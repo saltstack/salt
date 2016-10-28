@@ -122,7 +122,7 @@ Runner Events
 
 .. salt:event:: salt/run/<JID>/args
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Fired by the :mod:`state.orchestrate <salt.runners.state.orchestrate>`
     runner

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Loader mechanism for caching data, with data expirations, etc.
+Loader mechanism for caching data, with data expiration, etc.
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 '''
 
 # Import Python libs

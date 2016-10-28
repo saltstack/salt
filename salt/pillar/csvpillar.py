@@ -2,7 +2,7 @@
 '''
 Store key/value pairs in a CSV file
 
-.. versionaddedd:: Carbon
+.. versionaddedd:: 2016.11.0
 
 Example configuration:
 

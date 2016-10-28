@@ -98,7 +98,7 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
     :param ordered:
         Outputs an ordered dict if applicable (default: True)
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -515,7 +515,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         could be the grain for an OS and the value could the name of a package
         on that particular OS.
 
-        .. versionchanged:: Carbon
+        .. versionchanged:: 2016.11.0
 
             The dictionary key could be a globbing pattern. The function will
             return the corresponding ``lookup_dict`` value where grain value
@@ -531,7 +531,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         system could be used to pull values from the ``lookup_dict``
         dictionary.
 
-        .. versionchanged:: Carbon
+        .. versionchanged:: 2016.11.0
 
             The grain value could be a list. The function will return the
             ``lookup_dict`` value for a first found item in the list matching

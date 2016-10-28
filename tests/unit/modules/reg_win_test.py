@@ -4,7 +4,7 @@
     :platform: Windows
     :maturity: develop
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
-    versionadded:: Carbon
+    versionadded:: 2016.11.0
 '''
 # Import Python future libs
 from __future__ import absolute_import

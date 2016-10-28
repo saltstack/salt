@@ -895,7 +895,7 @@ VALID_OPTS = {
     # dictionary.  Otherwise it is assumed that the module calls the grains
     # function in a custom way and returns the data elsewhere
     #
-    # Default to False for 2016.3 and Carbon.  Switch to True for Nitrogen
+    # Default to False for 2016.3 and 2016.11.  Switch to True for Nitrogen
     'proxy_merge_grains_in_module': bool,
 
     # Command to use to restart salt-minion
@@ -2927,7 +2927,7 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
         required_keys.append('image')
         if driver == 'vmware':
             required_keys.append('datastore')
-    elif driver in ['linode', 'virtualbox', 'vmware']:
+    elif driver in ['linode', 'virtualbox']:
         required_keys.append('clonefrom')
     elif driver == 'nova':
         nova_image_keys = ['image', 'block_device_mapping', 'block_device', 'boot_volume']

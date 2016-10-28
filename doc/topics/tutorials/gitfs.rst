@@ -398,9 +398,9 @@ In the example configuration above, the following is true:
 .. _gitfs-per-saltenv-config:
 
 Per-Saltenv Configuration Parameters
-===================================
+====================================
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 For more granular control, Salt allows the following three things to be
 overridden for individual saltenvs within a given repo:

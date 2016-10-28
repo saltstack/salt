@@ -1262,7 +1262,7 @@ def managed(name,
         .. note::
             This option is **not** supported on Windows.
 
-        .. versionchanged:: Carbon
+        .. versionchanged:: 2016.11.0
             This option can be set to ``keep``, and Salt will keep the mode
             from the Salt fileserver. This is only supported when the
             ``source`` URL begins with ``salt://``, or for files local to the
@@ -1340,7 +1340,7 @@ def managed(name,
 
     contents_pillar
         .. versionadded:: 0.17.0
-        .. versionchanged: Carbon
+        .. versionchanged: 2016.11.0
             contents_pillar can also be a list, and the pillars will be
             concatinated together to form one file.
 
@@ -1507,7 +1507,7 @@ def managed(name,
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
 
@@ -2007,7 +2007,7 @@ def directory(name,
         Limit the recursion depth. The default is no limit=None.
         'max_depth' and 'clean' are mutually exclusive.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
@@ -2379,7 +2379,7 @@ def recurse(name,
         .. note::
             This option is **not** supported on Windows.
 
-        .. versionchanged:: Carbon
+        .. versionchanged:: 2016.11.0
             This option can be set to ``keep``, and Salt will keep the mode
             from the Salt fileserver. This is only supported when the
             ``source`` URL begins with ``salt://``, or for files local to the
@@ -2475,7 +2475,7 @@ def recurse(name,
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
 
@@ -2805,7 +2805,7 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
     '''
     Apply retention scheduling to backup storage directory.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     :param name:
         The filesystem path to the directory containing backups to be managed.
@@ -3058,25 +3058,25 @@ def line(name, content=None, match=None, mode=None, location=None,
     :param create:
         Create an empty file if doesn't exists.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     :param user:
         The user to own the file, this defaults to the user salt is running as
         on the minion.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     :param group:
         The group ownership set for the file, this defaults to the group salt
         is running as on the minion On Windows, this is ignored.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     :param file_mode:
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
         on Windows.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     If an equal sign (``=``) appears in an argument to a Salt command, it is
     interpreted as a keyword argument in the format of ``key=val``. That
@@ -4352,7 +4352,7 @@ def patch(name,
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
 
@@ -4981,7 +4981,7 @@ def serialize(name,
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
 

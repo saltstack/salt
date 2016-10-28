@@ -424,7 +424,7 @@ def get_job_config(name=None):
 
 def plugin_installed(name):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Return if the plugin is installed for the provided plugin name.
 

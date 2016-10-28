@@ -520,7 +520,7 @@ def get_hardware_grains(service_instance):
     service_instance
         The service instance object to get hardware info for
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     hw_grain_data = {}
     if get_inventory(service_instance).about.apiType == 'HostAgent':

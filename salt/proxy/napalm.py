@@ -56,7 +56,7 @@ Example:
             port: 12201
             nxos_protocol: https
 
-.. versionadded: Carbon
+.. versionadded: 2016.11.0
 '''
 
 from __future__ import absolute_import

@@ -3,7 +3,7 @@
 Manage CognitoIdentity Functions
 ================================
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Create and destroy CognitoIdentity identity pools. Be aware that this interacts with
 Amazon's services, and so may incur charges.

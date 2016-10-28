@@ -5723,7 +5723,7 @@ def call(name, function, *args, **kwargs):
     The container does not need to have Salt installed, but Python
     is required.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     '''
     # where to put the salt-thin
@@ -5794,7 +5794,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     The container does not need to have Salt installed, but Python
     is required.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     mods = [item.strip() for item in mods.split(',')] if mods else []
 
@@ -5866,7 +5866,7 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
     The base image does not need to have Salt installed, but Python
     is required.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
 
     # start a new container

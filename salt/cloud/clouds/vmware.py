@@ -2348,6 +2348,12 @@ def create(vm_):
     si = _get_si()
 
     container_ref = None
+
+    # If datacenter is specified, set the container reference to start search from it instead
+    if datacenter:
+        datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
+        container_ref = datacenter_ref if datacenter_ref else None
+
     if 'clonefrom' in vm_:
         # If datacenter is specified, set the container reference to start search from it instead
         if datacenter:
@@ -2465,6 +2471,11 @@ def create(vm_):
             datastore_ref = salt.utils.vmware.get_mor_by_property(si, vim.Datastore, datastore)
             if not datastore_ref:
                 raise SaltCloudSystemExit("Specified datastore: '{0}' does not exist".format(datastore))
+
+        if host:
+            host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host, container_ref=container_ref)
+            if not host_ref:
+                log.error("Specified host: '{0}' does not exist".format(host))
 
     # Create the config specs
     config_spec = vim.vm.ConfigSpec()
@@ -2613,8 +2624,11 @@ def create(vm_):
         else:
             log.info('Creating {0}'.format(vm_['name']))
 
-            task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref)
-            salt.utils.vmware.wait_for_task(task, vm_name, "create", 5, 'info')
+            if host:
+                task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref, host_ref)
+            else:
+                task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref)
+            salt.utils.vmware.wait_for_task(task, vm_name, "create", 15, 'info')
     except Exception as exc:
         err_msg = 'Error creating {0}: {1}'.format(vm_['name'], exc)
         log.error(
@@ -2627,9 +2641,13 @@ def create(vm_):
     new_vm_ref = salt.utils.vmware.get_mor_by_property(si, vim.VirtualMachine, vm_name, container_ref=container_ref)
 
     # Find how to power on in CreateVM_Task (if possible), for now this will do
-    if not clone_type and power:
-        task = new_vm_ref.PowerOn()
-        salt.utils.vmware.wait_for_task(task, vm_name, 'power', 5, 'info')
+    try:
+        if not clone_type and power:
+            task = new_vm_ref.PowerOn()
+            salt.utils.vmware.wait_for_task(task, vm_name, 'power', 5, 'info')
+    except Exception as exc:
+        log.info('Powering on the VM threw this exception. Ignoring.')
+        log.info(exc)
 
     # If it a template or if it does not need to be powered on then do not wait for the IP
     out = None

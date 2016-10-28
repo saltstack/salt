@@ -491,7 +491,7 @@ def salt_extend(extension, name, description, salt_dir, merge):
     '''
     Quickstart for developing on the saltstack installation
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     import salt.utils.extend
     salt.utils.extend.run(extension=extension,

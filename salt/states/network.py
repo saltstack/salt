@@ -246,7 +246,7 @@ all interfaces are ignored unless specified.
         the hostname. Default behavior is to delete unspecified network
         settings.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
 .. note::
 

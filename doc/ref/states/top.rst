@@ -440,7 +440,7 @@ environment, no states from the ``qa`` environment would be applied.
 Scenario 3 - No Environment Specified, :conf_minion:`top_file_merging_strategy` is "same"
 -----------------------------------------------------------------------------------------
 
-.. versionchanged:: Carbon
+.. versionchanged:: 2016.11.0
     In prior versions, "same" did not quite work as described below (see
     here__). This has now been corrected. It was decided that changing
     something like top file handling in a point release had the potential to
@@ -461,7 +461,7 @@ and ``qa2`` from the ``qa`` environment would be applied to all minions.
 Scenario 4 - No Environment Specified, :conf_minion:`top_file_merging_strategy` is "merge_all"
 ----------------------------------------------------------------------------------------------
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 In this scenario, all configured states in all top files are applied. From the
 ``base`` environment, ``base1`` would be applied to all minions, with ``base2``

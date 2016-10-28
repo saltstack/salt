@@ -3,7 +3,7 @@
 Module for managing block devices
 
 .. versionadded:: 2014.7.0
-.. deprecated:: Carbon
+.. deprecated:: 2016.11.0
    Merged to `disk` module
 
 '''
@@ -44,7 +44,7 @@ def format_(device, fs_type='ext4',
 
     .. versionadded:: 2015.8.2
 
-    .. deprecated:: Carbon
+    .. deprecated:: 2016.11.0
 
     device
         The block device in which to create the new filesystem
@@ -74,7 +74,7 @@ def format_(device, fs_type='ext4',
 
         This option is dangerous, use it with caution.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -100,7 +100,7 @@ def fstype(device):
 
     .. versionadded:: 2015.8.2
 
-    .. deprecated:: Carbon
+    .. deprecated:: 2016.11.0
 
     device
         The name of the block device
