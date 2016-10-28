@@ -7,7 +7,7 @@ The intention of this beacon is to add the config options to add monitoring
 stats to the health beacon making it a one stop shop for gathering systems
 health and status data
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 To configure this beacon to use the defaults, set up an empty dict for it in
 the minion config:

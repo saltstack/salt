@@ -3,7 +3,7 @@
 Used to manage the thorium register. The thorium register is where compound
 values are stored and computed, such as averages etc.
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 :depends: statistics PyPi module
 '''

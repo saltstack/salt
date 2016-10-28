@@ -699,7 +699,7 @@ def import_keypair(kwargs=None, call=None):
     Upload public key to cloud provider.
     Similar to EC2 import_keypair.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     kwargs
         file(mandatory): public key file-name

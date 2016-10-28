@@ -12,7 +12,7 @@ Kapacitor execution module.
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 '''
 
 from __future__ import absolute_import

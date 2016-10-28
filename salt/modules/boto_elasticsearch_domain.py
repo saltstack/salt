@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon Elasticsearch Service
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 :configuration: This module accepts explicit AWS credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.

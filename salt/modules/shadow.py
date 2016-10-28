@@ -206,7 +206,7 @@ def del_password(name):
 
 def lock_password(name):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Lock the password from name user
 
@@ -232,7 +232,7 @@ def lock_password(name):
 
 def unlock_password(name):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Unlock the password from name user
 

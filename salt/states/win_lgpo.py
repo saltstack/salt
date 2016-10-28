@@ -3,7 +3,7 @@
 Manage Windows Local Group Policy
 =================================
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 This state allows configuring local Windows Group Policy
 
