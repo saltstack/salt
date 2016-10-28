@@ -292,3 +292,102 @@ def absent(name):
             ret['comment'] = comment_host_notdeleted + str(host_delete['error'])
 
     return ret
+
+
+def assign_templates(host, templates, **kwargs):
+    '''
+    Ensures that templates are assigned to the host.
+
+    .. versionadded:: Carbon
+
+    :param host: technical name of the host
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    .. code-block:: yaml
+
+        add_zabbix_templates_to_host:
+            zabbix_host.assign_templates:
+                - host: TestHost
+                    - templates:
+                        - "Template OS Linux"
+                        - "Template App MySQL"
+
+    '''
+    ret = {'name': host, 'changes': {}, 'result': False, 'comment': ''}
+
+    # Set comments
+    comment_host_templates_updated = 'Templates updated.'
+    comment_host_templates_notupdated = 'Unable to update templates on host: {0}.'.format(host)
+    comment_host_templates_in_sync = 'Templates already synced.'
+
+    update_host_templates = False
+    curr_template_ids = list()
+    requested_template_ids = list()
+    hostid = ''
+
+    host_exists = __salt__['zabbix.host_exists'](host)
+
+    # Fail out if host does not exist
+    if not host_exists:
+        ret['result'] = False
+        ret['comment'] = comment_host_templates_notupdated
+        return ret
+
+    host_info = __salt__['zabbix.host_get'](name=host)[0]
+    hostid = host_info['hostid']
+
+    if not templates:
+        templates = list()
+
+    # Get current templateids for host
+    host_templates = __salt__['zabbix.host_get'](hostids=hostid,
+                                                 output='[{"hostid"}]', selectParentTemplates='["templateid"]')
+    for template_id in host_templates[0]['parentTemplates']:
+        curr_template_ids.append(template_id['templateid'])
+
+    # Get requested templateids
+    for template in templates:
+        try:
+            template_id = __salt__['zabbix.template_get'](host=template)[0]['templateid']
+            requested_template_ids.append(template_id)
+        except TypeError:
+            ret['result'] = False
+            ret['comment'] = 'Unable to find template: {0}.'.format(template)
+            return ret
+
+    # remove any duplications
+    requested_template_ids = list(set(requested_template_ids))
+
+    if set(curr_template_ids) != set(requested_template_ids):
+        update_host_templates = True
+
+    # Set change output
+    changes_host_templates_modified = {host: {'old': 'Host templates: ' + ", ".join(curr_template_ids),
+                                              'new': 'Host templates: ' + ', '.join(requested_template_ids)}}
+
+    # Dry run, test=true mode
+    if __opts__['test']:
+        if update_host_templates:
+            ret['result'] = None
+            ret['comment'] = comment_host_templates_updated
+        else:
+            ret['result'] = True
+            ret['comment'] = comment_host_templates_in_sync
+        return ret
+
+    # Attempt to perform update
+    ret['result'] = True
+    if update_host_templates:
+        update_output = __salt__['zabbix.host_update'](hostid, templates=(requested_template_ids))
+        if update_output is False:
+            ret['result'] = False
+            ret['comment'] = comment_host_templates_notupdated
+            return ret
+        ret['comment'] = comment_host_templates_updated
+        ret['changes'] = changes_host_templates_modified
+    else:
+        ret['comment'] = comment_host_templates_in_sync
+
+    return ret
