@@ -155,8 +155,10 @@ def uptime():
             raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
         ut_ret['seconds'] = int(float(open(ut_path).read().strip().split()[0]))
     elif salt.utils.is_sunos():
-        cmd = "kstat -p unix:0:system_misc:boot_time | nawk '{printf \"%d\\n\", srand()-$2}'"
+        cmd = "kstat -p unix:0:system_misc:boot_time | nawk '{printf \"%d\\n\", $2}'"
         ut_ret['seconds'] = int(__salt__['cmd.shell'](cmd, output_loglevel='trace').strip() or 0)
+        if ut_ret['seconds'] > 0:  # convert to seconds (nawk + srand is fails on SmartOS)
+            ut_ret['seconds'] = (int(time.time()) - ut_ret['seconds'])
     else:
         raise CommandExecutionError('This platform is not supported')
 
