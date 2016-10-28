@@ -2,7 +2,7 @@
 '''
 Proxy Minion for Cisco NX OS Switches
 
-.. versionadded: Carbon
+.. versionadded: 2016.11.0
 
 The Cisco NX OS Proxy Minion uses the built in SSHConnection module in :mod:`salt.utils.vt_helper <salt.utils.vt_helper>`
 
@@ -48,7 +48,7 @@ the :doc:`salt.modules.nxos</ref/modules/all/salt.modules.nxos>` execution modul
 
 .. note::
     The option `proxy_merge_grains_in_module: True` is required to have the NXOS
-    grains be available from the proxy minion, for the Carbon release.  For
+    grains be available from the proxy minion, for the 2016.11.0 release.  For
     Nitrogen, the setting will be True by default.
 
 .. note:

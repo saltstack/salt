@@ -2,7 +2,7 @@
 '''
 Package support for XBPS package manager (used by VoidLinux)
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 '''
 
 # TODO: what about the initial acceptance of repo's fingerprint when adding a

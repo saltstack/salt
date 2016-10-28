@@ -147,7 +147,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
         These must belong to the same VPC. You must provide at least one
         security group and one subnet ID.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     Permissions
         A list of permission definitions to be added to the function's policy
