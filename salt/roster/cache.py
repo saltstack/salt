@@ -18,16 +18,11 @@ file. The default for this is:
 '''
 from __future__ import absolute_import
 
-# Import python libs
-import os.path
-import msgpack
-
 # Import Salt libs
 import salt.loader
 import salt.utils
 import salt.utils.cloud
 import salt.utils.validate.net
-from salt import syspaths
 
 
 def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
@@ -35,28 +30,16 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     Return the targets from the flat yaml file, checks opts for location but
     defaults to /etc/salt/roster
     '''
-    cache = os.path.join(syspaths.CACHE_DIR, 'master', 'minions', tgt, 'data.p')
-
-    if not os.path.exists(cache):
-        return {}
 
     roster_order = __opts__.get('roster_order', (
         'public', 'private', 'local'
     ))
 
-    with salt.utils.fopen(cache, 'r') as fh_:
-        cache_data = msgpack.load(fh_)
-
-    ipv4 = cache_data.get('grains', {}).get('ipv4', [])
-    preferred_ip = extract_ipv4(roster_order, ipv4)
-    if preferred_ip is None:
-        return {}
-
-    return {
-        tgt: {
-            'host': preferred_ip,
-        }
-    }
+    cached_data = __runner__['cache.grains'](tgt=tgt, expr_form=tgt_type)
+    ret = {}
+    for server, grains in cached_data.items():
+        ret[server] = {'host': extract_ipv4(roster_order, grains.get('ipv4', []))}
+    return ret
 
 
 def extract_ipv4(roster_order, ipv4):
