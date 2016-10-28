@@ -209,7 +209,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             rule.append('-m {0}'.format(match))
             if '_name' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
                 rule.append('--name {0}'.format(kwargs['_name']))
-		del kwargs['_name']
+                del kwargs['_name']
         del kwargs['match']
 
     if 'match-set' in kwargs:
@@ -417,7 +417,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     for item in kwargs:
         rule.append(maybe_add_negation(item))
         if len(item) == 1:
-	    if kwargs[item] in (None, ''):
+            if kwargs[item] in (None, ''):
                 rule.append('-{0}'.format(item))
             else:
                 rule.append('-{0} {1}'.format(item, kwargs[item]))
