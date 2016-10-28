@@ -28,12 +28,15 @@ import salt.utils
 
 class ExtendTestCase(TestCase):
     def setUp(self):
+        self.starting_dir = os.getcwd()
+        os.chdir(integration.CODE_DIR)
         self.out = None
 
     def tearDown(self):
         if self.out is not None:
             if os.path.exists(self.out):
                 shutil.rmtree(self.out, True)
+        os.chdir(self.starting_dir)
 
     @patch('sys.exit', MagicMock)
     def test_run(self):
