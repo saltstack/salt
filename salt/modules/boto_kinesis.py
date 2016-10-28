@@ -50,6 +50,7 @@ from __future__ import absolute_import
 import logging
 import time
 import random
+import sys
 
 # Import third party libs
 # pylint: disable=unused-import
@@ -255,17 +256,31 @@ def get_info_for_reshard(stream_details):
             log.debug("skipping closed shard {0}".format(shard_id))
             continue
         stream_details["OpenShards"].append(shard)
-        shard["HashKeyRange"]["StartingHashKey"] = long(
+        shard["HashKeyRange"]["StartingHashKey"] = long_int(
             shard["HashKeyRange"]["StartingHashKey"])
-        shard["HashKeyRange"]["EndingHashKey"] = long(
+        shard["HashKeyRange"]["EndingHashKey"] = long_int(
             shard["HashKeyRange"]["EndingHashKey"])
         if shard["HashKeyRange"]["StartingHashKey"] < min_hash_key:
             min_hash_key = shard["HashKeyRange"]["StartingHashKey"]
         if shard["HashKeyRange"]["EndingHashKey"] > max_hash_key:
             max_hash_key = shard["HashKeyRange"]["EndingHashKey"]
-    stream_details["OpenShards"].sort(key=lambda shard: long(
+    stream_details["OpenShards"].sort(key=lambda shard: long_int(
         shard["HashKeyRange"]["StartingHashKey"]))
     return min_hash_key, max_hash_key, stream_details
+
+
+def long_int(hash_key):
+    """
+    The hash key is a 128-bit int, sent as a string.
+    It's necessary to convert to int/long for comparison operations.
+    This helper method handles python 2/3 incompatibility
+
+    :return: long object if python 2.X, int object if python 3.X
+    """
+    if sys.version_info < (3,):
+        return int(hash_key)
+    else:
+        return long(hash_key)
 
 
 def reshard(stream_name, desired_size, force=False,
