@@ -2,7 +2,7 @@
 '''
 Connection module for Apache Libcloud DNS management
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 :configuration:
     This module uses a configuration profile for one or multiple DNS providers

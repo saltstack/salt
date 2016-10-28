@@ -594,7 +594,7 @@ def project_create(name, domain, description=None, enabled=True, profile=None,
     Create a keystone project.
     Overrides keystone tenant_create form api V2. For keystone api V3.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     name
         The project name, which must be unique within the owning domain.
@@ -657,7 +657,7 @@ def project_delete(project_id=None, name=None, profile=None, **connection_args):
     Delete a project (keystone project-delete).
     Overrides keystone tenant-delete form api V2. For keystone api V3 only.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     project_id
         The project id.
@@ -720,7 +720,7 @@ def project_get(project_id=None, name=None, profile=None, **connection_args):
     Overrides keystone tenant-get form api V2.
     For keystone api V3 only.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     project_id
         The project id.
@@ -773,7 +773,7 @@ def project_list(profile=None, **connection_args):
     Overrides keystone tenants-list form api V2.
     For keystone api V3 only.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     profile
         Configuration profile - if configuration for multiple openstack accounts required.
@@ -840,7 +840,7 @@ def project_update(project_id=None, name=None, description=None,
     Overrides keystone tenant_update form api V2.
     For keystone api V3 only.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     project_id
         The project id.

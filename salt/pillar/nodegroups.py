@@ -10,7 +10,7 @@ Introspection: to which nodegroups does my minion belong?
 Provides a pillar with the default name of `nodegroups`
 which contains a list of nodegroups which match for a given minion.
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Command Line
 ------------

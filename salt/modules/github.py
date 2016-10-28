@@ -152,7 +152,7 @@ def list_users(profile="github", ignore_cache=False):
     ignore_cache
         Bypasses the use of cached users.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -313,7 +313,7 @@ def get_issue(issue_number, repo_name=None, profile='github', output='min'):
     '''
     Return information about a single issue in a named repository.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     issue_number
         The number of the issue to retrieve.
@@ -365,7 +365,7 @@ def get_issue_comments(issue_number,
     '''
     Return information about the comments for a given issue in a named repository.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     issue_number
         The number of the issue for which to retrieve comments.
@@ -436,7 +436,7 @@ def get_issues(repo_name=None,
     '''
     Returns information for all issues in a given repository, based on the search options.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     repo_name
         The name of the repository for which to list issues. This argument is
@@ -561,7 +561,7 @@ def get_milestones(repo_name=None,
     '''
     Return information about milestones for a given repository.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     repo_name
         The name of the repository for which to list issues. This argument is
@@ -641,7 +641,7 @@ def get_milestone(number=None,
     '''
     Return information about a single milestone in a named repository.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     number
         The number of the milestone to retrieve. If provided, this option
@@ -710,7 +710,7 @@ def get_repo_info(repo_name, profile='github'):
     '''
     Return information for a given repo.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     repo_name
         The name of the repository.
@@ -775,7 +775,7 @@ def list_repos(profile='github'):
     repositories within the organization Dependent upon the access rights of
     the profile token.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     profile
         The name of the profile configuration to use. Defaults to ``github``.
@@ -795,7 +795,7 @@ def list_private_repos(profile='github'):
     List private repositories within the organization. Dependent upon the access
     rights of the profile token.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     profile
         The name of the profile configuration to use. Defaults to ``github``.
@@ -818,7 +818,7 @@ def list_public_repos(profile='github'):
     '''
     List public repositories within the organization.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     profile
         The name of the profile configuration to use. Defaults to ``github``.
@@ -891,7 +891,7 @@ def add_repo(name,
 
         salt myminion github.add_repo 'repo_name'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     try:
         client = _get_client(profile)
@@ -967,7 +967,7 @@ def edit_repo(name,
 
         salt myminion github.add_repo 'repo_name'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     try:
         client = _get_client(profile)
@@ -1016,7 +1016,7 @@ def remove_repo(name, profile="github"):
 
         salt myminion github.remove_repo 'my-repo'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     repo_info = get_repo_info(name, profile=profile)
     if not repo_info:
@@ -1090,7 +1090,7 @@ def add_team(name,
 
         salt myminion github.add_team 'team_name'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     try:
         client = _get_client(profile)
@@ -1151,7 +1151,7 @@ def edit_team(name,
 
         salt myminion github.edit_team 'team_name' description='Team description'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     team = get_team(name, profile=profile)
     if not team:
@@ -1201,7 +1201,7 @@ def remove_team(name, profile="github"):
 
         salt myminion github.remove_team 'team_name'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     team_info = get_team(name, profile=profile)
     if not team_info:
@@ -1239,7 +1239,7 @@ def list_team_repos(team_name, profile="github", ignore_cache=False):
 
         salt myminion github.list_team_repos 'team_name'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     cached_team = get_team(team_name, profile=profile)
     if not cached_team:
@@ -1285,7 +1285,7 @@ def add_team_repo(repo_name, team_name, profile="github"):
 
         salt myminion github.add_team_repo 'my_repo' 'team_name'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     team = get_team(team_name, profile=profile)
     if not team:
@@ -1324,7 +1324,7 @@ def remove_team_repo(repo_name, team_name, profile="github"):
 
         salt myminion github.remove_team_repo 'my_repo' 'team_name'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     team = get_team(team_name, profile=profile)
     if not team:
@@ -1363,7 +1363,7 @@ def list_team_members(team_name, profile="github", ignore_cache=False):
 
         salt myminion github.list_team_members 'team_name'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     cached_team = get_team(team_name, profile=profile)
     if not cached_team:
@@ -1406,7 +1406,7 @@ def list_members_without_mfa(profile="github", ignore_cache=False):
 
         salt myminion github.list_members_without_mfa
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     key = "github.{0}:non_mfa_users".format(
         _get_config_value(profile, 'org_name')
@@ -1449,7 +1449,7 @@ def is_team_member(name, team_name, profile="github"):
 
         salt myminion github.is_team_member 'user_name' 'team_name'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     return name.lower() in list_team_members(team_name, profile=profile)
 
@@ -1473,7 +1473,7 @@ def add_team_member(name, team_name, profile="github"):
 
         salt myminion github.add_team_member 'user_name' 'team_name'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     team = get_team(team_name, profile=profile)
     if not team:
@@ -1524,7 +1524,7 @@ def remove_team_member(name, team_name, profile="github"):
 
         salt myminion github.remove_team_member 'user_name' 'team_name'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     team = get_team(team_name, profile=profile)
     if not team:
@@ -1566,7 +1566,7 @@ def list_teams(profile="github", ignore_cache=False):
 
         salt myminion github.list_teams
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     key = 'github.{0}:teams'.format(
         _get_config_value(profile, 'org_name')
