@@ -223,7 +223,7 @@ def match_metric(regex):
     Display the current values of all metrics whose names match the
     given regular expression.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     .. code-block:: bash
 
@@ -243,7 +243,7 @@ def match_config(regex):
     Display the current values of all configuration variables whose
     names match the given regular expression.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     .. code-block:: bash
 
@@ -262,7 +262,7 @@ def read_config(*args):
     '''
     Read Traffic Server configuration variable definitions.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     .. code-block:: bash
 
@@ -289,7 +289,7 @@ def read_metric(*args):
     '''
     Read Traffic Server one or more metrics.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     .. code-block:: bash
 
@@ -322,7 +322,7 @@ def set_config(variable, value):
     value
         The new value to set.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     .. code-block:: bash
 

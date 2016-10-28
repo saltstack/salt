@@ -86,7 +86,7 @@ config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Request, accept and delete VPC peering connections.
 VPC peering connections can be named allowing the name
@@ -519,13 +519,13 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
         A route table ID to explicitly associate the subnet with.  If both route_table_id
         and route_table_name are specified, route_table_id will take precedence.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     route_table_name
         A route table name to explicitly associate the subnet with.  If both route_table_id
         and route_table_name are specified, route_table_id will take precedence.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     region
         Region to connect to.
@@ -668,7 +668,7 @@ def _verify_subnet_association(route_table_desc, subnet_id):
     subnet_id
         the subnet id to verify
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     if route_table_desc:
         if 'associations' in route_table_desc:
@@ -1285,7 +1285,7 @@ def nat_gateway_present(name, subnet_name=None, subnet_id=None,
 
     This function requires boto3.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Example:
 
@@ -1362,7 +1362,7 @@ def nat_gateway_absent(name=None, subnet_name=None, subnet_id=None,
 
     This function requires boto3.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     name
         Name of the state.
@@ -1462,7 +1462,7 @@ def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Example:
 
@@ -1564,7 +1564,7 @@ def request_vpc_peering_connection(name, requester_vpc_id=None, requester_vpc_na
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Example:
 
@@ -1675,7 +1675,7 @@ def vpc_peering_connection_present(name, requester_vpc_id=None, requester_vpc_na
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Example:
 
@@ -1748,7 +1748,7 @@ def delete_vpc_peering_connection(name, conn_id=None, conn_name=None,
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Example:
 

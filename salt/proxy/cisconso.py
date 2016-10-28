@@ -46,7 +46,7 @@ Supported devices:
   -  Allied Telesys
   -  Open vSwitch
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 :codeauthor: `Anthony Shaw <anthony.shaw@dimensiondata.com>`
 
