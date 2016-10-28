@@ -4,7 +4,7 @@ Microsoft certificate management via the Pki PowerShell module.
 
 :platform:      Windows
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 '''
 
 # Import python libs

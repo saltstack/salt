@@ -30,15 +30,16 @@ def __virtual__():
     '''
     # Verify Windows
     if not salt.utils.is_windows():
-        return False, 'Module DSC: Module only works on Windows systems'
+        return False, 'Module DSC: Only available on Windows systems'
 
     # Verify PowerShell 5.0
     powershell_info = __salt__['cmd.shell_info']('powershell')
-    if not powershell_info['installed'] or \
-        distutils.version.StrictVersion(
-            powershell_info['version']) >= distutils.version.StrictVersion('5.0'):
-        return False, 'Module DSC: Module only works with PowerShell 5 or ' \
-                      'newer.'
+    if not powershell_info['installed']:
+        return False, 'Module DSC: Powershell not available'
+
+    if distutils.version.StrictVersion(powershell_info['version']) < \
+            distutils.version.StrictVersion('5.0'):
+        return False, 'Module DSC: Requires Powershell 5 or later'
 
     return __virtualname__
 
@@ -51,19 +52,22 @@ def _pshell(cmd, cwd=None, json_depth=2):
     if 'convertto-json' not in cmd.lower():
         cmd = '{0} | ConvertTo-Json -Depth {1}'.format(cmd, json_depth)
     log.debug('DSC: {0}'.format(cmd))
-    results = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd, python_shell=True)
+    results = __salt__['cmd.run_all'](
+        cmd, shell='powershell', cwd=cwd, python_shell=True)
 
     if 'pid' in results:
         del results['pid']
 
     if 'retcode' not in results or results['retcode'] != 0:
         # run_all logs an error to log.error, fail hard back to the user
-        raise CommandExecutionError('Issue executing powershell {0}'.format(cmd), info=results)
+        raise CommandExecutionError(
+            'Issue executing powershell {0}'.format(cmd), info=results)
 
     try:
         ret = json.loads(results['stdout'], strict=False)
     except ValueError:
-        raise CommandExecutionError('No JSON results from powershell', info=results)
+        raise CommandExecutionError(
+            'No JSON results from powershell', info=results)
 
     return ret
 
@@ -190,7 +194,8 @@ def compile_config(path, source=None, config=None, salt_env='base'):
     # Run the script and see if the compile command is in the script
     cmd = '{0} '.format(path)
     cmd += '| Select-Object -Property FullName, Extension, Exists, ' \
-           '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) -Format g}}'
+           '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) ' \
+           '-Format g}}'
 
     ret = _pshell(cmd, cwd)
 
@@ -203,7 +208,8 @@ def compile_config(path, source=None, config=None, salt_env='base'):
     # Run the script and run the compile command
     cmd = '. {0} ; {1} '.format(path, config)
     cmd += '| Select-Object -Property FullName, Extension, Exists, ' \
-           '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) -Format g}}'
+           '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) ' \
+           '-Format g}}'
 
     ret = _pshell(cmd, cwd)
 
@@ -453,7 +459,8 @@ def set_lcm_config(config_mode=None,
     cmd += '    Node localhost {'
     cmd += '        LocalConfigurationManager {'
     if config_mode:
-        if config_mode not in ('ApplyOnly', 'ApplyAndMonitor', 'ApplyAndAutoCorrect'):
+        if config_mode not in ('ApplyOnly', 'ApplyAndMonitor',
+                               'ApplyAndAutoCorrect'):
             error = 'config_mode must be one of ApplyOnly, ApplyAndMonitor, ' \
                     'or ApplyAndAutoCorrect. Passed {0}'.format(config_mode)
             SaltInvocationError(error)
@@ -483,7 +490,8 @@ def set_lcm_config(config_mode=None,
             reboot_if_needed = '$false'
         cmd += '            RebootNodeIfNeeded = {0};'.format(reboot_if_needed)
     if action_after_reboot:
-        if action_after_reboot not in ('ContinueConfiguration', 'StopConfiguration'):
+        if action_after_reboot not in ('ContinueConfiguration',
+                                       'StopConfiguration'):
             SaltInvocationError('action_after_reboot must be one of '
                                 'ContinueConfiguration or StopConfiguration')
         cmd += '            ActionAfterReboot = "{0}"'.format(action_after_reboot)
@@ -507,8 +515,9 @@ def set_lcm_config(config_mode=None,
         if debug_mode is None:
             debug_mode = 'None'
         if debug_mode not in ('None', 'ForceModuleImport', 'All'):
-            SaltInvocationError('debug_mode must be one of None, ForceModuleImport, '
-                                'ResourceScriptBreakAll, or All')
+            SaltInvocationError('debug_mode must be one of None, '
+                                'ForceModuleImport, ResourceScriptBreakAll, or '
+                                'All')
         cmd += '            DebugMode = "{0}";'.format(debug_mode)
     if status_retention_days:
         if isinstance(status_retention_days, int):

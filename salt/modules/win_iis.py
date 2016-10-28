@@ -399,7 +399,7 @@ def list_cert_bindings(site):
     :return: A dictionary of the binding names and properties.
     :rtype: dict
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -441,7 +441,7 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443, sslf
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -521,7 +521,7 @@ def remove_cert_binding(name, site, hostheader='', ipaddress='*', port=443):
     :param str ipaddress: The IP address of the binding.
     :param str port: The TCP port of the binding.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -714,7 +714,7 @@ def restart_apppool(name):
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -742,7 +742,7 @@ def get_container_setting(name, container, settings):
     :return: A dictionary of the provided settings and their values.
     :rtype: dict
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -815,7 +815,7 @@ def set_container_setting(name, container, settings):
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
