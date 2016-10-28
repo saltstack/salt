@@ -5,7 +5,6 @@ Manage Windows features via the ServerManager powershell module
 
 # Import Python libs
 from __future__ import absolute_import
-import ast
 import json
 import logging
 
@@ -16,6 +15,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.powershell
 
 log = logging.getLogger(__name__)
 
@@ -26,17 +26,6 @@ def __virtual__():
     '''
     Load only on windows with servermanager module
     '''
-    def _module_present():
-        '''
-        Check for the presence of the ServerManager module.
-        '''
-        cmd = r"[Bool] (Get-Module -ListAvailable | Where-Object { $_.Name -eq 'ServerManager' })"
-        cmd_ret = __salt__['cmd.run_all'](cmd, shell='powershell', python_shell=True)
-
-        if cmd_ret['retcode'] == 0:
-            return ast.literal_eval(cmd_ret['stdout'])
-        return False
-
     if not salt.utils.is_windows():
         return False
 
@@ -45,23 +34,12 @@ def __virtual__():
                       'Requires Remote Server Administration Tools which ' \
                       'is only available on Windows 2008 R2 and later.'
 
-    if not _module_present():
+    if not salt.utils.powershell.module_exists('ServerManager'):
         return False, 'Failed to load win_servermanager module: ' \
                       'ServerManager module not available. ' \
                       'May need to install Remote Server Administration Tools.'
 
     return __virtualname__
-
-
-def _check_server_manager():
-    '''
-    See if ServerManager module will import
-
-    Returns: True if import is successful, otherwise returns False
-    '''
-    return not __salt__['cmd.retcode']('Import-Module ServerManager',
-                                       shell='powershell',
-                                       python_shell=True)
 
 
 def _pshell_json(cmd, cwd=None):

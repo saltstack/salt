@@ -5,7 +5,7 @@ Utility Modules - Code Reuse in Custom Modules
 ==============================================
 
 .. versionadded:: 2015.5.0
-.. versionchanged:: Carbon
+.. versionchanged:: 2016.11.0
     These can now be synced to the Master for use in custom Runners, and in
     custom execution modules called within Pillar SLS files.
 

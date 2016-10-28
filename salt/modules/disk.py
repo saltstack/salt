@@ -380,7 +380,7 @@ def format_(device,
     '''
     Format a filesystem onto a device
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     device
         The device in which to create the new filesystem
@@ -443,7 +443,7 @@ def fstype(device):
     '''
     Return the filesystem name of the specified device
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     device
         The name of the device

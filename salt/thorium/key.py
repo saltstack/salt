@@ -2,7 +2,7 @@
 '''
 The key Thorium State is used to apply changes to the accepted/rejected/pending keys
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 '''
 # Import python libs
 from __future__ import absolute_import

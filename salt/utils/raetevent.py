@@ -46,6 +46,7 @@ class RAETEvent(object):
         self.stack = None
         self.ryn = 'manor'  # remote yard name
         self.connected = False
+        self.cpub = False
         self.__prep_stack(listen)
 
     def __prep_stack(self, listen):
@@ -132,6 +133,7 @@ class RAETEvent(object):
             self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
             self.stack.serviceAll()
             self.connected = True
+            self.cpub = True
         except Exception:
             pass
 
@@ -249,6 +251,12 @@ class RAETEvent(object):
                                        'job'))
                 except Exception:
                     pass
+
+    def close_pub(self):
+        '''
+        Here for compatability
+        '''
+        return
 
     def destroy(self):
         if hasattr(self, 'stack'):

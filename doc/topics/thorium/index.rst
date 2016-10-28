@@ -127,8 +127,8 @@ in the ``startreg`` codeblock has been successfully called first.
 
 Thorium Links to Beacons
 ------------------------
-The above example was added in the Carbon release of Salt and makes use of the
-``status`` beacon also added in the Carbon release. For the above Thorium state
+The above example was added in the 2016.11.0 release of Salt and makes use of the
+``status`` beacon also added in the 2016.11.0 release. For the above Thorium state
 to function properly you will also need to enable the ``status`` beacon in the
 ``minion`` configuration file:
 

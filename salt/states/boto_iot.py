@@ -96,6 +96,8 @@ def thing_type_present(name, thingTypeName, thingTypeDescription,
     '''
     Ensure thing type exists.
 
+    .. versionadded:: 2016.11.0
+
     name
         The name of the state definition
 
@@ -121,8 +123,6 @@ def thing_type_present(name, thingTypeName, thingTypeDescription,
     profile
         A dict with region, key, keyid, or a pillar key (string) that
         contains a dict with region, key, and keyid
-
-    .. versionadded:: Carbon
 
     '''
     ret = {
@@ -179,6 +179,8 @@ def thing_type_absent(name, thingTypeName,
     '''
     Ensure thing type with passed properties is absent.
 
+    .. versionadded:: 2016.11.0
+
     name
         The name of the state definition.
 
@@ -197,8 +199,6 @@ def thing_type_absent(name, thingTypeName,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-
-    .. versionadded:: Carbon
 
     '''
 

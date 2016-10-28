@@ -29,7 +29,7 @@ def parse(url):
             'Oxygen',
             'Parameter \'env\' has been detected in the salt:// URL.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
             )
         path, saltenv = resource.split('?env=', 1)[0], None
     elif '?saltenv=' in resource:

@@ -6,7 +6,7 @@ Vault Connection Functions
 :maturity:      New
 :platform:      all
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 This module allows access to Hashicorp Vault using an ``sdb://`` URI.
 

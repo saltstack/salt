@@ -1289,8 +1289,8 @@ def os_data():
                     elif salt.utils.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
                     else:
-                        log.error(
-                            'Could not determine init location from command line: ({0})'
+                        log.info(
+                            'Could not determine init system from command line: ({0})'
                             .format(' '.join(init_cmdline))
                         )
 

@@ -15,7 +15,7 @@ Dependencies
 
 - :doc:`napalm ntp management module (salt.modules.napalm_ntp) </ref/modules/all/salt.modules.napalm_ntp>`
 
-.. versionadded: Carbon
+.. versionadded: 2016.11.0
 '''
 
 from __future__ import absolute_import

@@ -2824,7 +2824,7 @@ class GitFS(GitBase):
                 'Oxygen',
                 'Parameter \'env\' has been detected in the argument list.  This '
                 'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')
 
@@ -2861,7 +2861,7 @@ class GitFS(GitBase):
                 'Oxygen',
                 'Parameter \'env\' has been detected in the argument list.  This '
                 'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')
 
@@ -2895,7 +2895,7 @@ class GitFS(GitBase):
                 'Oxygen',
                 'Parameter \'env\' has been detected in the argument list.  This '
                 'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')
 
@@ -2969,7 +2969,7 @@ class GitFS(GitBase):
                 'Oxygen',
                 'Parameter \'env\' has been detected in the argument list.  This '
                 'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')
 
