@@ -10,9 +10,10 @@ from __future__ import absolute_import
 import logging
 # Import Salt testing libraries
 from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call
 # Import Salt libraries
-from salt.exceptions import VMwareApiError, VMwareRuntimeError
+from salt.exceptions import VMwareApiError, VMwareRuntimeError, \
+        VMwareObjectRetrievalError
 import salt.utils.vmware as vmware
 # Import Third Party Libs
 try:
@@ -23,6 +24,120 @@ except ImportError:
 
 # Get Logging Started
 log = logging.getLogger(__name__)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@patch('salt.utils.vmware.get_managed_object_name',
+       MagicMock())
+@patch('salt.utils.vmware.get_service_instance_from_managed_object',
+       MagicMock())
+@patch('salt.utils.vmware.get_mors_with_properties',
+       MagicMock(return_value=[{'name': 'fake_cluster',
+                                'object': MagicMock()}]))
+class GetClusterTestCase(TestCase):
+    '''Tests for salt.utils.vmware.get_cluster'''
+
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.mock_dc = MagicMock()
+        self.mock_cluster1 = MagicMock()
+        self.mock_cluster2 = MagicMock()
+        self.mock_entries = [{'name': 'fake_cluster1',
+                              'object': self.mock_cluster1},
+                             {'name': 'fake_cluster2',
+                              'object': self.mock_cluster2}]
+
+    def test_get_managed_object_name_call(self):
+        mock_get_managed_object_name = MagicMock()
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   mock_get_managed_object_name):
+            vmware.get_cluster(self.mock_dc, 'fake_cluster')
+        mock_get_managed_object_name.assert_called_once_with(self.mock_dc)
+
+    def test_get_service_instance_from_managed_object(self):
+        mock_dc_name = MagicMock()
+        mock_get_service_instance_from_managed_object = MagicMock()
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   MagicMock(return_value=mock_dc_name)):
+            with patch(
+                'salt.utils.vmware.get_service_instance_from_managed_object',
+                mock_get_service_instance_from_managed_object):
+
+                vmware.get_cluster(self.mock_dc, 'fake_cluster')
+        mock_get_service_instance_from_managed_object.assert_called_once_with(
+            self.mock_dc, name=mock_dc_name)
+
+    def test_traversal_spec_init(self):
+        mock_dc_name = MagicMock()
+        mock_traversal_spec = MagicMock()
+        mock_traversal_spec_ini = MagicMock(return_value=mock_traversal_spec)
+        mock_get_service_instance_from_managed_object = MagicMock()
+        patch_traversal_spec_str = \
+                'salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec'
+
+        with patch(patch_traversal_spec_str, mock_traversal_spec_ini):
+            vmware.get_cluster(self.mock_dc, 'fake_cluster')
+        mock_traversal_spec_ini.assert_has_calls(
+            [call(path='childEntity',
+                  skip=False,
+                  type=vim.Folder),
+            call(path='hostFolder',
+                  skip=True,
+                  type=vim.Datacenter,
+                  selectSet=[mock_traversal_spec])])
+
+    def test_get_mors_with_properties_call(self):
+        mock_get_mors_with_properties = MagicMock(
+            return_value=[{'name': 'fake_cluster', 'object': MagicMock()}])
+        mock_traversal_spec = MagicMock()
+        patch_traversal_spec_str = \
+                'salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec'
+        with patch(
+            'salt.utils.vmware.get_service_instance_from_managed_object',
+            MagicMock(return_value=self.mock_si)):
+
+            with patch('salt.utils.vmware.get_mors_with_properties',
+                       mock_get_mors_with_properties):
+                with patch(patch_traversal_spec_str,
+                           MagicMock(return_value=mock_traversal_spec)):
+
+                    vmware.get_cluster(self.mock_dc, 'fake_cluster')
+        mock_get_mors_with_properties.assert_called_once_with(
+            self.mock_si, vim.ClusterComputeResource,
+            container_ref=self.mock_dc,
+            property_list=['name'],
+            traversal_spec=mock_traversal_spec)
+
+    def test_get_mors_with_properties_returns_empty_array(self):
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   MagicMock(return_value='fake_dc')):
+            with patch('salt.utils.vmware.get_mors_with_properties',
+                       MagicMock(return_value=[])):
+                with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+                    vmware.get_cluster(self.mock_dc, 'fake_cluster')
+        self.assertEqual(excinfo.exception.strerror,
+                         'Cluster \'fake_cluster\' was not found in '
+                         'datacenter \'fake_dc\'')
+
+    def test_cluster_not_found(self):
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   MagicMock(return_value='fake_dc')):
+            with patch('salt.utils.vmware.get_mors_with_properties',
+                       MagicMock(return_value=self.mock_entries)):
+                with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+                    vmware.get_cluster(self.mock_dc, 'fake_cluster')
+        self.assertEqual(excinfo.exception.strerror,
+                         'Cluster \'fake_cluster\' was not found in '
+                         'datacenter \'fake_dc\'')
+
+    def test_cluster_found(self):
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   MagicMock(return_value='fake_dc')):
+            with patch('salt.utils.vmware.get_mors_with_properties',
+                       MagicMock(return_value=self.mock_entries)):
+                res = vmware.get_cluster(self.mock_dc, 'fake_cluster2')
+        self.assertEqual(res, self.mock_cluster2)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -83,4 +198,5 @@ class UpdateClusterTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
+    run_tests(GetClusterTestCase, needs_daemon=False)
     run_tests(UpdateClusterTestCase, needs_daemon=False)
