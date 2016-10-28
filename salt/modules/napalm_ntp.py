@@ -17,7 +17,7 @@ Dependencies
 .. seealso::
     :mod:`NTP peers management state <salt.states.netntp>`
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 '''
 
 from __future__ import absolute_import
