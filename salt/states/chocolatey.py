@@ -40,7 +40,8 @@ def installed(name, version=None, source=None, force=False, install_args=None,
       The name of the package to be installed.
 
     version
-      Install a specific version of the package. Defaults to latest version.
+      Install a specific version of the package. Defaults to latest version. If the version is different to the
+      one installed then the specified version will be installed.
 
     source
       Chocolatey repository (directory, share or remote URL, feed). Defaults to
@@ -88,8 +89,18 @@ def installed(name, version=None, source=None, force=False, install_args=None,
         ret['changes'] = {'name': '{0} is already installed but will reinstall'
             .format(name)}
     else:
-        ret['comment'] = 'The Package {0} is already installed'.format(name)
-        return ret
+        pkg_installed = True
+        if version is not None:
+            version_info = __salt__['chocolatey.version'](name)
+            for installed_name, installed_version in version_info.iteritems():
+                if installed_name == name and installed_version.strip() != version:
+                    pkg_installed = False
+                    ret['changes'] = {'name': '{0} will be installed'.format(name)}
+                    break
+
+        if pkg_installed:
+            ret['comment'] = 'The Package {0} is already installed'.format(name)
+            return ret
 
     if __opts__['test']:
         ret['result'] = None
