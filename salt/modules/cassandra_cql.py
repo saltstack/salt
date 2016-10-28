@@ -32,7 +32,8 @@ Cassandra Database Module
           port: 9000
           username: cas_admin
 
-.. versionchanged:: Carbon
+    .. versionchanged:: 2016.11.0
+
     Added support for ``ssl_options`` and ``protocol_version``.
 
     Example configuration with

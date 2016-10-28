@@ -105,7 +105,7 @@ def list_sessions(logged_in_users_only=False):
     '''
     List information about the sessions.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     :param logged_in_users_only: If True, only return sessions with users logged in.
     :return: A list containing dictionaries of session information.
@@ -156,7 +156,7 @@ def get_session(session_id):
     '''
     Get information about a session.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     :param session_id: The numeric Id of the session.
     :return: A dictionary of session information.
@@ -186,7 +186,7 @@ def disconnect_session(session_id):
     '''
     Disconnect a session.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     :param session_id: The numeric Id of the session.
     :return: A boolean representing whether the disconnect succeeded.
@@ -212,7 +212,7 @@ def logoff_session(session_id):
     '''
     Initiate the logoff of a session.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     :param session_id: The numeric Id of the session.
     :return: A boolean representing whether the logoff succeeded.

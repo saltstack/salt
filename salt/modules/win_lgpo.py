@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: Carbon
-
 Manage Local Policy on Windows
+
+.. versionadded:: 2016.11.0
 
 This module allows configuring local group policy (i.e. gpedit.msc) on a Windows server.
 
