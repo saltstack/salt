@@ -117,8 +117,14 @@ try:
 except ImportError:
     HAS_DOCKERCOMPOSE = False
 
+try:
+    from compose.project import OneOffFilter
+    USE_FILTERCLASS = True
+except ImportError:
+    USE_FILTERCLASS = False
+
 MIN_DOCKERCOMPOSE = (1, 5, 0)
-MAX_DOCKERCOMPOSE = (1, 6, 2)
+MAX_DOCKERCOMPOSE = (1, 9, 0)
 VERSION_RE = r'([\d.]+)'
 
 log = logging.getLogger(__name__)
@@ -233,7 +239,7 @@ def __load_project(path):
 
 def __handle_except(inst):
     '''
-    Handle exception and return a standart result
+    Handle exception and return a standard result
 
     :param inst:
     :return:
@@ -655,10 +661,16 @@ def ps(path):
     if isinstance(project, dict):
         return project
     else:
-        containers = sorted(
-            project.containers(None, stopped=True) +
-            project.containers(None, one_off=True),
-            key=attrgetter('name'))
+        if USE_FILTERCLASS:
+            containers = sorted(
+                project.containers(None, stopped=True) +
+                project.containers(None, OneOffFilter.only),
+                key=attrgetter('name'))
+        else:
+            containers = sorted(
+                project.containers(None, stopped=True) +
+                project.containers(None, one_off=True),
+                key=attrgetter('name'))
         for container in containers:
             command = container.human_readable_command
             if len(command) > 30:
