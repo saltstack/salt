@@ -207,8 +207,9 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             match_value = match_value.split(',')
         for match in match_value:
             rule.append('-m {0}'.format(match))
-            if 'name' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
-                rule.append('--name {0}'.format(kwargs['name']))
+            if '_name' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
+                rule.append('--name {0}'.format(kwargs['_name']))
+		del kwargs['_name']
         del kwargs['match']
 
     if 'match-set' in kwargs:
@@ -416,9 +417,15 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     for item in kwargs:
         rule.append(maybe_add_negation(item))
         if len(item) == 1:
-            rule.append('-{0} {1}'.format(item, kwargs[item]))
+	    if kwargs[item] in (None, ''):
+                rule.append('-{0}'.format(item))
+            else:
+                rule.append('-{0} {1}'.format(item, kwargs[item]))
         else:
-            rule.append('--{0} {1}'.format(item, kwargs[item]))
+            if kwargs[item] in (None, ''):
+                rule.append('--{0}'.format(item))
+            else:
+                rule.append('--{0} {1}'.format(item, kwargs[item]))
 
     rule += after_jump
 
