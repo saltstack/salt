@@ -341,6 +341,26 @@ def groups(username, **kwargs):
                 if 'cn' in entry:
                     group_list.append(entry['cn'][0])
             log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
+
+        elif _config('freeipa'):
+            escaped_username = ldap.filter.escape_filter_chars(username)
+            search_base = _config('group_basedn')
+            search_string = _render_template(_config('group_filter'), escaped_username)
+            search_results = bind.search_s(search_base,
+                                           ldap.SCOPE_SUBTREE,
+                                           search_string,
+                                           [_config('accountattributename'), 'cn'])
+
+            for entry, result in search_results:
+                for user in result[_config('accountattributename')]:
+                    if username == user.split(',')[0].split('=')[-1]:
+                        group_list.append(entry.split(',')[0].split('=')[-1])
+
+            log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
+
+            if not auth(username, kwargs['password']):
+                log.error('LDAP username and password do not match')
+                return []
         else:
             if _config('groupou'):
                 search_base = 'ou={0},{1}'.format(_config('groupou'), _config('basedn'))
