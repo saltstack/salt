@@ -41,7 +41,7 @@ def envs(backend=None, sources=False):
 
 def clear_file_list_cache(saltenv=None, backend=None):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     The Salt fileserver caches the files/directories/symlinks for each
     fileserver backend and environment as they are requested. This is done to

@@ -114,13 +114,13 @@ def thing_type_exists(thingTypeName,
     Returns True if the given thing type exists and returns False if the
     given thing type does not exist.
 
+    .. versionadded:: 2016.11.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_iot.thing_type_exists mythingtype
-
-    .. versionadded:: Carbon
 
     '''
 
@@ -145,13 +145,13 @@ def describe_thing_type(thingTypeName,
 
     Returns a dictionary of interesting properties.
 
+    .. versionadded:: 2016.11.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_iot.describe_thing_type mythingtype
-
-    .. versionadded:: Carbon
 
     '''
     try:
@@ -184,14 +184,14 @@ def create_thing_type(thingTypeName, thingTypeDescription,
     Returns {created: true} if the thing type was created and returns
     {created: False} if the thing type was not created.
 
+    .. versionadded:: 2016.11.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_iot.create_thing_type mythingtype \\
               thingtype_description_string '["searchable_attr_1", "searchable_attr_2"]'
-
-    .. versionadded:: Carbon
 
     '''
 
@@ -226,13 +226,13 @@ def deprecate_thing_type(thingTypeName, undoDeprecate=False,
     Returns {deprecated: true} if the thing type was deprecated and returns
     {deprecated: false} if the thing type was not deprecated.
 
+    .. versionadded:: 2016.11.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_iot.deprecate_thing_type mythingtype
-
-    .. versionadded:: Carbon
 
     '''
 
@@ -256,13 +256,13 @@ def delete_thing_type(thingTypeName,
     Returns {deleted: true} if the thing type was deleted and returns
     {deleted: false} if the thing type was not deleted.
 
+    .. versionadded:: 2016.11.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_iot.delete_thing_type mythingtype
-
-    .. versionadded:: Carbon
 
     '''
 

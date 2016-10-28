@@ -135,7 +135,7 @@ def mounted(name,
                 - device_name_regex:
                   - ({{ glusterfs_ip_list|join('|') }}):/volume_name
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     extra_mount_invisible_options
         A list of extra options that are not visible through the

@@ -3,7 +3,7 @@
 Azure Cloud Module
 ==================
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 The Azure cloud module is used to control access to Microsoft Azure
 

@@ -371,8 +371,8 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
 
 .. note::
 
-    Beginning in the ``Carbon`` release of Salt, ``onfail`` uses OR logic for
-    multiple listed ``onfail`` requisites. Prior to the ``Carbon`` release,
+    Beginning in the ``2016.11.0`` release of Salt, ``onfail`` uses OR logic for
+    multiple listed ``onfail`` requisites. Prior to the ``2016.11.0`` release,
     ``onfail`` used AND logic. See `Issue #22370`_ for more information.
 
 .. _Issue #22370: https://github.com/saltstack/salt/issues/22370

@@ -91,7 +91,7 @@ def status(name, maximum=None, minimum=None, absolute=False):
         By default, the utilization is measured in percentage. Set
         the `absolute` flag to use kilobytes.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
     '''
     # Monitoring state, no changes will be made so no test interface needed
     ret = {'name': name,

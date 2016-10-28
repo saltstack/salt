@@ -1319,7 +1319,7 @@ This option has no default value. Set it to an environment name to ensure that
 ``top_file_merging_strategy``
 -----------------------------
 
-.. versionchanged:: Carbon
+.. versionchanged:: 2016.11.0
     A ``merge_all`` strategy has been added.
 
 Default: ``merge``
@@ -1732,7 +1732,7 @@ the `cmd_blacklist_glob` list and any matched shell command will be blocked.
     `salt-call` commands. This does NOT blacklist commands called from states
     or shell commands executed from other modules.
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 .. code-block:: yaml
 
@@ -1758,7 +1758,7 @@ blocked. If `cmd_whitelist_glob` is NOT SET, then all shell commands are permitt
     `salt-call` commands. This does NOT restrict commands called from states
     or shell commands executed from other modules.
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 .. code-block:: yaml
 
@@ -2065,7 +2065,7 @@ have other services that need to go with it.
 ``winrepo_cache_expire_min``
 ----------------------------
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Default: ``0``
 
@@ -2084,7 +2084,7 @@ will always refresh the metadata, regardless of age.
 ``winrepo_cache_expire_max``
 ----------------------------
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Default: ``21600``
 

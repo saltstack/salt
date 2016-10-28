@@ -781,7 +781,7 @@ def create_private_key(path=None, text=False, bits=2048, verbose=True):
     verbose:
         Provide visual feedback on stdout. Default True
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -1674,7 +1674,7 @@ def expired(certificate):
     Returns a dict containing limited details of a
     certificate and whether the certificate has expired.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     certificate:
         The certificate to be read. Can be a path to a certificate file,
@@ -1715,7 +1715,7 @@ def will_expire(certificate, days):
     the certificate will expire in the specified number of days.
     Input can be a PEM string or file path.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     certificate:
         The certificate to be read. Can be a path to a certificate file,

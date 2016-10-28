@@ -229,7 +229,7 @@ def private_key_managed(name,
         Provide visual feedback on stdout, dots while key is generated.
         Default is True.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     Example:
 

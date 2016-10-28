@@ -3,7 +3,7 @@
     :synopsis: Unit Tests for Windows IIS Module 'module.win_iis'
     :platform: Windows
     :maturity: develop
-    versionadded:: Carbon
+    versionadded:: 2016.11.0
 '''
 
 # Import Python Libs
