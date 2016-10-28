@@ -117,10 +117,6 @@ try:
 except ImportError:
     HAS_DOCKERCOMPOSE = False
 
-MIN_DOCKERCOMPOSE = (1, 5, 0)
-MAX_DOCKERCOMPOSE = (1, 6, 2)
-VERSION_RE = r'([\d.]+)'
-
 log = logging.getLogger(__name__)
 debug = False
 
@@ -130,13 +126,10 @@ dc_filename = 'docker-compose.yml'
 
 def __virtual__():
     if HAS_DOCKERCOMPOSE:
-        match = re.match(VERSION_RE, str(compose.__version__))
-        if match:
-            version = tuple([int(x) for x in match.group(1).split('.')])
-            if version >= MIN_DOCKERCOMPOSE and version <= MAX_DOCKERCOMPOSE:
-                return __virtualname__
-    return (False, 'The dockercompose execution module not loaded: '
-            'compose python library not available.')
+        return __virtualname__
+    else:
+        return (False, 'The dockercompose execution module not loaded: '
+                'compose python library not available.')
 
 
 def __standardize_result(status, message, data=None, debug_msg=None):
