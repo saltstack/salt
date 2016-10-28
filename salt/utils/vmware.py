@@ -912,6 +912,29 @@ def create_datacenter(service_instance, datacenter_name):
     return dc_obj
 
 
+def update_cluster(cluster_ref, cluster_spec):
+    '''
+    Updates a cluster in a datacenter.
+
+    cluster_ref
+        The cluster reference.
+
+    cluster_spec
+        The cluster spec (vim.ClusterConfigSpecEx).
+        Defaults to None.
+    '''
+    cluster_name = get_managed_object_name(cluster_ref)
+    log.trace('Updating cluster \'{0}\''.format(cluster_name))
+    try:
+        task = cluster_ref.ReconfigureComputeResource_Task(cluster_spec,
+                                                           modify=True)
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    wait_for_task(task, cluster_name, 'ClusterUpdateTask')
+
+
 def list_clusters(service_instance):
     '''
     Returns a list of clusters associated with a given service instance.
