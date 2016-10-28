@@ -205,7 +205,9 @@ def query_instance(vm_=None, call=None):
         log.debug('Returned query data: {0}'.format(data))
 
         if 'primaryIp' in data[1]:
-            return data[1]['primaryIp']
+            # Wait for SSH to be fully configured on the remote side
+            if data[1]['state'] == 'running':
+                return data[1]['primaryIp']
         return None
 
     try:
