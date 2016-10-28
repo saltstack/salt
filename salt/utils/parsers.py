@@ -569,12 +569,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
     def process_log_level(self):
         if not self.options.log_level:
-            cli_log_level = 'cli_{0}_log_level'.format(
-                self.get_prog_name().replace('-', '_')
-            )
-            if self.config.get(cli_log_level, None) is not None:
-                self.options.log_level = self.config.get(cli_log_level)
-            elif self.config.get(self._loglevel_config_setting_name_, None):
+            if self.config.get(self._loglevel_config_setting_name_, None):
                 self.options.log_level = self.config.get(
                     self._loglevel_config_setting_name_
                 )
@@ -590,14 +585,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
     def process_log_file(self):
         if not self.options.log_file:
-            cli_setting_name = 'cli_{0}_log_file'.format(
-                self.get_prog_name().replace('-', '_')
-            )
-            if self.config.get(cli_setting_name, None) is not None:
-                # There's a configuration setting defining this log file path,
-                # i.e., `key_log_file` if the cli tool is `salt-key`
-                self.options.log_file = self.config.get(cli_setting_name)
-            elif self.config.get(self._logfile_config_setting_name_, None):
+            if self.config.get(self._logfile_config_setting_name_, None):
                 # Is the regular log file setting set?
                 self.options.log_file = self.config.get(
                     self._logfile_config_setting_name_
@@ -609,15 +597,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
     def process_log_file_level(self):
         if not self.options.log_file_level:
-            cli_setting_name = 'cli_{0}_log_file_level'.format(
-                self.get_prog_name().replace('-', '_')
-            )
-            if self.config.get(cli_setting_name, None) is not None:
-                # There's a configuration setting defining this log file
-                # logging level, i.e., `key_log_file_level` if the cli tool is
-                # `salt-key`
-                self.options.log_file_level = self.config.get(cli_setting_name)
-            elif self.config.get(
+            if self.config.get(
                     self._logfile_loglevel_config_setting_name_, None):
                 # Is the regular log file level setting set?
                 self.options.log_file_level = self.config.get(
@@ -644,67 +624,32 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             )
         )
 
-        cli_log_path = 'cli_{0}_log_file'.format(
-            self.get_prog_name().replace('-', '_')
-        )
-        if cli_log_path in self.config and not self.config.get(cli_log_path):
-            # Remove it from config so it inherits from log_level_logfile
-            self.config.pop(cli_log_path)
-
         if self._logfile_config_setting_name_ in self.config and not \
                 self.config.get(self._logfile_config_setting_name_):
             # Remove it from config so it inherits from log_file
             self.config.pop(self._logfile_config_setting_name_)
 
         logfile = self.config.get(
-            # First from the config cli setting
-            cli_log_path,
-            self.config.get(
-                # From the config setting
-                self._logfile_config_setting_name_,
-                # From the default setting
-                self._default_logging_logfile_
-            )
+            # From the config setting
+            self._logfile_config_setting_name_,
+            # From the default setting
+            self._default_logging_logfile_
         )
-
-        cli_log_file_fmt = 'cli_{0}_log_file_fmt'.format(
-            self.get_prog_name().replace('-', '_')
-        )
-        if cli_log_file_fmt in self.config and not \
-                self.config.get(cli_log_file_fmt):
-            # Remove it from config so it inherits from log_fmt_logfile
-            self.config.pop(cli_log_file_fmt)
 
         if self.config.get('log_fmt_logfile', None) is None:
             # Remove it from config so it inherits from log_fmt_console
             self.config.pop('log_fmt_logfile', None)
 
         log_file_fmt = self.config.get(
-            cli_log_file_fmt,
+            'log_fmt_logfile',
             self.config.get(
-                'cli_{0}_log_fmt'.format(
-                    self.get_prog_name().replace('-', '_')
-                ),
+                'log_fmt_console',
                 self.config.get(
-                    'log_fmt_logfile',
-                    self.config.get(
-                        'log_fmt_console',
-                        self.config.get(
-                            'log_fmt',
-                            config._DFLT_LOG_FMT_CONSOLE
-                        )
-                    )
+                    'log_fmt',
+                    config._DFLT_LOG_FMT_CONSOLE
                 )
             )
         )
-
-        cli_log_file_datefmt = 'cli_{0}_log_file_datefmt'.format(
-            self.get_prog_name().replace('-', '_')
-        )
-        if cli_log_file_datefmt in self.config and not \
-                self.config.get(cli_log_file_datefmt):
-            # Remove it from config so it inherits from log_datefmt_logfile
-            self.config.pop(cli_log_file_datefmt)
 
         if self.config.get('log_datefmt_logfile', None) is None:
             # Remove it from config so it inherits from log_datefmt_console
@@ -715,20 +660,12 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             self.config.pop('log_datefmt_console', None)
 
         log_file_datefmt = self.config.get(
-            cli_log_file_datefmt,
+            'log_datefmt_logfile',
             self.config.get(
-                'cli_{0}_log_datefmt'.format(
-                    self.get_prog_name().replace('-', '_')
-                ),
+                'log_datefmt_console',
                 self.config.get(
-                    'log_datefmt_logfile',
-                    self.config.get(
-                        'log_datefmt_console',
-                        self.config.get(
-                            'log_datefmt',
-                            '%Y-%m-%d %H:%M:%S'
-                        )
-                    )
+                    'log_datefmt',
+                    '%Y-%m-%d %H:%M:%S'
                 )
             )
         )
@@ -798,43 +735,23 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             return
 
         # Since we're not going to be a daemon, setup the console logger
-        cli_log_fmt = 'cli_{0}_log_fmt'.format(
-            self.get_prog_name().replace('-', '_')
-        )
-        if cli_log_fmt in self.config and not self.config.get(cli_log_fmt):
-            # Remove it from config so it inherits from log_fmt_console
-            self.config.pop(cli_log_fmt)
-
         logfmt = self.config.get(
-            cli_log_fmt, self.config.get(
-                'log_fmt_console',
-                self.config.get(
-                    'log_fmt',
-                    config._DFLT_LOG_FMT_CONSOLE
-                )
+            'log_fmt_console',
+            self.config.get(
+                'log_fmt',
+                config._DFLT_LOG_FMT_CONSOLE
             )
         )
-
-        cli_log_datefmt = 'cli_{0}_log_datefmt'.format(
-            self.get_prog_name().replace('-', '_')
-        )
-        if cli_log_datefmt in self.config and not \
-                self.config.get(cli_log_datefmt):
-            # Remove it from config so it inherits from log_datefmt_console
-            self.config.pop(cli_log_datefmt)
 
         if self.config.get('log_datefmt_console', None) is None:
             # Remove it from config so it inherits from log_datefmt
             self.config.pop('log_datefmt_console', None)
 
         datefmt = self.config.get(
-            cli_log_datefmt,
+            'log_datefmt_console',
             self.config.get(
-                'log_datefmt_console',
-                self.config.get(
-                    'log_datefmt',
-                    '%Y-%m-%d %H:%M:%S'
-                )
+                'log_datefmt',
+                '%Y-%m-%d %H:%M:%S'
             )
         )
         log.setup_console_logger(
