@@ -1066,7 +1066,7 @@ def get_pending_component_servicing():
     :return: A boolean representing whether there are pending Component Based Servicing tasks.
     :rtype: bool
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -1095,7 +1095,7 @@ def get_pending_domain_join():
     :return: A boolean representing whether there is a pending domain join action.
     :rtype: bool
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -1136,7 +1136,7 @@ def get_pending_file_rename():
     :return: A boolean representing whether there are pending file rename operations.
     :rtype: bool
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -1170,7 +1170,7 @@ def get_pending_servermanager():
     :return: A boolean representing whether there are pending Server Manager tasks.
     :rtype: bool
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -1207,7 +1207,7 @@ def get_pending_update():
     :return: A boolean representing whether there are pending updates.
     :rtype: bool
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -1237,7 +1237,7 @@ REBOOT_REQUIRED_NAME = 'Reboot required'
 
 def set_reboot_required_witnessed():
     r'''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     This function is used to remember that
     an event indicating that a reboot is required was witnessed.
@@ -1277,7 +1277,7 @@ def set_reboot_required_witnessed():
 
 def get_reboot_required_witnessed():
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     This tells us if, at any time during the current boot session
     the salt minion witnessed an event indicating
@@ -1312,7 +1312,7 @@ def get_pending_reboot():
     :return: A boolean representing whether reboots are pending.
     :rtype: bool
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 

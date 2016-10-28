@@ -5,7 +5,7 @@ Installation of packages using OS package managers such as yum or apt-get
 
 ..note::
     On minions running systemd>=205, as of version 2015.8.12, 2016.3.3, and
-    Carbon, `systemd-run(1)`_ is now used to isolate commands which modify
+    2016.11.0, `systemd-run(1)`_ is now used to isolate commands which modify
     installed packages from the ``salt-minion`` daemon's control group. This is
     done to keep systemd from killing the package manager commands spawned by
     Salt, when Salt updates itself (see ``KillMode`` in the `systemd.kill(5)`_
@@ -830,7 +830,7 @@ def installed(
 
     :param str cache_valid_time:
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
         This parameter sets the value in seconds after which the cache is
         marked as invalid, and a cache update is necessary. This overwrites
@@ -1005,7 +1005,7 @@ def installed(
         (for example, when ``nodeps`` is passed in this option, ``rpm -V`` will
         be run with ``--nodeps``).
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     :param bool normalize:
         Normalize the package name by removing the architecture, if the
@@ -1154,7 +1154,7 @@ def installed(
 
         This option is currently supported only for YUM/DNF.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     :param list names:
         A list of packages to install from a software repository. Each package
@@ -1211,7 +1211,7 @@ def installed(
        defaults to ``True``. This paramater has no effect
        on non-Windows systems.
 
-       .. versionadded:: Carbon
+       .. versionadded:: 2016.11.0
 
        .. code-block:: yaml
 
@@ -1751,7 +1751,7 @@ def latest(
 
     :param str cache_valid_time:
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
         This parameter sets the value in seconds after which the cache is
         marked as invalid, and a cache update is necessary. This overwrites
@@ -1832,7 +1832,7 @@ def latest(
         defaults to ``True``. This paramater has no effect on
         non-Windows systems.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
         .. code-block:: yaml
 
@@ -2451,7 +2451,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
     '''
     .. versionadded:: 2015.8.0
 
-    .. versionchanged:: Carbon
+    .. versionchanged:: 2016.11.0
         Added support in :mod:`pacman <salt.modules.pacman>`
 
     Ensure that an entire package group is installed. This state is currently

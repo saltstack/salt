@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 This runner makes Salt's
 execution modules available

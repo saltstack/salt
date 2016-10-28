@@ -869,7 +869,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         3010 is the only recognized exit code. The value of this param
         defaults to True.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     :return: Return a dict containing the new package names and versions::
     :rtype: dict

@@ -2,7 +2,7 @@
 '''
 Tests for the salt runner
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 '''
 # Import Python libs
 from __future__ import absolute_import

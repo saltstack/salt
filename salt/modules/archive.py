@@ -557,7 +557,7 @@ def unzip(zip_file, dest, excludes=None, options=None, template=None,
         On Windows, only the read-only flag will be extracted as set within the zip file,
         other attributes (i.e. user/group permissions) are ignored.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     CLI Example:
 

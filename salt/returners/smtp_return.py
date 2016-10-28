@@ -76,7 +76,7 @@ that prints any email it receives to the console.
 
     python -m smtpd -n -c DebuggingServer localhost:1025
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 It is possible to send emails with selected Salt events by configuring ``event_return`` option
 for Salt Master. For example:

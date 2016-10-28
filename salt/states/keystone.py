@@ -427,7 +427,7 @@ def project_present(name, description=None, enabled=True, profile=None,
     Alias for tenant_present from V2 API to fulfill
     V3 API naming convention.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     name
         The name of the project to manage
@@ -457,7 +457,7 @@ def project_absent(name, profile=None, **connection_args):
     Alias for tenant_absent from V2 API to fulfill
     V3 API naming convention.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     name
         The name of the project that should not exist

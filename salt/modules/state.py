@@ -164,7 +164,7 @@ def orchestrate(mods,
                 pillar=None,
                 pillarenv=None):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Execute the orchestrate runner from a masterless minion.
 
@@ -366,7 +366,7 @@ def template(tem, queue=False, **kwargs):
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
 
@@ -767,7 +767,7 @@ def highstate(test=None,
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
 
@@ -929,7 +929,7 @@ def sls(mods,
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
 
@@ -1312,7 +1312,7 @@ def show_low_sls(mods,
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
 
@@ -1365,7 +1365,7 @@ def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
 
@@ -1425,7 +1425,7 @@ def show_top(queue=False, **kwargs):
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
 
