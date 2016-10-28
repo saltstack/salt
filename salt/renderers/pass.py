@@ -71,7 +71,7 @@ def _fetch_secret(pass_path):
     Fetch secret from pass based on pass_path. If there is
     any error, return back the original pass_path value
     """
-    cmd = "pass show {0}".format(pass_path.strip('\n'))
+    cmd = "pass show {0}".format(pass_path.strip())
     log.debug('Fetching secret: {0}'.format(cmd))
 
     proc = Popen(cmd.split(' '), stdout=PIPE, stderr=PIPE)
@@ -83,7 +83,7 @@ def _fetch_secret(pass_path):
         msg = 'Could not fetch secret: {0} {1}'.format(pass_data, pass_error)
         log.warn(msg)
         pass_data = pass_path
-    return pass_data
+    return pass_data.strip()
 
 
 def _decrypt_object(obj):
