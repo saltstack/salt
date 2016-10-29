@@ -140,7 +140,7 @@ def uptime():
         key/value pairs containing uptime information, instead of the output
         from a ``cmd.run`` call.
     .. versionchanged:: carbon
-        Support for OpenBSD, FreeBSD, and Solaris-like platforms.
+        Support for OpenBSD, FreeBSD, NetBSD, and Solaris-like platforms.
 
     CLI Example:
 
@@ -162,7 +162,7 @@ def uptime():
             raise CommandExecutionError('The boot_time kstat was not found.')
         utc_time = datetime.datetime.utcfromtimestamp(float(res['stdout'].split()[1].strip()))
         ut_ret['seconds'] = int(time.time()-time.mktime(utc_time.timetuple()))
-    elif salt.utils.is_openbsd():
+    elif salt.utils.is_openbsd() or salt.utils.is_netbsd():
         res = __salt__['cmd.run_all']('sysctl -n kern.boottime')
         if res['retcode'] > 0:
             raise CommandExecutionError('The sysctl kern.boottime was not found.')
