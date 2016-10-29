@@ -139,6 +139,8 @@ def uptime():
         The uptime function was changed to return a dictionary of easy-to-read
         key/value pairs containing uptime information, instead of the output
         from a ``cmd.run`` call.
+    .. versionchanged:: carbon
+        Fall back to output of `uptime` when /proc/uptime is not available.
 
     CLI Example:
 
@@ -160,6 +162,8 @@ def uptime():
             raise CommandExecutionError('The boot_time kstat was not found.')
         utc_time = datetime.datetime.utcfromtimestamp(float(res['stdout'].split()[1].strip()))
         ut_ret['seconds'] = int((datetime.datetime.utcnow() - utc_time).total_seconds())
+    elif salt.utils.which('uptime'):
+        return __salt__['cmd.run']('uptime')
     else:
         raise CommandExecutionError('This platform is not supported')
 
