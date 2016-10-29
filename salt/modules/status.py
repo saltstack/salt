@@ -161,7 +161,7 @@ def uptime():
         if res['retcode'] > 0:
             raise CommandExecutionError('The boot_time kstat was not found.')
         utc_time = datetime.datetime.utcfromtimestamp(float(res['stdout'].split()[1].strip()))
-        ut_ret['seconds'] = int((datetime.datetime.utcnow() - utc_time).total_seconds())
+        ut_ret['seconds'] = int(time.time()-time.mktime(utc_time.timetuple()))
     elif salt.utils.which('uptime'):
         return __salt__['cmd.run']('uptime')
     else:
