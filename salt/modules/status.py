@@ -140,6 +140,7 @@ def uptime():
         key/value pairs containing uptime information, instead of the output
         from a ``cmd.run`` call.
     .. versionchanged:: carbon
+        Support for OpenBSD and Solaris-like platforms.
         Fall back to output of `uptime` when /proc/uptime is not available.
 
     CLI Example:
@@ -162,6 +163,12 @@ def uptime():
             raise CommandExecutionError('The boot_time kstat was not found.')
         utc_time = datetime.datetime.utcfromtimestamp(float(res['stdout'].split()[1].strip()))
         ut_ret['seconds'] = int(time.time()-time.mktime(utc_time.timetuple()))
+    elif salt.utils.is_openbsd():
+        res = __salt__['cmd.run_all']('sysctl -n kern.boottime')
+        if res['retcode'] > 0:
+            raise CommandExecutionError('The sysctl kern.boottime was not found.')
+        utc_time = datetime.datetime.utcfromtimestamp(float(res['stdout'].strip()))
+        ut_ret['seconds'] = int(time.time()-time.mktime(utc_time.timetuple()))
     elif salt.utils.which('uptime'):
         return __salt__['cmd.run']('uptime')
     else:
@@ -173,7 +180,10 @@ def uptime():
     hours = (ut_ret['seconds'] - (ut_ret['days'] * 24 * 60 * 60)) // 60 // 60
     minutes = ((ut_ret['seconds'] - (ut_ret['days'] * 24 * 60 * 60)) // 60) - hours * 60
     ut_ret['time'] = '{0}:{1}'.format(hours, minutes)
-    ut_ret['users'] = len(__salt__['cmd.run']("who -s").split(os.linesep))
+    if salt.utils.is_openbsd():
+        ut_ret['users'] = len(__salt__['cmd.run']("who").split(os.linesep))
+    else:
+        ut_ret['users'] = len(__salt__['cmd.run']("who -s").split(os.linesep))
 
     return ut_ret
 
