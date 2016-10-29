@@ -140,7 +140,7 @@ def uptime():
         key/value pairs containing uptime information, instead of the output
         from a ``cmd.run`` call.
     .. versionchanged:: carbon
-        Support for OpenBSD, FreeBSD, NetBSD, and Solaris-like platforms.
+        Support for OpenBSD, FreeBSD, NetBSD, MacOS, and Solaris
 
     CLI Example:
 
@@ -148,49 +148,53 @@ def uptime():
 
         salt '*' status.uptime
     '''
-    ut_ret = {'seconds': 0}
-    utc_time = None
+    curr_seconds = time.time()
+
+    # Get uptime in seconds
     if salt.utils.is_linux():
         ut_path = "/proc/uptime"
         if not os.path.exists(ut_path):
             raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
-        ut_ret['seconds'] = int(float(open(ut_path).read().strip().split()[0]))
-        utc_time = datetime.datetime.utcfromtimestamp(time.time() - ut_ret['seconds'])
+        seconds = int(float(salt.utils.fopen(ut_path).read().split()[0]))
     elif salt.utils.is_sunos():
         res = __salt__['cmd.run_all']('kstat -p unix:0:system_misc:boot_time')
         if res['retcode'] > 0:
             raise CommandExecutionError('The boot_time kstat was not found.')
-        utc_time = datetime.datetime.utcfromtimestamp(float(res['stdout'].split()[1].strip()))
-        ut_ret['seconds'] = int(time.time()-time.mktime(utc_time.timetuple()))
+        seconds = int(curr_seconds - int(res['stdout'].split()[-1]))
     elif salt.utils.is_openbsd() or salt.utils.is_netbsd():
+        bt_data = __salt__['sysctl.get']('kern.boottime')
+        if not bt_data:
+            raise CommandExecutionError('Cannot find kern.boottime system parameter')
+        seconds = int(curr_seconds - int(bt_data))
+    elif salt.utils.is_freebsd() or salt.utils.is_darwin():
+        bt_data = __salt__['sysctl.get']('kern.boottime')
         res = __salt__['cmd.run_all']('sysctl -n kern.boottime')
-        if res['retcode'] > 0:
-            raise CommandExecutionError('The sysctl kern.boottime was not found.')
-        utc_time = datetime.datetime.utcfromtimestamp(float(res['stdout'].strip()))
-        ut_ret['seconds'] = int(time.time()-time.mktime(utc_time.timetuple()))
-    elif salt.utils.is_freebsd():
-        res = __salt__['cmd.run_all']('sysctl -n kern.boottime')
-        if res['retcode'] > 0:
-            raise CommandExecutionError('The sysctl kern.boottime was not found.')
+        if not bt_data:
+            raise CommandExecutionError('Cannot find kern.boottime system parameter')
         # format: { sec = 1477761334, usec = 664698 } Sat Oct 29 17:15:34 2016
         # note: sec -> unixtimestamp
-        utc_time = datetime.datetime.utcfromtimestamp(
-            float(res['stdout'][1:res['stdout'].index(',')].split('=')[1].strip())
-        )
-        ut_ret['seconds'] = int(time.time()-time.mktime(utc_time.timetuple()))
+        sec_data, usec_data = bt_data.split('}')[0].strip(' {').split(', ')
+        seconds = int(curr_seconds - int(sec_data.split('sec = ')[1]))
     else:
         raise CommandExecutionError('This platform is not supported')
 
-    ut_ret['since_iso'] = utc_time.isoformat()
-    ut_ret['since_t'] = time.mktime(utc_time.timetuple())
-    ut_ret['days'] = ut_ret['seconds'] // 60 // 60 // 24
-    hours = (ut_ret['seconds'] - (ut_ret['days'] * 24 * 60 * 60)) // 60 // 60
-    minutes = ((ut_ret['seconds'] - (ut_ret['days'] * 24 * 60 * 60)) // 60) - hours * 60
-    ut_ret['time'] = '{0}:{1}'.format(hours, minutes)
-    if salt.utils.is_openbsd():
-        ut_ret['users'] = len(__salt__['cmd.run']("who").split(os.linesep))
-    else:
-        ut_ret['users'] = len(__salt__['cmd.run']("who -s").split(os.linesep))
+    # Setup datetime and timedelta objects
+    boot_time = datetime.datetime.utcfromtimestamp(curr_seconds - seconds)
+    curr_time = datetime.datetime.utcfromtimestamp(curr_seconds)
+    up_time = curr_time - boot_time
+
+    # Construct return information
+    ut_ret = {
+        'seconds': seconds,
+        'since_iso': boot_time.isoformat(),
+        'since_t': int(curr_seconds - seconds),
+        'days': up_time.days,
+        'time': '{0}:{1}'.format(up_time.seconds // 3600, up_time.seconds % 3600 // 60),
+    }
+
+    if salt.utils.which('who'):
+        who_cmd = 'who' if salt.utils.is_openbsd() else 'who -s'  # OpenBSD does not support -s
+        ut_ret['users'] = len(__salt__['cmd.run'](who_cmd).split(os.linesep))
 
     return ut_ret
 
