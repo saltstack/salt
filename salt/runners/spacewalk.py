@@ -145,7 +145,7 @@ def _get_session(server_url):
     return client, key
 
 
-def call(server_url, command, *args, arguments=None):
+def call(server_url, command, *args, **kwargs):
     '''
     Call a command of the Spacewalk xmlrpc api.
 
@@ -164,7 +164,9 @@ def call(server_url, command, *args, arguments=None):
                     - MyGroup
                     - Description
     '''
-    if not arguments:
+    if 'arguments' in kwargs:
+        arguments = kwargs['arguments']
+    else:
         arguments = args
 
     try:
