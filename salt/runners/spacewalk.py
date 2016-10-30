@@ -183,14 +183,17 @@ def call(server, command, *args, **kwargs):
     namespace, method = command.split('.')
     endpoint = getattr(getattr(client, namespace), method)
 
+    ret = {}
     try:
         output = endpoint(key, *arguments)
+        ret['result'] = True
     except Exception as e:
-        raise Exception('Spacewalk call failed: {0}'.format(str(e)))
         output = 'failed'
+        ret['result'] = False
 
     call = '{0} {1}'.format(command, arguments)
-    return {call: output}
+    ret[call] = output
+    return ret
 
 
 def addGroupsToKey(server, activation_key, groups):
