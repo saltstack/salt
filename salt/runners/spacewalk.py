@@ -173,27 +173,23 @@ def call(server, command, *args, **kwargs):
     else:
         arguments = args
 
+    call = '{0} {1}'.format(command, arguments)
     try:
         client, key =  _get_session(server)
     except Exception as exc:
         err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server, exc)
         log.error(err_msg)
-        return {'Error': err_msg}
+        return {call: err_msg}
 
     namespace, method = command.split('.')
     endpoint = getattr(getattr(client, namespace), method)
 
-    ret = {}
     try:
         output = endpoint(key, *arguments)
-        ret['result'] = True
     except Exception as e:
         output = 'API call failed: {0}'.format(e)
-        ret['result'] = False
 
-    call = '{0} {1}'.format(command, arguments)
-    ret[call] = output
-    return ret
+    return {call: output}
 
 
 def addGroupsToKey(server, activation_key, groups):
