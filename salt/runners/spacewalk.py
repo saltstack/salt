@@ -186,7 +186,8 @@ def call(server, command, *args, **kwargs):
     try:
         output = endpoint(key, *arguments)
     except Exception as e:
-        raise Exception('Spacewalk call failed: {0}'.format(e))
+        raise Exception('Spacewalk call failed: {0}'.format(str(e)))
+        output = 'failed'
 
     call = '{0} {1}'.format(command, arguments)
     return {call: output}
