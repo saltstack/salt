@@ -154,19 +154,24 @@ def api(server, command, *args, **kwargs):
     Call the Spacewalk xmlrpc api.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt-run spacewalk.api spacewalk01.domain.com systemgroup.create MyGroup Description
         salt-run spacewalk.api spacewalk01.domain.com systemgroup.create arguments='["MyGroup", "Description"]'
 
-    Orchestrate Example:
+    State Example:
+
     .. code-block:: yaml
+
         create_group:
-            spacewalk.api:
-                - server: spacewalk01.domain.com
-                - command: systemgroup.create
-                - arguments:
-                    - MyGroup
-                    - Description
+          salt.runner:
+            - name: spacewalk.api
+            - server: spacewalk01.domain.com
+            - command: systemgroup.create
+            - arguments:
+              - MyGroup
+              - Description
     '''
     if 'arguments' in kwargs:
         arguments = kwargs['arguments']
@@ -197,7 +202,9 @@ def addGroupsToKey(server, activation_key, groups):
     Add server groups to a activation key
 
     CLI Example:
+
     .. code-block:: bash
+
         salt-run spacewalk.addGroupsToKey spacewalk01.domain.com 1-my-key '[group1, group2]'
     '''
 
@@ -254,7 +261,9 @@ def deleteAllSystems(server):
     Delete all systems from Spacewalk
 
     CLI Example:
+
     .. code-block:: bash
+
         salt-run spacewalk.deleteAllSystems spacewalk01.domain.com
     '''
 
@@ -284,7 +293,9 @@ def deleteAllActivationKeys(server):
     Delete all activation keys from Spacewalk
 
     CLI Example:
+
     .. code-block:: bash
+
         salt-run spacewalk.deleteAllActivationKeys spacewalk01.domain.com
     '''
 
@@ -317,7 +328,9 @@ def unregister(name, server_url):
     Unregister specified server from Spacewalk
 
     CLI Example:
+
     .. code-block:: bash
+
         salt-run spacewalk.unregister my-test-vm spacewalk01.domain.com
     '''
 
