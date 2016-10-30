@@ -700,11 +700,12 @@ class IPCMessageSubscriber(IPCClient):
                 for framed_msg in self.unpacker:
                     body = framed_msg['body']
                     self.io_loop.spawn_callback(callback, body)
-            except tornado.iostream.StreamClosedError:
+            except tornado.iostream.StreamClosedError as exc:
                 log.trace('Subscriber disconnected from IPC {0}'.format(self.socket_path))
-                break
+                raise exc
             except Exception as exc:
                 log.error('Exception occurred while Subscriber handling stream: {0}'.format(exc))
+                raise exc
 
     @tornado.gen.coroutine
     def read_async(self, callback):

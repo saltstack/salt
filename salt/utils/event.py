@@ -529,8 +529,8 @@ class SaltEvent(object):
                 ret = {'data': data, 'tag': mtag}
             except KeyboardInterrupt:
                 return {'tag': 'salt/event/exit', 'data': {}}
-            except (tornado.iostream.StreamClosedError, RuntimeError):
-                return None
+            except (tornado.iostream.StreamClosedError, RuntimeError) as exc:
+                raise exc
 
             if not match_func(ret['tag'], tag):
                 # tag not match
