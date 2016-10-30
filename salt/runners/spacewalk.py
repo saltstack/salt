@@ -128,14 +128,14 @@ def _disconnect_session(session):
     session['client'].auth.logout(session['key'])
 
 
-def _get_session(server_url):
+def _get_session(server):
     '''
     Get session and key
     '''
-    if server_url in _sessions:
-        return _sessions[server_url]
+    if server in _sessions:
+        return _sessions[server]
 
-    config = _get_spacewalk_configuration(server_url)
+    config = _get_spacewalk_configuration(server)
     if not config:
         return False
 
@@ -144,12 +144,12 @@ def _get_session(server_url):
 
     client = session['client']
     key = session['key']
-    _sessions[server_url] = (client, key)
+    _sessions[server] = (client, key)
 
     return client, key
 
 
-def call(server_url, command, *args, **kwargs):
+def call(server, command, *args, **kwargs):
     '''
     Call a command of the Spacewalk xmlrpc api.
 
@@ -162,7 +162,7 @@ def call(server_url, command, *args, **kwargs):
     .. code-block:: yaml
         create_group:
             spacewalk.call:
-                - server_url: spacewalk01.domain.com
+                - server: spacewalk01.domain.com
                 - command: systemgroup.create
                 - arguments:
                     - MyGroup
@@ -174,9 +174,9 @@ def call(server_url, command, *args, **kwargs):
         arguments = args
 
     try:
-        client, key =  _get_session(server_url)
+        client, key =  _get_session(server)
     except Exception as exc:
-        err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server_url, exc)
+        err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server, exc)
         log.error(err_msg)
         return {'Error': err_msg}
 
@@ -196,7 +196,7 @@ def call(server_url, command, *args, **kwargs):
     return ret
 
 
-def addGroupsToKey(server_url, activation_key, groups):
+def addGroupsToKey(server, activation_key, groups):
     '''
     Add server groups to a activation key
 
@@ -206,9 +206,9 @@ def addGroupsToKey(server_url, activation_key, groups):
     '''
 
     try:
-        client, key =  _get_session(server_url)
+        client, key =  _get_session(server)
     except Exception as exc:
-        err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server_url, exc)
+        err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server, exc)
         log.error(err_msg)
         return {'Error': err_msg}
 
@@ -224,15 +224,15 @@ def addGroupsToKey(server_url, activation_key, groups):
         return {activation_key: 'Failed to add groups to activation key'}
 
 
-def deleteAllGroups(server_url):
+def deleteAllGroups(server):
     '''
     Delete all server groups from Spacewalk
     '''
 
     try:
-        client, key =  _get_session(server_url)
+        client, key =  _get_session(server)
     except Exception as exc:
-        err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server_url, exc)
+        err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server, exc)
         log.error(err_msg)
         return {'Error': err_msg}
 
@@ -253,7 +253,7 @@ def deleteAllGroups(server_url):
     return ret
 
 
-def deleteAllSystems(server_url):
+def deleteAllSystems(server):
     '''
     Delete all systems from Spacewalk
 
@@ -263,9 +263,9 @@ def deleteAllSystems(server_url):
     '''
 
     try:
-        client, key =  _get_session(server_url)
+        client, key =  _get_session(server)
     except Exception as exc:
-        err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server_url, exc)
+        err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server, exc)
         log.error(err_msg)
         return {'Error': err_msg}
 
@@ -283,7 +283,7 @@ def deleteAllSystems(server_url):
         return {'Error': 'Failed to delete all systems'}
 
 
-def deleteAllActivationKeys(server_url):
+def deleteAllActivationKeys(server):
     '''
     Delete all activation keys from Spacewalk
 
@@ -293,9 +293,9 @@ def deleteAllActivationKeys(server_url):
     '''
 
     try:
-        client, key =  _get_session(server_url)
+        client, key =  _get_session(server)
     except Exception as exc:
-        err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server_url, exc)
+        err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server, exc)
         log.error(err_msg)
         return {'Error': err_msg}
 
