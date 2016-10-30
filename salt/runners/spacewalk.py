@@ -185,14 +185,14 @@ def call(server, command, *args, **kwargs):
 
     ret = {}
     try:
-        result = endpoint(key, *arguments)
+        output = endpoint(key, *arguments)
         ret['result'] = True
     except Exception as e:
-        result = False
-        ret['changes'] = 'failed'
+        output = 'failed'
+        ret['result'] = False
 
     call = '{0} {1}'.format(command, arguments)
-    ret['changes'][call] = result
+    ret['changes'] = {call: output}
     return ret
 
 
