@@ -188,7 +188,7 @@ def call(server, command, *args, **kwargs):
         output = endpoint(key, *arguments)
         ret['result'] = True
     except Exception as e:
-        output = 'failed'
+        output = 'API call failed: {0}'.format(e)
         ret['result'] = False
 
     call = '{0} {1}'.format(command, arguments)
