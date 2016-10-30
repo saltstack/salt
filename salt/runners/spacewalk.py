@@ -58,7 +58,11 @@ def __virtual__():
     Check for spacewalk configuration in master config file
     or directory and load runner only if it is specified
     '''
-    return HAS_LIBS and _get_spacewalk_configuration()
+    if not HAS_LIBS:
+        return False, 'Missing six library'
+    if not _get_spacewalk_configuration():
+        return False, 'No spacewalk configuration found'
+    return True
 
 
 def _get_spacewalk_configuration(spacewalk_url=''):
