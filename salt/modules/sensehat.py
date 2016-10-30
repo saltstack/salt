@@ -139,11 +139,14 @@ def show_message(message, msg_type=None,
         The message to display
     msg_type
         The type of the message. Changes the appearence of the message.
-        Available types are:
-        error:      red text
-        warning:    orange text
-        success:    green text
-        info:       blue text
+
+        Available types are::
+
+            error:      red text
+            warning:    orange text
+            success:    green text
+            info:       blue text
+
     scroll_speed
         The speed at which the message moves over the LED matrix.
         This value represents the time paused for between shifting the text
