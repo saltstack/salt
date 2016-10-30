@@ -183,13 +183,17 @@ def call(server_url, command, *args, **kwargs):
     namespace, method = command.split('.')
     endpoint = getattr(getattr(client, namespace), method)
 
+    ret = {}
     try:
         result = endpoint(key, *arguments)
+        ret['result'] = True
     except Exception as e:
-        result = 'failed'
+        result = False
+        ret['changes'] = 'failed'
 
     call = '{0} {1}'.format(command, arguments)
-    return {call: result}
+    ret['changes'][call] = result
+    return ret
 
 
 def addGroupsToKey(server_url, activation_key, groups):
