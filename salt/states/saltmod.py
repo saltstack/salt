@@ -651,7 +651,10 @@ def runner(name, **kwargs):
                                       __env__=__env__,
                                       **kwargs)
 
-    ret['result'] = True
+    if 'success' in out and not out['success']:
+        ret['result'] = False
+    else:
+        ret['result'] = True
     ret['comment'] = "Runner function '{0}' executed.".format(name)
 
     ret['__orchestration__'] = True
