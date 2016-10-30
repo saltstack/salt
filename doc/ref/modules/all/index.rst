@@ -316,6 +316,7 @@ execution modules
     sdb
     seed
     selinux
+    sensehat
     sensors
     serverdensity_device
     service
@@ -347,6 +348,7 @@ execution modules
     status
     stormpath
     supervisord
+    suse_apache
     svn
     swift
     sysbench
