@@ -149,19 +149,19 @@ def _get_session(server):
     return client, key
 
 
-def call(server, command, *args, **kwargs):
+def api(server, command, *args, **kwargs):
     '''
-    Call a command of the Spacewalk xmlrpc api.
+    Call the Spacewalk xmlrpc api.
 
     CLI Example:
     .. code-block:: bash
-        salt-run spacewalk.call spacewalk01.domain.com systemgroup.create MyGroup Description
-        salt-run spacewalk.call spacewalk01.domain.com systemgroup.create arguments='["MyGroup", "Description"]'
+        salt-run spacewalk.api spacewalk01.domain.com systemgroup.create MyGroup Description
+        salt-run spacewalk.api spacewalk01.domain.com systemgroup.create arguments='["MyGroup", "Description"]'
 
     Orchestrate Example:
     .. code-block:: yaml
         create_group:
-            spacewalk.call:
+            spacewalk.api:
                 - server: spacewalk01.domain.com
                 - command: systemgroup.create
                 - arguments:
