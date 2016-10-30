@@ -137,7 +137,7 @@ def _get_session(server):
 
     config = _get_spacewalk_configuration(server)
     if not config:
-        return False
+        raise Exception('No config for \'{0}\' found on master'.format(server))
 
     session = _get_client_and_key(config['api_url'], config['username'], config['password'])
     atexit.register(_disconnect_session, session)
