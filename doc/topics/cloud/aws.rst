@@ -415,6 +415,16 @@ Multiple security groups can also be specified in the same fashion:
         - default
         - extra
 
+EC2 instances can be added to an `AWS Placement Group`_ by specifying the
+``placementgroup`` option:
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      placementgroup: my-aws-placement-group
+
+.. _`AWS Placement Group`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-groups.html
+
 Your instances may optionally make use of EC2 Spot Instances. The
 following example will request that spot instances be used and your
 maximum bid will be $0.10. Keep in mind that different spot prices
