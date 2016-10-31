@@ -180,7 +180,7 @@ def api(server, command, *args, **kwargs):
 
     call = '{0} {1}'.format(command, arguments)
     try:
-        client, key =  _get_session(server)
+        client, key = _get_session(server)
     except Exception as exc:
         err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server, exc)
         log.error(err_msg)
@@ -209,7 +209,7 @@ def addGroupsToKey(server, activation_key, groups):
     '''
 
     try:
-        client, key =  _get_session(server)
+        client, key = _get_session(server)
     except Exception as exc:
         err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server, exc)
         log.error(err_msg)
@@ -233,7 +233,7 @@ def deleteAllGroups(server):
     '''
 
     try:
-        client, key =  _get_session(server)
+        client, key = _get_session(server)
     except Exception as exc:
         err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server, exc)
         log.error(err_msg)
@@ -268,7 +268,7 @@ def deleteAllSystems(server):
     '''
 
     try:
-        client, key =  _get_session(server)
+        client, key = _get_session(server)
     except Exception as exc:
         err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server, exc)
         log.error(err_msg)
@@ -300,7 +300,7 @@ def deleteAllActivationKeys(server):
     '''
 
     try:
-        client, key =  _get_session(server)
+        client, key = _get_session(server)
     except Exception as exc:
         err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server, exc)
         log.error(err_msg)
@@ -335,7 +335,7 @@ def unregister(name, server_url):
     '''
 
     try:
-        client, key =  _get_session(server_url)
+        client, key = _get_session(server_url)
     except Exception as exc:
         err_msg = 'Exception raised when connecting to spacewalk server ({0}): {1}'.format(server_url, exc)
         log.error(err_msg)
