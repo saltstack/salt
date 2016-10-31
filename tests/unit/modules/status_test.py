@@ -105,8 +105,7 @@ class StatusTestCase(TestCase):
         m = self._set_up_test_uptime()
         m2 = self._set_up_test_uptime_sunos()
 
-        with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value="1\n2\n3"),
-                                          'cmd.run_all': MagicMock(return_value=m2)}):
+        with patch.dict(status.__salt__, {'cmd.run_all': MagicMock(return_value=m2.ret)}):
             with patch('time.time', MagicMock(return_value=m.now)):
                 ret = status.uptime()
                 self.assertDictEqual(ret, m.ret)
