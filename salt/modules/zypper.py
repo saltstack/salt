@@ -1115,11 +1115,6 @@ def upgrade(refresh=True,
         cmd_update.append('--dry-run')
 
     if dist_upgrade:
-        if dryrun:
-            # Creates a solver test case for debugging.
-            log.info('Executing debugsolver and performing a dry-run dist-upgrade')
-            __zypper__.noraise.call(*cmd_update + ['--debug-solver'])
-
         if fromrepo:
             for repo in fromrepo:
                 cmd_update.extend(['--from', repo])
@@ -1132,6 +1127,11 @@ def upgrade(refresh=True,
                 log.info('Disabling vendor changes')
             else:
                 log.warn('Disabling vendor changes is not supported on this Zypper version')
+
+        if dryrun:
+            # Creates a solver test case for debugging.
+            log.info('Executing debugsolver and performing a dry-run dist-upgrade')
+            __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update + ['--debug-solver'])
 
     old = list_pkgs()
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
