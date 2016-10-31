@@ -725,7 +725,6 @@ def mac(address='', interface='', vlan=0):
 
 def load_config(filename=None, text=None, test=False, commit=True):
 
-
     '''
     Populates the candidate configuration. It can be loaded from a file or from a string. If you send both a
     filename and a string containing the configuration, the file takes precedence.
