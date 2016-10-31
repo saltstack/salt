@@ -169,7 +169,6 @@ def uptime():
     elif salt.utils.is_freebsd() or salt.utils.is_darwin():
         # format: { sec = 1477761334, usec = 664698 } Sat Oct 29 17:15:34 2016
         bt_data = __salt__['sysctl.get']('kern.boottime')
-        res = __salt__['cmd.run_all']('sysctl -n kern.boottime')
         if not bt_data:
             raise CommandExecutionError('Cannot find kern.boottime system parameter')
         data = bt_data.split("{")[-1].split("}")[0].strip().replace(' ', '')
