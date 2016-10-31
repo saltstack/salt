@@ -279,15 +279,15 @@ def create(name, allocated_storage, db_instance_class, engine,
             log.info('Waiting 10 secs...')
             sleep(10)
             _describe = describe(name=name, tags=tags, region=region, key=key,
-                                 keyid=keyid, profile=profile)
+                                 keyid=keyid, profile=profile)['rds']
             if not _describe:
                 return {'created': True}
-            if _describe['db_instance_status'] == wait_status:
+            if _describe['DBInstanceStatus'] == wait_status:
                 return {'created': True, 'message':
                         'Created RDS {0} with current status '
-                        '{1}'.format(name, _describe['db_instance_status'])}
+                        '{1}'.format(name, _describe['DBInstanceStatus'])}
 
-            log.info('Current status: {0}'.format(_describe['db_instance_status']))
+            log.info('Current status: {0}'.format(_describe['DBInstanceStatus']))
 
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
@@ -526,7 +526,7 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
                     'CopyTagsToSnapshot', 'MonitoringInterval',
                     'MonitoringRoleArn', 'PromotionTier',
                     'DomainMemberships')
-            return {'rds': dict([(k, rds.get(k)) for k in keys])}
+            return {'rds': dict([(k, rds.get('DBInstances', [{}])[0].get(k)) for k in keys])}
         else:
             return {'rds': None}
     except ClientError as e:
