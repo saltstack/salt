@@ -2,6 +2,10 @@
 '''
 Module for controlling the LED matrix or reading environment data on the SenseHat of a Raspberry Pi.
 
+:maintainer:    Benedikt Werner <1benediktwerner@gmail.com>, Joachim Werner <joe@suse.com>
+:maturity:      new
+:depends:       sense_hat Python module
+
 You can specify the rotation of the Pi in a pillar.
 This is useful if it is used upside down or sideways to correct the orientation of the image being shown.
 
@@ -12,9 +16,6 @@ Example:
     sensehat:
         rotation: 90
 
-:maintainer:    Benedikt Werner <1benediktwerner@gmail.com>, Joachim Werner <joe@suse.com>
-:maturity:      new
-:depends:       sense_hat Python module
 '''
 
 from __future__ import absolute_import
@@ -62,17 +63,18 @@ def get_pixels():
     Returns a list of 64 smaller lists of `[R, G, B]` pixels representing the
     the currently displayed image on the LED matrix.
 
-    Note: When using `set_pixels` the pixel values can sometimes change when
-    you read them again using `get_pixels`. This is because we specify each
-    pixel element as 8 bit numbers (0 to 255) but when they're passed into the
-    Linux frame buffer for the LED matrix the numbers are bit shifted down
-    to fit into RGB 565. 5 bits for red, 6 bits for green and 5 bits for blue.
-    The loss of binary precision when performing this conversion
-    (3 bits lost for red, 2 for green and 3 for blue) accounts for the
-    discrepancies you see.
+    .. note::
+        When using `set_pixels` the pixel values can sometimes change when
+        you read them again using `get_pixels`. This is because we specify each
+        pixel element as 8 bit numbers (0 to 255) but when they're passed into the
+        Linux frame buffer for the LED matrix the numbers are bit shifted down
+        to fit into RGB 565. 5 bits for red, 6 bits for green and 5 bits for blue.
+        The loss of binary precision when performing this conversion
+        (3 bits lost for red, 2 for green and 3 for blue) accounts for the
+        discrepancies you see.
 
-    The `get_pixels` method provides an accurate representation of how the
-    pixels end up in frame buffer memory after you have called `set_pixels`.
+        The `get_pixels` method provides an accurate representation of how the
+        pixels end up in frame buffer memory after you have called `set_pixels`.
     '''
     return _sensehat.get_pixels()
 
@@ -92,7 +94,7 @@ def set_pixel(x, y, color):
 
     .. code-block:: bash
 
-    salt 'raspberry' sensehat.set_pixel 0 0 '[255, 0, 0]'
+        salt 'raspberry' sensehat.set_pixel 0 0 '[255, 0, 0]'
     '''
     _sensehat.set_pixel(x, y, color)
     return {'color': color}
@@ -107,7 +109,8 @@ def get_pixel(x, y):
     y
         The y coodrinate of th pixel. Ranges from 0 at the top to 7 at the bottom.
 
-    Note: Please read the note for `get_pixels`
+    .. note::
+        Please read the note for `get_pixels`
     '''
     return _sensehat.get_pixel(x, y)
 
@@ -120,8 +123,8 @@ def low_light(low_light=True):
 
     .. code-block:: bash
 
-    salt 'raspberry' sensehat.low_light
-    salt 'raspberry' sensehat.low_light False
+        salt 'raspberry' sensehat.low_light
+        salt 'raspberry' sensehat.low_light False
     '''
     _sensehat.low_light = low_light
     return {'low_light': low_light}
@@ -136,11 +139,14 @@ def show_message(message, msg_type=None,
         The message to display
     msg_type
         The type of the message. Changes the appearence of the message.
-        Available types are:
+
+        Available types are::
+
             error:      red text
             warning:    orange text
             success:    green text
             info:       blue text
+
     scroll_speed
         The speed at which the message moves over the LED matrix.
         This value represents the time paused for between shifting the text
@@ -192,9 +198,9 @@ def show_letter(letter, text_color=None, back_color=None):
 
     .. code-block:: bash
 
-    salt 'raspberry' sensehat.show_letter O
-    salt 'raspberry' sensehat.show_letter X '[255, 0, 0]'
-    salt 'raspberry' sensehat.show_letter B '[0, 0, 255]' '[255, 255, 0]'
+        salt 'raspberry' sensehat.show_letter O
+        salt 'raspberry' sensehat.show_letter X '[255, 0, 0]'
+        salt 'raspberry' sensehat.show_letter B '[0, 0, 255]' '[255, 255, 0]'
     '''
     text_color = text_color or [255, 255, 255]
     back_color = back_color or [0, 0, 0]
@@ -214,7 +220,7 @@ def show_image(image):
 
     .. code-block:: bash
 
-    salt 'raspberry' sensehat.show_image /tmp/my_image.png
+        salt 'raspberry' sensehat.show_image /tmp/my_image.png
     '''
     return _sensehat.load_image(image)
 
@@ -227,8 +233,8 @@ def clear(color=None):
 
     .. code-block:: bash
 
-    salt 'raspberry' sensehat.clear
-    salt 'raspberry' sensehat.clear '[255, 0, 0]'
+        salt 'raspberry' sensehat.clear
+        salt 'raspberry' sensehat.clear '[255, 0, 0]'
     '''
     if color is None:
         _sensehat.clear()
