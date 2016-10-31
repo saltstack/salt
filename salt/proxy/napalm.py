@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-NAPALM
-========
+NAPALM: Network Automation and Programmability Abstraction Layer with Multivendor support
+=========================================================================================
 
 Proxy minion for managing network devices via NAPALM_ library.
 
@@ -15,19 +15,12 @@ Proxy minion for managing network devices via NAPALM_ library.
 Dependencies
 ------------
 
-The ``napalm`` proxy module requires `NAPALM`_ library to be installed:  ``pip install napalm``
-Please check `Installation`_ for complete details.
+The ``napalm`` proxy module requires NAPALM_ library to be installed:  ``pip install napalm``
+Please check Installation_ for complete details.
 
-.. _`NAPALM`: https://github.com/napalm-automation/napalm
-.. _`Installation`: https://napalm.readthedocs.io/en/latest/installation.html
+.. _NAPALM: https://github.com/napalm-automation/napalm
+.. _Installation: https://napalm.readthedocs.io/en/latest/installation.html
 
-See also
---------
-
-- :doc:`NET module: execute basic commands (salt.modules.napalm_network) </ref/modules/all/salt.modules.napalm_network>`
-- :doc:`NTP operational and configuration module (salt.modules.napalm_ntp) </ref/modules/all/salt.modules.napalm_ntp>`
-- :doc:`BGP operational and configuration module (salt.modules.napalm_bgp) </ref/modules/all/salt.modules.napalm_bgp>`
-- :doc:`Probes oper and config module (salt.modules.napalm_probes) </ref/modules/all/salt.modules.napalm_probes>`
 
 Pillar
 ------
@@ -39,8 +32,11 @@ please refer to the `NAPALM Read the Docs page`_.
 * host: hostname
 * username: username to be used when connecting to the device
 * passwd: the password needed to establish the connection
+* optional_args: dictionary with the optional arguments. Check the complete list of supported `optional arguments`_
 
 .. _`NAPALM Read the Docs page`: https://napalm.readthedocs.io/en/latest/#supported-network-operating-systems
+.. _`optional arguments`: http://napalm.readthedocs.io/en/latest/support/index.html#list-of-supported-optional-arguments
+
 
 Example:
 
@@ -54,7 +50,14 @@ Example:
         passwd: my_password
         optional_args:
             port: 12201
-            nxos_protocol: https
+            config_format: set
+
+.. seealso::
+
+    - :mod:`NET mdoule: network basic features <salt.modules.napalm_network>`
+    - :mod:`NTP operational and configuration management module <salt.modules.napalm_ntp>`
+    - :mod:`BGP operational and configuration management module <salt.modules.napalm_bgp>`
+    - :mod:`Probes operational and configuration management module <salt.modules.napalm_probes>`
 
 .. versionadded: 2016.11.0
 '''
