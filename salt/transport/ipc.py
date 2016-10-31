@@ -702,7 +702,9 @@ class IPCMessageSubscriber(IPCClient):
                     self.io_loop.spawn_callback(callback, body)
             except tornado.iostream.StreamClosedError as exc:
                 log.trace('Subscriber disconnected from IPC {0}'.format(self.socket_path))
-                raise exc
+                if not self._closing:
+                    raise exc
+                break
             except Exception as exc:
                 log.error('Exception occurred while Subscriber handling stream: {0}'.format(exc))
                 raise exc
