@@ -140,7 +140,7 @@ def uptime():
         key/value pairs containing uptime information, instead of the output
         from a ``cmd.run`` call.
     .. versionchanged:: carbon
-        Fall back to output of `uptime` when /proc/uptime is not available.
+        Support for OpenBSD, FreeBSD, NetBSD, MacOS, and Solaris
 
     CLI Example:
 
@@ -148,26 +148,54 @@ def uptime():
 
         salt '*' status.uptime
     '''
-    ut_ret = {'seconds': 0}
+    curr_seconds = time.time()
+
+    # Get uptime in seconds
     if salt.utils.is_linux():
         ut_path = "/proc/uptime"
         if not os.path.exists(ut_path):
             raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
-        ut_ret['seconds'] = int(float(open(ut_path).read().strip().split()[0]))
+        seconds = int(float(salt.utils.fopen(ut_path).read().split()[0]))
     elif salt.utils.is_sunos():
-        cmd = "kstat -p unix:0:system_misc:boot_time | nawk '{printf \"%d\\n\", srand()-$2}'"
-        ut_ret['seconds'] = int(__salt__['cmd.shell'](cmd, output_loglevel='trace').strip() or 0)
+        # note: some flavors/vesions report the host uptime inside a zone
+        #       https://support.oracle.com/epmos/faces/BugDisplay?id=15611584
+        res = __salt__['cmd.run_all']('kstat -p unix:0:system_misc:boot_time')
+        if res['retcode'] > 0:
+            raise CommandExecutionError('The boot_time kstat was not found.')
+        seconds = int(curr_seconds - int(res['stdout'].split()[-1]))
+    elif salt.utils.is_openbsd() or salt.utils.is_netbsd():
+        bt_data = __salt__['sysctl.get']('kern.boottime')
+        if not bt_data:
+            raise CommandExecutionError('Cannot find kern.boottime system parameter')
+        seconds = int(curr_seconds - int(bt_data))
+    elif salt.utils.is_freebsd() or salt.utils.is_darwin():
+        # format: { sec = 1477761334, usec = 664698 } Sat Oct 29 17:15:34 2016
+        bt_data = __salt__['sysctl.get']('kern.boottime')
+        if not bt_data:
+            raise CommandExecutionError('Cannot find kern.boottime system parameter')
+        data = bt_data.split("{")[-1].split("}")[0].strip().replace(' ', '')
+        uptime = dict([(k, int(v,)) for k, v in [p.strip().split('=') for p in data.split(',')]])
+        seconds = int(curr_seconds - uptime['sec'])
     else:
         return __salt__['cmd.run']('uptime')
 
-    utc_time = datetime.datetime.utcfromtimestamp(time.time() - ut_ret['seconds'])
-    ut_ret['since_iso'] = utc_time.isoformat()
-    ut_ret['since_t'] = time.mktime(utc_time.timetuple())
-    ut_ret['days'] = ut_ret['seconds'] // 60 // 60 // 24
-    hours = (ut_ret['seconds'] - (ut_ret['days'] * 24 * 60 * 60)) // 60 // 60
-    minutes = ((ut_ret['seconds'] - (ut_ret['days'] * 24 * 60 * 60)) // 60) - hours * 60
-    ut_ret['time'] = '{0}:{1}'.format(hours, minutes)
-    ut_ret['users'] = len(__salt__['cmd.run']("who -s").split(os.linesep))
+    # Setup datetime and timedelta objects
+    boot_time = datetime.datetime.utcfromtimestamp(curr_seconds - seconds)
+    curr_time = datetime.datetime.utcfromtimestamp(curr_seconds)
+    up_time = curr_time - boot_time
+
+    # Construct return information
+    ut_ret = {
+        'seconds': seconds,
+        'since_iso': boot_time.isoformat(),
+        'since_t': int(curr_seconds - seconds),
+        'days': up_time.days,
+        'time': '{0}:{1}'.format(up_time.seconds // 3600, up_time.seconds % 3600 // 60),
+    }
+
+    if salt.utils.which('who'):
+        who_cmd = 'who' if salt.utils.is_openbsd() else 'who -s'  # OpenBSD does not support -s
+        ut_ret['users'] = len(__salt__['cmd.run'](who_cmd).split(os.linesep))
 
     return ut_ret
 
