@@ -145,8 +145,10 @@ class StatusTestCase(TestCase):
         '''
         Test modules.status.uptime function for other platforms
         '''
+        exc_mock = MagicMock(side_effect=CommandExecutionError)
         with self.assertRaises(CommandExecutionError):
-            status.uptime()
+            with patch.dict(status.__salt__, {'cmd.run': exc_mock}):
+                status.uptime()
 
 
 if __name__ == '__main__':
