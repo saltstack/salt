@@ -96,27 +96,6 @@ class StdTest(integration.ModuleCase):
         self.assertIn('minion', ret)
         self.assertEqual({'ret': True, 'success': True}, ret['minion'])
 
-        ret = self.client.cmd_full_return(
-                'minion',
-                'test.pong',
-                )
-        self.assertIn('minion', ret)
-
-        if self.master_opts['transport'] == 'zeromq':
-            self.assertEqual(
-                {
-                    'out': 'nested',
-                    'ret': '\'test.pong\' is not available.',
-                    'success': False
-                },
-                ret['minion']
-            )
-        elif self.master_opts['transport'] == 'raet':
-            self.assertEqual(
-                {'success': False, 'ret': '\'test.pong\' is not available.'},
-                ret['minion']
-            )
-
     def test_disconnected_return(self):
         '''
         Test return/messaging on a disconnected minion

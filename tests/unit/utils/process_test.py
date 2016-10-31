@@ -3,12 +3,13 @@
 # Import python libs
 from __future__ import absolute_import
 import os
+import sys
 import time
 import signal
 import multiprocessing
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -99,6 +100,7 @@ class TestProcessManager(TestCase):
                 process_manager.stop_restarting()
                 process_manager.kill_children()
 
+    @skipIf(sys.version_info < (2, 7), 'Needs > Py 2.7 due to bug in stdlib')
     def test_counter(self):
         def incr(counter, num):
             salt.utils.appendproctitle('test_counter')
