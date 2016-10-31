@@ -278,9 +278,9 @@ def long_int(hash_key):
     :return: long object if python 2.X, int object if python 3.X
     """
     if sys.version_info < (3,):
-        return int(hash_key)
-    else:
         return long(hash_key)
+    else:
+        return int(hash_key)
 
 
 def reshard(stream_name, desired_size, force=False,
