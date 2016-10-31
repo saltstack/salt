@@ -292,6 +292,16 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             if tempdir is not None:
                 shutil.rmtree(tempdir)
                 tempdir = None
+
+        # workaround for backports
+        os.symlink('salt/ext','/tmp/workaround_symlink_backports')
+        tftp_deref_old = tfp.dereference
+        tfp.dereference = False
+        tfp.add('/tmp/workaround_symlink_backports', arcname=os.path.join('py{0}'.format(py_ver), 'backports'))
+        tfp.dereference = tftp_deref_old
+        os.unlink('/tmp/workaround_symlink_backports')
+        # workaround end
+
     os.chdir(thindir)
     tfp.add('salt-call')
     with salt.utils.fopen(thinver, 'w+') as fp_:
