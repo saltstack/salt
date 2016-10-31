@@ -8,7 +8,7 @@ Manages BGP configuration on network devices and provides statistics.
 :codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
-:platform:   linux
+:platform:   unix
 
 Dependencies
 ------------
@@ -29,7 +29,7 @@ try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
     # pylint: disable=W0611
-    from napalm import get_network_driver
+    from napalm_base import get_network_driver
     # pylint: enable=W0611
     HAS_NAPALM = True
 except ImportError:
@@ -59,7 +59,7 @@ def __virtual__():
         return __virtualname__
     else:
         return (False, 'The module napalm_bgp (BGP) cannot be loaded: \
-                napalm lib or proxy could not be loaded.')
+                NAPALM lib or proxy could not be loaded.')
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -70,7 +70,7 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def config(group='', neighbor=''):
+def config(group=None, neighbor=None):
 
     '''
     Provides the BGP configuration on the device.
@@ -179,14 +179,15 @@ def config(group='', neighbor=''):
     )
 
 
-def neighbors(neighbor=''):
+def neighbors(neighbor=None):
 
     '''
     Provides details regarding the BGP sessions configured on the network device.
 
     :param neighbor: IP Address of a specific neighbor.
-    :return: A dictionary with the statistics of the selected BGP neighbors.
-    Keys of this dictionary represent the AS numbers, while the values are lists of dictionaries,
+    :return: A dictionary with the statistics of the all/selected BGP neighbors.
+    Outer dictionary keys represent the VRF name.
+    Keys of inner dictionary represent the AS numbers, while the values are lists of dictionaries,
     having the following keys:
 
         * up (True/False)
@@ -228,49 +229,52 @@ def neighbors(neighbor=''):
 
     .. code-block:: bash
 
-        salt '*' bgp.neighbors # all neighbors
-        salt '*' bgp.neighbors 172.17.17.1 # only session with BGP neighbor(s) 172.17.17.1
+        salt '*' bgp.neighbors  # all neighbors
+        salt '*' bgp.neighbors 172.17.17.1  # only session with BGP neighbor(s) 172.17.17.1
 
     Output Example:
 
     .. code-block:: python
 
         {
-            8121: [
-                {
-                    'up'                        : True,
-                    'local_as'                  : 13335,
-                    'remote_as'                 : 8121,
-                    'local_address'             : u'172.101.76.1',
-                    'local_address_configured'  : True,
-                    'local_port'                : 179,
-                    'remote_address'            : u'192.247.78.0',
-                    'remote_port'               : 58380,
-                    'multihop'                  : False,
-                    'import_policy'             : u'4-NTT-TRANSIT-IN',
-                    'export_policy'             : u'4-NTT-TRANSIT-OUT',
-                    'input_messages'            : 123,
-                    'output_messages'           : 13,
-                    'input_updates'             : 123,
-                    'output_updates'            : 5,
-                    'messages_queued_out'       : 23,
-                    'connection_state'          : u'Established',
-                    'previous_connection_state' : u'EstabSync',
-                    'last_event'                : u'RecvKeepAlive',
-                    'suppress_4byte_as'         : False,
-                    'local_as_prepend'          : False,
-                    'holdtime'                  : 90,
-                    'configured_holdtime'       : 90,
-                    'keepalive'                 : 30,
-                    'configured_keepalive'      : 30,
-                    'active_prefix_count'       : 132808,
-                    'received_prefix_count'     : 566739,
-                    'accepted_prefix_count'     : 566479,
-                    'suppressed_prefix_count'   : 0,
-                    'advertise_prefix_count'    : 0,
-                    'flap_count'                : 27
-                }
-            ]
+            'default': {
+                8121: [
+                    {
+                        'up'                        : True,
+                        'local_as'                  : 13335,
+                        'remote_as'                 : 8121,
+                        'local_address'             : u'172.101.76.1',
+                        'local_address_configured'  : True,
+                        'local_port'                : 179,
+                        'remote_address'            : u'192.247.78.0',
+                        'router_id':                : u'192.168.0.1',
+                        'remote_port'               : 58380,
+                        'multihop'                  : False,
+                        'import_policy'             : u'4-NTT-TRANSIT-IN',
+                        'export_policy'             : u'4-NTT-TRANSIT-OUT',
+                        'input_messages'            : 123,
+                        'output_messages'           : 13,
+                        'input_updates'             : 123,
+                        'output_updates'            : 5,
+                        'messages_queued_out'       : 23,
+                        'connection_state'          : u'Established',
+                        'previous_connection_state' : u'EstabSync',
+                        'last_event'                : u'RecvKeepAlive',
+                        'suppress_4byte_as'         : False,
+                        'local_as_prepend'          : False,
+                        'holdtime'                  : 90,
+                        'configured_holdtime'       : 90,
+                        'keepalive'                 : 30,
+                        'configured_keepalive'      : 30,
+                        'active_prefix_count'       : 132808,
+                        'received_prefix_count'     : 566739,
+                        'accepted_prefix_count'     : 566479,
+                        'suppressed_prefix_count'   : 0,
+                        'advertise_prefix_count'    : 0,
+                        'flap_count'                : 27
+                    }
+                ]
+            }
         }
     '''
 
