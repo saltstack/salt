@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon CloudWatch Events
 
-.. versionadded:: carbon
+.. versionadded:: 2016.11.0
 
 :configuration: This module accepts explicit credentials but can also utilize
     IAM roles assigned to the instance through Instance Profiles. Dynamic
