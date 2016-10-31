@@ -187,7 +187,7 @@ def _delete_ntp_servers(servers):
 
 def _exec_fun(name, *kargs):
 
-    if name in globals().keys():
+    if name in list(globals().keys()):
         return globals().get(name)(*kargs)
 
     return None
