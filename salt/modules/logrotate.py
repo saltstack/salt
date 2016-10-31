@@ -31,6 +31,22 @@ def __virtual__():
     return True
 
 
+def _convert_if_int(value):
+    '''
+    Convert to an int if necessary.
+
+    :param str value: The value to check/convert.
+
+    :return: The converted or passed value.
+    :rtype: bool|int|str
+    '''
+    try:
+        value = int(str(value))
+    except ValueError:
+        pass
+    return value
+
+
 def _parse_conf(conf_file=_DEFAULT_CONF):
     '''
     Parse a logrotate configuration file.
@@ -45,6 +61,7 @@ def _parse_conf(conf_file=_DEFAULT_CONF):
     multi_names = []
     multi = {}
     prev_comps = None
+
     with salt.utils.fopen(conf_file, 'r') as ifile:
         for line in ifile:
             line = line.strip()
@@ -81,15 +98,19 @@ def _parse_conf(conf_file=_DEFAULT_CONF):
                 for include in os.listdir(comps[1]):
                     if include not in ret['include files']:
                         ret['include files'][include] = []
-                    include_path = '{0}/{1}'.format(comps[1], include)
+
+                    include_path = os.path.join(comps[1], include)
                     include_conf = _parse_conf(include_path)
+
                     for file_key in include_conf:
                         ret[file_key] = include_conf[file_key]
                         ret['include files'][include].append(file_key)
 
             prev_comps = comps
-            if len(comps) > 1:
+            if len(comps) > 2:
                 key[comps[0]] = ' '.join(comps[1:])
+            elif len(comps) > 1:
+                key[comps[0]] = _convert_if_int(comps[1])
             else:
                 key[comps[0]] = True
     return ret
@@ -98,6 +119,11 @@ def _parse_conf(conf_file=_DEFAULT_CONF):
 def show_conf(conf_file=_DEFAULT_CONF):
     '''
     Show parsed configuration
+
+    :param str conf_file: The logrotate configuration file.
+
+    :return: The parsed configuration.
+    :rtype: dict
 
     CLI Example:
 
@@ -108,9 +134,46 @@ def show_conf(conf_file=_DEFAULT_CONF):
     return _parse_conf(conf_file)
 
 
+def get(key, value=None, conf_file=_DEFAULT_CONF):
+    '''
+    Get the value for a specific configuration line.
+
+    :param str key: The command or stanza block to configure.
+    :param str value: The command value or command of the block specified by the key parameter.
+    :param str conf_file: The logrotate configuration file.
+
+    :return: The value for a specific configuration line.
+    :rtype: bool|int|str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' logrotate.get rotate
+
+        salt '*' logrotate.get /var/log/wtmp rotate /etc/logrotate.conf
+    '''
+    current_conf = _parse_conf(conf_file)
+    stanza = current_conf.get(key, False)
+
+    if value:
+        if stanza:
+            return stanza.get(value, False)
+        _LOG.warning("Block '%s' not present or empty.", key)
+    return stanza
+
+
 def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
     '''
-    Set a new value for a specific configuration line
+    Set a new value for a specific configuration line.
+
+    :param str key: The command or block to configure.
+    :param str value: The command value or command of the block specified by the key parameter.
+    :param str setting: The command value for the command specified by the value parameter.
+    :param str conf_file: The logrotate configuration file.
+
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
 
     CLI Example:
 
@@ -143,49 +206,64 @@ def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
         if key in conf['include files'][include]:
             conf_file = os.path.join(conf['include'], include)
 
-    if isinstance(conf[key], dict) and not setting:
-        error_msg = ('Error: {0} includes a dict, and a specific setting inside the '
-                     'dict was not declared').format(key)
-        raise SaltInvocationError(error_msg)
+    new_line = str()
+    kwargs = {
+        'flags': 8,
+        'backup': False,
+        'path': conf_file,
+        'pattern': '^{0}.*'.format(key),
+        'show_changes': False
+    }
 
-    if setting:
-        if isinstance(conf[key], str):
+    if setting is None:
+        current_value = conf.get(key, False)
+
+        if isinstance(current_value, dict):
+            error_msg = ('Error: {0} includes a dict, and a specific setting inside the '
+                         'dict was not declared').format(key)
+            raise SaltInvocationError(error_msg)
+
+        if value == current_value:
+            _LOG.debug("Command '%s' already has: %s", key, value)
+            return True
+
+        # This is the new config line that will be set
+        if value is True:
+            new_line = key
+        elif value:
+            new_line = '{0} {1}'.format(key, value)
+
+        kwargs.update({'prepend_if_not_found': True})
+    else:
+        stanza = conf.get(key, dict())
+
+        if stanza and not isinstance(stanza, dict):
             error_msg = ('Error: A setting for a dict was declared, but the '
                          'configuration line given is not a dict')
             raise SaltInvocationError(error_msg)
-        # We're going to be rewriting an entire stanza
-        stanza = conf[key]
-        if value == 'False':
-            del stanza[value]
-        else:
-            stanza[value] = setting
-        new_line = _dict_to_stanza(key, stanza)
-        _LOG.debug(stanza)
-        _LOG.debug(new_line)
-        _LOG.debug(key)
-        return __salt__['file.replace'](conf_file,
-                                        '{0}.*{{.*}}'.format(key),
-                                        new_line,
-                                        flags=24,
-                                        backup=False,
-                                        show_changes=False)
-    # This is the new config line that will be set
-    if value == 'True':
-        new_line = key
-    elif value == 'False':
-        new_line = ''
-    else:
-        new_line = '{0} {1}'.format(key, value)
 
-    _LOG.debug(conf_file)
-    _LOG.debug(key)
-    _LOG.debug(new_line)
-    return __salt__['file.replace'](conf_file,
-                                    '^{0}.*'.format(key),
-                                    new_line,
-                                    flags=8,
-                                    backup=False,
-                                    show_changes=False)
+        if setting == stanza.get(value, False):
+            _LOG.debug("Command '%s' already has: %s", value, setting)
+            return True
+
+        # We're going to be rewriting an entire stanza
+        if setting:
+            stanza[value] = setting
+        else:
+            del stanza[value]
+
+        new_line = _dict_to_stanza(key, stanza)
+
+        kwargs.update({
+            'pattern': '^{0}.*?{{.*?}}'.format(key),
+            'flags': 24,
+            'append_if_not_found': True
+        })
+
+    kwargs.update({'repl': new_line})
+    _LOG.debug("Setting file '%s' line: %s", conf_file, new_line)
+
+    return __salt__['file.replace'](**kwargs)
 
 
 def _dict_to_stanza(key, stanza):
