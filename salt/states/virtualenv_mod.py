@@ -119,6 +119,8 @@ def managed(name,
           virtualenv.managed:
             - system_site_packages: False
             - requirements: salt://REQUIREMENTS.txt
+            - env_vars:
+                PATH_VAR: '/usr/local/bin/'
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
