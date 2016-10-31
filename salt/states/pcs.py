@@ -10,7 +10,7 @@ with the Pacemaker/Corosync configuration system (PCS)
 
 :depends: pcs
 
-Walkthrough of a complete PCS cluster setup: 
+Walkthrough of a complete PCS cluster setup:
 http://clusterlabs.org/doc/en-US/Pacemaker/1.1/html/Clusters_from_Scratch/
 
 Requirements:
