@@ -668,7 +668,7 @@ def get_all_instance_profiles(path_prefix='/', region=None, key=None,
     '''
     Get and return all IAM instance profiles, starting at the optional path.
 
-    .. versionadded:: carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -692,7 +692,7 @@ def list_instance_profiles(path_prefix='/', region=None, key=None,
     '''
     List all IAM instance profiles, starting at the optional path.
 
-    .. versionadded:: carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
