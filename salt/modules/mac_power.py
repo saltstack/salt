@@ -4,7 +4,9 @@ Module for editing power settings on Mac OS X
 
  .. versionadded:: 2016.3.0
 '''
+# Import python libs
 from __future__ import absolute_import
+import time
 
 # Import salt libs
 import salt.utils
@@ -238,7 +240,12 @@ def set_harddisk_sleep(minutes):
     value = _validate_sleep(minutes)
     cmd = 'systemsetup -setharddisksleep {0}'.format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return str(value) in get_harddisk_sleep()
+
+    # Give macOS some time to change the setting
+    for i in range(5):
+        if str(value) in get_harddisk_sleep():
+            return True
+        time.sleep(1)
 
 
 def get_wake_on_modem():

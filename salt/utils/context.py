@@ -174,6 +174,7 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
         if override_name:
             self.__class__.__module__ = 'salt'
             self.__class__.__name__ = override_name
+        super(NamespacedDictWrapper, self).__init__(self._dict())
 
     def _dict(self):
         r = self.__dict
