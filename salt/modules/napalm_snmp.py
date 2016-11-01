@@ -183,7 +183,24 @@ def update_config(chassis_id=None,
 
     .. code-block:: bash
 
-        salt '*' snmp.update_config contact="noc@cloudflare.com"
+        salt '*' snmp.update_config location="Greenwich, UK" test=True
+
+    Output example (for the CLI example above):
+
+    .. code-block:: yaml
+
+        edge01.lon01:
+            ----------
+            already_configured:
+                False
+            comment:
+                Configuration discarded.
+            diff:
+                [edit snmp]
+                -  location "London, UK";
+                +  location "Greenwich, UK";
+            result:
+                True
     '''
 
     dic = {
