@@ -392,19 +392,12 @@ class ProcessManager(object):
             try:
                 # in case someone died while we were waiting...
                 self.check_children()
-
-                if not salt.utils.is_windows() and not async:
-                    pid, exit_status = os.wait()
-                    if pid not in self._process_map:
-                        log.debug('Process of pid {0} died, not a known'
-                                  ' process, will not restart'.format(pid))
-                        continue
-                    if self._restart_processes is True:
-                        self.restart_process(pid)
-                elif async is True:
+                # The event-based subprocesses management code was removed from here
+                # because os.wait() conflicts with the subprocesses management logic
+                # implemented in `multiprocessing` package. See #35480 for details.
+                if async:
                     yield gen.sleep(10)
-                elif async is False:
-                    # os.wait() is not supported on Windows.
+                else:
                     time.sleep(10)
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:

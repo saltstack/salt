@@ -139,8 +139,9 @@ def uptime():
         The uptime function was changed to return a dictionary of easy-to-read
         key/value pairs containing uptime information, instead of the output
         from a ``cmd.run`` call.
-    .. versionchanged:: carbon
-        Support for OpenBSD, FreeBSD, NetBSD, MacOS, and Solaris
+
+    .. versionchanged:: 2016.11.0
+        Fall back to output of `uptime` when /proc/uptime is not available.
 
     CLI Example:
 

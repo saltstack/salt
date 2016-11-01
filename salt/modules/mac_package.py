@@ -113,7 +113,7 @@ def install_app(app, target='/Applications/'):
     if not app[-1] == '/':
         app += '/'
 
-    cmd = 'rsync -a --no-compress --delete {0} {1}'.format(app, target)
+    cmd = 'rsync -a --delete {0} {1}'.format(app, target)
     return __salt__['cmd.run'](cmd)
 
 
