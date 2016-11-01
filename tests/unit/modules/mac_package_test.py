@@ -57,7 +57,7 @@ class MacPackageTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {'cmd.run': mock}):
             macpackage.install_app('/path/to/file.app')
-            mock.assert_called_once_with('rsync -a --no-compress --delete /path/to/file.app/ '
+            mock.assert_called_once_with('rsync -a --delete /path/to/file.app/ '
                                          '/Applications/file.app')
 
     def test_install_app_specify_target(self):
@@ -67,7 +67,7 @@ class MacPackageTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {'cmd.run': mock}):
             macpackage.install_app('/path/to/file.app', '/Applications/new.app')
-            mock.assert_called_once_with('rsync -a --no-compress --delete /path/to/file.app/ '
+            mock.assert_called_once_with('rsync -a --delete /path/to/file.app/ '
                                          '/Applications/new.app')
 
     def test_install_app_with_slash(self):
@@ -77,7 +77,7 @@ class MacPackageTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {'cmd.run': mock}):
             macpackage.install_app('/path/to/file.app/')
-            mock.assert_called_once_with('rsync -a --no-compress --delete /path/to/file.app/ '
+            mock.assert_called_once_with('rsync -a --delete /path/to/file.app/ '
                                          '/Applications/file.app')
 
     def test_uninstall(self):
