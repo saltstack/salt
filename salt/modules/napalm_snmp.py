@@ -183,7 +183,7 @@ def update_config(chassis_id=None,
 
     .. code-block:: bash
 
-        salt '*' snmp.update_config location="Greenwich, UK" test=True
+        salt 'edge01.lon01' snmp.update_config location="Greenwich, UK" test=True
 
     Output example (for the CLI example above):
 
