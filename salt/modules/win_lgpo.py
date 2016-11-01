@@ -3927,7 +3927,7 @@ def _write_regpol_data(data_to_write, policy_file_path, gpt_ini, gpt_extension):
     helper function to actually write the data to a Registry.pol file
 
     also updates/edits the gpt.ini file to include the ADM policy extensions
-    to let the computer know user and/or machine registyr policy files need
+    to let the computer know user and/or machine registry policy files need
     to be processed
 
     data_to_write: data to write into the user/machine registry.pol file
