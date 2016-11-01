@@ -2,7 +2,7 @@
 '''
 Cache data in filesystem.
 
-.. versionadded:: carbon
+.. versionadded:: 2016.11.0
 
 Expirations can be set in the relevant config file (``/etc/salt/master`` for
 the master, ``/etc/salt/cloud`` for Salt Cloud, etc).

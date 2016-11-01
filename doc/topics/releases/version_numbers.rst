@@ -28,8 +28,9 @@ Assigned codenames:
 - Lithium: ``2015.5.0``
 - Beryllium: ``2015.8.0``
 - Boron: ``2016.3.0``
-- Carbon: ``TBD``
+- Carbon: ``2016.11.0``
 - Nitrogen: ``TBD``
+- Oxygen: ``TBD``
 
 Example
 -------

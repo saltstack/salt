@@ -86,11 +86,11 @@ class SaltStackVersion(object):
         'Lithium'       : (2015, 5),
         'Beryllium'     : (2015, 8),
         'Boron'         : (2016, 3),
-        'Carbon'        : (MAX_SIZE - 103, 0),
+        'Carbon'        : (2016, 11),
         'Nitrogen'      : (MAX_SIZE - 102, 0),
         'Oxygen'        : (MAX_SIZE - 101, 0),
+        'Fluorine'      : (MAX_SIZE - 100, 0),
         # pylint: disable=E8265
-        #'Fluorine'     : (MAX_SIZE - 100, 0),
         #'Neon'         : (MAX_SIZE - 99 , 0),
         #'Sodium'       : (MAX_SIZE - 98 , 0),
         #'Magnesium'    : (MAX_SIZE - 97 , 0),

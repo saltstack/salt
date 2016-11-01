@@ -1,13 +1,14 @@
 :orphan:
 
-====================================
-Salt Release Notes - Codename Carbon
-====================================
+==============================================
+Salt 2016.11.0 Release Notes - Codename Carbon
+==============================================
 
 Release Candidate
 =================
 
-See :ref:`Installing/Testing a Salt Release Candidate <release-candidate>` for instructions to install the latest release candidate.
+See :ref:`Installing/Testing a Salt Release Candidate <release-candidate>` for instructions to install the
+latest release candidate.
 
 Release Candidate Known Issues
 ------------------------------
@@ -25,7 +26,7 @@ New Features
 Docker Introspection and Configuration
 --------------------------------------
 
-Major additions have been made to the Docker support in Carbon. The new
+Major additions have been made to the Docker support in 2016.11.0. The new
 addition allows Salt to be executed within a Docker container without a
 minion running or installed in the container. This allows states to
 be run inside a container, but also all of Salt's remote execution
@@ -151,7 +152,7 @@ Grains Changes
   is the `official capitalization <https://www.vmware.com>`_.  Additionally,
   all references to ``VMWare`` in the documentation have been changed to
   ``VMware`` :issue:`30807`.  Environments using versions of Salt before and
-  after Salt Carbon should employ case-insensitive grain matching on these
+  after Salt 2016.11.0 should employ case-insensitive grain matching on these
   grains.
 
   .. code-block:: jinja
@@ -374,7 +375,7 @@ General Deprecations
 - ``env`` to ``saltenv``
 
   All occurrences of ``env`` and some occurrences of ``__env__`` marked for
-  deprecation in Salt Carbon have been removed.  The new way to use the salt
+  deprecation in Salt 2016.11.0 have been removed.  The new way to use the salt
   environment setting is with a variable called ``saltenv``:
 
   .. code-block:: python
