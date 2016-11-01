@@ -666,7 +666,10 @@ def chgroups(name, groups, append=True):
             continue
         group = _cmd_quote(group).lstrip('\'').rstrip('\'')
         cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
-        __salt__['cmd.run_all'](cmd, python_shell=True)
+        out = __salt__['cmd.run_all'](cmd, python_shell=True)
+        if out['retcode'] != 0:
+            log.error(out['stdout'])
+            return False
 
     agrps = set(list_groups(name))
     return len(ugrps - agrps) == 0
