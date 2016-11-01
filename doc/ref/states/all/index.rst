@@ -141,6 +141,7 @@ state modules
     mysql_query
     mysql_user
     netntp
+    netsnmp
     network
     nftables
     npm
