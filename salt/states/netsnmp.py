@@ -23,7 +23,6 @@ from __future__ import absolute_import
 import logging
 log = logging.getLogger(__name__)
 
-from copy import deepcopy
 from json import loads, dumps
 
 # salt lib
@@ -122,6 +121,8 @@ def _clear_community_details(community_details):
 
     if community_details['mode'] not in ['ro', 'rw']:
         community_details['mode'] = 'ro'  # default is read-only
+
+    return community_details
 
 
 def _str_elem(config, key):
@@ -227,19 +228,19 @@ def _compute_diff(existing, expected):
 
     for key in ['location', 'contact', 'chassis_id']:
         if existing.get(key) != expected.get(key):
-             _create_diff(diff,
-                          _valid_str,
-                          key,
-                          existing.get(key),
-                          expected.get(key))
+            _create_diff(diff,
+                         _valid_str,
+                         key,
+                         existing.get(key),
+                         expected.get(key))
 
     for key in ['community']:  # for the moment only onen
         if existing.get(key) != expected.get(key):
-             _create_diff(diff,
-                          _valid_dict,
-                          key,
-                          existing.get(key),
-                          expected.get(key))
+            _create_diff(diff,
+                         _valid_dict,
+                         key,
+                         existing.get(key),
+                         expected.get(key))
 
     return diff
 
