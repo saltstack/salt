@@ -43,6 +43,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
 
     for host, addr in host_addrs.items():
         addr = str(addr)
+        ret[addr] = __opts__.get('roster_defaults', {}).copy()
         for port in ports:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -50,7 +51,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
                 sock.connect((addr, port))
                 sock.shutdown(socket.SHUT_RDWR)
                 sock.close()
-                ret[host] = {'host': host, 'port': port}
+                ret[host].update({'host': host, 'port': port})
             except socket.error:
                 pass
     return ret

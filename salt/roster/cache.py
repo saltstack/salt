@@ -38,7 +38,8 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     cached_data = __runner__['cache.grains'](tgt=tgt, expr_form=tgt_type)
     ret = {}
     for server, grains in cached_data.items():
-        ret[server] = {'host': extract_ipv4(roster_order, grains.get('ipv4', []))}
+        ret[server] = __opts__.get('roster_defaults', {}).copy()
+        ret[server].update({'host': extract_ipv4(roster_order, grains.get('ipv4', []))})
     return ret
 
 
