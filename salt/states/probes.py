@@ -173,7 +173,7 @@ def _compare_probes(configured_probes, expected_probes):
         # new tests for common probes
         for test_name in new_tests_keys_set:
             if probe_name not in new_probes.keys():
-                 new_probes[probe_name] = {}
+                new_probes[probe_name] = {}
             new_probes[probe_name].update({
                 test_name: probe_tests.pop(test_name)
             })
@@ -350,10 +350,12 @@ def managed(name, probes, defaults=None):
     # build expect probes config dictionary
     # using default values
     configured_probes = rpm_probes_config.get('out', {})
+    if not isinstance(defaults, dict):
+        defaults = {}
     expected_probes = _expand_probes(probes, defaults)
 
-    _clean_probes(configured_probes)  # let's remove the unnecessary data
-    _clean_probes(expected_probes)  # and here
+    _clean_probes(configured_probes)  # let's remove the unnecessary data from the configured probes
+    _clean_probes(expected_probes)  # also from the expected data
 
     # ----- Compare expected config with the existing config ---------------------------------------------------------->
 
@@ -423,6 +425,7 @@ def managed(name, probes, defaults=None):
     # ----- Try to save changes --------------------------------------------------------------------------------------->
 
     if config_change_expected:
+        # if any changes expected, try to commit
         result, comment = __salt__['net.config_control']()
 
     # <---- Try to save changes ----------------------------------------------------------------------------------------
@@ -432,10 +435,14 @@ def managed(name, probes, defaults=None):
 
     add_scheduled = _schedule_probes(add_probes)
     if add_scheduled.get('result'):
+        # if able to load the template to schedule the probes, try to commit the scheduling data
+        # (yes, a second commit is needed)
+        # on devices such as Juniper, RPM probes do not need to be scheduled
+        # therefore the template is empty and won't try to commit empty changes
         result, comment = __salt__['net.config_control']()
 
     if config_change_expected:
-        if result and comment == '':
+        if result and comment == '':  # if any changes and was able to apply them
             comment = 'Probes updated successfully!'
 
     ret.update({
