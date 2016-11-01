@@ -2477,7 +2477,7 @@ class _policy_info(object):
         '''
         minimum = 0
         maximum = 1
-        if isinstance(string_types, val):
+        if isinstance(val, string_types):
             if val.lower() == 'not defined':
                 return True
             else:
