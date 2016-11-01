@@ -4172,7 +4172,7 @@ def set_computer_policy(name,
     '''
     pol = {}
     pol[name] = setting
-    ret = set(computer_policy=pol,
+    ret = set_(computer_policy=pol,
               user_policy=None,
               cumulative_rights_assignments=cumulative_rights_assignments,
               adml_language=adml_language)
@@ -4201,7 +4201,7 @@ def set_user_policy(name,
     '''
     pol = {}
     pol[name] = setting
-    ret = set(user_policy=pol,
+    ret = set_(user_policy=pol,
               computer_policy=None,
               cumulative_rights_assignments=True,
               adml_language=adml_language)
