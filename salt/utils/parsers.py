@@ -2559,11 +2559,18 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
         self.add_option(
             '--metadata',
             default=False,
-            dest='metadata',
+            dest='print_metadata',
             action='store_true',
             help=('Print out the execution metadata as well as the return. '
                   'This will print out the outputter data, the return code, '
                   'etc.')
+        )
+        self.add_option(
+            '--set-metadata',
+            dest='metadata',
+            default=None,
+            metavar='METADATA',
+            help=('Pass metadata into Salt, used to search jobs.')
         )
         self.add_option(
             '--id',
