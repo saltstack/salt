@@ -3578,7 +3578,7 @@ def get_managed(
                     return '', {}, ('Source hash file {0} not found'
                                     .format(source_hash))
                 source_sum = extract_hash(
-                    hash_fn, '', source_hash_name or name)
+                    hash_fn, '', source_hash_name or urlparsed_source.path)
                 if source_sum is None:
                     return _invalid_source_hash_format()
 
