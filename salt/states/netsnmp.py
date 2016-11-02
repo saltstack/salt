@@ -90,7 +90,7 @@ def _valid_str(value):
     Valid str?
     '''
 
-    return isinstance(value, basestring) and len(value) > 0
+    return isinstance(value, six.string_types) and len(value) > 0
 
 
 def _community_defaults():
@@ -105,7 +105,6 @@ def _community_defaults():
 
 
 def _clear_community_details(community_details):
-
 
     '''
     Clears community details.
@@ -199,7 +198,7 @@ def _create_diff_action(diff, diff_key, key, value):
     DRY to build diff parts (added, removed, updated).
     '''
 
-    if not diff_key in diff.keys():
+    if diff_key not in diff.keys():
         diff[diff_key] = {}
     diff[diff_key][key] = value
 
@@ -410,7 +409,6 @@ def managed(name, config=None, defaults=None):
 
     if expected_config_change:
         result, comment = __salt__['net.config_control']()
-
 
     # <---- Call _set_users and _delete_users as needed --------------------------------------------------------
 
