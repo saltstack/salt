@@ -78,6 +78,8 @@ same way as in the above example, only without a top-level ``grains:`` key:
     cabinet: 13
     cab_u: 14-15
 
+Note that ``/etc/salt/grains`` is ignored if you specify grains in the minion config.
+
 
 Matching Grains in the Top File
 ===============================
