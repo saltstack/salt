@@ -229,6 +229,7 @@ execution modules
     napalm_network
     napalm_ntp
     napalm_probes
+    napalm_route
     netaddress
     netbsd_sysctl
     netbsdservice
