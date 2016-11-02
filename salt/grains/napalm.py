@@ -11,7 +11,7 @@ NAPALM Grains
 Dependencies
 ------------
 
-- :doc:`NAPALM proxy module (salt.proxies.napalm) </ref/proxies/all/salt.proxies.napalm>`
+- :mod:`NAPALM proxy module <salt.proxies.napalm>`
 
 .. versionadded: Carbon
 '''
