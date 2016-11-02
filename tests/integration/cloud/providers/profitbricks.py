@@ -87,6 +87,16 @@ class ProfitBricksTest(integration.ShellCase):
                 .format(PROVIDER_NAME)
             )
 
+    def test_list_images(self):
+        '''
+        Tests the return of running the --list-images command for ProfitBricks
+        '''
+        image_list = self.run_cloud('--list-images {0}'.format(PROVIDER_NAME))
+        self.assertIn(
+            'Ubuntu-16.04-LTS-server-2016-10-06',
+            [i.strip() for i in image_list]
+        )
+
     def test_instance(self):
         '''
         Test creating an instance on ProfitBricks
