@@ -5,8 +5,6 @@ NAPALM: Network Automation and Programmability Abstraction Layer with Multivendo
 
 Proxy minion for managing network devices via NAPALM_ library.
 
-.. _NAPALM: https://napalm.readthedocs.io
-
 :codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
@@ -18,7 +16,7 @@ Dependencies
 The ``napalm`` proxy module requires NAPALM_ library to be installed:  ``pip install napalm``
 Please check Installation_ for complete details.
 
-.. _NAPALM: https://github.com/napalm-automation/napalm
+.. _NAPALM: https://napalm.readthedocs.io
 .. _Installation: https://napalm.readthedocs.io/en/latest/installation.html
 
 
@@ -54,12 +52,15 @@ Example:
 
 .. seealso::
 
-    - :mod:`NET mdoule: network basic features <salt.modules.napalm_network>`
+    - :mod:`NAPALM grains: select network devices based on their characteristics <salt.grains.napalm>`
+    - :mod:`NET module: network basic features <salt.modules.napalm_network>`
     - :mod:`NTP operational and configuration management module <salt.modules.napalm_ntp>`
     - :mod:`BGP operational and configuration management module <salt.modules.napalm_bgp>`
-    - :mod:`Probes operational and configuration management module <salt.modules.napalm_probes>`
+    - :mod:`Routes details <salt.modules.napalm_route>`
+    - :mod:`SNMP configuration module <salt.modules.napalm_snmp>`
+    - :mod:`Users configuration management <salt.modules.napalm_users>`
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 '''
 
 from __future__ import absolute_import
@@ -148,8 +149,7 @@ def init(opts):
             "Cannot connect to {hostname}{port} as {username}. Please check error: {error}".format(
                 hostname=NETWORK_DEVICE.get('HOSTNAME', ''),
                 port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS'])
-                        if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''
-                ),
+                      if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''),
                 username=NETWORK_DEVICE.get('USERNAME', ''),
                 error=error
             )
@@ -228,8 +228,7 @@ def shutdown(opts):
             'Cannot close connection with {hostname}{port}! Please check error: {error}'.format(
                 hostname=NETWORK_DEVICE.get('HOSTNAME', '[unknown hostname]'),
                 port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS'])
-                        if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''
-                ),
+                      if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''),
                 error=error
             )
         )
@@ -256,6 +255,11 @@ def call(method, **params):
         * result (True/False): if the operation succeeded
         * out (object): returns the object as-is from the call
         * comment (string): provides more details in case the call failed
+        * traceback (string): complete traceback in case of exeception. Please submit an issue including this traceback
+        on the `correct driver repo`_ and make sure to read the FAQ_
+
+    .. _`correct driver repo`: https://github.com/napalm-automation/napalm/issues/new
+    .. FAQ_: https://github.com/napalm-automation/napalm#faq
 
     Example:
 
@@ -283,18 +287,20 @@ def call(method, **params):
         # either not connected
         # either unable to execute the command
         err_tb = traceback.format_exc()  # let's get the full traceback and display for debugging reasons.
+        comment = 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
+            device=NETWORK_DEVICE.get('HOSTNAME', '[unspecified hostname]'),
+            port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS'])
+                  if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''),
+            user=NETWORK_DEVICE.get('USERNAME', ''),
+            method=method,
+            error=error
+        )
+        log.error(comment)
+        log.error(err_tb)
         return {
             'out': {},
             'result': False,
-            'comment': 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
-                device=NETWORK_DEVICE.get('HOSTNAME', '[unspecified hostname]'),
-                port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS'])
-                        if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''
-                ),
-                user=NETWORK_DEVICE.get('USERNAME', ''),
-                method=method,
-                error=error
-            ),
+            'comment': comment,
             'traceback': err_tb
         }
 
