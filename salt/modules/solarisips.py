@@ -146,7 +146,7 @@ def upgrade_available(name):
     return ret
 
 
-def list_upgrades(refresh=False, **kwargs):  # pylint: disable=W0613
+def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     '''
     Lists all packages available for update.
 
@@ -160,15 +160,22 @@ def list_upgrades(refresh=False, **kwargs):  # pylint: disable=W0613
     in the list of upgrades, then the global zone should be updated to get all
     possible updates. Use ``refresh=True`` to refresh the package database.
 
-    refresh : False
-        Set to ``True`` to force a full pkg DB refresh before listing
+    refresh : True
+        Runs a full package database refresh before listing. Set to ``False`` to
+        disable running the refresh.
+
+        .. versionchanged:: Nitrogen
+
+        In previous versions of Salt, ``refresh`` defaulted to ``False``. This was
+        changed to default to ``True`` in the Nitrogen release to make the behavior
+        more consistent with the other package modules, which all default to ``True``.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.list_upgrades
-        salt '*' pkg.list_upgrades refresh=True
+        salt '*' pkg.list_upgrades refresh=False
     '''
     if salt.utils.is_true(refresh):
         refresh_db(full=True)
