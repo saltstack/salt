@@ -47,6 +47,16 @@ touch /tmp/foo if it does not exist:
 
     The ``creates`` option was added to version 2014.7.0
 
+Sometimes when running a command that starts up a daemon, the init script
+doesn't return properly which causes Salt to wait indefinitely for a response.
+In situations like this try the following:
+
+.. code-block:: yaml
+
+    run_installer:
+      cmd.run:
+        - name: /tmp/installer.bin  > /dev/null 2>&1
+
 Salt determines whether the ``cmd`` state is successfully enforced based on the exit
 code returned by the command. If the command returns a zero exit code, then salt
 determines that the state was successfully enforced. If the script returns a non-zero
