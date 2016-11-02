@@ -363,7 +363,6 @@ def managed(name, probes, defaults=None):
 
     # <---- Compare expected config with the existing config -----------------------------------------------------------
 
-
     # ----- Call set_probes and delete_probes as needed --------------------------------------------------------------->
 
     add_probes = diff.get('add')
@@ -421,7 +420,6 @@ def managed(name, probes, defaults=None):
 
     # <---- Call set_probes and delete_probes as needed ----------------------------------------------------------------
 
-
     # ----- Try to save changes --------------------------------------------------------------------------------------->
 
     if config_change_expected:
@@ -429,7 +427,6 @@ def managed(name, probes, defaults=None):
         result, comment = __salt__['net.config_control']()
 
     # <---- Try to save changes ----------------------------------------------------------------------------------------
-
 
     # ----- Try to schedule the probes -------------------------------------------------------------------------------->
 
