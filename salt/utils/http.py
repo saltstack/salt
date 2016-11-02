@@ -458,44 +458,28 @@ def query(url,
         supports_max_body_size = 'max_body_size' in client_argspec.args
 
         try:
-            if supports_max_body_size:
-                result = HTTPClient(max_body_size=max_body).fetch(
-                    url_full,
-                    method=method,
-                    headers=header_dict,
-                    auth_username=username,
-                    auth_password=password,
-                    body=data,
-                    validate_cert=verify_ssl,
-                    allow_nonstandard_methods=True,
-                    streaming_callback=streaming_callback,
-                    header_callback=header_callback,
-                    request_timeout=timeout,
-                    proxy_host=proxy_host,
-                    proxy_port=proxy_port,
-                    proxy_username=proxy_username,
-                    proxy_password=proxy_password,
-                    **req_kwargs
-                )
-            else:
-                result = HTTPClient().fetch(
-                    url_full,
-                    method=method,
-                    headers=header_dict,
-                    auth_username=username,
-                    auth_password=password,
-                    body=data,
-                    validate_cert=verify_ssl,
-                    allow_nonstandard_methods=True,
-                    streaming_callback=streaming_callback,
-                    header_callback=header_callback,
-                    request_timeout=timeout,
-                    proxy_host=proxy_host,
-                    proxy_port=proxy_port,
-                    proxy_username=proxy_username,
-                    proxy_password=proxy_password,
-                    **req_kwargs
-                )
+            download_client = HTTPClient(max_body_size=max_body) \
+                if supports_max_body_size \
+                else HTTPClient()
+            result = download_client.fetch(
+                url_full,
+                method=method,
+                headers=header_dict,
+                auth_username=username,
+                auth_password=password,
+                body=data,
+                validate_cert=verify_ssl,
+                allow_nonstandard_methods=True,
+                streaming_callback=streaming_callback,
+                header_callback=header_callback,
+                request_timeout=timeout,
+                proxy_host=proxy_host,
+                proxy_port=proxy_port,
+                proxy_username=proxy_username,
+                proxy_password=proxy_password,
+                decompress_response=False,
+                **req_kwargs
+            )
         except tornado.httpclient.HTTPError as exc:
             ret['status'] = exc.code
             ret['error'] = str(exc)
