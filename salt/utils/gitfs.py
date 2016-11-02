@@ -243,6 +243,7 @@ class GitProvider(object):
 
         if hasattr(self, 'mountpoint'):
             self.mountpoint = salt.utils.url.strip_proto(self.mountpoint)
+            self.mountpoint = self.mountpoint.strip('/')
         else:
             # For providers which do not use a mountpoint, assume the
             # filesystem is mounted at the root of the fileserver.
