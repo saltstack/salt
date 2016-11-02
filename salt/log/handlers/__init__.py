@@ -121,18 +121,20 @@ class RotatingFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.Rotatin
         if (sys.platform.startswith('win') and
                 logging.raiseExceptions and
                 sys.stderr):  # see Python issue 13807
-            t, v, tb = sys.exc_info()
+            exc_type, exc, exc_traceback = sys.exc_info()
             try:
                 # PermissionError is used since Python 3.3.
                 # OSError is used for previous versions of Python.
-                if t.__name__ in ('PermissionError', 'OSError') and v.winerror == 32:
+                if exc_type.__name__ in ('PermissionError', 'OSError') and exc.winerror == 32:
                     if self.level <= logging.WARNING:
                         sys.stderr.write('[WARNING ] Unable to rotate the log file "{0}" '
                                          'because it is in use\n'.format(self.baseFilename)
                         )
                     handled = True
             finally:
-                del t, v, tb
+                # 'del' recommended. See documentation of
+                # 'sys.exc_info()' for details.
+                del exc_type, exc, exc_traceback
 
         if not handled:
             super(RotatingFileHandler, self).handleError(record)
