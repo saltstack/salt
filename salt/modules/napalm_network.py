@@ -722,7 +722,6 @@ def mac(address='', interface='', vlan=0):
 # ----- Configuration specific functions ------------------------------------------------------------------------------>
 
 
-
 def load_config(filename=None, text=None, test=False, commit=True):
 
     '''
