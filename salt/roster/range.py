@@ -66,8 +66,21 @@ def targets(tgt, tgt_type='range', **kwargs):
 
 
 def target_range(tgt, hosts):
-    return dict((host, {'host': host, 'user': __opts__['ssh_user']}) for host in hosts)
+    ret = {}
+    for host in hosts:
+        ret[host] = __opts__.get('roster_defaults', {}).copy()
+        ret[host].update({'host': host})
+        if __opts__.get('ssh_user'):
+            ret[host].update({'user': __opts__['ssh_user']})
+    return ret
 
 
 def target_glob(tgt, hosts):
-    return dict((host, {'host': host, 'user': __opts__['ssh_user']}) for host in hosts if fnmatch.fnmatch(tgt, host))
+    ret = {}
+    for host in hosts:
+        if fnmatch.fnmatch(tgt, host):
+            ret[host] = __opts__.get('roster_defaults', {}).copy()
+            ret[host].update({'host': host})
+            if __opts__.get('ssh_user'):
+                ret[host].update({'user': __opts__['ssh_user']})
+    return ret
