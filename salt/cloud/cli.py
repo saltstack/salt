@@ -16,7 +16,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 import sys
-import time
 import logging
 from salt.ext.six.moves import input
 
@@ -364,10 +363,6 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.handle_exception(msg, exc)
 
         elif self.options.bootstrap:
-            if self.options.bootstrap_delay:
-                log.info('Sleeping for {0} seconds for bootstrap delay.'.format(self.options.bootstrap_delay))
-                time.sleep(self.options.bootstrap_delay)
-                log.info('Bootstrap delay finished. Onward!')
             host = self.options.bootstrap
             if len(self.args) > 0:
                 if '=' not in self.args[0]:
