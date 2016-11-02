@@ -4586,6 +4586,8 @@ def mkdir(dir_path,
         # to follow the principal of least surprise method.
         makedirs_perms(directory, user, group, mode)
 
+    return True
+
 
 def makedirs_(path,
               user=None,
