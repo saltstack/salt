@@ -13,7 +13,7 @@ Dependencies
 
 - :mod:`NAPALM proxy module <salt.proxies.napalm>`
 
-.. versionadded: Carbon
+.. versionadded:: 2016.11.0
 '''
 
 from __future__ import absolute_import

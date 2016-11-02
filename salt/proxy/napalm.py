@@ -60,7 +60,7 @@ Example:
     - :mod:`SNMP configuration module <salt.modules.napalm_snmp>`
     - :mod:`Users configuration management <salt.modules.napalm_users>`
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 '''
 
 from __future__ import absolute_import
