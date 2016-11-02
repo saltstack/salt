@@ -537,7 +537,7 @@ def destroy(name, conn=None, call=None):
             salt.utils.cloud.remove_sshkey(getattr(node, __opts__.get('ssh_interface', 'public_ips'))[0])
         if __opts__.get('update_cachedir', False) is True:
             __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
-        salt.utils.cloud.cachedir_index_del(name)
+        __utils__['cloud.cachedir_index_del'](name)
         return True
 
     log.error('Failed to Destroy VM: {0}'.format(name))
@@ -1001,9 +1001,7 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-    salt.utils.cloud.cachedir_index_add(
-    vm_['name'], vm_['profile'], 'nova', vm_['driver']
-    )
+    __utils__['cloud.cachedir_index_add'](vm_['name'], vm_['profile'], 'nova', vm_['driver'])
     return ret
 
 
