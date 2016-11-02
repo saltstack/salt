@@ -3542,54 +3542,53 @@ def get_managed(
             source_sum = _get_local_file_source_sum(urlparsed_source.path)
         elif not source_hash and source.startswith('/'):
             source_sum = _get_local_file_source_sum(source)
-        else:
-            if not skip_verify:
-                if source_hash:
-                    protos = ('salt', 'file') + remote_protos
+        elif not skip_verify:
+            if not source_hash:
+                msg = (
+                    'Unable to verify upstream hash of source file {0}, '
+                    'please set source_hash or set skip_verify to True'
+                    .format(source)
+                )
+                return '', {}, msg
 
-                    def _invalid_source_hash_format():
-                        '''
-                        DRY helper for reporting invalid source_hash input
-                        '''
-                        msg = (
-                            'Source hash {0} format is invalid. It '
-                            'must be in the format <hash type>=<hash>, '
-                            'or it must be a supported protocol: {1}'
-                            .format(source_hash, ', '.join(protos))
-                        )
-                        return '', {}, msg
+            protos = ('salt', 'file') + remote_protos
 
-                    try:
-                        source_hash_scheme = _urlparse(source_hash).scheme
-                    except TypeError:
-                        return '', {}, ('Invalid format for source_hash '
-                                        'parameter')
-                    if source_hash_scheme in protos:
-                        # The source_hash is a file on a server
-                        hash_fn = __salt__['cp.cache_file'](
-                            source_hash, saltenv)
-                        if not hash_fn:
-                            return '', {}, ('Source hash file {0} not found'
-                                            .format(source_hash))
-                        source_sum = extract_hash(
-                            hash_fn, '', source_hash_name or name)
-                        if source_sum is None:
-                            return _invalid_source_hash_format()
+            def _invalid_source_hash_format():
+                '''
+                DRY helper for reporting invalid source_hash input
+                '''
+                msg = (
+                    'Source hash {0} format is invalid. It '
+                    'must be in the format <hash type>=<hash>, '
+                    'or it must be a supported protocol: {1}'
+                    .format(source_hash, ', '.join(protos))
+                )
+                return '', {}, msg
 
-                    else:
-                        # The source_hash is a hash string
-                        comps = source_hash.split('=', 1)
-                        if len(comps) < 2:
-                            return _invalid_source_hash_format()
-                        source_sum['hsum'] = comps[1].strip()
-                        source_sum['hash_type'] = comps[0].strip()
-                else:
-                    msg = (
-                        'Unable to verify upstream hash of source file {0}, '
-                        'please set source_hash or set skip_verify to True'
-                        .format(source)
-                    )
-                    return '', {}, msg
+            try:
+                source_hash_scheme = _urlparse(source_hash).scheme
+            except TypeError:
+                return '', {}, ('Invalid format for source_hash '
+                                'parameter')
+            if source_hash_scheme in protos:
+                # The source_hash is a file on a server
+                hash_fn = __salt__['cp.cache_file'](
+                    source_hash, saltenv)
+                if not hash_fn:
+                    return '', {}, ('Source hash file {0} not found'
+                                    .format(source_hash))
+                source_sum = extract_hash(
+                    hash_fn, '', source_hash_name or name)
+                if source_sum is None:
+                    return _invalid_source_hash_format()
+
+            else:
+                # The source_hash is a hash string
+                comps = source_hash.split('=', 1)
+                if len(comps) < 2:
+                    return _invalid_source_hash_format()
+                source_sum['hsum'] = comps[1].strip()
+                source_sum['hash_type'] = comps[0].strip()
 
     if source and (template or urlparsed_source.scheme in remote_protos):
         # Check if we have the template or remote file cached
