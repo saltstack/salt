@@ -592,7 +592,7 @@ def create_launch_configuration(name, image_id, key_name=None,
     # If a VPC is specified, then determine the secgroup id's within that VPC, not
     # within the default VPC. If a security group id is already part of the list,
     # convert_to_group_ids leaves that entry without attempting a lookup on it.
-    if (security_groups and (vpc_id or vpc_name)):
+    if security_groups and (vpc_id or vpc_name):
         security_groups = __salt__['boto_secgroup.convert_to_group_ids'](
                                security_groups,
                                vpc_id=vpc_id, vpc_name=vpc_name,
