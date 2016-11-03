@@ -47,7 +47,16 @@ def _pshell(cmd, cwd=None):
     if 'convertto-json' not in cmd.lower():
         cmd = ' '.join([cmd, '| ConvertTo-Json'])
     log.debug('DSC: {0}'.format(cmd))
-    ret = __salt__['cmd.shell'](cmd, shell='powershell', cwd=cwd)
+    ret = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd,
+            python_shell=True, ignore_retcode=True)
+
+    if ret['retcode']:
+        log.debug('Error running command: {0}'.format(cmd))
+        log.debug(ret)
+        return False
+
+    ret = ret['stdout']
+
     try:
         ret = json.loads(ret, strict=False)
     except ValueError:
