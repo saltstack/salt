@@ -241,9 +241,11 @@ def present(
         raise SaltInvocationError('user_data and cloud_init are mutually'
                                   ' exclusive options.')
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    exists = __salt__['boto_asg.launch_configuration_exists'](name, region,
-                                                              key, keyid,
-                                                              profile)
+    exists = __salt__['boto_asg.launch_configuration_exists'](name,
+                                                              region=region,
+                                                              key=key,
+                                                              keyid=keyid,
+                                                              profile=profile)
     if not exists:
         if __opts__['test']:
             msg = 'Launch configuration set to be created.'
@@ -312,16 +314,22 @@ def absent(
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    exists = __salt__['boto_asg.launch_configuration_exists'](name, region,
-                                                              key, keyid,
-                                                              profile)
+    exists = __salt__['boto_asg.launch_configuration_exists'](name,
+                                                              region=region,
+                                                              key=key,
+                                                              keyid=keyid,
+                                                              profile=profile)
     if exists:
         if __opts__['test']:
             ret['comment'] = 'Launch configuration set to be deleted.'
             ret['result'] = None
             return ret
         deleted = __salt__['boto_asg.delete_launch_configuration'](
-            name, region, key, keyid, profile)
+                                                              name,
+                                                              region=region,
+                                                              key=key,
+                                                              keyid=keyid,
+                                                              profile=profile)
         if deleted:
             ret['changes']['old'] = name
             ret['changes']['new'] = None
