@@ -373,7 +373,7 @@ def managed(name, users=None, defaults=None):
     if __opts__['test'] is True:
         ret.update({
             'result': None,
-            'comment': 'This is in testing mode, the device configuration was not changed!'
+            'comment': 'Testing mode: configuration was not changed!'
         })
         return ret
 
