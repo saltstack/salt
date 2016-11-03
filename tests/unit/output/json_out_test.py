@@ -33,35 +33,30 @@ class JsonTestCase(TestCase):
         ret = json.output(self.data)
         self.assertIn('"test": "two"', ret)
         self.assertIn('"example": "one"', ret)
-        self.assertIn('"logs": [', ret)
 
     def test_pretty_output(self):
         json.__opts__['output_indent'] = 'pretty'
         ret = json.output(self.data)
         self.assertIn('"test": "two"', ret)
         self.assertIn('"example": "one"', ret)
-        self.assertIn('"logs": [', ret)
 
     def test_indent_output(self):
         json.__opts__['output_indent'] = 2
         ret = json.output(self.data)
         self.assertIn('"test": "two"', ret)
         self.assertIn('"example": "one"', ret)
-        self.assertIn('"logs": [', ret)
 
     def test_negative_zero_output(self):
         json.__opts__['output_indent'] = 0
         ret = json.output(self.data)
         self.assertIn('"test": "two"', ret)
         self.assertIn('"example": "one"', ret)
-        self.assertIn('"logs": [', ret)
 
     def test_negative_int_output(self):
         json.__opts__['output_indent'] = -1
         ret = json.output(self.data)
         self.assertIn('"test": "two"', ret)
         self.assertIn('"example": "one"', ret)
-        self.assertIn('"logs": [', ret)
 
     def test_unicode_output(self):
         json.__opts__['output_indent'] = 'pretty'
