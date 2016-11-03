@@ -56,10 +56,12 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Print the output data in JSON
     '''
-    if isinstance(data, dict) and 'local' not in data:
-        data.update(_get_log_stream_as_dict())
-    else:
-        log.debug('Unable to add logs to json', exc_info=True)
+    log_dict = _get_log_stream_as_dict()
+    # check if log entries exists.
+    #   try to avoid issues in ssh communication by salt.client.ssh handle_ssh()
+    #   could be checked by `tests/runtests.py -C --ssh`
+    if len(log_dict['logs']) > 0:
+        data.update(log_dict)
 
     try:
         if 'output_indent' not in __opts__:
@@ -103,6 +105,7 @@ def _get_log_stream_as_dict():
     getvalue_funcion = getattr(log_stream, "getvalue", None)
     if callable(getvalue_funcion):
         for line in log_stream.getvalue().split(os.linesep):
-            log_dict['logs'].append(line)
+            if line:
+                log_dict['logs'].append(line)
 
     return log_dict
