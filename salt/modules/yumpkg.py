@@ -703,7 +703,7 @@ def list_repo_pkgs(*args, **kwargs):
             version_list.add(pkg.version)
 
     if _no_repository_packages():
-        cmd_prefix = ['yum', '--quiet', 'list']
+        cmd_prefix = ['yum', '--quiet', 'list', '--showduplicates']
         for pkg_src in ('installed', 'available'):
             # Check installed packages first
             out = __salt__['cmd.run_all'](
