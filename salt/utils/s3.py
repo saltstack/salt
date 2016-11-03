@@ -93,7 +93,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         keyid = salt.utils.aws.IROLE_CODE
 
     if not location:
-        location = __utils__['aws.get_location']()
+        location = salt.utils.aws.get_location()
 
     data = ''
     payload_hash = None
