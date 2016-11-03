@@ -51,6 +51,7 @@ import logging
 import time
 import random
 import sys
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import third party libs
 # pylint: disable=unused-import
@@ -278,7 +279,7 @@ def long_int(hash_key):
     :return: long object if python 2.X, int object if python 3.X
     """
     if sys.version_info < (3,):
-        return long(hash_key)
+        return long(hash_key)  # pylint: disable=incompatible-py3-code
     else:
         return int(hash_key)
 
@@ -327,11 +328,11 @@ def reshard(stream_name, desired_size, force=False,
             expected_ending_hash_key = max_hash_key
 
         log.debug("Shard {0} ({1}) should start at {2}: {3}".format(shard_num, shard_id, expected_starting_hash_key,
-                                                                starting_hash_key == expected_starting_hash_key
-                                                                ))
+                                                                    starting_hash_key == expected_starting_hash_key
+                                                                    ))
         log.debug("Shard {0} ({1}) should end at {2}: {3}".format(shard_num, shard_id, expected_ending_hash_key,
-                                                              ending_hash_key == expected_ending_hash_key
-                                                              ))
+                                                                  ending_hash_key == expected_ending_hash_key
+                                                                  ))
 
         if starting_hash_key != expected_starting_hash_key:
             r['error'] = "starting hash keys mismatch, don't know what to do!"
