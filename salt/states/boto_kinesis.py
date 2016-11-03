@@ -55,6 +55,8 @@ pillars or minion config:
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
         - region: us-east-1
 '''
+# Keep pylint from chocking on ret
+# pylint: disable=undefined-variable
 # Import Python libs
 from __future__ import absolute_import
 import logging
