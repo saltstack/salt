@@ -77,6 +77,7 @@ def _get_instance(hosts=None, profile=None):
     Return the elasticsearch instance
     '''
     es = None
+    proxies = {}
 
     if profile is None:
         profile = 'elasticsearch'
@@ -89,13 +90,13 @@ def _get_instance(hosts=None, profile=None):
         hosts = _profile.get('host', None)
         if not hosts:
             hosts = _profile.get('hosts', None)
+        proxies = _profile.get('proxies', {})
 
     if not hosts:
         hosts = ['127.0.0.1:9200']
     if isinstance(hosts, string_types):
         hosts = [hosts]
     try:
-        proxies = _profile.get('proxies', {})
         if proxies == {}:
             es = elasticsearch.Elasticsearch(hosts)
         else:
