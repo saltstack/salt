@@ -207,8 +207,9 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             match_value = match_value.split(',')
         for match in match_value:
             rule.append('-m {0}'.format(match))
-            if 'name' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
-                rule.append('--name {0}'.format(kwargs['name']))
+            if 'name_' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
+                rule.append('--name {0}'.format(kwargs['name_']))
+                del kwargs['name_']
         del kwargs['match']
 
     if 'match-set' in kwargs:
@@ -413,12 +414,11 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
                 after_jump.append('--{0} {1}'.format(after_jump_argument, value))
             del kwargs[after_jump_argument]
 
-    for item in kwargs:
-        rule.append(maybe_add_negation(item))
-        if len(item) == 1:
-            rule.append('-{0} {1}'.format(item, kwargs[item]))
-        else:
-            rule.append('--{0} {1}'.format(item, kwargs[item]))
+    for key, value in kwargs.items():
+        negation = maybe_add_negation(key)
+        flag = '-' if len(key) == 1 else '--'
+        value = '' if value in (None, '') else ' {0}'.format(value)
+        rule.append('{0}{1}{2}{3}'.format(negation, flag, key, value))
 
     rule += after_jump
 
