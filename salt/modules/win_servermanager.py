@@ -47,6 +47,9 @@ def _check_server_manager():
 
     Returns: True if import is successful, otherwise returns False
     '''
+    if 'Server' not in __grains__['osrelease']:
+        return False
+
     return not __salt__['cmd.retcode']('Import-Module ServerManager',
                                        shell='powershell',
                                        python_shell=True)
