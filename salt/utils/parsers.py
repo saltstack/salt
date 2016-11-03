@@ -23,7 +23,7 @@ import optparse
 import traceback
 import yaml
 from functools import partial
-from StringIO import StringIO
+from io import StringIO
 
 
 # Import salt libs
@@ -886,11 +886,11 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             return
 
         # ensure that json stays valid with log output
-        if 'json' == getattr(self.options, 'output', None):
+        if getattr(self.options, 'output', None) == 'json':
             log.set_console_handler_stream(StringIO())
 
         # ensure that yaml stays valid with log output
-        if 'yaml' == getattr(self.options, 'output', None):
+        if getattr(self.options, 'output', None) == 'yaml':
             log_format = '# {0}'.format(self.config['log_fmt_console'])
         else:
             log_format = self.config['log_fmt_console']

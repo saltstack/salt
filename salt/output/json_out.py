@@ -34,6 +34,7 @@ from __future__ import absolute_import
 # Import python libs
 import json
 import logging
+import os
 
 # Import salt libs
 from salt.log.setup import get_console_handler_stream
@@ -101,7 +102,7 @@ def _get_log_stream_as_dict():
 
     getvalue_funcion = getattr(log_stream, "getvalue", None)
     if callable(getvalue_funcion):
-        for line in log_stream.getvalue().split("\n"):
+        for line in log_stream.getvalue().split(os.linesep):
             log_dict['logs'].append(line)
 
     return log_dict
