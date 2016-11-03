@@ -81,6 +81,10 @@ def _get_basic_stream(stream_name, conn):
     '''
     Stream info from AWS, via describe_stream
     Only returns the first "page" of shards (up to 100); use _get_full_stream() for all shards.
+
+    CLI example::
+
+        salt myminion boto_kinesis._get_basic_stream my_stream existing_conn
     '''
     return _execute_with_retries(conn, "describe_stream", StreamName=stream_name)
 
@@ -88,6 +92,10 @@ def _get_basic_stream(stream_name, conn):
 def _get_full_stream(stream_name, region=None, key=None, keyid=None, profile=None):
     '''
     Get complete stream info from AWS, via describe_stream, including all shards.
+
+    CLI example::
+
+        salt myminion boto_kinesis._get_full_stream my_stream region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = {}
@@ -112,6 +120,10 @@ def get_stream_when_active(stream_name, region=None, key=None, keyid=None, profi
     Get complete stream info from AWS, returning only when the stream is in the ACTIVE state.
     Continues to retry when stream is updating or creating.
     If the stream is deleted during retries, the loop will catch the error and break.
+
+    CLI example::
+
+        salt myminion boto_kinesis.get_stream_when_active my_stream region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -138,6 +150,10 @@ def get_stream_when_active(stream_name, region=None, key=None, keyid=None, profi
 def exists(stream_name, region=None, key=None, keyid=None, profile=None):
     '''
     Check if the stream exists. Returns False and the error if it does not.
+
+    CLI example::
+
+        salt myminion boto_kinesis.exists my_stream region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = {}
@@ -155,6 +171,10 @@ def exists(stream_name, region=None, key=None, keyid=None, profile=None):
 def create_stream(stream_name, num_shards, region=None, key=None, keyid=None, profile=None):
     '''
     Create a stream with name stream_name and initial number of shards num_shards.
+
+    CLI example::
+
+        salt myminion boto_kinesis.create_stream my_stream N region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = _execute_with_retries(conn,
@@ -169,6 +189,10 @@ def create_stream(stream_name, num_shards, region=None, key=None, keyid=None, pr
 def delete_stream(stream_name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete the stream with name stream_name. This cannot be undone! All data will be lost!!
+
+    CLI example::
+
+        salt myminion boto_kinesis.delete_stream my_stream region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = _execute_with_retries(conn,
@@ -183,6 +207,10 @@ def increase_stream_retention_period(stream_name, retention_hours,
                                      region=None, key=None, keyid=None, profile=None):
     '''
     Increase stream retention period to retention_hours
+
+    CLI example::
+
+        salt myminion boto_kinesis.increase_stream_retention_period my_stream N region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = _execute_with_retries(conn,
@@ -198,6 +226,10 @@ def decrease_stream_retention_period(stream_name, retention_hours,
                                      region=None, key=None, keyid=None, profile=None):
     '''
     Decrease stream retention period to retention_hours
+
+    CLI example::
+
+        salt myminion boto_kinesis.decrease_stream_retention_period my_stream N region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = _execute_with_retries(conn,
@@ -213,6 +245,10 @@ def enable_enhanced_monitoring(stream_name, metrics,
                                region=None, key=None, keyid=None, profile=None):
     '''
     Enable enhanced monitoring for the specified shard-level metrics on stream stream_name
+
+    CLI example::
+
+        salt myminion boto_kinesis.enable_enhanced_monitoring my_stream ["metrics", "to", "enable"] region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = _execute_with_retries(conn,
@@ -229,6 +265,10 @@ def disable_enhanced_monitoring(stream_name, metrics,
                                 region=None, key=None, keyid=None, profile=None):
     '''
     Disable enhanced monitoring for the specified shard-level metrics on stream stream_name
+
+    CLI example::
+
+        salt myminion boto_kinesis.disable_enhanced_monitoring my_stream ["metrics", "to", "disable"] region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = _execute_with_retries(conn,
@@ -246,6 +286,10 @@ def get_info_for_reshard(stream_details):
     Collect some data: number of open shards, key range, etc.
     Modifies stream_details to add a sorted list of OpenShards.
     Returns (min_hash_key, max_hash_key, stream_details)
+
+    CLI example::
+
+        salt myminion boto_kinesis.get_info_for_reshard existing_stream_details
     """
     min_hash_key = 0
     max_hash_key = 0
@@ -276,6 +320,10 @@ def long_int(hash_key):
     It's necessary to convert to int/long for comparison operations.
     This helper method handles python 2/3 incompatibility
 
+    CLI example::
+
+        salt myminion boto_kinesis.long_int some_MD5_hash_as_string
+
     :return: long object if python 2.X, int object if python 3.X
     """
     if sys.version_info < (3,):
@@ -290,6 +338,12 @@ def reshard(stream_name, desired_size, force=False,
     Reshard a kinesis stream.  Each call to this function will wait until the stream is ACTIVE,
     then make a single split or merge operation. This function decides where to split or merge
     with the assumption that the ultimate goal is a balanced partition space.
+
+    For safety, user must past in force=True; otherwise, the function will dry run.
+
+    CLI example::
+
+        salt myminion boto_kinesis.reshard my_stream N True region=us-east-1
 
     :return: True if a split or merge was found/performed, False if nothing is needed
     """
@@ -388,6 +442,10 @@ def reshard(stream_name, desired_size, force=False,
 def _get_next_open_shard(stream_details, shard_id):
     '''
     Return the next open shard after shard_id
+
+    CLI example::
+
+        salt myminion boto_kinesis._get_next_open_shard existing_stream_details shard_id
     '''
     found = False
     for shard in stream_details["OpenShards"]:
@@ -417,6 +475,10 @@ def _execute_with_retries(conn, function, **kwargs):
     Returns:
         The result dict with the HTTP response and JSON data if applicable
         as 'result', or an error as 'error'
+
+    CLI example::
+
+        salt myminion boto_kinesis._execute_with_retries existing_conn function_name function_kwargs
 
     '''
     r = {}
@@ -448,5 +510,9 @@ def _execute_with_retries(conn, function, **kwargs):
 def _jittered_backoff(attempt, max_retry_delay):
     '''
     Basic exponential backoff
+
+    CLI example::
+
+        salt myminion boto_kinesis._jittered_backoff current_attempt_number max_delay_in_seconds
     '''
     return min(random.random() * (2 ** attempt), max_retry_delay)
