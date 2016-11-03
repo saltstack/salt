@@ -7,7 +7,7 @@ Module to provide Elasticsearch compatibility to Salt
 
 .. versionadded:: 2015.8.0
 
-:depends:       `elasticsearch-py <https://elasticsearch-py.readthedocs.io/en/latest/>`_
+:depends:       `elasticsearch-py <http://elasticsearch-py.readthedocs.org/en/latest/>`_
 
 :configuration: This module accepts connection configuration details either as
     parameters or as configuration settings in /etc/salt/minion on the relevant
@@ -33,7 +33,12 @@ Module to provide Elasticsearch compatibility to Salt
             - 'saltutil.find_job'
             - 'pillar.items'
             - 'grains.items'
+          proxies:
+            - http: http://proxy:3128
+            - https: http://proxy:1080
 
+    When specifying proxies the requests backend will be used and the 'proxies'
+    data structure is passed as-is to that module.
 
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
@@ -56,6 +61,15 @@ except ImportError:
     HAS_ELASTICSEARCH = False
 
 from salt.ext.six import string_types
+
+from elasticsearch import RequestsHttpConnection
+
+# Custom connection class to use requests module with proxies
+class ProxyConnection(RequestsHttpConnection):
+    def __init__(self, *args, **kwargs):
+        proxies = kwargs.pop('proxies', {})
+        super(ProxyConnection, self).__init__(*args, **kwargs)
+        self.session.proxies = proxies
 
 
 def __virtual__():
@@ -90,7 +104,15 @@ def _get_instance(hosts=None, profile=None):
     if isinstance(hosts, string_types):
         hosts = [hosts]
     try:
-        es = elasticsearch.Elasticsearch(hosts)
+        proxies = _profile.get('proxies', {})
+        if proxies == {}:
+            es = elasticsearch.Elasticsearch(hosts)
+        else:
+            es = elasticsearch.Elasticsearch(
+                hosts,
+                connection_class=ProxyConnection,
+                proxies=_profile.get('proxies', {}),
+            )
         if not es.ping():
             raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}, is it unhealthy?'.format(hosts))
     except elasticsearch.exceptions.ConnectionError:
