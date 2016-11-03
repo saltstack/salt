@@ -55,7 +55,11 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Print the output data in JSON
     '''
-    data.update(_get_log_stream_as_dict())
+    if isinstance(data, dict) and 'local' not in data:
+        data.update(_get_log_stream_as_dict())
+    else:
+        log.debug('Unable to add logs to json', exc_info=True)
+
     try:
         if 'output_indent' not in __opts__:
             return json.dumps(data, default=repr, indent=4)
