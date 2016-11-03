@@ -55,22 +55,13 @@ log = logging.getLogger(__name__)
 # Import third party libs
 try:
     import elasticsearch
+    from elasticsearch import RequestsHttpConnection
     logging.getLogger('elasticsearch').setLevel(logging.CRITICAL)
     HAS_ELASTICSEARCH = True
 except ImportError:
     HAS_ELASTICSEARCH = False
 
 from salt.ext.six import string_types
-
-from elasticsearch import RequestsHttpConnection
-
-# Custom connection class to use requests module with proxies
-class ProxyConnection(RequestsHttpConnection):
-    def __init__(self, *args, **kwargs):
-        proxies = kwargs.pop('proxies', {})
-        super(ProxyConnection, self).__init__(*args, **kwargs)
-        self.session.proxies = proxies
-
 
 def __virtual__():
     '''
@@ -108,6 +99,13 @@ def _get_instance(hosts=None, profile=None):
         if proxies == {}:
             es = elasticsearch.Elasticsearch(hosts)
         else:
+            # Custom connection class to use requests module with proxies
+            class ProxyConnection(RequestsHttpConnection):
+                def __init__(self, *args, **kwargs):
+                    proxies = kwargs.pop('proxies', {})
+                    super(ProxyConnection, self).__init__(*args, **kwargs)
+                    self.session.proxies = proxies
+
             es = elasticsearch.Elasticsearch(
                 hosts,
                 connection_class=ProxyConnection,
