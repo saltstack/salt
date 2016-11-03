@@ -255,10 +255,7 @@ def get_jid(jid):
 
     sql = "select id, full_ret from returns where jid = '{0}'".format(jid)
 
-    log.debug(">> Now in get_jid {0}".format(jid))
     data = serv.query(sql)
-    log.debug(">> Now Data: {0}".format(data))
-
     ret = {}
     if data:
         points = data[0]['points']
@@ -280,9 +277,7 @@ def get_fun(fun):
             group by fun, id
           '''.format(fun)
 
-    log.debug(">> Now in get_fun {0}".format(fun))
     data = serv.query(sql)
-    log.debug(">> Now Data: {0}".format(data))
     ret = {}
     if data:
         points = data[0]['points']
@@ -303,11 +298,7 @@ def get_jids():
     #               [0, jid, load]],
     #   u'name': u'jids',
     #   u'columns': [u'time', u'distinct', u'load']}]
-
-    log.debug(">> Now in get_jids")
     data = serv.query(sql)
-    log.debug(">> Now Data: {0}".format(data))
-
     ret = {}
     if data:
         for _, jid, load in data[0]['points']:
