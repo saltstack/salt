@@ -1,9 +1,9 @@
-Licence Notice
+License Notice
 ==============
 
 The Salt project is open and encouraging to code contributions. Please be
 advised that all code contributions will be licensed under the Apache 2.0
-License. We cannot accept contributions that already hold a Licence other
+License. We cannot accept contributions that already hold a License other
 than Apache 2.0 without explicit exception.
 
 
