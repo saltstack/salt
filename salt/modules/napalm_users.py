@@ -14,6 +14,9 @@ Dependencies
 ------------
 - :mod:`NAPALM proxy minion <salt.proxy.napalm>`
 
+.. seealso::
+    :mod:`Users management state <salt.states.netusers>`
+
 .. versionadded:: 2016.11.0
 '''
 
