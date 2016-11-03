@@ -160,7 +160,7 @@ class IptablesTestCase(TestCase):
         self.assertEqual(iptables.build_rule(**{'match': 'recent', 'name_': 'SSH'}),
                          '-m recent --name SSH')
 
-        # should allow empty arguments 
+        # should allow empty arguments
         self.assertEqual(iptables.build_rule(**{'match': 'recent', 'update': None}),
                          '-m recent --update')
 
