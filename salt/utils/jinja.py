@@ -5,6 +5,7 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 
 # Import python libs
 from __future__ import absolute_import
+import collections
 import json
 import pprint
 import logging
@@ -348,11 +349,27 @@ class SerializerExtension(Extension, object):
 
         escape_regex = https\\:\\/\\/example\\.com\\?foo\\=bar\\%20baz
 
+    ** Set Theory Filters **
+
+    ..versionadded:: Nitrogen
+
+    Performs set math using Jinja filters.
+
+    For example:
+
+    .. code-block:: jinja
+
+        unique = {{ ['foo', 'foo', 'bar'] | unique }}
+
+    will be rendered as::
+
+        unique = ['foo', 'bar']
+
     .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
     tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
-                'load_text', 'import_text', 'regex_escape'])
+                'load_text', 'import_text', 'regex_escape', 'unique'])
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -365,6 +382,7 @@ class SerializerExtension(Extension, object):
             'load_json': self.load_json,
             'load_text': self.load_text,
             'regex_escape': self.regex_escape,
+            'unique': self.unique,
         })
 
         if self.environment.finalize is None:
@@ -555,3 +573,14 @@ class SerializerExtension(Extension, object):
 
     def regex_escape(self, value):
         return re.escape(value)
+
+    def unique(self, values):
+        ret = None
+        if isinstance(values, collections.Hashable):
+            ret = set(values)
+        else:
+            ret = []
+            for value in values:
+                if value not in ret:
+                    ret.append(value)
+        return ret
