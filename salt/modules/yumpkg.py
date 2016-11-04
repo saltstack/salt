@@ -706,7 +706,7 @@ def list_repo_pkgs(*args, **kwargs):
             )
             if out['retcode'] == 0:
                 _parse_output(out['stdout'], strict=True)
-    # The --showduplicates option is added in 3.2.13, but the 
+    # The --showduplicates option is added in 3.2.13, but the
     # repository-packages subcommand is only in 3.4.3 and newer
     elif yum_version and yum_version < _LooseVersion('3.4.3'):
         cmd_prefix = ['yum', '--quiet', 'list', '--showduplicates']
