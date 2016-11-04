@@ -1415,13 +1415,6 @@ def line(path, content, match=None, mode=None, location=None,
     arguments are required, as well as passing in one of the ``mode``
     options.
 
-    .. note::
-
-        If ``mode=insert`` is used, at least one of the following
-        options must also be defined: ``location``, ``before``, or
-        ``after``. If ``location`` is used, it takes precedence
-        over the other two options.
-
     path
         Filesystem path to the file to be edited.
 
@@ -1449,9 +1442,16 @@ def line(path, content, match=None, mode=None, location=None,
         - insert
             Insert a line.
 
+        .. note::
+
+            If ``mode=insert`` is used, at least one of the following
+            options must also be defined: ``location``, ``before``, or
+            ``after``. If ``location`` is used, it takes precedence
+            over the other two options.
+
     location
         Defines where to place content in the line. Note this option is only
-        used when ``mode=insert``. If location a location is passed in, it
+        used when ``mode=insert`` is specified. If a location is passed in, it
         takes precedence over both the ``before`` and ``after`` kwargs. Valid
         locations are:
 
