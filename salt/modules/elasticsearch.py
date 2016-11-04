@@ -63,6 +63,7 @@ except ImportError:
 
 from salt.ext.six import string_types
 
+
 def __virtual__():
     '''
     Only load if elasticsearch libraries exist.
