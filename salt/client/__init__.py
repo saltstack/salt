@@ -73,7 +73,8 @@ def get_local_client(
         c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
         mopts=None,
         skip_perm_errors=False,
-        io_loop=None):
+        io_loop=None,
+        auto_reconnect=False):
     '''
     .. versionadded:: 2014.7.0
 
@@ -100,7 +101,8 @@ def get_local_client(
         return LocalClient(
             mopts=opts,
             skip_perm_errors=skip_perm_errors,
-            io_loop=io_loop)
+            io_loop=io_loop,
+            auto_reconnect=auto_reconnect)
 
 
 class LocalClient(object):
@@ -126,7 +128,7 @@ class LocalClient(object):
     def __init__(self,
                  c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
                  mopts=None, skip_perm_errors=False,
-                 io_loop=None, keep_loop=False):
+                 io_loop=None, keep_loop=False, auto_reconnect=False):
         '''
         :param IOLoop io_loop: io_loop used for events.
                                Pass in an io_loop if you want asynchronous
@@ -149,6 +151,7 @@ class LocalClient(object):
         self.salt_user = salt.utils.get_specific_user()
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
+        self.auto_reconnect = auto_reconnect
         self.event = salt.utils.event.get_event(
                 'master',
                 self.opts['sock_dir'],
@@ -156,7 +159,8 @@ class LocalClient(object):
                 opts=self.opts,
                 listen=False,
                 io_loop=io_loop,
-                keep_loop=keep_loop)
+                keep_loop=keep_loop,
+                raise_errors=auto_reconnect)
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.returners = salt.loader.returners(self.opts, self.functions)
@@ -891,8 +895,16 @@ class LocalClient(object):
         '''
 
         while True:
-            raw = self.event.get_event(wait=0.01, tag=tag, match_type=match_type, full=True, no_block=True)
-            yield raw
+            try:
+                raw = self.event.get_event(wait=0.01, tag=tag, match_type=match_type, full=True, no_block=True)
+                yield raw
+            except tornado.iostream.StreamClosedError:
+                if self.auto_reconnect:
+                    log.warning('Connection to master lost. Reconnecting.')
+                    self.event.close_pub()
+                    self.event.connect_pub(timeout=self._get_timeout(None))
+                else:
+                    raise
 
     def get_iter_returns(
             self,
@@ -1122,7 +1134,16 @@ class LocalClient(object):
         while True:
             time_left = timeout_at - int(time.time())
             wait = max(1, time_left)
-            raw = self.event.get_event(wait, jid)
+            try:
+                raw = self.event.get_event(wait, jid)
+            except tornado.iostream.StreamClosedError:
+                if self.auto_reconnect:
+                    log.warning('Connection to master lost. Reconnecting.')
+                    self.event.close_pub()
+                    self.event.connect_pub(timeout=self._get_timeout(wait))
+                    continue
+                else:
+                    raise
             if raw is not None and 'return' in raw:
                 found.add(raw['id'])
                 ret[raw['id']] = raw['return']
@@ -1275,7 +1296,16 @@ class LocalClient(object):
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
             jid_tag = 'salt/job/{0}'.format(jid)
-            raw = self.event.get_event(wait, jid_tag)
+            try:
+                raw = self.event.get_event(wait, jid_tag)
+            except tornado.iostream.StreamClosedError:
+                if self.auto_reconnect:
+                    log.warning('Connection to master lost. Reconnecting.')
+                    self.event.close_pub()
+                    self.event.connect_pub(timeout=self._get_timeout(wait))
+                    continue
+                else:
+                    raise
             if raw is not None and 'return' in raw:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
@@ -1394,7 +1424,16 @@ class LocalClient(object):
             raise StopIteration()
         # Wait for the hosts to check in
         while True:
-            raw = self.event.get_event(timeout)
+            try:
+                raw = self.event.get_event(timeout)
+            except tornado.iostream.StreamClosedError:
+                if self.auto_reconnect:
+                    log.warning('Connection to master lost. Reconnecting.')
+                    self.event.close_pub()
+                    self.event.connect_pub(timeout=self._get_timeout(timeout))
+                    continue
+                else:
+                    raise
             if raw is None or time.time() > timeout_at:
                 # Timeout reached
                 break
