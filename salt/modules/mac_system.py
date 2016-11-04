@@ -226,9 +226,11 @@ def set_remote_login(enable):
     cmd = 'systemsetup -f -setremotelogin {0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    enabled = salt.utils.mac_utils.validate_enabled(get_remote_login())
-
-    return state == enabled
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_remote_login,
+        normalize_ret=True,
+    )
 
 
 def get_remote_events():
@@ -276,9 +278,11 @@ def set_remote_events(enable):
     cmd = 'systemsetup -setremoteappleevents {0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    enabled = salt.utils.mac_utils.validate_enabled(get_remote_events())
-
-    return state == enabled
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_remote_events,
+        normalize_ret=True,
+    )
 
 
 def get_computer_name():
@@ -318,7 +322,10 @@ def set_computer_name(name):
     cmd = 'systemsetup -setcomputername "{0}"'.format(name)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return get_computer_name() == name
+    return salt.utils.mac_utils.confirm_updated(
+        name,
+        get_computer_name,
+    )
 
 
 def get_subnet_name():
@@ -362,7 +369,10 @@ def set_subnet_name(name):
     cmd = 'systemsetup -setlocalsubnetname "{0}"'.format(name)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return get_subnet_name() == name
+    return salt.utils.mac_utils.confirm_updated(
+        name,
+        get_subnet_name,
+    )
 
 
 def get_startup_disk():
@@ -429,7 +439,10 @@ def set_startup_disk(path):
     cmd = 'systemsetup -setstartupdisk {0}'.format(path)
     salt.utils.mac_utils.execute_return_result(cmd)
 
-    return get_startup_disk() == path
+    return salt.utils.mac_utils.confirm_updated(
+        path,
+        get_startup_disk,
+    )
 
 
 def get_restart_delay():
@@ -490,7 +503,10 @@ def set_restart_delay(seconds):
     cmd = 'systemsetup -setwaitforstartupafterpowerfailure {0}'.format(seconds)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return get_restart_delay() == seconds
+    return salt.utils.mac_utils.confirm_updated(
+        seconds,
+        get_restart_delay,
+    )
 
 
 def get_disable_keyboard_on_lock():
@@ -540,10 +556,11 @@ def set_disable_keyboard_on_lock(enable):
           '{0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    enabled = salt.utils.mac_utils.validate_enabled(
-        get_disable_keyboard_on_lock())
-
-    return enabled == state
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_disable_keyboard_on_lock,
+        normalize_ret=True,
+    )
 
 
 def get_boot_arch():
@@ -612,4 +629,7 @@ def set_boot_arch(arch='default'):
     cmd = 'systemsetup -setkernelbootarchitecture {0}'.format(arch)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return arch in get_boot_arch()
+    return salt.utils.mac_utils.confirm_updated(
+        arch,
+        get_boot_arch,
+    )
