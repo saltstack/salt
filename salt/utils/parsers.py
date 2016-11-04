@@ -23,7 +23,6 @@ import optparse
 import traceback
 import yaml
 from functools import partial
-from io import StringIO
 
 
 # Import salt libs

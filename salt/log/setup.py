@@ -486,11 +486,10 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
             continue
 
         if handler.stream is sys.stderr:
-            # There's already a logging handler outputting to sys.stderr or set console handler stream
+            # There's already a logging handler outputting to sys.stderr
             break
     else:
         handler = StreamHandler(sys.stderr)
-
     handler.setLevel(level)
 
     # Set the default console formatter config

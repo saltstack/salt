@@ -5,8 +5,6 @@ unittests for json outputter
 
 # Import Python Libs
 from __future__ import absolute_import
-from StringIO import StringIO
-import sys
 
 # Import Salt Testing Libs
 from salttesting import TestCase
@@ -16,7 +14,6 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.output import json_out as json
-from salt.log.setup import set_console_handler_stream
 
 
 class JsonTestCase(TestCase):
@@ -24,8 +21,6 @@ class JsonTestCase(TestCase):
     Test cases for salt.output.json_out
     '''
     def setUp(self):
-        # reset to default behavior
-        set_console_handler_stream(sys.stderr)
         json.__opts__ = {}
         self.data = {'test': 'two', 'example': 'one'}
 
