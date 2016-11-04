@@ -326,7 +326,7 @@ def _get_rule_changes(rules, _rules):
     # 2. determine if rule exists in existing security group rules
     for rule in rules:
         try:
-            ip_protocol = rule.get('ip_protocol')
+            ip_protocol = str(rule.get('ip_protocol'))
         except KeyError:
             raise SaltInvocationError('ip_protocol, to_port, and from_port are'
                                       ' required arguments for security group'
