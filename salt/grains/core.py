@@ -1443,7 +1443,7 @@ def os_data():
                 rel_data = fp_.read()
                 try:
                     release_re = re.compile(
-                        r'((?:Open)?Solaris|OpenIndiana) (Development)?'
+                        r'((?:Open|Oracle )?Solaris|OpenIndiana) (Development)?'
                         r'\s*(\d+)\s?\D*\s?(\d+\/\d+|oi_\S+|snv_\S+)?'
                     )
                     osname, development, osmajorrelease, osminorrelease = \
@@ -1458,15 +1458,18 @@ def os_data():
                         osname = ' '.join((osname, development))
                     uname_v = os.uname()[3]
                     grains['os'] = grains['osfullname'] = osname
-                    osrelease = []
-                    osrelease.append(osmajorrelease)
-                    if '/' in osminorrelease:
-                        osrelease.append(osminorrelease.split('/')[0])
-                        osrelease.append(osminorrelease.split('/')[1])
+                    if osname in ['Oracle Solaris'] and uname_v.startswith(osmajorrelease):
+                        # Oracla Solars 11 and up have minor version in uname
+                        grains['osrelease'] = uname_v
                     else:
-                        osrelease.append(osminorrelease)
-                    grains['osrelease'] = ".".join(osrelease)
-                    grains['osrelease_stamp'] = uname_v
+                        # Sun Solaris 10 and earlier/comparable
+                        # (OpenIndiana, OmniOS)
+                        osrelease = []
+                        osrelease.append(osmajorrelease)
+                        if osminorrelease:
+                            osrelease.append(osminorrelease)
+                        grains['osrelease'] = ".".join(osrelease)
+                        grains['osrelease_stamp'] = uname_v
 
         grains.update(_sunos_cpudata())
     elif grains['kernel'] == 'VMkernel':
