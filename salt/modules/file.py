@@ -1513,7 +1513,7 @@ def line(path, content, match=None, mode=None, location=None,
 
     elif mode == 'replace':
         if os.stat(path).st_size == 0:
-            log.debug('Cannot find text to replace. File \'{0}\' is empty.'.format(path))
+            log.warning('Cannot find text to replace. File \'{0}\' is empty.'.format(path))
             body = ''
         else:
             body = os.linesep.join([(_get_line_indent(file_line, content, indent)
