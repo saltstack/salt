@@ -409,7 +409,7 @@ def managed(name, type, enabled=True, **kwargs):
             for iface in interfaces:
                 if 'secondary' in interfaces[iface]:
                     for second in interfaces[iface]['secondary']:
-                        if second.get('label', '') == 'name':
+                        if second.get('label', '') == name:
                             interface_status = True
         if enabled:
             if 'noifupdown' not in kwargs:
