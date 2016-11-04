@@ -115,6 +115,7 @@ def _get_version(host, port, user, password):
         log.critical('Failed to query InfluxDB version from HTTP API within InfluxDB returner: {0}'.format(ex))
     return version
 
+
 def _get_serv(ret=None):
     '''
     Return an influxdb client object
