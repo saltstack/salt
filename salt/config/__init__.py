@@ -361,6 +361,18 @@ VALID_OPTS = {
     # A dictionary of logging levels
     'log_granular_levels': dict,
 
+    # The maximum number of bytes a single log file may contain before
+    # it is rotated. A value of 0 disables this feature.
+    # Currently only supported on Windows. On other platforms, use an
+    # external tool such as 'logrotate' to manage log files.
+    'log_rotate_max_bytes': int,
+
+    # The number of backup files to keep when rotating log files. Only
+    # used if log_rotate_max_bytes is greater than 0.
+    # Currently only supported on Windows. On other platforms, use an
+    # external tool such as 'logrotate' to manage log files.
+    'log_rotate_backup_count': int,
+
     # If an event is above this size, it will be trimmed before putting it on the event bus
     'max_event_size': int,
 
@@ -895,7 +907,7 @@ VALID_OPTS = {
     # dictionary.  Otherwise it is assumed that the module calls the grains
     # function in a custom way and returns the data elsewhere
     #
-    # Default to False for 2016.3 and Carbon.  Switch to True for Nitrogen
+    # Default to False for 2016.3 and 2016.11.  Switch to True for Nitrogen
     'proxy_merge_grains_in_module': bool,
 
     # Command to use to restart salt-minion
@@ -1056,6 +1068,8 @@ DEFAULT_MINION_OPTS = {
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
+    'log_rotate_max_bytes': 0,
+    'log_rotate_backup_count': 0,
     'max_event_size': 1048576,
     'test': False,
     'ext_job_cache': '',
@@ -1324,6 +1338,8 @@ DEFAULT_MASTER_OPTS = {
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
+    'log_rotate_max_bytes': 0,
+    'log_rotate_backup_count': 0,
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-master.pid'),
     'publish_session': 86400,
     'range_server': 'range:80',
@@ -1472,6 +1488,8 @@ CLOUD_CONFIG_DEFAULTS = {
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
+    'log_rotate_max_bytes': 0,
+    'log_rotate_backup_count': 0,
     'bootstrap_delay': None,
 }
 
@@ -2927,7 +2945,7 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
         required_keys.append('image')
         if driver == 'vmware':
             required_keys.append('datastore')
-    elif driver in ['linode', 'virtualbox', 'vmware']:
+    elif driver in ['linode', 'virtualbox']:
         required_keys.append('clonefrom')
     elif driver == 'nova':
         nova_image_keys = ['image', 'block_device_mapping', 'block_device', 'boot_volume']

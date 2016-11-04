@@ -1,11 +1,21 @@
-==================================
+======
 Fedora
-==================================
+======
 
 Beginning with version 0.9.4, Salt has been available in the primary Fedora
-repositories and `EPEL`_. It is installable using yum. Fedora will have more
-up to date versions of Salt than other members of the Red Hat family, which
-makes it a great place to help improve Salt!
+repositories and `EPEL`_. It is installable using ``yum`` or ``dnf``, depending
+on your version of Fedora.
+
+.. note::
+
+    Released versions of Salt starting with ``2015.5.2`` through ``2016.3.2``
+    do not have Fedora packages available though `EPEL`_. To install a version
+    of Salt within this release array, please use SaltStack's `Bootstrap Script`_
+    and use the git method of installing Salt using the version's associated
+    release tag.
+
+    Release ``2016.3.3`` and onward will have packaged versions available via
+    `EPEL`_.
 
 **WARNING**: Fedora 19 comes with systemd 204.  Systemd has known bugs fixed in
 later revisions that prevent the salt-master from starting reliably or opening
@@ -30,8 +40,6 @@ will be one master and multiple minions.
 
     yum install salt-master
     yum install salt-minion
-
-.. _`EPEL`: http://fedoraproject.org/wiki/EPEL
 
 Installing from ``updates-testing``
 -----------------------------------
@@ -62,8 +70,6 @@ A pip install does not make the init scripts or the /etc/salt directory, and you
 will need to provide your own systemd service unit.
 
 Installation from pip:
-
-.. _`PyPI`: https://pypi.python.org/pypi/salt
 
 .. code-block:: bash
 
@@ -111,3 +117,7 @@ To start the Minion:
     systemctl start salt-minion.service
 
 Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
+
+.. _`Bootstrap Script`: https://github.com/saltstack/salt-bootstrap
+.. _`EPEL`: http://fedoraproject.org/wiki/EPEL
+.. _`PyPI`: https://pypi.python.org/pypi/salt

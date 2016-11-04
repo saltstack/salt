@@ -4,7 +4,7 @@ Manage DNS records and zones using libcloud
 
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Create and delete DNS records or zones through Libcloud. Libcloud's DNS system supports over 20 DNS
 providers including Amazon, Google, GoDaddy, Softlayer

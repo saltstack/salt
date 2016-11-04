@@ -229,6 +229,9 @@ execution modules
     napalm_network
     napalm_ntp
     napalm_probes
+    napalm_route
+    napalm_snmp
+    napalm_users
     netaddress
     netbsd_sysctl
     netbsdservice
@@ -259,6 +262,7 @@ execution modules
     parallels
     parted
     pcs
+    pdbedit
     pecl
     philips_hue
     pillar
@@ -315,6 +319,7 @@ execution modules
     sdb
     seed
     selinux
+    sensehat
     sensors
     serverdensity_device
     service
@@ -346,6 +351,7 @@ execution modules
     status
     stormpath
     supervisord
+    suse_apache
     svn
     swift
     sysbench

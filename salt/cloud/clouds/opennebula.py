@@ -763,7 +763,7 @@ def get_template(vm_):
     r'''
     Return the template id for a VM.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     vm\_
         The VM dictionary for which to obtain a template.

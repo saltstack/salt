@@ -50,7 +50,7 @@ class Roster(object):
             self.backends = backends
         if not backends:
             self.backends = ['flat']
-        self.rosters = salt.loader.roster(opts)
+        self.rosters = salt.loader.roster(opts, runner=salt.loader.runner(self.opts))
 
     def _gen_back(self):
         '''
@@ -81,13 +81,6 @@ class Roster(object):
                 log.error('Unable to render roster file: {0}'.format(exc))
             except IOError as exc:
                 pass
-
-        if not targets:
-            raise salt.exceptions.SaltSystemExit(
-                    'No hosts found with target {0} of type {1}'.format(
-                        tgt,
-                        tgt_type)
-                    )
 
         log.debug('Matched minions: {0}'.format(targets))
         return targets

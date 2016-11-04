@@ -536,7 +536,7 @@ Default: ``[]``
 
 Only return events matching tags in a whitelist.
 
-.. versionchanged:: Carbon
+.. versionchanged:: 2016.11.0
 
     Supports glob matching patterns.
 
@@ -557,7 +557,7 @@ Default: ``[]``
 
 Store all event returns _except_ the tags in a blacklist.
 
-.. versionchanged:: Carbon
+.. versionchanged:: 2016.11.0
 
     Supports glob matching patterns.
 
@@ -1387,7 +1387,7 @@ is impacted.
 ------------------------------
 
 .. versionadded:: 2014.1.0
-.. versionchanged:: Carbon
+.. versionchanged:: 2016.11.0
     The default was changed from ``30`` seconds to ``20``.
 
 Default: ``20``
@@ -1584,7 +1584,7 @@ compatible version installed will be the provider that is used.
 ``gitfs_ssl_verify``
 ********************
 
-.. versionchanged:: Carbon
+.. versionchanged:: 2016.11.0
 
 Default: ``True``
 
@@ -1594,7 +1594,7 @@ git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
 
-In the Carbon release, the default config value changed from ``False`` to
+In the 2016.11.0 release, the default config value changed from ``False`` to
 ``True``.
 
 .. code-block:: yaml
@@ -1672,7 +1672,7 @@ Defines which branch/tag should be used as the ``base`` environment.
 ``gitfs_saltenv``
 *****************
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Default: ``[]``
 
@@ -2446,7 +2446,7 @@ There are additional details at :ref:`salt-pillars`
 ``pillar_roots_override_ext_pillar``
 ------------------------------------
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Default: ``False``
 
@@ -2637,7 +2637,7 @@ files would be looked for in a subdirectory called ``pillar``.
 *************************
 
 .. versionadded:: 2015.8.0
-.. versionchanged:: Carbon
+.. versionchanged:: 2016.11.0
 
 Default: ``False``
 
@@ -2647,7 +2647,7 @@ git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
 
-In the Carbon release, the default config value changed from ``False`` to
+In the 2016.11.0 release, the default config value changed from ``False`` to
 ``True``.
 
 .. code-block:: yaml
@@ -3602,7 +3602,7 @@ branch/tag.
 ----------------------
 
 .. versionadded:: 2015.8.0
-.. versionchanged:: Carbon
+.. versionchanged:: 2016.11.0
 
 Default: ``False``
 
@@ -3612,7 +3612,7 @@ git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
 
-In the Carbon release, the default config value changed from ``False`` to
+In the 2016.11.0 release, the default config value changed from ``False`` to
 ``True``.
 
 .. code-block:: yaml

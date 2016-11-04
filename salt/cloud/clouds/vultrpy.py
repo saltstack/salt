@@ -174,7 +174,11 @@ def destroy(name):
     node = show_instance(name, call='action')
     params = {'SUBID': node['SUBID']}
     result = _query('server/destroy', method='POST', decode=False, data=urllib.urlencode(params))
-    if result['body'] == '' and result['text'] == '':
+
+    # The return of a destroy call is empty in the case of a success.
+    # Errors are only indicated via HTTP status code. Status code 200
+    # effetively therefore means "success".
+    if result.get('body') == '' and result.get('text') == '':
         return True
     return result
 
@@ -330,7 +334,8 @@ def create(vm_):
         Wait for the IP address to become available
         '''
         data = show_instance(vm_['name'], call='action')
-        pprint.pprint(data)
+        # print("Waiting for hostname")
+        # pprint.pprint(data)
         if str(data.get('main_ip', '0')) == '0':
             time.sleep(3)
             return False
@@ -341,8 +346,33 @@ def create(vm_):
         Wait for the IP address to become available
         '''
         data = show_instance(vm_['name'], call='action')
-        pprint.pprint(data)
+        # print("Waiting for default password")
+        # pprint.pprint(data)
         if str(data.get('default_password', '')) == '':
+            time.sleep(1)
+            return False
+        return data['default_password']
+
+    def wait_for_status():
+        '''
+        Wait for the IP address to become available
+        '''
+        data = show_instance(vm_['name'], call='action')
+        # print("Waiting for status normal")
+        # pprint.pprint(data)
+        if str(data.get('status', '')) != 'active':
+            time.sleep(1)
+            return False
+        return data['default_password']
+
+    def wait_for_server_state():
+        '''
+        Wait for the IP address to become available
+        '''
+        data = show_instance(vm_['name'], call='action')
+        # print("Waiting for server state ok")
+        # pprint.pprint(data)
+        if str(data.get('server_state', '')) != 'ok':
             time.sleep(1)
             return False
         return data['default_password']
@@ -357,6 +387,17 @@ def create(vm_):
         timeout=config.get_cloud_config_value(
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
+    __utils__['cloud.wait_for_fun'](
+        wait_for_status,
+        timeout=config.get_cloud_config_value(
+            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
+    )
+    __utils__['cloud.wait_for_fun'](
+        wait_for_server_state,
+        timeout=config.get_cloud_config_value(
+            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
+    )
+
     __opts__['hard_timeout'] = config.get_cloud_config_value(
         'hard_timeout',
         get_configured_provider(),

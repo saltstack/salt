@@ -16,12 +16,11 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     patch
 )
-from contextlib import nested
-from salt.ext.six.moves import range
 
 ensure_in_syspath('../../')
 
 # Import Salt Libs
+from salt.ext.six.moves import range
 from salt.modules import dockerng as dockerng_mod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -31,7 +30,7 @@ dockerng_mod.__opts__ = {}
 
 
 def _docker_py_version():
-    return dockerng_mod.docker.version_info if dockerng_mod.HAS_DOCKER_PY else None
+    return dockerng_mod.docker.version_info if dockerng_mod.HAS_DOCKER_PY else (0,)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -66,7 +65,7 @@ class DockerngTestCase(TestCase):
                 all=True,
                 filters={'label': 'KEY'})
 
-    @skipIf(_docker_py_version() is None, 'docker-py needs to be installed for this test to run')
+    @skipIf(_docker_py_version() > 0, 'docker-py needs to be installed for this test to run')
     @patch.object(dockerng_mod, '_get_exec_driver')
     def test_check_mine_cache_is_refreshed_on_container_change_event(self, _):
         '''
@@ -684,6 +683,7 @@ class DockerngTestCase(TestCase):
         '''
         test module calling inside containers
         '''
+        ret = None
         docker_run_all_mock = MagicMock(
             return_value={
                 'retcode': 0,
@@ -697,27 +697,17 @@ class DockerngTestCase(TestCase):
         client = Mock()
         client.put_archive = Mock()
 
-        with nested(
-                patch.dict(
-                    dockerng_mod.__opts__, {'cachedir': '/tmp'}),
-                patch.dict(
-                    dockerng_mod.__salt__, {
-                        'dockerng.run_all': docker_run_all_mock,
-                        'dockerng.copy_to': docker_copy_to_mock,
-                    }),
-                patch.dict(
-                    dockerng_mod.__context__, {
-                        'docker.client': client
-                    }
-                )
-        ):
-            # call twice to verify tmp path later
-            for i in range(2):
-                ret = dockerng_mod.call(
-                    'ID',
-                    'test.arg',
-                    1, 2,
-                    arg1='val1')
+        with patch.dict(dockerng_mod.__opts__, {'cachedir': '/tmp'}):
+            with patch.dict(dockerng_mod.__salt__, {'dockerng.run_all': docker_run_all_mock,
+                                                    'dockerng.copy_to': docker_copy_to_mock}):
+                with patch.dict(dockerng_mod.__context__, {'docker.client': client}):
+                    # call twice to verify tmp path later
+                    for i in range(2):
+                        ret = dockerng_mod.call(
+                            'ID',
+                            'test.arg',
+                            1, 2,
+                            arg1='val1')
 
         # Check that the directory is different each time
         # [ call(name, [args]), ...
@@ -737,8 +727,7 @@ class DockerngTestCase(TestCase):
         self.assertNotEqual(docker_run_all_mock.mock_calls[2][1][1],
                             docker_run_all_mock.mock_calls[5][1][1])
 
-        self.assertEqual(
-            {"retcode": 0, "comment": "container cmd"}, ret)
+        self.assertEqual({"retcode": 0, "comment": "container cmd"}, ret)
 
     def test_images_with_empty_tags(self):
         """

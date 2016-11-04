@@ -47,7 +47,7 @@ def ping(host, timeout=False, return_boolean=False):
 
         salt '*' network.ping archlinux.org
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Return a True or False instead of ping output.
 

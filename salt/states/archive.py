@@ -16,6 +16,7 @@ from contextlib import closing
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import shlex_quote as _cmd_quote
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 
 # Import salt libs
 import salt.utils
@@ -257,12 +258,12 @@ def extracted(name,
     use_cmd_unzip
         When archive_format is zip, setting this flag to True will use the archive.cmd_unzip module function
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     kwargs
         kwargs to pass to the archive.unzip or archive.unrar function
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
@@ -276,19 +277,47 @@ def extracted(name,
     if not name.endswith('/'):
         name += '/'
 
+    if __opts__['test']:
+        source_match = source
+    else:
+        try:
+            source_match = __salt__['file.source_list'](source,
+                                                        source_hash,
+                                                        __env__)[0]
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
+            return ret
+
+    urlparsed_source = _urlparse(source_match)
+    source_hash_name = urlparsed_source.path or urlparsed_source.netloc
+
     if if_missing is None:
         if_missing = name
     if source_hash and source_hash_update:
-        hash = source_hash.split("=")
-        source_file = '{0}.{1}'.format(os.path.basename(source), hash[0])
-        hash_fname = os.path.join(__opts__['cachedir'],
-                            'files',
-                            __env__,
-                            source_file)
-        if _compare_checksum(hash_fname, name, hash[1]):
-            ret['result'] = True
-            ret['comment'] = 'Hash {0} has not changed'.format(hash[1])
+        if urlparsed_source.scheme != '':
+            ret['result'] = False
+            ret['comment'] = (
+                '\'source_hash_update\' is not yet implemented for a remote '
+                'source_hash'
+            )
             return ret
+        else:
+            try:
+                hash_type, hsum = source_hash.split('=')
+            except ValueError:
+                ret['result'] = False
+                ret['comment'] = 'Invalid source_hash format'
+                return ret
+            source_file = '{0}.{1}'.format(os.path.basename(source), hash_type)
+            hash_fname = os.path.join(__opts__['cachedir'],
+                                'files',
+                                __env__,
+                                source_file)
+            if _compare_checksum(hash_fname, name, hsum):
+                ret['result'] = True
+                ret['comment'] = 'Hash {0} has not changed'.format(hsum)
+                return ret
     elif (
         __salt__['file.directory_exists'](if_missing)
         or __salt__['file.file_exists'](if_missing)
@@ -304,18 +333,6 @@ def extracted(name,
                             '{0}.{1}'.format(re.sub('[:/\\\\]', '_', if_missing),
                                              archive_format))
 
-    if __opts__['test']:
-        source_match = source
-    else:
-        try:
-            source_match = __salt__['file.source_list'](source,
-                                                        source_hash,
-                                                        __env__)[0]
-        except CommandExecutionError as exc:
-            ret['result'] = False
-            ret['comment'] = exc.strerror
-            return ret
-
     if not os.path.exists(filename):
         if __opts__['test']:
             ret['result'] = None
@@ -328,13 +345,15 @@ def extracted(name,
             return ret
 
         log.debug('%s is not in cache, downloading it', source_match)
+
         file_result = __salt__['state.single']('file.managed',
                                                filename,
-                                               source=source,
+                                               source=source_match,
                                                source_hash=source_hash,
                                                makedirs=True,
                                                skip_verify=skip_verify,
-                                               saltenv=__env__)
+                                               saltenv=__env__,
+                                               source_hash_name=source_hash_name)
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
         try:

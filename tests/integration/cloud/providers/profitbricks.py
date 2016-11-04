@@ -87,6 +87,16 @@ class ProfitBricksTest(integration.ShellCase):
                 .format(PROVIDER_NAME)
             )
 
+    def test_list_images(self):
+        '''
+        Tests the return of running the --list-images command for ProfitBricks
+        '''
+        image_list = self.run_cloud('--list-images {0}'.format(PROVIDER_NAME))
+        self.assertIn(
+            'Ubuntu-16.04-LTS-server-2016-10-06',
+            [i.strip() for i in image_list]
+        )
+
     def test_instance(self):
         '''
         Test creating an instance on ProfitBricks
@@ -96,11 +106,11 @@ class ProfitBricksTest(integration.ShellCase):
             self.assertIn(
                 INSTANCE_NAME,
                 [i.strip() for i in self.run_cloud(
-                    '-p profitbricks-test {0}'.format(INSTANCE_NAME)
+                    '-p profitbricks-test {0}'.format(INSTANCE_NAME), timeout=500
                 )]
             )
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
             raise
 
         # delete the instance
@@ -108,7 +118,7 @@ class ProfitBricksTest(integration.ShellCase):
             self.assertIn(
                 INSTANCE_NAME + ':',
                 [i.strip() for i in self.run_cloud(
-                    '-d {0} --assume-yes'.format(INSTANCE_NAME)
+                    '-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500
                 )]
             )
         except AssertionError:
@@ -123,7 +133,7 @@ class ProfitBricksTest(integration.ShellCase):
 
         # if test instance is still present, delete it
         if ret in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
 
 
 if __name__ == '__main__':

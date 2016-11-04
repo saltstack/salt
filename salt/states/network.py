@@ -246,7 +246,7 @@ all interfaces are ignored unless specified.
         the hostname. Default behavior is to delete unspecified network
         settings.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
 .. note::
 
@@ -409,7 +409,7 @@ def managed(name, type, enabled=True, **kwargs):
             for iface in interfaces:
                 if 'secondary' in interfaces[iface]:
                     for second in interfaces[iface]['secondary']:
-                        if second.get('label', '') == 'name':
+                        if second.get('label', '') == name:
                             interface_status = True
         if enabled:
             if 'noifupdown' not in kwargs:

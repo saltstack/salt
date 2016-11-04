@@ -2,7 +2,7 @@
 '''
 Manage ceph with salt.
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 '''
 # Import Python Libs
 from __future__ import absolute_import

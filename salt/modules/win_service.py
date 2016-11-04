@@ -2,7 +2,7 @@
 '''
 Windows Service module.
 
-.. versionchanged:: Carbon - Rewritten to use PyWin32
+.. versionchanged:: 2016.11.0 - Rewritten to use PyWin32
 '''
 
 # Import python libs
@@ -371,7 +371,11 @@ def info(name):
 
 def start(name):
     '''
-    Start the specified service
+    Start the specified service.
+
+    .. warning::
+        You cannot start a disabled service in Windows. If the service is
+        disabled, it will be changed to ``Manual`` start.
 
     Args:
         name (str): The name of the service to start
@@ -387,6 +391,10 @@ def start(name):
     '''
     if status(name):
         return True
+
+    # Set the service to manual if disabled
+    if disabled(name):
+        modify(name, start_type='Manual')
 
     try:
         win32serviceutil.StartService(name)
@@ -567,7 +575,7 @@ def modify(name,
     Modify a service's parameters. Changes will not be made for parameters that
     are not passed.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Args:
         name (str): The name of the service. Can be found using the
@@ -1121,7 +1129,7 @@ def config(name,
            password=None,
            **kwargs):
     r'''
-    .. deprecated:: Carbon
+    .. deprecated:: 2016.11.0
         Use ``service.modify`` instead
 
     Modify the named service. Because this is deprecated it will use the passed

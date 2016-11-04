@@ -6,7 +6,7 @@ ProfitBricks Cloud Module
 The ProfitBricks SaltStack cloud module allows a ProfitBricks server to
 be automatically deployed and bootstraped with Salt.
 
-:depends: profitbrick >= 2.3.0
+:depends: profitbrick >= 3.0.0
 
 The module requires ProfitBricks credentials to be supplied along with
 an existing virtual datacenter UUID where the server resources will
@@ -38,16 +38,22 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       provider: my-profitbricks-config
       # Name of a predefined server size.
       size: Micro Instance
+      # Assign CPU family to server.
+      cpu_family: INTEL_XEON
+      # Number of CPU cores to allocate to node (overrides server size).
+      cores: 4
+      # Amount of RAM in multiples of 256 MB (overrides server size).
+      ram: 4096
+      # The server availability zone.
+      availability_zone: ZONE_1
       # Name or UUID of the HDD image to use.
       image: <UUID>
       # Size of the node disk in GB (overrides server size).
       disk_size: 40
       # Type of disk (HDD or SSD).
       disk_type: SSD
-      # Number of CPU cores to allocate to node (overrides server size).
-      cores: 4
-      # Amount of RAM in multiples of 256 MB (overrides server size).
-      ram: 4096
+      # Storage availability zone to use.
+      disk_availability_zone: ZONE_2
       # Assign the server to the specified public LAN.
       public_lan: <ID>
       # Assign firewall rules to the network interface.
@@ -58,12 +64,13 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
           port_range_end: 22
       # Assign the server to the specified private LAN.
       private_lan: <ID>
-      # Assign CPU family to server.
-      cpu_family: INTEL_XEON
+      # Enable NAT on the private NIC.
+      nat: true
       # Assign additional volumes to the server.
       volumes:
         data-volume:
           disk_size: 500
+          disk_availability_zone: ZONE_3
         log-volume:
           disk_size: 50
           disk_type: SSD
@@ -515,7 +522,7 @@ def list_nodes_full(conn=None, call=None):
 
         ret[node['name']] = node
 
-    salt.utils.cloud.cache_node_list(
+    __utils__['cloud.cache_node_list'](
         ret,
         __active_provider_name__.split(':')[0],
         __opts__
@@ -534,8 +541,11 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__,
-                                __opts__)
+    __utils__['cloud.cache_node'](
+        nodes[name],
+        __active_provider_name__,
+        __opts__
+    )
     return nodes[name]
 
 
@@ -583,9 +593,12 @@ def _get_nics(vm_):
         firewall_rules = []
         if 'private_firewall_rules' in vm_:
             firewall_rules = _get_firewall_rules(vm_['private_firewall_rules'])
-        nics.append(NIC(lan=int(vm_['private_lan']),
-                        name='private',
-                        firewall_rules=firewall_rules))
+        nic = NIC(lan=int(vm_['private_lan']),
+                  name='private',
+                  firewall_rules=firewall_rules)
+        if 'nat' in vm_:
+            nic.nat = vm_['nat']
+        nics.append(nic)
     return nics
 
 
@@ -682,7 +695,7 @@ def create(vm_):
     # Assembla the composite server object.
     server = _get_server(vm_, volumes, nics)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
@@ -777,7 +790,7 @@ def create(vm_):
         )
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
@@ -792,7 +805,7 @@ def create(vm_):
 
     if 'ssh_host' in vm_:
         vm_['key_filename'] = get_key_filename(vm_)
-        ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+        ret = __utils__['cloud.bootstrap'](vm_, __opts__)
         ret.update(data)
         return ret
     else:
@@ -821,7 +834,7 @@ def destroy(name, call=None):
             '-a or --action.'
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
@@ -836,7 +849,7 @@ def destroy(name, call=None):
 
     conn.delete_server(datacenter_id=datacenter_id, server_id=node['id'])
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
@@ -846,7 +859,7 @@ def destroy(name, call=None):
     )
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(
+        __utils__['cloud.delete_minion_cachedir'](
             name,
             __active_provider_name__.split(':')[0],
             __opts__
@@ -944,6 +957,12 @@ def _get_server(vm_, volumes, nics):
     # Apply component overrides to the size from the cloud profile config
     vm_size = _override_size(vm_)
 
+    # Set the server availability zone from the cloud profile config
+    availability_zone = config.get_cloud_config_value(
+        'availability_zone', vm_, __opts__, default=None,
+        search_global=False
+    )
+
     # Assign CPU family from the cloud profile config
     cpu_family = config.get_cloud_config_value(
         'cpu_family', vm_, __opts__, default=None,
@@ -954,6 +973,7 @@ def _get_server(vm_, volumes, nics):
     return Server(
         name=vm_['name'],
         ram=vm_size['ram'],
+        availability_zone=availability_zone,
         cores=vm_size['cores'],
         cpu_family=cpu_family,
         create_volumes=volumes,
@@ -982,6 +1002,10 @@ def _get_system_volume(vm_):
         ssh_keys=ssh_keys
     )
 
+    # Set volume availability zone if defined in the cloud profile
+    if 'disk_availability_zone' in vm_:
+        volume.availability_zone = vm_['disk_availability_zone']
+
     return volume
 
 
@@ -1003,12 +1027,18 @@ def _get_data_volumes(vm_):
             volumes[key]['disk_type'] = 'HDD'
 
         # Construct volume object and assign to a list.
-        ret.append(Volume(
+        volume = Volume(
             name=key,
             size=volumes[key]['disk_size'],
             disk_type=volumes[key]['disk_type'],
             licence_type='OTHER'
-        ))
+        )
+
+        # Set volume availability zone if defined in the cloud profile
+        if 'disk_availability_zone' in volumes[key].keys():
+            volume.availability_zone = volumes[key]['disk_availability_zone']
+
+        ret.append(volume)
 
     return ret
 

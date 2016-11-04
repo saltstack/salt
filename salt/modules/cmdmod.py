@@ -26,6 +26,7 @@ import tempfile
 # Import salt libs
 import salt.utils
 import salt.utils.files
+import salt.utils.powershell
 import salt.utils.timed_subprocess
 import salt.grains.extra
 import salt.ext.six as six
@@ -315,6 +316,10 @@ def _run(cmd,
         raise CommandExecutionError('VT not available on windows')
 
     if shell.lower().strip() == 'powershell':
+        # Strip whitespace
+        if isinstance(cmd, six.string_types):
+            cmd = cmd.strip()
+
         # If we were called by script(), then fakeout the Windows
         # shell to run a Powershell script.
         # Else just run a Powershell command.
@@ -324,11 +329,11 @@ def _run(cmd,
         # The last item in the list [-1] is the current method.
         # The third item[2] in each tuple is the name of that method.
         if stack[-2][2] == 'script':
-            cmd = 'Powershell -NonInteractive -ExecutionPolicy Bypass -File ' + cmd
+            cmd = 'Powershell -NonInteractive -NoProfile -ExecutionPolicy Bypass -File ' + cmd
         elif encoded_cmd:
             cmd = 'Powershell -NonInteractive -EncodedCommand {0}'.format(cmd)
         else:
-            cmd = 'Powershell -NonInteractive "{0}"'.format(cmd.replace('"', '\\"'))
+            cmd = 'Powershell -NonInteractive -NoProfile "{0}"'.format(cmd.replace('"', '\\"'))
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
@@ -2058,7 +2063,7 @@ def script(source,
             'Oxygen',
             'Parameter \'__env__\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('__env__')
 
@@ -2274,7 +2279,7 @@ def script_retcode(source,
             'Oxygen',
             'Parameter \'__env__\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('__env__')
 
@@ -2663,16 +2668,24 @@ def shells():
     return ret
 
 
-def shell_info(shell):
+def shell_info(shell, list_modules=False):
     '''
-    Provides information about a shell or script languages which often use ``#!``.
-    The values returned are dependant on the shell or scripting languages all return the
-    ``installed``, ``path``, ``version``, ``version_raw``
+    .. versionadded:: 2016.11.0
 
-    :param str shell: Name of the shell. Support shells/script languages include
+    Provides information about a shell or script languages which often use
+    ``#!``. The values returned are dependant on the shell or scripting
+    languages all return the ``installed``, ``path``, ``version``,
+    ``version_raw``
+
+    Args:
+        shell (str): Name of the shell. Support shells/script languages include
         bash, cmd, perl, php, powershell, python, ruby and zsh
-    :return: Properties of the shell specifically its and other information if available.
-    :rtype: dict
+
+        list_modules (bool): True to list modules available to the shell.
+        Currently only lists powershell modules.
+
+    Returns:
+        dict: A dictionary of information about the shell
 
     .. code-block:: python
 
@@ -2682,14 +2695,12 @@ def shell_info(shell):
          'installed': <True, False or None>,
          '<attribute>': '<attribute value>'}
 
-    ..
-
     .. note::
-        * ``installed`` is always returned, if ``None`` or ``False`` also returns error and may also return ``stdout`` for diagnostics.
-        * ``version`` is for use in determine if a shell/script language has a particular feature set, not for package management.
-        * The shell must be within the exeuctable search path.
-
-    .. versionadded:: Carbon
+        - ``installed`` is always returned, if ``None`` or ``False`` also
+          returns error and may also return ``stdout`` for diagnostics.
+        - ``version`` is for use in determine if a shell/script language has a
+          particular feature set, not for package management.
+        - The shell must be within the executable search path.
 
     CLI Example:
 
@@ -2697,8 +2708,6 @@ def shell_info(shell):
 
         salt '*' cmd.shell_info bash
         salt '*' cmd.shell_info powershell
-
-    ..
 
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
@@ -2716,22 +2725,37 @@ def shell_info(shell):
         'php': [r'^PHP (\d\S*)', 'php', '-v']
     }
     # Ensure ret['installed'] always as a value of True, False or None (not sure)
-    ret = {}
-    ret['installed'] = False
+    ret = {'installed': False}
     if salt.utils.is_windows() and shell == 'powershell':
-        pw_keys = __salt__['reg.list_keys']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell')
+        pw_keys = __salt__['reg.list_keys'](
+            'HKEY_LOCAL_MACHINE',
+            'Software\\Microsoft\\PowerShell')
         pw_keys.sort(key=int)
         if len(pw_keys) == 0:
             return {
-                'error': 'Unable to locate \'powershell\' Reason: Cannot be found in registry.',
+                'error': 'Unable to locate \'powershell\' Reason: Cannot be '
+                         'found in registry.',
                 'installed': False,
             }
         for reg_ver in pw_keys:
-            install_data = __salt__['reg.read_value']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver), 'Install')
-            if 'vtype' in install_data and install_data['vtype'] == 'REG_DWORD' and install_data['vdata'] == 1:
-                details = __salt__['reg.list_values']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell\\{0}\\PowerShellEngine'.format(reg_ver))
-                ret = {}  # reset data, want the newest version details only as powershell is backwards compatible
-                ret['installed'] = None  # if all goes well this will become True
+            install_data = __salt__['reg.read_value'](
+                'HKEY_LOCAL_MACHINE',
+                'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver),
+                'Install')
+            if 'vtype' in install_data and \
+                    install_data['vtype'] == 'REG_DWORD' and \
+                    install_data['vdata'] == 1:
+                details = __salt__['reg.list_values'](
+                    'HKEY_LOCAL_MACHINE',
+                    'Software\\Microsoft\\PowerShell\\{0}\\'
+                    'PowerShellEngine'.format(reg_ver))
+
+                # reset data, want the newest version details only as powershell
+                # is backwards compatible
+                ret = {}
+
+                # if all goes well this will become True
+                ret['installed'] = None
                 ret['path'] = which('powershell.exe')
                 for attribute in details:
                     if attribute['vname'].lower() == '(default)':
@@ -2741,26 +2765,30 @@ def shell_info(shell):
                         ret['version_raw'] = attribute['vdata']
                     elif attribute['vname'].lower() == 'runtimeversion':
                         ret['crlversion'] = attribute['vdata']
-                        if ret['crlversion'][0] == 'v' or ret['crlversion'][0] == 'V':
+                        if ret['crlversion'][0].lower() == 'v':
                             ret['crlversion'] = ret['crlversion'][1::]
                     elif attribute['vname'].lower() == 'pscompatibleversion':
-                        # reg attribute does not end in s, the powershell attibute does
-                        ret['pscompatibleversions'] = attribute['vdata'].replace(' ', '').split(',')
+                        # reg attribute does not end in s, the powershell
+                        # attribute does
+                        ret['pscompatibleversions'] = \
+                            attribute['vdata'].replace(' ', '').split(',')
                     else:
-                        # keys are lower case as python is case sensitive the registry is not
+                        # keys are lower case as python is case sensitive the
+                        # registry is not
                         ret[attribute['vname'].lower()] = attribute['vdata']
     else:
         if shell not in regex_shells:
             return {
-                'error': 'Salt does not know how to get the version number for {0}'.format(shell),
+                'error': 'Salt does not know how to get the version number for '
+                         '{0}'.format(shell),
                 'installed': None
             }
         shell_data = regex_shells[shell]
         pattern = shell_data.pop(0)
         # We need to make sure HOME set, so shells work correctly
         # salt-call will general have home set, the salt-minion service may not
-        # We need to assume ports of unix shells to windows will look after themselves
-        # in setting HOME as they do it in many different ways
+        # We need to assume ports of unix shells to windows will look after
+        # themselves in setting HOME as they do it in many different ways
         newenv = os.environ
         if ('HOME' not in newenv) and (not salt.utils.is_windows()):
             newenv['HOME'] = os.path.expanduser('~')
@@ -2802,10 +2830,16 @@ def shell_info(shell):
                 ver_list.append('0')
             ret['version'] = '.'.join(ver_list[:3])
     else:
-        ret['installed'] = None  # Have an unexpect result
+        ret['installed'] = None  # Have an unexpected result
+
+    # Get a list of the PowerShell modules which are potentially available
+    # to be imported
+    if shell == 'powershell' and ret['installed'] and list_modules:
+        ret['modules'] = salt.utils.powershell.get_modules()
 
     if 'version' not in ret:
-        ret['error'] = 'The version regex pattern for shell {0}, could not find the version string'.format(shell)
+        ret['error'] = 'The version regex pattern for shell {0}, could not ' \
+                       'find the version string'.format(shell)
         ret['stdout'] = proc.stdout  # include stdout so they can see the issue
         log.error(ret['error'])
 
@@ -2830,14 +2864,28 @@ def powershell(cmd,
         saltenv='base',
         use_vt=False,
         password=None,
+        depth=None,
         encode_cmd=False,
         **kwargs):
     '''
-    Execute the passed PowerShell command and return the output as a string.
+    Execute the passed PowerShell command and return the output as a dictionary.
+
+    Other ``cmd.*`` functions return the raw text output of the command. This
+    function appends ``| ConvertTo-JSON`` to the command and then parses the
+    JSON into a Python dictionary. If you want the raw textual result of your
+    PowerShell command you should use ``cmd.run`` with the ``shell=powershell``
+    option.
+
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run '$PSVersionTable.CLRVersion' shell=powershell
+        salt '*' cmd.run 'Get-NetTCPConnection' shell=powershell
 
     .. versionadded:: 2016.3.0
 
-    .. warning ::
+    .. warning::
 
         This passes the cmd argument directly to PowerShell
         without any further processing! Be absolutely sure that you
@@ -2846,6 +2894,16 @@ def powershell(cmd,
 
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
+
+    In addition to the normal ``cmd.run`` parameters, this command offers the
+    ``depth`` parameter to change the Windows default depth for the
+    ``ConvertTo-JSON`` powershell command. The Windows default is 2. If you need
+    more depth, set that here.
+
+    .. note::
+        For some commands, setting the depth to a value greater than 4 greatly
+        increases the time it takes for the command to return and in many cases
+        returns useless data.
 
     :param str cmd: The powershell command to run.
 
@@ -2939,9 +2997,18 @@ def powershell(cmd,
 
     :param str saltenv: The salt environment to use. Default is 'base'
 
+    :param int depth: The number of levels of contained objects to be included.
+        Default is 2. Values greater than 4 seem to greatly increase the time
+        it takes for the command to complete for some commands. eg: ``dir``
+
+        .. versionadded:: 2016.3.4
+
     :param bool encode_cmd: Encode the command before executing. Use in cases
       where characters may be dropped or incorrectly converted when executed.
       Default is False.
+
+    :returns:
+        :dict: A dictionary of data returned by the powershell command.
 
     CLI Example:
 
@@ -2955,7 +3022,9 @@ def powershell(cmd,
         python_shell = True
 
     # Append PowerShell Object formatting
-    cmd = '{0} | ConvertTo-Json -Depth 32'.format(cmd)
+    cmd += ' | ConvertTo-JSON'
+    if depth is not None:
+        cmd += ' -Depth {0}'.format(depth)
 
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.

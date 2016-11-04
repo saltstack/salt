@@ -63,8 +63,12 @@ from __future__ import absolute_import
 import time
 
 # Import Salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 __virtualname__ = 'service'
 
@@ -298,9 +302,9 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         The name of the init or rc script used to manage the service
 
     enable
-        Set the service to be enabled at boot time, True sets the service to
-        be enabled, False sets the named service to be disabled. The default
-        is None, which does not enable or disable anything.
+        Set the service to be enabled at boot time, ``True`` sets the service
+        to be enabled, ``False`` sets the named service to be disabled. The
+        default is ``None``, which does not enable or disable anything.
 
     sig
         The string to search for when looking for the service process with ps
@@ -327,6 +331,10 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     # Check for common error: using enabled option instead of enable
     if 'enabled' in kwargs:
         return _enabled_used_error(ret)
+
+    # Convert enable to boolean in case user passed a string value
+    if isinstance(enable, six.string_types):
+        enable = salt.utils.is_true(enable)
 
     # Check if the service is available
     try:
@@ -432,6 +440,10 @@ def dead(name, enable=None, sig=None, **kwargs):
     # Check for common error: using enabled option instead of enable
     if 'enabled' in kwargs:
         return _enabled_used_error(ret)
+
+    # Convert enable to boolean in case user passed a string value
+    if isinstance(enable, six.string_types):
+        enable = salt.utils.is_true(enable)
 
     # Check if the service is available
     try:

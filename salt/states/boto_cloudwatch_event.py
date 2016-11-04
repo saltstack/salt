@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Manage CloudTrail Objects
-=================
+=========================
 
-.. versionadded:: carbon
+.. versionadded:: 2016.11.0
 
 Create and destroy CloudWatch event rules. Be aware that this interacts with Amazon's services,
 and so may incur charges.

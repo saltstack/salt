@@ -111,8 +111,9 @@ if HAS_CHERRYPY:
         }
 
         def setUp(self):
-            if hasattr(self, '_cp_config'):
-                Root._cp_config = self._cp_config
+            if not hasattr(self, '_cp_config'):
+                self._cp_config = {}
+            Root._cp_config = self._cp_config
             root = Root()
 
             cherrypy.tree.mount(root, '/', self.conf)

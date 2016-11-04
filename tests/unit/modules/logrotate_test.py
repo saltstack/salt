@@ -6,6 +6,10 @@
 # Import Python Libs
 from __future__ import absolute_import
 
+# Import Salt Libs
+from salt.exceptions import SaltInvocationError
+from salt.modules import logrotate
+
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
@@ -18,11 +22,18 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
-# Import Salt Libs
-from salt.modules import logrotate
-
 # Globals
 logrotate.__salt__ = {}
+
+PARSE_CONF = {
+    'include files': {
+        'rsyslog': ['/var/log/syslog']
+    },
+    'rotate': '1',
+    '/var/log/wtmp': {
+        'rotate': '1'
+    }
+}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -40,35 +51,50 @@ class LogrotateTestCase(TestCase):
         '''
         self.assertTrue(logrotate.show_conf())
 
-    # 'set_' function tests: 2
+    # 'set_' function tests: 4
 
     @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value={'include files': {'include': 'A'},
-                                   'rotate': {'salt': 'A'}}))
+           MagicMock(return_value=PARSE_CONF))
     def test_set(self):
         '''
         Test if it set a new value for a specific configuration line
         '''
-        ret = (
-               'Error: rotate includes a dict, and a specific '
-               'setting inside the dict was not declared'
-               )
-        self.assertEqual(logrotate.set_('rotate', '2'), ret)
+        with patch.dict(logrotate.__salt__,
+                        {'file.replace': MagicMock(return_value=True)}):
+            self.assertTrue(logrotate.set_('rotate', '2'))
 
     @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value={'include files': {'include': 'A'},
-                                   'rotate': 'salt'}))
+           MagicMock(return_value=PARSE_CONF))
+    def test_set_failed(self):
+        '''
+        Test if it fails to set a new value for a specific configuration line
+        '''
+        kwargs = {'key': '/var/log/wtmp',
+                  'value': 2}
+        self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
+
+    @patch('salt.modules.logrotate._parse_conf',
+           MagicMock(return_value=PARSE_CONF))
     def test_set_setting(self):
         '''
         Test if it set a new value for a specific configuration line
         '''
-        ret = (
-               'Error: A setting for a dict was declared, '
-               'but the configuration line given is not a dict'
-               )
-        self.assertEqual(logrotate.set_('rotate', '2', True), ret)
+        with patch.dict(logrotate.__salt__,
+                        {'file.replace': MagicMock(return_value=True)}):
+            self.assertTrue(logrotate.set_('/var/log/wtmp', 'rotate', '2'))
+
+    @patch('salt.modules.logrotate._parse_conf',
+           MagicMock(return_value=PARSE_CONF))
+    def test_set_setting_failed(self):
+        '''
+        Test if it fails to set a new value for a specific configuration line
+        '''
+        kwargs = {'key': 'rotate',
+                  'value': '/var/log/wtmp',
+                  'setting': '2'}
+        self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(LogrotateTestCase, needs_daemon=False)

@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
-Manage a GPG keychains, add keys, create keys, retrieve keys
-from keyservers.  Sign, encrypt and sign & encrypt text and files.
+Manage a GPG keychains, add keys, create keys, retrieve keys from keyservers.
+Sign, encrypt and sign plus encrypt text and files.
 
 .. versionadded:: 2015.5.0
 
 .. note::
-    The ``python-gnupg`` library and gpg binary are
-    required to be installed.
+
+    The ``python-gnupg`` library and ``gpg`` binary are required to be
+    installed.
 
 '''
 
@@ -565,7 +566,7 @@ def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
     Get a key from the GPG keychain
 
     keyid
-        The keyid of the key to be retrieved.
+        The key ID (short or long) of the key to be retrieved.
 
     fingerprint
         The fingerprint of the key to be retrieved.
@@ -591,7 +592,9 @@ def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
     '''
     tmp = {}
     for _key in _list_keys(user, gnupghome):
-        if _key['fingerprint'] == fingerprint or _key['keyid'] == keyid:
+        if (_key['fingerprint'] == fingerprint or
+                _key['keyid'] == keyid or
+                _key['keyid'][8:] == keyid):
             tmp['keyid'] = _key['keyid']
             tmp['fingerprint'] = _key['fingerprint']
             tmp['uids'] = _key['uids']
@@ -625,7 +628,7 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
     Get a key from the GPG keychain
 
     keyid
-        The keyid of the key to be retrieved.
+        The key ID (short or long) of the key to be retrieved.
 
     fingerprint
         The fingerprint of the key to be retrieved.
@@ -651,7 +654,9 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
     '''
     tmp = {}
     for _key in _list_keys(user, gnupghome, secret=True):
-        if _key['fingerprint'] == fingerprint or _key['keyid'] == keyid:
+        if (_key['fingerprint'] == fingerprint or
+                _key['keyid'] == keyid or
+                _key['keyid'][8:] == keyid):
             tmp['keyid'] = _key['keyid']
             tmp['fingerprint'] = _key['fingerprint']
             tmp['uids'] = _key['uids']
@@ -681,23 +686,23 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
 
 
 @_restore_ownership
-def import_key(user=None,
-               text=None,
+def import_key(text=None,
                filename=None,
+               user=None,
                gnupghome=None):
     r'''
     Import a key from text or file
-
-    user
-        Which user's keychain to access, defaults to user Salt is running as.
-        Passing the user as ``salt`` will set the GnuPG home directory to the
-        ``/etc/salt/gpgkeys``.
 
     text
         The text containing to import.
 
     filename
         The filename containing the key to import.
+
+    user
+        Which user's keychain to access, defaults to user Salt is running as.
+        Passing the user as ``salt`` will set the GnuPG home directory to the
+        ``/etc/salt/gpgkeys``.
 
     gnupghome
         Specify the location where GPG keyring and related files are stored.
@@ -711,9 +716,9 @@ def import_key(user=None,
 
     '''
     ret = {
-           'res': True,
-           'message': ''
-          }
+        'res': True,
+        'message': ''
+        }
 
     gpg = _create_gpg(user, gnupghome)
 
@@ -761,12 +766,13 @@ def export_key(keyids=None, secret=False, user=None, gnupghome=None):
     Export a key from the GPG keychain
 
     keyids
-        The keyid(s) of the key(s) to be exported.  Can be specified as a comma
-        separated string or a list.  Anything which GnuPG itself accepts to
-        identify a key - for example, the keyid or the fingerprint could be used.
+        The key ID(s) of the key(s) to be exported. Can be specified as a comma
+        separated string or a list. Anything which GnuPG itself accepts to
+        identify a key - for example, the key ID or the fingerprint could be
+        used.
 
     secret
-        Export the secret key identified by the keyid information passed.
+        Export the secret key identified by the ``keyids`` information passed.
 
     user
         Which user's keychain to access, defaults to user Salt is running as.

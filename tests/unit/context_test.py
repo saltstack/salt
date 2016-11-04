@@ -5,6 +5,7 @@
 '''
 # Import python libs
 from __future__ import absolute_import
+import json
 import tornado.stack_context
 import tornado.gen
 from tornado.testing import AsyncTestCase, gen_test
@@ -185,3 +186,13 @@ class NamespacedDictWrapperTests(TestCase):
         self._dict['prefix'] = {'foo': {'bar': 'baz'}}
         w = NamespacedDictWrapper(self._dict, ('prefix', 'foo'))
         self.assertEqual(w['bar'], 'baz')
+
+    def test_json_dumps_single_key(self):
+        self._dict['prefix'] = {'foo': {'bar': 'baz'}}
+        w = NamespacedDictWrapper(self._dict, 'prefix')
+        self.assertEqual(json.dumps(w), '{"foo": {"bar": "baz"}}')
+
+    def test_json_dumps_multiple_key(self):
+        self._dict['prefix'] = {'foo': {'bar': 'baz'}}
+        w = NamespacedDictWrapper(self._dict, ('prefix', 'foo'))
+        self.assertEqual(json.dumps(w), '{"bar": "baz"}')

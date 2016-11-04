@@ -1283,7 +1283,7 @@ def _mkstemp_copy(path,
     temp_file = None
     # Create the temp file
     try:
-        temp_file = salt.utils.files.mkstemp()
+        temp_file = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
             "Unable to create temp file. "
@@ -1404,7 +1404,7 @@ def _get_line_indent(src, line, indent):
     return ''.join(idt) + line.strip()
 
 
-def line(path, content, match=None, mode=None, location=None,
+def line(path, content=None, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
          quiet=False, indent=True):
     '''
@@ -1416,7 +1416,7 @@ def line(path, content, match=None, mode=None, location=None,
         Filesystem path to the file to be edited.
 
     :param content:
-        Content of the line.
+        Content of the line. Allowed to be empty if mode=delete.
 
     :param match:
         Match the target line for an action by
@@ -1495,6 +1495,13 @@ def line(path, content, match=None, mode=None, location=None,
             raise CommandExecutionError('Mode was not defined. How to process the file?')
         else:
             raise CommandExecutionError('Unknown mode: "{0}"'.format(mode))
+
+    # We've set the content to be empty in the function params but we want to make sure
+    # it gets passed when needed. Feature #37092
+    modeswithemptycontent = ['delete']
+    if mode not in modeswithemptycontent and content is None:
+        raise CommandExecutionError('Content can only be empty if mode is {0}'.format(modeswithemptycontent))
+    del modeswithemptycontent
 
     # Before/after has privilege. If nothing defined, match is used by content.
     if before is None and after is None and not match:
@@ -3510,6 +3517,7 @@ def get_managed(
         '''
         return {'hsum': get_hash(path, form='sha256'), 'hash_type': 'sha256'}
 
+    source_hash_name = kwargs.pop('source_hash_name', None)
     # If we have a source defined, let's figure out what the hash is
     if source:
         urlparsed_source = _urlparse(source)
@@ -3558,7 +3566,8 @@ def get_managed(
                         if not hash_fn:
                             return '', {}, ('Source hash file {0} not found'
                                             .format(source_hash))
-                        source_sum = extract_hash(hash_fn, '', name)
+                        source_sum = extract_hash(
+                            hash_fn, '', source_hash_name or name)
                         if source_sum is None:
                             return _invalid_source_hash_format()
 
@@ -4066,7 +4075,8 @@ def check_file_meta(
 
     if contents is not None:
         # Write a tempfile with the static contents
-        tmp = salt.utils.files.mkstemp(text=True)
+        tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
+                                       text=True)
         if salt.utils.is_windows():
             contents = os.linesep.join(contents.splitlines())
         with salt.utils.fopen(tmp, 'w') as tmp_:
@@ -4336,7 +4346,8 @@ def manage_file(name,
 
         if contents is not None:
             # Write the static contents to a temporary file
-            tmp = salt.utils.files.mkstemp(text=True)
+            tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
+                                           text=True)
             if salt.utils.is_windows():
                 contents = os.linesep.join(contents.splitlines())
             with salt.utils.fopen(tmp, 'w') as tmp_:
@@ -4518,7 +4529,8 @@ def manage_file(name,
 
         if contents is not None:
             # Write the static contents to a temporary file
-            tmp = salt.utils.files.mkstemp(text=True)
+            tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
+                                           text=True)
             if salt.utils.is_windows():
                 contents = os.linesep.join(contents.splitlines())
             with salt.utils.fopen(tmp, 'w') as tmp_:

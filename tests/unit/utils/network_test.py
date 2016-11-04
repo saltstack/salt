@@ -100,9 +100,9 @@ class NetworkTestCase(TestCase):
         ret = network.sanitize_host('10.1./2.$3')
         self.assertEqual(ret, '10.1.2.3')
 
-    def test_host_to_ip(self):
-        ret = network.host_to_ip('www.saltstack.com')
-        self.assertEqual(ret, '104.199.122.13')
+    def test_host_to_ips(self):
+        ret = network.host_to_ips('www.saltstack.com')
+        self.assertEqual(ret, ['104.199.122.13'])
 
     def test_generate_minion_id(self):
         self.assertTrue(network.generate_minion_id())

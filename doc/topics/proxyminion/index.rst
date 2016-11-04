@@ -36,8 +36,8 @@ or more minions.
 See :doc:`Proxyminion Beacon </topics/proxyminion/beacon>` to help
 with easy configuration and management of ``salt-proxy`` processes.
 
-New in Carbon
--------------
+New in 2016.11.0
+----------------
 
 Proxy minions now support configuration files with names ending in '*.conf'
 and placed in /etc/salt/proxy.d.
@@ -114,7 +114,7 @@ the rest of the proxy's grains.  Since older proxy-minions might have used other
 methods to call such a function and add its results to grains, this is config-gated
 by a new proxy configuration option called ``proxy_merge_grains_in_module``.  This
 defaults to ``False`` in this release.  It will default to True in the release after
-next.  The next release is codenamed **Carbon**, the following is **Nitrogen**.
+next.  The next release is 2016.11.0, the following is **Nitrogen**.
 
 
 
@@ -311,7 +311,7 @@ proxy minions will only see the keys specific to the proxies it will be
 handling.
 
 Proxies can be configured in /etc/salt/proxy or with files in /etc/salt/proxy.d as of
-Salt's Carbon release.
+Salt's 2016.11.0 release.
 
 Also, in general, proxy-minions are lightweight, so the machines that run them
 could conceivably control a large number of devices.  To run more than one proxy from

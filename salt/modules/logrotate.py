@@ -9,10 +9,11 @@ import os
 import logging
 
 # Import salt libs
+from salt.exceptions import SaltInvocationError
 import salt.utils
 
-log = logging.getLogger(__name__)
-default_conf = '/etc/logrotate.conf'
+_LOG = logging.getLogger(__name__)
+_DEFAULT_CONF = '/etc/logrotate.conf'
 
 
 # Define a function alias in order not to shadow built-in's
@@ -30,7 +31,7 @@ def __virtual__():
     return True
 
 
-def _parse_conf(conf_file=default_conf):
+def _parse_conf(conf_file=_DEFAULT_CONF):
     '''
     Parse a logrotate configuration file.
 
@@ -94,7 +95,7 @@ def _parse_conf(conf_file=default_conf):
     return ret
 
 
-def show_conf(conf_file=default_conf):
+def show_conf(conf_file=_DEFAULT_CONF):
     '''
     Show parsed configuration
 
@@ -107,7 +108,7 @@ def show_conf(conf_file=default_conf):
     return _parse_conf(conf_file)
 
 
-def set_(key, value, setting=None, conf_file=default_conf):
+def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
     '''
     Set a new value for a specific configuration line
 
@@ -143,15 +144,15 @@ def set_(key, value, setting=None, conf_file=default_conf):
             conf_file = os.path.join(conf['include'], include)
 
     if isinstance(conf[key], dict) and not setting:
-        return (
-            'Error: {0} includes a dict, and a specific setting inside the '
-            'dict was not declared'.format(key)
-        )
+        error_msg = ('Error: {0} includes a dict, and a specific setting inside the '
+                     'dict was not declared').format(key)
+        raise SaltInvocationError(error_msg)
 
     if setting:
         if isinstance(conf[key], str):
-            return ('Error: A setting for a dict was declared, but the '
-                    'configuration line given is not a dict')
+            error_msg = ('Error: A setting for a dict was declared, but the '
+                         'configuration line given is not a dict')
+            raise SaltInvocationError(error_msg)
         # We're going to be rewriting an entire stanza
         stanza = conf[key]
         if value == 'False':
@@ -159,31 +160,32 @@ def set_(key, value, setting=None, conf_file=default_conf):
         else:
             stanza[value] = setting
         new_line = _dict_to_stanza(key, stanza)
-        log.debug(stanza)
-        log.debug(new_line)
-        log.debug(key)
-        __salt__['file.replace'](conf_file,
-                                 '{0}.*{{.*}}'.format(key),
-                                 new_line,
-                                 flags=24,
-                                 backup=False)
+        _LOG.debug(stanza)
+        _LOG.debug(new_line)
+        _LOG.debug(key)
+        return __salt__['file.replace'](conf_file,
+                                        '{0}.*{{.*}}'.format(key),
+                                        new_line,
+                                        flags=24,
+                                        backup=False,
+                                        show_changes=False)
+    # This is the new config line that will be set
+    if value == 'True':
+        new_line = key
+    elif value == 'False':
+        new_line = ''
     else:
-        # This is the new config line that will be set
-        if value == 'True':
-            new_line = key
-        elif value == 'False':
-            new_line = ''
-        else:
-            new_line = '{0} {1}'.format(key, value)
+        new_line = '{0} {1}'.format(key, value)
 
-        log.debug(conf_file)
-        log.debug(key)
-        log.debug(new_line)
-        __salt__['file.replace'](conf_file,
-                                 '^{0}.*'.format(key),
-                                 new_line,
-                                 flags=8,
-                                 backup=False)
+    _LOG.debug(conf_file)
+    _LOG.debug(key)
+    _LOG.debug(new_line)
+    return __salt__['file.replace'](conf_file,
+                                    '^{0}.*'.format(key),
+                                    new_line,
+                                    flags=8,
+                                    backup=False,
+                                    show_changes=False)
 
 
 def _dict_to_stanza(key, stanza):

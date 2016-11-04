@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-CP" "1" "July 18, 2016" "2016.3.1" "Salt"
+.TH "SALT-CP" "1" "October 31, 2016" "2016.11.0" "Salt"
 .SH NAME
 salt-cp \- salt-cp Documentation
 .
@@ -51,6 +51,9 @@ salt\-cp \-G \(aqos:Arch.*\(aq [ options ] SOURCE DEST
 .sp
 Salt copy copies a local file out to all of the Salt minions matched by the
 given target.
+.sp
+Salt copy is only intended for use with small files (< 100KB). If you need
+to copy large files out to minions please use the cp.get_file function.
 .sp
 Note: salt\-cp uses salt\(aqs publishing mechanism. This means the privacy of the
 contents of the file on the wire is completely dependent upon the transport

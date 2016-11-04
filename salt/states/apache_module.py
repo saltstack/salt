@@ -91,6 +91,8 @@ def disabled(name):
     '''
     Ensure an Apache module is disabled.
 
+    .. versionadded:: 2016.3.0
+
     name
         Name of the Apache module
     '''
@@ -125,9 +127,7 @@ def disable(name):
     '''
     Ensure an Apache module is disabled.
 
-    .. warning::
-
-        This function is deprecated and will be removed in Salt Nitrogen.
+    .. deprecated:: 2016.3.0
 
     name
         Name of the Apache module

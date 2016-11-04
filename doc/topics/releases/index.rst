@@ -16,13 +16,11 @@ Latest Branch Release
 Previous Releases
 =================
 
-.. after carbon releases, remove carbon from the list below:
-
 .. releasestree::
     :maxdepth: 1
     :glob:
 
-    carbon
+    2016.11.*
     2016.3.*
     2015.8.*
     2015.5.*

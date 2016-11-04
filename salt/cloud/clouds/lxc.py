@@ -76,10 +76,12 @@ def _minion_opts(cfg='minion'):
 
 
 def _master_opts(cfg='master'):
+    if 'conf_file' in __opts__:
+        default_dir = os.path.dirname(__opts__['conf_file'])
+    else:
+        default_dir = __opts__['config_dir'],
     cfg = os.environ.get(
-        'SALT_MASTER_CONFIG',
-        __opts__.get('conf_file',
-                     os.path.join(__opts__['config_dir'], cfg)))
+        'SALT_MASTER_CONFIG', os.path.join(default_dir, cfg))
     opts = config.master_config(cfg)
     return opts
 

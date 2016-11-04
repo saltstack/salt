@@ -141,6 +141,8 @@ state modules
     mysql_query
     mysql_user
     netntp
+    netsnmp
+    netusers
     network
     nftables
     npm
@@ -156,6 +158,7 @@ state modules
     pagerduty_user
     pcs
     pecl
+    pdbedit
     pip_state
     pkg
     pkgbuild

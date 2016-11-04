@@ -1454,7 +1454,7 @@ class PortItem(IntegerItem):
 
 class ComplexSchemaItem(BaseSchemaItem):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Complex Schema Item
 
@@ -1529,7 +1529,7 @@ class ComplexSchemaItem(BaseSchemaItem):
 
 class DefinitionsSchema(Schema):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     JSON schema classs that supports ComplexSchemaItem objects by adding
     a definitions section to the JSON schema, containing the item definitions.

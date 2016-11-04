@@ -524,6 +524,15 @@ class MinionBase(object):
             if opts['random_master']:
                 shuffle(opts['local_masters'])
             last_exc = None
+            opts['master_uri_list'] = list()
+
+            # This sits outside of the connection loop below because it needs to set
+            # up a list of master URIs regardless of which masters are available
+            # to connect _to_. This is primarily used for masterless mode, when
+            # we need a list of master URIs to fire calls back to.
+            for master in opts['local_masters']:
+                opts['master'] = master
+                opts['master_uri_list'].append(resolve_dns(opts)['master_uri'])
 
             while True:
                 attempts += 1
@@ -769,6 +778,11 @@ class MinionManager(MinionBase):
         if HAS_ZMQ:
             zmq.eventloop.ioloop.install()
         self.io_loop = LOOP_CLASS.current()
+        self.process_manager = ProcessManager(name='MultiMinionProcessManager')
+        self.io_loop.spawn_callback(self.process_manager.run, async=True)
+
+    def __del__(self):
+        self.destroy()
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup

@@ -156,6 +156,14 @@ class IptablesTestCase(TestCase):
         self.assertEqual(iptables.build_rule(**{'match-set': match_sets}),
                          '-m set --match-set src1 flag -m set ! --match-set src2 flag2')
 
+        # should allow escaped name
+        self.assertEqual(iptables.build_rule(**{'match': 'recent', 'name_': 'SSH'}),
+                         '-m recent --name SSH')
+
+        # should allow empty arguments
+        self.assertEqual(iptables.build_rule(**{'match': 'recent', 'update': None}),
+                         '-m recent --update')
+
         # Should allow the --save jump option to CONNSECMARK
         #self.assertEqual(iptables.build_rule(jump='CONNSECMARK',
         #                                     **{'save': ''}),

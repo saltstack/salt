@@ -6,17 +6,21 @@ Utility functions for minions
 # Import Python Libs
 from __future__ import absolute_import
 import os
+import logging
 import threading
 
 # Import Salt Libs
 import salt.utils
 import salt.payload
 
+log = logging.getLogger(__name__)
+
 
 def running(opts):
     '''
     Return the running jobs on this minion
     '''
+
     ret = []
     proc_dir = os.path.join(opts['cachedir'], 'proc')
     if not os.path.isdir(proc_dir):
@@ -100,6 +104,11 @@ def _read_proc_file(path, opts):
             return None
 
     if not _check_cmdline(data):
+        pid = data.get('pid')
+        if pid:
+            log.warning(
+                'PID {0} exists but does not appear to be a salt process.'.format(pid)
+            )
         try:
             os.remove(path)
         except IOError:
@@ -110,13 +119,20 @@ def _read_proc_file(path, opts):
 
 def _check_cmdline(data):
     '''
-    Check the proc filesystem cmdline to see if this process is a salt process
+    In some cases where there are an insane number of processes being created
+    on a system a PID can get recycled or assigned to a non-Salt process.
+    On Linux this fn checks to make sure the PID we are checking on is actually
+    a Salt process.
+
+    For non-Linux systems we punt and just return True
     '''
-    if salt.utils.is_windows():
+    if not salt.utils.is_linux():
         return True
     pid = data.get('pid')
     if not pid:
         return False
+    if not os.path.isdir('/proc'):
+        return True
     path = os.path.join('/proc/{0}/cmdline'.format(pid))
     if not os.path.isfile(path):
         return False

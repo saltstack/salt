@@ -369,6 +369,25 @@ def get_service_instance(host, username=None, password=None, protocol=None,
     return service_instance
 
 
+def get_service_instance_from_managed_object(mo_ref, name='<unnamed>'):
+    '''
+    Retrieves the service instance from a managed object.
+
+    me_ref
+        Reference to a managed object (of type vim.ManagedEntity).
+
+    name
+        Name of managed object. This field is optional.
+    '''
+    if not name:
+        name = mo_ref.name
+    log.trace('[{0}] Retrieving service instance from managed object'
+              ''.format(name))
+    si = vim.ServiceInstance('ServiceInstance')
+    si._stub = mo_ref._stub
+    return si
+
+
 def is_connection_to_a_vcenter(service_instance):
     '''
     Function that returns True if the connection is made to a vCenter Server and
@@ -501,7 +520,7 @@ def get_hardware_grains(service_instance):
     service_instance
         The service instance object to get hardware info for
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     hw_grain_data = {}
     if get_inventory(service_instance).about.apiType == 'HostAgent':
@@ -748,6 +767,54 @@ def get_mors_with_properties(service_instance, object_type, property_list=None,
     return object_list
 
 
+def get_properties_of_managed_object(mo_ref, properties):
+    '''
+    Returns specific properties of a managed object, retrieved in an
+    optimally.
+
+    mo_ref
+        The managed object reference.
+
+    properties
+        List of properties of the managed object to retrieve.
+    '''
+    service_instance = get_service_instance_from_managed_object(mo_ref)
+    log.trace('Retrieving name of {0}'''.format(type(mo_ref).__name__))
+    try:
+        items = get_mors_with_properties(service_instance,
+                                         type(mo_ref),
+                                         container_ref=mo_ref,
+                                         property_list=['name'],
+                                         local_properties=True)
+        mo_name = items[0]['name']
+    except vmodl.query.InvalidProperty:
+        mo_name = '<unnamed>'
+    log.trace('Retrieving properties \'{0}\' of {1} \'{2}\''
+              ''.format(properties, type(mo_ref).__name__, mo_name))
+    items = get_mors_with_properties(service_instance,
+                                     type(mo_ref),
+                                     container_ref=mo_ref,
+                                     property_list=properties,
+                                     local_properties=True)
+    if not items:
+        raise salt.exceptions.VMwareApiError(
+            'Properties of managed object \'{0}\' weren\'t '
+            'retrieved'.format(mo_name))
+    return items[0]
+
+
+def get_managed_object_name(mo_ref):
+    '''
+    Returns the name of a managed object.
+    If the name wasn't found, it returns None.
+
+    mo_ref
+        The managed object reference.
+    '''
+    props = get_properties_of_managed_object(mo_ref, ['name'])
+    return props.get('name')
+
+
 def get_network_adapter_type(adapter_type):
     '''
     Return the network adapter type.
@@ -843,6 +910,65 @@ def create_datacenter(service_instance, datacenter_name):
     except vmodl.RuntimeFault as exc:
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
     return dc_obj
+
+
+def get_cluster(dc_ref, cluster):
+    '''
+    Returns a cluster in a datacenter.
+
+    dc_ref
+        The datacenter reference
+
+    cluster
+        The cluster to be retrieved
+    '''
+    dc_name = get_managed_object_name(dc_ref)
+    log.trace('Retrieving cluster \'{0}\' from datacenter \'{1}\''
+              ''.format(cluster, dc_name))
+    si = get_service_instance_from_managed_object(dc_ref, name=dc_name)
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+        path='hostFolder',
+        skip=True,
+        type=vim.Datacenter,
+        selectSet=[vmodl.query.PropertyCollector.TraversalSpec(
+            path='childEntity',
+            skip=False,
+            type=vim.Folder)])
+    items = [i['object'] for i in
+             get_mors_with_properties(si,
+                                      vim.ClusterComputeResource,
+                                      container_ref=dc_ref,
+                                      property_list=['name'],
+                                      traversal_spec=traversal_spec)
+            if i['name'] == cluster]
+    if not items:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Cluster \'{0}\' was not found in datacenter '
+            '\'{1}\''. format(cluster, dc_name))
+    return items[0]
+
+
+def update_cluster(cluster_ref, cluster_spec):
+    '''
+    Updates a cluster in a datacenter.
+
+    cluster_ref
+        The cluster reference.
+
+    cluster_spec
+        The cluster spec (vim.ClusterConfigSpecEx).
+        Defaults to None.
+    '''
+    cluster_name = get_managed_object_name(cluster_ref)
+    log.trace('Updating cluster \'{0}\''.format(cluster_name))
+    try:
+        task = cluster_ref.ReconfigureComputeResource_Task(cluster_spec,
+                                                           modify=True)
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    wait_for_task(task, cluster_name, 'ClusterUpdateTask')
 
 
 def list_clusters(service_instance):

@@ -3,12 +3,13 @@
 # Import python libs
 from __future__ import absolute_import
 import os
+import sys
 import time
 import signal
 import multiprocessing
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -45,7 +46,7 @@ class TestProcessManager(TestCase):
             time.sleep(0.5)
             # Are there child processes still running?
             if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGILL)
+                process_manager.send_signal_to_processes(signal.SIGKILL)
                 process_manager.stop_restarting()
                 process_manager.kill_children()
 
@@ -71,7 +72,7 @@ class TestProcessManager(TestCase):
             time.sleep(0.5)
             # Are there child processes still running?
             if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGILL)
+                process_manager.send_signal_to_processes(signal.SIGKILL)
                 process_manager.stop_restarting()
                 process_manager.kill_children()
 
@@ -81,7 +82,6 @@ class TestProcessManager(TestCase):
         '''
         def die():
             salt.utils.appendproctitle('test_restarting')
-            time.sleep(1)
 
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(die)
@@ -96,10 +96,11 @@ class TestProcessManager(TestCase):
             time.sleep(0.5)
             # Are there child processes still running?
             if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGILL)
+                process_manager.send_signal_to_processes(signal.SIGKILL)
                 process_manager.stop_restarting()
                 process_manager.kill_children()
 
+    @skipIf(sys.version_info < (2, 7), 'Needs > Py 2.7 due to bug in stdlib')
     def test_counter(self):
         def incr(counter, num):
             salt.utils.appendproctitle('test_counter')
@@ -120,7 +121,7 @@ class TestProcessManager(TestCase):
             time.sleep(0.5)
             # Are there child processes still running?
             if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGILL)
+                process_manager.send_signal_to_processes(signal.SIGKILL)
                 process_manager.stop_restarting()
                 process_manager.kill_children()
 

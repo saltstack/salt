@@ -5,7 +5,8 @@ event bus.  Alternatively Salt commands can be sent to the Salt master
 via Hipchat by setting the control parameter to ``True`` and using command
 prefaced with a ``!``. Only token key is required, but room and control
 keys make the engine interactive.
-.. versionadded: Carbon
+
+.. versionadded: 2016.11.0
 
 :depends: hypchat
 :configuration: Example configuration

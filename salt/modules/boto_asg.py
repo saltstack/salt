@@ -553,6 +553,7 @@ def describe_launch_configuration(name, region=None, key=None, keyid=None,
 
 
 def create_launch_configuration(name, image_id, key_name=None,
+                                vpc_id=None, vpc_name=None,
                                 security_groups=None, user_data=None,
                                 instance_type='m1.small', kernel_id=None,
                                 ramdisk_id=None, block_device_mappings=None,
@@ -587,6 +588,17 @@ def create_launch_configuration(name, image_id, key_name=None,
                     setattr(_block_device, attribute, value)
                 _block_device_map[block_device] = _block_device
         _bdms = [_block_device_map]
+
+    # If a VPC is specified, then determine the secgroup id's within that VPC, not
+    # within the default VPC. If a security group id is already part of the list,
+    # convert_to_group_ids leaves that entry without attempting a lookup on it.
+    if security_groups and (vpc_id or vpc_name):
+        security_groups = __salt__['boto_secgroup.convert_to_group_ids'](
+                               security_groups,
+                               vpc_id=vpc_id, vpc_name=vpc_name,
+                               region=region, key=key, keyid=keyid,
+                               profile=profile
+                           )
     lc = autoscale.LaunchConfiguration(
         name=name, image_id=image_id, key_name=key_name,
         security_groups=security_groups, user_data=user_data,
@@ -655,7 +667,7 @@ def get_all_groups(region=None, key=None, keyid=None, profile=None):
     Return all AutoScale Groups visible in the account
     (as a list of boto.ec2.autoscale.group.AutoScalingGroup).
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI example:
 
@@ -683,7 +695,7 @@ def list_groups(region=None, key=None, keyid=None, profile=None):
     Return all AutoScale Groups visible in the account
     (as a list of names).
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI example:
 
@@ -740,11 +752,12 @@ def enter_standby(name, instance_ids, should_decrement_desired_capacity=False,
     '''
     Switch desired instances to StandBy mode
 
+    .. versionadded:: 2016.11.0
+
     CLI example::
 
         salt-call boto_asg.enter_standby my_autoscale_group_name '["i-xxxxxx"]'
 
-    .. versionadded:: Carbon
     '''
     conn = _get_conn_autoscaling_boto3(
         region=region, key=key, keyid=keyid, profile=profile)
@@ -766,11 +779,12 @@ def exit_standby(name, instance_ids, should_decrement_desired_capacity=False,
     '''
     Exit desired instances from StandBy mode
 
+    .. versionadded:: 2016.11.0
+
     CLI example::
 
         salt-call boto_asg.exit_standby my_autoscale_group_name '["i-xxxxxx"]'
 
-    .. versionadded:: Carbon
     '''
     conn = _get_conn_autoscaling_boto3(
         region=region, key=key, keyid=keyid, profile=profile)

@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: Carbon
-
 Manage Local Policy on Windows
 
 This module allows configuring local group policy (i.e. ``gpedit.msc``) on a
 Windows server.
+
+.. versionadded:: 2016.11.0
 
 Administrative Templates
 ========================
@@ -2319,7 +2319,9 @@ class _policy_info(object):
                                             'GroupPolicy', 'User',
                                             'Registry.pol'),
                 'hive': 'HKEY_USERS',
-                'lgpo_section': 'User Configuration'
+                'lgpo_section': 'User Configuration',
+                'gpt_extension_location': 'gPCUserExtensionNames',
+                'gpt_extension_guid': '[{35378EAC-683F-11D2-A89A-00C04FBBCFA2}{D02B1F73-3407-48AE-BA88-E8213C6761F1}]'
             },
             'Machine': {
                 'policy_path': os.path.join(os.getenv('WINDIR'), 'System32',
@@ -2327,9 +2329,13 @@ class _policy_info(object):
                                             'Registry.pol'),
                 'hive': 'HKEY_LOCAL_MACHINE',
                 'lgpo_section': 'Computer Configuration',
+                'gpt_extension_location': 'gPCMachineExtensionNames',
+                'gpt_extension_guid': '[{35378EAC-683F-11D2-A89A-00C04FBBCFA2}{D02B1F72-3407-48AE-BA88-E8213C6761F1}]'
             },
         }
         self.reg_pol_header = u'\u5250\u6765\x01\x00'
+        self.gpt_ini_path = os.path.join(os.getenv('WINDIR'), 'System32',
+                                         'GroupPolicy', 'gpt.ini')
 
     @classmethod
     def _notEmpty(cls, val, **kwargs):
@@ -2471,7 +2477,7 @@ class _policy_info(object):
         '''
         minimum = 0
         maximum = 1
-        if isinstance(string_types, val):
+        if isinstance(val, string_types):
             if val.lower() == 'not defined':
                 return True
             else:
@@ -3270,6 +3276,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
         elif etree.QName(element).localname == 'decimal':
             # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
             this_vtype = 'REG_DWORD'
+            requested_val = this_element_value
             if this_element_value is not None:
                 temp_val = ''
                 for v in struct.unpack('2H', struct.pack('I', int(this_element_value))):
@@ -3280,13 +3287,14 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
                     this_vtype = 'REG_SZ'
-                    if this_element_value is not None:
-                        this_element_value = str(this_element_value)
+                    if requested_val is not None:
+                        this_element_value = str(requested_val)
             if check_deleted:
                 this_vtype = 'REG_SZ'
         elif etree.QName(element).localname == 'longDecimal':
             # https://msdn.microsoft.com/en-us/library/dn606015(v=vs.85).aspx
             this_vtype = 'REG_QWORD'
+            requested_val = this_element_value
             if this_element_value is not None:
                 temp_val = ''
                 for v in struct.unpack('4H', struct.pack('I', int(this_element_value))):
@@ -3297,8 +3305,8 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
                     this_vtype = 'REG_SZ'
-                    if this_element_value is not None:
-                        this_element_value = str(this_element_value)
+                    if requested_val is not None:
+                        this_element_value = str(requested_val)
         elif etree.QName(element).localname == 'text':
             # https://msdn.microsoft.com/en-us/library/dn605969(v=vs.85).aspx
             this_vtype = 'REG_SZ'
@@ -3913,17 +3921,98 @@ def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
     return None
 
 
-def _write_regpol_data(data_to_write, policy_file_path):
+def _write_regpol_data(data_to_write,
+                       policy_file_path,
+                       gpt_ini_path,
+                       gpt_extension,
+                       gpt_extension_guid):
     '''
     helper function to actually write the data to a Registry.pol file
+
+    also updates/edits the gpt.ini file to include the ADM policy extensions
+    to let the computer know user and/or machine registry policy files need
+    to be processed
+
+    data_to_write: data to write into the user/machine registry.pol file
+    policy_file_path: path to the registry.pol file
+    gpt_ini_path: path to gpt.ini file
+    gpt_extension: gpt extension list name from _policy_info class for this registry class gpt_extension_location
+    gpt_extension_guid: admx registry extension guid for the class
     '''
     try:
         if data_to_write:
             reg_pol_header = u'\u5250\u6765\x01\x00'
+            if not os.path.exists(policy_file_path):
+                ret = __salt__['file.makedirs'](policy_file_path)
             with open(policy_file_path, 'wb') as pol_file:
                 if not data_to_write.startswith(reg_pol_header):
                     pol_file.write(reg_pol_header.encode('utf-16-le'))
                 pol_file.write(data_to_write.encode('utf-16-le'))
+            try:
+                gpt_ini_data = ''
+                if os.path.exists(gpt_ini_path):
+                    with open(gpt_ini_path, 'rb') as gpt_file:
+                        gpt_ini_data = gpt_file.read()
+                if not _regexSearchRegPolData(r'\[General\]\r\n', gpt_ini_data):
+                    gpt_ini_data = '[General]\r\n' + gpt_ini_data
+                if _regexSearchRegPolData(r'{0}='.format(re.escape(gpt_extension)), gpt_ini_data):
+                    # ensure the line contains the ADM guid
+                    gpt_ext_loc = re.search(r'^{0}=.*\r\n'.format(re.escape(gpt_extension)),
+                                            gpt_ini_data,
+                                            re.IGNORECASE | re.MULTILINE)
+                    gpt_ext_str = gpt_ini_data[gpt_ext_loc.start():gpt_ext_loc.end()]
+                    if not _regexSearchRegPolData(r'{0}'.format(re.escape(gpt_extension_guid)),
+                                                  gpt_ext_str):
+                        gpt_ext_str = gpt_ext_str.split('=')
+                        gpt_ext_str[1] = gpt_extension_guid + gpt_ext_str[1]
+                        gpt_ext_str = '='.join(gpt_ext_str)
+                        gpt_ini_data = gpt_ini_data[0:gpt_ext_loc.start()] + gpt_ext_str + gpt_ini_data[gpt_ext_loc.end():]
+                else:
+                    general_location = re.search(r'^\[General\]\r\n',
+                                                 gpt_ini_data,
+                                                 re.IGNORECASE | re.MULTILINE)
+                    gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+                            gpt_ini_data[general_location.start():general_location.end()],
+                            gpt_extension, gpt_extension_guid,
+                            gpt_ini_data[general_location.end():])
+                # https://technet.microsoft.com/en-us/library/cc978247.aspx
+                if _regexSearchRegPolData(r'Version=', gpt_ini_data):
+                    version_loc = re.search(r'^Version=.*\r\n',
+                                            gpt_ini_data,
+                                            re.IGNORECASE | re.MULTILINE)
+                    version_str = gpt_ini_data[version_loc.start():version_loc.end()]
+                    version_str = version_str.split('=')
+                    version_nums = struct.unpack('>2H', struct.pack('>I', int(version_str[1])))
+                    if gpt_extension.lower() == 'gPCMachineExtensionNames'.lower():
+                        version_nums = (version_nums[0], version_nums[1] + 1)
+                    elif gpt_extension.lower() == 'gPCUserExtensionNames'.lower():
+                        version_nums = (version_nums[0] + 1, version_nums[1])
+                    version_num = int("{0}{1}".format(str(version_nums[0]).zfill(4),
+                                                      str(version_nums[1]).zfill(4)), 16)
+                    gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+                            gpt_ini_data[0:version_loc.start()],
+                            'Version', version_num,
+                            gpt_ini_data[version_loc.end():])
+                else:
+                    general_location = re.search(r'^\[General\]\r\n',
+                                                 gpt_ini_data,
+                                                 re.IGNORECASE | re.MULTILINE)
+                    if gpt_extension.lower() == 'gPCMachineExtensionNames'.lower():
+                        version_nums = (0, 1)
+                    elif gpt_extension.lower() == 'gPCUserExtensionNames'.lower():
+                        version_nums = (1, 0)
+                    gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+                            gpt_ini_data[general_location.start():general_location.end()],
+                            'Version',
+                            int("{0}{1}".format(str(version_nums[0]).zfill(4), str(version_nums[1]).zfill(4)), 16),
+                            gpt_ini_data[general_location.end():])
+                if gpt_ini_data:
+                    with open(gpt_ini_path, 'wb') as gpt_file:
+                        gpt_file.write(gpt_ini_data)
+            except Exception as e:
+                msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(
+                        gpt_ini_path, e)
+                raise CommandExecutionError(msg)
     except Exception as e:
         msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(policy_file_path, e)
         raise CommandExecutionError(msg)
@@ -4307,7 +4396,11 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                                         enabled_value_string,
                                                         existing_data,
                                                         append_only=True)
-        _write_regpol_data(existing_data, policy_data.admx_registry_classes[registry_class]['policy_path'])
+        _write_regpol_data(existing_data,
+                           policy_data.admx_registry_classes[registry_class]['policy_path'],
+                           policy_data.gpt_ini_path,
+                           policy_data.admx_registry_classes[registry_class]['gpt_extension_location'],
+                           policy_data.admx_registry_classes[registry_class]['gpt_extension_guid'])
     except Exception as e:
         log.error('Unhandled exception {0} occurred while attempting to write Adm Template Policy File'.format(e))
         return False
@@ -4319,34 +4412,36 @@ def _getScriptSettingsFromIniFile(policy_info):
     helper function to parse/read a GPO Startup/Shutdown script file
     '''
     _existingData = _read_regpol_file(policy_info['ScriptIni']['IniPath'])
-    _existingData = _existingData.split('\r\n')
-    script_settings = {}
-    this_section = None
-    for eLine in _existingData:
-        if eLine.startswith('[') and eLine.endswith(']'):
-            this_section = eLine.replace('[', '').replace(']', '')
-            log.debug('adding section {0}'.format(this_section))
-            if this_section:
-                script_settings[this_section] = {}
+    if _existingData:
+        _existingData = _existingData.split('\r\n')
+        script_settings = {}
+        this_section = None
+        for eLine in _existingData:
+            if eLine.startswith('[') and eLine.endswith(']'):
+                this_section = eLine.replace('[', '').replace(']', '')
+                log.debug('adding section {0}'.format(this_section))
+                if this_section:
+                    script_settings[this_section] = {}
+            else:
+                if '=' in eLine:
+                    log.debug('working with config line {0}'.format(eLine))
+                    eLine = eLine.split('=')
+                    if this_section in script_settings:
+                        script_settings[this_section][eLine[0]] = eLine[1]
+        if 'SettingName' in policy_info['ScriptIni']:
+            log.debug('Setting Name is in policy_info')
+            if policy_info['ScriptIni']['SettingName'] in script_settings[policy_info['ScriptIni']['Section']]:
+                log.debug('the value is set in the file')
+                return script_settings[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName']]
+            else:
+                return None
+        elif policy_info['ScriptIni']['Section'] in script_settings:
+            log.debug('no setting name')
+            return script_settings[policy_info['ScriptIni']['Section']]
         else:
-            if '=' in eLine:
-                log.debug('working with config line {0}'.format(eLine))
-                eLine = eLine.split('=')
-                if this_section in script_settings:
-                    script_settings[this_section][eLine[0]] = eLine[1]
-    if 'SettingName' in policy_info['ScriptIni']:
-        log.debug('Setting Name is in policy_info')
-        if policy_info['ScriptIni']['SettingName'] in script_settings[policy_info['ScriptIni']['Section']]:
-            log.debug('the value is set in the file')
-            return script_settings[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName']]
-        else:
+            log.debug('broad else')
             return None
-    elif policy_info['ScriptIni']['Section'] in script_settings:
-        log.debug('no setting name')
-        return script_settings[policy_info['ScriptIni']['Section']]
-    else:
-        log.debug('broad else')
-        return None
+    return None
 
 
 def _writeGpoScript(psscript=False):
@@ -4803,7 +4898,7 @@ def set_computer_policy(name,
     '''
     pol = {}
     pol[name] = setting
-    ret = set(computer_policy=pol,
+    ret = set_(computer_policy=pol,
               user_policy=None,
               cumulative_rights_assignments=cumulative_rights_assignments,
               adml_language=adml_language)
@@ -4840,7 +4935,7 @@ def set_user_policy(name,
     '''
     pol = {}
     pol[name] = setting
-    ret = set(user_policy=pol,
+    ret = set_(user_policy=pol,
               computer_policy=None,
               cumulative_rights_assignments=True,
               adml_language=adml_language)

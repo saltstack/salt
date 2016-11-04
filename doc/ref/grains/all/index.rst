@@ -19,6 +19,7 @@ grains modules
     junos
     marathon
     mdadm
+    napalm
     opts
     philips_hue
     rest_sample
