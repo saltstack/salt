@@ -1425,17 +1425,17 @@ def os_data():
         grains['os_family'] = 'Solaris'
         if salt.utils.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
-            uname_v = os.uname()[3]
+            uname_v = os.uname()[3]  # format: joyent_20161101T004406Z
+            uname_v = uname_v[uname_v.index('_')+1:]
             grains['os'] = grains['osfullname'] = 'SmartOS'
-            # format: joyent_20161101T004406Z
-            # note: YYYY, MM, DD, timestamp
-            grains['osrelease_stamp'] = uname_v[uname_v.index('_')+1:]
+            # store a parsed version of YYYY.MM.DD as osrelease
             grains['osrelease'] = ".".join([
-                uname_v[uname_v.index('_')+1:].split('T')[0][0:4],
-                uname_v[uname_v.index('_')+1:].split('T')[0][4:6],
-                uname_v[uname_v.index('_')+1:].split('T')[0][6:8],
-                uname_v[uname_v.index('_')+1:]
+                uname_v.split('T')[0][0:4],
+                uname_v.split('T')[0][4:6],
+                uname_v.split('T')[0][6:8],
             ])
+            # store a untouched copy of the timestamp in osrelease_stamp
+            grains['osrelease_stamp'] = uname_v 
             if salt.utils.is_smartos_globalzone():
                 grains.update(_smartos_computenode_data())
         elif os.path.isfile('/etc/release'):
