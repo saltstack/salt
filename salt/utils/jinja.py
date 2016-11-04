@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import json
 import pprint
 import logging
+import re
 from os import path
 from functools import wraps
 
@@ -330,11 +331,28 @@ class SerializerExtension(Extension, object):
         {% from "doc1.sls" import var1, var2 as local2 %}
         {{ var1.foo }} {{ local2.bar }}
 
+    ** Escape Filters **
+
+    ..versionadded:: Nitrogen
+
+    Allows escaping of strings so they can be interpreted literally by another
+    function.
+
+    For example:
+
+    .. code-block:: jinja
+
+        escape_regex = {{ 'https://example.com?foo=bar%20baz' | escape_regex }}
+
+    will be rendered as::
+
+        escape_regex = https\\:\\/\\/example\\.com\\?foo\\=bar\\%20baz
+
     .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
     tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
-                'load_text', 'import_text'])
+                'load_text', 'import_text', 'regex_escape'])
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -346,6 +364,7 @@ class SerializerExtension(Extension, object):
             'load_yaml': self.load_yaml,
             'load_json': self.load_json,
             'load_text': self.load_text,
+            'regex_escape': self.regex_escape,
         })
 
         if self.environment.finalize is None:
@@ -533,3 +552,6 @@ class SerializerExtension(Extension, object):
             ).set_lineno(lineno)
         ]
     # pylint: enable=E1120,E1121
+
+    def regex_escape(self, value):
+        return re.escape(value)

@@ -8,6 +8,7 @@ import tempfile
 import json
 import datetime
 import pprint
+import re
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -460,6 +461,12 @@ class TestGetTemplate(TestCase):
 
 
 class TestCustomExtensions(TestCase):
+    def test_regex_escape(self):
+        dataset = 'foo?:.*/\\bar'
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|regex_escape }}').render(dataset=dataset)
+        self.assertEqual(rendered, re.escape(dataset))
+
     def test_serialize_json(self):
         dataset = {
             "foo": True,
