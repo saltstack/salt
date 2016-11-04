@@ -107,13 +107,11 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             expect = {'minions_rejected': [],
                       'minions_denied': [],
                       'minions_pre': [],
-                      'minions': ['minion', 'sub_minion'],
-                      'logs': []}
+                      'minions': ['minion', 'sub_minion']}
         elif self.master_opts['transport'] == 'raet':
             expect = {'accepted': ['minion', 'sub_minion'],
                       'rejected': [],
-                      'pending': [],
-                      'logs': []}
+                      'pending': []}
         self.assertEqual(ret, expect)
 
     def test_list_yaml_out(self):

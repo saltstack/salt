@@ -938,10 +938,6 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # will go through the logging listener.
             return
 
-        # ensure that json stays valid with log output
-        if getattr(self.options, 'output', None) == 'json':
-            log.set_console_handler_stream(StringIO())
-
         # ensure that yaml stays valid with log output
         if getattr(self.options, 'output', None) == 'yaml':
             log_format = '# {0}'.format(self.config['log_fmt_console'])

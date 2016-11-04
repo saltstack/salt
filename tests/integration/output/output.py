@@ -35,7 +35,6 @@ class OutputReturnTest(integration.ShellCase):
         ret = self.run_call('test.ping --out=json')
         self.assertIn('{', ret)
         self.assertIn('"local": true', ''.join(ret))
-        self.assertIn('"logs": [', ''.join(ret))
         self.assertIn('}', ''.join(ret))
 
     def test_output_nested(self):

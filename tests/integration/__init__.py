@@ -618,7 +618,7 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
                                 pass
                     del sock
                 elif isinstance(port, str):
-                    joined = self.run_run('manage.joined', config_dir=self.config_dir)
+                    joined = self.run_run('manage.joined')
                     joined = [x.lstrip('- ') for x in joined]
                     if port in joined:
                         check_ports.remove(port)
@@ -1952,13 +1952,12 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
 
-    def run_cloud(self, arg_str, catch_stderr=False, timeout=15):
+    def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         '''
         Execute salt-cloud
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-cloud', arg_str, catch_stderr,
-                               timeout=timeout)
+        return self.run_script('salt-cloud', arg_str, catch_stderr, timeout)
 
 
 class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):

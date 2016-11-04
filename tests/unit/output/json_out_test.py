@@ -66,19 +66,6 @@ class JsonTestCase(TestCase):
         ret = json.output(data)
         self.assertEqual(expect, ret)
 
-    def test_default_outout_with_log_entries(self):
-        # mock a console log stream
-        test_stream = StringIO('line1\nline2')
-        set_console_handler_stream(test_stream)
-
-        json.__opts__['output_indent'] = -1
-        ret = json.output(self.data)
-        self.assertIn('"test": "two"', ret)
-        self.assertIn('"example": "one"', ret)
-        self.assertIn('"logs": [', ret)
-        self.assertIn('"line1"', ret)
-        self.assertIn('"line2"', ret)
-
 
 if __name__ == '__main__':
     from integration import run_tests
