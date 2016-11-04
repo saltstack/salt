@@ -53,6 +53,14 @@ other Windows service.
 If the minion won't start, try installing the Microsoft Visual C++ 2008 x64 SP1
 redistributable. Allow all Windows updates to run salt-minion smoothly.
 
+Installation Prerequisites
+--------------------------
+
+Most Salt functionality should work just fine right out of the box. A few Salt
+modules rely on PowerShell. The minimum version of PowerShell required for Salt
+is version 3. If you intend to work with DSC then Powershell version 5 is the
+minimum.
+
 .. _windows-installer-options:
 
 Silent Installer Options
