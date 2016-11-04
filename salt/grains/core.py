@@ -1435,7 +1435,7 @@ def os_data():
                 uname_v.split('T')[0][6:8],
             ])
             # store a untouched copy of the timestamp in osrelease_stamp
-            grains['osrelease_stamp'] = uname_v 
+            grains['osrelease_stamp'] = uname_v
             if salt.utils.is_smartos_globalzone():
                 grains.update(_smartos_computenode_data())
         elif os.path.isfile('/etc/release'):
@@ -1444,9 +1444,9 @@ def os_data():
                 try:
                     release_re = re.compile(
                         r'((?:Open)?Solaris|OpenIndiana) (Development)?'
-                        r'\s*(\d+ \d+\/\d+|oi_\S+|snv_\S+)?'
+                        r'\s*(\d+)\s?\D*\s?(\d+\/\d+|oi_\S+|snv_\S+)?'
                     )
-                    osname, development, osrelease = \
+                    osname, development, osmajorrelease, osminorrelease = \
                         release_re.search(rel_data).groups()
                 except AttributeError:
                     # Set a blank osrelease grain and fallback to 'Solaris'
@@ -1456,8 +1456,13 @@ def os_data():
                 else:
                     if development is not None:
                         osname = ' '.join((osname, development))
+                    uname_v = os.uname()[3]
                     grains['os'] = grains['osfullname'] = osname
-                    grains['osrelease'] = osrelease
+                    grains['osrelease_stamp'] = uname_v
+                    grains['osrelease'] = ".".join([
+                        osmajorrelease,
+                        osminorrelease,
+                    ])
 
         grains.update(_sunos_cpudata())
     elif grains['kernel'] == 'VMkernel':
