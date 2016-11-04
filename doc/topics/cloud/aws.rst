@@ -1048,6 +1048,12 @@ the network interfaces of your virtual machines, for example:-
           # to accept IP packets with destinations other than itself.
           # SourceDestCheck: False
 
+        - DeviceIndex: 1
+          subnetname: XXXXXXXX-Subnet
+          securitygroupname:
+            - XXXXXXXX-SecurityGroup
+            - YYYYYYYY-SecurityGroup
+
 Note that it is an error to assign a 'subnetid', 'subnetname', 'securitygroupid'
 or 'securitygroupname' to a profile where the interfaces are manually configured
 like this. These are both really properties of each network interface, not of
