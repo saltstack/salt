@@ -1458,11 +1458,15 @@ def os_data():
                         osname = ' '.join((osname, development))
                     uname_v = os.uname()[3]
                     grains['os'] = grains['osfullname'] = osname
+                    osrelease = []
+                    osrelease.append(osmajorrelease)
+                    if '/' in osminorrelease:
+                        osrelease.append(osminorrelease.split('/')[0])
+                        osrelease.append(osminorrelease.split('/')[1])
+                    else:
+                        osrelease.append(osminorrelease)
+                    grains['osrelease'] = ".".join(osrelease)
                     grains['osrelease_stamp'] = uname_v
-                    grains['osrelease'] = ".".join([
-                        osmajorrelease,
-                        osminorrelease,
-                    ])
 
         grains.update(_sunos_cpudata())
     elif grains['kernel'] == 'VMkernel':
