@@ -287,7 +287,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     config
         any extra argument for the salt minion config
     dnsservers
-        list of dns servers to set inside the container
+        list of DNS servers to set inside the container
         (Defaults to 8.8.8.8 and 4.4.4.4 until Oxygen release)
     dns_via_dhcp
         do not set the dns servers, let them be set by the dhcp.
