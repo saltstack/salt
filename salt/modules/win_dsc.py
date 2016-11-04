@@ -11,7 +11,7 @@ from __future__ import absolute_import, unicode_literals
 import logging
 import json
 import os
-import distutils.version
+import distutils.version  # pylint: disable=no-name-in-module
 
 # Import salt libs
 import salt.utils
