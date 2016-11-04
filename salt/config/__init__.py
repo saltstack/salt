@@ -361,6 +361,18 @@ VALID_OPTS = {
     # A dictionary of logging levels
     'log_granular_levels': dict,
 
+    # The maximum number of bytes a single log file may contain before
+    # it is rotated. A value of 0 disables this feature.
+    # Currently only supported on Windows. On other platforms, use an
+    # external tool such as 'logrotate' to manage log files.
+    'log_rotate_max_bytes': int,
+
+    # The number of backup files to keep when rotating log files. Only
+    # used if log_rotate_max_bytes is greater than 0.
+    # Currently only supported on Windows. On other platforms, use an
+    # external tool such as 'logrotate' to manage log files.
+    'log_rotate_backup_count': int,
+
     # If an event is above this size, it will be trimmed before putting it on the event bus
     'max_event_size': int,
 
@@ -1056,6 +1068,8 @@ DEFAULT_MINION_OPTS = {
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
+    'log_rotate_max_bytes': 0,
+    'log_rotate_backup_count': 0,
     'max_event_size': 1048576,
     'test': False,
     'ext_job_cache': '',
@@ -1324,6 +1338,8 @@ DEFAULT_MASTER_OPTS = {
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
+    'log_rotate_max_bytes': 0,
+    'log_rotate_backup_count': 0,
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-master.pid'),
     'publish_session': 86400,
     'range_server': 'range:80',
@@ -1472,6 +1488,8 @@ CLOUD_CONFIG_DEFAULTS = {
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
+    'log_rotate_max_bytes': 0,
+    'log_rotate_backup_count': 0,
     'bootstrap_delay': None,
 }
 
