@@ -1443,8 +1443,8 @@ def os_data():
                 rel_data = fp_.read()
                 try:
                     release_re = re.compile(
-                        r'((?:Open|Oracle )?Solaris|OpenIndiana) (Development)?'
-                        r'\s*(\d+)\s?\D*\s?(\d+\/\d+|oi_\S+|snv_\S+)?'
+                        r'((?:Open|Oracle )?Solaris|OpenIndiana|OmniOS) (Development)?'
+                        r'\s*(\d+\.?\d*|v\d+)\s?[A-Z]*\s?(r\d+|\d+\/\d+|oi_\S+|snv_\S+)?'
                     )
                     osname, development, osmajorrelease, osminorrelease = \
                         release_re.search(rel_data).groups()
@@ -1461,9 +1461,15 @@ def os_data():
                     if osname in ['Oracle Solaris'] and uname_v.startswith(osmajorrelease):
                         # Oracla Solars 11 and up have minor version in uname
                         grains['osrelease'] = uname_v
+                    elif osname in ['OmniOS']:
+                        # OmniOS
+                        osrelease = []
+                        osrelease.append(osmajorrelease[1:])
+                        osrelease.append(osminorrelease[1:])
+                        grains['osrelease'] = ".".join(osrelease)
+                        grains['osrelease_stamp'] = uname_v
                     else:
                         # Sun Solaris 10 and earlier/comparable
-                        # (OpenIndiana, OmniOS)
                         osrelease = []
                         osrelease.append(osmajorrelease)
                         if osminorrelease:
