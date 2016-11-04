@@ -167,7 +167,7 @@ class UpdateClusterTestCase(TestCase):
         self.mock_reconfigure_compute_resource_task.assert_called_once_with(
             self.mock_cluster_spec, modify=True)
 
-    def test_create_cluster_raise_vim_fault(self):
+    def test_reconfigure_compute_resource_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_cluster.ReconfigureComputeResource_Task = \
@@ -176,7 +176,7 @@ class UpdateClusterTestCase(TestCase):
             vmware.update_cluster(self.mock_cluster, self.mock_cluster_spec)
         self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
 
-    def test_create_cluster_raise_runtime_fault(self):
+    def test_reconfigure_compute_resource_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_cluster.ReconfigureComputeResource_Task = \
