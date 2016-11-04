@@ -1,0 +1,6 @@
+===========================
+Salt 2016.3.5 Release Notes
+===========================
+
+Version 2016.3.5 is a bugfix release for :doc:`2016.3.0
+</topics/releases/2016.3.0>`.
