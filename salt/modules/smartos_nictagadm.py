@@ -6,7 +6,7 @@ Module for running nictagadm command on SmartOS
 :depends:       nictagadm binary, dladm binary
 :platform:      smartos
 
-..versionadded:: Carbon
+..versionadded:: 2016.11.0
 
 '''
 from __future__ import absolute_import

@@ -435,7 +435,7 @@ def update_one(objects, collection, user=None, password=None, host=None, port=No
     Update an object into a collection
     http://api.mongodb.com/python/current/api/pymongo/collection.html#pymongo.collection.Collection.update_one
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 

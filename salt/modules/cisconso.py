@@ -2,7 +2,7 @@
 '''
 Execution module for Cisco Network Services Orchestrator Proxy minions
 
-.. versionadded: Carbon
+.. versionadded: 2016.11.0
 
 For documentation on setting up the cisconso proxy minion look in the documentation
 for :doc:`salt.proxy.cisconso</ref/proxy/all/salt.proxy.cisconso>`.

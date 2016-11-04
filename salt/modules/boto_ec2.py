@@ -1656,6 +1656,8 @@ def get_all_volumes(volume_ids=None, filters=None, return_objs=False,
     '''
     Get a list of all EBS volumes, optionally filtered by provided 'filters' param
 
+    .. versionadded:: 2016.11.0
+
     volume_ids
         (list) - Optional list of volume_ids.  If provided, only the volumes
         associated with those in the list will be returned.
@@ -1690,7 +1692,6 @@ def get_all_volumes(volume_ids=None, filters=None, return_objs=False,
 
         salt-call boto_ec2.get_all_volumes filters='{"tag:Name": "myVolume01"}'
 
-    .. versionadded:: Carbon
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -1705,6 +1706,8 @@ def get_all_volumes(volume_ids=None, filters=None, return_objs=False,
 def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
                     region=None, key=None, keyid=None, profile=None):
     '''
+    .. versionadded:: 2016.11.0
+
     tag_maps (list)
         List of dicts of filters and tags, where 'filters' is a dict suitable for passing to the
         'filters' argument of get_all_volumes() above, and 'tags' is a dict of tags to be set on
@@ -1752,7 +1755,6 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
     returns (dict)
         A dict dsecribing status and any changes.
 
-    .. versionadded:: Carbon
     '''
     ret = {'success': True, 'comment': '', 'changes': {}}
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
@@ -1827,6 +1829,8 @@ def create_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=N
     '''
     Create new metadata tags for the specified resource ids.
 
+    .. versionadded:: 2016.11.0
+
     resource_ids
         (string) or (list) – List of resource IDs.  A plain string will be converted to a list of one element.
     tags
@@ -1840,8 +1844,6 @@ def create_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=N
     .. code-block:: bash
 
         salt-call boto_ec2.create_tags vol-12345678 '{"Name": "myVolume01"}'
-
-    .. versionadded:: Carbon
 
     '''
     if not isinstance(resource_ids, list):
@@ -1859,6 +1861,8 @@ def create_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=N
 def delete_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=None):
     '''
     Delete metadata tags for the specified resource ids.
+
+    .. versionadded:: 2016.11.0
 
     resource_ids
         (string) or (list) – List of resource IDs.  A plain string will be converted to a list of one element.
@@ -1878,8 +1882,6 @@ def delete_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=N
         salt-call boto_ec2.delete_tags vol-12345678 '{"Name": "myVolume01"}'
         salt-call boto_ec2.delete_tags vol-12345678 '["Name","MountPoint"]'
 
-    .. versionadded:: Carbon
-
     '''
     if not isinstance(resource_ids, list):
         resource_ids = [resource_ids]
@@ -1897,6 +1899,8 @@ def detach_volume(volume_id, instance_id=None, device=None, force=False,
                   region=None, key=None, keyid=None, profile=None):
     '''
     Detach an EBS volume from an EC2 instance.
+
+    .. versionadded:: 2016.11.0
 
     volume_id
         (string) – The ID of the EBS volume to be detached.
@@ -1920,8 +1924,6 @@ def detach_volume(volume_id, instance_id=None, device=None, force=False,
 
         salt-call boto_ec2.detach_volume vol-12345678 i-87654321
 
-    .. versionadded:: Carbon
-
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
@@ -1936,6 +1938,8 @@ def delete_volume(volume_id, instance_id=None, device=None, force=False,
     '''
     Detach an EBS volume from an EC2 instance.
 
+    .. versionadded:: 2016.11.0
+
     volume_id
         (string) – The ID of the EBS volume to be deleted.
     force
@@ -1949,8 +1953,6 @@ def delete_volume(volume_id, instance_id=None, device=None, force=False,
     .. code-block:: bash
 
         salt-call boto_ec2.delete_volume vol-12345678
-
-    .. versionadded:: Carbon
 
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)

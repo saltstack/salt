@@ -658,17 +658,17 @@ def bootstrap(version='develop',
         hosts need to exist in the specified roster.
 
     root_user : False
-        Prepend ``root@`` to each host. Default changed in Salt Carbon from ``True``
+        Prepend ``root@`` to each host. Default changed in Salt 2016.11.0 from ``True``
         to ``False``.
 
-        .. versionchanged:: Carbon
+        .. versionchanged:: 2016.11.0
 
-        .. deprecated:: Carbon
+        .. deprecated:: 2016.11.0
 
     script_args
         Any additional arguments that you want to pass to the script.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     roster : flat
         The roster to use for Salt SSH. More information about roster files can
@@ -677,41 +677,41 @@ def bootstrap(version='develop',
         A full list of roster types, see the :ref:`builtin roster modules <all-salt.roster>`
         documentation.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     ssh_user
         If ``user`` isn't found in the ``roster``, a default SSH user can be set here.
         Keep in mind that ``ssh_user`` will not override the roster ``user`` value if
         it is already defined.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     ssh_password
         If ``passwd`` isn't found in the ``roster``, a default SSH password can be set
         here. Keep in mind that ``ssh_password`` will not override the roster ``passwd``
         value if it is already defined.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     ssh_privkey
         If ``priv`` isn't found in the ``roster``, a default SSH private key can be set
         here. Keep in mind that ``ssh_password`` will not override the roster ``passwd``
         value if it is already defined.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     tmp_dir : /tmp/.bootstrap
         The temporary directory to download the bootstrap script in. This
         directory will have ``-<uuid4>`` appended to it. For example:
         ``/tmp/.bootstrap-a19a728e-d40a-4801-aba9-d00655c143a7/``
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     http_backend : tornado
         The backend library to use to download the script. If you need to use
         a ``file:///`` URL, then you should set this to ``urllib2``.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
 
     CLI Example:
@@ -727,7 +727,7 @@ def bootstrap(version='develop',
 
     '''
     dep_warning = (
-        'Starting with Salt Carbon, manage.bootstrap now uses Salt SSH to '
+        'Starting with Salt 2016.11.0, manage.bootstrap now uses Salt SSH to '
         'connect, and requires a roster entry. Please ensure that a roster '
         'entry exists for this host. Non-roster hosts will no longer be '
         'supported starting with Salt Oxygen.'

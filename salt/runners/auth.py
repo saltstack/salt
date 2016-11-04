@@ -2,7 +2,7 @@
 '''
 Authentication runner for creating, deleting, and managing eauth tokens.
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 '''
 
