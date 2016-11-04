@@ -136,6 +136,62 @@ This has now been corrected. While this is technically a bugfix, we decided to
 hold a change in top file merging until a feature release to minimize user
 impact.
 
+Improved Archive Extraction Support
+===================================
+
+The :py:func:`archive.extracted <salt.states.archive.extracted>` state has been
+overhauled. Notable changes include the following:
+
+- When enforcing ownership (with the ``user`` and/or ``group`` arguments), the
+  ``if_missing`` argument no longer has any connection to which path(s) have
+  ownership enforced. Instead, the paths are determined using the either the
+  newly-added :py:func:`archive.list <salt.modules.archive.list_>` function, or
+  the newly-added ``enforce_ownership_on`` argument.
+- ``if_missing`` also is no longer required to skip extraction, as Salt is now
+  able to tell which paths would be present if the archive were extracted. It
+  should, in most cases, only be necessary in cases where a semaphore file is
+  used to conditionally skip extraction of the archive.
+- Password-protected ZIP archives are now detected before extraction, and the
+  state fails without attempting to extract the archive if no password was
+  specified.
+- By default, a single top-level directory is enforced, to guard against
+  'tar-bombs'. This enforcement can be disabled by setting ``enforce_toplevel``
+  to ``False``.
+- The ``tar_options`` and ``zip_options`` arguments have been deprecated in
+  favor of a single ``options`` argument.
+- The ``archive_format`` argument is now optional. The ending of the ``source``
+  argument is used to guess whether it is a tar, zip or rar file. If the
+  ``archive_format`` cannot be guessed, then it will need to be specified, but
+  in many cases it can now be omitted.
+- Ownership enforcement is now performed irrespective of whether or not the
+  archive needed to be extracted. This means that the state can be re-run after
+  the archive has been fully extracted to repair changes to ownership.
+
+A number of new arguments were also added. See the docs py:func:`docs for the
+archive.extracted state <salt.states.archive.extracted>` for more information.
+
+Additionally, the following changes have been made to the :mod:`archive
+<salt.modules.archive>` execution module:
+
+- A new function (:py:func:`archive.list <salt.modules.archive.list_>`) has
+  been added. This function lists the files/directories in an archive file, and
+  supports a ``verbose`` argument that gives a more detailed breakdown of which
+  paths are files, which are directories, and which paths are at the top level
+  of the archive.
+- A new function (:py:func:`archive.is_encrypted
+  <salt.modules.archive.is_encrypted>`) has been added. This function will
+  return ``True`` if the archive is a password-protected ZIP file, ``False`` if
+  not. If the archive is not a ZIP file, an error will be raised.
+- :py:func:`archive.cmd_unzip <salt.modules.archive.cmd_unzip>` now supports
+  passing a password, bringing it to feature parity with
+  :py:func:`archive.unzip <salt.modules.archive.unzip>`. Note that this is
+  still not considered to be secure, and :py:func:`archive.unzip
+  <salt.modules.archive.unzip>` is recommended for dealing with
+  password-protected ZIP archives.
+- The default value for the ``extract_perms`` argument to
+  :py:func:`archive.unzip <salt.modules.archive.unzip>` has been changed to
+  ``True``.
+
 Config Changes
 ==============
 

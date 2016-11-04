@@ -1475,10 +1475,10 @@ def managed(name,
         ``check_cmd``.
 
     tmp_ext
-        provide extention for temp file created by check_cmd
-        useful for checkers dependant on config file extention
-        for example it should be useful for init-checkconf upstart config checker
-        by default it is empty
+        Suffix for temp file created by ``check_cmd``. Useful for checkers
+        dependant on config file extension (e.g. the init-checkconf upstart
+        config checker).
+
         .. code-block:: yaml
 
             /etc/init/test.conf:
@@ -1793,7 +1793,7 @@ def managed(name,
     tmp_filename = None
 
     if check_cmd:
-        tmp_filename = salt.utils.files.mkstemp() + tmp_ext
+        tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext)
 
         # if exists copy existing file to tmp to compare
         if __salt__['file.file_exists'](name):
@@ -1826,7 +1826,8 @@ def managed(name,
                 dir_mode,
                 follow_symlinks,
                 skip_verify,
-                keep_mode)
+                keep_mode,
+                **kwargs)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
@@ -1884,7 +1885,8 @@ def managed(name,
                 dir_mode,
                 follow_symlinks,
                 skip_verify,
-                keep_mode)
+                keep_mode,
+                **kwargs)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
