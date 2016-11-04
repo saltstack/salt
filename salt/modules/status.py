@@ -141,7 +141,7 @@ def uptime():
         from a ``cmd.run`` call.
 
     .. versionchanged:: 2016.11.0
-        Fall back to output of `uptime` when /proc/uptime is not available.
+        Support for OpenBSD, FreeBSD, NetBSD, MacOS, and Solaris
 
     CLI Example:
 

@@ -23,6 +23,23 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 TEMPFILE_PREFIX = '__salt.tmp.'
+REMOTE_PROTOS = ('http', 'https', 'ftp', 'swift', 's3')
+VALID_PROTOS = ('salt', 'file') + REMOTE_PROTOS
+
+
+def guess_archive_type(name):
+    '''
+    Guess an archive type (tar, zip, or rar) by its file extension
+    '''
+    name = name.lower()
+    for ending in ('tar', 'tar.gz', 'tar.bz2', 'tar.xz', 'tgz', 'tbz2', 'txz',
+                   'tar.lzma', 'tlz'):
+        if name.endswith('.' + ending):
+            return 'tar'
+    for ending in ('zip', 'rar'):
+        if name.endswith('.' + ending):
+            return ending
+    return None
 
 
 def mkstemp(*args, **kwargs):
