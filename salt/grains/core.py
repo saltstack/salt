@@ -1427,7 +1427,15 @@ def os_data():
             # See https://github.com/joyent/smartos-live/issues/224
             uname_v = os.uname()[3]
             grains['os'] = grains['osfullname'] = 'SmartOS'
-            grains['osrelease'] = uname_v[uname_v.index('_')+1:]
+            # format: joyent_20161101T004406Z
+            # note: YYYY, MM, DD, timestamp
+            grains['osrelease_stamp'] = uname_v[uname_v.index('_')+1:]
+            grains['osrelease'] = ".".join([
+                uname_v[uname_v.index('_')+1:].split('T')[0][0:4],
+                uname_v[uname_v.index('_')+1:].split('T')[0][4:6],
+                uname_v[uname_v.index('_')+1:].split('T')[0][6:8],
+                uname_v[uname_v.index('_')+1:]
+            ])
             if salt.utils.is_smartos_globalzone():
                 grains.update(_smartos_computenode_data())
         elif os.path.isfile('/etc/release'):
