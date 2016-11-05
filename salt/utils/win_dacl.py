@@ -22,7 +22,8 @@ The Dacl object inherits Flags. To use the Dacl object:
 
     import salt.utils.win_dacl
     dacl = salt.utils.win_dacl.Dacl(obj_type='file')
-    dacl.add_ace('Administrators', 'grant',
+    dacl.add_ace('Administrators', 'grant', 'full_control')
+    dacl.save('C:\\temp')
 
 Object types are used by setting the `obj_type` parameter to a valid Windows
 object. Valid object types are as follows:
@@ -34,7 +35,96 @@ object. Valid object types are as follows:
 - registry32 (for WOW64)
 - share
 
+Each object type has its own set up permissions and 'applies to' properties as
+follows. At this time only basic permissions are used for setting. Advanced
+permissions are listed for displaying the permissions of an object that don't
+match the basic permissions, ie. Special permissions. These should match the
+permissions you see when you look at the security for an object.
 
+**Basic Permissions**
+
+    ================  ====  ========  =====  =======  =======
+    Permissions       File  Registry  Share  Printer  Service
+    ================  ====  ========  =====  =======  =======
+    full_control      X     X         X               X
+    modify            X
+    read_execute      X
+    read              X     X         X               X
+    write             X     X                         X
+    read_write                                        X
+    change                            X
+    print                                    X
+    manage_printer                           X
+    manage_documents                         X
+    ================  ====  ========  =====  =======  =======
+
+**Advanced Permissions**
+
+    =======================  ====  ========  =======  =======
+    Permissions              File  Registry  Printer  Service
+    =======================  ====  ========  =======  =======
+    list_folder              X
+    read_data                X
+    create_files             X
+    write_data               X
+    create_folders           X
+    append_data              X
+    read_ea                  X
+    write_ea                 X
+    traverse_folder          X
+    execute_file             X
+    delete_subfolders_files  X
+    read_attributes          X
+    write_attributes         X
+    delete                   X     X
+    read_permissions         X               X        X
+    change_permissions       X               X        X
+    take_ownership           X               X
+    query_value                    X
+    set_value                      X
+    create_subkey                  X
+    enum_subkeys                   X
+    notify                         X
+    create_link                    X
+    read_control                   X
+    write_dac                      X
+    write_owner                    X
+    manage_printer                           X
+    print                                    X
+    query_config                                      X
+    change_config                                     X
+    query_status                                      X
+    enum_dependents                                   X
+    start                                             X
+    stop                                              X
+    pause_resume                                      X
+    interrogate                                       X
+    user_defined                                      X
+    change_owner                                      X
+    =======================  ====  ========  =======  =======
+
+Only the registry and file object types have 'applies to' properties. These
+should match what you see when you look at the properties for an object.
+
+    **File types:**
+
+        - this_folder_only: Applies only to this object
+        - this_folder_subfolders_files (default): Applies to this object
+          and all sub containers and objects
+        - this_folder_subfolders: Applies to this object and all sub
+          containers, no files
+        - this_folder_files: Applies to this object and all file
+          objects, no containers
+        - subfolders_files: Applies to all containers and objects
+          beneath this object
+        - subfolders_only: Applies to all containers beneath this object
+        - files_only: Applies to all file objects beneath this object
+
+    **Registry types:**
+
+        - this_key_only: Applies only to this key
+        - this_key_subkeys: Applies to this key and all subkeys
+        - subkeys_only: Applies to all subkeys beneath this object
 
 '''
 # Import Python libs
@@ -307,14 +397,7 @@ class Dacl(Flags):
             obj_name (str): The full path to the object. If None, a blank DACL
             will be created
 
-            obj_type (Optional[str]): The type of object. Valid options are:
-
-                - file (default): This is a file or directory
-                - service
-                - printer
-                - registry
-                - registry32 (for WOW64)
-                - share
+            obj_type (Optional[str]): The type of object.
 
         Returns:
             obj: A DACL object
@@ -423,33 +506,9 @@ class Dacl(Flags):
             ``grant`` or ``deny``.
 
             permission (str): The type of permissions to grant/deny the user.
-            Valid options by obj_type are:
-
-                ================  ====  ========  =====  =======  =======
-                Permissions       File  Registry  Share  Printer  Service
-                ================  ====  ========  =====  =======  =======
-                full_control      X     X         X               X
-                modify            X
-                read_execute      X
-                read              X     X         X               X
-                write             X     X                         X
-                read_write                                        X
-                change                            X
-                print                                    X
-                manage_printer                           X
-                manage_documents                         X
-                ================  ====  ========  =====  =======  =======
 
             applies_to (str): The objects to which these permissions will apply.
-            Not all these options apply to all object types. Valid options are:
-
-                - this_folder_only
-                - this_folder_subfolders_files
-                - this_folder_subfolders
-                - this_folder_files
-                - subfolders_files
-                - subfolders_only
-                - files_only
+            Not all these options apply to all object types.
 
         Returns:
             bool: True if successful, otherwise False
@@ -897,14 +956,6 @@ def set_owner(obj_name, principal, obj_type='file'):
         object. Can also pass a SID.
 
         obj_type (Optional[str]): The type of object for which to set the owner.
-        Valid objects are as follows:
-
-            - file (default): This is a file or directory
-            - service
-            - printer
-            - registry
-            - registry32 (for WOW64)
-            - share
 
     Returns:
         bool: True if successful, raises an error otherwise
@@ -955,35 +1006,12 @@ def set_permissions(obj_name,
         https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
 
         obj_type (Optional[str]): The type of object for which to set
-        permissions. Valid objects are as follows:
-
-            - file (default): This is a file or directory
-            - service
-            - printer
-            - registry
-            - registry32 (for WOW64)
-            - share
+        permissions.
 
         principal (str): The name of the user or group for which to set
         permissions. Can also pass a SID.
 
-        permission (str): The type of permissions to grant/deny the user. Valid
-        options by obj_type are:
-
-            ================  ====  ========  =====  =======  =======
-            Permissions       File  Registry  Share  Printer  Service
-            ================  ====  ========  =====  =======  =======
-            full_control      X     X         X               X
-            modify            X
-            read_execute      X
-            read              X     X         X               X
-            write             X     X                         X
-            read_write                                        X
-            change                            X
-            print                                    X
-            manage_printer                           X
-            manage_documents                         X
-            ================  ====  ========  =====  =======  =======
+        permission (str): The type of permissions to grant/deny the user.
 
         access_mode (Optional[str]): Whether to grant or deny user the access.
         Valid options are:
@@ -1000,37 +1028,6 @@ def set_permissions(obj_name,
 
         applies_to (Optional[str]): The objects to which these permissions will
         apply. Not all these options apply to all object types. Valid options:
-
-            *File types:*
-
-                - this_folder_only: Applies only to this object
-                - this_folder_subfolders_files (default): Applies to this object
-                  and all sub containers and objects
-                - this_folder_subfolders: Applies to this object and all sub
-                  containers, no files
-                - this_folder_files: Applies to this object and all file
-                  objects, no containers
-                - subfolders_files: Applies to all containers and objects
-                  beneath this object
-                - subfolders_only: Applies to all containers beneath this object
-                - files_only: Applies to all file objects beneath this object
-
-            *Registry types:*
-
-                - this_key_only: Applies only to this key
-                - this_key_subkeys: Applies to this key and all subkeys
-                - subkeys_only: Applies to all subkeys beneath this object
-
-            *Service types:* Does not apply
-
-            *Printer types:* Does not apply (Defaults to ``This object only``)
-
-            *Share types:* Does not apply
-
-
-        propagate (Optional[bool]): Apply these permissions to all
-        sub-containers and objects. Not yet implemented. Would only apply to
-        file type objects.
 
     Returns:
         bool: True if successful, raises an error otherwise
@@ -1079,14 +1076,7 @@ def rm_permissions(obj_name,
         of ACEs, 'grant' and 'deny'. 'all' will remove all ACEs for the user.
 
         obj_type (Optional[str]): The type of object for which to set
-        permissions. Valid objects are as follows:
-
-            - file (default): This is a file or directory
-            - service
-            - printer
-            - registry
-            - registry32 (for WOW64)
-            - share
+        permissions.
 
     Returns:
         bool: True if successful, raises an error otherwise
@@ -1118,15 +1108,7 @@ def get_permissions(obj_name, principal=None, obj_type='file'):
 
         obj_name (str): The name of or path to the object.
 
-        obj_type (str): The type of object for which to get permissions. Valid
-        objects are as follows:
-
-            - file (default): This is a file or directory
-            - service
-            - printer
-            - registry
-            - registry32 (for WOW64)
-            - share
+        obj_type (str): The type of object for which to get permissions.
 
         principal (str): The name of the user or group for which to get
         permissions. Can also pass a SID.
@@ -1161,86 +1143,16 @@ def has_permission(obj_name,
 
         obj_name (str): The name of or path to the object.
 
-        obj_type (str): The type of object for which to check permissions. Valid
-        objects are as follows:
-
-            - file: This is a file or directory
-            - service
-            - printer
-            - registry
-            - registry32 (for WOW64)
-            - share
+        obj_type (str): The type of object for which to check permissions.
 
         principal (str): The name of the user or group for which to get
         permissions. Can also pass a SID.
 
         permission (str): The permission to verify. Valid options depend on the
-        obj_type. Valid options are:
+        obj_type.
 
-            **Basic Permissions**
-
-            ================  ====  ========  =====  =======  =======
-            Permissions       File  Registry  Share  Printer  Service
-            ================  ====  ========  =====  =======  =======
-            full_control      X     X         X               X
-            modify            X
-            read_execute      X
-            read              X     X         X               X
-            write             X     X                         X
-            read_write                                        X
-            change                            X
-            print                                    X
-            manage_printer                           X
-            manage_documents                         X
-            ================  ====  ========  =====  =======  =======
-
-            **Advanced Permissions**
-
-            =======================  ====  ========  =======  =======
-            Permissions              File  Registry  Printer  Service
-            =======================  ====  ========  =======  =======
-            list_folder              X
-            read_data                X
-            create_files             X
-            write_data               X
-            create_folders           X
-            append_data              X
-            read_ea                  X
-            write_ea                 X
-            traverse_folder          X
-            execute_file             X
-            delete_subfolders_files  X
-            read_attributes          X
-            write_attributes         X
-            delete                   X     X
-            read_permissions         X               X        X
-            change_permissions       X               X        X
-            take_ownership           X               X
-            query_value                    X
-            set_value                      X
-            create_subkey                  X
-            enum_subkeys                   X
-            notify                         X
-            create_link                    X
-            read_control                   X
-            write_dac                      X
-            write_owner                    X
-            manage_printer                           X
-            print                                    X
-            query_config                                      X
-            change_config                                     X
-            query_status                                      X
-            enum_dependents                                   X
-            start                                             X
-            stop                                              X
-            pause_resume                                      X
-            interrogate                                       X
-            user_defined                                      X
-            change_owner                                      X
-            =======================  ====  ========  =======  =======
-
-        access_mode (Optional[str]): The access mode to check. Default is
-        'grant'. Valid options are:
+        access_mode (Optional[str]): The access mode to check. Is the user
+        granted or denied the permission. Default is 'grant'. Valid options are:
 
             - grant
             - deny
@@ -1318,7 +1230,8 @@ def set_inheritance(obj_name, enabled, obj_type='file', clear=False):
 
         enabled (bool): True to enable inheritance, False to disable
 
-        obj_type (Optional[str]): The type of object. Valid objects are:
+        obj_type (Optional[str]): The type of object. Only three objects allow
+        inheritance. Valid objects are:
 
             - file (default): This is a file or directory
             - registry
@@ -1356,7 +1269,8 @@ def get_inheritance(obj_name, obj_type='file'):
 
         obj_name (str): The name of the object
 
-        obj_type (Optional[str]): The type of object. Valid objects are:
+        obj_type (Optional[str]): The type of object. Only three object types
+        allow inheritance. Valid objects are:
 
             - file (default): This is a file or directory
             - registry
