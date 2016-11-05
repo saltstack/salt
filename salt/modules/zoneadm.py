@@ -2,15 +2,21 @@
 '''
 Module for Solaris 10's zoneadm
 
+:maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
+:maturity:      new
+:platform:      OmniOS,OpenIndiana,SmartOS,OpenSolaris,Solaris 10
+
+.. versionadded:: nitrogen
+
+.. warning::
+    Oracle Solaris 11's zoneadm is not supported by this module!
+
 .. note::
     Not all subcommands are implemented.
 
     These subcommands are missing:
     attach, detach, clone, install,
     uninstall, move, ready, and verify
-
-    Oracle Solaris 11's zoneadm is not supported
-    by this module!
 
 '''
 from __future__ import absolute_import
@@ -185,6 +191,45 @@ def halt(zone):
     ## execute halt
     res = __salt__['cmd.run_all']('zoneadm -z {zone} halt'.format(
         zone=zone,
+    ))
+    return res['retcode'] == 0
+
+
+def reboot(zone, single=False, altinit=None, smf_options=None):
+    '''
+    Restart the zone. This is equivalent to a halt boot sequence.
+
+    zone : string
+        name of the zone
+    single : boolean
+        boots only to milestone svc:/milestone/single-user:default.
+    altinit : string
+        valid path to an alternative executable to be the primordial process.
+    smf_options : string
+        include two categories of options to control booting behavior of
+        the service management facility: recovery options and messages options.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zoneadm.boot clementine
+    '''
+    ## build boot_options
+    boot_options = ''
+    if single:
+        boot_options = '-s {0}'.format(boot_options)
+    if altinit:  # note: we cannot validate the path, as this is local to the zonepath.
+        boot_options = '-i {0} {1}'.format(altinit, boot_options)
+    if smf_options:
+        boot_options = '-m {0} {1}'.format(smf_options, boot_options)
+    if boot_options != '':
+        boot_options = ' -- {0}'.format(boot_options.strip())
+
+    ## execute boot
+    res = __salt__['cmd.run_all']('zoneadm -z {zone} reboot{boot_opts}'.format(
+        zone=zone,
+        boot_opts=boot_options,
     ))
     return res['retcode'] == 0
 
