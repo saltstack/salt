@@ -554,27 +554,25 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
 
         if not permissive:
             try:
-                # Get SIDs for Groups and Users
-                admins = salt.utils.win_dacl.get_sid('S-1-5-32-544')
-                system = salt.utils.win_dacl.get_sid('S-1-5-18')
-                owner = salt.utils.win_dacl.get_sid('S-1-3-4')
-                user = salt.utils.win_dacl.get_sid('S-1-5-32-545')
+                # Get a clean dacl by not passing an obj_name
+                dacl = salt.utils.win_dacl.Dacl()
 
-                # Get a clean dacl
-                dacl = salt.utils.win_dacl.Dacl(obj_type='file')
-
-                # Add aces to the dacl for the above groups
-                dacl.add_ace(admins, 'grant', 'this_folder_subfolders_files',
+                # Add aces to the dacl, use the GUID (locale non-specific)
+                dacl.add_ace('S-1-5-32-544',  # Administrators Group
+                             'grant', 'this_folder_subfolders_files',
                              'full_control')
-                dacl.add_ace(system, 'grant', 'this_folder_subfolders_files',
+                dacl.add_ace('S-1-5-18',  # System Account
+                             'grant', 'this_folder_subfolders_files',
                              'full_control')
-                dacl.add_ace(owner, 'grant', 'this_folder_subfolders_files',
+                dacl.add_ace('S-1-3-4',  # Owner
+                             'grant', 'this_folder_subfolders_files',
                              'full_control')
-                dacl.add_ace(user, 'grant', 'this_folder_subfolders_files',
+                dacl.add_ace('S-1-5-32-545',  # Users group
+                             'grant', 'this_folder_subfolders_files',
                              'read_execute')
 
                 # Save the dacl to the object
-                dacl.save(path, 'file', True)
+                dacl.save(path, True)
 
             except CommandExecutionError:
                 msg = 'Unable to securely set the permissions of ' \
@@ -603,24 +601,22 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
                 salt.utils.win_dacl.set_owner(path, 'S-1-5-32-544')
 
                 # Give Admins, System and Owner permissions
-                # Get SIDs
-                admins = salt.utils.win_dacl.get_sid('S-1-5-32-544')
-                system = salt.utils.win_dacl.get_sid('S-1-5-18')
-                owner = salt.utils.win_dacl.get_sid('S-1-3-4')
+                # Get a clean dacl by not passing an obj_name
+                dacl = salt.utils.win_dacl.Dacl()
 
-                # Get a clean dacl
-                dacl = salt.utils.win_dacl.Dacl(obj_type='file')
-
-                # Add aces to the dacl for the above groups
-                dacl.add_ace(admins, 'grant', 'this_folder_subfolders_files',
+                # Add aces to the dacl, use the GUID (locale non-specific)
+                dacl.add_ace('S-1-5-32-544',  # Administrators Group
+                             'grant', 'this_folder_subfolders_files',
                              'full_control')
-                dacl.add_ace(system, 'grant', 'this_folder_subfolders_files',
+                dacl.add_ace('S-1-5-18',  # System User
+                             'grant', 'this_folder_subfolders_files',
                              'full_control')
-                dacl.add_ace(owner, 'grant', 'this_folder_subfolders_files',
+                dacl.add_ace('S-1-3-4',  # Owner
+                             'grant', 'this_folder_subfolders_files',
                              'full_control')
 
                 # Save the dacl to the object
-                dacl.save(dir_, 'file', True)
+                dacl.save(dir_, True)
 
             except CommandExecutionError:
                 msg = 'Unable to securely set the permissions of "{0}".'

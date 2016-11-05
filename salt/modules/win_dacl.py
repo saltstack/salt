@@ -581,6 +581,18 @@ def _ace_to_text(ace, objectType):
 def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=False):
     '''
     helper function to set the inheritance
+    Args:
+
+        path (str): The path to the object
+
+        objectType (str): The type of object
+
+        inheritance (bool): True enables inheritance, False disables
+
+        copy (bool): Copy inherited ACEs to the DACL before disabling
+        inheritance
+
+        clear (bool): Remove non-inherited ACEs from the DACL
     '''
     ret = {'result': False,
            'comment': '',
