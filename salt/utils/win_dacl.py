@@ -332,16 +332,15 @@ class Dacl(Flags):
         if obj_name is None:
             self.dacl = win32security.ACL()
         else:
-            if obj_type.lower() in ['registry', 'registry32']:
+            self.dacl_type = obj_type.lower()
+            if self.dacl_type in ['registry', 'registry32']:
                 obj_name = self.get_reg_name(obj_name)
 
             sd = win32security.GetNamedSecurityInfo(
-                obj_name, self.obj_type[obj_type], self.element['dacl'])
+                obj_name, self.obj_type[self.dacl_type], self.element['dacl'])
             self.dacl = sd.GetSecurityDescriptorDacl()
             if self.dacl is None:
                 self.dacl = win32security.ACL()
-
-            self.dacl_type = obj_type
 
     def get_reg_name(self, obj_name):
         '''
@@ -409,6 +408,7 @@ class Dacl(Flags):
                 'Invalid Registry Hive: {0}'.format(passed_hive))
 
         reg.insert(0, valid_hive)
+
         return r'\\'.join(reg)
 
     def add_ace(self, principal, access_mode, permission, applies_to):
@@ -640,8 +640,8 @@ class Dacl(Flags):
                 ace_prop = 'Unknown propagation'
 
         # Get the object type
-        obj_type = 'registry' if self.dacl_type.lower() == 'registry32' \
-            else self.dacl_type.lower()
+        obj_type = 'registry' if self.dacl_type == 'registry32' \
+            else self.dacl_type
 
         # Get the ace permissions
         # Check basic permissions first
@@ -737,7 +737,7 @@ class Dacl(Flags):
             else:
                 sec_info = sec_info | self.inheritance['unprotected']
 
-        if obj_type.lower() in ['registry', 'registry32']:
+        if self.dacl_type in ['registry', 'registry32']:
             obj_name = self.get_reg_name(obj_name)
 
         try:
