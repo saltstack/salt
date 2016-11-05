@@ -558,18 +558,18 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
                 dacl = salt.utils.win_dacl.Dacl()
 
                 # Add aces to the dacl, use the GUID (locale non-specific)
-                dacl.add_ace('S-1-5-32-544',  # Administrators Group
-                             'grant', 'this_folder_subfolders_files',
-                             'full_control')
-                dacl.add_ace('S-1-5-18',  # System Account
-                             'grant', 'this_folder_subfolders_files',
-                             'full_control')
-                dacl.add_ace('S-1-3-4',  # Owner
-                             'grant', 'this_folder_subfolders_files',
-                             'full_control')
-                dacl.add_ace('S-1-5-32-545',  # Users group
-                             'grant', 'this_folder_subfolders_files',
-                             'read_execute')
+                # Administrators Group
+                dacl.add_ace('S-1-5-32-544', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # System
+                dacl.add_ace('S-1-5-18', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # Owner
+                dacl.add_ace('S-1-3-4', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # Users Group
+                dacl.add_ace('S-1-5-32-545', 'grant', 'read_execute',
+                             'this_folder_subfolders_files')
 
                 # Save the dacl to the object
                 dacl.save(path, True)
@@ -605,15 +605,15 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
                 dacl = salt.utils.win_dacl.Dacl()
 
                 # Add aces to the dacl, use the GUID (locale non-specific)
-                dacl.add_ace('S-1-5-32-544',  # Administrators Group
-                             'grant', 'this_folder_subfolders_files',
-                             'full_control')
-                dacl.add_ace('S-1-5-18',  # System User
-                             'grant', 'this_folder_subfolders_files',
-                             'full_control')
-                dacl.add_ace('S-1-3-4',  # Owner
-                             'grant', 'this_folder_subfolders_files',
-                             'full_control')
+                # Administrators Group
+                dacl.add_ace('S-1-5-32-544', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # System
+                dacl.add_ace('S-1-5-18', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # Owner
+                dacl.add_ace('S-1-3-4', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
 
                 # Save the dacl to the object
                 dacl.save(dir_, True)

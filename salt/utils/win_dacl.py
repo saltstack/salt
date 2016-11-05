@@ -329,10 +329,10 @@ class Dacl(Flags):
             # Load the DACL of the named object
             dacl = Dacl(obj_name, obj_type)
         '''
+        self.dacl_type = obj_type.lower()
         if obj_name is None:
             self.dacl = win32security.ACL()
         else:
-            self.dacl_type = obj_type.lower()
             if self.dacl_type in ['registry', 'registry32']:
                 obj_name = self.get_reg_name(obj_name)
 
