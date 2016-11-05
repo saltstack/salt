@@ -1,6 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-Module for Solaris' zoneadm
+Module for Solaris 10's zoneadm
+
+.. note::
+    Not all subcommands are implemented.
+
+    These subcommands are missing:
+    attach, detach, clone, install,
+    uninstall, move, ready, and verify
+
+    Oracle Solaris 11's zoneadm is not supported
+    by this module!
+
 '''
 from __future__ import absolute_import
 
@@ -42,10 +53,13 @@ def _is_globalzone():
 
 def __virtual__():
     '''
-    We are available if we have zoneadm util and are a Solaris globalzone
+    We are available if we are have zoneadm and are the global zone on
+    Solaris 10, OmniOS, OpenIndiana, OpenSolaris, or Smartos.
     '''
+    ## note: we depend on PR#37472 to distinguish between Solaris and Oracle Solaris
     if _is_globalzone() and salt.utils.which('zoneadm'):
-        return __virtualname__
+        if __grains__['os'] in ['Solaris', 'OpenSolaris', 'SmartOS', 'OmniOS', 'OpenIndiana']:
+            return __virtualname__
 
     return (
         False,
@@ -103,5 +117,75 @@ def list_zones(verbose=True, installed=False, configured=False, hide_global=True
             del zones[zone_t['zonename']]['zonename']
 
     return zones if verbose else sorted(zones.keys())
+
+
+def boot(zone, single=False, altinit=None, smf_options=None):
+    '''
+    Boot (or activate) the specified zone.
+
+    zone : string
+        name of the zone
+    single : boolean
+        boots only to milestone svc:/milestone/single-user:default.
+    altinit : string
+        valid path to an alternative executable to be the primordial process.
+    smf_options : string
+        include two categories of options to control booting behavior of
+        the service management facility: recovery options and messages options.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zoneadm.boot clementine
+    '''
+    ## zone is running
+    if zone in list_zones():
+        return True
+
+    ## build boot_options
+    boot_options = ''
+    if single:
+        boot_options = '-s {0}'.format(boot_options)
+    if altinit:  # note: we cannot validate the path, as this is local to the zonepath.
+        boot_options = '-i {0} {1}'.format(altinit, boot_options)
+    if smf_options:
+        boot_options = '-m {0} {1}'.format(smf_options, boot_options)
+    if boot_options != '':
+        boot_options = ' -- {0}'.format(boot_options.strip())
+
+    ## execute boot
+    res = __salt__['cmd.run_all']('zoneadm -z {zone} boot{boot_opts}'.format(
+        zone=zone,
+        boot_opts=boot_options,
+    ))
+    return res['retcode'] == 0
+
+
+def halt(zone):
+    '''
+    Halt the specified zone.
+
+    zone : string
+        name of the zone
+
+    .. note::
+        To cleanly shutdown the zone use the shutdown function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zoneadm.halt delores
+    '''
+    ## zone is not running or not available
+    if zone not in list_zones():
+        return True
+
+    ## execute halt
+    res = __salt__['cmd.run_all']('zoneadm -z {zone} halt'.format(
+        zone=zone,
+    ))
+    return res['retcode'] == 0
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
