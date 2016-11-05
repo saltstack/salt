@@ -1057,7 +1057,7 @@ def rm_permissions(obj_name,
                    principal,
                    ace_type='all',
                    obj_type='file'):
-    '''
+    r'''
     Remove a user's ACE from an object. This can be a file, folder, registry
     key, printer, service, etc...
 
@@ -1136,7 +1136,7 @@ def has_permission(obj_name,
                    permission,
                    access_mode='grant',
                    exact=True):
-    '''
+    r'''
     Check if the object has a permission
 
     Args:
