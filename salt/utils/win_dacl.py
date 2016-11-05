@@ -635,7 +635,7 @@ class Dacl(Flags):
 
             # Lookup the propagation
             try:
-                ace_prop = self.ace_prop[self.obj_type][ace_prop]
+                ace_prop = self.ace_prop[self.dacl_type][ace_prop]
             except KeyError:
                 ace_prop = 'Unknown propagation'
 
@@ -651,6 +651,9 @@ class Dacl(Flags):
         if not ace_perms[0]:
             ace_perms = []
             for perm in self.ace_perms[obj_type]['advanced']:
+                # Don't match against the string perms
+                if isinstance(perm, six.string_types):
+                    continue
                 if ace[1] & perm == perm:
                     ace_perms.append(
                         self.ace_perms[obj_type]['advanced'][perm])
@@ -1047,7 +1050,7 @@ def set_permissions(obj_name,
         dacl = Dacl(obj_name, obj_type)
         dacl.rm_ace(principal, access_mode)
 
-    dacl.add_ace(principal, access_mode, applies_to, permission)
+    dacl.add_ace(principal, access_mode, permission, applies_to)
     dacl.save(obj_name, protected)
 
     return True
