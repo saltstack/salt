@@ -144,6 +144,8 @@ def boot(zone, single=False, altinit=None, smf_options=None):
     .. code-block:: bash
 
         salt '*' zoneadm.boot clementine
+        salt '*' zoneadm.boot maeve single=True
+        salt '*' zoneadm.boot teddy single=True smf_options=verbose
     '''
     ## zone is running
     if zone in list_zones():
@@ -168,33 +170,6 @@ def boot(zone, single=False, altinit=None, smf_options=None):
     return res['retcode'] == 0
 
 
-def halt(zone):
-    '''
-    Halt the specified zone.
-
-    zone : string
-        name of the zone
-
-    .. note::
-        To cleanly shutdown the zone use the shutdown function.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' zoneadm.halt delores
-    '''
-    ## zone is not running or not available
-    if zone not in list_zones():
-        return True
-
-    ## execute halt
-    res = __salt__['cmd.run_all']('zoneadm -z {zone} halt'.format(
-        zone=zone,
-    ))
-    return res['retcode'] == 0
-
-
 def reboot(zone, single=False, altinit=None, smf_options=None):
     '''
     Restart the zone. This is equivalent to a halt boot sequence.
@@ -213,7 +188,8 @@ def reboot(zone, single=False, altinit=None, smf_options=None):
 
     .. code-block:: bash
 
-        salt '*' zoneadm.boot clementine
+        salt '*' zoneadm.reboot dolores
+        salt '*' zoneadm.reboot teddy single=True
     '''
     ## build boot_options
     boot_options = ''
@@ -229,6 +205,76 @@ def reboot(zone, single=False, altinit=None, smf_options=None):
     ## execute boot
     res = __salt__['cmd.run_all']('zoneadm -z {zone} reboot{boot_opts}'.format(
         zone=zone,
+        boot_opts=boot_options,
+    ))
+    return res['retcode'] == 0
+
+
+def halt(zone):
+    '''
+    Halt the specified zone.
+
+    zone : string
+        name of the zone
+
+    .. note::
+        To cleanly shutdown the zone use the shutdown function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zoneadm.halt hector
+    '''
+    ## zone is not running or not available
+    if zone not in list_zones():
+        return True
+
+    ## execute halt
+    res = __salt__['cmd.run_all']('zoneadm -z {zone} halt'.format(
+        zone=zone,
+    ))
+    return res['retcode'] == 0
+
+
+def shutdown(zone, reboot=False, single=False, altinit=None, smf_options=None):
+    '''
+    Gracefully shutdown the specified zone.
+
+    zone : string
+        name of the zone
+    reboot : boolean
+        reboot zone after shutdown (equivalent of shutdown -i6 -g0 -y)
+    single : boolean
+        boots only to milestone svc:/milestone/single-user:default.
+    altinit : string
+        valid path to an alternative executable to be the primordial process.
+    smf_options : string
+        include two categories of options to control booting behavior of
+        the service management facility: recovery options and messages options.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zoneadm.shutdown peter
+        salt '*' zoneadm.shutdown armistice reboot=True
+    '''
+    ## build boot_options
+    boot_options = ''
+    if single:
+        boot_options = '-s {0}'.format(boot_options)
+    if altinit:  # note: we cannot validate the path, as this is local to the zonepath.
+        boot_options = '-i {0} {1}'.format(altinit, boot_options)
+    if smf_options:
+        boot_options = '-m {0} {1}'.format(smf_options, boot_options)
+    if boot_options != '':
+        boot_options = ' -- {0}'.format(boot_options.strip())
+
+    ## execute boot
+    res = __salt__['cmd.run_all']('zoneadm -z {zone} shutdown{reboot}{boot_opts}'.format(
+        zone=zone,
+        reboot=' -r' if reboot else '',
         boot_opts=boot_options,
     ))
     return res['retcode'] == 0
