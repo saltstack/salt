@@ -1807,6 +1807,7 @@ def minion_config(path,
     opts = apply_minion_config(overrides, defaults,
                                cache_minion_id=cache_minion_id,
                                minion_id=minion_id)
+    apply_sdb(opts)
     _validate_opts(opts)
     return opts
 
@@ -1881,7 +1882,6 @@ def syndic_config(master_config_path,
     return opts
 
 
-# ----- Salt Cloud Configuration Functions ---------------------------------->
 def apply_sdb(opts, sdb_opts=None):
     '''
     Recurse for sdb:// links for opts
@@ -1904,6 +1904,7 @@ def apply_sdb(opts, sdb_opts=None):
     return sdb_opts
 
 
+# ----- Salt Cloud Configuration Functions ---------------------------------->
 def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                  master_config_path=None, master_config=None,
                  providers_config_path=None, providers_config=None,
@@ -3084,6 +3085,7 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
     if opts.get('transport') == 'raet' and 'aes' in opts:
         opts.pop('aes')
+    apply_sdb(opts)
     return opts
 
 
