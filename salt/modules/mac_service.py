@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import os
 import re
 import plistlib
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 
 # Import salt libs
 import salt.utils

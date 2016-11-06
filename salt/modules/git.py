@@ -9,7 +9,7 @@ import copy
 import logging
 import os
 import re
-from distutils.version import LooseVersion as _LooseVersion
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=no-name-in-module
 
 # Import salt libs
 import salt.utils
