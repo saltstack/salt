@@ -7,7 +7,7 @@ Module to provide Elasticsearch compatibility to Salt
 
 .. versionadded:: 2015.8.0
 
-:depends:       `elasticsearch-py <https://elasticsearch-py.readthedocs.io/en/latest/>`_
+:depends:       `elasticsearch-py <http://elasticsearch-py.readthedocs.org/en/latest/>`_
 
 :configuration: This module accepts connection configuration details either as
     parameters or as configuration settings in /etc/salt/minion on the relevant
@@ -33,7 +33,12 @@ Module to provide Elasticsearch compatibility to Salt
             - 'saltutil.find_job'
             - 'pillar.items'
             - 'grains.items'
+          proxies:
+            - http: http://proxy:3128
+            - https: http://proxy:1080
 
+    When specifying proxies the requests backend will be used and the 'proxies'
+    data structure is passed as-is to that module.
 
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
@@ -50,6 +55,7 @@ log = logging.getLogger(__name__)
 # Import third party libs
 try:
     import elasticsearch
+    from elasticsearch import RequestsHttpConnection
     logging.getLogger('elasticsearch').setLevel(logging.CRITICAL)
     HAS_ELASTICSEARCH = True
 except ImportError:
@@ -72,6 +78,7 @@ def _get_instance(hosts=None, profile=None):
     Return the elasticsearch instance
     '''
     es = None
+    proxies = {}
 
     if profile is None:
         profile = 'elasticsearch'
@@ -84,13 +91,28 @@ def _get_instance(hosts=None, profile=None):
         hosts = _profile.get('host', None)
         if not hosts:
             hosts = _profile.get('hosts', None)
+        proxies = _profile.get('proxies', {})
 
     if not hosts:
         hosts = ['127.0.0.1:9200']
     if isinstance(hosts, string_types):
         hosts = [hosts]
     try:
-        es = elasticsearch.Elasticsearch(hosts)
+        if proxies == {}:
+            es = elasticsearch.Elasticsearch(hosts)
+        else:
+            # Custom connection class to use requests module with proxies
+            class ProxyConnection(RequestsHttpConnection):
+                def __init__(self, *args, **kwargs):
+                    proxies = kwargs.pop('proxies', {})
+                    super(ProxyConnection, self).__init__(*args, **kwargs)
+                    self.session.proxies = proxies
+
+            es = elasticsearch.Elasticsearch(
+                hosts,
+                connection_class=ProxyConnection,
+                proxies=_profile.get('proxies', {}),
+            )
         if not es.ping():
             raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}, is it unhealthy?'.format(hosts))
     except elasticsearch.exceptions.ConnectionError:
