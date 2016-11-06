@@ -1227,7 +1227,7 @@ def managed(name,
 
     source_hash_name
         When ``source_hash`` refers to a hash file, Salt will try to find the
-        correct hash by matching the filename associated with that hash. By
+        correct hash by matching the filename/URI associated with that hash. By
         default, Salt will look for the filename being managed. When managing a
         file at path ``/tmp/foo.txt``, then the following line in a hash file
         would match:
