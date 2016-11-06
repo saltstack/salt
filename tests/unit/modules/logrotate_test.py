@@ -29,9 +29,9 @@ PARSE_CONF = {
     'include files': {
         'rsyslog': ['/var/log/syslog']
     },
-    'rotate': '1',
+    'rotate': 1,
     '/var/log/wtmp': {
-        'rotate': '1'
+        'rotate': 1
     }
 }
 
