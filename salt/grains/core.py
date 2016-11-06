@@ -1074,10 +1074,12 @@ _OS_FAMILY_MAP = {
     'SLES_SAP': 'Suse',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
+    'OmniOS': 'Solaris',
     'OpenIndiana Development': 'Solaris',
     'OpenIndiana': 'Solaris',
     'OpenSolaris Development': 'Solaris',
     'OpenSolaris': 'Solaris',
+    'Oracle Solaris': 'Solaris',
     'Arch ARM': 'Arch',
     'Manjaro': 'Arch',
     'Antergos': 'Arch',
@@ -1422,7 +1424,6 @@ def os_data():
         grains.update(_linux_cpudata())
         grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
-        grains['os_family'] = 'Solaris'
         if salt.utils.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
             uname_v = os.uname()[3]  # format: joyent_20161101T004406Z
