@@ -167,8 +167,8 @@ class OptionParser(optparse.OptionParser, object):
             new_inargs = sys.stdin.readlines()
             new_inargs = [arg.rstrip('\r\n') for arg in new_inargs]
             new_options, new_args = optparse.OptionParser.parse_args(
-                    self,
-                    new_inargs)
+                self,
+                new_inargs)
             options.__dict__.update(new_options.__dict__)
             args.extend(new_args)
 
@@ -2925,7 +2925,7 @@ class SaltAPIParser(six.with_metaclass(OptionParserMeta,
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
     # LogLevelMixIn attributes
-    _default_logging_logfile_ = config.DEFAULT_API_OPTS['logfile']
+    _default_logging_logfile_ = config.DEFAULT_API_OPTS['api_logfile']
 
     def setup_config(self):
         return salt.config.api_config(self.get_config_file_path())  # pylint: disable=no-member
