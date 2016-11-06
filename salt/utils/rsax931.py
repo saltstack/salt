@@ -29,8 +29,10 @@ def _load_libcrypto():
             'libcrypto.so*'))[0])
     else:
         lib = find_library('crypto')
-        if not lib and salt.utils.is_smartos():
-            # smartos does not have libraries in std location
+        if not lib and salt.utils.is_sunos():
+            # Solaris-like distribution that use pkgsrc have
+            # libraries in a non standard location.
+            # (SmartOS, OmniOS, OpenIndiana, ...)
             lib = glob.glob(os.path.join(
                 '/opt/local/lib',
                 'libcrypto.so*'))
