@@ -111,7 +111,7 @@ TAGS = {
 
 def get_event(
         node, sock_dir=None, transport='zeromq',
-        opts=None, listen=True, io_loop=None, keep_loop=False):
+        opts=None, listen=True, io_loop=None, keep_loop=False, raise_errors=False):
     '''
     Return an event object suitable for the named transport
 
@@ -124,8 +124,19 @@ def get_event(
     # TODO: AIO core is separate from transport
     if transport in ('zeromq', 'tcp'):
         if node == 'master':
-            return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, keep_loop=keep_loop)
-        return SaltEvent(node, sock_dir, opts, listen=listen, io_loop=io_loop, keep_loop=keep_loop)
+            return MasterEvent(sock_dir,
+                               opts,
+                               listen=listen,
+                               io_loop=io_loop,
+                               keep_loop=keep_loop,
+                               raise_errors=raise_errors)
+        return SaltEvent(node,
+                         sock_dir,
+                         opts,
+                         listen=listen,
+                         io_loop=io_loop,
+                         keep_loop=keep_loop,
+                         raise_errors=raise_errors)
     elif transport == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.RAETEvent(node,
@@ -134,13 +145,13 @@ def get_event(
                                               opts=opts)
 
 
-def get_master_event(opts, sock_dir, listen=True, io_loop=None):
+def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False):
     '''
     Return an event object suitable for the named transport
     '''
     # TODO: AIO core is separate from transport
     if opts['transport'] in ('zeromq', 'tcp', 'detect'):
-        return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop)
+        return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors)
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.MasterEvent(
@@ -197,7 +208,8 @@ class SaltEvent(object):
     '''
     def __init__(
             self, node, sock_dir=None,
-            opts=None, listen=True, io_loop=None, keep_loop=False):
+            opts=None, listen=True, io_loop=None,
+            keep_loop=False, raise_errors=False):
         '''
         :param IOLoop io_loop: Pass in an io_loop if you want asynchronous
                                operation for obtaining events. Eg use of
@@ -220,6 +232,7 @@ class SaltEvent(object):
         self.cpush = False
         self.subscriber = None
         self.pusher = None
+        self.raise_errors = raise_errors
 
         if opts is None:
             opts = {}
@@ -529,7 +542,12 @@ class SaltEvent(object):
                 ret = {'data': data, 'tag': mtag}
             except KeyboardInterrupt:
                 return {'tag': 'salt/event/exit', 'data': {}}
-            except (tornado.iostream.StreamClosedError, RuntimeError):
+            except tornado.iostream.StreamClosedError:
+                if self.raise_errors:
+                    raise
+                else:
+                    return None
+            except RuntimeError:
                 return None
 
             if not match_func(ret['tag'], tag):
@@ -839,14 +857,16 @@ class MasterEvent(SaltEvent):
             opts=None,
             listen=True,
             io_loop=None,
-            keep_loop=False):
+            keep_loop=False,
+            raise_errors=False):
         super(MasterEvent, self).__init__(
             'master',
             sock_dir,
             opts,
             listen=listen,
             io_loop=io_loop,
-            keep_loop=keep_loop)
+            keep_loop=keep_loop,
+            raise_errors=raise_errors)
 
 
 class LocalClientEvent(MasterEvent):
@@ -879,10 +899,11 @@ class MinionEvent(SaltEvent):
     RAET compatible
     Create a master event management object
     '''
-    def __init__(self, opts, listen=True, io_loop=None):
+    def __init__(self, opts, listen=True, io_loop=None, raise_errors=False):
         super(MinionEvent, self).__init__(
             'minion', sock_dir=opts.get('sock_dir'),
-            opts=opts, listen=listen, io_loop=io_loop)
+            opts=opts, listen=listen, io_loop=io_loop,
+            raise_errors=raise_errors)
 
 
 class AsyncEventPublisher(object):

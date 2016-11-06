@@ -2549,15 +2549,17 @@ def recurse(name,
 
     # Check source path relative to fileserver root, make sure it is a
     # directory
-    source_rel = source.partition('://')[2]
-    master_dirs = __salt__['cp.list_master_dirs'](__env__)
-    if source_rel not in master_dirs \
+    srcpath, senv = salt.utils.url.parse(source)
+    if senv is None:
+        senv = __env__
+    master_dirs = __salt__['cp.list_master_dirs'](saltenv=senv)
+    if srcpath not in master_dirs \
             and not any((x for x in master_dirs
-                         if x.startswith(source_rel + '/'))):
+                         if x.startswith(srcpath + '/'))):
         ret['result'] = False
         ret['comment'] = (
             'The directory \'{0}\' does not exist on the salt fileserver '
-            'in saltenv \'{1}\''.format(source, __env__)
+            'in saltenv \'{1}\''.format(srcpath, senv)
         )
         return ret
 
@@ -2696,16 +2698,15 @@ def recurse(name,
 
     keep = set()
     vdir = set()
-    srcpath = salt.utils.url.parse(source)[0]
     if not srcpath.endswith('/'):
         # we're searching for things that start with this *directory*.
         # use '/' since #master only runs on POSIX
         srcpath = srcpath + '/'
-    fns_ = __salt__['cp.list_master'](__env__, srcpath)
+    fns_ = __salt__['cp.list_master'](senv, srcpath)
     # If we are instructed to keep symlinks, then process them.
     if keep_symlinks:
         # Make this global so that emptydirs can use it if needed.
-        symlinks = __salt__['cp.list_master_symlinks'](__env__, srcpath)
+        symlinks = __salt__['cp.list_master_symlinks'](senv, srcpath)
         fns_ = process_symlinks(fns_, symlinks)
     for fn_ in fns_:
         if not fn_.strip():
@@ -2744,11 +2745,11 @@ def recurse(name,
             manage_directory(dirname)
             vdir.add(dirname)
 
-        src = salt.utils.url.create(fn_)
+        src = salt.utils.url.create(fn_, saltenv=senv)
         manage_file(dest, src)
 
     if include_empty:
-        mdirs = __salt__['cp.list_master_dirs'](__env__, srcpath)
+        mdirs = __salt__['cp.list_master_dirs'](senv, srcpath)
         for mdir in mdirs:
             if not salt.utils.check_include_exclude(
                     os.path.relpath(mdir, srcpath), include_pat, exclude_pat):
