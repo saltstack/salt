@@ -483,10 +483,14 @@ class FileModuleTestCase(TestCase):
         '''
         # With file name
         with tempfile.NamedTemporaryFile(mode='w+') as tfile:
-            tfile.write('rc.conf ef6e82e4006dee563d98ada2a2a80a27\n')
             tfile.write(
-                'ead48423703509d37c4a90e6a0d53e143b6fc268 example.tar.gz\n')
+                'rc.conf ef6e82e4006dee563d98ada2a2a80a27\n'
+                'ead48423703509d37c4a90e6a0d53e143b6fc268 example.tar.gz\n'
+                'fe05bcdcdc4928012781a5f1a2a77cbb5398e106 ./subdir/example.tar.gz\n'
+                'ad782ecdac770fc6eb9a62e44f90873fb97fb26b foo.tar.bz2\n'
+            )
             tfile.flush()
+
             result = filemod.extract_hash(tfile.name, '', '/rc.conf')
             self.assertEqual(result, {
                 'hsum': 'ef6e82e4006dee563d98ada2a2a80a27',
@@ -498,15 +502,83 @@ class FileModuleTestCase(TestCase):
                 'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
                 'hash_type': 'sha1'
             })
-        # Solohash - no file name (Maven repo checksum file format)
+
+            # All the checksums in this test file are sha1 sums. We run this
+            # loop three times. The first pass tests auto-detection of hash
+            # type by length of the hash. The second tests matching a specific
+            # type. The third tests a failed attempt to match a specific type,
+            # since sha256 was requested but sha1 is what is in the file.
+            for hash_type in ('', 'sha1', 'sha256'):
+                # Test the source_hash_name argument. Even though there are
+                # matches in the source_hash file for both the file_name and
+                # source params, they should be ignored in favor of the
+                # source_hash_name.
+                file_name = '/example.tar.gz'
+                source = 'https://mydomain.tld/foo.tar.bz2?key1=val1&key2=val2'
+                source_hash_name = './subdir/example.tar.gz'
+                result = filemod.extract_hash(
+                    tfile.name,
+                    hash_type,
+                    file_name,
+                    source,
+                    source_hash_name)
+                expected = {
+                    'hsum': 'fe05bcdcdc4928012781a5f1a2a77cbb5398e106',
+                    'hash_type': 'sha1'
+                } if hash_type != 'sha256' else None
+                self.assertEqual(result, expected)
+
+                # Test both a file_name and source but no source_hash_name.
+                # Even though there are matches for both file_name and
+                # source_hash_name, file_name should be preferred.
+                file_name = '/example.tar.gz'
+                source = 'https://mydomain.tld/foo.tar.bz2?key1=val1&key2=val2'
+                source_hash_name = None
+                result = filemod.extract_hash(
+                    tfile.name,
+                    hash_type,
+                    file_name,
+                    source,
+                    source_hash_name)
+                expected = {
+                    'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
+                    'hash_type': 'sha1'
+                } if hash_type != 'sha256' else None
+                self.assertEqual(result, expected)
+
+                # Test both a file_name and source but no source_hash_name.
+                # Since there is no match for the file_name, the source is
+                # matched.
+                file_name = '/somefile.tar.gz'
+                source = 'https://mydomain.tld/foo.tar.bz2?key1=val1&key2=val2'
+                source_hash_name = None
+                result = filemod.extract_hash(
+                    tfile.name,
+                    hash_type,
+                    file_name,
+                    source,
+                    source_hash_name)
+                expected = {
+                    'hsum': 'ad782ecdac770fc6eb9a62e44f90873fb97fb26b',
+                    'hash_type': 'sha1'
+                } if hash_type != 'sha256' else None
+                self.assertEqual(result, expected)
+
+        # Hash only, no file name (Maven repo checksum format)
+        # Since there is no name match, the first checksum in the file will
+        # always be returned, never the second.
         with tempfile.NamedTemporaryFile(mode='w+') as tfile:
-            tfile.write('ead48423703509d37c4a90e6a0d53e143b6fc268\n')
+            tfile.write('ead48423703509d37c4a90e6a0d53e143b6fc268\n'
+                        'ad782ecdac770fc6eb9a62e44f90873fb97fb26b\n')
             tfile.flush()
-            result = filemod.extract_hash(tfile.name, '', '/testfile')
-            self.assertEqual(result, {
-                'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
-                'hash_type': 'sha1'
-            })
+
+            for hash_type in ('', 'sha1', 'sha256'):
+                result = filemod.extract_hash(tfile.name, hash_type, '/testfile')
+                expected = {
+                    'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
+                    'hash_type': 'sha1'
+                } if hash_type != 'sha256' else None
+                self.assertEqual(result, expected)
 
     def test_user_to_uid_int(self):
         '''
