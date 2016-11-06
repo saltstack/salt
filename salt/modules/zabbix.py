@@ -28,7 +28,7 @@ from __future__ import absolute_import
 import logging
 import socket
 import json
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 
 # Import salt libs
 import salt.utils
