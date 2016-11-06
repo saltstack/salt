@@ -55,7 +55,7 @@ import salt.utils
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs_, makedirs_perms,
         check_managed, check_managed_changes, check_perms, source_list,
-        touch, append, contains, contains_regex,
+        touch, append, contains, contains_regex, get_source_sum,
         contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
         get_hash, manage_file, file_exists, get_diff, line, list_backups,
         __clean_tmp, check_file_meta, _binary_replace, restore_backup,
@@ -83,7 +83,7 @@ def __virtual__():
             global source_list, mkdir, __clean_tmp, makedirs_, file_exists
             global check_managed, check_managed_changes, check_file_meta
             global append, _error, directory_exists, touch, contains
-            global contains_regex, contains_glob
+            global contains_regex, contains_glob, get_source_sum
             global find, psed, get_sum, check_hash, get_hash, delete_backup
             global get_diff, _get_flags, extract_hash, comment_line
             global access, copy, readdir, rmdir, truncate, replace, search
@@ -120,6 +120,7 @@ def __virtual__():
             contains = _namespaced_function(contains, globals())
             contains_regex = _namespaced_function(contains_regex, globals())
             contains_glob = _namespaced_function(contains_glob, globals())
+            get_source_sum = _namespaced_function(get_source_sum, globals())
             find = _namespaced_function(find, globals())
             psed = _namespaced_function(psed, globals())
             get_sum = _namespaced_function(get_sum, globals())
