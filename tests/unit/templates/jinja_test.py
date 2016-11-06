@@ -8,6 +8,7 @@ import tempfile
 import json
 import datetime
 import pprint
+import re
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -460,6 +461,33 @@ class TestGetTemplate(TestCase):
 
 
 class TestCustomExtensions(TestCase):
+    def test_regex_escape(self):
+        dataset = 'foo?:.*/\\bar'
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|regex_escape }}').render(dataset=dataset)
+        self.assertEqual(rendered, re.escape(dataset))
+
+    def test_unique_string(self):
+        dataset = 'foo'
+        unique = set(dataset)
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
+        self.assertEqual(rendered, u"{0}".format(unique))
+
+    def test_unique_tuple(self):
+        dataset = ('foo', 'foo', 'bar')
+        unique = set(dataset)
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
+        self.assertEqual(rendered, u"{0}".format(unique))
+
+    def test_unique_list(self):
+        dataset = ['foo', 'foo', 'bar']
+        unique = ['foo', 'bar']
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
+        self.assertEqual(rendered, u"{0}".format(unique))
+
     def test_serialize_json(self):
         dataset = {
             "foo": True,
