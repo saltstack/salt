@@ -1131,7 +1131,7 @@ def _get_subnetname_id(subnetname):
                provider=get_provider(), opts=__opts__, sigver='4'):
         tags = subnet.get('tagSet', {}).get('item', {})
         if not isinstance(tags, list):
-            tags = [ tags, ]
+            tags = [tags]
         for tag in tags:
             if tag['key'] == 'Name' and tag['value'] == subnetname:
                 log.debug('AWS Subnet ID of {0} is {1}'.format(
@@ -1163,13 +1163,14 @@ def _get_securitygroupname_id(securitygroupname_list):
     '''
     securitygroupid_set = set()
     if not isinstance(securitygroupname_list, list):
-    securitygroupname_list = [ securitygroupname_list, ]
+        securitygroupname_list = [securitygroupname_list]
     params = {'Action': 'DescribeSecurityGroups'}
     for sg in aws.query(params, location=get_location(),
-               provider=get_provider(), opts=__opts__, sigver='4'):
+                        provider=get_provider(), opts=__opts__, sigver='4'):
         if sg['groupName'] in securitygroupname_list:
             log.debug('AWS SecurityGroup ID of {0} is {1}'.format(
-                                    sg['groupName'], sg['groupId'] )
+                sg['groupName'],
+                sg['groupId'])
             )
             securitygroupid_set.add(sg['groupId'])
     return list(securitygroupid_set)
