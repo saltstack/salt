@@ -105,7 +105,7 @@ __virtualname__ = 'carbon'
 
 
 def __virtual__():
-    return __virtualname__
+    return (False, 'Testing #37444')
 
 
 def _get_options(ret):
