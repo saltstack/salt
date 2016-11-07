@@ -439,7 +439,7 @@ def apply_config(path, source=None, salt_env='base'):
     if ret is False:
         raise CommandExecutionError('Apply Config Failed: {0}'.format(path))
 
-    cmd = '$status = Get-DscConfigurationStatus; $status.Status'.format(config)
+    cmd = '$status = Get-DscConfigurationStatus; $status.Status'
     ret = _pshell(cmd)
     log.info('DSC Apply Config: {0}'.format(ret))
 
