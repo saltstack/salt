@@ -119,7 +119,7 @@ def query(url,
           node='minion',
           port=80,
           opts=None,
-          backend='tornado',
+          backend=None,
           requests_lib=None,
           ca_bundle=None,
           verify_ssl=None,
@@ -152,24 +152,27 @@ def query(url,
         else:
             opts = {}
 
-    if requests_lib is None:
-        requests_lib = opts.get('requests_lib', False)
+    if not backend:
+        if requests_lib is not None or 'requests_lib' in opts:
+            salt.utils.warn_until('Nitrogen', '"requests_lib:True" has been replaced by "backend:requests"')
+            if 'backend' in opts:
+                backend = opts['backend']
+            elif requests_lib or opts.get('request_lib', False):
+                backend = 'requests'
+            else:
+                backend = 'tornado'
+        else:
+            backend = opts.get('backend', 'tornado')
 
-    if requests_lib is True:
-        log.warning('Please set "backend" to "requests" instead of setting '
-                 '"requests_lib" to "True"')
-
+    if backend == 'requests':
         if HAS_REQUESTS is False:
             ret['error'] = ('http.query has been set to use requests, but the '
                             'requests library does not seem to be installed')
             log.error(ret['error'])
             return ret
-
-        backend = 'requests'
-
-    else:
-        requests_log = logging.getLogger('requests')
-        requests_log.setLevel(logging.WARNING)
+        else:
+            requests_log = logging.getLogger('requests')
+            requests_log.setLevel(logging.WARNING)
 
     # Some libraries don't support separation of url and GET parameters
     # Don't need a try/except block, since Salt depends on tornado
