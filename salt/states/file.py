@@ -1105,6 +1105,7 @@ def missing(name):
 def managed(name,
             source=None,
             source_hash='',
+            source_hash_name=None,
             user=None,
             group=None,
             mode=None,
@@ -1210,7 +1211,7 @@ def managed(name,
                     - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
                     - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.hash
 
-            The following is an example of the supported source_hash format:
+            The following lines are all supported formats:
 
             .. code-block:: text
 
@@ -1220,7 +1221,7 @@ def managed(name,
 
             Debian file type ``*.dsc`` files are also supported.
 
-        **Inserting the Source Hash in the sls Data**
+        **Inserting the Source Hash in the SLS Data**
             Examples:
 
             .. code-block:: yaml
@@ -1246,6 +1247,44 @@ def managed(name,
                     - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
                     - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz/+md5
 
+    source_hash_name
+        When ``source_hash`` refers to a hash file, Salt will try to find the
+        correct hash by matching the filename/URI associated with that hash. By
+        default, Salt will look for the filename being managed. When managing a
+        file at path ``/tmp/foo.txt``, then the following line in a hash file
+        would match:
+
+        .. code-block:: text
+
+            acbd18db4cc2f85cedef654fccc4a4d8    foo.txt
+
+        However, sometimes a hash file will include multiple similar paths:
+
+        .. code-block:: text
+
+            37b51d194a7513e45b56f6524f2d51f2    ./dir1/foo.txt
+            acbd18db4cc2f85cedef654fccc4a4d8    ./dir2/foo.txt
+            73feffa4b7f6bb68e44cf984c85f6e88    ./dir3/foo.txt
+
+        In cases like this, Salt may match the incorrect hash. This argument
+        can be used to tell Salt which filename to match, to ensure that the
+        correct hash is identified. For example:
+
+        .. code-block:: yaml
+
+            /tmp/foo.txt:
+              file.managed:
+                - source: https://mydomain.tld/dir2/foo.txt
+                - source_hash: https://mydomain.tld/hashes
+                - source_hash_name: ./dir2/foo.txt
+
+        .. note::
+            This argument must contain the full filename entry from the
+            checksum file, as this argument is meant to disambiguate matches
+            for multiple files that have the same basename. So, in the
+            example above, simply using ``foo.txt`` would not match.
+
+        .. versionadded:: 2016.3.5
 
     user
         The user to own the file, this defaults to the user salt is running as
@@ -1730,6 +1769,7 @@ def managed(name,
                     name,
                     source,
                     source_hash,
+                    source_hash_name,
                     user,
                     group,
                     mode,
@@ -1774,6 +1814,7 @@ def managed(name,
             template,
             source,
             source_hash,
+            source_hash_name,
             user,
             group,
             mode,
@@ -5057,6 +5098,7 @@ def serialize(name,
             name=name,
             source=None,
             source_hash={},
+            source_hash_name=None,
             user=user,
             group=group,
             mode=mode,
