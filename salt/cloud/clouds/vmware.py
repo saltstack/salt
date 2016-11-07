@@ -1903,6 +1903,9 @@ def list_snapshots(kwargs=None, call=None):
                 return {vm["name"]: _get_snapshots(vm["snapshot"].rootSnapshotList)}
             else:
                 ret[vm["name"]] = _get_snapshots(vm["snapshot"].rootSnapshotList)
+        else:
+            if kwargs and kwargs.get('name') == vm["name"]:
+                return {}
 
     return ret
 
