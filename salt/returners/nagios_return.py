@@ -177,7 +177,7 @@ def __virtual__():
     '''
     Return virtualname
     '''
-    return __virtualname__
+    return 'nagios.list_plugins' in __salt__
 
 
 def returner(ret):
