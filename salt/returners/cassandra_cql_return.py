@@ -175,7 +175,8 @@ __virtualname__ = 'cassandra_cql'
 
 def __virtual__():
     if not HAS_CASSANDRA_DRIVER:
-        return False
+        return False, 'Could not import cassandra_cql returner; ' \
+                      'cassandra-driver is not installed.'
 
     return True
 

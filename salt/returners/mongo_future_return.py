@@ -73,7 +73,6 @@ import salt.utils.jid
 import salt.returners
 import salt.ext.six as six
 
-
 # Import third party libs
 try:
     import pymongo
@@ -91,7 +90,7 @@ __virtualname__ = 'mongo'
 
 def __virtual__():
     if not HAS_PYMONGO:
-        return False
+        return False, 'Could not import mongo returner; pymongo is not installed.'
     return __virtualname__
 
 
