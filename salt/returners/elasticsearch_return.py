@@ -86,6 +86,21 @@ def _ensure_index(index):
         __salt__['elasticsearch.alias_create']('{0}-v1'.format(index), index)
 
 
+def _convert_keys(data):
+    if not isinstance(data, dict):
+        return data
+
+    new_data = {}
+    for k, sub_data in data.items():
+        if '.' in k:
+            new_data['_orig_key'] = k
+            k = k.replace('.', '_')
+
+        new_data[k] = _convert_keys(sub_data)
+
+    return new_data
+
+
 def returner(ret):
     '''
     Process the return from Salt
@@ -130,12 +145,6 @@ def returner(ret):
         def dst(self, dt):
             return timedelta(0)
 
-    if isinstance(ret['return'], dict):
-        sk = ""
-        for k in ret['return'].keys():
-            sk = k.replace('.', '_')
-            ret['return'][sk] = ret['return'].pop(k)
-
     utc = UTC()
     data = {
         '@timestamp': datetime.now(utc).isoformat(),
@@ -144,7 +153,7 @@ def returner(ret):
         'minion': job_minion_id,
         'fun': job_fun,
         'jid': job_id,
-        'data': ret['return'],
+        'data': _convert_keys(ret['return'])
     }
 
     ret = __salt__['elasticsearch.document_create'](index=index,
