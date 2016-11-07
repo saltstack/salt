@@ -24,28 +24,26 @@ To use the kafka returner, append '--return kafka' to the Salt command, eg;
 
 '''
 
+# Import Python libs
 from __future__ import absolute_import
-
 import json
 import logging
 
-
+# Import third-party libs
 try:
     from kafka import KafkaClient, SimpleProducer
     HAS_KAFKA = True
 except ImportError:
     HAS_KAFKA = False
 
-
 log = logging.getLogger(__name__)
-
 
 __virtualname__ = 'kafka'
 
 
 def __virtual__():
     if not HAS_KAFKA:
-        return False
+        return False, 'Could not import kafka returner; kafka-python is not installed.'
     return __virtualname__
 
 
