@@ -2616,7 +2616,7 @@ def _maybe_set_dns(conn, vpcid, dns_support, dns_hostnames):
 def _maybe_name_route_table(conn, vpcid, vpc_name):
     route_tables = conn.get_all_route_tables(filters={'vpc_id': vpcid})
     if not route_tables:
-        log.warn('no default route table found')
+        log.warning('no default route table found')
         return
     default_table = None
     for table in route_tables:
@@ -2625,7 +2625,7 @@ def _maybe_name_route_table(conn, vpcid, vpc_name):
                 default_table = table
                 break
     if not default_table:
-        log.warn('no default route table found')
+        log.warning('no default route table found')
         return
 
     name = '{0}-default-table'.format(vpc_name)

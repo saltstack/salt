@@ -404,7 +404,7 @@ def show_instance(name, call=None):
     try:
         __utils__['cloud.cache_node'](nodes[name], __active_provider_name__, __opts__)
     except TypeError:
-        log.warn('Unable to show cache node data; this may be because the node has been deleted')
+        log.warning('Unable to show cache node data; this may be because the node has been deleted')
     return nodes[name]
 
 

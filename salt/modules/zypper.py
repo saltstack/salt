@@ -1163,7 +1163,7 @@ def upgrade(refresh=True,
                 cmd_update.append('--no-allow-vendor-change')
                 log.info('Disabling vendor changes')
             else:
-                log.warn('Disabling vendor changes is not supported on this Zypper version')
+                log.warning('Disabling vendor changes is not supported on this Zypper version')
 
         if dryrun:
             # Creates a solver test case for debugging.
