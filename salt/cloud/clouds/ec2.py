@@ -1135,10 +1135,12 @@ def _get_subnetname_id(subnetname):
         for tag in tags:
             if tag['key'] == 'Name' and tag['value'] == subnetname:
                 log.debug('AWS Subnet ID of {0} is {1}'.format(
-                                        subnetname, subnet['subnetId'] )
+                    subnetname,
+                    subnet['subnetId'])
                 )
                 return subnet['subnetId']
     return None
+
 
 def get_subnetid(vm_):
     '''
@@ -1156,6 +1158,7 @@ def get_subnetid(vm_):
     if subnetname:
         return _get_subnetname_id(subnetname)
     return None
+
 
 def _get_securitygroupname_id(securitygroupname_list):
     '''
@@ -1175,17 +1178,21 @@ def _get_securitygroupname_id(securitygroupname_list):
             securitygroupid_set.add(sg['groupId'])
     return list(securitygroupid_set)
 
+
 def securitygroupid(vm_):
     '''
     Returns the SecurityGroupId
     '''
     securitygroupid_set = set()
     securitygroupid_list = config.get_cloud_config_value(
-        'securitygroupid', vm_, __opts__, search_global=False
+        'securitygroupid',
+        vm_,
+        __opts__,
+        search_global=False
     )
     if securitygroupid_list:
         if isinstance(securitygroupid_list, list):
-            securitygroupid_set = securitygroupid_set.union( securitygroupid_list )
+            securitygroupid_set = securitygroupid_set.union(securitygroupid_list)
         else:
             securitygroupid_set.add(securitygroupid_list)
 
@@ -1193,7 +1200,9 @@ def securitygroupid(vm_):
         'securitygroupname', vm_, __opts__, search_global=False
     )
     if securitygroupname_list:
-        securitygroupid_set = securitygroupid_set.union( _get_securitygroupname_id(securitygroupname_list) )
+        securitygroupid_set = securitygroupid_set.union(
+            _get_securitygroupname_id(securitygroupname_list)
+        )
     return list(securitygroupid_set)
 
 
