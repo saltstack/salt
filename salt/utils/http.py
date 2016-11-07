@@ -157,7 +157,7 @@ def query(url,
             salt.utils.warn_until('Nitrogen', '"requests_lib:True" has been replaced by "backend:requests"')
             if 'backend' in opts:
                 backend = opts['backend']
-            elif requests_lib or opts.get('request_lib', False):
+            elif requests_lib or opts.get('requests_lib', False):
                 backend = 'requests'
             else:
                 backend = 'tornado'
