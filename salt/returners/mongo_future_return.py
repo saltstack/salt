@@ -211,7 +211,7 @@ def save_load(jid, load, minions=None):
         mdb.jobs.insert(load.copy())
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''

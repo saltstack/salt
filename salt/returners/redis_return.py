@@ -128,7 +128,7 @@ def save_load(jid, load, minions=None):
     serv.setex('load:{0}'.format(jid), json.dumps(load), _get_ttl())
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''

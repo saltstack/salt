@@ -158,7 +158,7 @@ def save_load(jid, load, minions=None):
         log.critical('Failed to store load with InfluxDB returner: {0}'.format(ex))
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''
