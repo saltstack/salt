@@ -299,7 +299,7 @@ class MergeConfigMixIn(six.with_metaclass(MixInMeta, object)):
                 if value is not None:
                     # There's an actual value, add it to the config
                     self.config[option.dest] = value
-            elif value is not None and getattr(option, "explicit", False):
+            elif value is not None and getattr(option, 'explicit', False):
                 # Only set the value in the config file IF it was explicitly
                 # specified by the user, this makes it possible to tweak settings
                 # on the configuration files bypassing the shell option flags'
@@ -544,7 +544,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 help='Console logging log level. One of {0}. '
                      'Default: \'{1}\'.'.format(
                          ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
-                         getattr(self, '_default_logging_level_', 'warning')
+                         self._default_logging_level_
                      )
             )
 
@@ -563,18 +563,27 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             help='Logfile logging log level. One of {0}. '
                  'Default: \'{1}\'.'.format(
                      ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
-                     getattr(self, '_default_logging_level_', 'warning')
+                     self._default_logging_level_
                  )
         )
 
     def process_log_level(self):
-        if not self.options.log_level:
-            if self.config.get(self._loglevel_config_setting_name_, None):
-                self.options.log_level = self.config.get(
-                    self._loglevel_config_setting_name_
-                )
+        if not getattr(self.options, self._loglevel_config_setting_name_, None):
+            if getattr(self.config, self._loglevel_config_setting_name_, None):
+                # Is the regular log level setting set?
+                setattr(self.options,
+                        self._loglevel_config_setting_name_,
+                        getattr(self.config,
+                                self._loglevel_config_setting_name_
+                               )
+                       )
             else:
-                self.options.log_level = self._default_logging_level_
+                # Nothing is set on the configuration? Let's use the cli tool
+                # defined default
+                setattr(self.options,
+                        self._loglevel_config_setting_name_,
+                        self._default_logging_level_
+                       )
 
         # Setup extended logging right before the last step
         self._mixin_after_parsed_funcs.append(self.__setup_extended_logging)
@@ -584,29 +593,40 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         self._mixin_after_parsed_funcs.append(self.__setup_console_logger)
 
     def process_log_file(self):
-        if not self.options.log_file:
-            if self.config.get(self._logfile_config_setting_name_, None):
+        if not getattr(self.options, self._logfile_config_setting_name_, None):
+            if getattr(self.config, self._logfile_config_setting_name_, None):
                 # Is the regular log file setting set?
-                self.options.log_file = self.config.get(
-                    self._logfile_config_setting_name_
-                )
+                setattr(self.options,
+                        self._logfile_config_setting_name_,
+                        getattr(self.config,
+                                self._logfile_config_setting_name_
+                               )
+                       )
             else:
                 # Nothing is set on the configuration? Let's use the cli tool
                 # defined default
-                self.options.log_file = self._default_logging_logfile_
+                setattr(self.options,
+                        self._logfile_config_setting_name_,
+                        self._default_logging_logfile_
+                       )
 
     def process_log_file_level(self):
-        if not self.options.log_file_level:
-            if self.config.get(
-                    self._logfile_loglevel_config_setting_name_, None):
-                # Is the regular log file level setting set?
-                self.options.log_file_level = self.config.get(
-                    self._logfile_loglevel_config_setting_name_
-                )
+        if not getattr(self.options, self._logfile_loglevel_config_setting_name_, None):
+            if getattr(self.config, self._logfile_loglevel_config_setting_name_, None):
+                # Is the regular log file setting set?
+                setattr(self.options,
+                        self._logfile_loglevel_config_setting_name_,
+                        getattr(self.config,
+                                self._default_logging_level_
+                               )
+                       )
             else:
                 # Nothing is set on the configuration? Let's use the cli tool
                 # defined default
-                self.options.log_level = self._default_logging_level_
+                setattr(self.options,
+                        self._logfile_config_setting_name_,
+                        self._default_logging_logfile_
+                       )
 
     def setup_logfile_logger(self):
         if self._logfile_loglevel_config_setting_name_ in self.config and not \
@@ -1566,8 +1586,8 @@ class CloudCredentialsMixIn(six.with_metaclass(MixInMeta, object)):
     def process_set_password(self):
         if self.options.set_password:
             raise RuntimeError(
-                    'This functionality is not supported; '
-                    'please see the keyring module at http://docs.saltstack.com/en/latest/topics/sdb/'
+                'This functionality is not supported; '
+                'please see the keyring module at http://docs.saltstack.com/en/latest/topics/sdb/'
             )
 
 
