@@ -98,7 +98,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         headers['x-amz-server-side-encryption-aws-kms-key-id'] = kms_keyid
 
     if not location:
-        location = __utils__['aws.get_location']()
+        location = salt.utils.aws.get_location()
 
     data = ''
     payload_hash = None

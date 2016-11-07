@@ -369,6 +369,11 @@ class ZypperTestCase(TestCase):
                 zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run')
                 zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run', '--debug-solver')
 
+            with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1"}])):
+                ret = zypper.upgrade(dist_upgrade=True, dryrun=True, fromrepo=["Dummy", "Dummy2"], novendorchange=True)
+                zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run', '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change')
+                zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run', '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change', '--debug-solver')
+
             with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
                 ret = zypper.upgrade(dist_upgrade=True, fromrepo=["Dummy", "Dummy2"], novendorchange=True)
                 self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
