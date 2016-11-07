@@ -1462,9 +1462,13 @@ def line(path, content, match=None, mode=None, location=None,
 
     before
         Regular expression or an exact case-sensitive fragment of the string.
+        This option is only used when either the ``ensure`` or ``insert`` mode
+        is defined.
 
     after
         Regular expression or an exact case-sensitive fragment of the string.
+        This option is only used when either the ``ensure`` or ``insert`` mode
+        is defined.
 
     show_changes
         Output a unified diff of the old file and the new file.
@@ -1484,7 +1488,8 @@ def line(path, content, match=None, mode=None, location=None,
         tried to be edited does not exist and nothing really happened.
 
     indent
-        Keep indentation with the previous line.
+        Keep indentation with the previous line. This option is not considered when
+        the ``delete`` mode is specified.
 
     CLI Example:
 
