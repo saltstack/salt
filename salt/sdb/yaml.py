@@ -66,10 +66,11 @@ def get(key, profile=None):  # pylint: disable=W0613
     return salt.utils.traverse_dict_and_list(data, key, None)
 
 
-def _get_values(profile):
+def _get_values(profile=None):
     '''
     Retrieve all the referenced files, deserialize, then merge them together
     '''
+    profile = profile or {}
     serializers = salt.loader.serializers(__opts__)
 
     ret = {}
