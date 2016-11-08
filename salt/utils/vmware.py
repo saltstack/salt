@@ -715,7 +715,8 @@ def get_mor_by_property(service_instance, object_type, property_value, property_
     object_list = get_mors_with_properties(service_instance, object_type, property_list=[property_name], container_ref=container_ref)
 
     for obj in object_list:
-        if obj[property_name] == property_value or property_value in str(obj.get('object', '')):
+        obj_id = str(obj.get('object', '')).strip('\'"')
+        if obj[property_name] == property_value or property_value == obj_id:
             return obj['object']
 
     return None
