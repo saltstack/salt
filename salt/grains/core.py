@@ -1979,7 +1979,7 @@ def _hw_data(osdata):
     grains = {}
     # On SmartOS (possibly SunOS also) smbios only works in the global zone
     # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
-    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not salt.utils.is_smartos():
+    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not ( salt.utils.is_smartos() or osdata['kernel'] == 'SunOS' and osdata['cpuarch'].startswith('sparc')):
         grains = {
             'biosversion': __salt__['smbios.get']('bios-version'),
             'productname': __salt__['smbios.get']('system-product-name'),
@@ -2046,6 +2046,68 @@ def _hw_data(osdata):
             value = __salt__['cmd.run']('{0} -b {1}'.format(sysctl, oid))
             if not value.endswith(' is invalid'):
                 grains[key] = _clean_value(key, value)
+    elif osdata['kernel'] == 'SunOS' and osdata['cpuarch'].startswith('sparc'):
+        data = ""
+        for (cmd, args) in (('/usr/sbin/prtdiag', '-v'), ('/usr/sbin/prtconf', '-vp'), ('/usr/sbin/virtinfo', '-a')):
+            if salt.utils.which(cmd): # Also verifies that cmd is executable
+                data += __salt__['cmd.run']('{0} {1}'.format(cmd, args))
+                data += '\n'
+
+        # Possible sources of chassis serial numbers
+        sn_regexes = [ re.compile(r) for r in 
+                       [ 
+                           r'(?im)Chassis Serial Number\n-+\n(\S+)', # prtdiag
+                           r'(?i)Chassis Serial#:\s*(\S+)', # virtinfo
+                           r'(?i)chassis-sn:\s*(\S+)', # prtconf
+                       ]
+                   ]
+
+        # Possible sources of OBP version and date
+        obp_regexes = [ re.compile(r) for r in
+                        [
+                            r'(?im)System PROM revisions.*\nVersion\n-+\nOBP\s+(\S+)\s+(\S+)', # prtdiag
+                            r'(?im)version:\s*\'OBP\s+(\S+)\s+(\S+)', # prtconf
+                        ]
+                    ]
+
+        # Possible sources of system firmware version and date
+        fw_regexes = [ re.compile(r) for r in
+                       [
+                           # Sun System Firmware 8.8.3.b 2015/12/22 08:36
+                           r'(?i)Sun System Firmware\s+(\S+)\s+(\S+)', # prtdiag
+                       ]
+                   ]
+
+        # Possible sources of UUID 
+        uuid_regexes = [ re.compile(r) for r in 
+                         [
+                             r'(?i)Domain UUID:\s+(\S+)', # virtinfo
+                         ]
+                     ]
+
+        for regex in sn_regexes:
+            s = regex.search(data)
+            if s and len(s.groups()) >= 1:
+                grains['serialnumber'] = s.group(1).strip().replace("'", "")
+
+        for regex in obp_regexes:
+            s = regex.search(data)
+            if s and len(s.groups()) >= 1:
+                obp_rev, obp_date = s.groups()[0:2] # Limit the number in case we found the data in multiple places
+                grains['biosversion'] = obp_rev.strip().replace("'", "")
+                grains['biosreleasedate'] = obp_date.strip().replace("'", "")
+
+        for regex in fw_regexes:
+            s = regex.search(data)
+            if s and len(s.groups()) >= 1:
+                fw_rev, fw_date = s.groups()[0:2]
+                grains['systemfirmware'] = fw_rev.strip().replace("'", "")
+                grains['systemfirmwaredate'] = fw_date.strip().replace("'", "")
+
+        for regex in uuid_regexes:
+            s = regex.search(data)
+            if s and len(s.groups()) >= 1:
+                grains['uuid'] = s.group(1).strip().replace("'", "")
 
     return grains
 
