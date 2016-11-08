@@ -77,50 +77,51 @@ except ImportError:
 # pylint: enable=import-error
 
 boto3_param_map = {
-    'allocated_storage': ('AllocatedStorage', lambda val: int(val)),
-    'allow_major_version_upgrade': ('AllowMajorVersionUpgrade', lambda val: bool(val)),
-    'auto_minor_version_upgrade': ('AutoMinorVersionUpgrade', lambda val: bool(val)),
-    'availability_zone': ('AvailabilityZone', lambda val: str(val)),
-    'apply_immediately': ('ApplyImmediately', lambda val: bool(val)),
-    'backup_retention_period': ('BackupRetentionPeriod', lambda val: int(val)),
-    'ca_certificate_identifier': ('CACertificateIdentifier', lambda val: str(val)),
-    'character_set_name': ('CharacterSetName', lambda val: str(val)),
-    'copy_tags_to_snapshot': ('CopyTagsToSnapshot', lambda val: bool(val)),
-    'db_cluster_identifier': ('DBClusterIdentifier', lambda val: str(val)),
-    'db_instance_class': ('DBInstanceClass', lambda val: str(val)),
-    'db_name': ('DBName', lambda val: str(val)),
-    'db_parameter_group_name': ('DBParameterGroupName', lambda val: str(val)),
-    'db_port_number': ('DBPortNumber', lambda val: int(val)),
-    'db_security_groups': ('DBSecurityGroups', lambda val: list(val)),
-    'db_subnet_group_name': ('DBSubnetGroupName', lambda val: str(val)),
-    'db_cluster_identifier': ('DBClusterIdentifier', lambda val: str(val)),
-    'domain': ('Domain', lambda val: str(val)),
-    'domain_iam_role_name': ('DomainIAMRoleName', lambda val: str(val)),
-    'engine': ('Engine', lambda val: str(val)),
-    'engine_version': ('EngineVersion', lambda val: str(val)),
-    'iops': ('Iops', lambda val: int(val)),
-    'kms_key_id': ('KmsKeyId', lambda val: str(val)),
-    'license_model': ('LicenseModel', lambda val: str(val)),
-    'master_user_password': ('MasterUserPassword', lambda val: str(val)),
-    'master_username': ('MasterUsername', lambda val: str(val)),
-    'monitoring_interval': ('MonitoringInterval', lambda val: int(val)),
-    'monitoring_role_arn': ('MonitoringRoleArn', lambda val: str(val)),
-    'multi_az': ('MultiAZ', lambda val: bool(val)),
-    'name': ('DBInstanceIdentifier', lambda val: str(val)),
-    'new_db_instance_identifier': ('NewDBInstanceIdentifier', lambda val: str(val)),
-    'option_group_name': ('OptionGroupName', lambda val: str(val)),
-    'port': ('Port', lambda val: int(val)),
-    'preferred_backup_window': ('PreferredBackupWindow', lambda val: str(val)),
-    'preferred_maintenance_window': ('PreferredMaintenanceWindow', lambda val: str(val)),
-    'promotion_tier': ('PromotionTier', lambda val: int(val)),
-    'publicly_accessible': ('PubliclyAccessible', lambda val: bool(val)),
-    'storage_encrypted': ('StorageEncrypted', lambda val: bool(val)),
-    'storage_type': ('StorageType', lambda val: str(val)),
-    'taglist': ('Tags', lambda val: list(val)),
-    'tde_credential_arn': ('TdeCredentialArn', lambda val: str(val)),
-    'tde_credential_password': ('TdeCredentialPassword', lambda val: str(val)),
-    'vpc_security_group_ids': ('VpcSecurityGroupIds', lambda val: list(val)),
+    'allocated_storage': ('AllocatedStorage', int),
+    'allow_major_version_upgrade': ('AllowMajorVersionUpgrade', bool),
+    'auto_minor_version_upgrade': ('AutoMinorVersionUpgrade', bool),
+    'availability_zone': ('AvailabilityZone', str),
+    'apply_immediately': ('ApplyImmediately', bool),
+    'backup_retention_period': ('BackupRetentionPeriod', int),
+    'ca_certificate_identifier': ('CACertificateIdentifier', str),
+    'character_set_name': ('CharacterSetName', str),
+    'copy_tags_to_snapshot': ('CopyTagsToSnapshot', bool),
+    'db_cluster_identifier': ('DBClusterIdentifier', str),
+    'db_instance_class': ('DBInstanceClass', str),
+    'db_name': ('DBName', str),
+    'db_parameter_group_name': ('DBParameterGroupName', str),
+    'db_port_number': ('DBPortNumber', int),
+    'db_security_groups': ('DBSecurityGroups', list),
+    'db_subnet_group_name': ('DBSubnetGroupName', str),
+    'db_cluster_identifier': ('DBClusterIdentifier', str),
+    'domain': ('Domain', str),
+    'domain_iam_role_name': ('DomainIAMRoleName', str),
+    'engine': ('Engine', str),
+    'engine_version': ('EngineVersion', str),
+    'iops': ('Iops', int),
+    'kms_key_id': ('KmsKeyId', str),
+    'license_model': ('LicenseModel', str),
+    'master_user_password': ('MasterUserPassword', str),
+    'master_username': ('MasterUsername', str),
+    'monitoring_interval': ('MonitoringInterval', int),
+    'monitoring_role_arn': ('MonitoringRoleArn', str),
+    'multi_az': ('MultiAZ', bool),
+    'name': ('DBInstanceIdentifier', str),
+    'new_db_instance_identifier': ('NewDBInstanceIdentifier', str),
+    'option_group_name': ('OptionGroupName', str),
+    'port': ('Port', int),
+    'preferred_backup_window': ('PreferredBackupWindow', str),
+    'preferred_maintenance_window': ('PreferredMaintenanceWindow', str),
+    'promotion_tier': ('PromotionTier', int),
+    'publicly_accessible': ('PubliclyAccessible', bool),
+    'storage_encrypted': ('StorageEncrypted', bool),
+    'storage_type': ('StorageType', str),
+    'taglist': ('Tags', list),
+    'tde_credential_arn': ('TdeCredentialArn', str),
+    'tde_credential_password': ('TdeCredentialPassword', str),
+    'vpc_security_group_ids': ('VpcSecurityGroupIds', list),
 }
+
 
 def __virtual__():
     '''
@@ -193,9 +194,13 @@ def parameter_group_exists(name, tags=None, region=None, key=None, keyid=None,
 
     try:
         rds = conn.describe_db_parameter_groups(DBParameterGroupName=name)
-        return {'exists': bool(rds)}
+        return {'exists': bool(rds), 'error': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        resp = {}
+        if e.response['Error']['Code'] == 'DBParameterGroupNotFound':
+            resp['exists'] = False
+        resp['error'] = salt.utils.boto3.get_error(e)
+        return resp
 
 
 def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None,
@@ -717,7 +722,7 @@ def describe_parameter_group(name, Filters=None, MaxRecords=None, Marker=None,
                                                       region=region, key=key,
                                                       keyid=keyid,
                                                       profile=profile)
-    if not res:
+    if not res.get('exists'):
         return {'exists': bool(res)}
 
     try:
@@ -759,7 +764,7 @@ def describe_parameters(name, Source=None, MaxRecords=None, Marker=None,
                                                       region=region, key=key,
                                                       keyid=keyid,
                                                       profile=profile)
-    if not res:
+    if not res.get('exists'):
         return {'exists': bool(res)}
 
     try:
@@ -856,7 +861,7 @@ def modify_db_instance(name,
             return {'modified': False}
 
         kwargs = {}
-        excluded = {'name'}
+        excluded = set(('name',))
         boto_params = set(boto3_param_map.keys())
         keys = set(locals().keys())
         for key in keys.intersection(boto_params).difference(excluded):
