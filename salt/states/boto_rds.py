@@ -675,9 +675,9 @@ def parameter_present(name, db_parameter_group_family, description, parameters=N
            'comment': '',
            'changes': {}
            }
-    exists = __salt__['boto_rds.parameter_group_exists'](name=name, tags=tags, region=region, key=key,
+    res = __salt__['boto_rds.parameter_group_exists'](name=name, tags=tags, region=region, key=key,
                                                          keyid=keyid, profile=profile)
-    if not exists:
+    if not res.get('exists'):
         if __opts__['test']:
             ret['comment'] = 'Parameter group {0} is set to be created.'.format(name)
             ret['result'] = None
