@@ -5,7 +5,7 @@ Management of SQLite3 databases
 
 :depends:   - SQLite3 Python Module
 :configuration: See :py:mod:`salt.modules.sqlite3` for setup instructions
-.. versionadded:: Beryllium
+.. versionadded:: 2016.3.0
 
 The sqlite3 module is used to create and manage sqlite3 databases
 and execute queries
