@@ -21,6 +21,7 @@ def orchestrate(mods,
                 exclude=None,
                 pillar=None,
                 pillarenv=None,
+                pillar_enc=None,
                 orchestration_jid=None):
     '''
     .. versionadded:: 0.17.0
@@ -48,6 +49,21 @@ def orchestrate(mods,
     .. versionchanged:: 2014.7.0
 
         Runner uses the pillar variable
+
+    .. versionchanged:: develop
+
+        Runner uses the pillar_enc variable that allows renderers to render the pillar.
+        This is usable when supplying the contents of a file as pillar, and the file contains
+        gpg-encrypted entries.
+
+    .. seealso:: GPG renderer documentation
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+       salt-run state.orchestrate webserver pillar_enc=gpg pillar="$(cat somefile.json)"
+
     '''
     if pillar is not None and not isinstance(pillar, dict):
         raise SaltInvocationError(
@@ -62,6 +78,7 @@ def orchestrate(mods,
             exclude,
             pillar=pillar,
             pillarenv=pillarenv,
+            pillar_enc=pillar_enc,
             orchestration_jid=orchestration_jid)
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
     res = salt.utils.check_state_result(ret['data'])
