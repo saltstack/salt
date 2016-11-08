@@ -168,7 +168,7 @@ def _verify_options(options):
 
 def __virtual__():
     if not HAS_SYSLOG:
-        return False
+        return False, 'Could not import syslog returner; syslog is not installed.'
     return __virtualname__
 
 
