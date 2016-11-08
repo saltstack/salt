@@ -92,7 +92,8 @@ To use the cassandra returner, append '--return cassandra_cql' to the salt comma
 Note: if your Cassandra instance has not been tuned much you may benefit from
 altering some timeouts in `cassandra.yaml` like so:
 
-.. code-block:: bash
+.. code-block:: yaml
+
     # How long the coordinator should wait for read operations to complete
     read_request_timeout_in_ms: 5000
     # How long the coordinator should wait for seq or index scans to complete
@@ -175,7 +176,8 @@ __virtualname__ = 'cassandra_cql'
 
 def __virtual__():
     if not HAS_CASSANDRA_DRIVER:
-        return False
+        return False, 'Could not import cassandra_cql returner; ' \
+                      'cassandra-driver is not installed.'
 
     return True
 
@@ -304,7 +306,7 @@ def save_load(jid, load, minions=None):
         raise
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''
