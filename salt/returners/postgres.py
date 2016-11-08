@@ -151,7 +151,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     if not HAS_POSTGRES:
-        return False
+        return False, 'Could not import postgres returner; psycopg2 is not installed.'
     return __virtualname__
 
 
@@ -276,7 +276,7 @@ def save_load(jid, load, minions=None):  # pylint: disable=unused-argument
             pass
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''
