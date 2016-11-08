@@ -51,10 +51,11 @@ class CacheDictTestCase(TestCase):
         # make sure that a get would get a regular old key error
         self.assertRaises(KeyError, cd.__getitem__, 'foo')
 
+
 class CacheContextTestCase(TestCase):
 
     def setUp(self):
-        context_dir = os.path.join(tempfile.gettempdir(), 'context') 
+        context_dir = os.path.join(tempfile.gettempdir(), 'context')
         if os.path.exists(context_dir):
             shutil.rmtree(os.path.join(tempfile.gettempdir(), 'context'))
 
@@ -63,7 +64,7 @@ class CacheContextTestCase(TestCase):
         Smoke test the context cache
         '''
         if os.path.exists(os.path.join(tempfile.gettempdir(), 'context')):
-                self.skipTest('Context dir already exists')
+            self.skipTest('Context dir already exists')
         else:
             opts = salt.config.DEFAULT_MINION_OPTS
             opts['cachedir'] = tempfile.gettempdir()
@@ -74,7 +75,6 @@ class CacheContextTestCase(TestCase):
             ret = context_cache.get_cache_context()
 
             self.assertDictEqual({'a': 'b'}, ret)
-
 
     def test_context_wrapper(self):
         '''
@@ -95,7 +95,6 @@ class CacheContextTestCase(TestCase):
 
         self.assertEqual(cache_test_func()['called'], 0)
         self.assertEqual(cache_test_func()['called'], 1)
-
 
 
 if __name__ == '__main__':
