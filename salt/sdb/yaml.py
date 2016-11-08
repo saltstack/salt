@@ -6,7 +6,7 @@ Pull sdb values from a YAML file
 :maturity:      New
 :platform:      all
 
-.. versionadded:: Carbon
+.. versionadded:: Nitrogen
 
 Configuration:
 
