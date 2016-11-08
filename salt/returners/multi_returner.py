@@ -69,7 +69,7 @@ def save_load(jid, clear_load, minions=None):
         _mminion().returners['{0}.save_load'.format(returner_)](jid, clear_load)
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''

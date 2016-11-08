@@ -160,7 +160,7 @@ __virtualname__ = 'pgjsonb'
 
 def __virtual__():
     if not HAS_PG:
-        return False
+        return False, 'Could not import pgjsonb returner; python-psycopg2 is not installed.'
     return True
 
 
@@ -291,7 +291,7 @@ def save_load(jid, load, minions=None):
             pass
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''

@@ -683,7 +683,7 @@ def upgrade(name,
             force_x86=False,
             package_args=None):
     '''
-    .. version-added:: 2016.3.4
+    .. versionadded:: 2016.3.4
 
     Instructs Chocolatey to upgrade packages on the system. (update is being
     deprecated)
