@@ -636,8 +636,7 @@ def sync_all(saltenv=None, refresh=True):
         ret['pillar'] = sync_pillar(saltenv, False)
     if refresh:
         refresh_modules()
-        if __opts__['file_client'] == 'local':
-            refresh_pillar()
+        refresh_pillar()
     return ret
 
 
