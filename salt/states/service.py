@@ -431,6 +431,9 @@ def dead(name, enable=None, sig=None, **kwargs):
     # Check if the service is available
     try:
         if not _available(name, ret):
+            # A non-available service is OK here, don't let the state fail
+            # because of it.
+            ret['result'] = True
             return ret
     except CommandExecutionError as exc:
         ret['result'] = False
