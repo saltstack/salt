@@ -519,7 +519,7 @@ def verify_log(opts):
     level = LOG_LEVELS.get(opts.get('log_level').lower(), logging.NOTSET)
 
     if level < logging.INFO:
-        log.warn('Insecure logging configuration detected! Sensitive data may be logged.')
+        log.warning('Insecure logging configuration detected! Sensitive data may be logged.')
 
 
 def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):

@@ -187,7 +187,7 @@ class BotoElasticsearchDomainTestCase(BotoElasticsearchDomainTestCaseBase, BotoE
 
         result = boto_elasticsearch_domain.describe(DomainName=domain_ret['DomainName'], **conn_parameters)
 
-        log.warn(result)
+        log.warning(result)
         desired_ret = copy.copy(domain_ret)
         desired_ret.pop('DomainName')
         self.assertEqual(result, {'domain': desired_ret})
