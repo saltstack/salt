@@ -154,10 +154,12 @@ def query(url,
 
     if not backend:
         if requests_lib is not None or 'requests_lib' in opts:
-            salt.utils.warn_until('Nitrogen', '"requests_lib:True" has been replaced by "backend:requests"')
+            salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
+                                            'please change your config')
+            # beware the named arg above
             if 'backend' in opts:
                 backend = opts['backend']
-            elif requests_lib or opts.get('request_lib', False):
+            elif requests_lib or opts.get('requests_lib', False):
                 backend = 'requests'
             else:
                 backend = 'tornado'

@@ -710,7 +710,7 @@ set in the master's configuration file:
 
 .. code-block:: bash
 
-    requests_lib: True
+    backend: requests
 
 The following functions are available.
 
