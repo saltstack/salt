@@ -52,28 +52,23 @@ This driver requires Packet's client library: https://pypi.python.org/pypi/packe
 from __future__ import absolute_import
 import logging
 import pprint
-import re
 import time
-import datetime
 import packet
 
 # Import Salt Libs
 import salt.config as config
-import salt.ext.six as six
 
 from salt.ext.six.moves import range
 
 from salt.exceptions import (
-    SaltCloudConfigError,
     SaltCloudException,
-    SaltCloudNotFound,
     SaltCloudSystemExit
 )
 
 # Import Salt-Cloud Libs
 import salt.utils.cloud
 
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+from salt.cloud.libcloudfuncs import get_size, get_image, script, show_instance
 from salt.utils import namespaced_function
 
 get_size = namespaced_function(get_size, globals())
@@ -185,7 +180,7 @@ def avail_sizes(call=None):
 
     vm_ = get_configured_provider()
 
-    manager = Packet.Manager(auth_token=vm_['token'])
+    manager = packet.Manager(auth_token=vm_['token'])
 
     ret = {}
 
@@ -212,7 +207,6 @@ def avail_projects(call=None):
 
     vm_ = get_configured_provider()
     manager = packet.Manager(auth_token=vm_['token'])
-
 
     ret = {}
 
@@ -246,7 +240,7 @@ def _wait_for_status(status_type, object_id, status=None, timeout=500, quiet=Tru
     manager = packet.Manager(auth_token=vm_['token'])
 
     for i in range(0, iterations):
-        get_object = getattr(manager, "get_%s" % status_type)
+        get_object = getattr(manager, "get_{status_type}".format(status_type=status_type))
         obj = get_object(object_id)
 
         if obj.state == status:
@@ -288,7 +282,7 @@ def is_profile_configured(vm_):
             for key in required_keys:
                 if profile_data.get(key) is None:
                     log.error(
-                        'both storage_size and storage_tier required for profile %s. Please check your profile configuration' % vm_['profile']
+                        'both storage_size and storage_tier required for profile %(profile)s. Please check your profile configuration' % {'profile': vm_['profile']}
                     )
                     return False
 
@@ -296,9 +290,10 @@ def is_profile_configured(vm_):
 
             for location in locations.values():
                 if location['code'] == profile_data['location']:
-                    if not 'storage' in location['features']:
+                    if 'storage' not in location['features']:
                         log.error(
-                            'Choosen location %s for profile %s does not support storage feature. Please check your profile configuration' % (location['code'], vm_['profile'])
+                            'Choosen location %(location)s for profile %(profile)s does not support storage feature. '\
+                            'Please check your profile configuration' % {'location': location['code'], 'profile': vm_['profile']}
                         )
                         return False
 
@@ -308,7 +303,7 @@ def is_profile_configured(vm_):
             for key in required_keys:
                 if profile_data.get(key) is None:
                     log.error(
-                        'both storage_snapshot_count and storage_snapshot_frequency required for profile %s. Please check your profile configuration' % vm_['profile']
+                        'both storage_snapshot_count and storage_snapshot_frequency required for profile %(profile)s. Please check your profile configuration' % {'profile': vm_['profile']}
                     )
                     return False
 
@@ -581,7 +576,7 @@ def destroy(name, call=None):
                 volume.delete()
                 break
 
-    manager.call_api("devices/%s" % node['id'], type='DELETE')
+    manager.call_api("devices/{id}".format(id=node['id']), type='DELETE')
 
     __utils__['cloud.fire_event'](
         'event',
