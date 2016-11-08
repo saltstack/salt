@@ -952,7 +952,7 @@ The port number used for HTTP proxy access.
 .. conf_minion:: proxy_username
 
 ``proxy_username``
---------------
+------------------
 
 Default: ``''``
 
@@ -965,7 +965,7 @@ The username used for HTTP proxy access.
 .. conf_minion:: proxy_password
 
 ``proxy_password``
---------------
+------------------
 
 Default: ``''``
 

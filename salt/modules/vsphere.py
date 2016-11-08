@@ -3579,6 +3579,7 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
     Return Example:
 
     .. code-block:: yaml
+
         somehost:
             ----------
             esxi1.corp.com:

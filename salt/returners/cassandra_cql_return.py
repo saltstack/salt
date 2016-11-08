@@ -92,7 +92,8 @@ To use the cassandra returner, append '--return cassandra_cql' to the salt comma
 Note: if your Cassandra instance has not been tuned much you may benefit from
 altering some timeouts in `cassandra.yaml` like so:
 
-.. code-block:: bash
+.. code-block:: yaml
+
     # How long the coordinator should wait for read operations to complete
     read_request_timeout_in_ms: 5000
     # How long the coordinator should wait for seq or index scans to complete
