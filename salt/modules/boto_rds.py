@@ -79,9 +79,9 @@ except ImportError:
 boto3_param_map = {
     'allocated_storage': ('AllocatedStorage', int),
     'allow_major_version_upgrade': ('AllowMajorVersionUpgrade', bool),
+    'apply_immediately': ('ApplyImmediately', bool),
     'auto_minor_version_upgrade': ('AutoMinorVersionUpgrade', bool),
     'availability_zone': ('AvailabilityZone', str),
-    'apply_immediately': ('ApplyImmediately', bool),
     'backup_retention_period': ('BackupRetentionPeriod', int),
     'ca_certificate_identifier': ('CACertificateIdentifier', str),
     'character_set_name': ('CharacterSetName', str),
@@ -93,7 +93,6 @@ boto3_param_map = {
     'db_port_number': ('DBPortNumber', int),
     'db_security_groups': ('DBSecurityGroups', list),
     'db_subnet_group_name': ('DBSubnetGroupName', str),
-    'db_cluster_identifier': ('DBClusterIdentifier', str),
     'domain': ('Domain', str),
     'domain_iam_role_name': ('DomainIAMRoleName', str),
     'engine': ('Engine', str),
@@ -765,12 +764,14 @@ def describe_parameters(name, Source=None, MaxRecords=None, Marker=None,
                                                       keyid=keyid,
                                                       profile=profile)
     if not res.get('exists'):
-        return {'exists': bool(res)}
+        return {'result': False,
+                'message': 'Parameter group {0} does not exist'.format(name)}
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if not conn:
-            return {'results': bool(conn)}
+            return {'result': False,
+                    'message': 'Could not establish a connection to RDS'}
 
         kwargs = {}
         for key in ('Marker', 'Source'):
@@ -783,25 +784,26 @@ def describe_parameters(name, Source=None, MaxRecords=None, Marker=None,
         r = conn.describe_db_parameters(DBParameterGroupName=name, **kwargs)
 
         if not r:
-            return {'results': bool(r), 'message':
-                    'Failed to get RDS parameters for group {0}.'.format(name)}
+            return {'result': False,
+                    'message': 'Failed to get RDS parameters for group {0}.'
+                    .format(name)}
 
         results = r['Parameters']
         keys = ['ParameterName', 'ParameterValue', 'Description',
                 'Source', 'ApplyType', 'DataType', 'AllowedValues',
                 'IsModifieable', 'MinimumEngineVersion', 'ApplyMethod']
 
-        c = 0
-        p = odict.OrderedDict()
-        while c < len(results):
-            d = odict.OrderedDict()
+        parameters = odict.OrderedDict()
+        ret = {'result':  True}
+        for result in results:
+            data = odict.OrderedDict()
             for k in keys:
-                d[k] = results[c].get(k)
+                data[k] = result.get(k)
 
-            p[results[c].get('ParameterName')] = d
-            c += 1
+            parameters[result.get('ParameterName')] = data
 
-        return p
+        ret['parameters'] = parameters
+        return ret
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 

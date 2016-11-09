@@ -701,15 +701,14 @@ def parameter_present(name, db_parameter_group_family, description, parameters=N
                 params[k] = value
         logging.debug('Parameters from user are : {0}.'.format(params))
         options = __salt__['boto_rds.describe_parameters'](name=name, region=region, key=key, keyid=keyid, profile=profile)
-        if not options:
+        if not options.get('result'):
             ret['result'] = False
             ret['comment'] = os.linesep.join([ret['comment'], 'Faled to get parameters for group  {0}.'.format(name)])
             return ret
-        options = options['DescribeDBParametersResponse']['DescribeDBParametersResult']['Parameters']
-        for values in options:
-            if values['ParameterName'] in params and str(params.get(values['ParameterName'])) != str(values['ParameterValue']):
-                logging.debug('Values that are being compared are {0}:{1} .'.format(params.get(values['ParameterName']), values['ParameterValue']))
-                changed[values['ParameterName']] = params.get(values['ParameterName'])
+        for parameter in options['parameters'].values():
+            if parameter['ParameterName'] in params and str(params.get(parameter['ParameterName'])) != str(parameter['ParameterValue']):
+                logging.debug('Values that are being compared are {0}:{1} .'.format(params.get(parameter['ParameterName']), parameter['ParameterValue']))
+                changed[parameter['ParameterName']] = params.get(parameter['ParameterName'])
         if len(changed) > 0:
             if __opts__['test']:
                 ret['comment'] = os.linesep.join([ret['comment'], 'Parameters {0} for group {1} are set to be changed.'.format(changed, name)])
