@@ -711,6 +711,7 @@ class Minion(MinionBase):
                              ' {0}'.format(opts['master']))
                     if opts['master_shuffle']:
                         shuffle(opts['master'])
+                    opts['auth_tries'] = 0
                 elif isinstance(opts['master'], str):
                     # We have a string, but a list was what was intended. Convert.
                     # See issue 23611 for details
