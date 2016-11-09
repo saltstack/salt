@@ -83,7 +83,7 @@ def _gluster_xml(cmd):
 
     if _gluster_ok(root):
         output = root.find('output')
-        if output:
+        if output is not None:
             log.info('Gluster call "{0}" succeeded: {1}'.format(cmd, root.find('output').text))
         else:
             log.info('Gluster call "{0}" succeeded'.format(cmd))
