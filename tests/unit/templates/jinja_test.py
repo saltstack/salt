@@ -290,6 +290,24 @@ class TestGetTemplate(TestCase):
                 dict(opts=self.local_opts, saltenv='test'))
         SaltCacheLoader.file_client = _fc
 
+    def test_var_undefinederror(self):
+        '''
+        any variable that is not defined should raise an error
+        '''
+        expected = "Jinja variable 'user' is undefined"
+        filename = os.path.join(TEMPLATES_DIR,
+                                'files', 'test', 'varundefined')
+        fc = MockFileClient()
+        _fc = SaltCacheLoader.file_client
+        SaltCacheLoader.file_client = lambda loader: fc
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            salt.utils.fopen(filename).read(),
+            dict(opts=self.local_opts, saltenv='test'))
+        SaltCacheLoader.file_client = _fc
+
     def test_non_ascii_encoding(self):
         fc = MockFileClient()
         # monkey patch file client
