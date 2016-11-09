@@ -119,8 +119,8 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
         ctx = M2Crypto.m2.x509v3_set_nconf()
         _fix_ctx(ctx, issuer)
         if ctx is None:
-           raise MemoryError(
-               'Not enough memory when creating a new X509 extension')
+            raise MemoryError(
+                'Not enough memory when creating a new X509 extension')
         x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(None, ctx, name, value)
         lhash = None
     except AttributeError:
@@ -133,8 +133,7 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
 
     if x509_ext_ptr is None:
         raise M2Crypto.X509.X509Error(
-            "Cannot create X509_Extension with name '%s' and value '%s'" %
-            (name, value))
+            "Cannot create X509_Extension with name '{0}' and value '{1}'".format(name, value))
     x509_ext = M2Crypto.X509.X509_Extension(x509_ext_ptr, _pyfree)
     x509_ext.set_critical(critical)
     return x509_ext
