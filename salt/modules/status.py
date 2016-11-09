@@ -139,8 +139,6 @@ def uptime():
         The uptime function was changed to return a dictionary of easy-to-read
         key/value pairs containing uptime information, instead of the output
         from a ``cmd.run`` call.
-    .. versionchanged:: carbon
-        Fall back to output of `uptime` when /proc/uptime is not available.
 
     CLI Example:
 
@@ -157,6 +155,9 @@ def uptime():
     elif salt.utils.is_sunos():
         cmd = "kstat -p unix:0:system_misc:boot_time | nawk '{printf \"%d\\n\", srand()-$2}'"
         ut_ret['seconds'] = int(__salt__['cmd.shell'](cmd, output_loglevel='trace').strip() or 0)
+        if ut_ret['seconds'] < 0:
+            cmd = "kstat -p unix:0:system_misc:snaptime | nawk '{printf \"%d\\n\", $2}'"
+            ut_ret['seconds'] = int(__salt__['cmd.shell'](cmd, output_loglevel='trace').strip() or 0)
     else:
         raise CommandExecutionError('This platform is not supported')
 
