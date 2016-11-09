@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import collections
+import copy
 
 # Import third party libs
 import os
@@ -21,7 +22,18 @@ from salt.exceptions import CommandExecutionError
 __proxyenabled__ = ['*']
 
 
-def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
+def _get_opts(localconfig=None):
+    '''
+    Return a copy of the opts for use, optionally load a local config on top
+    '''
+    opts = copy.deepcopy(__opts__)
+    if localconfig:
+        opts = salt.config.minion_config(localconfig, defaults=opts)
+    return opts
+
+
+def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM,
+        localconfig=None):
     '''
     .. versionadded:: 0.14
 
@@ -54,16 +66,24 @@ def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
 
         .. versionadded:: 2014.7.0
 
+    localconfig
+        Optionally, instead of using the minion config, load minion opts from
+        the file specified by this argument, and then merge them with the
+        options from the minion config. This functionality allows for specific
+        states to be run with their own custom minion configuration, including
+        different pillars, file_roots, etc.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pillar.get pkg:apache
     '''
-    if not __opts__.get('pillar_raise_on_missing'):
+    opts = _get_opts(localconfig)
+    if not opts.get('pillar_raise_on_missing'):
         if default is KeyError:
             default = ''
-    opt_merge_lists = __opts__.get('pillar_merge_lists', False)
+    opt_merge_lists = opts.get('pillar_merge_lists', False)
     if merge:
         ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
@@ -96,6 +116,13 @@ def items(*args, **kwargs):
 
         .. versionadded:: 2015.5.0
 
+    localconfig
+        Optionally, instead of using the minion config, load minion opts from
+        the file specified by this argument, and then merge them with the
+        options from the minion config. This functionality allows for specific
+        states to be run with their own custom minion configuration, including
+        different pillars, file_roots, etc.
+
     CLI Example:
 
     .. code-block:: bash
@@ -106,11 +133,13 @@ def items(*args, **kwargs):
     if args:
         return item(*args)
 
+    opts = _get_opts(kwargs.get('localconfig'))
+
     pillar = salt.pillar.get_pillar(
-        __opts__,
+        opts,
         __grains__,
-        __opts__['id'],
-        __opts__['environment'],
+        opts['id'],
+        opts['environment'],
         pillar=kwargs.get('pillar'))
 
     return pillar.compile_pillar()
@@ -248,7 +277,7 @@ def raw(key=None):
     return ret
 
 
-def ext(external, pillar=None):
+def ext(external, pillar=None, localconfig=None):
     '''
     Generate the pillar and apply an explicit external pillar
 
@@ -262,17 +291,25 @@ def ext(external, pillar=None):
 
         .. versionadded:: 2015.5.0
 
+    localconfig
+        Optionally, instead of using the minion config, load minion opts from
+        the file specified by this argument, and then merge them with the
+        options from the minion config. This functionality allows for specific
+        states to be run with their own custom minion configuration, including
+        different pillars, file_roots, etc.
+
     .. code-block:: bash
 
         salt '*' pillar.ext '{libvirt: _}'
     '''
+    opts = _get_opts(localconfig)
     if isinstance(external, six.string_types):
         external = yaml.safe_load(external)
     pillar_obj = salt.pillar.get_pillar(
-        __opts__,
+        opts,
         __grains__,
-        __opts__['id'],
-        __opts__['environment'],
+        opts['id'],
+        opts['environment'],
         ext=external,
         pillar=pillar)
 
@@ -311,7 +348,7 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     return ret.keys()
 
 
-def file_exists(path, saltenv=None):
+def file_exists(path, saltenv=None, localconfig=None):
     '''
     .. versionadded:: 2016.3.0
 
@@ -333,13 +370,21 @@ def file_exists(path, saltenv=None):
     saltenv
         Optional argument to restrict the search to a specific saltenv
 
+    localconfig
+        Optionally, instead of using the minion config, load minion opts from
+        the file specified by this argument, and then merge them with the
+        options from the minion config. This functionality allows for specific
+        states to be run with their own custom minion configuration, including
+        different pillars, file_roots, etc.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pillar.file_exists foo/bar.sls
     '''
-    pillar_roots = __opts__.get('pillar_roots')
+    opts = _get_opts(localconfig)
+    pillar_roots = opts.get('pillar_roots')
     if not pillar_roots:
         raise CommandExecutionError('No pillar_roots found. Are you running '
                                     'this on the master?')
