@@ -802,9 +802,28 @@ class LocalClient(object):
             self,
             jid,
             tags_regex=None
+            ):
+        '''
+        Raw function to just return events of jid excluding timeout logic.  Uses a very short timeout to
+        simulate a non blocking call
+
+        Yield either the raw event data or None
+
+        Pass a list of additional regular expressions as `tags_regex` to search
+        the event bus for non-return data, such as minion lists returned from
+        syndics.
+        '''
+        self.get_returns_short_block(jid, tags_regex, wait=0.01)
+
+    def get_returns_short_block(
+            self,
+            jid,
+            tags_regex=None,
+            wait=5
            ):
         '''
-        Raw function to just return events of jid excluding timeout logic
+        Raw function to just return events of jid with a short wait.  The
+        wait value should generally be some factor of the job timeout.
 
         Yield either the raw event data or None
 
@@ -816,7 +835,7 @@ class LocalClient(object):
         while True:
             # TODO(driskell): This was previously completely nonblocking.
             #                 Should get_event have a nonblock option?
-            raw = self.event.get_event(wait=0.01, tag='salt/job/{0}'.format(jid), tags_regex=tags_regex, full=True)
+            raw = self.event.get_event(wait=wait, tag='salt/job/{0}'.format(jid), tags_regex=tags_regex, full=True)
             yield raw
 
     def get_iter_returns(
@@ -863,9 +882,9 @@ class LocalClient(object):
         # iterator for this job's return
         if self.opts['order_masters']:
             # If we are a MoM, we need to gather expected minions from downstreams masters.
-            ret_iter = self.get_returns_no_block(jid, tags_regex=['^syndic/.*/{0}'.format(jid)])
+            ret_iter = self.get_returns_short_block(jid, tags_regex=['^syndic/.*/{0}'.format(jid)], wait=timeout / 4)
         else:
-            ret_iter = self.get_returns_no_block(jid)
+            ret_iter = self.get_returns_short_block(jid, wait=timeout / 4)
         # iterator for the info of this job
         jinfo_iter = []
         timeout_at = time.time() + timeout
@@ -938,7 +957,7 @@ class LocalClient(object):
                 if 'jid' not in jinfo:
                     jinfo_iter = []
                 else:
-                    jinfo_iter = self.get_returns_no_block(jinfo['jid'])
+                    jinfo_iter = self.get_returns_short_block(jinfo['jid'], wait=timeout / 4)
                 timeout_at = time.time() + self.opts['gather_job_timeout']
                 # if you are a syndic, wait a little longer
                 if self.opts['order_masters']:
@@ -987,11 +1006,9 @@ class LocalClient(object):
             if done:
                 break
 
-            # don't spin
-            if block:
-                time.sleep(0.01)
-            else:
+            if not block:
                 yield
+
         if expect_minions:
             for minion in list((minions - found)):
                 yield {minion: {'failed': True}}
