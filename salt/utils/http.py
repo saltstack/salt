@@ -297,7 +297,7 @@ def query(url,
             if isinstance(cert, six.string_types):
                 if os.path.exists(cert):
                     req_kwargs['cert'] = cert
-            elif isinstance(cert, tuple):
+            elif isinstance(cert, list):
                 if os.path.exists(cert[0]) and os.path.exists(cert[1]):
                     req_kwargs['cert'] = cert
             else:
@@ -375,7 +375,7 @@ def query(url,
                     if isinstance(cert, six.string_types):
                         if os.path.exists(cert):
                             cert_chain = (cert)
-                    elif isinstance(cert, tuple):
+                    elif isinstance(cert, list):
                         if os.path.exists(cert[0]) and os.path.exists(cert[1]):
                             cert_chain = cert
                     else:
@@ -424,7 +424,7 @@ def query(url,
             if isinstance(cert, six.string_types):
                 if os.path.exists(cert):
                     req_kwargs['client_cert'] = cert
-            elif isinstance(cert, tuple):
+            elif isinstance(cert, list):
                 if os.path.exists(cert[0]) and os.path.exists(cert[1]):
                     req_kwargs['client_cert'] = cert[0]
                     req_kwargs['client_key'] = cert[1]
