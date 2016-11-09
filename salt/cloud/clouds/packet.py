@@ -282,7 +282,8 @@ def is_profile_configured(vm_):
             for key in required_keys:
                 if profile_data.get(key) is None:
                     log.error(
-                        'both storage_size and storage_tier required for profile %(profile)s. Please check your profile configuration' % {'profile': vm_['profile']}
+                        'both storage_size and storage_tier required for profile {profile}. '\
+                        'Please check your profile configuration'.format(profile=vm_['profile'])
                     )
                     return False
 
@@ -292,8 +293,10 @@ def is_profile_configured(vm_):
                 if location['code'] == profile_data['location']:
                     if 'storage' not in location['features']:
                         log.error(
-                            'Choosen location %(location)s for profile %(profile)s does not support storage feature. '\
-                            'Please check your profile configuration' % {'location': location['code'], 'profile': vm_['profile']}
+                            'Choosen location {location} for profile {profile} does not support storage feature. '\
+                            'Please check your profile configuration'.format(
+                                location=location['code'], profile=vm_['profile']
+                            )
                         )
                         return False
 
@@ -303,7 +306,8 @@ def is_profile_configured(vm_):
             for key in required_keys:
                 if profile_data.get(key) is None:
                     log.error(
-                        'both storage_snapshot_count and storage_snapshot_frequency required for profile %(profile)s. Please check your profile configuration' % {'profile': vm_['profile']}
+                        'both storage_snapshot_count and storage_snapshot_frequency required for profile {profile}. '\
+                        'Please check your profile configuration'.format(profile=vm_['profile'])
                     )
                     return False
 
