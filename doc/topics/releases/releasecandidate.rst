@@ -36,27 +36,27 @@ Available builds:
 - Debian 8
 - macOS
 - RHEL 7
+- SmartOS (see below)
 - Ubuntu 16.04
 - Windows
 
-.. SmartOS (see below)
 .. FreeBSD
 
-.. SmartOS
-   -------
-   Release candidate builds for SmartOS are available at http://pkg.blackdot.be/extras/salt-2016.11rc/.
+SmartOS
+-------
+Release candidate builds for SmartOS are available at http://pkg.blackdot.be/extras/salt-2016.11rc/.
 
-.. On a base64 2015Q4-x86_64 based native zone the package can be installed by the following:
+On a base64 2015Q4-x86_64 based native zone the package can be installed by the following:
 
-.. .. code-block:: bash
+.. code-block:: bash
 
-..    pfexec pkg_add -U http://pkg.blackdot.be/extras/salt-2016.11rc/salt-2016.11.0rc1_2015Q4_x86_64.tgz
+    pfexec pkg_add -U https://pkg.blackdot.be/extras/salt-2016.11rc/salt-2016.11.0rc2_2015Q4_x86_64.tgz
 
-.. When using the 2016Q2-tools release on the global zone by the following:
+When using the 2016Q2-tools release on the global zone by the following:
 
-.. .. code-block:: bash
+.. code-block:: bash
 
-..    pfexec pkg_add -U http://pkg.blackdot.be/extras/salt-2016.11rc/salt-2016.11.0rc1_2016Q2_TOOLS.tgz
+    pfexec pkg_add -U https://pkg.blackdot.be/extras/salt-2016.11rc/salt-2016.11.0rc2_2016Q2_TOOLS.tgz
 
 Installing Using Bootstrap
 ==========================
