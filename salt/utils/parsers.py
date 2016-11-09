@@ -540,6 +540,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         if not getattr(self, '_skip_console_logging_config_', False):
             group.add_option(
                 '-l', '--log-level',
+                dest=self._loglevel_config_setting_name_,
                 choices=list(log.LOG_LEVELS),
                 help='Console logging log level. One of {0}. '
                      'Default: \'{1}\'.'.format(
@@ -550,6 +551,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
         group.add_option(
             '--log-file',
+            dest=self._logfile_config_setting_name_,
             default=None,
             help='Log file path. Default: \'{0}\'.'.format(
                 self._default_logging_logfile_
