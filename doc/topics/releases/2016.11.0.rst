@@ -10,16 +10,6 @@ Release Candidate
 See :ref:`Installing/Testing a Salt Release Candidate <release-candidate>` for instructions to install the
 latest release candidate.
 
-Release Candidate Known Issues
-------------------------------
-
-- :issue:`36729`: Minion does not shutdown properly when attempting to start multiple minions on same host
-- :issue:`36693`: /etc/salt/master.d/schedule.conf schedule jobs fail to run
-- :issue:`36746`: When killing a job jid output missing
-- :issue:`36748`: Proxy minion is not working
-- :issue:`36134`: multi-master with failover does not failover when master goes down
-- :issue:`36804`: error when using pkg.installed with url source
-
 New Features
 ============
 
