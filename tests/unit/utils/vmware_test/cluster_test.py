@@ -140,6 +140,7 @@ class GetClusterTestCase(TestCase):
         self.assertEqual(res, self.mock_cluster2)
 
 
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 class CreateClusterTestCase(TestCase):
     '''Tests for salt.utils.vmware.create_cluster'''
