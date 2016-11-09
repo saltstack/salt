@@ -79,7 +79,7 @@ Here is an example of removing a row from a table:
           - sqlite3: users
           
 Note that there is no explicit state to perform random queries, however, this 
-can be approximated sqlite3's module functions and module.run:
+can be approximated with sqlite3's module functions and module.run:
 
   .. code-block:: yaml
   
