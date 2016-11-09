@@ -16,7 +16,6 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.output import yaml_out as yaml
-from salt.log.setup import set_console_handler_stream
 
 
 class YamlTestCase(TestCase):
@@ -25,7 +24,6 @@ class YamlTestCase(TestCase):
     '''
     def setUp(self):
         # reset to default behavior
-        set_console_handler_stream(sys.stderr)
         yaml.__opts__ = {}
         self.data = {'test': 'two', 'example': 'one'}
 
@@ -35,16 +33,6 @@ class YamlTestCase(TestCase):
         self.assertEqual(expect, ret)
 
     def test_negative_int_output(self):
-        yaml.__opts__['output_indent'] = -1
-        ret = yaml.output(self.data)
-        expect = '{example: one, test: two}\n'
-        self.assertEqual(expect, ret)
-
-    def test_default_outout_with_log_entries(self):
-        # mock a console log stream
-        test_stream = StringIO('line1\nline2')
-        set_console_handler_stream(test_stream)
-
         yaml.__opts__['output_indent'] = -1
         ret = yaml.output(self.data)
         expect = '{example: one, test: two}\n'
