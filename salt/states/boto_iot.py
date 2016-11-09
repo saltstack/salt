@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Manage IoT Objects
-=================
+==================
 
 .. versionadded:: 2016.3.0
 
