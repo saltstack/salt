@@ -2351,7 +2351,7 @@ class ClearFuncs(object):
                             self.opts['ext_job_cache']
                         )
                     )
-            except AttributeError:
+            except (AttributeError, KeyError):
                 save_load_func = False
                 log.critical(
                     'The specified returner used for the external job cache '
