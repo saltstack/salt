@@ -130,11 +130,16 @@ class ChildContextDict(collections.MutableMapping):
     def __init__(self, parent, overrides=None):
         self.parent = parent
         self._data = {} if overrides is None else overrides
+        self._old_data = None
 
         # merge self.global_data into self._data
         for k, v in six.iteritems(self.parent.global_data):
             if k not in self._data:
-                self._data[k] = v
+                # A deepcopy is necessary to avoid using the same
+                # objects in globals as we do in thread local storage.
+                # Otherwise, changing one would automatically affect
+                # the other.
+                self._data[k] = copy.deepcopy(v)
 
     def __setitem__(self, key, val):
         self._data[key] = val
@@ -152,10 +157,13 @@ class ChildContextDict(collections.MutableMapping):
         return iter(self._data)
 
     def __enter__(self):
+        if hasattr(self.parent._state, 'data'):
+            # Save old data to support nested calls
+            self._old_data = self.parent._state.data
         self.parent._state.data = self._data
 
     def __exit__(self, *exc):
-        self.parent._state.data = None
+        self.parent._state.data = self._old_data
 
 
 class NamespacedDictWrapper(collections.MutableMapping, dict):

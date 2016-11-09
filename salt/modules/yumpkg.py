@@ -678,21 +678,6 @@ def list_repo_pkgs(*args, **kwargs):
                 return True
         return False
 
-    def _no_repository_packages():
-        '''
-        Check yum version, the repository-packages subcommand is only in
-        3.4.3 and newer.
-        '''
-        if _yum() == 'yum':
-            yum_version = _LooseVersion(
-                __salt__['cmd.run'](
-                    ['yum', '--version'],
-                    python_shell=False
-                ).splitlines()[0].strip()
-            )
-            return yum_version < _LooseVersion('3.4.3')
-        return False
-
     def _parse_output(output, strict=False):
         for pkg in _yum_pkginfo(output):
             if strict and (pkg.repoid not in repos
@@ -702,8 +687,29 @@ def list_repo_pkgs(*args, **kwargs):
             version_list = repo_dict.setdefault(pkg.name, set())
             version_list.add(pkg.version)
 
-    if _no_repository_packages():
+    yum_version = None if _yum() != 'yum' else _LooseVersion(
+                __salt__['cmd.run'](
+                    ['yum', '--version'],
+                    python_shell=False
+                ).splitlines()[0].strip()
+            )
+    # Really old version of yum; does not even have --showduplicates option
+    if yum_version and yum_version < _LooseVersion('3.2.13'):
         cmd_prefix = ['yum', '--quiet', 'list']
+        for pkg_src in ('installed', 'available'):
+            # Check installed packages first
+            out = __salt__['cmd.run_all'](
+                cmd_prefix + [pkg_src],
+                output_loglevel='trace',
+                ignore_retcode=True,
+                python_shell=False
+            )
+            if out['retcode'] == 0:
+                _parse_output(out['stdout'], strict=True)
+    # The --showduplicates option is added in 3.2.13, but the
+    # repository-packages subcommand is only in 3.4.3 and newer
+    elif yum_version and yum_version < _LooseVersion('3.4.3'):
+        cmd_prefix = ['yum', '--quiet', 'list', '--showduplicates']
         for pkg_src in ('installed', 'available'):
             # Check installed packages first
             out = __salt__['cmd.run_all'](

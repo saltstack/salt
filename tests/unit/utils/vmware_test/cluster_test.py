@@ -140,6 +140,51 @@ class GetClusterTestCase(TestCase):
         self.assertEqual(res, self.mock_cluster2)
 
 
+@patch('salt.utils.vmware.get_managed_object_name', MagicMock())
+class CreateClusterTestCase(TestCase):
+    '''Tests for salt.utils.vmware.create_cluster'''
+
+    def setUp(self):
+        self.mock_create_cluster_ex = MagicMock()
+        self.mock_dc = MagicMock(
+            hostFolder=MagicMock(CreateClusterEx=self.mock_create_cluster_ex))
+        self.mock_cluster_spec = MagicMock()
+
+    def test_get_managed_object_name(self):
+        mock_get_managed_object_name = MagicMock()
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   mock_get_managed_object_name):
+            vmware.create_cluster(self.mock_dc, 'fake_cluster',
+                                  self.mock_cluster_spec)
+        mock_get_managed_object_name.assert_called_once_with(self.mock_dc)
+
+    def test_create_cluster_call(self):
+        vmware.create_cluster(self.mock_dc, 'fake_cluster',
+                              self.mock_cluster_spec)
+        self.mock_create_cluster_ex.assert_called_once_with(
+           'fake_cluster', self.mock_cluster_spec)
+
+    def test_create_cluster_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.mock_dc.hostFolder.CreateClusterEx = MagicMock(
+            side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            vmware.create_cluster(self.mock_dc, 'fake_cluster',
+                                  self.mock_cluster_spec)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_create_cluster_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.mock_dc.hostFolder.CreateClusterEx = MagicMock(
+            side_effect=exc)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            vmware.create_cluster(self.mock_dc, 'fake_cluster',
+                                  self.mock_cluster_spec)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
@@ -167,7 +212,7 @@ class UpdateClusterTestCase(TestCase):
         self.mock_reconfigure_compute_resource_task.assert_called_once_with(
             self.mock_cluster_spec, modify=True)
 
-    def test_create_cluster_raise_vim_fault(self):
+    def test_reconfigure_compute_resource_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_cluster.ReconfigureComputeResource_Task = \
@@ -176,7 +221,7 @@ class UpdateClusterTestCase(TestCase):
             vmware.update_cluster(self.mock_cluster, self.mock_cluster_spec)
         self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
 
-    def test_create_cluster_raise_runtime_fault(self):
+    def test_reconfigure_compute_resource_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_cluster.ReconfigureComputeResource_Task = \
@@ -199,4 +244,5 @@ class UpdateClusterTestCase(TestCase):
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(GetClusterTestCase, needs_daemon=False)
+    run_tests(CreateClusterTestCase, needs_daemon=False)
     run_tests(UpdateClusterTestCase, needs_daemon=False)

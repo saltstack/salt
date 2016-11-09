@@ -1144,6 +1144,10 @@ def upgrade(refresh=True,
     '''
     cmd_update = (['dist-upgrade'] if dist_upgrade else ['update']) + ['--auto-agree-with-licenses']
 
+    if skip_verify:
+        # The '--no-gpg-checks' needs to be placed before the Zypper command.
+        cmd_update.insert(0, '--no-gpg-checks')
+
     if refresh:
         refresh_db()
 
@@ -1151,11 +1155,6 @@ def upgrade(refresh=True,
         cmd_update.append('--dry-run')
 
     if dist_upgrade:
-        if dryrun:
-            # Creates a solver test case for debugging.
-            log.info('Executing debugsolver and performing a dry-run dist-upgrade')
-            __zypper__.noraise.call(*cmd_update + ['--debug-solver'])
-
         if fromrepo:
             for repo in fromrepo:
                 cmd_update.extend(['--from', repo])
@@ -1169,8 +1168,10 @@ def upgrade(refresh=True,
             else:
                 log.warn('Disabling vendor changes is not supported on this Zypper version')
 
-    if skip_verify:
-        cmd_update.append('--no-gpg-checks')
+        if dryrun:
+            # Creates a solver test case for debugging.
+            log.info('Executing debugsolver and performing a dry-run dist-upgrade')
+            __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update + ['--debug-solver'])
 
     old = list_pkgs()
 

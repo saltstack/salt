@@ -588,27 +588,29 @@ Example of a minimal profile:
 Cloning from a Snapshot
 =======================
 
-.. versionadded:: 2016.3.4
 
-Cloning a template works similar to cloning a VM except for the fact that
-a snapshot number must be provided.
+.. versionadded:: 2016.3.5
+
+Cloning from a snapshot requires that one of the
+supported options be set in the cloud profile.
+
+Supported options are ``createNewChildDiskBacking``,
+``moveChildMostDiskBacking``, ``moveAllDiskBackingsAndAllowSharing``
+and ``moveAllDiskBackingsAndDisallowSharing``.
 
 Example of a minimal profile:
 
 .. code-block:: yaml
 
   my-template-clone:
-     provider: vcenter01
-     clonefrom: 'salt_vm'
-     snapshot: 3
-
-.. image:: /_static/snapshot_manager.png
-    :align: center
-    :scale: 70%
-
-.. note::
-    The previous diagram shows how to identify the snapshot number. Selected
-    (third snapshot) is number 3.
+    provider: vcenter01
+    clonefrom: 'salt_vm'
+    snapshot:
+      disk_move_type: createNewChildDiskBacking
+      # these types are also supported
+      # disk_move_type: moveChildMostDiskBacking
+      # disk_move_type: moveAllDiskBackingsAndAllowSharing
+      # disk_move_type: moveAllDiskBackingsAndDisallowSharing
 
 
 Creating a VM
@@ -689,7 +691,7 @@ Example of a complete profile:
 Specifying disk backing mode
 ============================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2016.3.5
 
 Disk backing mode can now be specified when cloning a VM. This option
 can be set in the cloud profile as shown in example below:
@@ -707,6 +709,7 @@ can be set in the cloud profile as shown in example below:
         disk:
           Hard disk 1:
             mode: 'independent_nonpersistent'
+            size: 42
           Hard disk 2:
             size: 15
             mode: 'independent_nonpersistent'

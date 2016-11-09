@@ -3,9 +3,16 @@
 # Import python libs
 from __future__ import absolute_import
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
 import json
 import pprint
+
+try:
+    from dateutil.relativedelta import relativedelta
+    HAS_DATEUTIL = True
+except ImportError:
+    HAS_DATEUTIL = False
+
+NO_DATEUTIL_REASON = 'python-dateutil is not installed'
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -1655,6 +1662,7 @@ class FileTestCase(TestCase):
 
             self.assertTrue(filestate.mod_run_check_cmd(cmd, filename))
 
+    @skipIf(not HAS_DATEUTIL, NO_DATEUTIL_REASON)
     def test_retention_schedule(self):
         '''
         Test to execute the retention_schedule logic.

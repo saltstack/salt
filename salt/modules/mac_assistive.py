@@ -11,7 +11,7 @@ This module allows you to manage assistive access on OS X minions with 10.9+
 
 # Import Python Libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 import re
 import logging
 

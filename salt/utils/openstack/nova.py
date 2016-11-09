@@ -5,7 +5,7 @@ Nova class
 
 # Import Python libs
 from __future__ import absolute_import, with_statement
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=no-name-in-module,import-error
 import time
 import inspect
 import logging

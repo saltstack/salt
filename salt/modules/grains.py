@@ -13,7 +13,6 @@ import logging
 import operator
 import collections
 import json
-import fnmatch
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # Import 3rd-party libs
@@ -25,7 +24,6 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-
 
 # Import salt libs
 import salt.utils
-import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 
@@ -569,44 +567,12 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         salt '*' grains.filter_by '{default: {A: {B: C}, D: E}, F: {A: {B: G}}, H: {D: I}}' 'xxx' '{D: J}' 'F' 'default'
         # next same as above when default='H' instead of 'F' renders {A: {B: C}, D: J}
     '''
-
-    ret = None
-    # Default value would be an empty list if grain not found
-    val = salt.utils.traverse_dict_and_list(__grains__, grain, [])
-
-    # Iterate over the list of grain values to match against patterns in the lookup_dict keys
-    for each in val if isinstance(val, list) else [val]:
-        for key in sorted(lookup_dict):
-            if fnmatch.fnmatchcase(each, key):
-                ret = lookup_dict[key]
-                break
-        if ret is not None:
-            break
-
-    if ret is None:
-        ret = lookup_dict.get(default, None)
-
-    if base and base in lookup_dict:
-        base_values = lookup_dict[base]
-        if ret is None:
-            ret = base_values
-
-        elif isinstance(base_values, collections.Mapping):
-            if not isinstance(ret, collections.Mapping):
-                raise SaltException(
-                    'filter_by default and look-up values must both be dictionaries.')
-            ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
-
-    if merge:
-        if not isinstance(merge, collections.Mapping):
-            raise SaltException('filter_by merge argument must be a dictionary.')
-
-        if ret is None:
-            ret = merge
-        else:
-            salt.utils.dictupdate.update(ret, copy.deepcopy(merge))
-
-    return ret
+    return salt.utils.filter_by(lookup_dict=lookup_dict,
+                                lookup=grain,
+                                traverse=__grains__,
+                                merge=merge,
+                                default=default,
+                                base=base)
 
 
 def _dict_from_path(path, val, delimiter=DEFAULT_TARGET_DELIM):

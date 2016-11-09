@@ -715,7 +715,7 @@ def get_mor_by_property(service_instance, object_type, property_value, property_
     object_list = get_mors_with_properties(service_instance, object_type, property_list=[property_name], container_ref=container_ref)
 
     for obj in object_list:
-        if obj[property_name] == property_value:
+        if obj[property_name] == property_value or property_value in str(obj.get('object', '')):
             return obj['object']
 
     return None
@@ -946,6 +946,31 @@ def get_cluster(dc_ref, cluster):
             'Cluster \'{0}\' was not found in datacenter '
             '\'{1}\''. format(cluster, dc_name))
     return items[0]
+
+
+def create_cluster(dc_ref, cluster_name, cluster_spec):
+    '''
+    Creates a cluster in a datacenter.
+
+    dc_ref
+        The parent datacenter reference.
+
+    cluster_name
+        The cluster name.
+
+    cluster_spec
+        The cluster spec (vim.ClusterConfigSpecEx).
+        Defaults to None.
+    '''
+    dc_name = get_managed_object_name(dc_ref)
+    log.trace('Creating cluster \'{0}\' in datacenter \'{1}\''
+              ''.format(cluster_name, dc_name))
+    try:
+        dc_ref.hostFolder.CreateClusterEx(cluster_name, cluster_spec)
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
 
 def update_cluster(cluster_ref, cluster_spec):

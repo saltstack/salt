@@ -45,7 +45,7 @@ class ArchiveTestCase(TestCase):
         archive.extracted tar options
         '''
 
-        source = 'file.tar.gz'
+        source = '/tmp/file.tar.gz'
         tmp_dir = os.path.join(tempfile.gettempdir(), 'test_archive', '')
         test_tar_opts = [
             '--no-anchored foo',
@@ -66,47 +66,67 @@ class ArchiveTestCase(TestCase):
         mock_false = MagicMock(return_value=False)
         ret = {'stdout': ['saltines', 'cheese'], 'stderr': 'biscuits', 'retcode': '31337', 'pid': '1337'}
         mock_run = MagicMock(return_value=ret)
-        mock_source_list = MagicMock(return_value=source)
+        mock_source_list = MagicMock(return_value=(source, None))
+        state_single_mock = MagicMock(return_value={'local': {'result': True}})
+        list_mock = MagicMock(return_value={
+            'dirs': [],
+            'files': ['saltines', 'cheese'],
+            'top_level_dirs': [],
+            'top_level_files': ['saltines', 'cheese'],
+        })
 
-        with patch('os.path.exists', mock_true):
-            with patch.dict(archive.__opts__, {'test': False,
-                                               'cachedir': tmp_dir}):
-                with patch.dict(archive.__salt__, {'file.directory_exists': mock_false,
-                                                   'file.file_exists': mock_false,
-                                                   'file.makedirs': mock_true,
-                                                   'cmd.run_all': mock_run,
-                                                   'file.source_list': mock_source_list}):
-                    filename = os.path.join(
-                        tmp_dir,
-                        'files/test/_tmp_test_archive_.tar'
-                    )
-                    for test_opts, ret_opts in zip(test_tar_opts, ret_tar_opts):
-                        ret = archive.extracted(tmp_dir,
-                                                source,
-                                                'tar',
-                                                tar_options=test_opts)
-                        ret_opts.append(filename)
-                        mock_run.assert_called_with(ret_opts, cwd=tmp_dir, python_shell=False)
+        with patch.dict(archive.__opts__, {'test': False,
+                                           'cachedir': tmp_dir}):
+            with patch.dict(archive.__salt__, {'file.directory_exists': mock_false,
+                                               'file.file_exists': mock_false,
+                                               'state.single': state_single_mock,
+                                               'file.makedirs': mock_true,
+                                               'cmd.run_all': mock_run,
+                                               'archive.list': list_mock,
+                                               'file.source_list': mock_source_list}):
+                filename = os.path.join(
+                    tmp_dir,
+                    'files/test/_tmp_file.tar.gz'
+                )
+                for test_opts, ret_opts in zip(test_tar_opts, ret_tar_opts):
+                    ret = archive.extracted(tmp_dir,
+                                            source,
+                                            options=test_opts,
+                                            enforce_toplevel=False)
+                    ret_opts.append(filename)
+                    mock_run.assert_called_with(ret_opts, cwd=tmp_dir, python_shell=False)
 
     def test_tar_gnutar(self):
         '''
         Tests the call of extraction with gnutar
         '''
         gnutar = MagicMock(return_value='tar (GNU tar)')
-        source = 'GNU tar'
+        source = '/tmp/foo.tar.gz'
         missing = MagicMock(return_value=False)
         nop = MagicMock(return_value=True)
+        state_single_mock = MagicMock(return_value={'local': {'result': True}})
         run_all = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout', 'stderr': 'stderr'})
-        mock_source_list = MagicMock(return_value=source)
+        mock_source_list = MagicMock(return_value=(source, None))
+        list_mock = MagicMock(return_value={
+            'dirs': [],
+            'files': ['stdout'],
+            'top_level_dirs': [],
+            'top_level_files': ['stdout'],
+        })
 
         with patch.dict(archive.__salt__, {'cmd.run': gnutar,
                                            'file.directory_exists': missing,
                                            'file.file_exists': missing,
-                                           'state.single': nop,
+                                           'state.single': state_single_mock,
                                            'file.makedirs': nop,
                                            'cmd.run_all': run_all,
+                                           'archive.list': list_mock,
                                            'file.source_list': mock_source_list}):
-            ret = archive.extracted('/tmp/out', '/tmp/foo.tar.gz', 'tar', tar_options='xvzf', keep=True)
+            ret = archive.extracted('/tmp/out',
+                                    source,
+                                    options='xvzf',
+                                    enforce_toplevel=False,
+                                    keep=True)
             self.assertEqual(ret['changes']['extracted_files'], 'stdout')
 
     def test_tar_bsdtar(self):
@@ -114,20 +134,32 @@ class ArchiveTestCase(TestCase):
         Tests the call of extraction with bsdtar
         '''
         bsdtar = MagicMock(return_value='tar (bsdtar)')
-        source = 'bsdtar'
+        source = '/tmp/foo.tar.gz'
         missing = MagicMock(return_value=False)
         nop = MagicMock(return_value=True)
+        state_single_mock = MagicMock(return_value={'local': {'result': True}})
         run_all = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout', 'stderr': 'stderr'})
-        mock_source_list = MagicMock(return_value=source)
+        mock_source_list = MagicMock(return_value=(source, None))
+        list_mock = MagicMock(return_value={
+            'dirs': [],
+            'files': ['stderr'],
+            'top_level_dirs': [],
+            'top_level_files': ['stderr'],
+        })
 
         with patch.dict(archive.__salt__, {'cmd.run': bsdtar,
                                            'file.directory_exists': missing,
                                            'file.file_exists': missing,
-                                           'state.single': nop,
+                                           'state.single': state_single_mock,
                                            'file.makedirs': nop,
                                            'cmd.run_all': run_all,
+                                           'archive.list': list_mock,
                                            'file.source_list': mock_source_list}):
-            ret = archive.extracted('/tmp/out', '/tmp/foo.tar.gz', 'tar', tar_options='xvzf', keep=True)
+            ret = archive.extracted('/tmp/out',
+                                    source,
+                                    options='xvzf',
+                                    enforce_toplevel=False,
+                                    keep=True)
             self.assertEqual(ret['changes']['extracted_files'], 'stderr')
 
 if __name__ == '__main__':

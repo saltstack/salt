@@ -117,13 +117,14 @@ except (ImportError, OSError, AttributeError, TypeError):
 from salt.defaults import DEFAULT_TARGET_DELIM
 import salt.defaults.exitcodes
 import salt.log
+import salt.utils.dictupdate
 import salt.version
 from salt.utils.decorators import memoize as real_memoize
 from salt.textformat import TextFormat
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,
     CommandNotFoundError, SaltSystemExit,
-    SaltInvocationError
+    SaltInvocationError, SaltException
 )
 
 
@@ -3162,3 +3163,53 @@ def substr_in_list(string_to_search_for, list_to_search):
     string is present in any of the strings which comprise a list
     '''
     return any(string_to_search_for in s for s in list_to_search)
+
+
+def filter_by(lookup_dict,
+              lookup,
+              traverse,
+              merge=None,
+              default='default',
+              base=None):
+    '''
+    '''
+    ret = None
+    # Default value would be an empty list if lookup not found
+    val = traverse_dict_and_list(traverse, lookup, [])
+
+    # Iterate over the list of values to match against patterns in the
+    # lookup_dict keys
+    for each in val if isinstance(val, list) else [val]:
+        for key in sorted(lookup_dict):
+            if fnmatch.fnmatchcase(each, key):
+                ret = lookup_dict[key]
+                break
+        if ret is not None:
+            break
+
+    if ret is None:
+        ret = lookup_dict.get(default, None)
+
+    if base and base in lookup_dict:
+        base_values = lookup_dict[base]
+        if ret is None:
+            ret = base_values
+
+        elif isinstance(base_values, collections.Mapping):
+            if not isinstance(ret, collections.Mapping):
+                raise SaltException(
+                    'filter_by default and look-up values must both be '
+                    'dictionaries.')
+            ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
+
+    if merge:
+        if not isinstance(merge, collections.Mapping):
+            raise SaltException(
+                'filter_by merge argument must be a dictionary.')
+
+        if ret is None:
+            ret = merge
+        else:
+            salt.utils.dictupdate.update(ret, copy.deepcopy(merge))
+
+    return ret

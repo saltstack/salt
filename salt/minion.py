@@ -1336,9 +1336,9 @@ class Minion(MinionBase):
             )
         else:
             exitstack = contextlib.ExitStack()
-            exitstack.push(self.functions.context_dict.clone())
-            exitstack.push(self.returners.context_dict.clone())
-            exitstack.push(self.executors.context_dict.clone())
+            exitstack.enter_context(self.functions.context_dict.clone())
+            exitstack.enter_context(self.returners.context_dict.clone())
+            exitstack.enter_context(self.executors.context_dict.clone())
             return exitstack
 
     @classmethod
