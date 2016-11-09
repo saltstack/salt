@@ -576,9 +576,16 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         self.payload_handler = payload_handler
         self.io_loop = io_loop
         self.serial = salt.payload.Serial(self.opts)
+        if 'ssl_cert' in self.opts and 'ssl_key' in self.opts:
+            ssl_options = {
+                    'certfile': self.opts['ssl_cert'],
+                    'keyfile': self.opts['ssl_key'],
+                    }
+        else:
+            ssl_options = None
         if USE_LOAD_BALANCER:
             self.req_server = LoadBalancerWorker(
-                self.socket_queue, self.handle_message, io_loop=self.io_loop
+                self.socket_queue, self.handle_message, io_loop=self.io_loop, ssl_options=ssl_options
             )
         else:
             if salt.utils.is_windows():
@@ -587,7 +594,9 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                 _set_tcp_keepalive(self._socket, self.opts)
                 self._socket.setblocking(0)
                 self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
-            self.req_server = SaltMessageServer(self.handle_message, io_loop=self.io_loop)
+            self.req_server = SaltMessageServer(self.handle_message,
+                                                io_loop=self.io_loop,
+                                                ssl_options=ssl_options)
             self.req_server.add_socket(self._socket)
             self._socket.listen(self.backlog)
         salt.transport.mixins.auth.AESReqServerMixin.post_fork(self, payload_handler, io_loop)
@@ -828,11 +837,20 @@ class SaltMessageClient(object):
         '''
         Try to connect for the rest of time!
         '''
+        if 'ssl_cert' in self.opts and 'ssl_key' in self.opts:
+            ssl_options = {
+                    'certfile': self.opts['ssl_cert'],
+                    'keyfile': self.opts['ssl_key'],
+                    }
+        else:
+            ssl_options = None
         while True:
             if self._closing:
                 break
             try:
-                self._stream = yield self._tcp_client.connect(self.host, self.port)
+                self._stream = yield self._tcp_client.connect(self.host,
+                                                              self.port,
+                                                              ssl_options=ssl_options)
                 self._connecting_future.set_result(True)
                 break
             except Exception as e:
@@ -1032,7 +1050,14 @@ class PubServer(tornado.tcpserver.TCPServer, object):
     TCP publisher
     '''
     def __init__(self, opts, io_loop=None):
-        super(PubServer, self).__init__(io_loop=io_loop)
+        if 'ssl_cert' in opts and 'ssl_key' in opts:
+            ssl_options = {
+                    'certfile': opts['ssl_cert'],
+                    'keyfile': opts['ssl_key'],
+                    }
+        else:
+            ssl_options = None
+        super(PubServer, self).__init__(io_loop=io_loop, ssl_options=ssl_options)
         self.opts = opts
         self._closing = False
         self.clients = set()
