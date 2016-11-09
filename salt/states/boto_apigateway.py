@@ -424,14 +424,19 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
 
 
 # Helper Swagger Class for swagger version 2.0 API specification
-def _gen_md5_filehash(fname):
+def _gen_md5_filehash(fname, *args):
     '''
     helper function to generate a md5 hash of the swagger definition file
+    any extra argument passed to the function is converted to a string
+    and participates in the hash calculation
     '''
     _hash = hashlib.md5()
     with salt.utils.fopen(fname, 'rb') as f:
         for chunk in iter(lambda: f.read(4096), b''):
             _hash.update(chunk)
+
+    for extra_arg in args:
+        _hash.update(str(extra_arg))
     return _hash.hexdigest()
 
 
@@ -704,7 +709,9 @@ class _Swagger(object):
         if swagger_file_path is not None:
             if os.path.exists(swagger_file_path) and os.path.isfile(swagger_file_path):
                 self._swagger_file = swagger_file_path
-                self._md5_filehash = _gen_md5_filehash(self._swagger_file)
+                self._md5_filehash = _gen_md5_filehash(self._swagger_file, 
+                                                       error_response_template,
+                                                       response_template)
                 with salt.utils.fopen(self._swagger_file, 'rb') as sf:
                     self._cfg = yaml.load(sf)
                 self._swagger_version = ''
