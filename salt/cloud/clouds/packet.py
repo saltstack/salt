@@ -282,7 +282,7 @@ def is_profile_configured(vm_):
             for key in required_keys:
                 if profile_data.get(key) is None:
                     log.error(
-                        'both storage_size and storage_tier required for profile {profile}. '\
+                        'both storage_size and storage_tier required for profile {profile}. '
                         'Please check your profile configuration'.format(profile=vm_['profile'])
                     )
                     return False
@@ -293,7 +293,7 @@ def is_profile_configured(vm_):
                 if location['code'] == profile_data['location']:
                     if 'storage' not in location['features']:
                         log.error(
-                            'Choosen location {location} for profile {profile} does not support storage feature. '\
+                            'Choosen location {location} for profile {profile} does not support storage feature. '
                             'Please check your profile configuration'.format(
                                 location=location['code'], profile=vm_['profile']
                             )
@@ -306,7 +306,7 @@ def is_profile_configured(vm_):
             for key in required_keys:
                 if profile_data.get(key) is None:
                     log.error(
-                        'both storage_snapshot_count and storage_snapshot_frequency required for profile {profile}. '\
+                        'both storage_snapshot_count and storage_snapshot_frequency required for profile {profile}. '
                         'Please check your profile configuration'.format(profile=vm_['profile'])
                     )
                     return False
@@ -394,7 +394,7 @@ def create(vm_):
         # create storage and attach it to device
 
         volume = manager.create_volume(
-            vm_['project_id'], "%s_storage" % name, vm_.get('storage_tier'),
+            vm_['project_id'], "{0}_storage".format(name), vm_.get('storage_tier'),
             vm_.get('storage_size'), vm_.get('location'), snapshot_count=vm_.get('storage_snapshot_count', 0),
             snapshot_frequency=vm_.get('storage_snapshot_frequency'))
 
