@@ -64,6 +64,43 @@ class TestGemState(TestCase):
                 gem_uninstall_fails.assert_called_once_with(
                     'bar', None, runas=None)
 
+    def test_sources_add(self):
+        gem_sources = ['http://foo', 'http://bar']
+        gem_sources_list = MagicMock(return_value=gem_sources)
+        gem_sources_add_succeeds = MagicMock(return_value=True)
+        gem_sources_add_fails = MagicMock(return_value=False)
+        with patch.dict(gem.__salt__, {'gem.sources_list': gem_sources_list}):
+            with patch.dict(gem.__salt__, {'gem.sources_add': gem_sources_add_succeeds}):
+                ret = gem.sources_add('http://foo')
+                self.assertEqual(True, ret['result'])
+                ret = gem.sources_add('http://fui')
+                self.assertEqual(True, ret['result'])
+                gem_sources_add_succeeds.assert_called_once_with(
+                    source_uri='http://fui', ruby=None, runas=None)
+            with patch.dict(gem.__salt__, {'gem.sources_add': gem_sources_add_fails}):
+                ret = gem.sources_add('http://fui')
+                self.assertEqual(False, ret['result'])
+                gem_sources_add_fails.assert_called_once_with(
+                    source_uri='http://fui', ruby=None, runas=None)
+
+    def test_sources_remove(self):
+        gem_sources = ['http://foo', 'http://bar']
+        gem_sources_list = MagicMock(return_value=gem_sources)
+        gem_sources_remove_succeeds = MagicMock(return_value=True)
+        gem_sources_remove_fails = MagicMock(return_value=False)
+        with patch.dict(gem.__salt__, {'gem.sources_list': gem_sources_list}):
+            with patch.dict(gem.__salt__, {'gem.sources_remove': gem_sources_remove_succeeds}):
+                ret = gem.sources_remove('http://fui')
+                self.assertEqual(True, ret['result'])
+                ret = gem.sources_remove('http://foo')
+                self.assertEqual(True, ret['result'])
+                gem_sources_remove_succeeds.assert_called_once_with(
+                    source_uri='http://foo', ruby=None, runas=None)
+            with patch.dict(gem.__salt__, {'gem.sources_remove': gem_sources_remove_fails}):
+                ret = gem.sources_remove('http://bar')
+                self.assertEqual(False, ret['result'])
+                gem_sources_remove_fails.assert_called_once_with(
+                    source_uri='http://bar', ruby=None, runas=None)
 
 if __name__ == '__main__':
     from integration import run_tests
