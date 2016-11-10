@@ -709,7 +709,7 @@ class _Swagger(object):
         if swagger_file_path is not None:
             if os.path.exists(swagger_file_path) and os.path.isfile(swagger_file_path):
                 self._swagger_file = swagger_file_path
-                self._md5_filehash = _gen_md5_filehash(self._swagger_file, 
+                self._md5_filehash = _gen_md5_filehash(self._swagger_file,
                                                        error_response_template,
                                                        response_template)
                 with salt.utils.fopen(self._swagger_file, 'rb') as sf:
