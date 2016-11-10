@@ -289,6 +289,14 @@ class CMDModuleTest(integration.ModuleCase):
         else:
             raise RuntimeError
 
+    def test_home_envvar(self):
+        '''
+        Test that $HOME is available in the environment
+        '''
+        ret = self.run_function('cmd.run_stdout', ['echo $HOME']).rstrip()
+        self.assertNotEqual(ret, '')
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(CMDModuleTest)
