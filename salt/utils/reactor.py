@@ -205,7 +205,7 @@ class ReactWrap(object):
         except Exception as exc:
             log.warning('Exception caught by reactor: {0}'.format(exc))
 
-    cmd = local
+        cmd = local
 
     def runner(self, fun, **kwargs):
         '''
