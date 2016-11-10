@@ -40,6 +40,14 @@ from salt.exceptions import (
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+[^\s<>]+\s+[^\s<>]+'
 OPKG_CONFDIR = '/etc/opkg'
+ATTR_MAP = {
+    'Architecture': 'arch',
+    'Homepage': 'url',
+    'Installed-Time': 'install_date_time_t',
+    'Maintainer': 'packager',
+    'Package': 'name',
+    'Section': 'group'
+}
 
 log = logging.getLogger(__name__)
 
@@ -766,6 +774,137 @@ def list_upgrades(refresh=True):
     for line in out.splitlines():
         name, _oldversion, newversion = line.split(' - ')
         ret[name] = newversion
+
+    return ret
+
+
+def _convert_to_standard_attr(attr):
+    '''
+    Helper function for _process_info_installed_output()
+
+    Converts an opkg attribute name to a standard attribute
+    name which is used across 'pkg' modules.
+    '''
+    ret_attr = ATTR_MAP.get(attr, None)
+    if ret_attr is None:
+        # All others convert to lowercase
+        return attr.lower()
+    return ret_attr
+
+
+def _process_info_installed_output(out, filter_attrs):
+    '''
+    Helper function for info_installed()
+
+    Processes stdout output from a single invocation of
+    'opkg status'.
+    '''
+    ret = {}
+    name = None
+    attrs = {}
+    attr = None
+
+    for line in salt.utils.itertools.split(out, '\n'):
+        if line and line[0] == ' ':
+            # This is a continuation of the last attr
+            if filter_attrs is None or attr in filter_attrs:
+                line = line.strip()
+                if len(attrs[attr]):
+                    # If attr is empty, don't add leading newline
+                    attrs[attr] += '\n'
+                attrs[attr] += line
+            continue
+        line = line.strip()
+        if not line:
+            # Separator between different packages
+            if name:
+                ret[name] = attrs
+            name = None
+            attrs = {}
+            attr = None
+            continue
+        key, value = line.split(':', 1)
+        value = value.lstrip()
+        attr = _convert_to_standard_attr(key)
+        if attr == 'name':
+            name = value
+        elif filter_attrs is None or attr in filter_attrs:
+            attrs[attr] = value
+
+    if name:
+        ret[name] = attrs
+    return ret
+
+
+def info_installed(*names, **kwargs):
+    '''
+    Return the information of the named package(s), installed on the system.
+
+    .. versionadded:: Nitrogen
+
+    :param names:
+        Names of the packages to get information about. If none are specified,
+        will return information for all installed packages.
+
+    :param attr:
+        Comma-separated package attributes. If no 'attr' is specified, all available attributes returned.
+
+        Valid attributes are:
+            arch, conffiles, conflicts, depends, description, filename, group,
+            install_date_time_t, md5sum, packager, provides, recommends,
+            replaces, size, source, suggests, url, version
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.info_installed
+        salt '*' pkg.info_installed attr=version,packager
+        salt '*' pkg.info_installed <package1>
+        salt '*' pkg.info_installed <package1> <package2> <package3> ...
+        salt '*' pkg.info_installed <package1> attr=version,packager
+        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,packager
+    '''
+    attr = kwargs.pop('attr', None)
+    if attr is None:
+        filter_attrs = None
+    elif isinstance(attr, str):
+        filter_attrs = set(attr.split(','))
+    else:
+        filter_attrs = set(attr)
+
+    ret = {}
+    if names:
+        # Specific list of names of installed packages
+        for name in names:
+            cmd = ['opkg', 'status', name]
+            call = __salt__['cmd.run_all'](cmd,
+                                           output_loglevel='trace',
+                                           python_shell=False)
+            if call['retcode'] != 0:
+                comment = ''
+                if 'stderr' in call:
+                    comment += call['stderr']
+
+                raise CommandExecutionError(
+                    '{0}'.format(comment)
+                )
+            ret.update(_process_info_installed_output(call['stdout'], filter_attrs))
+    else:
+        # All installed packages
+        cmd = ['opkg', 'status']
+        call = __salt__['cmd.run_all'](cmd,
+                                       output_loglevel='trace',
+                                       python_shell=False)
+        if call['retcode'] != 0:
+            comment = ''
+            if 'stderr' in call:
+                comment += call['stderr']
+
+            raise CommandExecutionError(
+                '{0}'.format(comment)
+            )
+        ret.update(_process_info_installed_output(call['stdout'], filter_attrs))
 
     return ret
 
