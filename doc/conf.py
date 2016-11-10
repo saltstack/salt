@@ -235,8 +235,8 @@ version = salt.version.__version__
 latest_release = '2016.3.4'  # latest release
 previous_release = '2015.8.12'  # latest release from previous branch
 previous_release_dir = '2015.8'  # path on web server for previous branch
-next_release = ''  # next release
-next_release_dir = ''  # path on web server for next release branch
+next_release = '2016.11'  # next release
+next_release_dir = '2016.11'  # path on web server for next release branch
 
 today = ''
 copyright = ''
@@ -245,7 +245,7 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'develop'  # latest, previous, develop, next
+build_type = 'next'  # latest, previous, develop, next
 release = version  # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
 
