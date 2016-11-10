@@ -789,6 +789,7 @@ class CkMinions(object):
                     # so this fn is permitted by all minions
                     if self.match_check(auth_list_entry, fun):
                         return True
+                continue
             if isinstance(auth_list_entry, dict):
                 if len(auth_list_entry) != 1:
                     log.info('Malformed ACL: {0}'.format(auth_list_entry))
