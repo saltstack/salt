@@ -30,6 +30,7 @@ state.__salt__ = {}
 state.__context__ = {}
 state.__opts__ = {}
 state.__pillar__ = {}
+state.__grains__ = {}
 
 
 class MockState(object):
