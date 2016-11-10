@@ -124,6 +124,9 @@ def _format_host(host, data):
                 data,
                 key=lambda k: data[k].get('__run_num__', 0)):
             ret = data[tname]
+            # An exception was returned in the comment
+            if isinstance(ret['comment'], Exception):
+                raise ret['comment']
             # Increment result counts
             rcounts.setdefault(ret['result'], 0)
             rcounts[ret['result']] += 1
