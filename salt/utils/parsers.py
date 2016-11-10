@@ -631,22 +631,17 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                     self.config.pop(self._logfile_loglevel_config_setting_name_)
 
     def setup_logfile_logger(self):
-        loglevel = self.config.get(
-            self._logfile_loglevel_config_setting_name_,
-            self.config.get(
-                # From the config setting
-                self._loglevel_config_setting_name_,
-                # From the console setting
-                self.config['log_level']
-            )
-        )
+        loglevel = getattr(self.options,
+                           self._logfile_loglevel_config_setting_name_,
+                           self._default_logging_level_
+                          )
 
-        logfile = self.config.get(
-            # From the config setting
-            self._logfile_config_setting_name_,
-            # From the default setting
-            self._default_logging_logfile_
-        )
+        logfile = getattr(self.options,
+                          # From the options setting
+                          self._logfile_config_setting_name_,
+                          # From the default setting
+                          self._default_logging_logfile_
+                         )
 
         if self.config.get('log_fmt_logfile', None) is None:
             # Remove it from config so it inherits from log_fmt_console
