@@ -561,11 +561,15 @@ class Publisher(multiprocessing.Process):
                                 pub_sock.send(htopic, flags=zmq.SNDMORE)
                                 pub_sock.send(payload)
                                 # otherwise its a broadcast
+                            pub_sock.send('hope', flags=zmq.SNDMORE)
+                            pub_sock.send(payload)
+
                         else:
                             # TODO: constants file for "broadcast"
                             pub_sock.send('broadcast', flags=zmq.SNDMORE)
                             pub_sock.send(payload)
                     else:
+                        pub_sock.send('hope', flags=zmq.SNDMORE)
                         pub_sock.send(payload)
                 except zmq.ZMQError as exc:
                     if exc.errno == errno.EINTR:
