@@ -1126,7 +1126,7 @@ def running(name,
         # then assume it already exists.
     )
 
-    is_running = __salt__['docker.is_running'](container)
+    is_running = __salt__['docker.is_running'](name)
 
     # if container exists but is not started, try to start it
     if already_exists_with_same_image and (is_running or not start):
