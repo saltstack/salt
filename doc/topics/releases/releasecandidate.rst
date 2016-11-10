@@ -126,4 +126,4 @@ Then install salt using the following command:
 
 .. code-block:: bash
 
-    sudo pip install salt==v2016.11.0rc2
+    sudo pip install salt==2016.11.0rc2
