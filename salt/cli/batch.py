@@ -208,11 +208,11 @@ class Batch(object):
                                 break
                             continue
                         if self.opts.get('raw'):
-                            parts.update({part['id']: part})
-                            if part['id'] in minion_tracker[queue]['minions']:
-                                minion_tracker[queue]['minions'].remove(part['id'])
+                            parts.update({part['data']['id']: part})
+                            if part['data']['id'] in minion_tracker[queue]['minions']:
+                                minion_tracker[queue]['minions'].remove(part['data']['id'])
                             else:
-                                print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(part['id']))
+                                print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(part['data']['id']))
                         else:
                             parts.update(part)
                             for id in part.keys():
