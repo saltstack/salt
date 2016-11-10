@@ -224,6 +224,7 @@ class Batch(object):
                     if bwait:
                         wait.append(datetime.now() + timedelta(seconds=bwait))
                 if self.opts.get('raw'):
+                    ret[minion] = data
                     yield data
                 elif self.opts.get('failhard'):
                     # When failhard is passed, we need to return all data to include
