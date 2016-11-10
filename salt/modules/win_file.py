@@ -37,6 +37,7 @@ import salt.ext.six as six  # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.utils.win_dacl
 # pylint: enable=W0611
 
 # Import third party libs
@@ -53,7 +54,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
-        directory_exists, get_managed, mkdir, makedirs_, makedirs_perms,
+        directory_exists, get_managed,
         check_managed, check_managed_changes, check_perms, source_list,
         touch, append, contains, contains_regex, get_source_sum,
         contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
@@ -1041,7 +1042,7 @@ def set_mode(path, mode):
     if __opts__.get('fun', '') == func_name:
         log.info('The function {0} should not be used on Windows systems; '
                  'see function docs for details. The value returned is '
-                 'always None.'.format(func_name))
+                 'always None. Use set_perms instead.'.format(func_name))
 
     return get_mode(path)
 
@@ -1325,3 +1326,307 @@ def readlink(path):
         raise
 
     return target
+
+
+def mkdir(path,
+          owner=None,
+          grant_perms=None,
+          deny_perms=None,
+          inheritance=None):
+    '''
+    Ensure that the directory is available.
+
+    Args:
+
+        path (str): The full path to the directory.
+
+        owner (str): The owner of the directory. If not passed, it will be the
+        account that created the directory, likely SYSTEM
+
+        grant_perms (dict): A dictionary containing the user/group and the basic
+        permission to grant, ie: ``{'user': 'basic_permission'}``. To set
+        advanced permissions use a dict containing the user/group and a list of
+        advanced permissions to apply, ie:
+        ``{'user': ['adv_perm1', 'adv_perm2']}``
+
+        deny_perms (dict): A dictionary containing the user/group and
+        permissions to deny. Use the same format used for the ``grant_perms``
+        parameter. Remember, deny permissions supersede grant permissions.
+
+        inheritance (bool): If True the object will inherit permissions from the
+        parent, if False, inheritance will be disabled. Inheritance setting will
+        not apply to parent directories if they must be created
+
+    Returns:
+        bool: True if successful, otherwise raise an error
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # To grant the 'Users' group 'read & execute' permissions.
+        salt '*' file.mkdir C:\\Temp\\ Administrators "{'Users': 'read_execute'}"
+
+        # Locally using salt call
+        salt-call file.mkdir C:\\Temp\\ Administrators "{'Users': 'read_execute'}"
+
+        # Specify advanced attributes with a list
+        salt '*' file.mkdir C:\\Temp\\ Administrators "{'jsnuffy': ['read_attributes', 'read_ea']}"
+    '''
+    # Make sure the drive is valid
+    if not os.path.isdir(os.path.splitdrive(path)[0]):
+        raise CommandExecutionError('Drive {0} is not mapped'.format(drive))
+
+    path = os.path.expanduser(path)
+    path = os.path.expandvars(path)
+
+    if not os.path.isdir(path):
+
+        # Make the directory
+        os.mkdir(path)
+        set_perms(path, owner, grant_perms, deny_perms, inheritance)
+
+    return True
+
+
+def makedirs(path,
+             owner=None,
+             grant_perms=None,
+             deny_perms=None,
+             inheritance=None):
+    '''
+    Ensure that the parent directory containing this path is available.
+
+    Args:
+
+        path (str): The full path to the directory.
+
+        owner (str): The owner of the directory. If not passed, it will be the
+        account that created the directly, likely SYSTEM
+
+        grant_perms (dict): A dictionary containing the user/group and the basic
+        permission to grant, ie: ``{user: basic_permission}``. To set advanced
+        permissions use a dict containing the user/group and a list of advanced
+        permissions to apply, ie: ``{user: [adv_perm1, adv_perm2]}``
+
+        deny_perms (dict): A dictionary containing the user/group and
+        permissions to deny. Use the same format used for the ``grant_perms``
+        parameter. Remember, deny permissions supersede grant permissions.
+
+        inheritance (bool): If True the object will inherit permissions from the
+        parent, if False, inheritance will be disabled. Inheritance setting will
+        not apply to parent directories if they must be created
+
+    .. note::
+
+        The path must end with a trailing slash otherwise the directory(s) will
+        be created up to the parent directory. For example if path is
+        ``C:\\temp\\test``, then it would be treated as ``C:\\temp\\`` but if
+        the path ends with a trailing slash like ``C:\\temp\\test\\``, then it
+        would be treated as ``C:\\temp\\test\\``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # To grant the 'Users' group 'read & execute' permissions.
+        salt '*' file.makedirs C:\\Temp\\ Administrators "{'Users': 'read_execute'}"
+
+        # Locally using salt call
+        salt-call file.makedirs C:\\Temp\\ Administrators "{'Users': 'read_execute'}"
+
+        # Specify advanced attributes with a list
+        salt '*' file.makedirs C:\\Temp\\ Administrators "{'jsnuffy': ['read_attributes', 'read_ea']}"
+
+    '''
+    path = os.path.expanduser(path)
+
+    # walk up the directory structure until we find the first existing
+    # directory
+    dirname = os.path.normpath(os.path.dirname(path))
+
+    if os.path.isdir(dirname):
+        # There's nothing for us to do
+        msg = 'Directory \'{0}\' already exists'.format(dirname)
+        log.debug(msg)
+        return msg
+
+    if os.path.exists(dirname):
+        msg = 'The path \'{0}\' already exists and is not a directory'.format(
+            dirname
+        )
+        log.debug(msg)
+        return msg
+
+    directories_to_create = []
+    while True:
+        if os.path.isdir(dirname):
+            break
+
+        directories_to_create.append(dirname)
+        current_dirname = dirname
+        dirname = os.path.dirname(dirname)
+
+        if current_dirname == dirname:
+            raise SaltInvocationError(
+                'Recursive creation for path \'{0}\' would result in an '
+                'infinite loop. Please use an absolute path.'.format(dirname)
+            )
+
+    # create parent directories from the topmost to the most deeply nested one
+    directories_to_create.reverse()
+    for directory_to_create in directories_to_create:
+        # all directories have the user, group and mode set!!
+        log.debug('Creating directory: %s', directory_to_create)
+        mkdir(path, owner, grant_perms, deny_perms, inheritance)
+
+
+def makedirs_perms(path,
+                   owner=None,
+                   grant_perms=None,
+                   deny_perms=None,
+                   inheritance=None):
+    '''
+    Set owner and permissions for each directory created.
+
+    Args:
+
+        path (str): The full path to the directory.
+
+        owner (str): The owner of the directory. If not passed, it will be the
+        account that created the directory, likely SYSTEM
+
+        grant_perms (dict): A dictionary containing the user/group and the basic
+        permission to grant, ie: ``{'user': 'basic_permission'}``. To set
+        advanced permissions use a dict containing the user/group and a list of
+        advanced permissions to apply, ie:
+        ``{'user': ['adv_perm1', 'adv_perm2']}``
+
+        deny_perms (dict): A dictionary containing the user/group and
+        permissions to deny. Use the same format used for the ``grant_perms``
+        parameter. Remember, deny permissions supersede grant permissions.
+
+        inheritance (bool): If True the object will inherit permissions from the
+        parent, if False, inheritance will be disabled. Inheritance setting will
+        not apply to parent directories if they must be created
+
+    Returns:
+        bool: True if successful, otherwise raise an error
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # To grant the 'Users' group 'read & execute' permissions.
+        salt '*' file.makedirs_perms C:\\Temp\\ Administrators "{'Users': 'read_execute'}"
+
+        # Locally using salt call
+        salt-call file.makedirs_perms C:\\Temp\\ Administrators "{'Users': 'read_execute'}"
+
+        # Specify advanced attributes with a list
+        salt '*' file.makedirs_perms C:\\Temp\\ Administrators "{'jsnuffy': ['read_attributes', 'read_ea']}"
+    '''
+    # Expand any environment variables
+    path = os.path.expanduser(path)
+    path = os.path.expandvars(path)
+
+    # Get parent directory (head)
+    head, tail = os.path.split(path)
+
+    # If tail is empty, split head
+    if not tail:
+        head, tail = os.path.split(head)
+
+    # If head and tail are defined and head is not there, recurse
+    if head and tail and not os.path.exists(head):
+        try:
+            # Create the directory here, set inherited True because this is a
+            # parent directory, the inheritance setting will only apply to the
+            # child directory
+            makedirs_perms(head, owner, grant_perms, deny_perms, True)
+        except OSError as exc:
+            # be happy if someone already created the path
+            if exc.errno != errno.EEXIST:
+                raise
+        if tail == os.curdir:  # xxx/newdir/. exists if xxx/newdir exists
+            return {}
+
+    # Make the directory
+    mkdir(path, owner, grant_perms, deny_perms, inheritance)
+
+    return True
+
+
+def check_perms(path,
+                ret=None,
+                owner=None,
+                grant_perms=None,
+                deny_perms=None,
+                inheritance=None,
+                follow_symlinks=False):
+    path = os.path.expanduser(path)
+
+    if not ret:
+        ret = {'name': name,
+               'changes': {},
+               'comment': [],
+               'result': True}
+        orig_comment = ''
+    else:
+        orig_comment = ret['comment']
+        ret['comment'] = []
+
+    # Check owner
+    if owner:
+        if is_link(path) and not follow_symlinks:
+            pass
+        else:
+            owner = salt.utils.win_dacl.get_name(owner)
+            current_owner = salt.utils.win_dacl.get_owner(name)
+            if owner != current_owner:
+                if __opts__['test'] is True:
+                    ret['changes']['owner'] = owner
+                else:
+                    try:
+                        salt.utils.win_dacl.set_owner(path, owner)
+                        ret['changes']['owner'] = owner
+                    except CommandExecutionError:
+                        ret['result'] = False
+                        ret['comment'].append(
+                            'Failed to change owner to "{0}"'.format(owner))
+
+    # Check permissions
+
+
+def set_perms(path,
+              owner=None,
+              grant_perms=None,
+              deny_perms=None,
+              inheritance=None):
+
+    # Set the owner if passed
+    if owner is not None:
+        salt.utils.win_dacl.set_owner(path, owner)
+
+    # Get the DACL for the directory
+    dacl = salt.utils.win_dacl.Dacl(path)
+
+    # Set 'grant' perms if any
+    if grant_perms is not None:
+        ret['grant'] = {}
+        for user in grant_perms:
+            if dacl.add_ace(user[0], 'grant', user[1]):
+                ret['grant'][user[0]] = user[1]
+
+    # Set 'deny' perms if any
+    if deny_perms is not None:
+        ret['deny'] = {}
+        for user in deny_perms:
+            if dacl.add_ace(user[0], 'deny', user[1]):
+                ret['deny'][user[0]] = user[1]
+
+    # Save the DACL, setting the inheritance
+    if dacl.save(path, not inheritance):
+        return ret
+
+    return {}
