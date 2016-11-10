@@ -26,6 +26,7 @@ from salt.utils.decorators import Depends
 from salt.utils import is_proxy
 import salt.utils.context
 import salt.utils.lazy
+import salt.utils.odict
 import salt.utils.event
 import salt.utils.odict
 
