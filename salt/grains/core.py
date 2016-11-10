@@ -20,7 +20,9 @@ import re
 import platform
 import logging
 import locale
+import uuid
 import salt.exceptions
+from salt.ext.six.moves import range
 
 __proxyenabled__ = ['*']
 __FQDN__ = None
@@ -874,6 +876,52 @@ def _ps(osdata):
     return grains
 
 
+def _clean_value(key, val):
+    '''
+    Clean out well-known bogus values.
+    If it isn't clean (for example has value 'None'), return None.
+    Otherwise, return the original value.
+
+    NOTE: This logic also exists in the smbios module. This function is
+          for use when not using smbios to retrieve the value.
+    '''
+    if (val is None or
+            not len(val) or
+            re.match('none', val, flags=re.IGNORECASE)):
+        return None
+    elif 'uuid' in key:
+        # Try each version (1-5) of RFC4122 to check if it's actually a UUID
+        for uuidver in range(1, 5):
+            try:
+                uuid.UUID(val, version=uuidver)
+                return val
+            except ValueError:
+                continue
+        log.trace('HW {0} value {1} is an invalid UUID'.format(key, val.replace('\n', ' ')))
+        return None
+    elif re.search('serial|part|version', key):
+        # 'To be filled by O.E.M.
+        # 'Not applicable' etc.
+        # 'Not specified' etc.
+        # 0000000, 1234567 etc.
+        # begone!
+        if (re.match(r'^[0]+$', val) or
+                re.match(r'[0]?1234567[8]?[9]?[0]?', val) or
+                re.search(r'sernum|part[_-]?number|specified|filled|applicable', val, flags=re.IGNORECASE)):
+            return None
+    elif re.search('asset|manufacturer', key):
+        # AssetTag0. Manufacturer04. Begone.
+        if re.search(r'manufacturer|to be filled|available|asset|^no(ne|t)', val, flags=re.IGNORECASE):
+            return None
+    else:
+        # map unspecified, undefined, unknown & whatever to None
+        if (re.search(r'to be filled', val, flags=re.IGNORECASE) or
+                re.search(r'un(known|specified)|no(t|ne)? (asset|provided|defined|available|present|specified)',
+                    val, flags=re.IGNORECASE)):
+            return None
+    return val
+
+
 def _windows_platform_data():
     '''
     Use the platform module for as much as we can.
@@ -949,23 +997,23 @@ def _windows_platform_data():
             service_pack = ''.join(['SP', str(info['ServicePackMajor'])])
 
         grains = {
-            'kernelrelease': osinfo.Version,
-            'osversion': osinfo.Version,
-            'osrelease': os_release,
-            'osservicepack': service_pack,
-            'osmanufacturer': osinfo.Manufacturer,
-            'manufacturer': systeminfo.Manufacturer,
-            'productname': systeminfo.Model,
+            'kernelrelease': _clean_value('kernelrelease', osinfo.Version),
+            'osversion': _clean_value('osversion', osinfo.Version),
+            'osrelease': _clean_value('osrelease', os_release),
+            'osservicepack': _clean_value('osservicepack', service_pack),
+            'osmanufacturer': _clean_value('osmanufacturer', osinfo.Manufacturer),
+            'manufacturer': _clean_value('manufacturer', systeminfo.Manufacturer),
+            'productname': _clean_value('productname', systeminfo.Model),
             # bios name had a bunch of whitespace appended to it in my testing
             # 'PhoenixBIOS 4.0 Release 6.0     '
-            'biosversion': biosinfo.Name.strip(),
-            'serialnumber': biosinfo.SerialNumber,
-            'osfullname': osinfo.Caption,
-            'timezone': timeinfo.Description,
-            'windowsdomain': systeminfo.Domain,
+            'biosversion': _clean_value('biosversion', biosinfo.Name.strip()),
+            'serialnumber': _clean_value('serialnumber', biosinfo.SerialNumber),
+            'osfullname': _clean_value('osfullname', osinfo.Caption),
+            'timezone': _clean_value('timezone', timeinfo.Description),
+            'windowsdomain': _clean_value('windowsdomain', systeminfo.Domain),
             'motherboard': {
-                'productname': motherboard['product'],
-                'serialnumber': motherboard['serial'],
+                'productname': _clean_value('motherboard.productname', motherboard['product']),
+                'serialnumber': _clean_value('motherboard.serialnumber', motherboard['serial']),
             }
         }
 
@@ -1005,13 +1053,17 @@ def _osx_platform_data():
     for line in hardware.splitlines():
         field_name, _, field_val = line.partition(': ')
         if field_name.strip() == "Model Name":
-            grains['model_name'] = field_val
+            key = 'model_name'
+            grains[key] = _clean_value(key, field_val)
         if field_name.strip() == "Boot ROM Version":
-            grains['boot_rom_version'] = field_val
+            key = 'boot_rom_version'
+            grains[key] = _clean_value(key, field_val)
         if field_name.strip() == "SMC Version (system)":
-            grains['smc_version'] = field_val
+            key = 'smc_version'
+            grains[key] = _clean_value(key, field_val)
         if field_name.strip() == "Serial Number (system)":
-            grains['system_serialnumber'] = field_val
+            key = 'system_serialnumber'
+            grains[key] = _clean_value(key, field_val)
 
     return grains
 
@@ -1932,7 +1984,8 @@ def _hw_data(osdata):
                 'uuid': 'smbios.system.uuid',
             }
             for key, val in six.iteritems(fbsd_hwdata):
-                grains[key] = __salt__['cmd.run']('{0} {1}'.format(kenv, val))
+                value = __salt__['cmd.run']('{0} {1}'.format(kenv, val))
+                grains[key] = _clean_value(key, value)
     elif osdata['kernel'] == 'OpenBSD':
         sysctl = salt.utils.which('sysctl')
         hwdata = {'biosversion': 'hw.version',
@@ -1943,7 +1996,7 @@ def _hw_data(osdata):
         for key, oid in six.iteritems(hwdata):
             value = __salt__['cmd.run']('{0} -n {1}'.format(sysctl, oid))
             if not value.endswith(' value is not available'):
-                grains[key] = value
+                grains[key] = _clean_value(key, value)
     elif osdata['kernel'] == 'NetBSD':
         sysctl = salt.utils.which('sysctl')
         nbsd_hwdata = {
@@ -1957,7 +2010,7 @@ def _hw_data(osdata):
         for key, oid in six.iteritems(nbsd_hwdata):
             result = __salt__['cmd.run_all']('{0} -n {1}'.format(sysctl, oid))
             if result['retcode'] == 0:
-                grains[key] = result['stdout']
+                grains[key] = _clean_value(key, result['stdout'])
     elif osdata['kernel'] == 'Darwin':
         grains['manufacturer'] = 'Apple Inc.'
         sysctl = salt.utils.which('sysctl')
@@ -1965,7 +2018,7 @@ def _hw_data(osdata):
         for key, oid in hwdata.items():
             value = __salt__['cmd.run']('{0} -b {1}'.format(sysctl, oid))
             if not value.endswith(' is invalid'):
-                grains[key] = value
+                grains[key] = _clean_value(key, value)
 
     return grains
 
