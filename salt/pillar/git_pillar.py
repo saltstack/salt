@@ -125,6 +125,14 @@ The corresponding Pillar top file would look like this:
       '*':
         - bar
 
+.. note::
+    This feature was unintentionally omitted when git_pillar was rewritten for
+    the 2015.8.0 release. It was added again in the 2016.3.4 release, but it
+    has changed slightly in that release. On Salt masters running 2015.8.0
+    through 2016.3.3, this feature can only be accessed using the legacy config
+    described above. For 2016.3.4 and later, refer to explanation of the
+    ``__env__`` parameter in the below section.
+
 .. _git-pillar-2015-8-0-and-later:
 
 Configuring git_pillar for Salt releases 2015.8.0 and later
@@ -203,6 +211,36 @@ per-remote parameter:
       - git:
         - production https://gitserver/git-pillar.git:
           - env: prod
+
+If ``__env__`` is specified as the branch name, then git_pillar will use the
+branch specified by :conf_master:`git_pillar_base`:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git:
+        - __env__ https://gitserver/git-pillar.git:
+          - root: pillar
+
+The corresponding Pillar top file would look like this:
+
+.. code-block:: yaml
+
+    {{env}}:
+      '*':
+        - bar
+
+.. note::
+    This feature was unintentionally omitted when git_pillar was rewritten for
+    the 2015.8.0 release. It was added again in the 2016.3.4 release, but it
+    has changed slightly in that release. On Salt masters running 2015.8.0
+    through 2016.3.3, this feature can only be accessed using the legacy config
+    in the previous section of this page.
+
+    For 2016.3.4 and later, the above example is accurate, and the value
+    replaced by ``__env__`` is :conf_master:`git_pillar_base`, while the legacy
+    config's version of this feature replaces ``__env__`` with
+    :conf_master:`gitfs_base`.
 
 With the addition of pygit2_ support, git_pillar can now interact with
 authenticated remotes. Authentication works just like in gitfs (as outlined in
