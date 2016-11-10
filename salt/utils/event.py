@@ -571,7 +571,8 @@ class SaltEvent(object):
                   use_pending=None,
                   pending_tags=None,
                   match_type=None,
-                  no_block=False):
+                  no_block=False,
+                  auto_reconnect=False):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
@@ -635,7 +636,20 @@ class SaltEvent(object):
         ret = self._check_pending(tag, match_func)
         if ret is None:
             with salt.utils.async.current_ioloop(self.io_loop):
-                ret = self._get_event(wait, tag, match_func, no_block)
+                if auto_reconnect:
+                    raise_errors = self.raise_errors
+                    self.raise_errors = True
+                    while True:
+                        try:
+                            ret = self._get_event(wait, tag, match_func, no_block)
+                            break
+                        except tornado.iostream.StreamClosedError:
+                            self.close_pub()
+                            self.connect_pub(timeout=wait)
+                            continue
+                    self.raise_errors = raise_errors
+                else:
+                    ret = self._get_event(wait, tag, match_func, no_block)
 
         if ret is None or full:
             return ret
@@ -671,12 +685,13 @@ class SaltEvent(object):
         mtag, data = self.unpack(raw, self.serial)
         return {'data': data, 'tag': mtag}
 
-    def iter_events(self, tag='', full=False, match_type=None):
+    def iter_events(self, tag='', full=False, match_type=None, auto_reconnect=False):
         '''
         Creates a generator that continuously listens for events
         '''
         while True:
-            data = self.get_event(tag=tag, full=full, match_type=match_type)
+            data = self.get_event(tag=tag, full=full, match_type=match_type,
+                                  auto_reconnect=auto_reconnect)
             if data is None:
                 continue
             yield data

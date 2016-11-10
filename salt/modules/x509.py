@@ -136,20 +136,25 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
         raise salt.exceptions.SaltInvocationError(
             'value must be precomputed hash')
 
-    lhash = M2Crypto.m2.x509v3_lhash()  # pylint: disable=no-member
-    ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)  # pylint: disable=no-member
-    # ctx not zeroed
-    _fix_ctx(ctx, issuer)
-
-    # pylint: disable=no-member
-    x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value)
-    # pylint: enable=no-member
-    # ctx,lhash freed
+    try:
+        ctx = M2Crypto.m2.x509v3_set_nconf()
+        _fix_ctx(ctx, issuer)
+        if ctx is None:
+            raise MemoryError(
+                'Not enough memory when creating a new X509 extension')
+        x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(None, ctx, name, value)
+        lhash = None
+    except AttributeError:
+        lhash = M2Crypto.m2.x509v3_lhash()                      # pylint: disable=no-member
+        ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)          # pylint: disable=no-member
+        #ctx not zeroed
+        _fix_ctx(ctx, issuer)
+        x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value)  # pylint: disable=no-member
+    #ctx,lhash freed
 
     if x509_ext_ptr is None:
-        raise salt.exceptions.SaltInvocationError(
-            'null pointer returned from '
-            'x509v3_ext_conf for {0}="{1}"'.format(name, value))
+        raise M2Crypto.X509.X509Error(
+            "Cannot create X509_Extension with name '{0}' and value '{1}'".format(name, value))
     x509_ext = M2Crypto.X509.X509_Extension(x509_ext_ptr, _pyfree)
     x509_ext.set_critical(critical)
     return x509_ext
