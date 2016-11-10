@@ -109,7 +109,7 @@ class SSHClient(object):
             final.update(ret)
         return final
 
-    def cmd_sync(self, low):
+    def cmd_sync(self, low, **kwargs):
         '''
         Execute a salt-ssh call synchronously.
 
