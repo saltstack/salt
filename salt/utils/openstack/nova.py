@@ -272,37 +272,18 @@ class SaltNova(object):
             self.client_kwargs = self.kwargstruct.__dict__
 
         # Requires novaclient version >= 2.6.1
-        version = str(kwargs.get('version', 2))
+        self.version = str(kwargs.get('version', 2))
 
         self.client_kwargs = sanatize_novaclient(self.client_kwargs)
         options = loader.load_from_options(**self.kwargs)
-        session = keystoneauth1.session.Session(auth=options)
-        conn = client.Client(version=version, session=session, **self.client_kwargs)
+        self.session = keystoneauth1.session.Session(auth=options)
+        conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
         self.kwargs['auth_token'] = conn.client.session.get_token()
         self.catalog = conn.client.session.get('/auth/catalog', endpoint_filter={'service_type': 'identity'}).json().get('catalog', [])
-
-        if region_name is not None:
-            servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
-            self.kwargs['bypass_url'] = get_entry_multi(
-                servers_endpoints,
-                [('region', region_name), ('interface', 'public')]
-            )['url']
-
-        self.compute_conn = client.Client(version=version, session=session, **self.client_kwargs)
-
-        volume_endpoints = get_entry(self.catalog, 'type', 'volume', raise_error=False).get('endpoints', {})
-        if volume_endpoints:
-            if region_name is not None:
-                self.kwargs['bypass_url'] = get_entry_multi(
-                    volume_endpoints,
-                    [('region', region_name), ('interface', 'public')]
-                )['url']
-
-            self.volume_conn = client.Client(version=version, session=session, **self.client_kwargs)
-            if hasattr(self, 'extensions'):
-                self.expand_extensions()
+        if conn.client.get_endpoint(service_type='identity').endswith('v3'):
+            self._v3_setup(region_name)
         else:
-            self.volume_conn = None
+            self._v2_setup(region_name)
 
     def _old_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, **kwargs):
         self.kwargs = kwargs.copy()
@@ -358,6 +339,33 @@ class SaltNova(object):
         self.kwargs['auth_token'] = conn.client.auth_token
         self.catalog = conn.client.service_catalog.catalog['access']['serviceCatalog']
 
+        self._v2_setup(region_name)
+
+    def _v3_setup(self, region_name):
+        if region_name is not None:
+            servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
+            self.kwargs['bypass_url'] = get_entry_multi(
+                servers_endpoints,
+                [('region', region_name), ('interface', 'public')]
+            )['url']
+
+        self.compute_conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
+
+        volume_endpoints = get_entry(self.catalog, 'type', 'volume', raise_error=False).get('endpoints', {})
+        if volume_endpoints:
+            if region_name is not None:
+                self.kwargs['bypass_url'] = get_entry_multi(
+                    volume_endpoints,
+                    [('region', region_name), ('interface', 'public')]
+                )['url']
+
+            self.volume_conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
+            if hasattr(self, 'extensions'):
+                self.expand_extensions()
+        else:
+            self.volume_conn = None
+
+    def _v2_setup(self, region_name):
         if region_name is not None:
             servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
             self.kwargs['bypass_url'] = get_entry(
