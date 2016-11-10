@@ -668,12 +668,13 @@ def get_source_sum(file_name='',
             if hsum_len not in HASHES_REVMAP:
                 _invalid_source_hash_format()
             elif hsum_len != HASHES[ret['hash_type']]:
-                msg = (
+                raise CommandExecutionError(
                     'Invalid length ({0}) for hash type \'{1}\'. Either '
                     'remove the hash type and simply use \'{2}\' as the '
                     'source_hash, or change the hash type to \'{3}\''.format(
                         hsum_len,
                         ret['hash_type'],
+                        ret['hsum'],
                         HASHES_REVMAP[hsum_len],
                     )
                 )
