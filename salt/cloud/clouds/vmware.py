@@ -376,7 +376,7 @@ def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_ty
     return network_spec
 
 
-def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type, container_ref=None):
+def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type, mac, container_ref=None):
     random_key = randint(-4099, -4000)
 
     adapter_type.strip().lower()
@@ -422,6 +422,9 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
                                                                                           switch_type)
         raise SaltCloudSystemExit(err_msg)
 
+    if mac != '':
+        network_spec.device.addressType = 'assigned'
+        network_spec.device.macAddress = mac
     network_spec.device.key = random_key
     network_spec.device.deviceInfo = vim.Description()
     network_spec.device.deviceInfo.label = network_adapter_label
@@ -738,8 +741,9 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
             network_name = devices['network'][network_adapter_label]['name']
             adapter_type = devices['network'][network_adapter_label]['adapter_type'] if 'adapter_type' in devices['network'][network_adapter_label] else ''
             switch_type = devices['network'][network_adapter_label]['switch_type'] if 'switch_type' in devices['network'][network_adapter_label] else ''
+            mac = devices['network'][network_adapter_label]['mac'] if 'mac' in devices['network'][network_adapter_label] else ''
             # create the network adapter
-            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type, container_ref)
+            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type, mac, container_ref)
             adapter_mapping = _set_network_adapter_mapping(devices['network'][network_adapter_label])
             device_specs.append(network_spec)
             nics_map.append(adapter_mapping)

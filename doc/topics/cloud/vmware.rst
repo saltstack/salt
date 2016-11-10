@@ -142,6 +142,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             name: 10.30.40-500-Dev-DHCP
             adapter_type: e1000
             switch_type: distributed
+            mac: '00:16:3e:e8:19:0f'
           Network adapter 3:
             name: 10.40.50-600-Prod
             adapter_type: vmxnet3
@@ -315,6 +316,10 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         domain
             Enter the domain to be used with the network adapter. If the network
             specified is DHCP enabled, you do not have to specify this.
+
+        mac
+            Enter the MAC for this network adapter. If not specified an address
+            will be selected automatically.
 
     scsi
         Enter the SCSI controller specification here. If the SCSI controller doesn\'t exist,
