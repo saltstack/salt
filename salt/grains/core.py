@@ -22,6 +22,7 @@ import logging
 import locale
 import uuid
 import salt.exceptions
+from salt.ext.six.moves import range
 
 __proxyenabled__ = ['*']
 __FQDN__ = None
