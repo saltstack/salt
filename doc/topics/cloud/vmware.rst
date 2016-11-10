@@ -657,5 +657,4 @@ can be set in the cloud profile as shown in example below:
             size: 42
 
           Hard disk 2:
-            size: 15
             mode: 'independent_nonpersistent'
