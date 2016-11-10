@@ -905,30 +905,44 @@ def get_sid_string(principal):
         raise CommandExecutionError('Invalid principal {0}'.format(principal))
 
 
-def get_name(sid):
+def get_name(principal):
     '''
-    Gets the name from the specified SID. Opposite of get_sid
+    Gets the name from the specified principal.
 
     Args:
-        sid (str): The SID for which to find the name
+        principal (str): Find the Normalized name based on this. Can be a PySID
+        object, a SID string, or a user name in any capitalization.
 
     Returns:
-        str: The name that corresponds to the passed SID
+        str: The name that corresponds to the passed principal
 
     Usage:
 
     .. code-block:: python
 
         salt.utils.win_dacl.get_name('S-1-5-32-544')
+        salt.utils.win_dacl.get_name('adminisTrators')
     '''
-    try:
-        sid_obj = win32security.ConvertStringSidToSid(sid)
-        name = win32security.LookupAccountSid(None, sid_obj)[0]
-    except pywintypes.error as exc:
-        raise CommandExecutionError(
-            'User {0} found: {1}'.format(sid, exc[2]))
+    # Assume PySID object
+    sid_obj = principal
 
-    return name
+    # Name
+    try:
+        sid_obj = win32security.LookupAccountName(None, principal)[0]
+    except (pywintypes.error, TypeError):
+        pass
+
+    # String SID
+    try:
+        sid_obj = win32security.ConvertStringSidToSid(principal)
+    except (pywintypes.error, TypeError):
+        pass
+
+    try:
+        return win32security.LookupAccountSid(None, sid_obj)[0]
+    except TypeError:
+        raise CommandExecutionError(
+            'Could not find User for {0}'.format(principal))
 
 
 def get_owner(obj_name):
