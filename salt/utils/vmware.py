@@ -77,7 +77,7 @@ from __future__ import absolute_import
 import atexit
 import logging
 import time
-from httplib import BadStatusLine
+from salt.ext.six.moves.http_client import BadStatusLine
 
 # Import Salt Libs
 from salt.exceptions import SaltSystemExit
