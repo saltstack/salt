@@ -313,7 +313,7 @@ class APIClient(object):
 
         If wait is 0 then block forever or until next event becomes available.
         '''
-        return self.event.get_event(wait=wait, tag=tag, full=full)
+        return self.event.get_event(wait=wait, tag=tag, full=full, auto_reconnect=True)
 
     def fire_event(self, data, tag):
         '''

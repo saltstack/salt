@@ -160,7 +160,7 @@ class SyncClientMixin(object):
 
         if timeout is None:
             timeout = self.opts.get('rest_timeout', 300)
-        ret = event.get_event(tag=ret_tag, full=True, wait=timeout)
+        ret = event.get_event(tag=ret_tag, full=True, wait=timeout, auto_reconnect=True)
         if ret is None:
             raise salt.exceptions.SaltClientTimeout(
                 "RunnerClient job '{0}' timed out".format(job['jid']),
