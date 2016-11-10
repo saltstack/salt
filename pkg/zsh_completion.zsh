@@ -1,7 +1,7 @@
 #compdef salt salt-call salt-cp
 
 local state line curcontext="$curcontext"
- 
+
 salt_dir="${$(python2 -c 'import salt; print(salt.__file__);')%__init__*}"
 _modules(){
     typeset -a _funcs
@@ -11,7 +11,7 @@ _modules(){
             continue
         fi
         mod=$(python2 -c "import salt.modules.$module as tmp; print(getattr(tmp, '__virtualname__', '$module'));")
-        for func in $(awk -F'[ (]' '/^def [^_]/ {print $2}' $file); do 
+        for func in $(awk -F'[ (]' '/^def [^_]/ {print $2}' $file); do
             _funcs+=($mod.$func)
         done
     done
