@@ -377,11 +377,15 @@ def sls(mods,
 
         This option starts a new thread for each queued state run so use this
         option sparingly.
-    saltenv : base
+    saltenv : None
         Specify a ``file_roots`` environment.
 
         .. versionchanged:: 0.17.0
             Argument name changed from ``env`` to ``saltenv``.
+        .. versionchanged:: 2014.7
+            Defaults to None. If no saltenv is specified, the minion config will
+            be checked for a saltenv and if found, it will be used. If none is found,
+            base will be used.
     concurrent:
         WARNING: This flag is potentially dangerous. It is designed
         for use when multiple state runs can safely be run at the same
@@ -410,6 +414,11 @@ def sls(mods,
         )
         # Backwards compatibility
         saltenv = env
+    if not saltenv:
+        if __opts__.get('saltenv', None):
+            saltenv = __opts__['saltenv']
+        else:
+            saltenv = 'base'
 
     if saltenv is None:
         saltenv = __opts__['environment'] or 'base'
