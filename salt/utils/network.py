@@ -121,12 +121,12 @@ def _generate_minion_id():
                 if len(a_nfo) > 3:
                     hosts.append(a_nfo[3])
         except socket.gaierror:
-            log.warning('Cannot resolve address {addr} info via socket: {message}'.format(
-                addr=hosts.first(), message=socket.gaierror)
+            log.warning('Cannot resolve address {0} info via socket: {1}'.format(
+                hosts.first(), socket.gaierror)
             )
     # Universal method for everywhere (Linux, Slowlaris, Windows etc)
     for f_name in ['/etc/hostname', '/etc/nodename', '/etc/hosts',
-                   r'{win}\system32\drivers\etc\hosts'.format(win=os.getenv('WINDIR'))]:
+                   r'{0}\system32\drivers\etc\hosts'.format(os.getenv('WINDIR'))]:
         if not os.path.exists(f_name):
             continue
         with salt.utils.fopen(f_name) as f_hdl:
