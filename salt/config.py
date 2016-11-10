@@ -49,7 +49,7 @@ FLO_DIR = os.path.join(
 VALID_OPTS = {
     'master': str,
     'master_port': int,
-    'master_type': str,
+    'master_type': 'standard',
     'master_finger': str,
     'master_shuffle': bool,
     'master_alive_interval': int,
