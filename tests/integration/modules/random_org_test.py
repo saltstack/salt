@@ -28,8 +28,11 @@ def check_status():
     '''
     Check the status of random.org
     '''
-    ret = salt.utils.http.query('https://api.random.org/', status=True)
-    return ret['status'] == 200
+    try:
+        ret = salt.utils.http.query('https://api.random.org/', status=True)
+        return ret['status'] == 200
+    except:  # pylint: disable=W0702
+        return False
 
 
 @skipIf(not check_status(), 'random.org is not available')
