@@ -15,6 +15,69 @@
 # limitations under the License.
 
 import types
+from abc import ABCMeta, abstractmethod
+import os
+
+
+class SchemaMethods(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def mod_repo(self, data):
+        '''
+        Structure returned for mod_repo method call. Should be implemented
+        :return:
+        '''
+        return {}
+
+
+class SchemaBase(object):
+    '''
+    Schema base class.
+    '''
+
+    def __init__(self, cls, ident):
+        # This loads the corresponding unifier to the caller module
+        self.unifier = cls.__dict__.get(os.path.basename(ident).split(".")[0].title(), Stub)()
+
+    def __getattr__(self, item):
+        '''
+        Load only what is really needed at the very moment.
+
+        :param item:
+        :return:
+        '''
+        # When this class is initialized, an unifier is set according to the module name.
+        # Example: for modules/zypper.py class is Zypper. For modules/yumpkg is Yumpkg etc.
+        # The usage of this class is simple:
+        #
+        #    foo = Package(__file__)     <-- this sets what module is calling it
+        #    return foo.mod_repo(output) <-- this wraps the output to the certain function
+
+        return getattr(self.unifier, item)
+
+    def __call__(self, function):
+        '''
+        Call as decorator.
+
+        :param args:
+        :param kwargs:
+        :return:
+        '''
+        def formatter(*args, **kwargs):
+            '''
+            Formatter function that wraps the output.
+
+            :param args:
+            :param kwargs:
+            :return:
+            '''
+            for k_arg in kwargs.copy().keys():
+                if k_arg.startswith('__'):
+                    kwargs.pop(k_arg)
+            return getattr(self.unifier, function.func_name)(function(*args, **kwargs))
+
+        return formatter
 
 
 class Stub(object):

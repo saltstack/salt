@@ -17,45 +17,19 @@
 #
 # Unification of the returning data
 
-import os
-from abc import ABCMeta, abstractmethod
-from salt.utils.scm.common import Stub
+from salt.utils.scm.common import SchemaBase, SchemaMethods
 
 
-class PackageSchema(object):
+class PackageSchema(SchemaBase):
     '''
     Refers to the pkg.* module.
     '''
     DIST_SPECIFIC = 'distribution-specific'
 
     def __init__(self, ident):
-        # This loads the corresponding unifier to the caller module
-        self.unifier = PackageSchema.__dict__.get(os.path.basename(ident).split(".")[0].title(), Stub)()
+        SchemaBase.__init__(self, PackageSchema, ident=ident)
 
-    class _Methods(object):
-        __metaclass__ = ABCMeta
-
-        @abstractmethod
-        def mod_repo(self, data):
-            '''
-            Structure returned for mod_repo method call
-            :return:
-            '''
-            schema = {
-                'alias': str,
-                'baseurl': str,
-                'enabled': bool,
-                'refresh': bool,
-                'gpgcheck': bool,
-                'filename': str,
-                'name': str,
-                PackageSchema.DIST_SPECIFIC: {},  # Data only appears
-                                                  # in this particular distribution
-            }
-
-            return schema
-
-    class Yumpkg(_Methods):
+    class Yumpkg(SchemaMethods):
         '''
         Structure unifiers for Yum package manager (module/yumpkg.py)
         '''
@@ -78,7 +52,7 @@ class PackageSchema(object):
 
             return schema
 
-    class Zypper(_Methods):
+    class Zypper(SchemaMethods):
         '''
         Structure unifiers for Zypper package manager (modules/zypper.py)
         '''
@@ -98,48 +72,9 @@ class PackageSchema(object):
 
             return schema
 
-    class Aptpkg(_Methods):
+    class Aptpkg(SchemaMethods):
         '''
         Structure unifiers for Apt package manager (modules/aptpkg.py)
         '''
         def mod_repo(self, data):
             return data
-
-    def __getattr__(self, item):
-        '''
-        Load only what is really needed at the very moment.
-
-        :param item:
-        :return:
-        '''
-        # When this class is initialized, an unifier is set according to the module name.
-        # Example: for modules/zypper.py class is Zypper. For modules/yumpkg is Yumpkg etc.
-        # The usage of this class is simple:
-        #
-        #    foo = Package(__file__)     <-- this sets what module is calling it
-        #    return foo.mod_repo(output) <-- this wraps the output to the certain function
-
-        return getattr(self.unifier, item)
-
-    def __call__(self, function):
-        '''
-        Call as decorator.
-
-        :param args:
-        :param kwargs:
-        :return:
-        '''
-        def formatter(*args, **kwargs):
-            '''
-            Formatter function that wraps the output.
-
-            :param args:
-            :param kwargs:
-            :return:
-            '''
-            for k_arg in kwargs.copy().keys():
-                if k_arg.startswith('__'):
-                    kwargs.pop(k_arg)
-            return getattr(self.unifier, function.func_name)(function(*args, **kwargs))
-
-        return formatter
