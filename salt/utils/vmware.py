@@ -78,7 +78,7 @@ from __future__ import absolute_import
 import atexit
 import logging
 import time
-from salt.ext.six.moves.http_client import BadStatusLine
+from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
 
 # Import Salt Libs
 import salt.exceptions
