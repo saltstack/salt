@@ -50,7 +50,7 @@ __virtualname__ = 'django'
 
 def __virtual__():
     if not HAS_DJANGO:
-        return False
+        return False, 'Could not import django returner; django is not installed.'
     return True
 
 

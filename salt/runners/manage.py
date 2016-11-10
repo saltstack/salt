@@ -776,8 +776,8 @@ def bootstrap(version='develop',
             salt.client.ssh.SSH(client_opts).run()
         except SaltSystemExit as exc:
             if 'No hosts found with target' in str(exc):
-                log.warn('The host {0} was not found in the Salt SSH roster '
-                         'system. Attempting to log in without Salt SSH.')
+                log.warning('The host {0} was not found in the Salt SSH roster '
+                            'system. Attempting to log in without Salt SSH.')
                 salt.utils.warn_until('Oxygen', dep_warning)
                 ret = subprocess.call([
                     'ssh',

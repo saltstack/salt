@@ -420,6 +420,7 @@ def absent(name,
 
 def file(name,
          source_hash='',
+         source_hash_name=None,
          user='root',
          template=None,
          context=None,
@@ -446,6 +447,45 @@ def file(name,
         the source, or a source hash string. The source hash string is the
         hash algorithm followed by the hash of the file:
         ``md5=e138491e9d5b97023cea823fe17bac22``
+
+    source_hash_name
+        When ``source_hash`` refers to a hash file, Salt will try to find the
+        correct hash by matching the filename/URI associated with that hash. By
+        default, Salt will look for the filename being managed. When managing a
+        file at path ``/tmp/foo.txt``, then the following line in a hash file
+        would match:
+
+        .. code-block:: text
+
+            acbd18db4cc2f85cedef654fccc4a4d8    foo.txt
+
+        However, sometimes a hash file will include multiple similar paths:
+
+        .. code-block:: text
+
+            37b51d194a7513e45b56f6524f2d51f2    ./dir1/foo.txt
+            acbd18db4cc2f85cedef654fccc4a4d8    ./dir2/foo.txt
+            73feffa4b7f6bb68e44cf984c85f6e88    ./dir3/foo.txt
+
+        In cases like this, Salt may match the incorrect hash. This argument
+        can be used to tell Salt which filename to match, to ensure that the
+        correct hash is identified. For example:
+
+        .. code-block:: yaml
+
+            foo_crontab:
+              cron.file:
+                - name: https://mydomain.tld/dir2/foo.txt
+                - source_hash: https://mydomain.tld/hashes
+                - source_hash_name: ./dir2/foo.txt
+
+        .. note::
+            This argument must contain the full filename entry from the
+            checksum file, as this argument is meant to disambiguate matches
+            for multiple files that have the same basename. So, in the
+            example above, simply using ``foo.txt`` would not match.
+
+        .. versionadded:: 2016.3.5
 
     user
         The user to whom the crontab should be assigned. This defaults to
@@ -499,6 +539,7 @@ def file(name,
         fcm = __salt__['file.check_managed'](cron_path,
                                              source,
                                              source_hash,
+                                             source_hash_name,
                                              owner,
                                              group,
                                              mode,

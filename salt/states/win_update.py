@@ -46,6 +46,7 @@ features/states of updates available for configuring:
 
 The following example installs all driver updates that don't require a reboot:
 .. code-block:: yaml
+
     gryffindor:
       win_update.installed:
         - skips:
@@ -56,6 +57,7 @@ The following example installs all driver updates that don't require a reboot:
 To just update your windows machine, add this your sls:
 
 .. code-block:: yaml
+
     updates:
       win_update.installed
 '''

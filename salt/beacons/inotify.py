@@ -232,7 +232,7 @@ def beacon(config):
                                 if re.search(exclude.keys()[0], event.pathname):
                                     _append = False
                             except Exception:
-                                log.warn('Failed to compile regex: {0}'.format(exclude.keys()[0]))
+                                log.warning('Failed to compile regex: {0}'.format(exclude.keys()[0]))
                         else:
                             exclude = exclude.keys()[0]
                     elif '*' in exclude:

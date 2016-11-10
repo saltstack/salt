@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Management of the GPG keychains
-==============================
+===============================
 
 .. versionadded:: 2016.3.0
 

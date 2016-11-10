@@ -54,7 +54,7 @@ VERIFIED_VIEWS = False
 
 def __virtual__():
     if not HAS_DEPS:
-        return False
+        return False, 'Could not import couchbase returner; couchbase is not installed.'
 
     # try to load some faster json libraries. In order of fastest to slowest
     json = salt.utils.import_json()

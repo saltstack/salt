@@ -14,7 +14,7 @@ The Azure cloud module is used to control access to Microsoft Azure
     * ``apikey``
     * ``certificate_path``
     * ``subscription_id``
-    * ``requests_lib``
+    * ``backend``
 
     A Management Certificate (.pem and .crt files) must be created and the .pem
     file placed on the same machine that salt-cloud is run from. Information on
@@ -23,7 +23,7 @@ The Azure cloud module is used to control access to Microsoft Azure
 
     http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-management/
 
-    For users with Python < 2.7.9, requests_lib must currently be set to True.
+    For users with Python < 2.7.9, ``backend`` must currently be set to ``requests``.
 
 Example ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/azure.conf`` configuration:
@@ -404,7 +404,7 @@ def show_instance(name, call=None):
     try:
         __utils__['cloud.cache_node'](nodes[name], __active_provider_name__, __opts__)
     except TypeError:
-        log.warn('Unable to show cache node data; this may be because the node has been deleted')
+        log.warning('Unable to show cache node data; this may be because the node has been deleted')
     return nodes[name]
 
 
@@ -3401,6 +3401,14 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         'requests_lib',
         get_configured_provider(), __opts__, search_global=False
     )
+    if requests_lib is not None:
+        salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
+                                        'please change your config')
+
+    backend = config.get_cloud_config_value(
+        'backend',
+        get_configured_provider(), __opts__, search_global=False
+    )
     url = 'https://{management_host}/{subscription_id}/{path}'.format(
         management_host=management_host,
         subscription_id=subscription_id,
@@ -3422,6 +3430,7 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         text=True,
         cert=certificate_path,
         requests_lib=requests_lib,
+        backend=backend,
         decode=decode,
         decode_type='xml',
     )

@@ -57,6 +57,7 @@ start() {
     if [ -f $SUSE_RELEASE ]; then
         startproc -p /var/run/$SERVICE.pid $SALTMINION -d $MINION_ARGS
         rc_status -v
+        RETVAL=$?
     elif [ -e $DEBIAN_VERSION ]; then
         if [ -f $LOCKFILE ]; then
             echo -n "already started, lock file found"
@@ -114,6 +115,7 @@ case "$1" in
             echo -n "Checking for service salt-minion "
             checkproc $SALTMINION
             rc_status -v
+            RETVAL=$?
         elif [ -f $DEBIAN_VERSION ]; then
             if [ -f $LOCKFILE ]; then
                 RETVAL=0

@@ -198,7 +198,7 @@ The name of the service in which to create the VM. If this is not specified,
 then a service will be created with the same name as the VM.
 
 virtual_network_name
-------------
+--------------------
 Optional. The name of the virtual network for the VM to join. If this is not
 specified, then no virtual network will be joined.
 
@@ -710,7 +710,7 @@ set in the master's configuration file:
 
 .. code-block:: bash
 
-    requests_lib: True
+    backend: requests
 
 The following functions are available.
 

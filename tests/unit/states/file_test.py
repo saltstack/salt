@@ -890,7 +890,7 @@ class FileTestCase(TestCase):
                 ret.update({'comment': comt})
                 self.assertDictEqual(filestate.recurse(name, source), ret)
 
-                comt = ("The directory 'salt://code/flask' does not exist"
+                comt = ("The directory 'code/flask' does not exist"
                         " on the salt fileserver in saltenv 'base'")
                 ret.update({'comment': comt})
                 self.assertDictEqual(filestate.recurse(name, source), ret)

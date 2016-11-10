@@ -683,8 +683,7 @@ class SMinion(MinionBase):
         '''
 
         self.utils = salt.loader.utils(self.opts)
-        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
-                                                 include_errors=True)
+        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.serializers = salt.loader.serializers(self.opts)
         self.returners = salt.loader.returners(self.opts, self.functions)
         self.proxy = salt.loader.proxy(self.opts, self.functions, self.returners, None)
@@ -1533,9 +1532,13 @@ class Minion(MinionBase):
             ret['id'] = opts['id']
             for returner in set(data['ret'].split(',')):
                 try:
-                    minion_instance.returners['{0}.returner'.format(
-                        returner
-                    )](ret)
+                    returner_str = '{0}.returner'.format(returner)
+                    if returner_str in minion_instance.returners:
+                        minion_instance.returners[returner_str](ret)
+                    else:
+                        returner_err = minion_instance.returners.missing_fun_string(returner_str)
+                        log.error('Returner {0} could not be loaded: {1}'.format(
+                            returner_str, returner_err))
                 except Exception as exc:
                     log.error(
                         'The return failed for job {0} {1}'.format(

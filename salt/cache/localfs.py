@@ -76,7 +76,7 @@ def updated(bank, key):
     '''
     key_file = os.path.join(__opts__['cachedir'], os.path.normpath(bank), '{0}.p'.format(key))
     if not os.path.isfile(key_file):
-        log.warn('Cache file "%s" does not exist', key_file)
+        log.warning('Cache file "%s" does not exist', key_file)
         return None
     try:
         return int(os.path.getmtime(key_file))

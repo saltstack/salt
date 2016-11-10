@@ -1495,8 +1495,8 @@ CLOUD_CONFIG_DEFAULTS = {
 
 DEFAULT_API_OPTS = {
     # ----- Salt master settings overridden by Salt-API --------------------->
-    'pidfile': '/var/run/salt-api.pid',
-    'logfile': '/var/log/salt/api',
+    'api_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-api.pid'),
+    'api_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'api'),
     'rest_timeout': 300,
     # <---- Salt master settings overridden by Salt-API ----------------------
 }
@@ -1914,6 +1914,7 @@ def minion_config(path,
     opts = apply_minion_config(overrides, defaults,
                                cache_minion_id=cache_minion_id,
                                minion_id=minion_id)
+    apply_sdb(opts)
     _validate_opts(opts)
     return opts
 
@@ -1989,7 +1990,6 @@ def syndic_config(master_config_path,
     return opts
 
 
-# ----- Salt Cloud Configuration Functions ---------------------------------->
 def apply_sdb(opts, sdb_opts=None):
     '''
     Recurse for sdb:// links for opts
@@ -2014,6 +2014,7 @@ def apply_sdb(opts, sdb_opts=None):
     return sdb_opts
 
 
+# ----- Salt Cloud Configuration Functions ---------------------------------->
 def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                  master_config_path=None, master_config=None,
                  providers_config_path=None, providers_config=None,
@@ -3199,6 +3200,7 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
     if opts.get('transport') == 'raet' and 'aes' in opts:
         opts.pop('aes')
+    apply_sdb(opts)
     return opts
 
 
@@ -3399,12 +3401,23 @@ def api_config(path):
     Read in the salt master config file and add additional configs that
     need to be stubbed out for salt-api
     '''
-    # Let's grab a copy of salt's master default opts
-    defaults = DEFAULT_MASTER_OPTS
+    # Let's grab a copy of salt's master opts
+    opts = client_config(path, defaults=DEFAULT_MASTER_OPTS)
     # Let's override them with salt-api's required defaults
-    defaults.update(DEFAULT_API_OPTS)
-
-    return client_config(path, defaults=defaults)
+    api_opts = {
+        'log_file': opts.get(
+            'api_logfile', os.path.join(
+                opts['root_dir'], DEFAULT_API_OPTS['api_logfile'].lstrip('/')
+            )
+        ),
+        'pidfile': opts.get(
+            'api_pidfile', os.path.join(
+                opts['root_dir'], DEFAULT_API_OPTS['api_pidfile'].lstrip('/')
+            )
+        ),
+    }
+    opts.update(api_opts)
+    return opts
 
 
 def spm_config(path):

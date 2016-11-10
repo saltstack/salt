@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Manage CloudTrail Objects
-=================
+=========================
 
 .. versionadded:: 2016.3.0
 
