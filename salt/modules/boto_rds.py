@@ -76,6 +76,51 @@ except ImportError:
     HAS_BOTO = False
 # pylint: enable=import-error
 
+boto3_param_map = {
+    'allocated_storage': ('AllocatedStorage', int),
+    'allow_major_version_upgrade': ('AllowMajorVersionUpgrade', bool),
+    'apply_immediately': ('ApplyImmediately', bool),
+    'auto_minor_version_upgrade': ('AutoMinorVersionUpgrade', bool),
+    'availability_zone': ('AvailabilityZone', str),
+    'backup_retention_period': ('BackupRetentionPeriod', int),
+    'ca_certificate_identifier': ('CACertificateIdentifier', str),
+    'character_set_name': ('CharacterSetName', str),
+    'copy_tags_to_snapshot': ('CopyTagsToSnapshot', bool),
+    'db_cluster_identifier': ('DBClusterIdentifier', str),
+    'db_instance_class': ('DBInstanceClass', str),
+    'db_name': ('DBName', str),
+    'db_parameter_group_name': ('DBParameterGroupName', str),
+    'db_port_number': ('DBPortNumber', int),
+    'db_security_groups': ('DBSecurityGroups', list),
+    'db_subnet_group_name': ('DBSubnetGroupName', str),
+    'domain': ('Domain', str),
+    'domain_iam_role_name': ('DomainIAMRoleName', str),
+    'engine': ('Engine', str),
+    'engine_version': ('EngineVersion', str),
+    'iops': ('Iops', int),
+    'kms_key_id': ('KmsKeyId', str),
+    'license_model': ('LicenseModel', str),
+    'master_user_password': ('MasterUserPassword', str),
+    'master_username': ('MasterUsername', str),
+    'monitoring_interval': ('MonitoringInterval', int),
+    'monitoring_role_arn': ('MonitoringRoleArn', str),
+    'multi_az': ('MultiAZ', bool),
+    'name': ('DBInstanceIdentifier', str),
+    'new_db_instance_identifier': ('NewDBInstanceIdentifier', str),
+    'option_group_name': ('OptionGroupName', str),
+    'port': ('Port', int),
+    'preferred_backup_window': ('PreferredBackupWindow', str),
+    'preferred_maintenance_window': ('PreferredMaintenanceWindow', str),
+    'promotion_tier': ('PromotionTier', int),
+    'publicly_accessible': ('PubliclyAccessible', bool),
+    'storage_encrypted': ('StorageEncrypted', bool),
+    'storage_type': ('StorageType', str),
+    'taglist': ('Tags', list),
+    'tde_credential_arn': ('TdeCredentialArn', str),
+    'tde_credential_password': ('TdeCredentialPassword', str),
+    'vpc_security_group_ids': ('VpcSecurityGroupIds', list),
+}
+
 
 def __virtual__():
     '''
@@ -148,9 +193,13 @@ def parameter_group_exists(name, tags=None, region=None, key=None, keyid=None,
 
     try:
         rds = conn.describe_db_parameter_groups(DBParameterGroupName=name)
-        return {'exists': bool(rds)}
+        return {'exists': bool(rds), 'error': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        resp = {}
+        if e.response['Error']['Code'] == 'DBParameterGroupNotFound':
+            resp['exists'] = False
+        resp['error'] = salt.utils.boto3.get_error(e)
+        return resp
 
 
 def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None,
@@ -175,21 +224,21 @@ def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None,
 
 
 def create(name, allocated_storage, db_instance_class, engine,
-           master_username, master_user_password, DBname=None,
-           DBSecurityGroups=None, vpc_security_group_ids=None,
+           master_username, master_user_password, db_name=None,
+           db_security_groups=None, vpc_security_group_ids=None,
            availability_zone=None, db_subnet_group_name=None,
            preferred_maintenance_window=None, db_parameter_group_name=None,
            backup_retention_period=None, preferred_backup_window=None,
-           Port=None, MultiAZ=None, EngineVersion=None,
-           AutoMinorVersionUpgrade=None, LicenseModel=None, Iops=None,
-           OptionGroupName=None, CharacterSetName=None,
-           PubliclyAccessible=None, wait_status=None, tags=None,
-           DBClusterIdentifier=None, storage_type=None,
-           TdeCredentialArn=None, TdeCredentialPassword=None,
-           StorageEncrypted=None, KmsKeyId=None, Domain=None,
-           CopyTagsToSnapshot=None, MonitoringInterval=None,
-           MonitoringRoleArn=None, DomainIAMRoleName=None, region=None,
-           PromotionTier=None, key=None, keyid=None, profile=None):
+           port=None, multi_az=None, engine_version=None,
+           auto_minor_version_upgrade=None, license_model=None, iops=None,
+           option_group_name=None, character_set_name=None,
+           publicly_accessible=None, wait_status=None, tags=None,
+           db_cluster_identifier=None, storage_type=None,
+           tde_credential_arn=None, tde_credential_password=None,
+           storage_encrypted=None, kms_key_id=None, domain=None,
+           copy_tags_to_snapshot=None, monitoring_interval=None,
+           monitoring_role_arn=None, domain_iam_role_name=None, region=None,
+           promotion_tier=None, key=None, keyid=None, profile=None):
     '''
     Create an RDS
 
@@ -222,46 +271,15 @@ def create(name, allocated_storage, db_instance_class, engine,
             return {'results': bool(conn)}
 
         kwargs = {}
-        for key in ('DomainIAMRoleName', 'LicenseModel',
-                    'TdeCredentialArn',
-                    'TdeCredentialPassword', 'DBname', 'Domain',
-                    'EngineVersion', 'OptionGroupName',
-                    'CharacterSetName', 'MonitoringRoleArn',
-                    'DBClusterIdentifier', 'KmsKeyId'):
-            if locals()[key] is not None:
-                kwargs[key] = str(locals()[key])
-
-        for key in ('MonitoringInterval', 'PromotionTier',
-                    'Iops', 'Port'):
-            if locals()[key] is not None:
-                kwargs[key] = int(locals()[key])
-
-        for key in ('CopyTagsToSnapshot', 'MultiAZ',
-                    'AutoMinorVersionUpgrade', 'StorageEncrypted',
-                    'PubliclyAccessible'):
-            if locals()[key] is not None:
-                kwargs[key] = bool(locals()[key])
-
-        if locals()['DBSecurityGroups'] is not None:
-            kwargs['DBSecurityGroups'] = list(locals()['DBSecurityGroups'])
+        boto_params = set(boto3_param_map.keys())
+        keys = set(locals().keys())
+        for key in keys.intersection(boto_params):
+            val = locals()[key]
+            if val is not None:
+                mapped = boto3_param_map[key]
+                kwargs[mapped[0]] = mapped[1](val)
 
         taglist = _tag_doc(tags)
-
-        kwargs['DBInstanceIdentifier'] = name
-        kwargs['AllocatedStorage'] = allocated_storage
-        kwargs['DBInstanceClass'] = db_instance_class
-        kwargs['Engine'] = engine
-        kwargs['MasterUsername'] = master_username
-        kwargs['MasterUserPassword'] = master_user_password
-        kwargs['VpcSecurityGroupIds'] = vpc_security_group_ids
-        kwargs['AvailabilityZone'] = availability_zone
-        kwargs['DBSubnetGroupName'] = db_subnet_group_name
-        kwargs['PreferredMaintenanceWindow'] = preferred_maintenance_window
-        kwargs['DBParameterGroupName'] = db_parameter_group_name
-        kwargs['BackupRetentionPeriod'] = backup_retention_period
-        kwargs['PreferredBackupWindow'] = preferred_backup_window
-        kwargs['StorageType'] = storage_type
-        kwargs['Tags'] = taglist
 
         # Validation doesn't want parameters that are None
         # https://github.com/boto/boto3/issues/400
@@ -703,7 +721,7 @@ def describe_parameter_group(name, Filters=None, MaxRecords=None, Marker=None,
                                                       region=region, key=key,
                                                       keyid=keyid,
                                                       profile=profile)
-    if not res:
+    if not res.get('exists'):
         return {'exists': bool(res)}
 
     try:
@@ -745,13 +763,15 @@ def describe_parameters(name, Source=None, MaxRecords=None, Marker=None,
                                                       region=region, key=key,
                                                       keyid=keyid,
                                                       profile=profile)
-    if not res:
-        return {'exists': bool(res)}
+    if not res.get('exists'):
+        return {'result': False,
+                'message': 'Parameter group {0} does not exist'.format(name)}
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if not conn:
-            return {'results': bool(conn)}
+            return {'result': False,
+                    'message': 'Could not establish a connection to RDS'}
 
         kwargs = {}
         for key in ('Marker', 'Source'):
@@ -764,65 +784,67 @@ def describe_parameters(name, Source=None, MaxRecords=None, Marker=None,
         r = conn.describe_db_parameters(DBParameterGroupName=name, **kwargs)
 
         if not r:
-            return {'results': bool(r), 'message':
-                    'Failed to get RDS parameters for group {0}.'.format(name)}
+            return {'result': False,
+                    'message': 'Failed to get RDS parameters for group {0}.'
+                    .format(name)}
 
         results = r['Parameters']
         keys = ['ParameterName', 'ParameterValue', 'Description',
                 'Source', 'ApplyType', 'DataType', 'AllowedValues',
                 'IsModifieable', 'MinimumEngineVersion', 'ApplyMethod']
 
-        c = 0
-        p = odict.OrderedDict()
-        while c < len(results):
-            d = odict.OrderedDict()
+        parameters = odict.OrderedDict()
+        ret = {'result':  True}
+        for result in results:
+            data = odict.OrderedDict()
             for k in keys:
-                d[k] = results[c].get(k)
+                data[k] = result.get(k)
 
-            p[results[c].get('ParameterName')] = d
-            c += 1
+            parameters[result.get('ParameterName')] = data
 
-        return p
+        ret['parameters'] = parameters
+        return ret
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
 
 def modify_db_instance(name,
-                       AllocatedStorage=None,
-                       DBInstanceClass=None,
-                       DBSecurityGroups=None,
-                       VpcSecurityGroupIds=None,
-                       ApplyImmediately=None,
-                       MasterUserPassword=None,
-                       DBParameterGroupName=None,
-                       BackupRetentionPeriod=None,
-                       PreferredBackupWindow=None,
-                       PreferredMaintenanceWindow=None,
-                       StorageType=None,
-                       DBname=None,
-                       MultiAZ=None,
-                       LicenseModel=None,
-                       EngineVersion=None,
-                       AllowMajorVersionUpgrade=None,
-                       AutoMinorVersionUpgrade=None,
-                       Iops=None,
-                       OptionGroupName=None,
-                       NewDBInstanceIdentifier=None,
-                       TdeCredentialArn=None,
-                       TdeCredentialPassword=None,
-                       CACertificateIdentifier=None,
-                       Domain=None,
-                       CopyTagsToSnapshot=None,
-                       MonitoringInterval=None,
-                       DBPortNumber=None,
-                       DBClusterIdentifier=None,
-                       PubliclyAccessible=None,
-                       MonitoringRoleArn=None,
-                       DomainIAMRoleName=None,
-                       CharacterSetName=None,
-                       KmsKeyId=None,
-                       StorageEncrypted=None,
-                       PromotionTier=None,
+                       allocated_storage=None,
+                       allow_major_version_upgrade=None,
+                       apply_immediately=None,
+                       auto_minor_version_upgrade=None,
+                       backup_retention_period=None,
+                       ca_certificate_identifier=None,
+                       character_set_name=None,
+                       copy_tags_to_snapshot=None,
+                       db_cluster_identifier=None,
+                       db_instance_class=None,
+                       db_name=None,
+                       db_parameter_group_name=None,
+                       db_port_number=None,
+                       db_security_groups=None,
+                       db_subnet_group_name=None,
+                       domain=None,
+                       domain_iam_role_name=None,
+                       engine_version=None,
+                       iops=None,
+                       kms_key_id=None,
+                       license_model=None,
+                       master_user_password=None,
+                       monitoring_interval=None,
+                       monitoring_role_arn=None,
+                       multi_az=None,
+                       new_db_instance_identifier=None,
+                       option_group_name=None,
+                       preferred_backup_window=None,
+                       preferred_maintenance_window=None,
+                       promotion_tier=None,
+                       publicly_accessible=None,
+                       storage_encrypted=None,
+                       storage_type=None,
+                       tde_credential_arn=None,
+                       tde_credential_password=None,
+                       vpc_security_group_ids=None,
                        region=None, key=None, keyid=None, profile=None):
     '''
     Modify settings for a DB instance.
@@ -841,34 +863,14 @@ def modify_db_instance(name,
             return {'modified': False}
 
         kwargs = {}
-        for key in ('DomainIAMRoleName', 'LicenseModel',
-                    'TdeCredentialArn', 'DBInstanceClass',
-                    'TdeCredentialPassword', 'DBname', 'Domain',
-                    'EngineVersion', 'OptionGroupName',
-                    'CharacterSetName', 'MonitoringRoleArn',
-                    'DBClusterIdentifier', 'KmsKeyId',
-                    'NewDBInstanceIdentifier', 'StorageType',
-                    'CACertificateIdentifier', 'MasterUserPassword',
-                    'DBParameterGroupName', 'PreferredBackupWindow',
-                    'Domain', 'PreferredMaintenanceWindow'):
-            if locals()[key] is not None:
-                kwargs[key] = str(locals()[key])
-
-        for key in ('MonitoringInterval', 'PromotionTier',
-                    'Iops', 'DBPortNumber', 'AllocatedStorage'):
-            if locals()[key] is not None:
-                kwargs[key] = int(locals()[key])
-
-        for key in ('CopyTagsToSnapshot', 'MultiAZ',
-                    'AutoMinorVersionUpgrade',
-                    'AllowMajorVersionUpgrade', 'StorageEncrypted',
-                    'ApplyImmediately', 'PubliclyAccessible'):
-            if locals()[key] is not None:
-                kwargs[key] = bool(locals()[key])
-
-        for key in ('DBSecurityGroups', 'VpcSecurityGroupIds'):
-            if locals()[key] is not None:
-                kwargs[key] = list(locals()[key])
+        excluded = set(('name',))
+        boto_params = set(boto3_param_map.keys())
+        keys = set(locals().keys())
+        for key in keys.intersection(boto_params).difference(excluded):
+            val = locals()[key]
+            if val is not None:
+                mapped = boto3_param_map[key]
+                kwargs[mapped[0]] = mapped[1](val)
 
         info = conn.modify_db_instance(DBInstanceIdentifier=name, **kwargs)
 
