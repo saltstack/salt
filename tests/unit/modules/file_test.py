@@ -7,7 +7,7 @@ import textwrap
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, destructiveTest
 from salttesting.mock import MagicMock
 
 ensure_in_syspath('../../')
@@ -34,6 +34,7 @@ here
 """
 
 
+@destructiveTest
 class FileReplaceTestCase(TestCase):
     MULTILINE_STRING = textwrap.dedent('''\
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam rhoncus
@@ -172,6 +173,7 @@ class FileReplaceTestCase(TestCase):
         filemod.replace(self.tfile.name, r'Etiam', 123)
 
 
+@destructiveTest
 class FileBlockReplaceTestCase(TestCase):
     MULTILINE_STRING = textwrap.dedent('''\
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam rhoncus
@@ -423,6 +425,7 @@ class FileBlockReplaceTestCase(TestCase):
         )
 
 
+@destructiveTest
 class FileModuleTestCase(TestCase):
     def test_sed_limit_escaped(self):
         with tempfile.NamedTemporaryFile() as tfile:
@@ -466,6 +469,38 @@ class FileModuleTestCase(TestCase):
             filemod.append(tfile.name, 'bar')
             with salt.utils.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), 'bar\n')
+
+    def test_blockreplace_exact_marker_match(self):
+        '''
+        ensure that blockreplace matches the exact markers
+        '''
+        new_multiline_content = (
+            "Who's that then?\nWell, how'd you become king,"
+            "then?\nWe found them. I'm not a witch.\nWe shall"
+            "say 'Ni' again to you, if you do not appease us."
+        )
+        with tempfile.NamedTemporaryFile() as tfile:
+            filemod.blockreplace(self.tfile.name,
+                                 '#-- start fabrication',
+                                 '#-- end fabrication',
+                                 new_multiline_content,
+                                 backup=False)
+            filemod.blockreplace(self.tfile.name,
+                                 '#-- start fab',
+                                 '#-- end fab',
+                                 new_multiline_content,
+                                 backup=False)
+
+            with salt.utils.fopen(self.tfile.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual('#-- start fabrication'
+                             + "\n" + new_multiline_content
+                             + "\n"
+                             + '#-- end fabrication'
+                             + '#-- start fab'
+                             + "\n" + new_multiline_content
+                             + "\n"
+                             + '#-- end fab', filecontent)
 
     def test_extract_hash(self):
         '''

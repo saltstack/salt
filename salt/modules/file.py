@@ -1709,13 +1709,13 @@ def blockreplace(path,
 
             result = line
 
-            if marker_start in line:
+            if marker_start.rstrip() == line.rstrip():
                 # managed block start found, start recording
                 in_block = True
 
             else:
                 if in_block:
-                    if marker_end in line:
+                    if marker_end.rstrip() == line.rstrip():
                         # end of block detected
                         in_block = False
 
