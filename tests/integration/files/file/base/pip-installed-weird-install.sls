@@ -3,9 +3,9 @@
     - system_site_packages: False
     - distribute: True
 
-carbon-weird-setup:
+carbonite-weird-setup:
   pip.installed:
-    - name: carbon
+    - name: carbonite
     - no_deps: True
     - bin_env: {{ salt['runtests_helpers.get_sys_temp_dir_for_path']('pip-installed-weird-install') }}
     - mirrors: http://testpypi.python.org/pypi
