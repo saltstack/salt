@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+import re
 
 # Import salt libs
 import salt.utils
@@ -391,6 +392,16 @@ def check(set=None, entry=None, family='ipv4'):
         return 'Error: Set needs to be specified'
     if not entry:
         return 'Error: Entry needs to be specified'
+
+    # If IPv4 address is a single host with a mask
+    # remote the /32, since ipset strips it.
+    if entry.endswith('/32'):
+        entry = re.sub('\/32', '', entry)
+
+    # If IPv6 address is a single host with a mask
+    # remote the /128, since ipset strips it.
+    if entry.endswith('/128'):
+        entry = re.sub('\/128', '', entry)
 
     settype = _find_set_type(set)
     if not settype:
