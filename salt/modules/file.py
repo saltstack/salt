@@ -69,6 +69,7 @@ HASHES = {
     'sha1': 40,
     'md5': 32,
 }
+HASHES_REVMAP = dict([(y, x) for x, y in six.iteritems(HASHES)])
 
 
 def __virtual__():
@@ -538,12 +539,22 @@ def get_hash(path, form='sha256', chunk_size=65536):
     return salt.utils.get_hash(os.path.expanduser(path), form, chunk_size)
 
 
-def get_source_sum(source, source_hash, saltenv='base'):
+def get_source_sum(file_name='',
+                   source='',
+                   source_hash=None,
+                   source_hash_name=None,
+                   saltenv='base'):
     '''
     .. versionadded:: 2016.11.0
 
-    Obtain a checksum and hash type, given a ``source_hash`` file/expression
-    and the source file name.
+    Used by :py:func:`file.get_managed <salt.modules.file.get_managed>` to
+    obtain the hash and hash type from the parameters specified below.
+
+    file_name
+        Optional file name being managed, for matching with
+        :py:func:`file.extract_hash <salt.modules.file.extract_hash>`.
+
+        .. versionadded:: 2016.11.1
 
     source
         Source file, as used in :py:mod:`file <salt.states.file>` and other
@@ -559,27 +570,43 @@ def get_source_sum(source, source_hash, saltenv='base'):
         <salt.modules.file.extract_hash>` will be used to obtain a hash from
         it.
 
+    source_hash_name
+        Specific file name to look for when ``source_hash`` refers to a remote
+        file, used to disambiguate ambiguous matches.
+
+        .. versionadded:: 2016.11.1
+
     saltenv : base
         Salt fileserver environment from which to retrive the source_hash. This
         value will only be used when ``source_hash`` refers to a file on the
         Salt fileserver (i.e. one beginning with ``salt://``).
 
-    CLI Examples:
+    CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.get_source_sum /etc/foo.conf source_hash=499ae16dcae71eeb7c3a30c75ea7a1a6
-        salt '*' file.get_source_sum /etc/foo.conf source_hash=md5=499ae16dcae71eeb7c3a30c75ea7a1a6
-        salt '*' file.get_source_sum /etc/foo.conf source_hash=https://foo.domain.tld/hashfile
+        salt '*' file.get_source_sum /tmp/foo.tar.gz source=http://mydomain.tld/foo.tar.gz source_hash=499ae16dcae71eeb7c3a30c75ea7a1a6
+        salt '*' file.get_source_sum /tmp/foo.tar.gz source=http://mydomain.tld/foo.tar.gz source_hash=https://mydomain.tld/hashes.md5
+        salt '*' file.get_source_sum /tmp/foo.tar.gz source=http://mydomain.tld/foo.tar.gz source_hash=https://mydomain.tld/hashes.md5 source_hash_name=./dir2/foo.tar.gz
     '''
     def _invalid_source_hash_format():
         '''
         DRY helper for reporting invalid source_hash input
         '''
         raise CommandExecutionError(
-            'Source hash {0} format is invalid. It must be in the format '
-            '<hash type>=<hash>, or it must be a supported protocol: {1}'
-            .format(source_hash, ', '.join(salt.utils.files.VALID_PROTOS))
+            'Source hash {0} format is invalid. The supported formats are: '
+            '1) a hash, 2) an expression in the format <hash_type>=<hash>, or '
+            '3) either a path to a local file containing hashes, or a URI of '
+            'a remote hash file. Supported protocols for remote hash files '
+            'are: {1}. The hash may also not be of a valid length, the '
+            'following are supported hash types and lengths: {2}.'.format(
+                source_hash,
+                ', '.join(salt.utils.files.VALID_PROTOS),
+                ', '.join(
+                    ['{0} ({1})'.format(HASHES_REVMAP[x], x)
+                     for x in sorted(HASHES_REVMAP)]
+                ),
+            )
         )
 
     hash_fn = None
@@ -606,7 +633,7 @@ def get_source_sum(source, source_hash, saltenv='base'):
             _invalid_source_hash_format()
 
     if hash_fn is not None:
-        ret = extract_hash(hash_fn, '', source)
+        ret = extract_hash(hash_fn, '', file_name, source, source_hash_name)
         if ret is None:
             _invalid_source_hash_format()
         return ret
@@ -624,12 +651,33 @@ def get_source_sum(source, source_hash, saltenv='base'):
                 _invalid_source_hash_format()
             ret['hsum'] = source_hash
             source_hash_len = len(source_hash)
-            for hash_type, hash_len in HASHES:
-                if source_hash_len == hash_len:
-                    ret['hash_type'] = hash_type
-                    break
+            if source_hash_len in HASHES_REVMAP:
+                ret['hash_type'] = HASHES_REVMAP[source_hash_len]
             else:
                 _invalid_source_hash_format()
+
+        if ret['hash_type'] not in HASHES:
+            raise CommandExecutionError(
+                'Invalid hash type \'{0}\'. Supported hash types are: {1}. '
+                'Either remove the hash type and simply use \'{2}\' as the '
+                'source_hash, or change the hash type to a supported type.'
+                .format(ret['hash_type'], ', '.join(HASHES), ret['hsum'])
+            )
+        else:
+            hsum_len = len(ret['hsum'])
+            if hsum_len not in HASHES_REVMAP:
+                _invalid_source_hash_format()
+            elif hsum_len != HASHES[ret['hash_type']]:
+                msg = (
+                    'Invalid length ({0}) for hash type \'{1}\'. Either '
+                    'remove the hash type and simply use \'{2}\' as the '
+                    'source_hash, or change the hash type to \'{3}\''.format(
+                        hsum_len,
+                        ret['hash_type'],
+                        HASHES_REVMAP[hsum_len],
+                    )
+                )
+
         return ret
 
 
@@ -3663,41 +3711,13 @@ def get_managed(
             if not skip_verify:
                 if source_hash:
                     try:
-<<<<<<< HEAD
-                        source_sum = get_source_sum(source_hash_name or source,
+                        source_sum = get_source_sum(name,
+                                                    source,
                                                     source_hash,
+                                                    source_hash_name,
                                                     saltenv)
                     except CommandExecutionError as exc:
                         return '', {}, exc.strerror
-=======
-                        source_hash_scheme = _urlparse(source_hash).scheme
-                    except TypeError:
-                        return '', {}, ('Invalid format for source_hash '
-                                        'parameter')
-                    if source_hash_scheme in protos:
-                        # The source_hash is a file on a server
-                        hash_fn = __salt__['cp.cache_file'](
-                            source_hash, saltenv)
-                        if not hash_fn:
-                            return '', {}, ('Source hash file {0} not found'
-                                            .format(source_hash))
-                        source_sum = extract_hash(
-                            hash_fn,
-                            '',
-                            name,
-                            source,
-                            source_hash_name)
-                        if source_sum is None:
-                            return _invalid_source_hash_format()
-
-                    else:
-                        # The source_hash is a hash string
-                        comps = source_hash.split('=', 1)
-                        if len(comps) < 2:
-                            return _invalid_source_hash_format()
-                        source_sum['hsum'] = comps[1].strip()
-                        source_sum['hash_type'] = comps[0].strip()
->>>>>>> carbon
                 else:
                     msg = (
                         'Unable to verify upstream hash of source file {0}, '
@@ -3789,6 +3809,10 @@ def extract_hash(hash_fn,
         takes precedence over both the ``file_name`` and ``source``. When it is
         not specified, ``file_name`` takes precedence over ``source``. This
         allows for better capability for matching hashes.
+    .. versionchanged:: 2016.11.1
+        File name and source URI matches are no longer disregarded when
+        ``source_hash_name`` is specified. They will be used as fallback
+        matches if there is no match to the ``source_hash_name`` value.
 
     This routine is called from the :mod:`file.managed
     <salt.states.file.managed>` state to pull a hash from a remote file.
@@ -3817,68 +3841,6 @@ def extract_hash(hash_fn,
 
         salt '*' file.extract_hash /path/to/hash/file sha512 /etc/foo
     '''
-<<<<<<< HEAD
-    source_sum = None
-    partial_id = False
-    name_sought = os.path.basename(file_name)
-    log.debug(
-        'modules.file.py - extract_hash(): Extracting hash for file named: %s',
-        name_sought
-    )
-    try:
-        with salt.utils.fopen(hash_fn, 'r') as hash_fn_fopen:
-            for hash_variant in HASHES:
-                if hash_type == '' or hash_type == hash_variant[0]:
-                    log.debug(
-                        'modules.file.py - extract_hash(): Will use regex to '
-                        'get a purely hexadecimal number of length (%s), '
-                        'presumably hash type : %s',
-                        hash_variant[1], hash_variant[0]
-                    )
-                    hash_fn_fopen.seek(0)
-                    for line in hash_fn_fopen.read().splitlines():
-                        hash_array = re.findall(
-                            r'(?i)(?<![a-z0-9])[a-f0-9]{' + str(hash_variant[1]) + '}(?![a-z0-9])',
-                            line)
-                        log.debug(
-                            'modules.file.py - extract_hash(): From "%s", '
-                            'got : %s', line, hash_array
-                        )
-                        if hash_array:
-                            if not partial_id:
-                                source_sum = {'hsum': hash_array[0],
-                                              'hash_type': hash_variant[0]}
-                                partial_id = True
-
-                            log.debug(
-                                'modules.file.py - extract_hash(): Found: %s '
-                                '-- %s',
-                                source_sum['hash_type'], source_sum['hsum']
-                            )
-
-                            if name_sought in line:
-                                source_sum = {'hsum': hash_array[0],
-                                              'hash_type': hash_variant[0]}
-                                log.debug(
-                                    'modules.file.py - extract_hash: For %s -- '
-                                    'returning the %s hash "%s".',
-                                    name_sought, source_sum['hash_type'],
-                                    source_sum['hsum']
-                                )
-                                return source_sum
-    except OSError as exc:
-        raise CommandExecutionError(
-            'Error encountered extracting hash from {0}: {1}'.format(
-                exc.filename, exc.strerror
-            )
-        )
-
-    if partial_id:
-        log.debug(
-            'modules.file.py - extract_hash: Returning the partially '
-            'identified %s hash "%s".',
-            source_sum['hash_type'], source_sum['hsum']
-=======
     hash_len = HASHES.get(hash_type)
     if hash_len is None:
         if hash_type:
@@ -3887,16 +3849,13 @@ def extract_hash(hash_fn,
                 'back to matching any supported hash_type', hash_type
             )
             hash_type = ''
-        hash_len_expr = '{0},{1}'.format(min(six.itervalues(HASHES)),
-                                         max(six.itervalues(HASHES)))
+        hash_len_expr = '{0},{1}'.format(min(HASHES_REVMAP), max(HASHES_REVMAP))
     else:
         hash_len_expr = str(hash_len)
 
     filename_separators = string.whitespace + r'\/'
 
-    if source_hash_name is not None:
-        #if not isinstance(source_hash_name, six.string_types):
-        #    source_hash_name = str(source_hash_name)
+    if source_hash_name:
         if not isinstance(source_hash_name, six.string_types):
             source_hash_name = str(source_hash_name)
         source_hash_name_idx = (len(source_hash_name) + 1) * -1
@@ -3905,11 +3864,13 @@ def extract_hash(hash_fn,
             'source_hash_name \'%s\'',
             'any supported' if not hash_type else hash_type,
             source_hash_name
->>>>>>> carbon
         )
-    else:
+    if file_name:
         if not isinstance(file_name, six.string_types):
             file_name = str(file_name)
+        file_name_basename = os.path.basename(file_name)
+        file_name_idx = (len(file_name_basename) + 1) * -1
+    if source:
         if not isinstance(source, six.string_types):
             source = str(source)
         urlparsed_source = _urlparse(source)
@@ -3917,20 +3878,21 @@ def extract_hash(hash_fn,
             urlparsed_source.path or urlparsed_source.netloc
         )
         source_idx = (len(source_basename) + 1) * -1
-        file_name_basename = os.path.basename(file_name)
-        file_name_idx = (len(file_name_basename) + 1) * -1
-        searches = [x for x in (file_name, source) if x]
-        if searches:
-            log.debug(
-                'file.extract_hash: Extracting %s hash for file matching%s: %s',
-                'any supported' if not hash_type else hash_type,
-                '' if len(searches) == 1 else ' either of the following',
-                ', '.join(searches)
-            )
+
+    basename_searches = [x for x in (file_name, source) if x]
+    if basename_searches:
+        log.debug(
+            'file.extract_hash: %s %s hash for file matching%s: %s',
+            'If no source_hash_name match found, will extract'
+                if source_hash_name
+                else 'Extracting',
+            'any supported' if not hash_type else hash_type,
+            '' if len(basename_searches) == 1 else ' either of the following',
+            ', '.join(basename_searches)
+        )
 
     partial = None
     found = {}
-    hashes_revmap = dict([(y, x) for x, y in six.iteritems(HASHES)])
 
     with salt.utils.fopen(hash_fn, 'r') as fp_:
         for line in fp_:
@@ -3941,7 +3903,7 @@ def extract_hash(hash_fn,
             if hash_match:
                 matched_hsum = hash_match.group(1)
                 if matched_hsum is not None:
-                    matched_type = hashes_revmap.get(len(matched_hsum))
+                    matched_type = HASHES_REVMAP.get(len(matched_hsum))
                     if matched_type is None:
                         # There was a match, but it's not of the correct length
                         # to match one of the supported hash types.
@@ -3969,7 +3931,7 @@ def extract_hash(hash_fn,
                 found.setdefault(match_type, []).append(matched)
 
             hash_matched = False
-            if source_hash_name is not None:
+            if source_hash_name:
                 if line.endswith(source_hash_name):
                     # Checking the character before where the basename
                     # should start for either whitespace or a path
@@ -3987,37 +3949,36 @@ def extract_hash(hash_fn,
                     _add_to_matches(found, line, 'source_hash_name',
                                     source_hash_name, matched)
                     hash_matched = True
-            else:
-                if file_name:
-                    if line.endswith(file_name_basename):
-                        # Checking the character before where the basename
-                        # should start for either whitespace or a path
-                        # separator. We can't just rsplit on spaces/whitespace,
-                        # because the filename may contain spaces.
-                        try:
-                            if line[file_name_idx] in filename_separators:
-                                _add_to_matches(found, line, 'file_name',
-                                                file_name, matched)
-                                hash_matched = True
-                        except IndexError:
-                            pass
-                    elif re.match(file_name.replace('.', r'\.') + r'\s+', line):
-                        _add_to_matches(found, line, 'file_name',
-                                        file_name, matched)
-                        hash_matched = True
-                if source:
-                    if line.endswith(source_basename):
-                        # Same as above, we can't just do an rsplit here.
-                        try:
-                            if line[source_idx] in filename_separators:
-                                _add_to_matches(found, line, 'source',
-                                                source, matched)
-                                hash_matched = True
-                        except IndexError:
-                            pass
-                    elif re.match(source.replace('.', r'\.') + r'\s+', line):
-                        _add_to_matches(found, line, 'source', source, matched)
-                        hash_matched = True
+            if file_name:
+                if line.endswith(file_name_basename):
+                    # Checking the character before where the basename
+                    # should start for either whitespace or a path
+                    # separator. We can't just rsplit on spaces/whitespace,
+                    # because the filename may contain spaces.
+                    try:
+                        if line[file_name_idx] in filename_separators:
+                            _add_to_matches(found, line, 'file_name',
+                                            file_name, matched)
+                            hash_matched = True
+                    except IndexError:
+                        pass
+                elif re.match(file_name.replace('.', r'\.') + r'\s+', line):
+                    _add_to_matches(found, line, 'file_name',
+                                    file_name, matched)
+                    hash_matched = True
+            if source:
+                if line.endswith(source_basename):
+                    # Same as above, we can't just do an rsplit here.
+                    try:
+                        if line[source_idx] in filename_separators:
+                            _add_to_matches(found, line, 'source',
+                                            source, matched)
+                            hash_matched = True
+                    except IndexError:
+                        pass
+                elif re.match(source.replace('.', r'\.') + r'\s+', line):
+                    _add_to_matches(found, line, 'source', source, matched)
+                    hash_matched = True
 
             if not hash_matched:
                 log.debug(
@@ -4032,7 +3993,8 @@ def extract_hash(hash_fn,
         if found_type in found:
             if len(found[found_type]) > 1:
                 log.debug(
-                    'file.extract_hash: Multiple matches for %s: %s',
+                    'file.extract_hash: Multiple %s matches for %s: %s',
+                    found_type,
                     found_str,
                     ', '.join(
                         ['{0} ({1})'.format(x['hsum'], x['hash_type'])
@@ -4648,7 +4610,10 @@ def manage_file(name,
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = (
                         'Specified {0} checksum for {1} ({2}) does not match '
-                        'actual checksum ({3})'.format(
+                        'actual checksum ({3}). If the \'source_hash\' value '
+                        'refers to a remote file with multiple possible '
+                        'matches, then it may be necessary to set '
+                        '\'source_hash_name\'.'.format(
                             source_sum['hash_type'],
                             source,
                             source_sum['hsum'],

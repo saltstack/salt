@@ -62,8 +62,8 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         access, copy, readdir, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
-        lstat, path_exists_glob, write, pardir, join, HASHES, comment,
-        uncomment, _add_flags, comment_line, apply_template_on_contents)
+        lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
+        comment, uncomment, _add_flags, comment_line, apply_template_on_contents)
 
 from salt.utils import namespaced_function as _namespaced_function
 
