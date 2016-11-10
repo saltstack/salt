@@ -223,7 +223,8 @@ def mounted(name,
                     if fstype in ['cifs'] and opt.split('=')[0] == 'user':
                         opt = "username={0}".format(opt.split('=')[1])
 
-                    if opt not in active[real_name]['opts'] and opt not in active[real_name]['superopts'] and opt not in mount_invisible_options:
+                    if opt not in active[real_name]['opts'] and opt not in mount_invisible_options and \
+                        ('superopts' in active[real_name] and opt not in active[real_name]['superopts']):
                         if __opts__['test']:
                             ret['result'] = None
                             ret['comment'] = "Remount would be forced because options ({0}) changed".format(opt)
