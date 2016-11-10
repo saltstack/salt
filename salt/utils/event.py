@@ -728,7 +728,7 @@ class StateFire(object):
     '''
     def __init__(self, opts, auth=None):
         self.opts = opts
-        self.event = SaltEvent(opts, 'minion')
+        self.event = SaltEvent('minion', opts=opts)
         if not auth:
             self.auth = salt.crypt.SAuth(self.opts)
         else:
