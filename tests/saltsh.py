@@ -20,7 +20,7 @@ A history file is maintained in ~/.saltsh_history.
 completion behavior can be customized via the ~/.inputrc file.
 
 '''
-# pylint: disable=file-perms
+# pylint: disable=E0599
 
 # Import python libs
 import atexit

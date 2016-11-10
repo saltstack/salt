@@ -3,7 +3,7 @@
 '''
 Discover all instances of unittest.TestCase in this directory.
 '''
-# pylint: disable=file-perms
+# pylint: disable=E0599
 
 # Import python libs
 from __future__ import print_function

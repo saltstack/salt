@@ -8,7 +8,7 @@
 # run tests. It *will* install the build deps on the machine running the script.
 #
 
-# pylint: disable=file-perms
+# pylint: disable=E0599
 
 import errno
 import glob
