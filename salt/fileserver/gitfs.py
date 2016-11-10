@@ -848,12 +848,12 @@ def _init_gitpython(rp_, repo_url, ssl_verify):
     new = False
     if not os.listdir(rp_):
         # Repo cachedir is empty, initialize a new repo there
-        repo = git.Repo.init(rp_)
+        repo = git.Repo.init(rp_, odbt=git.GitCmdObjectDB)
         new = True
     else:
         # Repo cachedir exists, try to attach
         try:
-            repo = git.Repo(rp_)
+            repo = git.Repo(rp_, odbt=git.GitCmdObjectDB)
         except git.exc.InvalidGitRepositoryError:
             log.error(_INVALID_REPO.format(rp_, repo_url))
             return None, new
