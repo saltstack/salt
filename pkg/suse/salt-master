@@ -108,6 +108,7 @@ case "$1" in
             echo -n "Checking for service salt-master "
             checkproc $SALTMASTER
             rc_status -v
+            RETVAL=$?
         elif [ -f $DEBIAN_VERSION ]; then
             if [ -f $LOCKFILE ]; then
                 RETVAL=0

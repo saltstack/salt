@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Installing of certificates to the keychain
-=======================
+==========================================
 
 Install certificats to the OS X keychain
 
