@@ -184,6 +184,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)
+                sys.exit(11)
 
     def _run_batch(self):
         import salt.cli.batch
