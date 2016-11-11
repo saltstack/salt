@@ -15,8 +15,7 @@ Module for Solaris 10's zoneadm
     Not all subcommands are implemented.
 
     These subcommands are missing:
-    clone, install,
-    uninstall, move, and verify
+    clone, install, and uninstall
 
 '''
 from __future__ import absolute_import
@@ -385,6 +384,66 @@ def ready(zone):
     ## ready zone
     res = __salt__['cmd.run_all']('zoneadm -z {zone} ready'.format(
         zone=zone,
+    ))
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zoneadm: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
+
+
+def verify(zone):
+    '''
+    Check to make sure the configuration of the specified
+    zone can safely be installed on the machine.
+
+    zone : string
+        name of the zone
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zoneadm.verify dolores
+    '''
+    ret = {'status': True}
+
+    ## verify zone
+    res = __salt__['cmd.run_all']('zoneadm -z {zone} verify'.format(
+        zone=zone,
+    ))
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zoneadm: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
+
+
+def move(zone, zonepath):
+    '''
+    Move zone to new zonepath.
+
+    zone : string
+        name of the zone
+    zonepath : string
+        new zonepath
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zoneadm.move meave /sweetwater/meave
+    '''
+    ret = {'status': True}
+
+    ## verify zone
+    res = __salt__['cmd.run_all']('zoneadm -z {zone} move {path}'.format(
+        zone=zone,
+        path=zonepath,
     ))
     ret['status'] = res['retcode'] == 0
     ret['message'] = res['stdout'] if ret['status'] else res['stderr']
