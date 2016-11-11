@@ -720,7 +720,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             log_format=log_file_fmt,
             date_format=log_file_datefmt
         )
-        for name, level in six.iteritems(self.config['log_granular_levels']):
+        for name, level in six.iteritems(self.config.get('log_granular_levels', {})):
             log.set_logger_level(name, level)
 
     def __setup_extended_logging(self, *args):  # pylint: disable=unused-argument
@@ -764,7 +764,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         log.setup_console_logger(
             self.config['log_level'], log_format=logfmt, date_format=datefmt
         )
-        for name, level in six.iteritems(self.config['log_granular_levels']):
+        for name, level in six.iteritems(self.config.get('log_granular_levels', {})):
             log.set_logger_level(name, level)
 
 
@@ -1238,7 +1238,7 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
 
     def _mixin_after_parsed(self):
         group_options_selected = [
-                option for option in self.output_options_group.option_list if (
+            option for option in self.output_options_group.option_list if (
                 getattr(self.options, option.dest) and
                 (option.dest.endswith('_out') or option.dest == 'output'))
         ]
@@ -1507,8 +1507,8 @@ class CloudProvidersListsMixIn(six.with_metaclass(MixInMeta, object)):
 
     def _mixin_after_parsed(self):
         list_options_selected = [
-                option for option in self.providers_listings_group.option_list if
-                getattr(self.options, option.dest) is not None
+            option for option in self.providers_listings_group.option_list if
+            getattr(self.options, option.dest) is not None
         ]
         if len(list_options_selected) > 1:
             self.error(
