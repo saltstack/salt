@@ -15,7 +15,7 @@ Module for Solaris 10's zoneadm
     Not all subcommands are implemented.
 
     These subcommands are missing:
-    attach, detach, clone, install,
+    clone, install,
     uninstall, move, ready, and verify
 
 '''
@@ -278,5 +278,68 @@ def shutdown(zone, reboot=False, single=False, altinit=None, smf_options=None):
         boot_opts=boot_options,
     ))
     return res['retcode'] == 0
+
+
+def detach(zone):
+    '''
+    Detach the specified zone.
+
+    zone : string
+        name of the zone
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zoneadm.detach kissy
+    '''
+    ret = {'status': True}
+
+    ## detach zone
+    res = __salt__['cmd.run_all']('zoneadm -z {zone} detach'.format(
+        zone=zone,
+    ))
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zoneadm: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
+
+
+def attach(zone, force=False, brand_opts=None):
+    '''
+    Attach the specified zone.
+
+    zone : string
+        name of the zone
+    force : boolean
+        force the zone into the "installed" state with no validation
+    brand_opts : string
+        brand specific options to pass
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zoneadm.attach lawrence
+        salt '*' zoneadm.attach lawrence True
+    '''
+    ret = {'status': True}
+
+    ## attach zone
+    res = __salt__['cmd.run_all']('zoneadm -z {zone} attach{force}{brand_opts}'.format(
+        zone=zone,
+        force=' -F' if force else '',
+        brand_opts=' {0}'.format(brand_opts) if brand_opts else '',
+    ))
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zoneadm: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
