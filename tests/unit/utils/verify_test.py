@@ -240,7 +240,7 @@ class TestVerify(TestCase):
             mock_trace.assert_called_once_with(message)
 
         mock_none = MagicMock()
-        with patch.object(log, 'warn', mock_none):
+        with patch.object(log, 'warning', mock_none):
             verify_log({})
             mock_none.assert_called_once_with(message)
 
