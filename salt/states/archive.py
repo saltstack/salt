@@ -123,6 +123,7 @@ def _cleanup_destdir(name):
 def extracted(name,
               source,
               source_hash=None,
+              source_hash_name=None,
               source_hash_update=False,
               skip_verify=False,
               password=None,
@@ -239,6 +240,71 @@ def extracted(name,
         .. note::
             This argument uses the same syntax as its counterpart in the
             :py:func:`file.managed <salt.states.file.managed>` state.
+
+        .. versionchanged:: 2016.11.0
+            If this argument specifies the hash itself, instead of a URI to a
+            file containing hashes, the hash type can now be omitted and Salt
+            will determine the hash type based on the length of the hash. For
+            example, both of the below states are now valid, while before only
+            the second one would be:
+
+        .. code-block:: yaml
+
+            foo_app:
+              archive.extracted:
+                - name: /var/www
+                - source: https://mydomain.tld/foo.tar.gz
+                - source_hash: 3360db35e682f1c5f9c58aa307de16d41361618c
+
+            bar_app:
+              archive.extracted:
+                - name: /var/www
+                - source: https://mydomain.tld/bar.tar.gz
+                - source_hash: sha1=5edb7d584b82ddcbf76e311601f5d4442974aaa5
+
+    source_hash_name
+        When ``source_hash`` refers to a hash file, Salt will try to find the
+        correct hash by matching the filename part of the ``source`` URI. When
+        managing a file with a ``source`` of ``salt://files/foo.tar.gz``, then
+        the following line in a hash file would match:
+
+        .. code-block:: text
+
+            acbd18db4cc2f85cedef654fccc4a4d8    foo.tar.gz
+
+        This line would also match:
+
+        .. code-block:: text
+
+            acbd18db4cc2f85cedef654fccc4a4d8    ./dir1/foo.tar.gz
+
+        However, sometimes a hash file will include multiple similar paths:
+
+        .. code-block:: text
+
+            37b51d194a7513e45b56f6524f2d51f2    ./dir1/foo.txt
+            acbd18db4cc2f85cedef654fccc4a4d8    ./dir2/foo.txt
+            73feffa4b7f6bb68e44cf984c85f6e88    ./dir3/foo.txt
+
+        In cases like this, Salt may match the incorrect hash. This argument
+        can be used to tell Salt which filename to match, to ensure that the
+        correct hash is identified. For example:
+
+        .. code-block:: yaml
+
+            /var/www:
+              archive.extracted:
+                - source: https://mydomain.tld/dir2/foo.tar.gz
+                - source_hash: https://mydomain.tld/hashes
+                - source_hash_name: ./dir2/foo.tar.gz
+
+        .. note::
+            This argument must contain the full filename entry from the
+            checksum file, as this argument is meant to disambiguate matches
+            for multiple files that have the same basename. So, in the
+            example above, simply using ``foo.txt`` would not match.
+
+        .. versionadded:: 2016.11.1
 
     source_hash_update
         Set this to ``True`` if archive should be extracted if source_hash has
@@ -569,11 +635,11 @@ def extracted(name,
         return ret
 
     urlparsed_source = _urlparse(source_match)
-    source_hash_name = urlparsed_source.path or urlparsed_source.netloc
+    source_hash_basename = urlparsed_source.path or urlparsed_source.netloc
 
     valid_archive_formats = ('tar', 'rar', 'zip')
     if not archive_format:
-        archive_format = salt.utils.files.guess_archive_type(source_hash_name)
+        archive_format = salt.utils.files.guess_archive_type(source_hash_basename)
         if archive_format is None:
             ret['comment'] = (
                 'Could not guess archive_format from the value of the '
@@ -672,7 +738,7 @@ def extracted(name,
         __opts__['cachedir'],
         'files',
         __env__,
-        re.sub(r'[:/\\]', '_', source_hash_name),
+        re.sub(r'[:/\\]', '_', source_hash_basename),
     )
 
     if os.path.isdir(cached_source):
@@ -681,8 +747,10 @@ def extracted(name,
 
     if source_hash:
         try:
-            source_sum = __salt__['file.get_source_sum'](source_hash_name,
+            source_sum = __salt__['file.get_source_sum']('',
+                                                         source,
                                                          source_hash,
+                                                         source_hash_name,
                                                          __env__)
         except CommandExecutionError as exc:
             ret['comment'] = exc.strerror
@@ -710,10 +778,10 @@ def extracted(name,
                                                cached_source,
                                                source=source_match,
                                                source_hash=source_hash,
+                                               source_hash_name=source_hash_name,
                                                makedirs=True,
                                                skip_verify=skip_verify,
-                                               saltenv=__env__,
-                                               source_hash_name=source_hash_name)
+                                               saltenv=__env__)
         log.debug('file.managed: {0}'.format(file_result))
 
         # Get actual state result. The state.single return is a single-element

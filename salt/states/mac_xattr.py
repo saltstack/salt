@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Allows you to manage extended attributes on files or directories
-=======================
+================================================================
 
 Install, enable and disable assitive access on OS X minions
 

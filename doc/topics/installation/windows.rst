@@ -95,6 +95,14 @@ least one item must be selected.
 You will also be prompted on the final page to start the ``salt-master``
 service.
 
+Installation Prerequisites
+--------------------------
+
+Most Salt functionality should work just fine right out of the box. A few Salt
+modules rely on PowerShell. The minimum version of PowerShell required for Salt
+is version 3. If you intend to work with DSC then Powershell version 5 is the
+minimum.
+
 .. _windows-installer-options:
 
 Silent Installer Options

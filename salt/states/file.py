@@ -1106,6 +1106,7 @@ def missing(name):
 def managed(name,
             source=None,
             source_hash='',
+            source_hash_name=None,
             user=None,
             group=None,
             mode=None,
@@ -1211,7 +1212,7 @@ def managed(name,
                     - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
                     - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.hash
 
-            The following is an example of the supported source_hash format:
+            The following lines are all supported formats:
 
             .. code-block:: text
 
@@ -1221,7 +1222,7 @@ def managed(name,
 
             Debian file type ``*.dsc`` files are also supported.
 
-        **Inserting the Source Hash in the sls Data**
+        **Inserting the Source Hash in the SLS Data**
             Examples:
 
             .. code-block:: yaml
@@ -1247,6 +1248,44 @@ def managed(name,
                     - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
                     - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz/+md5
 
+    source_hash_name
+        When ``source_hash`` refers to a hash file, Salt will try to find the
+        correct hash by matching the filename/URI associated with that hash. By
+        default, Salt will look for the filename being managed. When managing a
+        file at path ``/tmp/foo.txt``, then the following line in a hash file
+        would match:
+
+        .. code-block:: text
+
+            acbd18db4cc2f85cedef654fccc4a4d8    foo.txt
+
+        However, sometimes a hash file will include multiple similar paths:
+
+        .. code-block:: text
+
+            37b51d194a7513e45b56f6524f2d51f2    ./dir1/foo.txt
+            acbd18db4cc2f85cedef654fccc4a4d8    ./dir2/foo.txt
+            73feffa4b7f6bb68e44cf984c85f6e88    ./dir3/foo.txt
+
+        In cases like this, Salt may match the incorrect hash. This argument
+        can be used to tell Salt which filename to match, to ensure that the
+        correct hash is identified. For example:
+
+        .. code-block:: yaml
+
+            /tmp/foo.txt:
+              file.managed:
+                - source: https://mydomain.tld/dir2/foo.txt
+                - source_hash: https://mydomain.tld/hashes
+                - source_hash_name: ./dir2/foo.txt
+
+        .. note::
+            This argument must contain the full filename entry from the
+            checksum file, as this argument is meant to disambiguate matches
+            for multiple files that have the same basename. So, in the
+            example above, simply using ``foo.txt`` would not match.
+
+        .. versionadded:: 2016.3.5,2016.11.1
 
     user
         The user to own the file, this defaults to the user salt is running as
@@ -1731,6 +1770,7 @@ def managed(name,
                     name,
                     source,
                     source_hash,
+                    source_hash_name,
                     user,
                     group,
                     mode,
@@ -1776,6 +1816,7 @@ def managed(name,
             template,
             source,
             source_hash,
+            source_hash_name,
             user,
             group,
             mode,
@@ -2553,15 +2594,17 @@ def recurse(name,
 
     # Check source path relative to fileserver root, make sure it is a
     # directory
-    source_rel = source.partition('://')[2]
-    master_dirs = __salt__['cp.list_master_dirs'](__env__)
-    if source_rel not in master_dirs \
+    srcpath, senv = salt.utils.url.parse(source)
+    if senv is None:
+        senv = __env__
+    master_dirs = __salt__['cp.list_master_dirs'](saltenv=senv)
+    if srcpath not in master_dirs \
             and not any((x for x in master_dirs
-                         if x.startswith(source_rel + '/'))):
+                         if x.startswith(srcpath + '/'))):
         ret['result'] = False
         ret['comment'] = (
             'The directory \'{0}\' does not exist on the salt fileserver '
-            'in saltenv \'{1}\''.format(source, __env__)
+            'in saltenv \'{1}\''.format(srcpath, senv)
         )
         return ret
 
@@ -2700,16 +2743,15 @@ def recurse(name,
 
     keep = set()
     vdir = set()
-    srcpath = salt.utils.url.parse(source)[0]
     if not srcpath.endswith('/'):
         # we're searching for things that start with this *directory*.
         # use '/' since #master only runs on POSIX
         srcpath = srcpath + '/'
-    fns_ = __salt__['cp.list_master'](__env__, srcpath)
+    fns_ = __salt__['cp.list_master'](senv, srcpath)
     # If we are instructed to keep symlinks, then process them.
     if keep_symlinks:
         # Make this global so that emptydirs can use it if needed.
-        symlinks = __salt__['cp.list_master_symlinks'](__env__, srcpath)
+        symlinks = __salt__['cp.list_master_symlinks'](senv, srcpath)
         fns_ = process_symlinks(fns_, symlinks)
     for fn_ in fns_:
         if not fn_.strip():
@@ -2748,11 +2790,11 @@ def recurse(name,
             manage_directory(dirname)
             vdir.add(dirname)
 
-        src = salt.utils.url.create(fn_)
+        src = salt.utils.url.create(fn_, saltenv=senv)
         manage_file(dest, src)
 
     if include_empty:
-        mdirs = __salt__['cp.list_master_dirs'](__env__, srcpath)
+        mdirs = __salt__['cp.list_master_dirs'](senv, srcpath)
         for mdir in mdirs:
             if not salt.utils.check_include_exclude(
                     os.path.relpath(mdir, srcpath), include_pat, exclude_pat):
@@ -3001,43 +3043,61 @@ def line(name, content=None, match=None, mode=None, location=None,
 
     .. versionadded:: 2015.8.0
 
-    :param name:
+    name
         Filesystem path to the file to be edited.
 
-    :param content:
+    content
         Content of the line. Allowed to be empty if mode=delete.
 
-    :param match:
+    match
         Match the target line for an action by
         a fragment of a string or regular expression.
 
-    :param mode:
-        :Ensure:
+        If neither ``before`` nor ``after`` are provided, and ``match``
+        is also ``None``, match becomes the ``content`` value.
+
+    mode
+        Defines how to edit a line. One of the following options is
+        required:
+
+        - ensure
             If line does not exist, it will be added.
-
-        :Replace:
-            If line already exist, it will be replaced.
-
-        :Delete:
+        - replace
+            If line already exists, it will be replaced.
+        - delete
             Delete the line, once found.
-
-        :Insert:
+        - insert
             Insert a line.
 
-    :param location:
-        :start:
-            Place the content at the beginning of the file.
+        .. note::
 
-        :end:
+            If ``mode=insert`` is used, at least one of the following
+            options must also be defined: ``location``, ``before``, or
+            ``after``. If ``location`` is used, it takes precedence
+            over the other two options.
+
+    location
+        Defines where to place content in the line. Note this option is only
+        used when ``mode=insert`` is specified. If a location is passed in, it
+        takes precedence over both the ``before`` and ``after`` kwargs. Valid
+        locations are:
+
+        - start
+            Place the content at the beginning of the file.
+        - end
             Place the content at the end of the file.
 
-    :param before:
+    before
         Regular expression or an exact case-sensitive fragment of the string.
+        This option is only used when either the ``ensure`` or ``insert`` mode
+        is defined.
 
-    :param after:
+    after
         Regular expression or an exact case-sensitive fragment of the string.
+        This option is only used when either the ``ensure`` or ``insert`` mode
+        is defined.
 
-    :param show_changes:
+    show_changes
         Output a unified diff of the old file and the new file.
         If ``False`` return a boolean if any changes were made.
         Default is ``True``
@@ -3046,16 +3106,17 @@ def line(name, content=None, match=None, mode=None, location=None,
             Using this option will store two copies of the file in-memory
             (the original version and the edited version) in order to generate the diff.
 
-    :param backup:
+    backup
         Create a backup of the original file with the extension:
         "Year-Month-Day-Hour-Minutes-Seconds".
 
-    :param quiet:
+    quiet
         Do not raise any exceptions. E.g. ignore the fact that the file that is
         tried to be edited does not exist and nothing really happened.
 
-    :param indent:
-        Keep indentation with the previous line.
+    indent
+        Keep indentation with the previous line. This option is not considered when
+        the ``delete`` mode is specified.
 
     :param create:
         Create an empty file if doesn't exists.
@@ -5080,6 +5141,7 @@ def serialize(name,
             name=name,
             source=None,
             source_hash={},
+            source_hash_name=None,
             user=user,
             group=group,
             mode=mode,

@@ -46,6 +46,9 @@ ln -sf /opt/salt/bin/salt-config.sh /usr/local/sbin/salt-config
 # Add salt to paths.d
 ###############################################################################
 # echo "Path: Adding salt to the path..." >> /tmp/postinstall.txt
+if [ ! -d "/etc/paths.d" ]; then
+    mkdir /etc/paths.d
+fi
 sh -c 'echo "/opt/salt/bin" > /etc/paths.d/salt'
 sh -c 'echo "/usr/local/sbin" >> /etc/paths.d/salt'
 

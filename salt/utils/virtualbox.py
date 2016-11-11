@@ -514,7 +514,7 @@ def vb_xpcom_to_attribute_dict(xpcom,
         m = re.search(r"XPCOM.+implementing {0}".format(interface_name), str(xpcom))
         if not m:
             # TODO maybe raise error here?
-            log.warn("Interface %s is unknown and cannot be converted to dict", interface_name)
+            log.warning("Interface %s is unknown and cannot be converted to dict", interface_name)
             return dict()
 
     interface_attributes = set(attributes or XPCOM_ATTRIBUTES.get(interface_name, []))

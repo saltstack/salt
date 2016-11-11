@@ -44,7 +44,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
             self.local_client = salt.client.get_local_client(
                 self.get_config_file_path(),
-                skip_perm_errors=skip_perm_errors)
+                skip_perm_errors=skip_perm_errors,
+                auto_reconnect=True)
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return

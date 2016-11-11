@@ -22,7 +22,7 @@ requires very little. In the example:
         url: https://api.github.com/
       keys:
         url: https://api.github.com/users/{{user}}/keys
-        requests_lib: True
+        backend: requests
 
 The ``driver`` refers to the REST module, and must be set to ``rest`` in order
 to use this driver. Each of the other items inside this block refers to a

@@ -175,6 +175,7 @@ def interfaces(root):
 
     Output example:
      .. code-block:: json
+
        {
           "r": [
             "state",

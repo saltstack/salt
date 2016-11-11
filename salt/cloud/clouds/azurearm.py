@@ -218,7 +218,7 @@ def _cache(bank, key, fun, **kwargs):
         try:
             item_list = fun(**kwargs)
         except CloudError as exc:
-            log.warn('There was a cloud error calling {0} with kwargs {1}: {2}'.format(fun, kwargs, exc))
+            log.warning('There was a cloud error calling {0} with kwargs {1}: {2}'.format(fun, kwargs, exc))
         for item in item_list:
             items[item.name] = object_to_dict(item)
         cache.store(bank, key, items)
@@ -1024,8 +1024,8 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     try:
         poller.wait()
     except CloudError as exc:
-        log.warn('There was a cloud error: {0}'.format(exc))
-        log.warn('This may or may not indicate an actual problem')
+        log.warning('There was a cloud error: {0}'.format(exc))
+        log.warning('This may or may not indicate an actual problem')
 
     try:
         return show_instance(vm_['name'], call='action')
@@ -1100,7 +1100,7 @@ def create(vm_):
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure, SaltCloudSystemExit) as exc:
         try:
-            log.warn(exc)
+            log.warning(exc)
         finally:
             raise SaltCloudSystemExit(str(exc))
 

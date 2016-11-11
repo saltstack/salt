@@ -278,9 +278,10 @@ class GitProvider(object):
                 self.conf['name'] = self.conf['name'][:-4]
 
         if 'mountpoint' in self.conf:
-            # Remove the 'salt://' from the beginning of the mountpoint
+            # Remove the 'salt://' from the beginning of the mountpoint, as
+            # well as any additional leading/trailing slashes
             self.conf['mountpoint'] = \
-                salt.utils.url.strip_proto(self.conf['mountpoint'])
+                salt.utils.url.strip_proto(self.conf['mountpoint']).strip('/')
         else:
             # For providers which do not use a mountpoint, assume the
             # filesystem is mounted at the root of the fileserver.
