@@ -262,6 +262,8 @@ class LocalClient(object):
             print(pub_data['error'])
             log.debug('_check_pub_data() error: {0}'.format(pub_data['error']))
             return {}
+        elif 'jid' not in pub_data:
+            return {}
         if pub_data['jid'] == '0':
             print('Failed to connect to the Master, '
                   'is the Salt Master running?')
