@@ -12,6 +12,14 @@ Returner Changes
   accept a ``minions`` keyword argument. All returners which ship with Salt
   have been modified to do so.
 
+New Configuration Parameter: ``rotate_aes_key``
+===============================================
+
+- ``Rotate_aes_key`` causes Salt to generate a new AES key whenever a minion key
+  is deleted.  This eliminates the chance that a deleted minion could continue
+  to eavesdrop on communications with the master if it continues to run after its
+  key is deleted.  See the entry in the documentation for `rotate_aes_key`_.
+
 Ubuntu 16.04 Packages
 =====================
 
@@ -640,3 +648,4 @@ Changes:
 .. _`#34647`: https://github.com/saltstack/salt/pull/34647
 .. _`#34651`: https://github.com/saltstack/salt/pull/34651
 .. _`#34676`: https://github.com/saltstack/salt/pull/34676
+.. _ `rotate_aes_key`: https://docs.saltstack.com/en/2015.8/ref/configuration/master.html#rotate-aes-key
