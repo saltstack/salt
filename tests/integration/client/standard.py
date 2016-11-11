@@ -85,6 +85,29 @@ class StdTest(integration.ModuleCase):
                 continue
             self.assertTrue(ret['minion'])
 
+    def test_batch(self):
+        '''
+        test cmd_batch
+        '''
+        cmd_batch = self.client.cmd_batch(
+            'minion',
+            'test.ping',
+        )
+        for ret in cmd_batch:
+            self.assertTrue(ret['minion'])
+
+    def test_batch_raw(self):
+        '''
+        test cmd_batch with raw option
+        '''
+        cmd_batch = self.client.cmd_batch(
+            'minion',
+            'test.ping',
+            raw=True,
+        )
+        for ret in cmd_batch:
+            self.assertTrue(ret['data']['success'])
+
     def test_full_returns(self):
         '''
         test cmd_iter
