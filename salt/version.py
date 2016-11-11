@@ -645,8 +645,8 @@ def system_information():
     release = platform.release()
     if platform.win32_ver()[0]:
         import win32api
-        if ((sys.version_info.major == 2 and sys.version_info >= (2,7,12)) or
-                (sys.version_info.major == 3 and sys.version_info >= (3,5,2))):
+        if ((sys.version_info.major == 2 and sys.version_info >= (2, 7, 12)) or
+                (sys.version_info.major == 3 and sys.version_info >= (3, 5, 2))):
             if win32api.GetVersionEx(1)[8] > 1:
                 server = {'Vista': '2008Server',
                           '7': '2008ServerR2',
