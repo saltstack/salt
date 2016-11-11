@@ -145,6 +145,7 @@ import os
 # Import salt libs
 import salt.utils
 import salt.utils.files
+import salt.modules.useradd
 from salt.modules.cron import (
     _needs_change,
     _cron_matched
@@ -471,7 +472,15 @@ def file(name,
     '''
     # Initial set up
     mode = salt.utils.normalize_mode('0600')
-    owner, group, crontab_dir = _get_cron_info()
+
+    try:
+        group = salt.modules.useradd.info(user)['groups'][0]
+    except Exception:
+        ret = {'changes': {},
+               'comment': "Could not identify group for user {0}".format(user),
+               'name': name,
+               'result': False}
+        return ret
 
     cron_path = salt.utils.files.mkstemp()
     with salt.utils.fopen(cron_path, 'w+') as fp_:
@@ -499,7 +508,7 @@ def file(name,
         fcm = __salt__['file.check_managed'](cron_path,
                                              source,
                                              source_hash,
-                                             owner,
+                                             user,
                                              group,
                                              mode,
                                              template,
@@ -524,7 +533,7 @@ def file(name,
             template,
             source,
             source_hash,
-            owner,
+            user,
             group,
             mode,
             __env__,
@@ -552,7 +561,7 @@ def file(name,
             ret,
             source,
             source_sum,
-            owner,
+            user,
             group,
             mode,
             __env__,
@@ -565,17 +574,22 @@ def file(name,
         return ret
 
     cron_ret = None
-    if ret['changes']:
+    if "diff" in ret['changes']:
         cron_ret = __salt__['cron.write_cron_file_verbose'](user, cron_path)
-        ret['comment'] = 'Crontab for user {0} was updated'.format(user)
+        # Check cmd return code and show success or failure
+        if cron_ret['retcode'] == 0:
+            ret['comment'] = 'Crontab for user {0} was updated'.format(user)
+            ret['result'] = True
+            ret['changes'] = ret['changes']['diff']
+        else:
+            ret['comment'] = 'Unable to update user {0} crontab {1}.' \
+                             ' Error: {2}'.format(user, cron_path, cron_ret['stderr'])
+            ret['result'] = False
+            ret['changes'] = {}
     elif ret['result']:
         ret['comment'] = 'Crontab for user {0} is in the correct ' \
                          'state'.format(user)
-
-    if cron_ret and cron_ret['retcode']:
-        ret['comment'] = 'Unable to update user {0} crontab {1}.' \
-                         ' Error: {2}'.format(user, cron_path, cron_ret['stderr'])
-        ret['result'] = False
+        ret['changes'] = {}
 
     os.unlink(cron_path)
     return ret

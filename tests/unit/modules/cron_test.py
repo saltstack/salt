@@ -615,6 +615,31 @@ class PsTestCase(TestCase):
     def test__get_cron_cmdstr(self):
         self.assertEqual('crontab /tmp', cron._get_cron_cmdstr(STUB_PATH))
 
+    # Test non-root on Solaris
+    @patch('salt.modules.cron.__grains__', new=MagicMock(return_value={'os_family': 'Solaris'}))
+    def test__get_cron_cmdstr_solaris(self):
+        '''
+        Passes if a Solaris OS gets a command string of `crontab /tmp` when adding user
+        '''
+        self.assertEqual('crontab /tmp', cron._get_cron_cmdstr(STUB_PATH, user='foo'))
+
+    # Test non-root on AIX
+    @patch('salt.modules.cron.__grains__', new=MagicMock(return_value={'os_family': 'AIX'}))
+    def test__get_cron_cmdstr_aix(self):
+        '''
+        Passes if a AIX OS gets a command string of `crontab /tmp` when adding user
+        '''
+        self.assertEqual('crontab /tmp', cron._get_cron_cmdstr(STUB_PATH, user='foo'))
+
+    # Test non-root on RedHat
+    @patch('salt.modules.cron.__grains__', new=MagicMock(return_value={'os_family': 'RedHat'}))
+    def test__get_cron_cmdstr_redhat(self):
+        '''
+        Passes if a RedHat OS gets a command string of `crontab /tmp` when adding user
+        '''
+        self.assertEqual('crontab /tmp', cron._get_cron_cmdstr(STUB_PATH, user='foo'))
+
+
     def test__date_time_match(self):
         '''
         Passes if a match is found on all elements. Note the conversions to strings here!
