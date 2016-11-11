@@ -693,8 +693,8 @@ def request_instance(vm_=None, call=None):
                     vm_['name'], exc
                 )
             )
-
-    vm_['password'] = data.extra.get('password', '')
+    if not vm_.get('password', None):
+        vm_['password'] = data.extra.get('password', '')
 
     return data, vm_
 
