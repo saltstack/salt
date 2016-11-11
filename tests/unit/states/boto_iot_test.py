@@ -349,7 +349,7 @@ class BotoIoTPolicyTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
         self.conn.list_principal_policies.return_value = {'policies': [policy_ret]}
         result = salt_states['boto_iot.policy_detached']('test', policy_ret['policyName'], principal)
         self.assertTrue(result['result'])
-        log.warn(result)
+        log.warning(result)
         self.assertFalse(result['changes']['new']['attached'])
 
     def test_detached_when_policy_detached(self):

@@ -66,7 +66,7 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return __virtualname__
+    return 'elasticsearch.alias_exists' in __salt__
 
 
 def _get_options(ret=None):

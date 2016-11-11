@@ -188,7 +188,7 @@ class BotoVpcTestCaseMixin(object):
         if not self.conn:
             self.conn = boto.vpc.connect_to_region(region)
 
-        igw = self.conn.create_internet_gateway(vpc_id)
+        igw = self.conn.create_internet_gateway()
         _maybe_set_name_tag(name, igw)
         _maybe_set_tags(tags, igw)
         return igw

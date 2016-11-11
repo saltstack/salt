@@ -156,7 +156,7 @@ def _get_deps(deps, tree_base, saltenv='base'):
         else:
             shutil.copy(deprpm, dest)
 
-        deps_list += ' --install {0}'.format(dest)
+        deps_list += ' {0}'.format(dest)
 
     return deps_list
 
@@ -250,9 +250,10 @@ def build(runas,
             __salt__['cmd.run']('chown {0} -R {1}'.format(runas, results_dir))
             cmd = 'mock --root={0} --resultdir={1} --init'.format(tgt, results_dir)
             __salt__['cmd.run'](cmd, runas=runas)
-            if deps_list:
+            if deps_list and not deps_list.isspace():
                 cmd = 'mock --root={0} --resultdir={1} --install {2} {3}'.format(tgt, results_dir, deps_list, noclean)
                 __salt__['cmd.run'](cmd, runas=runas)
+                noclean += ' --no-clean'
 
             cmd = 'mock --root={0} --resultdir={1} {2} {3} {4}'.format(
                 tgt,

@@ -3096,7 +3096,7 @@ master, specify the log_file of the syndic daemon.
 
     syndic_log_file: salt-syndic.log
 
-.. master_conf:: syndic_failover
+.. conf_master:: syndic_failover
 
 ``syndic_failover``
 -------------------

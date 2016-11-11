@@ -230,22 +230,22 @@ class TestVerify(TestCase):
         message = 'Insecure logging configuration detected! Sensitive data may be logged.'
 
         mock_cheese = MagicMock()
-        with patch.object(log, 'warn', mock_cheese):
+        with patch.object(log, 'warning', mock_cheese):
             verify_log({'log_level': 'cheeseshop'})
             mock_cheese.assert_called_once_with(message)
 
         mock_trace = MagicMock()
-        with patch.object(log, 'warn', mock_trace):
+        with patch.object(log, 'warning', mock_trace):
             verify_log({'log_level': 'trace'})
             mock_trace.assert_called_once_with(message)
 
         mock_none = MagicMock()
-        with patch.object(log, 'warn', mock_none):
+        with patch.object(log, 'warning', mock_none):
             verify_log({})
             mock_none.assert_called_once_with(message)
 
         mock_info = MagicMock()
-        with patch.object(log, 'warn', mock_info):
+        with patch.object(log, 'warning', mock_info):
             verify_log({'log_level': 'info'})
             mock_info.assert_not_called()
 

@@ -1,0 +1,22 @@
+===========================
+Salt 2016.3.5 Release Notes
+===========================
+
+Version 2016.3.5 is a bugfix release for :doc:`2016.3.0
+</topics/releases/2016.3.0>`.
+
+
+Improved Checksum Handling in :py:func:`file.managed <salt.states.file.managed>`, :py:func:`archive.extracted <salt.states.archive.extracted>` States
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+
+When the ``source_hash`` argument for these states refers to a file containing
+checksums, Salt now looks for checksums matching the name of the source URI, as
+well as the file being managed. Prior releases only looked for checksums
+matching the filename being managed. Additionally, a new argument
+(``source_hash_name``) has been added, which allows the user to disambiguate
+ambiguous matches when more than one matching checksum is found in the
+``source_hash`` file.
+
+A more detailed explanation of this functionality can be found in the
+:py:func:`file.managed <salt.states.file.managed>` documentation, in the
+section for the new ``source_hash_name`` argument.

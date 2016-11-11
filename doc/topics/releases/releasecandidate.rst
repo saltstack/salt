@@ -26,7 +26,7 @@ Builds for a few platforms are available as part of the RC at https://repo.salts
 
         baseurl=https://repo.saltstack.com/salt_rc/yum/redhat/$releasever/$basearch/
 
-    .. code-block::
+    .. code-block:: none
 
         deb http://repo.saltstack.com/salt_rc/apt/ubuntu/14.04/amd64 jessie main
 
@@ -126,4 +126,4 @@ Then install salt using the following command:
 
 .. code-block:: bash
 
-    sudo pip install salt==v2016.11.0rc2
+    sudo pip install salt==2016.11.0rc2

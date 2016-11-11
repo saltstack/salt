@@ -119,7 +119,7 @@ def query(url,
           node='minion',
           port=80,
           opts=None,
-          backend='tornado',
+          backend=None,
           requests_lib=None,
           ca_bundle=None,
           verify_ssl=None,
@@ -152,24 +152,29 @@ def query(url,
         else:
             opts = {}
 
-    if requests_lib is None:
-        requests_lib = opts.get('requests_lib', False)
+    if not backend:
+        if requests_lib is not None or 'requests_lib' in opts:
+            salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
+                                            'please change your config')
+            # beware the named arg above
+            if 'backend' in opts:
+                backend = opts['backend']
+            elif requests_lib or opts.get('requests_lib', False):
+                backend = 'requests'
+            else:
+                backend = 'tornado'
+        else:
+            backend = opts.get('backend', 'tornado')
 
-    if requests_lib is True:
-        log.warning('Please set "backend" to "requests" instead of setting '
-                 '"requests_lib" to "True"')
-
+    if backend == 'requests':
         if HAS_REQUESTS is False:
             ret['error'] = ('http.query has been set to use requests, but the '
                             'requests library does not seem to be installed')
             log.error(ret['error'])
             return ret
-
-        backend = 'requests'
-
-    else:
-        requests_log = logging.getLogger('requests')
-        requests_log.setLevel(logging.WARNING)
+        else:
+            requests_log = logging.getLogger('requests')
+            requests_log.setLevel(logging.WARNING)
 
     # Some libraries don't support separation of url and GET parameters
     # Don't need a try/except block, since Salt depends on tornado
@@ -466,46 +471,29 @@ def query(url,
         supports_max_body_size = 'max_body_size' in client_argspec.args
 
         try:
-            if supports_max_body_size:
-                result = HTTPClient(max_body_size=max_body).fetch(
-                    url_full,
-                    method=method,
-                    headers=header_dict,
-                    auth_username=username,
-                    auth_password=password,
-                    body=data,
-                    validate_cert=verify_ssl,
-                    allow_nonstandard_methods=True,
-                    streaming_callback=streaming_callback,
-                    header_callback=header_callback,
-                    request_timeout=timeout,
-                    proxy_host=proxy_host,
-                    proxy_port=proxy_port,
-                    proxy_username=proxy_username,
-                    proxy_password=proxy_password,
-                    raise_error=raise_error,
-                    **req_kwargs
-                )
-            else:
-                result = HTTPClient().fetch(
-                    url_full,
-                    method=method,
-                    headers=header_dict,
-                    auth_username=username,
-                    auth_password=password,
-                    body=data,
-                    validate_cert=verify_ssl,
-                    allow_nonstandard_methods=True,
-                    streaming_callback=streaming_callback,
-                    header_callback=header_callback,
-                    request_timeout=timeout,
-                    proxy_host=proxy_host,
-                    proxy_port=proxy_port,
-                    proxy_username=proxy_username,
-                    proxy_password=proxy_password,
-                    raise_error=raise_error,
-                    **req_kwargs
-                )
+            download_client = HTTPClient(max_body_size=max_body) \
+                if supports_max_body_size \
+                else HTTPClient()
+            result = download_client.fetch(
+                url_full,
+                method=method,
+                headers=header_dict,
+                auth_username=username,
+                auth_password=password,
+                body=data,
+                validate_cert=verify_ssl,
+                allow_nonstandard_methods=True,
+                streaming_callback=streaming_callback,
+                header_callback=header_callback,
+                request_timeout=timeout,
+                proxy_host=proxy_host,
+                proxy_port=proxy_port,
+                proxy_username=proxy_username,
+                proxy_password=proxy_password,
+                raise_error=raise_error,
+                decompress_response=False,
+                **req_kwargs
+            )
         except tornado.httpclient.HTTPError as exc:
             ret['status'] = exc.code
             ret['error'] = str(exc)

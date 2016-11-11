@@ -149,7 +149,7 @@ def delete(name, remove=False, force=False):
 
     # force is added for compatibility with user.absent state function
     if force:
-        log.warn('force option is unsupported on MacOS, ignoring')
+        log.warning('force option is unsupported on MacOS, ignoring')
 
     # remove home directory from filesystem
     if remove:

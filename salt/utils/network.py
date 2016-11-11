@@ -122,7 +122,7 @@ def _generate_minion_id():
                 if len(a_nfo) > 3:
                     hosts.append(a_nfo[3])
         except socket.gaierror:
-            log.warn('Cannot resolve address {addr} info via socket: {message}'.format(
+            log.warning('Cannot resolve address {addr} info via socket: {message}'.format(
                 addr=hosts.first() or 'localhost (N/A)', message=socket.gaierror)
             )
     # Universal method for everywhere (Linux, Slowlaris, Windows etc)

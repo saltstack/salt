@@ -465,7 +465,7 @@ def list_tags(DomainName=None, ARN=None,
             raise SaltInvocationError('One (but not both) of ARN or '
                          'domain must be specified.')
         ret = conn.list_tags(ARN=ARN)
-        log.warn(ret)
+        log.warning(ret)
         tlist = ret.get('TagList', [])
         tagdict = {}
         for tag in tlist:
