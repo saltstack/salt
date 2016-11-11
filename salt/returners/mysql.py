@@ -169,7 +169,8 @@ __virtualname__ = 'mysql'
 
 def __virtual__():
     if not HAS_MYSQL:
-        return False
+        return False, 'Could not import mysql returner; ' \
+                      'mysql python client is not installed.'
     return True
 
 
@@ -332,7 +333,7 @@ def save_load(jid, load, minions=None):
             pass
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''
