@@ -251,7 +251,7 @@ class LocalClient(object):
         '''
         Common checks on the pub_data data structure returned from running pub
         '''
-        if not pub_data:
+        if pub_data == '':
             # Failed to authenticate, this could be a bunch of things
             raise EauthAuthenticationError(
                 'Failed to authenticate! This is most likely because this '
@@ -261,7 +261,11 @@ class LocalClient(object):
             )
 
         # Failed to connect to the master and send the pub
-        if 'jid' not in pub_data:
+        if 'error' in pub_data:
+            print(pub_data['error'])
+            log.debug('_check_pub_data() error: {0}'.format(pub_data['error']))
+            return {}
+        elif 'jid' not in pub_data:
             return {}
         if pub_data['jid'] == '0':
             print('Failed to connect to the Master, '
