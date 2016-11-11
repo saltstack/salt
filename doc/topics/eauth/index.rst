@@ -121,12 +121,12 @@ Positional arguments or keyword arguments to functions can also be whitelisted.
         my_user:
           - '*':
             - 'my_mod.*':
-              args:
+                args:
                 - 'a.*'
                 - 'b.*'
-              kwargs:
-                'kwa': 'kwa.*'
-                'kwb': 'kwb'
+                kwargs:
+                  'kwa': 'kwa.*'
+                  'kwb': 'kwb'
 
 The rules:
 
