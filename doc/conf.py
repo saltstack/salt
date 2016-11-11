@@ -245,7 +245,7 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'next'  # latest, previous, develop, next
+build_type = 'develop'  # latest, previous, develop, next
 release = version  # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
 
