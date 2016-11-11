@@ -152,7 +152,7 @@ def _render_tab(lst):
     return ret
 
 
-def _get_cron_cmdstr(path, user=None):
+def _get_cron_cmdstr(path):
     '''
     Returns a format string, to be used to build a crontab command.
     '''
@@ -176,7 +176,7 @@ def write_cron_file(user, path):
 
         Some OS' do not support specifying user via the `crontab` command
     '''
-    return __salt__['cmd.retcode'](_get_cron_cmdstr(path, user),
+    return __salt__['cmd.retcode'](_get_cron_cmdstr(path),
                                    runas=user,
                                    python_shell=False) == 0
 
@@ -197,9 +197,10 @@ def write_cron_file_verbose(user, path):
 
         Some OS' do not support specifying user via the `crontab` command
     '''
-    return __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
+    return __salt__['cmd.run_all'](_get_cron_cmdstr(path),
                                    runas=user,
                                    python_shell=False)
+
 
 def _write_cron_lines(user, lines):
     '''
@@ -209,7 +210,7 @@ def _write_cron_lines(user, lines):
     with salt.utils.fpopen(path, 'w+', uid=__salt__['file.user_to_uid'](user), mode=0o600) as fp_:
         fp_.writelines(lines)
 
-    ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
+    ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path),
                                   runas=user,
                                   python_shell=False)
 
@@ -239,7 +240,7 @@ def raw_cron(user):
     '''
 
     cmd = 'crontab -l'
-    # Preserve line endings    
+    # Preserve line endings
     lines = __salt__['cmd.run_stdout'](cmd,
                                        runas=user,
                                        rstrip=False,
