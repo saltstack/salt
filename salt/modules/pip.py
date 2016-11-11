@@ -87,7 +87,7 @@ import salt.utils
 import tempfile
 import salt.utils.locales
 import salt.utils.url
-from salt.ext.six import string_types
+from salt.ext.six import string_types, iteritems
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
@@ -827,6 +827,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if env_vars:
         if isinstance(env_vars, dict):
+            for k, v in iteritems(env_vars):
+                if not isinstance(v, string_types):
+                    env_vars[k] = str(v)
             os.environ.update(env_vars)
         else:
             raise CommandExecutionError(
