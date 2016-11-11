@@ -1979,11 +1979,11 @@ def _hw_data(osdata):
     grains = {}
     # On SmartOS (possibly SunOS also) smbios only works in the global zone
     # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
-    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not ( 
+    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not (
             salt.utils.is_smartos() or
             (  # SunOS on SPARC - 'smbios: failed to load SMBIOS: System does not export an SMBIOS table'
                 osdata['kernel'] == 'SunOS' and
-                osdata['cpuarch'].startswith('sparc') 
+                osdata['cpuarch'].startswith('sparc')
             )):
         grains = {
             'biosversion': __salt__['smbios.get']('bios-version'),
@@ -2061,8 +2061,8 @@ def _hw_data(osdata):
                 data += __salt__['cmd.run']('{0} {1}'.format(cmd, args))
                 data += '\n'
 
-        sn_regexes = [ re.compile(r) for r in 
-                       [ 
+        sn_regexes = [ re.compile(r) for r in
+                       [
                            r'(?im)^\s*Chassis\s+Serial\s+Number\n-+\n(\S+)', # prtdiag
                            r'(?im)^\s*chassis-sn:\s*(\S+)', # prtconf
                            r'(?im)^\s*Chassis\s+Serial#:\s*(\S+)', # virtinfo
@@ -2082,7 +2082,7 @@ def _hw_data(osdata):
                        ]
                    ]
 
-        uuid_regexes = [ re.compile(r) for r in 
+        uuid_regexes = [ re.compile(r) for r in
                          [
                              r'(?im)^\s*Domain\s+UUID:\s*(\S+)', # virtinfo
                          ]
@@ -2094,7 +2094,7 @@ def _hw_data(osdata):
                                 ]
                             ]
 
-        product_regexes = [ re.compile(r) for r in 
+        product_regexes = [ re.compile(r) for r in
                            [
                                r'(?im)^\s*System\s+Configuration:\s*.*?sun\d\S+\s(.*)', # prtdiag
                                r'(?im)^\s*banner-name:\s*(.*)',  # prtconf
