@@ -444,8 +444,7 @@ def get_mors_with_properties(service_instance, object_type, property_list=None, 
     content_args = [service_instance, object_type]
     content_kwargs = {'property_list': property_list,
                       'container_ref': container_ref,
-                      'traversal_spec': traversal_spec,
-                      'local_properties': local_properties}
+                      }
     try:
         content = get_content(*content_args, **content_kwargs)
     except BadStatusLine:
