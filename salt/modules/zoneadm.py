@@ -16,7 +16,7 @@ Module for Solaris 10's zoneadm
 
     These subcommands are missing:
     clone, install,
-    uninstall, move, ready, and verify
+    uninstall, move, and verify
 
 '''
 from __future__ import absolute_import
@@ -147,9 +147,7 @@ def boot(zone, single=False, altinit=None, smf_options=None):
         salt '*' zoneadm.boot maeve single=True
         salt '*' zoneadm.boot teddy single=True smf_options=verbose
     '''
-    ## zone is running
-    if zone in list_zones():
-        return True
+    ret = {'status': True}
 
     ## build boot_options
     boot_options = ''
@@ -167,7 +165,13 @@ def boot(zone, single=False, altinit=None, smf_options=None):
         zone=zone,
         boot_opts=boot_options,
     ))
-    return res['retcode'] == 0
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zoneadm: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
 
 
 def reboot(zone, single=False, altinit=None, smf_options=None):
@@ -191,6 +195,8 @@ def reboot(zone, single=False, altinit=None, smf_options=None):
         salt '*' zoneadm.reboot dolores
         salt '*' zoneadm.reboot teddy single=True
     '''
+    ret = {'status': True}
+
     ## build boot_options
     boot_options = ''
     if single:
@@ -202,12 +208,18 @@ def reboot(zone, single=False, altinit=None, smf_options=None):
     if boot_options != '':
         boot_options = ' -- {0}'.format(boot_options.strip())
 
-    ## execute boot
+    ## execute reboot
     res = __salt__['cmd.run_all']('zoneadm -z {zone} reboot{boot_opts}'.format(
         zone=zone,
         boot_opts=boot_options,
     ))
-    return res['retcode'] == 0
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zoneadm: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
 
 
 def halt(zone):
@@ -226,15 +238,19 @@ def halt(zone):
 
         salt '*' zoneadm.halt hector
     '''
-    ## zone is not running or not available
-    if zone not in list_zones():
-        return True
+    ret = {'status': True}
 
-    ## execute halt
+    ## halt zone
     res = __salt__['cmd.run_all']('zoneadm -z {zone} halt'.format(
         zone=zone,
     ))
-    return res['retcode'] == 0
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zoneadm: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
 
 
 def shutdown(zone, reboot=False, single=False, altinit=None, smf_options=None):
@@ -260,6 +276,8 @@ def shutdown(zone, reboot=False, single=False, altinit=None, smf_options=None):
         salt '*' zoneadm.shutdown peter
         salt '*' zoneadm.shutdown armistice reboot=True
     '''
+    ret = {'status': True}
+
     ## build boot_options
     boot_options = ''
     if single:
@@ -271,13 +289,19 @@ def shutdown(zone, reboot=False, single=False, altinit=None, smf_options=None):
     if boot_options != '':
         boot_options = ' -- {0}'.format(boot_options.strip())
 
-    ## execute boot
+    ## shutdown zone
     res = __salt__['cmd.run_all']('zoneadm -z {zone} shutdown{reboot}{boot_opts}'.format(
         zone=zone,
         reboot=' -r' if reboot else '',
         boot_opts=boot_options,
     ))
-    return res['retcode'] == 0
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zoneadm: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
 
 
 def detach(zone):
@@ -333,6 +357,34 @@ def attach(zone, force=False, brand_opts=None):
         zone=zone,
         force=' -F' if force else '',
         brand_opts=' {0}'.format(brand_opts) if brand_opts else '',
+    ))
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zoneadm: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
+
+
+def ready(zone):
+    '''
+    Prepares a zone for running applications.
+
+    zone : string
+        name of the zone
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zoneadm.ready clementine
+    '''
+    ret = {'status': True}
+
+    ## ready zone
+    res = __salt__['cmd.run_all']('zoneadm -z {zone} ready'.format(
+        zone=zone,
     ))
     ret['status'] = res['retcode'] == 0
     ret['message'] = res['stdout'] if ret['status'] else res['stderr']
