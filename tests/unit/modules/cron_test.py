@@ -639,7 +639,6 @@ class PsTestCase(TestCase):
         '''
         self.assertEqual('crontab /tmp', cron._get_cron_cmdstr(STUB_PATH, user='foo'))
 
-
     def test__date_time_match(self):
         '''
         Passes if a match is found on all elements. Note the conversions to strings here!
