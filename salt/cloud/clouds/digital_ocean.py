@@ -617,22 +617,34 @@ def list_keypairs(call=None):
         )
         return False
 
-    items = query(method='account/keys')
+    fetch = True
+    page = 1
     ret = {}
-    for key_pair in items['ssh_keys']:
-        name = key_pair['name']
-        if name in ret:
-            raise SaltCloudSystemExit(
-                'A duplicate key pair name, \'{0}\', was found in DigitalOcean\'s '
-                'key pair list. Please change the key name stored by DigitalOcean. '
-                'Be sure to adjust the value of \'ssh_key_file\' in your cloud '
-                'profile or provider configuration, if necessary.'.format(
-                    name
+
+    while fetch:
+        items = query(method='account/keys', command='?page=' + str(page) +
+                      '&per_page=100')
+
+        for key_pair in items['ssh_keys']:
+            name = key_pair['name']
+            if name in ret:
+                raise SaltCloudSystemExit(
+                    'A duplicate key pair name, \'{0}\', was found in DigitalOcean\'s '
+                    'key pair list. Please change the key name stored by DigitalOcean. '
+                    'Be sure to adjust the value of \'ssh_key_file\' in your cloud '
+                    'profile or provider configuration, if necessary.'.format(
+                        name
+                    )
                 )
-            )
-        ret[name] = {}
-        for item in six.iterkeys(key_pair):
-            ret[name][item] = str(key_pair[item])
+            ret[name] = {}
+            for item in six.iterkeys(key_pair):
+                ret[name][item] = str(key_pair[item])
+
+        page += 1
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
 
     return ret
 
