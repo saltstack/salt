@@ -194,8 +194,9 @@ class Batch(object):
                                 break
                             continue
                         if self.opts.get('raw'):
-                            parts.update({part['id']: part})
-                            minion_tracker[queue]['minions'].remove(part['id'])
+                            parts.update({part['data']['id']: part})
+                            if part['data']['id'] in minion_tracker[queue]['minions']:
+                                minion_tracker[queue]['minions'].remove(part['data']['id'])
                         else:
                             parts.update(part)
                             for id in part.keys():
@@ -223,6 +224,7 @@ class Batch(object):
                     if bwait:
                         wait.append(datetime.now() + timedelta(seconds=bwait))
                 if self.opts.get('raw'):
+                    ret[minion] = data
                     yield data
                 elif self.opts.get('failhard'):
                     # When failhard is passed, we need to return all data to include
