@@ -682,17 +682,8 @@ def request_instance(vm_=None, call=None):
                 break
         if floating_ip is None:
             floating_ip = conn.floating_ip_create(pool)['ip']
-        try:
-            conn.floating_ip_associate(kwargs['name'], floating_ip)
-            vm_['floating_ip'] = floating_ip
-        except Exception as exc:
-            raise SaltCloudSystemExit(
-                'Error assigning floating_ip for {0} on Nova\n\n'
-                'The following exception was thrown by libcloud when trying to '
-                'assing a floating ip: {1}\n'.format(
-                    vm_['name'], exc
-                )
-            )
+
+    vm_['floating_ip'] = floating_ip
 
     vm_['password'] = data.extra.get('password', '')
 
@@ -794,6 +785,9 @@ def create(vm_):
             # Still not running, trigger another iteration
             return
 
+        # set vm state is ACTIVE here,or it will be BUILD or other when final return
+        data.state = 'ACTIVE'        
+        
         if rackconnect(vm_) is True:
             extra = node.get('extra', {})
             rc_status = extra.get('metadata', {}).get(
@@ -918,7 +912,24 @@ def create(vm_):
             data.private_ips = result
             if ssh_interface(vm_) == 'private_ips':
                 return data
-
+        
+        # if the vm already associated with a floating ip,we should skip it.
+        if not floating:
+            log.debug('associate floating ip {0} to vm {1}'.format(vm_['floating_ip'], vm_['name']))
+            try:
+                # we should associate floating ip to vm after it's state is ACTIVE.
+                conn.floating_ip_associate(vm_['name'], vm_['floating_ip'])
+            except Exception as exc:
+                raise SaltCloudSystemExit(
+                    'Error assigning floating_ip for {0} on Nova\n\n'
+                    'The following exception was thrown by libcloud when trying to '
+                    'assing a floating ip: {1}\n'.format(
+                        vm_['name'], exc
+                    )
+                )
+        else:
+            log.debug('skip floating_ip_associate')
+            
     try:
         data = salt.utils.cloud.wait_for_ip(
             __query_node_data,
