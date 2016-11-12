@@ -180,8 +180,9 @@ class OptionParser(optparse.OptionParser, object):
         # Let's get some proper sys.stderr logging as soon as possible!!!
         # This logging handler will be removed once the proper console or
         # logfile logging is setup.
+        temp_log_level = getattr(self.options, 'log_level', None)
         log.setup_temp_logger(
-            getattr(self.options, 'log_level', 'error')
+            'error' if temp_log_level is None else temp_log_level
         )
 
         # Gather and run the process_<option> functions in the proper order
@@ -1599,10 +1600,11 @@ class MasterOptionParser(six.with_metaclass(OptionParserMeta,
         return config.master_config(self.get_config_file_path())
 
 
-class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser)):  # pylint: disable=no-init
+class MinionOptionParser(six.with_metaclass(OptionParserMeta,
+                                            MasterOptionParser)):  # pylint: disable=no-init
 
     description = (
-        'The Salt minion, receives commands from a remote Salt master.'
+        'The Salt Minion, receives commands from a remote Salt Master.'
     )
 
     # ConfigDirMixIn config filename attribute
