@@ -15,7 +15,9 @@ Module for Solaris 10's zoneadm
     Not all subcommands are implemented.
 
     These subcommands are missing:
-    clone, install, and uninstall
+    clone
+
+    UUID support is also not present
 
 '''
 from __future__ import absolute_import
@@ -444,6 +446,72 @@ def move(zone, zonepath):
     res = __salt__['cmd.run_all']('zoneadm -z {zone} move {path}'.format(
         zone=zone,
         path=zonepath,
+    ))
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zoneadm: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
+
+
+def uninstall(zone):
+    '''
+    Uninstall the specified zone from the system.
+
+    zone : string
+        name of the zone
+
+    .. warning::
+        The -F flag is always used to avoid the prompts when uninstalling.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zoneadm.uninstall teddy
+    '''
+    ret = {'status': True}
+
+    ## uninstall zone
+    res = __salt__['cmd.run_all']('zoneadm -z {zone} uninstall -F'.format(
+        zone=zone,
+    ))
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zoneadm: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
+
+
+def install(zone, nodataset=False, brand_opts=None):
+    '''
+    Install the specified zone from the system.
+
+    zone : string
+        name of the zone
+    nodataset : boolean
+        do not create a ZFS file system
+    brand_opts : string
+        brand specific options to pass
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zoneadm.install dolores
+        salt '*' zoneadm.install teddy True
+    '''
+    ret = {'status': True}
+
+    ## install zone
+    res = __salt__['cmd.run_all']('zoneadm -z {zone} install{nodataset}{brand_opts}'.format(
+        zone=zone,
+        nodataset=' -x nodataset' if nodataset else '',
+        brand_opts=' {0}'.format(brand_opts) if brand_opts else '',
     ))
     ret['status'] = res['retcode'] == 0
     ret['message'] = res['stdout'] if ret['status'] else res['stderr']
