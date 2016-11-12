@@ -10,10 +10,6 @@ Module for Solaris 10's zoneadm
 
 .. warning::
     Oracle Solaris 11's zoneadm is not supported by this module!
-
-.. note::
-    UUID are not yet supported
-
 '''
 from __future__ import absolute_import
 
@@ -51,6 +47,13 @@ def _is_globalzone():
         return True
 
     return False
+
+
+def _is_uuid(zone):
+    '''
+    Check if zone is actually a UUID
+    '''
+    return len(zone) == 36 and zone.index('-') == 8
 
 
 def __virtual__():
@@ -126,7 +129,7 @@ def boot(zone, single=False, altinit=None, smf_options=None):
     Boot (or activate) the specified zone.
 
     zone : string
-        name of the zone
+        name or uuid of the zone
     single : boolean
         boots only to milestone svc:/milestone/single-user:default.
     altinit : string
@@ -157,8 +160,8 @@ def boot(zone, single=False, altinit=None, smf_options=None):
         boot_options = ' -- {0}'.format(boot_options.strip())
 
     ## execute boot
-    res = __salt__['cmd.run_all']('zoneadm -z {zone} boot{boot_opts}'.format(
-        zone=zone,
+    res = __salt__['cmd.run_all']('zoneadm {zone} boot{boot_opts}'.format(
+        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
         boot_opts=boot_options,
     ))
     ret['status'] = res['retcode'] == 0
@@ -175,7 +178,7 @@ def reboot(zone, single=False, altinit=None, smf_options=None):
     Restart the zone. This is equivalent to a halt boot sequence.
 
     zone : string
-        name of the zone
+        name or uuid of the zone
     single : boolean
         boots only to milestone svc:/milestone/single-user:default.
     altinit : string
@@ -205,8 +208,8 @@ def reboot(zone, single=False, altinit=None, smf_options=None):
         boot_options = ' -- {0}'.format(boot_options.strip())
 
     ## execute reboot
-    res = __salt__['cmd.run_all']('zoneadm -z {zone} reboot{boot_opts}'.format(
-        zone=zone,
+    res = __salt__['cmd.run_all']('zoneadm {zone} reboot{boot_opts}'.format(
+        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
         boot_opts=boot_options,
     ))
     ret['status'] = res['retcode'] == 0
@@ -223,7 +226,7 @@ def halt(zone):
     Halt the specified zone.
 
     zone : string
-        name of the zone
+        name or uuid of the zone
 
     .. note::
         To cleanly shutdown the zone use the shutdown function.
@@ -237,8 +240,8 @@ def halt(zone):
     ret = {'status': True}
 
     ## halt zone
-    res = __salt__['cmd.run_all']('zoneadm -z {zone} halt'.format(
-        zone=zone,
+    res = __salt__['cmd.run_all']('zoneadm {zone} halt'.format(
+        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
     ))
     ret['status'] = res['retcode'] == 0
     ret['message'] = res['stdout'] if ret['status'] else res['stderr']
@@ -254,7 +257,7 @@ def shutdown(zone, reboot=False, single=False, altinit=None, smf_options=None):
     Gracefully shutdown the specified zone.
 
     zone : string
-        name of the zone
+        name or uuid of the zone
     reboot : boolean
         reboot zone after shutdown (equivalent of shutdown -i6 -g0 -y)
     single : boolean
@@ -286,8 +289,8 @@ def shutdown(zone, reboot=False, single=False, altinit=None, smf_options=None):
         boot_options = ' -- {0}'.format(boot_options.strip())
 
     ## shutdown zone
-    res = __salt__['cmd.run_all']('zoneadm -z {zone} shutdown{reboot}{boot_opts}'.format(
-        zone=zone,
+    res = __salt__['cmd.run_all']('zoneadm {zone} shutdown{reboot}{boot_opts}'.format(
+        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
         reboot=' -r' if reboot else '',
         boot_opts=boot_options,
     ))
@@ -305,7 +308,7 @@ def detach(zone):
     Detach the specified zone.
 
     zone : string
-        name of the zone
+        name or uuid of the zone
 
     CLI Example:
 
@@ -316,8 +319,8 @@ def detach(zone):
     ret = {'status': True}
 
     ## detach zone
-    res = __salt__['cmd.run_all']('zoneadm -z {zone} detach'.format(
-        zone=zone,
+    res = __salt__['cmd.run_all']('zoneadm {zone} detach'.format(
+        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
     ))
     ret['status'] = res['retcode'] == 0
     ret['message'] = res['stdout'] if ret['status'] else res['stderr']
@@ -368,7 +371,7 @@ def ready(zone):
     Prepares a zone for running applications.
 
     zone : string
-        name of the zone
+        name or uuid of the zone
 
     CLI Example:
 
@@ -379,8 +382,8 @@ def ready(zone):
     ret = {'status': True}
 
     ## ready zone
-    res = __salt__['cmd.run_all']('zoneadm -z {zone} ready'.format(
-        zone=zone,
+    res = __salt__['cmd.run_all']('zoneadm {zone} ready'.format(
+        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
     ))
     ret['status'] = res['retcode'] == 0
     ret['message'] = res['stdout'] if ret['status'] else res['stderr']
@@ -425,7 +428,7 @@ def move(zone, zonepath):
     Move zone to new zonepath.
 
     zone : string
-        name of the zone
+        name or uuid of the zone
     zonepath : string
         new zonepath
 
@@ -438,8 +441,8 @@ def move(zone, zonepath):
     ret = {'status': True}
 
     ## verify zone
-    res = __salt__['cmd.run_all']('zoneadm -z {zone} move {path}'.format(
-        zone=zone,
+    res = __salt__['cmd.run_all']('zoneadm {zone} move {path}'.format(
+        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
         path=zonepath,
     ))
     ret['status'] = res['retcode'] == 0
@@ -456,7 +459,7 @@ def uninstall(zone):
     Uninstall the specified zone from the system.
 
     zone : string
-        name of the zone
+        name or uuid of the zone
 
     .. warning::
         The -F flag is always used to avoid the prompts when uninstalling.
@@ -470,8 +473,8 @@ def uninstall(zone):
     ret = {'status': True}
 
     ## uninstall zone
-    res = __salt__['cmd.run_all']('zoneadm -z {zone} uninstall -F'.format(
-        zone=zone,
+    res = __salt__['cmd.run_all']('zoneadm {zone} uninstall -F'.format(
+        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
     ))
     ret['status'] = res['retcode'] == 0
     ret['message'] = res['stdout'] if ret['status'] else res['stderr']
