@@ -78,8 +78,13 @@ same way as in the above example, only without a top-level ``grains:`` key:
     cabinet: 13
     cab_u: 14-15
 
-Note that ``/etc/salt/grains`` is ignored if you specify grains in the minion config.
+.. note::
 
+    The content of ``/etc/salt/grains`` is ignored if you specify grains in the minion config.
+
+.. note::
+
+    Grains are static, and since they are not often changed, they will need a grains refresh when they are updated. You can do this by calling: ``salt minion saltutil.refresh_modules``
 
 Matching Grains in the Top File
 ===============================
