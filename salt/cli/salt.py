@@ -53,6 +53,10 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             return
 
         if self.options.batch or self.options.static:
+            # _run_batch() will handle all output and
+            # exit with the appropriate error condition
+            # Execution will not continue past this point
+            # in batch mode.
             self._run_batch()
         else:
             if self.options.timeout <= 0:
@@ -234,10 +238,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 # We will print errors to the console further down the stack
                 sys.exit(1)
             # Printing the output is already taken care of in run() itself
+            retcode = 0
             for res in batch.run():
-                if self.options.failhard:
-                    for ret in six.itervalues(res):
-                        retcode = salt.utils.job.get_retcode(ret)
+                for ret in six.itervalues(res):
+                    job_retcode = salt.utils.job.get_retcode(ret)
+                    if job_retcode > retcode:
+                        # Exit with the highest retcode we find
+                        retcode = job_retcode
+                    if self.options.failhard:
                         if retcode != 0:
                             sys.stderr.write(
                                 '{0}\nERROR: Minions returned with non-zero exit code.\n'.format(
@@ -245,6 +253,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                                 )
                             )
                             sys.exit(retcode)
+            sys.exit(retcode)
 
     def _print_errors_summary(self, errors):
         if errors:

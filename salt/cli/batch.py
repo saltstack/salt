@@ -226,14 +226,9 @@ class Batch(object):
                 if self.opts.get('raw'):
                     ret[minion] = data
                     yield data
-                elif self.opts.get('failhard'):
-                    # When failhard is passed, we need to return all data to include
-                    # the retcode to use in salt/cli/salt.py later. See issue #24996.
+                else:
                     ret[minion] = data
                     yield {minion: data}
-                else:
-                    ret[minion] = data['ret']
-                    yield {minion: data['ret']}
                 if not self.quiet:
                     ret[minion] = data['ret']
                     data[minion] = data.pop('ret')
