@@ -240,7 +240,7 @@ def commit():
     commit_ok = conn.cu.commit_check()
     if commit_ok:
         try:
-            conn.cu.commit(confirm=True)
+            conn.cu.commit(confirm=False)
             ret['out'] = True
             ret['message'] = 'Commit Successful.'
         except Exception as exception:
