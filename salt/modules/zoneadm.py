@@ -12,12 +12,7 @@ Module for Solaris 10's zoneadm
     Oracle Solaris 11's zoneadm is not supported by this module!
 
 .. note::
-    Not all subcommands are implemented.
-
-    These subcommands are missing:
-    clone
-
-    UUID support is also not present
+    UUID are not yet supported
 
 '''
 from __future__ import absolute_import
@@ -512,6 +507,40 @@ def install(zone, nodataset=False, brand_opts=None):
         zone=zone,
         nodataset=' -x nodataset' if nodataset else '',
         brand_opts=' {0}'.format(brand_opts) if brand_opts else '',
+    ))
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zoneadm: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
+
+
+def clone(zone, source, snapshot=None):
+    '''
+    Install a zone by copying an existing installed zone.
+
+    zone : string
+        name of the zone
+    source : string
+        zone to clone from
+    snapshot : string
+        optional name of snapshot to use as source
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zoneadm.clone clementine dolores
+    '''
+    ret = {'status': True}
+
+    ## install zone
+    res = __salt__['cmd.run_all']('zoneadm -z {zone} clone {snapshot}{source}'.format(
+        zone=zone,
+        source=source,
+        snapshot='-s {0} '.format(snapshot) if snapshot else '',
     ))
     ret['status'] = res['retcode'] == 0
     ret['message'] = res['stdout'] if ret['status'] else res['stderr']
