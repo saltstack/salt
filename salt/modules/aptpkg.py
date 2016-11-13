@@ -1775,6 +1775,8 @@ def del_repo(repo, **kwargs):
 
 def get_repo_keys():
     '''
+    .. versionadded:: nitrogen
+
     List known repo key details.
 
     :return: A dictionary containing the repo keys.
@@ -1845,6 +1847,8 @@ def get_repo_keys():
 
 def add_repo_key(path=None, text=None, keyserver=None, keyid=None, saltenv='base'):
     '''
+    .. versionadded:: nitrogen
+
     Add a repo key using ``apt-key add``.
 
     :param str path: The path of the key file to import.
