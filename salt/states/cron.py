@@ -145,7 +145,6 @@ import os
 # Import salt libs
 import salt.utils
 import salt.utils.files
-import salt.modules.useradd
 from salt.modules.cron import (
     _needs_change,
     _cron_matched
@@ -514,7 +513,7 @@ def file(name,
     mode = salt.utils.normalize_mode('0600')
 
     try:
-        group = salt.modules.useradd.info(user)['groups'][0]
+        group = __salt__['user.info'](user)['groups'][0]
     except Exception:
         ret = {'changes': {},
                'comment': "Could not identify group for user {0}".format(user),
