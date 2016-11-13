@@ -1773,6 +1773,24 @@ def del_repo(repo, **kwargs):
     )
 
 
+def _convert_if_int(value):
+    '''
+    .. versionadded:: nitrogen
+
+    Convert to an int if necessary.
+
+    :param str value: The value to check/convert.
+
+    :return: The converted or passed value.
+    :rtype: bool|int|str
+    '''
+    try:
+        value = int(str(value))
+    except ValueError:
+        pass
+    return value
+
+
 def get_repo_keys():
     '''
     .. versionadded:: nitrogen
@@ -1807,7 +1825,7 @@ def get_repo_keys():
     # Reference for the meaning of each item in the colon-separated
     # record can be found here: https://goo.gl/KIZbvp
     for line in lines:
-        items = [item.strip() if item.strip() else None for item in line.split(':')]
+        items = [_convert_if_int(item.strip()) if item.strip() else None for item in line.split(':')]
         key_props = dict()
 
         if len(items) < 2:
