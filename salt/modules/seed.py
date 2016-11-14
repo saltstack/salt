@@ -72,7 +72,7 @@ def _mount(path, ftype, root=None):
         return path
     elif ftype == 'file':
         if 'guestfs.mount' in __salt__:
-            util = 'qemu_nbd'
+            util = 'guestfs'
         elif 'qemu_nbd.init' in __salt__:
             util = 'qemu_nbd'
         else:
