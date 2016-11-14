@@ -167,8 +167,7 @@ class LocalClient(object):
                 opts=self.opts,
                 listen=False,
                 io_loop=io_loop,
-                keep_loop=keep_loop,
-                raise_errors=auto_reconnect)
+                keep_loop=keep_loop)
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.returners = salt.loader.returners(self.opts, self.functions)
@@ -252,7 +251,7 @@ class LocalClient(object):
         '''
         Common checks on the pub_data data structure returned from running pub
         '''
-        if not pub_data:
+        if pub_data == '':
             # Failed to authenticate, this could be a bunch of things
             raise EauthAuthenticationError(
                 'Failed to authenticate! This is most likely because this '
@@ -262,7 +261,11 @@ class LocalClient(object):
             )
 
         # Failed to connect to the master and send the pub
-        if 'jid' not in pub_data:
+        if 'error' in pub_data:
+            print(pub_data['error'])
+            log.debug('_check_pub_data() error: {0}'.format(pub_data['error']))
+            return {}
+        elif 'jid' not in pub_data:
             return {}
         if pub_data['jid'] == '0':
             print('Failed to connect to the Master, '
@@ -907,16 +910,9 @@ class LocalClient(object):
         '''
 
         while True:
-            try:
-                raw = self.event.get_event(wait=0.01, tag=tag, match_type=match_type, full=True, no_block=True)
-                yield raw
-            except tornado.iostream.StreamClosedError:
-                if self.auto_reconnect:
-                    log.warning('Connection to master lost. Reconnecting.')
-                    self.event.close_pub()
-                    self.event.connect_pub(timeout=self._get_timeout(None))
-                else:
-                    raise
+            raw = self.event.get_event(wait=0.01, tag=tag, match_type=match_type, full=True,
+                                       no_block=True, auto_reconnect=self.auto_reconnect)
+            yield raw
 
     def get_iter_returns(
             self,
@@ -1148,16 +1144,7 @@ class LocalClient(object):
         while True:
             time_left = timeout_at - int(time.time())
             wait = max(1, time_left)
-            try:
-                raw = self.event.get_event(wait, jid)
-            except tornado.iostream.StreamClosedError:
-                if self.auto_reconnect:
-                    log.warning('Connection to master lost. Reconnecting.')
-                    self.event.close_pub()
-                    self.event.connect_pub(timeout=self._get_timeout(wait))
-                    continue
-                else:
-                    raise
+            raw = self.event.get_event(wait, jid, auto_reconnect=self.auto_reconnect)
             if raw is not None and 'return' in raw:
                 found.add(raw['id'])
                 ret[raw['id']] = raw['return']
@@ -1310,16 +1297,7 @@ class LocalClient(object):
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
             jid_tag = 'salt/job/{0}'.format(jid)
-            try:
-                raw = self.event.get_event(wait, jid_tag)
-            except tornado.iostream.StreamClosedError:
-                if self.auto_reconnect:
-                    log.warning('Connection to master lost. Reconnecting.')
-                    self.event.close_pub()
-                    self.event.connect_pub(timeout=self._get_timeout(wait))
-                    continue
-                else:
-                    raise
+            raw = self.event.get_event(wait, jid_tag, auto_reconnect=self.auto_reconnect)
             if raw is not None and 'return' in raw:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
@@ -1437,16 +1415,7 @@ class LocalClient(object):
             raise StopIteration()
         # Wait for the hosts to check in
         while True:
-            try:
-                raw = self.event.get_event(timeout)
-            except tornado.iostream.StreamClosedError:
-                if self.auto_reconnect:
-                    log.warning('Connection to master lost. Reconnecting.')
-                    self.event.close_pub()
-                    self.event.connect_pub(timeout=self._get_timeout(timeout))
-                    continue
-                else:
-                    raise
+            raw = self.event.get_event(timeout, auto_reconnect=self.auto_reconnect)
             if raw is None or time.time() > timeout_at:
                 # Timeout reached
                 break

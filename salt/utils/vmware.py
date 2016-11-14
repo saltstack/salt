@@ -78,6 +78,7 @@ from __future__ import absolute_import
 import atexit
 import logging
 import time
+from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
 
 # Import Salt Libs
 import salt.exceptions
@@ -751,11 +752,15 @@ def get_mors_with_properties(service_instance, object_type, property_list=None,
         container. If that is the case, the traversal spec needs to be None.
     '''
     # Get all the content
-    content = get_content(service_instance, object_type,
-                          property_list=property_list,
-                          container_ref=container_ref,
-                          traversal_spec=traversal_spec,
-                          local_properties=local_properties)
+    content_args = [service_instance, object_type]
+    content_kwargs = {'property_list': property_list,
+                      'container_ref': container_ref,
+                      'traversal_spec': traversal_spec,
+                      'local_properties': local_properties}
+    try:
+        content = get_content(*content_args, **content_kwargs)
+    except BadStatusLine:
+        content = get_content(*content_args, **content_kwargs)
 
     object_list = []
     for obj in content:

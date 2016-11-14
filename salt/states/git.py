@@ -261,7 +261,33 @@ def latest(name,
     up-to-date.
 
     name
-        Address of the remote repository as passed to "git clone"
+        Address of the remote repository, as passed to ``git clone``
+
+        .. note::
+             From the `Git documentation`_, there are two URL formats
+             supported for SSH authentication. The below two examples are
+             equivalent:
+
+             .. code-block:: text
+
+                 # ssh:// URL
+                 ssh://user@server/project.git
+
+                 # SCP-like syntax
+                 user@server:project.git
+
+             A common mistake is to use an ``ssh://`` URL, but with a colon
+             after the domain instead of a slash. This is invalid syntax in
+             Git, and will therefore not work in Salt. When in doubt, confirm
+             that a ``git clone`` works for the URL before using it in Salt.
+
+             It has been reported by some users that SCP-like syntax is
+             incompatible with git repos hosted on `Atlassian Stash/BitBucket
+             Server`_. In these cases, it may be necessary to use ``ssh://``
+             URLs for SSH authentication.
+
+        .. _`Git documentation`: https://git-scm.com/book/en/v2/Git-on-the-Server-The-Protocols#The-SSH-Protocol
+        .. _`Atlassian Stash/BitBucket Server`: https://www.atlassian.com/software/bitbucket/server
 
     rev : HEAD
         The remote branch, tag, or revision ID to checkout after clone / before
@@ -280,19 +306,73 @@ def latest(name,
         Name of the target directory where repository is about to be cloned
 
     branch
-        Name of the branch into which to checkout the specified rev. If not
-        specified, then Salt will not care what branch is being used locally
-        and will just use whatever branch is currently there.
-
-        .. note::
-            If not specified, this means that the local branch name will not be
-            changed if the repository is reset to another branch/tag/SHA1.
+        Name of the local branch into which to checkout the specified rev. If
+        not specified, then Salt will not care what branch is being used
+        locally and will just use whatever branch is currently there.
 
         .. versionadded:: 2015.8.0
 
+        .. note::
+            If this argument is not specified, this means that Salt will not
+            change the local branch if the repository is reset to another
+            branch/tag/SHA1. For example, assume that the following state was
+            run initially:
+
+            .. code-block:: yaml
+
+                foo_app:
+                  git.latest:
+                    - name: https://mydomain.tld/apps/foo.git
+                    - target: /var/www/foo
+                    - user: www
+
+            This would have cloned the HEAD of that repo (since a ``rev``
+            wasn't specified), and because ``branch`` is not specified, the
+            branch in the local clone at ``/var/www/foo`` would be whatever the
+            default branch is on the remote repository (usually ``master``, but
+            not always). Now, assume that it becomes necessary to switch this
+            checkout to the ``dev`` branch. This would require ``rev`` to be
+            set, and probably would also require ``force_reset`` to be enabled:
+
+            .. code-block:: yaml
+
+                foo_app:
+                  git.latest:
+                    - name: https://mydomain.tld/apps/foo.git
+                    - target: /var/www/foo
+                    - user: www
+                    - rev: dev
+                    - force_reset: True
+
+            The result of this state would be to perform a hard-reset to
+            ``origin/dev``. Since ``branch`` was not specified though, while
+            ``/var/www/foo`` would reflect the contents of the remote repo's
+            ``dev`` branch, the local branch would still remain whatever it was
+            when it was cloned. To make the local branch match the remote one,
+            set ``branch`` as well, like so:
+
+            .. code-block:: yaml
+
+                foo_app:
+                  git.latest:
+                    - name: https://mydomain.tld/apps/foo.git
+                    - target: /var/www/foo
+                    - user: www
+                    - rev: dev
+                    - branch: dev
+                    - force_reset: True
+
+            This may seem redundant, but Salt tries to support a wide variety
+            of use cases, and doing it this way allows for the use case where
+            the local branch doesn't need to be strictly managed.
+
     user
-        User under which to run git commands. By default, commands are run by
-        the user under which the minion is running.
+        Local system user under which to run git commands. By default, commands
+        are run by the user under which the minion is running.
+
+        .. note::
+            This is not to be confused with the username for http(s)/SSH
+            authentication.
 
         .. versionadded:: 0.17.0
 
@@ -300,7 +380,7 @@ def latest(name,
         Windows only. Required when specifying ``user``. This parameter will be
         ignored on non-Windows platforms.
 
-      .. versionadded:: 2016.3.4
+        .. versionadded:: 2016.3.4
 
     update_head : True
         If set to ``False``, then the remote repository will be fetched (if
@@ -412,9 +492,9 @@ def latest(name,
             invoked from the minion using ``salt-call``, to prevent blocking
             waiting for user input.
 
-        Key can be specified as a SaltStack file server URL, eg. salt://location/identity_file
-
-        .. versionadded:: 2016.3.0
+        .. versionchanged:: 2016.3.0
+            Key can now be specified as a SaltStack fileserver URL (e.g.
+            ``salt://path/to/identity_file``).
 
     https_user
         HTTP Basic Auth username for HTTPS (only) clones
@@ -450,52 +530,52 @@ def latest(name,
 
     .. note::
         Clashing ID declarations can be avoided when including different
-        branches from the same git repository in the same sls file by using the
-        ``name`` declaration.  The example below checks out the ``gh-pages``
-        and ``gh-pages-prod`` branches from the same repository into separate
-        directories.  The example also sets up the ``ssh_known_hosts`` ssh key
+        branches from the same git repository in the same SLS file by using the
+        ``name`` argument. The example below checks out the ``gh-pages`` and
+        ``gh-pages-prod`` branches from the same repository into separate
+        directories. The example also sets up the ``ssh_known_hosts`` ssh key
         required to perform the git checkout.
 
-    .. code-block:: yaml
+        Also, it has been reported that the SCP-like syntax for
 
-        gitlab.example.com:
-          ssh_known_hosts:
-            - present
-            - user: root
-            - enc: ecdsa
-            - fingerprint: 4e:94:b0:54:c1:5b:29:a2:70:0e:e1:a3:51:ee:ee:e3
+        .. code-block:: yaml
 
-        git-website-staging:
-          git.latest:
-            - name: ssh://git@gitlab.example.com:user/website.git
-            - rev: gh-pages
-            - target: /usr/share/nginx/staging
-            - identity: /root/.ssh/website_id_rsa
-            - require:
-              - pkg: git
-              - ssh_known_hosts: gitlab.example.com
+            gitlab.example.com:
+              ssh_known_hosts:
+                - present
+                - user: root
+                - enc: ecdsa
+                - fingerprint: 4e:94:b0:54:c1:5b:29:a2:70:0e:e1:a3:51:ee:ee:e3
 
-        git-website-staging:
-          git.latest:
-            - name: ssh://git@gitlab.example.com:user/website.git
-            - rev: gh-pages
-            - target: /usr/share/nginx/staging
-            - identity: salt://website/id_rsa
-            - require:
-              - pkg: git
-              - ssh_known_hosts: gitlab.example.com
+            git-website-staging:
+              git.latest:
+                - name: git@gitlab.example.com:user/website.git
+                - rev: gh-pages
+                - target: /usr/share/nginx/staging
+                - identity: /root/.ssh/website_id_rsa
+                - require:
+                  - pkg: git
+                  - ssh_known_hosts: gitlab.example.com
 
-            .. versionadded:: 2016.3.0
+            git-website-staging:
+              git.latest:
+                - name: git@gitlab.example.com:user/website.git
+                - rev: gh-pages
+                - target: /usr/share/nginx/staging
+                - identity: salt://website/id_rsa
+                - require:
+                  - pkg: git
+                  - ssh_known_hosts: gitlab.example.com
 
-        git-website-prod:
-          git.latest:
-            - name: ssh://git@gitlab.example.com:user/website.git
-            - rev: gh-pages-prod
-            - target: /usr/share/nginx/prod
-            - identity: /root/.ssh/website_id_rsa
-            - require:
-              - pkg: git
-              - ssh_known_hosts: gitlab.example.com
+            git-website-prod:
+              git.latest:
+                - name: git@gitlab.example.com:user/website.git
+                - rev: gh-pages-prod
+                - target: /usr/share/nginx/prod
+                - identity: /root/.ssh/website_id_rsa
+                - require:
+                  - pkg: git
+                  - ssh_known_hosts: gitlab.example.com
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -2020,9 +2100,9 @@ def detached(name,
         Update submodules
 
     identity
-        A path on the minion server to a private key to use over SSH
-        Key can be specified as a SaltStack file server URL
-        eg. salt://location/identity_file
+        A path on the minion (or a SaltStack fileserver URL, e.g.
+        ``salt://path/to/identity_file``) to a private key to use for SSH
+        authentication.
 
     https_user
         HTTP Basic Auth username for HTTPS (only) clones

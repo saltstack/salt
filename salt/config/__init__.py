@@ -1607,6 +1607,11 @@ def _validate_opts(opts):
             if isinstance(val, VALID_OPTS[key]):
                 continue
 
+            # We don't know what data type sdb will return at run-time so we
+            # simply cannot check it for correctness here at start-time.
+            if isinstance(val, str) and val.startswith('sdb://'):
+                continue
+
             if hasattr(VALID_OPTS[key], '__call__'):
                 try:
                     VALID_OPTS[key](val)
