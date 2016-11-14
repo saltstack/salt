@@ -327,6 +327,7 @@ def highstate(test=None, **kwargs):
     # Check for errors
     for chunk in chunks:
         if not isinstance(chunk, dict):
+            __context__['retcode'] = 1
             return chunks
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
