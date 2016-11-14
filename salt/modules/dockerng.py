@@ -603,6 +603,17 @@ def __virtual__():
     return (False, 'Docker module could not get imported; You need to "pip install docker-py"')
 
 
+class DockerJSONDecoder(json.JSONDecoder):
+    def decode(self, s, _w=None):
+        objs = []
+        for line in s.splitlines():
+            if not line:
+                continue
+            obj, _ = self.raw_decode(line)
+            objs.append(obj)
+        return objs
+
+
 def _get_docker_py_versioninfo():
     '''
     Returns the version_info tuple from docker-py
@@ -3634,7 +3645,9 @@ def build(path=None,
             .format(image)
         )
 
-    stream_data = [json.loads(x) for x in response]
+    stream_data = []
+    for line in response:
+        stream_data.extend(json.loads(line, cls=DockerJSONDecoder))
     errors = []
     # Iterate through API response and collect information
     for item in stream_data:

@@ -91,7 +91,7 @@ def parse_resolv(src='/etc/resolv.conf'):
             # The domain and search keywords are mutually exclusive.  If more
             # than one instance of these keywords is present, the last instance
             # will override.
-            log.warning('{0}: The domain and search keywords are mutually '
+            log.debug('{0}: The domain and search keywords are mutually '
                         'exclusive.'.format(src))
 
         return {
