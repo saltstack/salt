@@ -1781,7 +1781,7 @@ def minion_config(path,
         minion_opts = salt.config.minion_config('/etc/salt/minion')
     '''
     if defaults is None:
-        defaults = DEFAULT_MINION_OPTS
+        defaults = DEFAULT_MINION_OPTS.copy()
 
     if path is not None and path.endswith('proxy'):
         defaults.update(DEFAULT_PROXY_MINION_OPTS)
@@ -3314,7 +3314,7 @@ def spm_config(path):
     .. versionadded:: 2015.8.0
     '''
     # Let's grab a copy of salt's master default opts
-    defaults = DEFAULT_MASTER_OPTS
+    defaults = DEFAULT_MASTER_OPTS.copy()
     # Let's override them with spm's required defaults
     defaults.update(DEFAULT_SPM_OPTS)
 
