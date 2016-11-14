@@ -652,21 +652,22 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                     # there is atleast one disk specified to be created/configured
                     unit_number += 1
                     existing_disks_label.append(device.deviceInfo.label)
-                    # log.info('all = %s', str(devices['disk'].keys()))
                     if device.deviceInfo.label in list(devices['disk'].keys()):
                         disk_spec = None
-
                         if 'size' in devices['disk'][device.deviceInfo.label]:
-                            size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
-                            disk_spec = _get_size_spec(device, size_gb)
+                            disk_spec = _get_size_spec(device, devices)
+                            size_kb = float(
+                                devices['disk'][device.deviceInfo.label]['size']
+                            ) * 1024 * 1024
                         else:
-                            raise SaltCloudSystemExit(
-                                'Please specify a size'
-                                ' for the disk "{0}" in'
-                                ' your cloud profile'
-                                ''.format(device.deviceInfo.label))
+                            # User didn't specify disk size
+                            # in the cloud profile
+                            # so use the existing disk size
+                            log.info('Virtual disk size was not'
+                                     ' specified in the cloud profile.'
+                                     ' Using existing disk size.')
+                            size_kb = device.capacityInKB
 
-                        size_kb = int(size_gb * 1024 * 1024)
                         if device.capacityInKB < size_kb:
                             # expand the disk
                             disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
