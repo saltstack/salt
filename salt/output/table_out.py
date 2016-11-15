@@ -69,7 +69,7 @@ class TableDisplay(object):
                  separate_rows=True,  # display the line separating two consecutive rows
                  prefix='| ',  # character to display at the beginning of the row
                  suffix=' |',  # character to display at the end of the row
-                 width=5,  # column max width
+                 width=50,  # column max width
                  wrapfunc=None):  # function wrapper
         self.__dict__.update(
             get_colors(
