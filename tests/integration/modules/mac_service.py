@@ -194,7 +194,7 @@ class MacServiceModuleTest(integration.ModuleCase):
         '''
         Test service.disabled
         '''
-	SERVICE_NAME = 'com.apple.nfsd'
+        SERVICE_NAME = 'com.apple.nfsd'
         self.assertTrue(self.run_function('service.start', [SERVICE_NAME]))
         self.assertFalse(
             self.run_function('service.disabled', [SERVICE_NAME]))
