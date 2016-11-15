@@ -100,8 +100,9 @@ class TableDisplay(object):
                 prefix='',
                 suffix='',
                 endc=None):
+        '''Build the unicode string to be displayed.'''
         if endc is None:
-            endc = self.ENDC
+            endc = self.ENDC  # pylint: disable=no-member
 
         indent *= ' '
         fmt = u'{0}{1}{2}{3}{4}{5}'
@@ -113,18 +114,24 @@ class TableDisplay(object):
 
     def wrap_onspace(self, text, width=50):
 
-        return reduce(lambda line, word, width=width: '%s%s%s' %
-                      (line,
-                       ' \n'[(len(line[line.rfind('\n')+1:])
-                             + len(word.split('\n',1)[0]
-                                  ) >= width)],
-                       word),
-                      text.split(' ')
-                     )
+        '''
+        When the text inside the column is longer then the widht, will split by space and continue on the next line.'''
+
+        def _truncate(line, word, width):
+            return '{line}{part}{word}'.format(
+                        line,
+                        ' \n'[(len(line[line.rfind('\n')+1:]) + len(word.split('\n', 1)[0]) >= width)],
+                        word
+                    )
+
+        return reduce(_truncate, text.split(' '))
 
     def prepare_rows(self,
                      rows,
-                     indent):
+                     indent,
+                     has_header):
+
+        '''Prepare rows content to be displayed.'''
 
         out = []
 
@@ -135,10 +142,10 @@ class TableDisplay(object):
             ]
             rows = []
             for item in map(None, *new_rows):
-              if isinstance(item, (tuple, list)):
-                rows.append([substr or '' for substr in item])
-              else:
-                rows.append([item])
+                if isinstance(item, (tuple, list)):
+                    rows.append([substr or '' for substr in item])
+                else:
+                    rows.append([item])
             return rows
 
         logical_rows = [
@@ -152,8 +159,8 @@ class TableDisplay(object):
             max([len(str(item)) for item in column])
             for column in columns
         ]
-        row_separator = self.row_delimiter * (len(self.prefix) + len(self.suffix) + sum(max_widths) + \
-                                            len(self.delim) * (len(max_widths) -1))
+        row_separator = self.row_delimiter * (len(self.prefix) + len(self.suffix) + sum(max_widths) +
+                                              len(self.delim) * (len(max_widths) - 1))
 
         justify = self._JUSTIFY_MAP[self.justify.lower()]
 
@@ -161,7 +168,7 @@ class TableDisplay(object):
             out.append(
                 self.ustring(
                     indent,
-                    self.LIGHT_GRAY,
+                    self.LIGHT_GRAY,  # pylint: disable=no-member
                     row_separator
                 )
             )
@@ -169,13 +176,13 @@ class TableDisplay(object):
             for row in physical_rows:
                 line = self.prefix \
                         + self.delim.join([
-                                justify(str(item),width)
+                                justify(str(item), width)
                                 for (item, width) in zip(row, max_widths)
                         ]) + self.suffix
                 out.append(
                     self.ustring(
                         indent,
-                        self.WHITE,
+                        self.WHITE,  # pylint: disable=no-member
                         line
                     )
                 )
@@ -183,17 +190,19 @@ class TableDisplay(object):
                 out.append(
                     self.ustring(
                         indent,
-                        self.LIGHT_GRAY,
+                        self.LIGHT_GRAY,  # pylint: disable=no-member
                         row_separator
                     )
                 )
-                has_header=False
+                has_header = False
         return out
 
     def display_rows(self,
                      rows,
                      labels,
                      indent):
+
+        '''Prepares row content and displays.'''
 
         out = []
 
@@ -219,7 +228,7 @@ class TableDisplay(object):
         if first_row_type is dict:  # and all the others
             temp_rows = []
             if not labels:
-                labels = map(lambda label: str(label).replace('_', ' ').title(), sorted(rows[0]))
+                labels = [str(label).replace('_', ' ').title() for label in sorted(rows[0])]
             for row in rows:
                 temp_row = []
                 for key in sorted(row):
@@ -227,12 +236,12 @@ class TableDisplay(object):
                 temp_rows.append(temp_row)
             rows = temp_rows
         elif isinstance(rows[0], string_types):
-            rows = map(lambda row: [row], rows)
+            rows = [[row] for row in rows]  # encapsulate each row in a single-element list
 
         labels_and_rows = [labels] + rows if labels else rows
-        has_header = self.has_header and labels  # no labels -> no header
+        has_header = self.has_header and labels
 
-        return self.prepare_rows(labels_and_rows, indent + 4)
+        return self.prepare_rows(labels_and_rows, indent + 4, has_header)
 
     def display(self,
                 ret,
@@ -240,6 +249,8 @@ class TableDisplay(object):
                 out,
                 rows_key=None,
                 labels_key=None):
+
+        '''Display table(s).'''
 
         rows = []
         labels = None
@@ -256,7 +267,7 @@ class TableDisplay(object):
                         out.append(
                             self.ustring(
                                 indent,
-                                self.DARK_GRAY,
+                                self.DARK_GRAY,  # pylint: disable=no-member
                                 key,
                                 suffix=':'
                             )
@@ -264,7 +275,7 @@ class TableDisplay(object):
                         out.append(
                             self.ustring(
                                 indent,
-                                self.DARK_GRAY,
+                                self.DARK_GRAY,  # pylint: disable=no-member
                                 '----------'
                             )
                         )
@@ -333,7 +344,7 @@ def output(ret, **kwargs):
             table.ustring(
                 base_indent,
                 title,
-                table.WHITE,
+                table.WHITE,  # pylint: disable=no-member
                 suffix='\n'
             )
         )
