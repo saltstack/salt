@@ -1912,7 +1912,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                  providers_config_path=None, providers_config=None,
                  profiles_config_path=None, profiles_config=None):
     '''
-    Read in the salt cloud config and return the dict
+    Read in the Salt Cloud config and return the dict
     '''
     if path:
         config_dir = os.path.dirname(path)
@@ -1927,14 +1927,15 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     )
 
     if defaults is None:
-        defaults = DEFAULT_CLOUD_OPTS
+        defaults = DEFAULT_CLOUD_OPTS.copy()
+
+    # Set defaults early to override Salt Master's default config values later
+    defaults.update(overrides)
+    overrides = defaults
 
     # Load cloud configuration from any default or provided includes
-    default_include = overrides.get(
-        'default_include', defaults['default_include']
-    )
     overrides.update(
-        salt.config.include_config(default_include, path, verbose=False)
+        salt.config.include_config(overrides['default_include'], path, verbose=False)
     )
     include = overrides.get('include', [])
     overrides.update(
