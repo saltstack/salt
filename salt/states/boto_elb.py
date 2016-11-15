@@ -689,12 +689,12 @@ def _listeners_present(
 
     expected_listeners_by_tuple = {}
     for l in listeners:
-        key = __salt__['boto_elb.listener_dict_to_tuple'](l)
-        expected_listeners_by_tuple[key] = l
+        l_key = __salt__['boto_elb.listener_dict_to_tuple'](l)
+        expected_listeners_by_tuple[l_key] = l
     actual_listeners_by_tuple = {}
     for l in lb['listeners']:
-        key = __salt__['boto_elb.listener_dict_to_tuple'](l)
-        actual_listeners_by_tuple[key] = l
+        l_key = __salt__['boto_elb.listener_dict_to_tuple'](l)
+        actual_listeners_by_tuple[l_key] = l
 
     to_delete = []
     to_create = []
