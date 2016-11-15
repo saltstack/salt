@@ -130,12 +130,16 @@ def installed(name,
             for pkg_details in installed_pkgs.values():
                 try:
                     pkg_from = pkg_details.get('from', '').split('://')[1]
+                    # Catch condition where we may have specified package as
+                    # git://github.com/foo/bar but packager describes it as
+                    # git://github.com/foo/bar.git in the package
+                    if not pkg_from.endswith('.git') and pkg_name.startswith('git://'):
+                        pkg_from += '.git'
                     if pkg_name.split('://')[1] == pkg_from:
                         return True
                 except IndexError:
                     pass
         return False
-
     for pkg in pkg_list:
         pkg_name, _, pkg_ver = pkg.partition('@')
         pkg_name = pkg_name.strip()
