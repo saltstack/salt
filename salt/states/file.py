@@ -2089,6 +2089,7 @@ def directory(name,
               win_owner=None,
               win_perms=None,
               win_deny_perms=None,
+              win_applies_to='this_folder_subfolders_files',
               win_inheritance=None,
               **kwargs):
     '''
@@ -2228,10 +2229,10 @@ def directory(name,
     win_deny_perms : None
         .. versionadded:: Nitrogen
 
-    win_inheritance : None
+    win_applies_to : None
         .. versionadded:: Nitrogen
 
-    win_applies_to : None
+    win_inheritance : None
         .. versionadded:: Nitrogen
     '''
     name = os.path.expanduser(name)
@@ -2355,7 +2356,8 @@ def directory(name,
                         return _error(
                             ret, 'Drive {0} is not mapped'.format(drive))
                     __salt__['file.makedirs'](name, win_owner, win_perms,
-                                              win_deny_perms, win_inheritance)
+                                              win_deny_perms, win_applies_to,
+                                              win_inheritance)
                 else:
                     __salt__['file.makedirs'](name, user=user, group=group,
                                               mode=dir_mode)
@@ -2365,7 +2367,7 @@ def directory(name,
 
         if salt.utils.is_windows():
             __salt__['file.mkdir'](name, win_owner, win_perms, win_deny_perms,
-                                   win_inheritance)
+                                   win_applies_to, win_inheritance)
         else:
             __salt__['file.mkdir'](name, user=user, group=group, mode=dir_mode)
 
@@ -2377,12 +2379,13 @@ def directory(name,
     # issue 32707: skip this __salt__['file.check_perms'] call if children_only == True
     # Check permissions
     if not children_only:
-        ret, perms = __salt__['file.check_perms'](name,
-                                                  ret,
-                                                  user,
-                                                  group,
-                                                  dir_mode,
-                                                  follow_symlinks)
+        if salt.utils.is_windows():
+            ret = __salt__['file.check_perms'](
+                name, ret, win_owner, win_perms, win_deny_perms, win_applies_to,
+                win_inheritance, follow_symlinks)
+        else:
+            ret, perms = __salt__['file.check_perms'](
+                name, ret, user, group, dir_mode, follow_symlinks)
 
     errors = []
     if recurse or clean:
@@ -2448,27 +2451,28 @@ def directory(name,
                 for fn_ in files:
                     full = os.path.join(root, fn_)
                     try:
-                        ret, _ = __salt__['file.check_perms'](
-                            full,
-                            ret,
-                            user,
-                            group,
-                            file_mode,
-                            follow_symlinks)
+                        if salt.utils.is_windows():
+                            ret = __salt__['file.check_perms'](
+                                full, ret, win_owner, win_perms, win_deny_perms,
+                                win_applies_to, win_inheritance, follow_symlinks)
+                        else:
+                            ret, _ = __salt__['file.check_perms'](
+                                full, ret, user, group, file_mode, follow_symlinks)
                     except CommandExecutionError as exc:
                         if not exc.strerror.endswith('does not exist'):
                             errors.append(exc.strerror)
+
             if check_dirs:
                 for dir_ in dirs:
                     full = os.path.join(root, dir_)
                     try:
-                        ret, _ = __salt__['file.check_perms'](
-                            full,
-                            ret,
-                            user,
-                            group,
-                            dir_mode,
-                            follow_symlinks)
+                        if salt.utils.is_windows():
+                            ret = __salt__['file.check_perms'](
+                                full, ret, win_owner, win_perms, win_deny_perms,
+                                win_applies_to, win_inheritance, follow_symlinks)
+                        else:
+                            ret, _ = __salt__['file.check_perms'](
+                                full, ret, user, group, dir_mode, follow_symlinks)
                     except CommandExecutionError as exc:
                         if not exc.strerror.endswith('does not exist'):
                             errors.append(exc.strerror)
@@ -2499,6 +2503,7 @@ def directory(name,
         ret['comment'] += '\n\nThe following errors were encountered:\n'
         for error in errors:
             ret['comment'] += '\n- {0}'.format(error)
+
     return ret
 
 
