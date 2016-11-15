@@ -45,6 +45,7 @@ class SysModuleTest(integration.ModuleCase):
                 'nspawn.restart',
                 'lowpkg.bin_pkg_info',
                 'state.apply',
+                'pip.iteritems',
                 'cmd.win_runas',
                 'status.list2cmdline'
         )
