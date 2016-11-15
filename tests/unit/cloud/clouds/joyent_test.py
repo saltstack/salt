@@ -129,7 +129,7 @@ class JoyentTestCase(TestCase):
         })
         self.assertEqual(http_mock.call_args[1]['header_dict']['Content-Type'],
             'application/json')
-        self.assertEqual(result, False) # Deploy failed
+        self.assertEqual(result, False)  # Deploy failed
 
 if __name__ == '__main__':
     from integration import run_tests
