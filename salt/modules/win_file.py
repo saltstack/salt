@@ -55,7 +55,7 @@ except ImportError:
 import salt.utils
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
         directory_exists, get_managed,
-        check_managed, check_managed_changes, check_perms, source_list,
+        check_managed, check_managed_changes, source_list,
         touch, append, contains, contains_regex, get_source_sum,
         contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
         get_hash, manage_file, file_exists, get_diff, line, list_backups,
@@ -80,8 +80,8 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         if HAS_WINDOWS_MODULES:
-            global check_perms, get_managed, makedirs_perms, manage_file
-            global source_list, mkdir, __clean_tmp, makedirs_, file_exists
+            global get_managed, manage_file
+            global source_list, __clean_tmp, file_exists
             global check_managed, check_managed_changes, check_file_meta
             global append, _error, directory_exists, touch, contains
             global contains_regex, contains_glob, get_source_sum
@@ -104,16 +104,12 @@ def __virtual__():
             delete_backup = _namespaced_function(delete_backup, globals())
             extract_hash = _namespaced_function(extract_hash, globals())
             append = _namespaced_function(append, globals())
-            check_perms = _namespaced_function(check_perms, globals())
             get_managed = _namespaced_function(get_managed, globals())
             check_managed = _namespaced_function(check_managed, globals())
             check_managed_changes = _namespaced_function(check_managed_changes, globals())
             check_file_meta = _namespaced_function(check_file_meta, globals())
-            makedirs_perms = _namespaced_function(makedirs_perms, globals())
-            makedirs_ = _namespaced_function(makedirs_, globals())
             manage_file = _namespaced_function(manage_file, globals())
             source_list = _namespaced_function(source_list, globals())
-            mkdir = _namespaced_function(mkdir, globals())
             file_exists = _namespaced_function(file_exists, globals())
             __clean_tmp = _namespaced_function(__clean_tmp, globals())
             directory_exists = _namespaced_function(directory_exists, globals())
@@ -1384,7 +1380,13 @@ def mkdir(path,
 
         # Make the directory
         os.mkdir(path)
-        set_perms(path, owner, grant_perms, deny_perms, inheritance)
+
+        # Set owner
+        if owner:
+            salt.utils.win_dacl.set_owner(path, owner)
+
+        # Set permissions
+        set_perms(path, grant_perms, deny_perms, inheritance)
 
     return True
 
@@ -1562,6 +1564,7 @@ def check_perms(path,
                 owner=None,
                 grant_perms=None,
                 deny_perms=None,
+                applies_to,
                 inheritance=None,
                 follow_symlinks=False):
     path = os.path.expanduser(path)
@@ -1595,18 +1598,130 @@ def check_perms(path,
                         ret['comment'].append(
                             'Failed to change owner to "{0}"'.format(owner))
 
-    # Check permissions
+    # Check permissions# Check perms
+    perms = salt.utils.win_dacl.get_permissions(name)
+
+    # Verify Grant Permissions and Applies to
+    if grant_perms is not None:
+        for user in grant_perms:
+
+            # Check Perms
+            list_grant_perms = []
+            if isinstance(grant_perms[user], six.string_types):
+                if not salt.utils.win_dacl.has_permission(
+                        name, user, grant_perms[user]):
+                    list_grant_perms = grant_perms[user]
+            else:
+                for perm in grant_perms[user]:
+                    if not salt.utils.win_dacl.has_permission(
+                            name, user, perm, exact=False):
+                        list_grant_perms.append(grant_perms[user])
+
+            # Check Applies to
+            user = salt.utils.win_dacl.get_name(user)
+
+            # Get the proper applies_to text
+            at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][win_applies_to]
+            applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+
+            # Get current "applies to" settings from the file
+            new_applies_to = 'this_folder_subfolder_files'
+            for flag in salt.utils.win_dacl.Flags.ace_prop['file']:
+                if salt.utils.win_dacl.Flags.ace_prop['file'][flag] == \
+                    perms[user]['grant']['applies to']:
+                    at_flag = flag
+            for flag in salt.utils.win_dacl.Flags.ace_prop['file']:
+                if salt.utils.win_dacl.Flags.ace_prop['file'][flag] == \
+                    at_flag:
+                    new_applies_to = flag
+
+            # If the applies to settings are different, use the new one
+            if 'grant' in perms[user]:
+                if not perms[user]['grant']['applies to'] == applies_to_text:
+                    new_applies_to = applies_to
+                    if not list_grant_perms:
+                        if __opts__['test'] is True:
+                            ret['changes']['applies_to'] = applies_to_text
+                        else:
+                            try:
+                                salt.utils.win_dacl.set_permissions(
+                                    path, user, perms[user]['grant']['permissions'], 'grant', new_applies_to)
+                                ret['changes']['applies_to'] = applies_to_text
+                            except CommandExecutionError:
+                                ret['result'] = False
+                                ret['comment'].append(
+                                    'Failed to set "applies to" for "{0}" to '
+                                    '{0}'.format(user, applies_to_text))
+
+            if list_grant_perms:
+                if 'grant_perms' not in ret['changes']:
+                    ret['changes']['grant_perms'] = {}
+                if __opts__['test'] is True:
+                    ret['changes']['grant_perms'][user] = list_grant_perms
+                else:
+                    try:
+                        salt.utils.win_dacl.set_permissions(
+                            path, user, grant_perms[user], 'grant', new_applies_to)
+                        ret['changes']['grant_perms'][user] = list_grant_perms
+                    except CommandExecutionError:
+                        ret['result'] = False
+                        ret['comment'].append(
+                            'Failed to grant permissions for "{0}" to '
+                            '{0}'.format(user, grant_perms[user]))
+
+    # Verify Deny Permissions
+    if deny_perms is not None:
+        for user in deny_perms:
+            list_deny_perms = []
+            # Check for permissions
+            if isinstance(deny_perms[user], six.string_types):
+                if not salt.utils.win_dacl.has_permission(
+                        name, user, deny_perms[user], 'deny'):
+                    list_deny_perms = deny_perms[user]
+            else:
+                for perm in deny_perms[user]:
+                    if not salt.utils.win_dacl.has_permission(
+                            name, user, perm, 'deny', exact=False):
+                        list_deny_perms.append(perm)
+
+            if list_deny_perms:
+                if 'deny_perms' not in ret['changes']:
+                    ret['changes']['deny_perms'] = {}
+                ret['changes']['deny_perms'][user] = list_deny_perms
+
+            # Check Applies to
+            user = salt.utils.win_dacl.get_name(user)
+
+            # Get the proper applies_to text
+            at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][win_applies_to]
+            applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+
+            if 'deny' in perms[user]:
+                if not perms[user]['deny']['applies to'] == applies_to_text:
+                    ret['changes']['applies_to'] = applies_to_text
+
+    # Check inheritance
+    if inheritance is not None:
+        if not inheritance == salt.utils.win_dacl.get_inheritance(name):
+            ret['changes']['inheritance'] = inheritance
+
+    # Re-add the Original Comment if defined
+    if isinstance(orig_comment, six.string_types):
+        if orig_comment:
+            ret['comment'].insert(0, orig_comment)
+        ret['comment'] = '; '.join(ret['comment'])
+
+    # Set result for test = True
+    if __opts__['test'] is True and ret['changes']:
+        ret['result'] = None
+
+    return ret, perms
 
 
 def set_perms(path,
-              owner=None,
               grant_perms=None,
               deny_perms=None,
               inheritance=None):
-
-    # Set the owner if passed
-    if owner is not None:
-        salt.utils.win_dacl.set_owner(path, owner)
 
     # Get the DACL for the directory
     dacl = salt.utils.win_dacl.Dacl(path)
