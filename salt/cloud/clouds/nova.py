@@ -733,7 +733,7 @@ def request_instance(vm_=None, call=None):
         try:
             salt.utils.cloud.wait_for_ip(
                 __query_node_data,
-                update_args = (vm_,)
+                update_args=(vm_,)
             )
         except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
             try:
