@@ -3358,7 +3358,10 @@ def replace(name,
 
     check_res, check_msg = _check_file(name)
     if not check_res:
-        return _error(ret, check_msg)
+        if ignore_if_missing and 'file not found' in check_msg:
+            pass
+        else:
+            return _error(ret, check_msg)
 
     changes = __salt__['file.replace'](name,
                                        pattern,
