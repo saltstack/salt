@@ -5,6 +5,14 @@ Grains from cloud metadata servers at 169.254.169.254
 .. versionadded:: Nitrogen
 
 :depends: requests
+
+To enable these grains that pull from the http://169.254.169.254/latest
+metadata server set `metadata_server_grains: True`.
+
+.. code-block:: yaml
+
+    metadata_server_grains: True
+
 '''
 from __future__ import absolute_import
 
@@ -22,8 +30,10 @@ HOST = 'http://{0}/'.format(IP)
 
 
 def __virtual__():
+    if __salt__['config.get']('metadata_server_grains', False) is False:
+        return False
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(1)
+    sock.settimeout(.1)
     result = sock.connect_ex((IP, 80))
     if result != 0:
         return False
