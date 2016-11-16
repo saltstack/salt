@@ -208,9 +208,9 @@ class Batch(object):
                                 break
                             continue
                         if self.opts.get('raw'):
-                            parts.update({part['id']: part})
-                            if part['id'] in minion_tracker[queue]['minions']:
-                                minion_tracker[queue]['minions'].remove(part['id'])
+                            parts.update({part['data']['id']: part})
+                            if part['data']['id'] in minion_tracker[queue]['minions']:
+                                minion_tracker[queue]['minions'].remove(part['data']['id'])
                             else:
                                 print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(part['id']))
                         else:
@@ -242,15 +242,11 @@ class Batch(object):
                     if bwait:
                         wait.append(datetime.now() + timedelta(seconds=bwait))
                 if self.opts.get('raw'):
+                    ret[minion] = data
                     yield data
-                elif self.opts.get('failhard'):
-                    # When failhard is passed, we need to return all data to include
-                    # the retcode to use in salt/cli/salt.py later. See issue #24996.
+                else:
                     ret[minion] = data
                     yield {minion: data}
-                else:
-                    ret[minion] = data['ret']
-                    yield {minion: data['ret']}
                 if not self.quiet:
                     ret[minion] = data['ret']
                     data[minion] = data.pop('ret')
