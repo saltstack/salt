@@ -119,7 +119,7 @@ class TableDisplay(object):
     def wrap_onspace(self, text):
 
         '''
-        When the text inside the column is longer then the widht, will split by space and continue on the next line.'''
+        When the text inside the column is longer then the width, will split by space and continue on the next line.'''
 
         def _truncate(line, word):
             return '{line}{part}{word}'.format(
@@ -310,6 +310,7 @@ def output(ret, **kwargs):
 
     Args:
 
+        * nested_indent: integer, specify the left alignment.
         * has_header: boolean specifying if header should be displayed. Default: True.
         * row_delimiter: character to separate rows. Default: ``_``.
         * delim: character to separate columns. Default: `` | ``.
@@ -320,10 +321,11 @@ def output(ret, **kwargs):
         * width: column max width. Default: ``50``.
         * rows_key: display the rows under a specific key.
         * labels_key: use the labels under a certain key. Otherwise will try to use the dictionary keys (if any).
+        * title: display title when only one table is selected (using the ``rows_key`` argument).
     '''
     # Prefer kwargs before opts
     base_indent = kwargs.get('nested_indent', 0) \
-        or __opts__.get('nested_indent', 0)
+        or __opts__.get('out.table.nested_indent', 0)
     rows_key = kwargs.get('rows_key') \
         or __opts__.get('out.table.rows_key')
     labels_key = kwargs.get('labels_key') \
