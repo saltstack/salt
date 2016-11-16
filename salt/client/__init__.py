@@ -117,8 +117,7 @@ class LocalClient(object):
     running as. (Unless :conf_master:`external_auth` is configured and
     authentication credentials are included in the execution).
 
-    ..note::
-
+    .. note::
         The LocalClient uses a Tornado IOLoop, this can create issues when
         using the LocalClient inside an existing IOLoop. If creating the
         LocalClient in partnership with another IOLoop either create the

@@ -25,8 +25,16 @@ except ImportError:
 
 try:
     import dbus
+    from dbus import DBusException
+    BUS = dbus.SystemBus()
+    SERVER = dbus.Interface(BUS.get_object(avahi.DBUS_NAME, avahi.DBUS_PATH_SERVER),
+                            avahi.DBUS_INTERFACE_SERVER)
+    GROUP = dbus.Interface(BUS.get_object(avahi.DBUS_NAME, SERVER.EntryGroupNew()),
+                           avahi.DBUS_INTERFACE_ENTRY_GROUP)
     HAS_DBUS = True
 except ImportError:
+    HAS_DBUS = False
+except DBusException:
     HAS_DBUS = False
 
 log = logging.getLogger(__name__)
@@ -34,11 +42,6 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'avahi_announce'
 
 LAST_GRAINS = {}
-BUS = dbus.SystemBus()
-SERVER = dbus.Interface(BUS.get_object(avahi.DBUS_NAME, avahi.DBUS_PATH_SERVER),
-                        avahi.DBUS_INTERFACE_SERVER)
-GROUP = dbus.Interface(BUS.get_object(avahi.DBUS_NAME, SERVER.EntryGroupNew()),
-                       avahi.DBUS_INTERFACE_ENTRY_GROUP)
 
 
 def __virtual__():

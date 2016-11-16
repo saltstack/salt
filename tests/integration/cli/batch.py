@@ -54,6 +54,12 @@ class BatchTest(integration.ShellCase):
         self.assertIn(sub_min_ret, cmd)
         self.assertIn(min_ret, cmd)
 
+    def test_batch_exit_code(self):
+        '''
+        Test that a failed state returns a non-zero exit code in batch mode
+        '''
+        cmd = self.run_salt(' "*" state.single test.fail_without_changes name=test_me -b 25%', with_retcode=True)
+        self.assertEqual(cmd[-1], 2)
 
 if __name__ == '__main__':
     from integration import run_tests
