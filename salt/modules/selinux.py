@@ -249,7 +249,7 @@ def list_semod():
     if semodule_version == 'new':
         mdata = __salt__['cmd.run']('semodule -lfull').splitlines()
         ret = {}
-        for line in mdata[1:]:
+        for line in mdata[0:]:
             if not line.strip():
                 continue
             comps = line.split()
@@ -262,7 +262,7 @@ def list_semod():
     else:
         mdata = __salt__['cmd.run']('semodule -l').splitlines()
         ret = {}
-        for line in mdata[1:]:
+        for line in mdata[0:]:
             if not line.strip():
                 continue
             comps = line.split()
