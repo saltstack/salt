@@ -243,7 +243,7 @@ def list_semod():
     semodule_versioncheck = __salt__['cmd.run']('semodule -h').splitlines()
     semodule_version = ''
     for line in versioncheck[1:]:
-        if line.strip.startswith('full'):
+        if line.strip().startswith('full'):
             semodule_version = 'new'
 
     if semodule_version == 'new':
