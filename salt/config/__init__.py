@@ -3285,24 +3285,16 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
 
 def api_config(path):
     '''
-    Read in the salt master config file and add additional configs that
+    Read in the Salt Master config file and add additional configs that
     need to be stubbed out for salt-api
     '''
     # Let's grab a copy of salt's master opts
     opts = client_config(path, defaults=DEFAULT_MASTER_OPTS)
     # Let's override them with salt-api's required defaults
-    api_opts = {
-        'log_file': opts.get(
-            'api_logfile', os.path.join(
-                opts['root_dir'], DEFAULT_API_OPTS['api_logfile'].lstrip('/')
-            )
-        ),
-        'pidfile': opts.get(
-            'api_pidfile', os.path.join(
-                opts['root_dir'], DEFAULT_API_OPTS['api_pidfile'].lstrip('/')
-            )
-        ),
-    }
+    api_opts = DEFAULT_API_OPTS
+    api_opts.update({
+        'pidfile': opts.get('api_pidfile', DEFAULT_API_OPTS['api_pidfile']),
+    })
     opts.update(api_opts)
     return opts
 
