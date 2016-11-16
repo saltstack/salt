@@ -97,6 +97,8 @@ class ArchiveTest(integration.ModuleCase,
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
                              source=ARCHIVE_TAR_SOURCE, archive_format='tar',
                              skip_verify=True)
+        if 'Timeout' in ret:
+            self.skipTest('Timeout talking to local tornado server.')
         self.assertSaltTrueReturn(ret)
 
         self._check_ext_remove(ARCHIVE_DIR, UNTAR_FILE)
@@ -110,6 +112,9 @@ class ArchiveTest(integration.ModuleCase,
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
                              source=ARCHIVE_TAR_SOURCE, archive_format='tar',
                              source_hash=ARCHIVE_TAR_HASH)
+        if 'Timeout' in ret:
+            self.skipTest('Timeout talking to local tornado server.')
+
         self.assertSaltTrueReturn(ret)
 
         self._check_ext_remove(ARCHIVE_DIR, UNTAR_FILE)
