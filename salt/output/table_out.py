@@ -36,12 +36,16 @@ Example output::
 from __future__ import absolute_import
 
 import operator
+from functools import reduce  # pylint: disable=redefined-builtin
 
 # Import salt libs
 import salt.output
+import salt.utils.locales
 from salt.ext.six import string_types
 from salt.utils import get_colors
-import salt.utils.locales
+from salt.ext.six.moves import map  # pylint: disable=redefined-builtin
+from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
+
 
 __virtualname__ = 'table'
 
@@ -117,11 +121,11 @@ class TableDisplay(object):
         '''
         When the text inside the column is longer then the widht, will split by space and continue on the next line.'''
 
-        def _truncate(line, word, width):
+        def _truncate(line, word, width=width):
             return '{line}{part}{word}'.format(
-                        line,
-                        ' \n'[(len(line[line.rfind('\n')+1:]) + len(word.split('\n', 1)[0]) >= width)],
-                        word
+                        line=line,
+                        part=' \n'[(len(line[line.rfind('\n')+1:]) + len(word.split('\n', 1)[0]) >= width)],
+                        word=word
                     )
 
         return reduce(_truncate, text.split(' '))
@@ -256,7 +260,7 @@ class TableDisplay(object):
         labels = None
 
         if isinstance(ret, dict):
-            if not rows_key or (rows_key and rows_key in ret.keys()):
+            if not rows_key or (rows_key and rows_key in list(ret.keys())):
                 # either not looking for a specific key
                 # either looking and found in the current root
                 for key in sorted(ret):
