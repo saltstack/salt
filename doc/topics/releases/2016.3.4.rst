@@ -8,11 +8,18 @@ Version 2016.3.4 is a bugfix release for :doc:`2016.3.0
 Known Issues
 ------------
 
+The Salt Minion does not clean up files in ``/tmp`` when rendering templates. This potentially
+results in either running out of disk space or running out of inodes. Please see `Issue #37541`_
+for more information. This bug was fixed with `Pull Request #37540`_, which will be available in
+the ``2016.3.5`` release of Salt.
+
 The release of the `bootstrap-salt.sh` script that is included with 2016.3.4 release has a bug
 in it that fails to install salt correctly for git installs using tags in the 2015.5 branch.
 This bug has not been fixed in the `salt-bootstrap repository`_ yet, but the
 `previous bootstrap release`_ (v2016.08.16) does not contain this bug.
 
+.. _`Issue #37541`: https://github.com/saltstack/salt/issues/37541
+.. _`Pull Request #37540`: https://github.com/saltstack/salt/pull/37540
 .. _`previous bootstrap release`: https://raw.githubusercontent.com/saltstack/salt-bootstrap/v2016.08.16/bootstrap-salt.sh
 .. _`salt-bootstrap repository`: https://github.com/saltstack/salt-bootstrap
 
