@@ -116,15 +116,15 @@ class TableDisplay(object):
         except UnicodeDecodeError:
             return fmt.format(indent, color, prefix, salt.utils.locales.sdecode(msg), endc, suffix)
 
-    def wrap_onspace(self, text, width=50):
+    def wrap_onspace(self, text):
 
         '''
         When the text inside the column is longer then the widht, will split by space and continue on the next line.'''
 
-        def _truncate(line, word, width=width):
+        def _truncate(line, word):
             return '{line}{part}{word}'.format(
                         line=line,
-                        part=' \n'[(len(line[line.rfind('\n')+1:]) + len(word.split('\n', 1)[0]) >= width)],
+                        part=' \n'[(len(line[line.rfind('\n')+1:]) + len(word.split('\n', 1)[0]) >= self.width)],
                         word=word
                     )
 
