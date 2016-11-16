@@ -62,6 +62,7 @@ to find the IP of the new VM.
 
 # Import Python Libs
 from __future__ import absolute_import
+import distutils
 import logging
 import os
 import pprint
