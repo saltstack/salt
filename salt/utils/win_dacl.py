@@ -566,6 +566,145 @@ class Dacl(Flags):
 
         return True
 
+    def order_acl(self):
+        '''
+        Put the ACEs in the ACL in the proper order. This is necessary because
+        the add_ace function puts ACEs at the end of the list without regard for
+        order. This will cause the following Windows Security dialog to appear
+        when viewing the security for the object:
+
+        ``The permissions on Directory are incorrectly ordered, which may cause
+        some entries to be ineffective.``
+
+        .. note:: Run this function after adding all your ACEs.
+
+        Proper Orders is as follows:
+
+            1. Implicit Deny
+            2. Inherited Deny
+            3. Implicit Deny Object
+            4. Inherited Deny Object
+            5. Implicit Allow
+            6. Inherited Allow
+            7. Implicit Allow Object
+            8. Inherited Allow Object
+
+        Usage:
+
+        .. code-block:: python
+
+            dacl = Dacl(obj_type=obj_type)
+            dacl.add_ace(sid, access_mode, applies_to, permission)
+            dacl.order_acl()
+            dacl.save(obj_name, protected)
+        '''
+        new_dacl = Dacl()
+        deny_dacl = Dacl()
+        deny_obj_dacl = Dacl()
+        allow_dacl = Dacl()
+        allow_obj_dacl = Dacl()
+
+        # Load Non-Inherited ACEs first
+        for i in range(0, self.dacl.GetAceCount()):
+            ace = self.dacl.GetAce(i)
+            if ace[0][1] & win32security.INHERITED_ACE == 0:
+                if ace[0][0] == win32security.ACCESS_DENIED_ACE_TYPE:
+                    deny_dacl.dacl.AddAccessDeniedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace[0][1],
+                        ace[1],
+                        ace[2])
+                elif ace[0][0] == win32security.ACCESS_DENIED_OBJECT_ACE_TYPE:
+                    deny_obj_dacl.dacl.AddAccessDeniedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace[0][1],
+                        ace[1],
+                        ace[2])
+                elif ace[0][0] == win32security.ACCESS_ALLOWED_ACE_TYPE:
+                    allow_dacl.dacl.AddAccessAllowedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace[0][1],
+                        ace[1],
+                        ace[2])
+                elif ace[0][0] == win32security.ACCESS_ALLOWED_OBJECT_ACE_TYPE:
+                    allow_obj_dacl.dacl.AddAccessAllowedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace[0][1],
+                        ace[1],
+                        ace[2])
+
+        # Load Inherited ACEs last
+        for i in range(0, self.dacl.GetAceCount()):
+            ace = self.dacl.GetAce(i)
+            if ace[0][1] & win32security.INHERITED_ACE == \
+                    win32security.INHERITED_ACE:
+                ace_prop = ace[0][1] ^ win32security.INHERITED_ACE
+                if ace[0][0] == win32security.ACCESS_DENIED_ACE_TYPE:
+                    deny_dacl.dacl.AddAccessDeniedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace_prop,
+                        ace[1],
+                        ace[2])
+                elif ace[0][0] == win32security.ACCESS_DENIED_OBJECT_ACE_TYPE:
+                    deny_obj_dacl.dacl.AddAccessDeniedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace_prop,
+                        ace[1],
+                        ace[2])
+                elif ace[0][0] == win32security.ACCESS_ALLOWED_ACE_TYPE:
+                    allow_dacl.dacl.AddAccessAllowedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace_prop,
+                        ace[1],
+                        ace[2])
+                elif ace[0][0] == win32security.ACCESS_ALLOWED_OBJECT_ACE_TYPE:
+                    allow_obj_dacl.dacl.AddAccessAllowedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace_prop,
+                        ace[1],
+                        ace[2])
+
+        # Combine ACEs in the proper order
+        # Deny, Deny Object, Allow, Allow Object
+        # Deny
+        for i in range(0, deny_dacl.dacl.GetAceCount()):
+            ace = deny_dacl.dacl.GetAce(i)
+            new_dacl.dacl.AddAccessDeniedAceEx(
+                win32security.ACL_REVISION_DS,
+                ace[0][1],
+                ace[1],
+                ace[2])
+
+        # Deny Object
+        for i in range(0, deny_obj_dacl.dacl.GetAceCount()):
+            ace = deny_obj_dacl.dacl.GetAce(i)
+            new_dacl.dacl.AddAccessDeniedAceEx(
+                win32security.ACL_REVISION_DS,
+                ace[0][1] ^ win32security.INHERITED_ACE,
+                ace[1],
+                ace[2])
+
+        # Allow
+        for i in range(0, allow_dacl.dacl.GetAceCount()):
+            ace = allow_dacl.dacl.GetAce(i)
+            new_dacl.dacl.AddAccessAllowedAceEx(
+                win32security.ACL_REVISION_DS,
+                ace[0][1],
+                ace[1],
+                ace[2])
+
+        # Allow Object
+        for i in range(0, allow_obj_dacl.dacl.GetAceCount()):
+            ace = allow_obj_dacl.dacl.GetAce(i)
+            new_dacl.dacl.AddAccessAllowedAceEx(
+                win32security.ACL_REVISION_DS,
+                ace[0][1] ^ win32security.INHERITED_ACE,
+                ace[1],
+                ace[2])
+
+        # Set the new dacl
+        self.dacl = new_dacl.dacl
+
     def get_ace(self, principal, return_obj=False):
         '''
         Get the ACE for a specific principal.
@@ -1081,6 +1220,9 @@ def set_permissions(obj_name,
         dacl.rm_ace(principal, access_mode)
 
     dacl.add_ace(principal, access_mode, permissions, applies_to)
+
+    dacl.order_acl()
+
     dacl.save(obj_name, protected)
 
     return True

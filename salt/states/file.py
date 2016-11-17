@@ -561,8 +561,7 @@ def _check_directory_win(name,
                          win_owner,
                          win_perms=None,
                          win_deny_perms=None,
-                         win_inheritance=None,
-                         win_applies_to=None):
+                         win_inheritance=None):
     '''
     Check what changes need to be made on a directory
     '''
@@ -579,65 +578,101 @@ def _check_directory_win(name,
         # Check perms
         perms = salt.utils.win_dacl.get_permissions(name)
 
-        # Verify Grant Permissions
+        # Verify Permissions
         if win_perms is not None:
             for user in win_perms:
+                # Check that user exists:
+                try:
+                    salt.utils.win_dacl.get_name(user)
+                except CommandExecutionError:
+                    continue
+
                 grant_perms = []
-                if isinstance(win_perms[user], six.string_types):
+                # Check for permissions
+                if isinstance(win_perms[user]['perms'], six.string_types):
                     if not salt.utils.win_dacl.has_permission(
-                            name, user, win_perms[user]):
-                        grant_perms = win_perms[user]
+                            name, user, win_perms[user]['perms']):
+                        grant_perms = win_perms[user]['perms']
                 else:
-                    for perm in win_perms[user]:
+                    for perm in win_perms[user]['perms']:
                         if not salt.utils.win_dacl.has_permission(
                                 name, user, perm, exact=False):
-                            grant_perms.append(win_perms[user])
+                            grant_perms.append(win_perms[user]['perms'])
                 if grant_perms:
                     if 'grant_perms' not in changes:
                         changes['grant_perms'] = {}
-                    changes['grant_perms'][user] = grant_perms
+                    if user not in changes['grant_perms']:
+                        changes['grant_perms'][user] = {}
+                    changes['grant_perms'][user]['perms'] = grant_perms
 
                 # Check Applies to
-                user = salt.utils.win_dacl.get_name(user)
+                if 'applies_to' not in win_perms[user]:
+                    applies_to = 'this_folder_subfolders_files'
+                else:
+                    applies_to = win_perms[user]['applies_to']
 
-                # Get the proper applies_to text
-                at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][win_applies_to]
-                applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+                if user in perms:
+                    user = salt.utils.win_dacl.get_name(user)
 
-                if 'grant' in perms[user]:
-                    if not perms[user]['grant']['applies to'] == applies_to_text:
-                        changes['applies_to'] = applies_to_text
+                    # Get the proper applies_to text
+                    at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][applies_to]
+                    applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+
+                    if 'grant' in perms[user]:
+                        if not perms[user]['grant']['applies to'] == applies_to_text:
+                            if 'grant_perms' not in changes:
+                                changes['grant_perms'] = {}
+                            if user not in changes['grant_perms']:
+                                changes['grant_perms'][user] = {}
+                            changes['grant_perms'][user]['applies_to'] = applies_to
 
         # Verify Deny Permissions
         if win_deny_perms is not None:
             for user in win_deny_perms:
+                # Check that user exists:
+                try:
+                    salt.utils.win_dacl.get_name(user)
+                except CommandExecutionError:
+                    continue
+
                 deny_perms = []
                 # Check for permissions
-                if isinstance(win_deny_perms[user], six.string_types):
+                if isinstance(win_deny_perms[user]['perms'], six.string_types):
                     if not salt.utils.win_dacl.has_permission(
-                            name, user, win_deny_perms[user], 'deny'):
-                        deny_perms = win_deny_perms[user]
+                            name, user, win_deny_perms[user]['perms'], 'deny'):
+                        deny_perms = win_deny_perms[user]['perms']
                 else:
-                    for perm in win_deny_perms[user]:
+                    for perm in win_deny_perms[user]['perms']:
                         if not salt.utils.win_dacl.has_permission(
                                 name, user, perm, 'deny', exact=False):
-                            deny_perms.append(perm)
-
+                            deny_perms.append(win_deny_perms[user]['perms'])
                 if deny_perms:
                     if 'deny_perms' not in changes:
                         changes['deny_perms'] = {}
-                    changes['deny_perms'][user] = deny_perms
+                    if user not in changes['deny_perms']:
+                        changes['deny_perms'][user] = {}
+                    changes['deny_perms'][user]['perms'] = deny_perms
 
                 # Check Applies to
-                user = salt.utils.win_dacl.get_name(user)
+                if 'applies_to' not in win_deny_perms[user]:
+                    applies_to = 'this_folder_subfolders_files'
+                else:
+                    applies_to = win_deny_perms[user]['applies_to']
 
-                # Get the proper applies_to text
-                at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][win_applies_to]
-                applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+                if user in perms:
+                    user = salt.utils.win_dacl.get_name(user)
 
-                if 'deny' in perms[user]:
-                    if not perms[user]['deny']['applies to'] == applies_to_text:
-                        changes['applies_to'] = applies_to_text
+                    # Get the proper applies_to text
+                    at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][applies_to]
+                    applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+
+                    if 'deny' in perms[user]:
+                        if not perms[user]['deny']['applies to'] == applies_to_text:
+                            if 'deny_perms' not in changes:
+                                changes['deny_perms'] = {}
+                            if user not in changes['deny_perms']:
+                                changes['deny_perms'][user] = {}
+                            changes['deny_perms'][user]['applies_to'] = applies_to
 
         # Check inheritance
         if win_inheritance is not None:
@@ -2089,8 +2124,7 @@ def directory(name,
               win_owner=None,
               win_perms=None,
               win_deny_perms=None,
-              win_applies_to='this_folder_subfolders_files',
-              win_inheritance=None,
+              win_inheritance=True,
               **kwargs):
     '''
     Ensure that a named directory is present and has the right perms
@@ -2223,17 +2257,52 @@ def directory(name,
         .. versionadded:: Nitrogen
 
     win_perms : None
-        A dictionary containing permissions to grant
+        A dictionary containing permissions to grant and their propagation. For
+        example: ``{'Administrators': {'perms': 'full_control', 'applies_to':
+        'this_folder_only'}}`` Can be a single basic perm or a list of advanced
+        perms. ``perms`` must be specified. ``applies_to`` is optional and
+        defaults to ``this_folder_subfoler_files``.
         .. versionadded:: Nitrogen
 
     win_deny_perms : None
+        A dictionary containing permissions to deny and their propagation. For
+        example: ``{'Administrators': {'perms': 'full_control', 'applies_to':
+        'this_folder_only'}}`` Can be a single basic perm or a list of advanced
+        perms.
         .. versionadded:: Nitrogen
 
-    win_applies_to : None
+    win_inheritance : True
+        True to inherit permissions from the parent directory, False not to
+        inherit permission.
         .. versionadded:: Nitrogen
 
-    win_inheritance : None
-        .. versionadded:: Nitrogen
+    Here's an example using the above ``win_*`` parameters:
+
+    .. code-block:: yaml
+
+        create_config_dir:
+          file.directory:
+            - name: C:\config\
+            - win_owner: Administrators
+            - win_perms:
+                # Basic Permissions
+                dev_ops:
+                  perms: full_control
+                # List of advanced permissions
+                appuser:
+                  perms:
+                    - read_attributes
+                    - read_ea
+                    - create_folders
+                    - read_permissions
+                  applies_to: this_folder_only
+                joe_snuffy:
+                  perms: read
+                  applies_to: this_folder_files
+            - win_deny_perms:
+                fred_snuffy:
+                  perms: full_control
+            - win_inheritance: False
     '''
     name = os.path.expanduser(name)
     ret = {'name': name,
@@ -2330,8 +2399,7 @@ def directory(name,
     # Check directory?
     if salt.utils.is_windows():
         presult, pcomment, ret['pchanges'] = _check_directory_win(
-            name, win_owner, win_perms, win_deny_perms, win_inheritance,
-            win_applies_to)
+            name, win_owner, win_perms, win_deny_perms, win_inheritance)
     else:
         presult, pcomment, ret['pchanges'] = _check_directory(
             name, user, group, recurse or [], dir_mode, clean, require,
@@ -2367,7 +2435,7 @@ def directory(name,
 
         if salt.utils.is_windows():
             __salt__['file.mkdir'](name, win_owner, win_perms, win_deny_perms,
-                                   win_applies_to, win_inheritance)
+                                   win_inheritance)
         else:
             __salt__['file.mkdir'](name, user=user, group=group, mode=dir_mode)
 
@@ -2381,8 +2449,7 @@ def directory(name,
     if not children_only:
         if salt.utils.is_windows():
             ret = __salt__['file.check_perms'](
-                name, ret, win_owner, win_perms, win_deny_perms, win_applies_to,
-                win_inheritance, follow_symlinks)
+                name, ret, win_owner, win_perms, win_deny_perms, win_inheritance)
         else:
             ret, perms = __salt__['file.check_perms'](
                 name, ret, user, group, dir_mode, follow_symlinks)
@@ -2496,7 +2563,13 @@ def directory(name,
     if __opts__['test']:
         ret['comment'] = 'Directory {0} not updated'.format(name)
     elif not ret['changes'] and ret['result']:
+        orig_comment = None
+        if ret['comment']:
+            orig_comment = ret['comment']
+
         ret['comment'] = 'Directory {0} is in the correct state'.format(name)
+        if orig_comment:
+            ret['comment'] = '\n'.join([ret['comment'], orig_comment])
 
     if errors:
         ret['result'] = False
