@@ -170,12 +170,16 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
             self.pre_keys = (pre_keys,)
         else:
             self.pre_keys = pre_keys
+        super(NamespacedDictWrapper, self).__init__(self._dict())
 
     def _dict(self):
         r = self.__dict
         for k in self.pre_keys:
             r = r[k]
         return r
+
+    def __repr__(self):
+        return repr(self._dict())
 
     def __setitem__(self, key, val):
         self._dict()[key] = val

@@ -29,6 +29,7 @@ from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
 from distutils.command.install_lib import install_lib
+from ctypes.util import find_library
 # pylint: enable=E0611
 
 try:
@@ -119,6 +120,7 @@ SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py'
 SALT_VERSION_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_version.py')
 SALT_SYSPATHS_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_syspaths.py')
 SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.txt')
+SALT_WINDOWS_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'windows.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
 SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'raet.txt')
 
@@ -384,11 +386,11 @@ class InstallPyCryptoWindowsWheel(Command):
         call_arguments = ['pip', 'install', 'wheel']
         if platform_bits == '64bit':
             call_arguments.append(
-                'http://repo.saltstack.com/windows/dependencies/64/pycrypto-2.6.1-cp27-none-win_amd64.whl'
+                'https://repo.saltstack.com/windows/dependencies/64/pycrypto-2.6.1-cp27-none-win_amd64.whl'
             )
         else:
             call_arguments.append(
-                'http://repo.saltstack.com/windows/dependencies/32/pycrypto-2.6.1-cp27-none-win32.whl'
+                'https://repo.saltstack.com/windows/dependencies/32/pycrypto-2.6.1-cp27-none-win32.whl'
             )
         with indent_log():
             call_subprocess(call_arguments)
@@ -415,11 +417,11 @@ class InstallCompiledPyYaml(Command):
         call_arguments = ['easy_install', '-Z']
         if platform_bits == '64bit':
             call_arguments.append(
-                'http://repo.saltstack.com/windows/dependencies/64/PyYAML-3.11.win-amd64-py2.7.exe'
+                'https://repo.saltstack.com/windows/dependencies/64/PyYAML-3.11.win-amd64-py2.7.exe'
             )
         else:
             call_arguments.append(
-                'http://repo.saltstack.com/windows/dependencies/32/PyYAML-3.11.win-amd64-py2.7.exe'
+                'https://repo.saltstack.com/windows/dependencies/32/PyYAML-3.11.win32-py2.7.exe'
             )
         with indent_log():
             call_subprocess(call_arguments)
@@ -442,10 +444,13 @@ class DownloadWindowsDlls(Command):
         import platform
         from pip.utils.logging import indent_log
         platform_bits, _ = platform.architecture()
-        url = 'http://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll'
+        url = 'https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll'
         dest = os.path.join(os.path.dirname(sys.executable), '{fname}.dll')
         with indent_log():
             for fname in ('libeay32', 'ssleay32', 'libsodium', 'msvcr120'):
+                # See if the library is already on the system
+                if find_library(fname):
+                    continue
                 furl = url.format(bits=platform_bits[:2], fname=fname)
                 fdest = dest.format(fname=fname)
                 if not os.path.exists(fdest):
@@ -1065,8 +1070,7 @@ class SaltDistribution(distutils.dist.Distribution):
         install_requires = _parse_requirements_file(SALT_REQS)
 
         if IS_WINDOWS_PLATFORM:
-            install_requires.append('WMI')
-            install_requires.append('pypiwin32 >= 219')
+            install_requires += _parse_requirements_file(SALT_WINDOWS_REQS)
 
         if self.salt_transport == 'zeromq':
             install_requires += _parse_requirements_file(SALT_ZEROMQ_REQS)

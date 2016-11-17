@@ -931,8 +931,13 @@ def patch_python_logging_handlers():
 def __process_multiprocessing_logging_queue(opts, queue):
     import salt.utils
     salt.utils.appendproctitle('MultiprocessingLoggingQueue')
+
+    # Assign UID/GID of user to proc if set
     from salt.utils.verify import check_user
-    check_user(opts['user'])
+    user = opts.get('user')
+    if user:
+        check_user(user)
+
     if salt.utils.is_windows():
         # On Windows, creating a new process doesn't fork (copy the parent
         # process image). Due to this, we need to setup extended logging

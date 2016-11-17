@@ -18,6 +18,7 @@ import subprocess
 import sys
 import time
 import traceback
+import tempfile
 from salt.utils import vt
 
 # Import salt libs
@@ -25,7 +26,8 @@ import salt.utils
 import salt.utils.timed_subprocess
 import salt.grains.extra
 import salt.ext.six as six
-from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
+from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
+    SaltInvocationError
 from salt.log import LOG_LEVELS
 from salt.ext.six.moves import range
 from salt.ext.six.moves import shlex_quote as _cmd_quote
@@ -278,6 +280,10 @@ def _run(cmd,
         raise CommandExecutionError('VT not available on windows')
 
     if shell.lower().strip() == 'powershell':
+        # Strip whitespace
+        if isinstance(cmd, six.string_types):
+            cmd = cmd.strip()
+
         # If we were called by script(), then fakeout the Windows
         # shell to run a Powershell script.
         # Else just run a Powershell command.
@@ -287,9 +293,9 @@ def _run(cmd,
         # The last item in the list [-1] is the current method.
         # The third item[2] in each tuple is the name of that method.
         if stack[-2][2] == 'script':
-            cmd = 'Powershell -NonInteractive -ExecutionPolicy Bypass -File ' + cmd
+            cmd = 'Powershell -NonInteractive -NoProfile -ExecutionPolicy Bypass -File ' + cmd
         else:
-            cmd = 'Powershell -NonInteractive "{0}"'.format(cmd.replace('"', '\\"'))
+            cmd = 'Powershell -NonInteractive -NoProfile "{0}"'.format(cmd.replace('"', '\\"'))
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
@@ -1986,8 +1992,8 @@ def script(source,
 
     def _cleanup_tempfile(path):
         try:
-            os.remove(path)
-        except (IOError, OSError) as exc:
+            __salt__['file.remove'](path)
+        except (SaltInvocationError, CommandExecutionError) as exc:
             log.error(
                 'cmd.script: Unable to clean tempfile \'{0}\': {1}'.format(
                     path,
@@ -2004,6 +2010,12 @@ def script(source,
         # Backwards compatibility
         saltenv = __env__
 
+    if salt.utils.is_windows() and runas and cwd is None:
+        cwd = tempfile.mkdtemp(dir=__opts__['cachedir'])
+        __salt__['win_dacl.add_ace'](
+            cwd, 'File', runas, 'READ&EXECUTE', 'ALLOW',
+            'FOLDER&SUBFOLDERS&FILES')
+
     path = salt.utils.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
     if template:
@@ -2016,7 +2028,10 @@ def script(source,
                                           saltenv,
                                           **kwargs)
         if not fn_:
-            _cleanup_tempfile(path)
+            if salt.utils.is_windows() and runas:
+                _cleanup_tempfile(cwd)
+            else:
+                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2025,7 +2040,10 @@ def script(source,
     else:
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         if not fn_:
-            _cleanup_tempfile(path)
+            if salt.utils.is_windows() and runas:
+                _cleanup_tempfile(cwd)
+            else:
+                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2053,7 +2071,10 @@ def script(source,
                use_vt=use_vt,
                bg=bg,
                password=password)
-    _cleanup_tempfile(path)
+    if salt.utils.is_windows() and runas:
+        _cleanup_tempfile(cwd)
+    else:
+        _cleanup_tempfile(path)
     return ret
 
 
@@ -2602,13 +2623,27 @@ def powershell(cmd,
         saltenv='base',
         use_vt=False,
         password=None,
+        depth=None,
         **kwargs):
     '''
-    Execute the passed PowerShell command and return the output as a string.
+    Execute the passed PowerShell command and return the output as a dictionary.
+
+    Other ``cmd.*`` functions return the raw text output of the command. This
+    function appends ``| ConvertTo-JSON`` to the command and then parses the
+    JSON into a Python dictionary. If you want the raw textual result of your
+    PowerShell command you should use ``cmd.run`` with the ``shell=powershell``
+    option.
+
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run '$PSVersionTable.CLRVersion' shell=powershell
+        salt '*' cmd.run 'Get-NetTCPConnection' shell=powershell
 
     .. versionadded:: 2016.3.0
 
-    .. warning ::
+    .. warning::
 
         This passes the cmd argument directly to PowerShell
         without any further processing! Be absolutely sure that you
@@ -2617,6 +2652,16 @@ def powershell(cmd,
 
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
+
+    In addition to the normal ``cmd.run`` parameters, this command offers the
+    ``depth`` parameter to change the Windows default depth for the
+    ``ConvertTo-JSON`` powershell command. The Windows default is 2. If you need
+    more depth, set that here.
+
+    .. note::
+        For some commands, setting the depth to a value greater than 4 greatly
+        increases the time it takes for the command to return and in many cases
+        returns useless data.
 
     :param str cmd: The powershell command to run.
 
@@ -2710,6 +2755,15 @@ def powershell(cmd,
 
     :param str saltenv: The salt environment to use. Default is 'base'
 
+    :param int depth: The number of levels of contained objects to be included.
+        Default is 2. Values greater than 4 seem to greatly increase the time
+        it takes for the command to complete for some commands. eg: ``dir``
+
+        .. versionadded:: 2016.3.4
+
+    :returns:
+        :dict: A dictionary of data returned by the powershell command.
+
     CLI Example:
 
     .. code-block:: powershell
@@ -2722,7 +2776,9 @@ def powershell(cmd,
         python_shell = True
 
     # Append PowerShell Object formatting
-    cmd = '{0} | ConvertTo-Json -Depth 32'.format(cmd)
+    cmd += ' | ConvertTo-JSON'
+    if depth is not None:
+        cmd += ' -Depth {0}'.format(depth)
 
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(cmd,

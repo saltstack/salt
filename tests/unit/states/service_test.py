@@ -58,7 +58,10 @@ class ServiceTestCase(TestCase):
                 'result': True},
                {'changes': {},
                 'comment': 'The service salt is already running',
-                'name': 'salt', 'result': True}]
+                'name': 'salt', 'result': True},
+               {'changes': 'saltstack',
+                'comment': 'Service salt failed to start', 'name': 'salt',
+                'result': True}]
 
         tmock = MagicMock(return_value=True)
         fmock = MagicMock(return_value=False)
@@ -134,6 +137,22 @@ class ServiceTestCase(TestCase):
                 ):
                     self.assertDictEqual(service.running("salt", True), ret[4])
 
+                with contextlib.nested(
+                    patch.dict(service.__opts__, {'test': False}),
+                    patch.dict(
+                        service.__salt__, {
+                            'service.status':
+                            MagicMock(side_effect=[False, False]),
+                            'service.enabled':
+                            MagicMock(side_effect=[True, True]),
+                            'service.start':
+                            MagicMock(return_value="stack")}),
+                    patch.object(
+                        service, '_enable',
+                        MagicMock(return_value={'changes': 'saltstack'}))
+                ):
+                    self.assertDictEqual(service.running("salt", True), ret[6])
+
     def test_dead(self):
         '''
             Test to ensure that the named service is dead
@@ -149,8 +168,8 @@ class ServiceTestCase(TestCase):
                 'comment': 'Service salt was killed', 'name': 'salt',
                 'result': True},
                {'changes': {},
-                'comment': 'Service salt was killed', 'name': 'salt',
-                'result': True},
+                'comment': 'Service salt failed to die', 'name': 'salt',
+                'result': False},
                {'changes': 'saltstack',
                 'comment': 'The service salt is already dead', 'name': 'salt',
                 'result': True}]
@@ -176,6 +195,7 @@ class ServiceTestCase(TestCase):
                 patch.object(service, '_enable', mock)
             ):
                 self.assertDictEqual(service.dead("salt", True), ret[5])
+
             with contextlib.nested(
                 patch.dict(service.__opts__, {'test': False}),
                 patch.dict(
@@ -203,7 +223,7 @@ class ServiceTestCase(TestCase):
                     {'service.enabled':
                      MagicMock(side_effect=[True, True, False]),
                      'service.status':
-                     MagicMock(side_effect=[True, True, False]),
+                     MagicMock(side_effect=[True, False, False]),
                      'service.stop': MagicMock(return_value="stack")}),
                 patch.object(
                     service, '_enable',
@@ -226,6 +246,25 @@ class ServiceTestCase(TestCase):
                     MagicMock(return_value={}))
             ):
                 self.assertDictEqual(service.dead("salt", False), ret[4])
+
+    def test_dead_with_missing_service(self):
+        '''
+        Tests the case in which a service.dead state is executed on a state
+        which does not exist.
+
+        See https://github.com/saltstack/salt/issues/37511
+        '''
+        name = 'thisisnotarealservice'
+        with patch.dict(service.__salt__,
+                        {'service.available': MagicMock(return_value=False)}):
+            ret = service.dead(name=name)
+            self.assertDictEqual(
+                ret,
+                {'changes': {},
+                 'comment': 'The named service {0} is not available'.format(name),
+                 'result': True,
+                 'name': name}
+            )
 
     def test_enabled(self):
         '''

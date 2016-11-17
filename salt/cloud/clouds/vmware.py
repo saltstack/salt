@@ -132,9 +132,12 @@ from salt.exceptions import SaltCloudSystemExit
 
 # Import salt cloud libs
 import salt.config as config
-from salt.ext.six.moves import range
 
 # Attempt to import pyVim and pyVmomi libs
+FLATTEN_DISK_FULL_CLONE = 'moveAllDiskBackingsAndDisallowSharing'
+COPY_ALL_DISKS_FULL_CLONE = 'moveAllDiskBackingsAndAllowSharing'
+CURRENT_STATE_LINKED_CLONE = 'moveChildMostDiskBacking'
+QUICK_LINKED_CLONE = 'createNewChildDiskBacking'
 try:
     from pyVmomi import vim
     HAS_PYVMOMI = True
@@ -265,6 +268,15 @@ def _edit_existing_hard_disk_helper(disk, size_kb):
     disk.capacityInKB = size_kb
     disk_spec = vim.vm.device.VirtualDeviceSpec()
     disk_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
+    disk_spec.device = disk
+
+    return disk_spec
+
+
+def _edit_existing_hard_disk_mode_helper(disk, mode):
+    disk_spec = vim.vm.device.VirtualDeviceSpec()
+    disk_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
+    disk.backing.diskMode = mode
     disk_spec.device = disk
 
     return disk_spec
@@ -601,16 +613,42 @@ def _manage_devices(devices, vm=None, container_ref=None):
             if isinstance(device, vim.vm.device.VirtualDisk):
                 # this is a hard disk
                 if 'disk' in list(devices.keys()):
-                    # there is atleast one disk specified to be created/configured
+                    # there is at least one disk specified to be created/configured
                     unit_number += 1
                     existing_disks_label.append(device.deviceInfo.label)
                     if device.deviceInfo.label in list(devices['disk'].keys()):
-                        size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
-                        size_kb = int(size_gb * 1024.0 * 1024.0)
+                        disk_spec = None
+                        if 'size' in devices['disk'][device.deviceInfo.label]:
+                            disk_spec = _get_size_spec(device, devices)
+                            size_kb = float(
+                                devices['disk'][device.deviceInfo.label]['size']
+                            ) * 1024 * 1024
+                        else:
+                            # User didn't specify disk size
+                            # in the cloud profile
+                            # so use the existing disk size
+                            log.info('Virtual disk size was not'
+                                     ' specified in the cloud profile.'
+                                     ' Using existing disk size.')
+                            size_kb = device.capacityInKB
+
                         if device.capacityInKB < size_kb:
                             # expand the disk
                             disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
-                            device_specs.append(disk_spec)
+
+                        if 'mode' in devices['disk'][device.deviceInfo.label]:
+                            if devices['disk'][device.deviceInfo.label]['mode'] \
+                                in [
+                                    'independent_persistent',
+                                    'independent_nonpersistent',
+                                    'dependent',
+                            ]:
+                                disk_spec = _get_mode_spec(device, devices, disk_spec)
+                            else:
+                                raise SaltCloudSystemExit('Invalid disk'
+                                                          ' backing mode'
+                                                          ' specified!')
+                        device_specs.append(disk_spec)
 
             elif isinstance(device.backing, vim.vm.device.VirtualEthernetCard.NetworkBackingInfo) or isinstance(device.backing, vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
                 # this is a network adapter
@@ -753,6 +791,31 @@ def _manage_devices(devices, vm=None, container_ref=None):
     }
 
     return ret
+
+
+def _get_mode_spec(device, devices, disk_spec):
+    if device.backing.diskMode != \
+            devices['disk'][device.deviceInfo.label]['mode']:
+        if not disk_spec:
+            disk_spec = \
+                _edit_existing_hard_disk_mode_helper(
+                    device,
+                    devices['disk'][device.deviceInfo.label]['mode']
+                )
+        else:
+            disk_spec.device.backing.diskMode = \
+                devices['disk'][device.deviceInfo.label]['mode']
+    return disk_spec
+
+
+def _get_size_spec(device, devices):
+    size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
+    size_kb = int(size_gb * 1024.0 * 1024.0)
+    disk_spec = None
+    if device.capacityInKB < size_kb:
+        # expand the disk
+        disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
+    return disk_spec
 
 
 def _wait_for_vmware_tools(vm_ref, max_wait):
@@ -2188,18 +2251,6 @@ def create(vm_):
             raise SaltCloudSystemExit(
                 'The VM/template that you have specified under clonefrom does not exist.'
             )
-
-        snapshot = None
-        if clone_type == 'vm' and 'snapshot' in vm_:
-            num = int(vm_['snapshot']) - 1
-            snapshot = object_ref.rootSnapshot[0]
-            # Drill down to the correct snapshot number
-            for _ in range(num):
-                try:
-                    snapshot = snapshot.childSnapshot[0]
-                except IndexError:
-                    raise SaltCloudSystemExit('Specified snapshot'
-                                              ' does not exist.')
     else:
         clone_type = None
         object_ref = None
@@ -2338,20 +2389,18 @@ def create(vm_):
             config_spec.extraConfig.append(option)
 
     if 'clonefrom' in vm_:
-        if not snapshot:
-            # Create the clone specs
-            clone_spec = vim.vm.CloneSpec(
-                template=template,
-                location=reloc_spec,
-                config=config_spec
-            )
-        else:
-            clone_spec = vim.vm.CloneSpec(
-                template=template,
-                location=reloc_spec,
-                config=config_spec,
-                snapshot=snapshot
-            )
+        clone_spec = handle_snapshot(
+            config_spec,
+            object_ref,
+            reloc_spec,
+            template,
+            vm_
+        )
+        if not clone_spec:
+            clone_spec = build_clonespec(config_spec,
+                                         object_ref,
+                                         reloc_spec,
+                                         template)
 
         if customization and (devices and 'network' in list(devices.keys())) and 'Windows' not in object_ref.config.guestFullName:
             global_ip = vim.vm.customization.GlobalIPSettings()
@@ -2474,6 +2523,75 @@ def create(vm_):
         transport=__opts__['transport']
     )
     return data
+
+
+def handle_snapshot(config_spec, object_ref, reloc_spec, template, vm_):
+    '''
+    Returns a clone spec for cloning from shapshots
+    :rtype vim.vm.CloneSpec
+    '''
+    if 'snapshot' not in vm_:
+        return None
+
+    allowed_types = [
+        FLATTEN_DISK_FULL_CLONE,
+        COPY_ALL_DISKS_FULL_CLONE,
+        CURRENT_STATE_LINKED_CLONE,
+        QUICK_LINKED_CLONE,
+    ]
+
+    clone_spec = get_clonespec_for_valid_snapshot(
+        config_spec,
+        object_ref,
+        reloc_spec,
+        template,
+        vm_)
+    if not clone_spec:
+        raise SaltCloudSystemExit('Invalid disk move type specified'
+                                  ' supported types are'
+                                  ' {0}'.format(' '.join(allowed_types)))
+    return clone_spec
+
+
+def get_clonespec_for_valid_snapshot(config_spec, object_ref, reloc_spec, template, vm_):
+    '''
+    return clonespec only if values are valid
+    '''
+    moving = True
+    if QUICK_LINKED_CLONE == vm_['snapshot']['disk_move_type']:
+        reloc_spec.diskMoveType = QUICK_LINKED_CLONE
+    elif CURRENT_STATE_LINKED_CLONE == vm_['snapshot']['disk_move_type']:
+        reloc_spec.diskMoveType = CURRENT_STATE_LINKED_CLONE
+    elif COPY_ALL_DISKS_FULL_CLONE == vm_['snapshot']['disk_move_type']:
+        reloc_spec.diskMoveType = COPY_ALL_DISKS_FULL_CLONE
+    elif FLATTEN_DISK_FULL_CLONE == vm_['snapshot']['disk_move_type']:
+        reloc_spec.diskMoveType = FLATTEN_DISK_FULL_CLONE
+    else:
+        moving = False
+
+    if moving:
+        return build_clonespec(config_spec, object_ref, reloc_spec, template)
+    else:
+        return None
+
+
+def build_clonespec(config_spec, object_ref, reloc_spec, template):
+    '''
+    Returns the clone spec
+    '''
+    if reloc_spec.diskMoveType == QUICK_LINKED_CLONE:
+        return vim.vm.CloneSpec(
+            template=template,
+            location=reloc_spec,
+            config=config_spec,
+            snapshot=object_ref.snapshot.currentSnapshot
+        )
+    else:
+        return vim.vm.CloneSpec(
+            template=template,
+            location=reloc_spec,
+            config=config_spec
+        )
 
 
 def create_datacenter(kwargs=None, call=None):

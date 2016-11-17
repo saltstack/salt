@@ -671,10 +671,10 @@
 #pillar_safe_render_error: True
 
 # The pillar_source_merging_strategy option allows you to configure merging strategy
-# between different sources. It accepts four values: recurse, aggregate, overwrite,
-# or smart. Recurse will merge recursively mapping of data. Aggregate instructs
-# aggregation of elements between sources that use the #!yamlex renderer. Overwrite
-# will verwrite elements according the order in which they are processed. This is
+# between different sources. It accepts five values: none, recurse, aggregate, overwrite,
+# or smart. None will not do any merging at all. Recurse will merge recursively mapping of data.
+# Aggregate instructs aggregation of elements between sources that use the #!yamlex renderer. Overwrite
+# will overwrite elements according the order in which they are processed. This is
 # behavior of the 2014.1 branch and earlier. Smart guesses the best strategy based
 # on the "renderer" setting and is the default value.
 #pillar_source_merging_strategy: smart
@@ -994,3 +994,10 @@
 ############################################
 # Default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
 #event_match_type: startswith
+
+# Permanently include any available Python 3rd party modules into Salt Thin
+# when they are generated for Salt-SSH or other purposes.
+# The modules should be named by the names they are actually imported inside the Python.
+# The value of the parameters can be either one module or a comma separated list of them.
+#thin_extra_mods: foo,bar
+

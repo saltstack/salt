@@ -533,7 +533,8 @@ class Master(SMaster):
                                       'reload': salt.crypt.Crypticle.generate_key_string
                                      }
             log.info('Creating master process manager')
-            self.process_manager = salt.utils.process.ProcessManager()
+            # Since there are children having their own ProcessManager we should wait for kill more time.
+            self.process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
             pub_channels = []
             log.info('Creating master publisher process')
             for transport, opts in iter_transport_opts(self.opts):
@@ -687,7 +688,9 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
             except os.error:
                 pass
 
-        self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
+        # Wait for kill should be less then parent's ProcessManager.
+        self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager',
+                                                                 wait_for_kill=1)
 
         req_channels = []
         tcp_only = True
@@ -2301,7 +2304,7 @@ class ClearFuncs(object):
                             self.opts['ext_job_cache']
                         )
                     )
-            except AttributeError:
+            except (AttributeError, KeyError):
                 save_load_func = False
                 log.critical(
                     'The specified returner used for the external job cache '

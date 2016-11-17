@@ -140,8 +140,11 @@ def _strip_exc(exc):
     return re.sub(r'^Command [\'"].+[\'"] failed: ', '', exc.strerror)
 
 
-def _uptodate(ret, target, comments=None):
+def _uptodate(ret, target, comments=None, local_changes=False):
     ret['comment'] = 'Repository {0} is up-to-date'.format(target)
+    if local_changes:
+        ret['comment'] += ', but with local changes. Set \'force_reset\' to ' \
+                          'True to purge local changes.'
     if comments:
         # Shouldn't be making any changes if the repo was up to date, but
         # report on them so we are alerted to potential problems with our
@@ -179,14 +182,39 @@ def _failed_submodule_update(ret, exc, comments=None):
     return _fail(ret, msg, comments)
 
 
-def _not_fast_forward(ret, pre, post, branch, local_branch,
-                      local_changes, comments):
+def _not_fast_forward(ret, rev, pre, post, branch, local_branch,
+                      default_branch, local_changes, comments):
+    branch_msg = ''
+    if branch is None:
+        if rev != 'HEAD':
+            if local_branch != rev:
+                branch_msg = (
+                    ' The desired rev ({0}) differs from the name of the '
+                    'local branch ({1}), if the desired rev is a branch name '
+                    'then a forced update could possibly be avoided by '
+                    'setting the \'branch\' argument to \'{0}\' instead.'
+                    .format(rev, local_branch)
+                )
+        else:
+            if default_branch is not None and local_branch != default_branch:
+                branch_msg = (
+                    ' The default remote branch ({0}) differs from the '
+                    'local branch ({1}). This could be caused by changing the '
+                    'default remote branch, or if the local branch was '
+                    'manually changed. Rather than forcing an update, it '
+                    'may be advisable to set the \'branch\' argument to '
+                    '\'{0}\' instead. To ensure that this state follows the '
+                    '\'{0}\' branch instead of the remote HEAD, set the '
+                    '\'rev\' argument to \'{0}\'.'
+                    .format(default_branch, local_branch)
+                )
+
     pre = _short_sha(pre)
     post = _short_sha(post)
     return _fail(
         ret,
         'Repository would be updated {0}{1}, but {2}. Set \'force_reset\' to '
-        'True to force this update{3}.'.format(
+        'True to force this update{3}.{4}'.format(
             'from {0} to {1}'.format(pre, post)
                 if local_changes and pre != post
                 else 'to {0}'.format(post),
@@ -196,7 +224,8 @@ def _not_fast_forward(ret, pre, post, branch, local_branch,
             'this is not a fast-forward merge'
                 if not local_changes
                 else 'there are uncommitted changes',
-            ' and discard these changes' if local_changes else ''
+            ' and discard these changes' if local_changes else '',
+            branch_msg,
         ),
         comments
     )
@@ -230,7 +259,33 @@ def latest(name,
     up-to-date.
 
     name
-        Address of the remote repository as passed to "git clone"
+        Address of the remote repository, as passed to ``git clone``
+
+        .. note::
+             From the `Git documentation`_, there are two URL formats
+             supported for SSH authentication. The below two examples are
+             equivalent:
+
+             .. code-block:: text
+
+                 # ssh:// URL
+                 ssh://user@server/project.git
+
+                 # SCP-like syntax
+                 user@server:project.git
+
+             A common mistake is to use an ``ssh://`` URL, but with a colon
+             after the domain instead of a slash. This is invalid syntax in
+             Git, and will therefore not work in Salt. When in doubt, confirm
+             that a ``git clone`` works for the URL before using it in Salt.
+
+             It has been reported by some users that SCP-like syntax is
+             incompatible with git repos hosted on `Atlassian Stash/BitBucket
+             Server`_. In these cases, it may be necessary to use ``ssh://``
+             URLs for SSH authentication.
+
+        .. _`Git documentation`: https://git-scm.com/book/en/v2/Git-on-the-Server-The-Protocols#The-SSH-Protocol
+        .. _`Atlassian Stash/BitBucket Server`: https://www.atlassian.com/software/bitbucket/server
 
     rev : HEAD
         The remote branch, tag, or revision ID to checkout after clone / before
@@ -249,19 +304,73 @@ def latest(name,
         Name of the target directory where repository is about to be cloned
 
     branch
-        Name of the branch into which to checkout the specified rev. If not
-        specified, then Salt will not care what branch is being used locally
-        and will just use whatever branch is currently there.
-
-        .. note::
-            If not specified, this means that the local branch name will not be
-            changed if the repository is reset to another branch/tag/SHA1.
+        Name of the local branch into which to checkout the specified rev. If
+        not specified, then Salt will not care what branch is being used
+        locally and will just use whatever branch is currently there.
 
         .. versionadded:: 2015.8.0
 
+        .. note::
+            If this argument is not specified, this means that Salt will not
+            change the local branch if the repository is reset to another
+            branch/tag/SHA1. For example, assume that the following state was
+            run initially:
+
+            .. code-block:: yaml
+
+                foo_app:
+                  git.latest:
+                    - name: https://mydomain.tld/apps/foo.git
+                    - target: /var/www/foo
+                    - user: www
+
+            This would have cloned the HEAD of that repo (since a ``rev``
+            wasn't specified), and because ``branch`` is not specified, the
+            branch in the local clone at ``/var/www/foo`` would be whatever the
+            default branch is on the remote repository (usually ``master``, but
+            not always). Now, assume that it becomes necessary to switch this
+            checkout to the ``dev`` branch. This would require ``rev`` to be
+            set, and probably would also require ``force_reset`` to be enabled:
+
+            .. code-block:: yaml
+
+                foo_app:
+                  git.latest:
+                    - name: https://mydomain.tld/apps/foo.git
+                    - target: /var/www/foo
+                    - user: www
+                    - rev: dev
+                    - force_reset: True
+
+            The result of this state would be to perform a hard-reset to
+            ``origin/dev``. Since ``branch`` was not specified though, while
+            ``/var/www/foo`` would reflect the contents of the remote repo's
+            ``dev`` branch, the local branch would still remain whatever it was
+            when it was cloned. To make the local branch match the remote one,
+            set ``branch`` as well, like so:
+
+            .. code-block:: yaml
+
+                foo_app:
+                  git.latest:
+                    - name: https://mydomain.tld/apps/foo.git
+                    - target: /var/www/foo
+                    - user: www
+                    - rev: dev
+                    - branch: dev
+                    - force_reset: True
+
+            This may seem redundant, but Salt tries to support a wide variety
+            of use cases, and doing it this way allows for the use case where
+            the local branch doesn't need to be strictly managed.
+
     user
-        User under which to run git commands. By default, commands are run by
-        the user under which the minion is running.
+        Local system user under which to run git commands. By default, commands
+        are run by the user under which the minion is running.
+
+        .. note::
+            This is not to be confused with the username for http(s)/SSH
+            authentication.
 
         .. versionadded:: 0.17.0
 
@@ -269,7 +378,7 @@ def latest(name,
         Windows only. Required when specifying ``user``. This parameter will be
         ignored on non-Windows platforms.
 
-      .. versionadded:: 2016.3.4
+        .. versionadded:: 2016.3.4
 
     update_head : True
         If set to ``False``, then the remote repository will be fetched (if
@@ -381,9 +490,9 @@ def latest(name,
             invoked from the minion using ``salt-call``, to prevent blocking
             waiting for user input.
 
-        Key can be specified as a SaltStack file server URL, eg. salt://location/identity_file
-
-        .. versionadded:: 2016.3.0
+        .. versionchanged:: 2016.3.0
+            Key can now be specified as a SaltStack fileserver URL (e.g.
+            ``salt://path/to/identity_file``).
 
     https_user
         HTTP Basic Auth username for HTTPS (only) clones
@@ -405,52 +514,52 @@ def latest(name,
 
     .. note::
         Clashing ID declarations can be avoided when including different
-        branches from the same git repository in the same sls file by using the
-        ``name`` declaration.  The example below checks out the ``gh-pages``
-        and ``gh-pages-prod`` branches from the same repository into separate
-        directories.  The example also sets up the ``ssh_known_hosts`` ssh key
+        branches from the same git repository in the same SLS file by using the
+        ``name`` argument. The example below checks out the ``gh-pages`` and
+        ``gh-pages-prod`` branches from the same repository into separate
+        directories. The example also sets up the ``ssh_known_hosts`` ssh key
         required to perform the git checkout.
 
-    .. code-block:: yaml
+        Also, it has been reported that the SCP-like syntax for
 
-        gitlab.example.com:
-          ssh_known_hosts:
-            - present
-            - user: root
-            - enc: ecdsa
-            - fingerprint: 4e:94:b0:54:c1:5b:29:a2:70:0e:e1:a3:51:ee:ee:e3
+        .. code-block:: yaml
 
-        git-website-staging:
-          git.latest:
-            - name: ssh://git@gitlab.example.com:user/website.git
-            - rev: gh-pages
-            - target: /usr/share/nginx/staging
-            - identity: /root/.ssh/website_id_rsa
-            - require:
-              - pkg: git
-              - ssh_known_hosts: gitlab.example.com
+            gitlab.example.com:
+              ssh_known_hosts:
+                - present
+                - user: root
+                - enc: ecdsa
+                - fingerprint: 4e:94:b0:54:c1:5b:29:a2:70:0e:e1:a3:51:ee:ee:e3
 
-        git-website-staging:
-          git.latest:
-            - name: ssh://git@gitlab.example.com:user/website.git
-            - rev: gh-pages
-            - target: /usr/share/nginx/staging
-            - identity: salt://website/id_rsa
-            - require:
-              - pkg: git
-              - ssh_known_hosts: gitlab.example.com
+            git-website-staging:
+              git.latest:
+                - name: git@gitlab.example.com:user/website.git
+                - rev: gh-pages
+                - target: /usr/share/nginx/staging
+                - identity: /root/.ssh/website_id_rsa
+                - require:
+                  - pkg: git
+                  - ssh_known_hosts: gitlab.example.com
 
-            .. versionadded:: 2016.3.0
+            git-website-staging:
+              git.latest:
+                - name: git@gitlab.example.com:user/website.git
+                - rev: gh-pages
+                - target: /usr/share/nginx/staging
+                - identity: salt://website/id_rsa
+                - require:
+                  - pkg: git
+                  - ssh_known_hosts: gitlab.example.com
 
-        git-website-prod:
-          git.latest:
-            - name: ssh://git@gitlab.example.com:user/website.git
-            - rev: gh-pages-prod
-            - target: /usr/share/nginx/prod
-            - identity: /root/.ssh/website_id_rsa
-            - require:
-              - pkg: git
-              - ssh_known_hosts: gitlab.example.com
+            git-website-prod:
+              git.latest:
+                - name: git@gitlab.example.com:user/website.git
+                - rev: gh-pages-prod
+                - target: /usr/share/nginx/prod
+                - identity: /root/.ssh/website_id_rsa
+                - require:
+                  - pkg: git
+                  - ssh_known_hosts: gitlab.example.com
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -611,14 +720,27 @@ def latest(name,
             'Failed to check remote refs: {0}'.format(_strip_exc(exc))
         )
 
+    if 'HEAD' in all_remote_refs:
+        head_rev = all_remote_refs['HEAD']
+        for refname, refsha in six.iteritems(all_remote_refs):
+            if refname.startswith('refs/heads/'):
+                if refsha == head_rev:
+                    default_branch = refname.partition('refs/heads/')[-1]
+                    break
+        else:
+            default_branch = None
+    else:
+        head_ref = None
+        default_branch = None
+
     desired_upstream = False
     if bare:
         remote_rev = None
         remote_rev_type = None
     else:
         if rev == 'HEAD':
-            if 'HEAD' in all_remote_refs:
-                remote_rev = all_remote_refs['HEAD']
+            if head_rev is not None:
+                remote_rev = head_rev
                 # Just go with whatever the upstream currently is
                 desired_upstream = None
                 remote_rev_type = 'sha1'
@@ -773,6 +895,30 @@ def latest(name,
                 )
                 local_changes = False
 
+            if local_changes and revs_match:
+                if force_reset:
+                    msg = (
+                        '{0} is up-to-date, but with local changes. Since '
+                        '\'force_reset\' is enabled, these local changes '
+                        'would be reset.'.format(target)
+                    )
+                    if __opts__['test']:
+                        ret['changes']['forced update'] = True
+                        if comments:
+                            msg += _format_comments(comments)
+                        return _neutral_test(ret, msg)
+                    log.debug(msg.replace('would', 'will'))
+                else:
+                    log.debug(
+                        '%s up-to-date, but with local changes. Since '
+                        '\'force_reset\' is disabled, no changes will be '
+                        'made.', target
+                    )
+                    return _uptodate(ret,
+                                     target,
+                                     _format_comments(comments),
+                                     local_changes)
+
             if remote_rev_type == 'sha1' \
                     and base_rev is not None \
                     and base_rev.startswith(remote_rev):
@@ -866,7 +1012,7 @@ def latest(name,
                             has_remote_rev = True
 
             # If fast_forward is not boolean, then we don't know if this will
-            # be a fast forward or not, because a fetch is requirde.
+            # be a fast forward or not, because a fetch is required.
             fast_forward = None if not local_changes else False
 
             if has_remote_rev:
@@ -908,10 +1054,12 @@ def latest(name,
                 if not force_reset:
                     return _not_fast_forward(
                         ret,
+                        rev,
                         base_rev,
                         remote_rev,
                         branch,
                         local_branch,
+                        default_branch,
                         local_changes,
                         comments)
                 merge_action = 'hard-reset'
@@ -1142,6 +1290,20 @@ def latest(name,
                 else:
                     branch_opts = None
 
+                if branch_opts is not None and local_branch is None:
+                    return _fail(
+                        ret,
+                        'Cannot set/unset upstream tracking branch, local '
+                        'HEAD refers to nonexistent branch. This may have '
+                        'been caused by cloning a remote repository for which '
+                        'the default branch was renamed or deleted. If you '
+                        'are unable to fix the remote repository, you can '
+                        'work around this by setting the \'branch\' argument '
+                        '(which will ensure that the named branch is created '
+                        'if it does not already exist).',
+                        comments
+                    )
+
                 if not has_remote_rev:
                     try:
                         fetch_changes = __salt__['git.fetch'](
@@ -1205,10 +1367,12 @@ def latest(name,
                     if fast_forward is False and not force_reset:
                         return _not_fast_forward(
                             ret,
+                            rev,
                             base_rev,
                             remote_rev,
                             branch,
                             local_branch,
+                            default_branch,
                             local_changes,
                             comments)
 
@@ -1561,6 +1725,21 @@ def latest(name,
                     local_rev, local_branch = \
                         _get_local_rev_and_branch(target, user, password)
 
+                    if local_branch is None \
+                            and remote_rev is not None \
+                            and 'HEAD' not in all_remote_refs:
+                        return _fail(
+                            ret,
+                            'Remote HEAD refers to a ref that does not exist. '
+                            'This can happen when the default branch on the '
+                            'remote repository is renamed or deleted. If you '
+                            'are unable to fix the remote repository, you can '
+                            'work around this by setting the \'branch\' argument '
+                            '(which will ensure that the named branch is created '
+                            'if it does not already exist).',
+                            comments
+                        )
+
                     if not _revs_equal(local_rev, remote_rev, remote_rev_type):
                         __salt__['git.reset'](
                             target,
@@ -1905,9 +2084,9 @@ def detached(name,
         Update submodules
 
     identity
-        A path on the minion server to a private key to use over SSH
-        Key can be specified as a SaltStack file server URL
-        eg. salt://location/identity_file
+        A path on the minion (or a SaltStack fileserver URL, e.g.
+        ``salt://path/to/identity_file``) to a private key to use for SSH
+        authentication.
 
     https_user
         HTTP Basic Auth username for HTTPS (only) clones

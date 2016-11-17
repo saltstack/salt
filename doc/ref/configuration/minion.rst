@@ -923,6 +923,57 @@ talking to the intended master.
 
     syndic_finger: 'ab:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:50:10'
 
+.. conf_minion:: proxy_host
+
+``proxy_host``
+--------------
+
+Default: ``''``
+
+The hostname used for HTTP proxy access.
+
+.. code-block:: yaml
+
+    proxy_host: proxy.my-domain
+
+.. conf_minion:: proxy_port
+
+``proxy_port``
+--------------
+
+Default: ``0``
+
+The port number used for HTTP proxy access.
+
+.. code-block:: yaml
+
+    proxy_port: 31337
+
+.. conf_minion:: proxy_username
+
+``proxy_username``
+------------------
+
+Default: ``''``
+
+The username used for HTTP proxy access.
+
+.. code-block:: yaml
+
+    proxy_username: charon
+
+.. conf_minion:: proxy_password
+
+``proxy_password``
+------------------
+
+Default: ``''``
+
+The password used for HTTP proxy access.
+
+.. code-block:: yaml
+
+    proxy_password: obolus
 
 Minion Module Management
 ========================
@@ -1188,9 +1239,9 @@ This option has no default value. Set it to an environment name to ensure that
     :conf_minion:`top_file_merging_strategy` is left at its default, and
     :conf_minion:`state_top_saltenv` is set to ``foo``, then any sections for
     environments other than ``foo`` in the top file for the ``foo`` environment
-    will be ignored. With :conf_minion:`top_file_merging_strategy` set to
-    ``base``, all states from all environments in the ``base`` top file will
-    be applied, while all other top files are ignored.
+    will be ignored. With :conf_minion:`state_top_saltenv` set to ``base``, all
+    states from all environments in the ``base`` top file will be applied,
+    while all other top files are ignored.
 
 .. code-block:: yaml
 

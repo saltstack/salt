@@ -3,8 +3,9 @@
 Manage Windows features via the ServerManager powershell module
 '''
 from __future__ import absolute_import
-import logging
+import ast
 import json
+import logging
 
 # Import python libs
 try:
@@ -24,6 +25,17 @@ def __virtual__():
     '''
     Load only on windows with servermanager module
     '''
+    def _module_present():
+        '''
+        Check for the presence of the ServerManager module.
+        '''
+        cmd = r"[Bool] (Get-Module -ListAvailable | Where-Object { $_.Name -eq 'ServerManager' })"
+        cmd_ret = __salt__['cmd.run_all'](cmd, shell='powershell', python_shell=True)
+
+        if cmd_ret['retcode'] == 0:
+            return ast.literal_eval(cmd_ret['stdout'])
+        return False
+
     if not salt.utils.is_windows():
         return False, 'Failed to load win_servermanager module: ' \
                       'Only available on Windows systems.'
@@ -33,7 +45,7 @@ def __virtual__():
                       'Requires Remote Server Administration Tools which ' \
                       'is only available on Windows 2008 R2 and later.'
 
-    if not _check_server_manager():
+    if not _module_present():
         return False, 'Failed to load win_servermanager module: ' \
                       'ServerManager module not available. ' \
                       'May need to install Remote Server Administration Tools.'
@@ -47,6 +59,9 @@ def _check_server_manager():
 
     Returns: True if import is successful, otherwise returns False
     '''
+    if 'Server' not in __grains__['osrelease']:
+        return False
+
     return not __salt__['cmd.retcode']('Import-Module ServerManager',
                                        shell='powershell',
                                        python_shell=True)
@@ -143,7 +158,8 @@ def install(feature, recurse=False, source=None, restart=False, exclude=None):
     :param str exclude: The name of the feature to exclude when installing the
         named feature.
 
-        ..note:: As there is no exclude option for the ``Add-WindowsFeature``
+        .. note::
+            As there is no exclude option for the ``Add-WindowsFeature``
             command, the feature will be installed with other sub-features and
             will then be removed.
 

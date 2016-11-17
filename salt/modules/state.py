@@ -1122,7 +1122,10 @@ def sls_id(
     opts['test'] = _get_test_value(test, **kwargs)
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
-    st_ = salt.state.HighState(opts)
+    try:
+        st_ = salt.state.HighState(opts, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.HighState(opts)
     if isinstance(mods, six.string_types):
         split_mods = mods.split(',')
     st_.push_active()
@@ -1641,7 +1644,7 @@ def event(tagmatch='*',
             listen=True)
 
     while True:
-        ret = sevent.get_event(full=True)
+        ret = sevent.get_event(full=True, auto_reconnect=True)
         if ret is None:
             continue
 

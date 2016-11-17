@@ -29,7 +29,6 @@ import time
 
 # Import salt cloud libs
 import salt.config as config
-import salt.utils.cloud
 from salt.exceptions import SaltCloudSystemExit
 
 # Get logging started
@@ -146,7 +145,7 @@ def list_nodes_select(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
-    return salt.utils.cloud.list_nodes_select(
+    return __utils__['cloud.list_nodes_select'](
         list_nodes_full(), __opts__['query.selection'], call,
     )
 
@@ -190,7 +189,7 @@ def show_instance(name, call=None):
     # Find under which cloud service the name is listed, if any
     if name not in nodes:
         return {}
-    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
+    __utils__['cloud.cache_node'](nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
 
@@ -212,7 +211,7 @@ def create(vm_):
     if 'driver' not in vm_:
         vm_['driver'] = vm_['provider']
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
@@ -248,7 +247,7 @@ def create(vm_):
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
@@ -264,7 +263,7 @@ def create(vm_):
             log.error('Status 412 may mean that you are requesting an\n'
                       'invalid location, image, or size.')
 
-            salt.utils.cloud.fire_event(
+            __utils__['cloud.fire_event'](
                 'event',
                 'instance request failed',
                 'salt/cloud/{0}/requesting/failed'.format(vm_['name']),
@@ -282,7 +281,7 @@ def create(vm_):
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
         )
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'instance request failed',
             'salt/cloud/{0}/requesting/failed'.format(vm_['name']),
@@ -311,17 +310,14 @@ def create(vm_):
         if str(data.get('default_password', '')) == '':
             time.sleep(1)
             return False
-        if '!' not in data['default_password']:
-            time.sleep(1)
-            return False
         return data['default_password']
 
-    vm_['ssh_host'] = salt.utils.cloud.wait_for_fun(
+    vm_['ssh_host'] = __utils__['cloud.wait_for_fun'](
         wait_for_hostname,
         timeout=config.get_cloud_config_value(
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
-    vm_['password'] = salt.utils.cloud.wait_for_fun(
+    vm_['password'] = __utils__['cloud.wait_for_fun'](
         wait_for_default_password,
         timeout=config.get_cloud_config_value(
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
@@ -335,7 +331,7 @@ def create(vm_):
     )
 
     # Bootstrap
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     ret.update(show_instance(vm_['name'], call='action'))
 
@@ -346,7 +342,7 @@ def create(vm_):
             )
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
@@ -387,7 +383,7 @@ def _query(path, method='GET', data=None, params=None, header_dict=None, decode=
     if header_dict is None:
         header_dict = {}
 
-    result = salt.utils.http.query(
+    result = __utils__['http.query'](
         url,
         method=method,
         params=params,

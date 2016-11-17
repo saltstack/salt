@@ -6,9 +6,9 @@
 # Import python libs
 from __future__ import absolute_import
 import os
+import time
 import threading
 import platform
-import time
 
 import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
@@ -80,10 +80,20 @@ class BaseZMQReqCase(TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # Attempting to kill the children hangs the test suite.
+        # Let the test suite handle this instead.
         cls.process_manager.kill_children()
         time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
         cls.io_loop.stop()
         cls.server_channel.close()
+        del cls.server_channel
+
+    @classmethod
+    def _handle_payload(cls, payload):
+        '''
+        TODO: something besides echo
+        '''
+        return payload, {'fun': 'send_clear'}
 
 
 class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
@@ -117,6 +127,12 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
+    #
+    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    #
+    # WARNING: This test will fail randomly on any system with > 1 CPU core!!!
+    #
+    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     def test_badload(self):
         '''
         Test a variety of bad requests, make sure that we get some sort of error

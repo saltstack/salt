@@ -53,22 +53,24 @@ def isportopen(host, port):
     return out
 
 
-def host_to_ip(host):
+def host_to_ips(host):
     '''
-    Returns the IP address of a given hostname
+    Returns a list of IP addresses of a given hostname or None if not found.
     '''
+    ips = []
     try:
-        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(
-            host, 0, socket.AF_UNSPEC, socket.SOCK_STREAM)[0]
-
-        if family == socket.AF_INET:
-            ip, port = sockaddr
-        elif family == socket.AF_INET6:
-            ip, port, flow_info, scope_id = sockaddr
-
+        for family, socktype, proto, canonname, sockaddr in socket.getaddrinfo(
+                host, 0, socket.AF_UNSPEC, socket.SOCK_STREAM):
+            if family == socket.AF_INET:
+                ip, port = sockaddr
+            elif family == socket.AF_INET6:
+                ip, port, flow_info, scope_id = sockaddr
+            ips.append(ip)
+        if not ips:
+            ips = None
     except Exception:
-        ip = None
-    return ip
+        ips = None
+    return ips
 
 
 def _filter_localhost_names(name_list):
@@ -589,7 +591,10 @@ def _interfaces_ifconfig(out):
                     if not salt.utils.is_sunos():
                         ipv6scope = mmask6.group(3) or mmask6.group(4)
                         addr_obj['scope'] = ipv6scope.lower() if ipv6scope is not None else ipv6scope
-                if addr_obj['address'] != '::' and addr_obj['prefixlen'] != 0:  # SunOS sometimes has ::/0 as inet6 addr when using addrconf
+                # SunOS sometimes has ::/0 as inet6 addr when using addrconf
+                if not salt.utils.is_sunos() \
+                        or addr_obj['address'] != '::' \
+                        and addr_obj['prefixlen'] != 0:
                     data['inet6'].append(addr_obj)
         data['up'] = updown
         if iface in ret:

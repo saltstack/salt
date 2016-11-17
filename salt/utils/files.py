@@ -21,6 +21,8 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 
+TEMPFILE_PREFIX = '__salt.tmp.'
+
 
 def recursive_copy(source, dest):
     '''

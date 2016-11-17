@@ -44,18 +44,23 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             # process is run with the -a flag
             skip_perm_errors = self.options.eauth != ''
 
-            local = salt.client.get_local_client(
+            self.local_client = salt.client.get_local_client(
                 self.get_config_file_path(),
-                skip_perm_errors=skip_perm_errors)
+                skip_perm_errors=skip_perm_errors,
+                auto_reconnect=True)
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return
 
         if self.options.batch or self.options.static:
+            # _run_batch() will handle all output and
+            # exit with the appropriate error condition
+            # Execution will not continue past this point
+            # in batch mode.
             self._run_batch()
         else:
             if self.options.timeout <= 0:
-                self.options.timeout = local.opts['timeout']
+                self.options.timeout = self.local_client.opts['timeout']
 
             kwargs = {
                 'tgt': self.config['tgt'],
@@ -115,20 +120,20 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 kwargs['eauth'] = self.options.eauth
 
             if self.config['async']:
-                jid = local.cmd_async(**kwargs)
+                jid = self.local_client.cmd_async(**kwargs)
                 print_cli('Executed command with job ID: {0}'.format(jid))
                 return
             retcodes = []
             try:
                 # local will be None when there was an error
                 errors = []
-                if local:
+                if self.local_client:
                     if self.options.subset:
-                        cmd_func = local.cmd_subset
+                        cmd_func = self.local_client.cmd_subset
                         kwargs['sub'] = self.options.subset
                         kwargs['cli'] = True
                     else:
-                        cmd_func = local.cmd_cli
+                        cmd_func = self.local_client.cmd_cli
 
                     if self.options.progress:
                         kwargs['progress'] = True
@@ -147,7 +152,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     elif self.config['fun'] == 'sys.doc':
                         ret = {}
                         out = ''
-                        for full_ret in local.cmd_cli(**kwargs):
+                        for full_ret in self.local_client.cmd_cli(**kwargs):
                             ret_, out, retcode = self._format_ret(full_ret)
                             ret.update(ret_)
                         self._output_ret(ret, out)
@@ -183,6 +188,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)
+                sys.exit(11)
 
     def _run_batch(self):
         import salt.cli.batch
@@ -232,10 +238,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 # We will print errors to the console further down the stack
                 sys.exit(1)
             # Printing the output is already taken care of in run() itself
+            retcode = 0
             for res in batch.run():
-                if self.options.failhard:
-                    for ret in six.itervalues(res):
-                        retcode = salt.utils.job.get_retcode(ret)
+                for ret in six.itervalues(res):
+                    job_retcode = salt.utils.job.get_retcode(ret)
+                    if job_retcode > retcode:
+                        # Exit with the highest retcode we find
+                        retcode = job_retcode
+                    if self.options.failhard:
                         if retcode != 0:
                             sys.stderr.write(
                                 '{0}\nERROR: Minions returned with non-zero exit code.\n'.format(
@@ -243,6 +253,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                                 )
                             )
                             sys.exit(retcode)
+            sys.exit(retcode)
 
     def _print_errors_summary(self, errors):
         if errors:

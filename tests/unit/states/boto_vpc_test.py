@@ -307,11 +307,12 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
         vpc = self._create_vpc(name='test')
         igw = self._create_internet_gateway(name='test', vpc_id=vpc.id)
 
-        route_table_present_result = salt_states['boto_vpc.route_table_present'](
-                name='test', vpc_name='test', routes=[{'destination_cidr_block': '0.0.0.0/0',
-                                                       'gateway_id': igw.id},
-                                                      {'destination_cidr_block': '10.0.0.0/24',
-                                                       'gateway_id': 'local'}])
+        with patch.dict('salt.utils.boto.__salt__', funcs):
+            route_table_present_result = salt_states['boto_vpc.route_table_present'](
+                    name='test', vpc_name='test', routes=[{'destination_cidr_block': '0.0.0.0/0',
+                                                           'gateway_id': igw.id},
+                                                          {'destination_cidr_block': '10.0.0.0/24',
+                                                           'gateway_id': 'local'}])
         routes = [x['gateway_id'] for x in route_table_present_result['changes']['new']['routes']]
 
         self.assertEqual(set(routes), set(['local', igw.id]))

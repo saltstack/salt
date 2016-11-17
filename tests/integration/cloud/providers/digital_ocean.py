@@ -10,7 +10,6 @@ import random
 import string
 
 # Import Salt Testing Libs
-from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
@@ -37,8 +36,6 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'digital_ocean'
 
 
-@skipIf(True, 'Valid provider configs are not available for the DigitalOcean v1 API '
-              'in conjunction with the configs needed for v2 API.')
 class DigitalOceanTest(integration.ShellCase):
     '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
@@ -89,7 +86,7 @@ class DigitalOceanTest(integration.ShellCase):
         '''
         image_list = self.run_cloud('--list-images {0}'.format(PROVIDER_NAME))
         self.assertIn(
-            '14.04 x64',
+            '14.04.5 x64',
             [i.strip() for i in image_list]
         )
 
@@ -160,17 +157,17 @@ class DigitalOceanTest(integration.ShellCase):
         try:
             self.assertIn(
                 INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p digitalocean-test {0}'.format(INSTANCE_NAME))]
+                [i.strip() for i in self.run_cloud('-p digitalocean-test {0}'.format(INSTANCE_NAME), timeout=500)]
             )
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
             raise
 
         # delete the instance
         try:
             self.assertIn(
                 'True',
-                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))]
+                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)]
             )
         except AssertionError:
             raise
@@ -179,7 +176,7 @@ class DigitalOceanTest(integration.ShellCase):
         # This was originally in a tearDown function, but that didn't make sense
         # To run this for each test when not all tests create instances.
         if INSTANCE_NAME in [i.strip() for i in self.run_cloud('--query')]:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
 
 
 if __name__ == '__main__':

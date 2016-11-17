@@ -45,7 +45,7 @@ class TestProcessManager(TestCase):
             time.sleep(0.5)
             # Are there child processes still running?
             if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGILL)
+                process_manager.send_signal_to_processes(signal.SIGKILL)
                 process_manager.stop_restarting()
                 process_manager.kill_children()
 
@@ -71,7 +71,7 @@ class TestProcessManager(TestCase):
             time.sleep(0.5)
             # Are there child processes still running?
             if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGILL)
+                process_manager.send_signal_to_processes(signal.SIGKILL)
                 process_manager.stop_restarting()
                 process_manager.kill_children()
 
@@ -81,7 +81,6 @@ class TestProcessManager(TestCase):
         '''
         def die():
             salt.utils.appendproctitle('test_restarting')
-            time.sleep(1)
 
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(die)
@@ -96,7 +95,7 @@ class TestProcessManager(TestCase):
             time.sleep(0.5)
             # Are there child processes still running?
             if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGILL)
+                process_manager.send_signal_to_processes(signal.SIGKILL)
                 process_manager.stop_restarting()
                 process_manager.kill_children()
 
@@ -120,7 +119,7 @@ class TestProcessManager(TestCase):
             time.sleep(0.5)
             # Are there child processes still running?
             if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGILL)
+                process_manager.send_signal_to_processes(signal.SIGKILL)
                 process_manager.stop_restarting()
                 process_manager.kill_children()
 

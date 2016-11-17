@@ -37,6 +37,8 @@ Backwards-incompatible Changes
   fileserver under ``salt://_runners``, ``salt://_output``, etc. and sync them
   using the functions in the new :mod:`saltutil runner
   <salt.runners.saltutil>`.
+- The :py:func:`pkg.check_db <salt.modules.yumpkg.check_db>` function has been
+  removed for yum/dnf.
 
 
 Core Changes

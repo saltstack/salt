@@ -505,6 +505,15 @@ class MinionBase(object):
             if opts['random_master']:
                 shuffle(opts['local_masters'])
             last_exc = None
+            opts['master_uri_list'] = list()
+
+            # This sits outside of the connection loop below because it needs to set
+            # up a list of master URIs regardless of which masters are available
+            # to connect _to_. This is primarily used for masterless mode, when
+            # we need a list of master URIs to fire calls back to.
+            for master in opts['local_masters']:
+                opts['master'] = master
+                opts['master_uri_list'].append(resolve_dns(opts)['master_uri'])
 
             while True:
                 attempts += 1
@@ -640,8 +649,7 @@ class SMinion(MinionBase):
             pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
         self.utils = salt.loader.utils(self.opts)
-        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
-                                                 include_errors=True)
+        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.serializers = salt.loader.serializers(self.opts)
         self.returners = salt.loader.returners(self.opts, self.functions)
         self.proxy = salt.loader.proxy(self.opts, self.functions, self.returners, None)
@@ -722,6 +730,27 @@ class MultiMinion(MinionBase):
         if HAS_ZMQ:
             zmq.eventloop.ioloop.install()
         self.io_loop = LOOP_CLASS.current()
+        self.process_manager = ProcessManager(name='MultiMinionProcessManager')
+        self.io_loop.spawn_callback(self.process_manager.run, async=True)
+
+    def destroy(self):
+        '''
+        Tear down the minion
+        '''
+        self._running = False
+        if hasattr(self, 'schedule'):
+            del self.schedule
+        if hasattr(self, 'pub_channel'):
+            self.pub_channel.on_recv(None)
+            if hasattr(self.pub_channel, 'close'):
+                self.pub_channel.close()
+            del self.pub_channel
+        if hasattr(self, 'periodic_callbacks'):
+            for cb in six.itervalues(self.periodic_callbacks):
+                cb.stop()
+
+    def __del__(self):
+        self.destroy()
 
     def _spawn_minions(self):
         '''
@@ -1154,6 +1183,7 @@ class Minion(MinionBase):
                 self._send_req_sync(load, timeout)
             except salt.exceptions.SaltReqTimeoutError:
                 log.info('fire_master failed: master could not be contacted. Request timed out.')
+                return False
             except Exception:
                 log.info('fire_master failed: {0}'.format(traceback.format_exc()))
                 return False
@@ -1427,9 +1457,13 @@ class Minion(MinionBase):
             ret['id'] = opts['id']
             for returner in set(data['ret'].split(',')):
                 try:
-                    minion_instance.returners['{0}.returner'.format(
-                        returner
-                    )](ret)
+                    returner_str = '{0}.returner'.format(returner)
+                    if returner_str in minion_instance.returners:
+                        minion_instance.returners[returner_str](ret)
+                    else:
+                        returner_err = minion_instance.returners.missing_fun_string(returner_str)
+                        log.error('Returner {0} could not be loaded: {1}'.format(
+                            returner_str, returner_err))
                 except Exception as exc:
                     log.error(
                         'The return failed for job {0} {1}'.format(

@@ -47,7 +47,16 @@ def _pshell(cmd, cwd=None):
     if 'convertto-json' not in cmd.lower():
         cmd = ' '.join([cmd, '| ConvertTo-Json'])
     log.debug('DSC: {0}'.format(cmd))
-    ret = __salt__['cmd.shell'](cmd, shell='powershell', cwd=cwd)
+    ret = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd,
+            python_shell=True, ignore_retcode=True)
+
+    if ret['retcode']:
+        log.debug('Error running command: {0}'.format(cmd))
+        log.debug(ret)
+        return False
+
+    ret = ret['stdout']
+
     try:
         ret = json.loads(ret, strict=False)
     except ValueError:
@@ -392,6 +401,9 @@ def apply_config(path, source=None, salt_env='base'):
         salt '*' dsc.run_config C:\\DSC\\WebSiteConfiguration salt://dsc/configs/WebSiteConfiguration
 
     '''
+    # If you're getting an error along the lines of "The client cannot connect
+    # to the destination specified in the request.", try the following:
+    # Enable-PSRemoting -SkipNetworkProfileCheck
     config = path
     if source:
         # Make sure the folder names match
@@ -421,16 +433,17 @@ def apply_config(path, source=None, salt_env='base'):
 
     # Run the DSC Configuration
     # Putting quotes around the parameter protects against command injection
-    cmd = '$job = Start-DscConfiguration -Path "{0}"; '.format(config)
-    cmd += 'Do{ } While ($job.State -notin \'Completed\', \'Failed\'); ' \
-           'return $job.State'
+    cmd = 'Start-DscConfiguration -Path "{0}" -Wait -Force'.format(config)
+    ret = _pshell(cmd)
+
+    if ret is False:
+        raise CommandExecutionError('Apply Config Failed: {0}'.format(path))
+
+    cmd = '$status = Get-DscConfigurationStatus; $status.Status'
     ret = _pshell(cmd)
     log.info('DSC Apply Config: {0}'.format(ret))
 
-    if ret == 'Completed':
-        return True
-    else:
-        return False
+    return ret == 'Success'
 
 
 def get_config():
@@ -466,10 +479,7 @@ def test_config():
     '''
     cmd = 'Test-DscConfiguration *>&1'
     ret = _pshell(cmd)
-    if ret == 'True':
-        return True
-    else:
-        return False
+    return ret == 'True'
 
 
 def get_config_status():

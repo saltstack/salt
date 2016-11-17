@@ -4,6 +4,7 @@ Module for editing power settings on Mac OS X
 
  .. versionadded:: 2016.3.0
 '''
+# Import python libs
 from __future__ import absolute_import
 
 # Import salt libs
@@ -110,9 +111,14 @@ def set_sleep(minutes):
     value = _validate_sleep(minutes)
     cmd = 'systemsetup -setsleep {0}'.format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_sleep() == {'Computer': value,
-                           'Display': value,
-                           'Hard Disk': value}
+
+    state = []
+    for check in (get_computer_sleep, get_display_sleep, get_harddisk_sleep):
+        state.append(salt.utils.mac_utils.confirm_updated(
+            value,
+            check,
+        ))
+    return all(state)
 
 
 def get_computer_sleep():
@@ -154,7 +160,11 @@ def set_computer_sleep(minutes):
     value = _validate_sleep(minutes)
     cmd = 'systemsetup -setcomputersleep {0}'.format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return str(value) in get_computer_sleep()
+
+    return salt.utils.mac_utils.confirm_updated(
+        str(value),
+        get_computer_sleep,
+    )
 
 
 def get_display_sleep():
@@ -196,7 +206,11 @@ def set_display_sleep(minutes):
     value = _validate_sleep(minutes)
     cmd = 'systemsetup -setdisplaysleep {0}'.format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return str(value) in get_display_sleep()
+
+    return salt.utils.mac_utils.confirm_updated(
+        str(value),
+        get_display_sleep,
+    )
 
 
 def get_harddisk_sleep():
@@ -238,7 +252,11 @@ def set_harddisk_sleep(minutes):
     value = _validate_sleep(minutes)
     cmd = 'systemsetup -setharddisksleep {0}'.format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return str(value) in get_harddisk_sleep()
+
+    return salt.utils.mac_utils.confirm_updated(
+        str(value),
+        get_harddisk_sleep,
+    )
 
 
 def get_wake_on_modem():
@@ -281,7 +299,11 @@ def set_wake_on_modem(enabled):
     state = salt.utils.mac_utils.validate_enabled(enabled)
     cmd = 'systemsetup -setwakeonmodem {0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_wake_on_modem() == state
+
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_wake_on_modem,
+    )
 
 
 def get_wake_on_network():
@@ -324,7 +346,11 @@ def set_wake_on_network(enabled):
     state = salt.utils.mac_utils.validate_enabled(enabled)
     cmd = 'systemsetup -setwakeonnetworkaccess {0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_wake_on_network() == state
+
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_wake_on_network,
+    )
 
 
 def get_restart_power_failure():
@@ -367,7 +393,11 @@ def set_restart_power_failure(enabled):
     state = salt.utils.mac_utils.validate_enabled(enabled)
     cmd = 'systemsetup -setrestartpowerfailure {0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_restart_power_failure() == state
+
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_restart_power_failure,
+    )
 
 
 def get_restart_freeze():
@@ -412,7 +442,11 @@ def set_restart_freeze(enabled):
     state = salt.utils.mac_utils.validate_enabled(enabled)
     cmd = 'systemsetup -setrestartfreeze {0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_restart_freeze() == state
+
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_restart_freeze,
+    )
 
 
 def get_sleep_on_power_button():
@@ -456,4 +490,8 @@ def set_sleep_on_power_button(enabled):
     state = salt.utils.mac_utils.validate_enabled(enabled)
     cmd = 'systemsetup -setallowpowerbuttontosleepcomputer {0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_sleep_on_power_button() == state
+
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_sleep_on_power_button,
+    )

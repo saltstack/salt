@@ -688,6 +688,8 @@ def hypermedia_handler(*args, **kwargs):
     except (salt.exceptions.SaltDaemonNotRunning,
             salt.exceptions.SaltReqTimeoutError) as exc:
         raise cherrypy.HTTPError(503, exc.strerror)
+    except (cherrypy.TimeoutError, salt.exceptions.SaltClientTimeout):
+        raise cherrypy.HTTPError(504)
     except cherrypy.CherryPyException:
         raise
     except Exception as exc:
@@ -863,7 +865,7 @@ def lowdata_fmt():
     # if the data was sent as urlencoded, we need to make it a list.
     # this is a very forgiving implementation as different clients set different
     # headers for form encoded data (including charset or something similar)
-    if data and not isinstance(data, list):
+    if data and isinstance(data, collections.Mapping):
         # Make the 'arg' param a list if not already
         if 'arg' in data and not isinstance(data['arg'], list):
             data['arg'] = [data['arg']]
@@ -2004,7 +2006,7 @@ class Events(object):
                     transport=self.opts['transport'],
                     opts=self.opts,
                     listen=True)
-            stream = event.iter_events(full=True)
+            stream = event.iter_events(full=True, auto_reconnect=True)
 
             yield u'retry: {0}\n'.format(400)
 
@@ -2178,7 +2180,7 @@ class WebsocketEndpoint(object):
                     transport=self.opts['transport'],
                     opts=self.opts,
                     listen=True)
-            stream = event.iter_events(full=True)
+            stream = event.iter_events(full=True, auto_reconnect=True)
             SaltInfo = event_processor.SaltInfo(handler)
             while True:
                 data = next(stream)

@@ -184,7 +184,7 @@ class TestDaemon(object):
         '''
         # Setup the multiprocessing logging queue listener
         salt_log_setup.setup_multiprocessing_logging_listener(
-            self.parser.options
+            vars(self.parser.options)
         )
 
         # Set up PATH to mockbin
@@ -704,7 +704,7 @@ class TestDaemon(object):
         self._exit_ssh()
         # Shutdown the multiprocessing logging queue listener
         salt_log_setup.shutdown_multiprocessing_logging()
-        salt_log_setup.shutdown_multiprocessing_logging_listener()
+        salt_log_setup.shutdown_multiprocessing_logging_listener(daemonizing=True)
 
     def pre_setup_minions(self):
         '''
@@ -1300,12 +1300,13 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
 
-    def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
+    def run_cloud(self, arg_str, catch_stderr=False, timeout=15):
         '''
         Execute salt-cloud
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-cloud', arg_str, catch_stderr, timeout)
+        return self.run_script('salt-cloud', arg_str, catch_stderr,
+                               timeout=timeout)
 
 
 class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):

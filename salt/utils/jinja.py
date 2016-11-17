@@ -281,7 +281,7 @@ class SerializerExtension(Extension, object):
 
     **Load tags**
 
-    Salt implements ``import_yaml`` and ``import_json`` tags. They work like
+    Salt implements ``load_yaml`` and ``load_json`` tags. They work like
     the `import tag`_, except that the document is also deserialized.
 
     Syntaxes are ``{% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}``
@@ -387,8 +387,8 @@ class SerializerExtension(Extension, object):
     def format_yaml(self, value, flow_style=True):
         yaml_txt = yaml.dump(value, default_flow_style=flow_style,
                              Dumper=OrderedDictDumper).strip()
-        if yaml_txt.endswith('\n...\n'):
-            yaml_txt = yaml_txt[:len(yaml_txt-5)]
+        if yaml_txt.endswith('\n...'):
+            yaml_txt = yaml_txt[:len(yaml_txt)-4]
         return Markup(yaml_txt)
 
     def format_yaml_safe(self, value, flow_style=True):

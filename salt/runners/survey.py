@@ -8,7 +8,7 @@ returned by several different minions.
 Aggregated results are sorted by the size of the minion pools which returned
 matching results.
 
-Useful for playing the game: " some of these things are not like the others... "
+Useful for playing the game: *"some of these things are not like the others..."*
 when identifying discrepancies in a large infrastructure managed by salt.
 '''
 
@@ -29,20 +29,20 @@ def hash(*args, **kwargs):
     .. versionadded:: 2014.7.0
 
     This command is submitted via a salt runner using the
-    general form:
+    general form::
 
         salt-run survey.hash [survey_sort=up/down] <target>
                   <salt-execution-module> <salt-execution-module parameters>
 
-    Optionally accept a "survey_sort=" parameter. Default: "survey_sort=down"
+    Optionally accept a ``survey_sort=`` parameter. Default: ``survey_sort=down``
 
-    CLI Example #1: ( functionally equivalent to "salt-run manage.up" )
+    CLI Example #1: (functionally equivalent to ``salt-run manage.up``)
 
     .. code-block:: bash
 
         salt-run survey.hash "*" test.ping
 
-    CLI Example #2: ( find an "outlier" minion config file )
+    CLI Example #2: (find an "outlier" minion config file)
 
     .. code-block:: bash
 
@@ -61,20 +61,23 @@ def diff(*args, **kwargs):
 
     These pools are determined from the aggregated and sorted results of
     a salt command.
-    This command displays the "diffs" as a series of 2-way differences-- namely
-    the difference between the FIRST displayed minion pool
-    (according to sort order) and EACH SUBSEQUENT minion pool result set.
-    Differences are displayed according to the Python "difflib.unified_diff()"
-    as in the case of the salt execution module "file.get_diff".
 
-    This command is submitted via a salt runner using the general form:
+    This command displays the "diffs" as a series of 2-way differences --
+    namely the difference between the FIRST displayed minion pool
+    (according to sort order) and EACH SUBSEQUENT minion pool result set.
+
+    Differences are displayed according to the Python ``difflib.unified_diff()``
+    as in the case of the salt execution module ``file.get_diff``.
+
+    This command is submitted via a salt runner using the general form::
 
         salt-run survey.diff [survey_sort=up/down] <target>
                      <salt-execution-module> <salt-execution-module parameters>
 
-    Optionally accept a "survey_sort=" parameter. Default: "survey_sort=down"
+    Optionally accept a ``survey_sort=`` parameter. Default:
+    ``survey_sort=down``
 
-    CLI Example #1: ( Example to display the "differences of files" )
+    CLI Example #1: (Example to display the "differences of files")
 
     .. code-block:: bash
 

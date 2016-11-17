@@ -17,6 +17,13 @@ ensure_in_syspath('../../../')
 from salt.cloud.clouds import opennebula
 from salt.exceptions import SaltCloudSystemExit, SaltCloudNotFound
 
+# Import Third Party Libs
+try:
+    from lxml import etree  # pylint: disable=W0611
+    HAS_XML_LIBS = True
+except ImportError:
+    HAS_XML_LIBS = False
+
 # Global Variables
 opennebula.__active_provider_name__ = ''
 opennebula.__opts__ = {}
@@ -1628,6 +1635,16 @@ class OpenNebulaTestCase(TestCase):
                           opennebula.vn_reserve,
                           call='function',
                           kwargs={'vn_id': '0'})
+
+    @skipIf(not HAS_XML_LIBS, 'cannot find lxml python library')
+    def test__get_xml(self):
+        '''
+        Tests that invalid XML raises SaltCloudSystemExit.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula._get_xml,
+                          "[VirtualMachinePoolInfo] User couldn't be"
+                          " authenticated, aborting call.")
 
 
 if __name__ == '__main__':

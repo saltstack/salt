@@ -269,7 +269,8 @@ def latest_version(*names, **kwargs):
             cmd.extend(repo)
         out = __salt__['cmd.run_all'](cmd,
                                       output_loglevel='trace',
-                                      python_shell=False)
+                                      python_shell=False,
+                                      env={'LC_ALL': 'C', 'LANG': 'C'})
         candidate = ''
         for line in out['stdout'].splitlines():
             if 'Candidate' in line:
@@ -371,9 +372,9 @@ def refresh_db():
             # Strip filesize from end of line
             ident = re.sub(r' \[.+B\]$', '', ident)
             ret[ident] = True
-        elif cols[0] == 'Ign':
+        elif 'Ign' in cols[0]:
             ret[ident] = False
-        elif cols[0] == 'Hit':
+        elif 'Hit' in cols[0]:
             ret[ident] = None
     return ret
 
@@ -983,14 +984,20 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         force_conf = '--force-confnew'
     else:
         force_conf = '--force-confold'
-
     cmd = []
     if salt.utils.systemd.has_scope(__context__) \
             and __salt__['config.get']('systemd.scope', True):
         cmd.extend(['systemd-run', '--scope'])
+
     cmd.extend(['apt-get', '-q', '-y',
                 '-o', 'DPkg::Options::={0}'.format(force_conf),
                 '-o', 'DPkg::Options::=--force-confdef'])
+
+    if kwargs.get('force_yes', False):
+        cmd.append('--force-yes')
+    if kwargs.get('skip_verify', False):
+        cmd.append('--allow-unauthenticated')
+
     cmd.append('dist-upgrade' if dist_upgrade else 'upgrade')
 
     call = __salt__['cmd.run_all'](cmd,
@@ -2062,9 +2069,9 @@ def file_dict(*packages):
 
     .. code-block:: bash
 
-        salt '*' pkg.file_list httpd
-        salt '*' pkg.file_list httpd postfix
-        salt '*' pkg.file_list
+        salt '*' pkg.file_dict httpd
+        salt '*' pkg.file_dict httpd postfix
+        salt '*' pkg.file_dict
     '''
     return __salt__['lowpkg.file_dict'](*packages)
 

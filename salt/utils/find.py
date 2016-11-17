@@ -358,7 +358,7 @@ class GroupOption(Option):
                 self.gids.add(int(name))
             else:
                 try:
-                    self.gids.add(grp.getgrnam(value).gr_gid)
+                    self.gids.add(grp.getgrnam(name).gr_gid)
                 except KeyError:
                     raise ValueError('no such group "{0}"'.format(name))
 

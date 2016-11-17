@@ -76,6 +76,7 @@ class SysModuleTest(integration.ModuleCase):
                 'nspawn.restart',
                 'lowpkg.bin_pkg_info',
                 'state.apply',
+                'pip.iteritems',
         )
 
         for fun in docs:

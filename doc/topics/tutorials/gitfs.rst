@@ -138,6 +138,21 @@ install GitPython`` (or ``easy_install GitPython``) as root.
     Therefore, it may be necessary to delete the GitPython directory from the
     build cache in order to ensure that the specified version is installed.
 
+.. warning::
+
+    GitPython_ 2.0.9 and newer is not compatible with Python 2.6. If installing
+    GitPython_ using pip on a machine running Python 2.6, make sure that a
+    version earlier than 2.0.9 is installed. This can be done on the CLI by
+    running ``pip install 'GitPython<2.0.9'``, or in a :py:func:`pip.installed
+    <salt.states.pip_state.installed>` state using the following SLS:
+
+    .. code-block:: yaml
+
+        GitPython:
+          pip.installed:
+            - name: 'GitPython < 2.0.9'
+
+
 Dulwich
 -------
 
@@ -786,7 +801,8 @@ steps to this process:
          #!/usr/bin/env sh
          salt-call event.fire_master update salt/fileserver/gitfs/update
 
-   b. To enable other git users to run the hook after a `push`, use sudo in the hook script: 
+   b. To enable other git users to run the hook after a `push`, use sudo in the hook script:
+
      .. code-block:: bash
 
          #!/usr/bin/env sh
@@ -795,7 +811,7 @@ steps to this process:
 4. If using sudo in the git hook (above), the policy must be changed to permit all users to fire the event.
    Add the following policy to the sudoers file on the git server.
 
-   .. code-block::
+   .. code-block:: bash
 
        Cmnd_Alias SALT_GIT_HOOK = /bin/salt-call event.fire_master update salt/fileserver/gitfs/update
        Defaults!SALT_GIT_HOOK !requiretty

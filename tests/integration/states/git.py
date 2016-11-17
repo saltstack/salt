@@ -5,9 +5,11 @@ Tests for the Git state
 
 # Import python libs
 from __future__ import absolute_import
+import errno
 import os
 import shutil
 import socket
+import string
 import subprocess
 import tempfile
 
@@ -174,16 +176,21 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # Make sure that we now have uncommitted changes
             self.assertTrue(self.run_function('git.diff', [name, 'HEAD']))
 
-            # Re-run state with force_reset=False, this should fail
+            # Re-run state with force_reset=False
             ret = self.run_state(
                 'git.latest',
                 name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
                 target=name,
                 force_reset=False
             )
-            self.assertSaltFalseReturn(ret)
+            self.assertSaltTrueReturn(ret)
+            self.assertEqual(
+                ret[next(iter(ret))]['comment'],
+                ('Repository {0} is up-to-date, but with local changes. Set '
+                 '\'force_reset\' to True to purge local changes.'.format(name))
+            )
 
-            # Now run the state with force_reset=True, this should succeed
+            # Now run the state with force_reset=True
             ret = self.run_state(
                 'git.latest',
                 name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
@@ -253,6 +260,142 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             for path in (mirror_dir, admin_dir, clone_dir):
                 shutil.rmtree(path, ignore_errors=True)
+
+    def _changed_local_branch_helper(self, rev, hint):
+        '''
+        We're testing two almost identical cases, the only thing that differs
+        is the rev used for the git.latest state.
+        '''
+        name = os.path.join(integration.TMP, 'salt_repo')
+        cwd = os.getcwd()
+        try:
+            # Clone repo
+            ret = self.run_state(
+                'git.latest',
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+                rev=rev,
+                target=name
+            )
+            self.assertSaltTrueReturn(ret)
+
+            # Check out a new branch in the clone and make a commit, to ensure
+            # that when we re-run the state, it is not a fast-forward change
+            os.chdir(name)
+            with salt.utils.fopen(os.devnull, 'w') as devnull:
+                subprocess.check_call(['git', 'checkout', '-b', 'new_branch'],
+                                      stdout=devnull, stderr=devnull)
+                with salt.utils.fopen('foo', 'w'):
+                    pass
+                subprocess.check_call(['git', 'add', '.'],
+                                      stdout=devnull, stderr=devnull)
+                subprocess.check_call(['git', 'commit', '-m', 'add file'],
+                                      stdout=devnull, stderr=devnull)
+            os.chdir(cwd)
+
+            # Re-run the state, this should fail with a specific hint in the
+            # comment field.
+            ret = self.run_state(
+                'git.latest',
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+                rev=rev,
+                target=name
+            )
+            self.assertSaltFalseReturn(ret)
+
+            comment = ret[next(iter(ret))]['comment']
+            self.assertTrue(hint in comment)
+        finally:
+            # Make sure that we change back to the original cwd even if there
+            # was a traceback in the test.
+            os.chdir(cwd)
+            shutil.rmtree(name, ignore_errors=True)
+
+    def test_latest_changed_local_branch_rev_head(self):
+        '''
+        Test for presence of hint in failure message when the local branch has
+        been changed and a the rev is set to HEAD
+
+        This test will fail if the default branch for the salt-test-repo is
+        ever changed.
+        '''
+        self._changed_local_branch_helper(
+            'HEAD',
+            'The default remote branch (develop) differs from the local '
+            'branch (new_branch)'
+        )
+
+    def test_latest_changed_local_branch_rev_develop(self):
+        '''
+        Test for presence of hint in failure message when the local branch has
+        been changed and a non-HEAD rev is specified
+        '''
+        self._changed_local_branch_helper(
+            'develop',
+            'The desired rev (develop) differs from the name of the local '
+            'branch (new_branch)'
+        )
+
+    def test_latest_updated_remote_rev(self):
+        '''
+        Ensure that we don't exit early when checking for a fast-forward
+        '''
+        orig_cwd = os.getcwd()
+        name = tempfile.mkdtemp(dir=integration.TMP)
+        target = os.path.join(integration.TMP, 'test_latest_updated_remote_rev')
+
+        # Initialize a new git repository
+        subprocess.check_call(['git', 'init', '--quiet', name])
+
+        try:
+            os.chdir(name)
+            # Set user.name and user.email config attributes if not present
+            for key, value in (('user.name', 'Jenkins'),
+                               ('user.email', 'qa@saltstack.com')):
+                # Check if key is missing
+                keycheck = subprocess.Popen(
+                    ['git', 'config', '--get', key],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
+                if keycheck.wait() != 0:
+                    # Set the key if it is not present
+                    subprocess.check_call(
+                        ['git', 'config', key, value])
+
+            # Add and commit a file
+            with salt.utils.fopen('foo.txt', 'w') as fp_:
+                fp_.write('Hello world\n')
+            subprocess.check_call(['git', 'add', '.'])
+            subprocess.check_call(['git', 'commit', '-qm', 'init'])
+
+            # Run the state to clone the repo we just created
+            ret = self.run_state(
+                'git.latest',
+                name=name,
+                target=target,
+            )
+            self.assertSaltTrueReturn(ret)
+
+            # Add another commit
+            with salt.utils.fopen('foo.txt', 'w') as fp_:
+                fp_.write('Added a line\n')
+            subprocess.check_call(['git', 'commit', '-aqm', 'added a line'])
+
+            # Run the state again. It should pass, if it doesn't then there was
+            # a problem checking whether or not the change is a fast-forward.
+            ret = self.run_state(
+                'git.latest',
+                name=name,
+                target=target,
+            )
+            self.assertSaltTrueReturn(ret)
+        finally:
+            os.chdir(orig_cwd)
+            for path in (name, target):
+                try:
+                    shutil.rmtree(path)
+                except OSError as exc:
+                    if exc.errno != errno.ENOENT:
+                        raise exc
 
     def test_present(self):
         '''
@@ -326,6 +469,136 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             repo=name,
             **{'global': False})
         self.assertSaltTrueReturn(ret)
+
+
+@skip_if_binaries_missing('git')
+class LocalRepoGitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+    '''
+    Tests which do no require connectivity to github.com
+    '''
+    def test_renamed_default_branch(self):
+        '''
+        Test the case where the remote branch has been removed
+        https://github.com/saltstack/salt/issues/36242
+        '''
+        cwd = os.getcwd()
+        repo = tempfile.mkdtemp(dir=integration.TMP)
+        admin = tempfile.mkdtemp(dir=integration.TMP)
+        name = tempfile.mkdtemp(dir=integration.TMP)
+        for dirname in (repo, admin, name):
+            self.addCleanup(shutil.rmtree, dirname, ignore_errors=True)
+        self.addCleanup(os.chdir, cwd)
+
+        with salt.utils.fopen(os.devnull, 'w') as devnull:
+            # Create bare repo
+            subprocess.check_call(['git', 'init', '--bare', repo],
+                                  stdout=devnull, stderr=devnull)
+            # Clone bare repo
+            subprocess.check_call(['git', 'clone', repo, admin],
+                                  stdout=devnull, stderr=devnull)
+
+            # Create, add, commit, and push file
+            os.chdir(admin)
+            with salt.utils.fopen('foo', 'w'):
+                pass
+            subprocess.check_call(['git', 'add', '.'],
+                                  stdout=devnull, stderr=devnull)
+            subprocess.check_call(['git', 'commit', '-m', 'init'],
+                                  stdout=devnull, stderr=devnull)
+            subprocess.check_call(['git', 'push', 'origin', 'master'],
+                                  stdout=devnull, stderr=devnull)
+
+        # Change back to the original cwd
+        os.chdir(cwd)
+
+        # Rename remote 'master' branch to 'develop'
+        os.rename(
+            os.path.join(repo, 'refs', 'heads', 'master'),
+            os.path.join(repo, 'refs', 'heads', 'develop')
+        )
+
+        # Run git.latest state. This should successfuly clone and fail with a
+        # specific error in the comment field.
+        ret = self.run_state(
+            'git.latest',
+            name=repo,
+            target=name,
+            rev='develop',
+        )
+        self.assertSaltFalseReturn(ret)
+        self.assertEqual(
+            ret[next(iter(ret))]['comment'],
+            'Remote HEAD refers to a ref that does not exist. '
+            'This can happen when the default branch on the '
+            'remote repository is renamed or deleted. If you '
+            'are unable to fix the remote repository, you can '
+            'work around this by setting the \'branch\' argument '
+            '(which will ensure that the named branch is created '
+            'if it does not already exist).\n\n'
+            'Changes already made: {0} cloned to {1}'
+            .format(repo, name)
+        )
+        self.assertEqual(
+            ret[next(iter(ret))]['changes'],
+            {'new': '{0} => {1}'.format(repo, name)}
+        )
+
+        # Run git.latest state again. This should fail again, with a different
+        # error in the comment field, and should not change anything.
+        ret = self.run_state(
+            'git.latest',
+            name=repo,
+            target=name,
+            rev='develop',
+        )
+        self.assertSaltFalseReturn(ret)
+        self.assertEqual(
+            ret[next(iter(ret))]['comment'],
+            'Cannot set/unset upstream tracking branch, local '
+            'HEAD refers to nonexistent branch. This may have '
+            'been caused by cloning a remote repository for which '
+            'the default branch was renamed or deleted. If you '
+            'are unable to fix the remote repository, you can '
+            'work around this by setting the \'branch\' argument '
+            '(which will ensure that the named branch is created '
+            'if it does not already exist).'
+        )
+        self.assertEqual(ret[next(iter(ret))]['changes'], {})
+
+        # Run git.latest state again with a branch manually set. This should
+        # checkout a new branch and the state should pass.
+        ret = self.run_state(
+            'git.latest',
+            name=repo,
+            target=name,
+            rev='develop',
+            branch='develop',
+        )
+        # State should succeed
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltCommentRegexpMatches(
+            ret,
+            'New branch \'develop\' was checked out, with origin/develop '
+            r'\([0-9a-f]{7}\) as a starting point'
+        )
+        # Only the revision should be in the changes dict.
+        self.assertEqual(
+            list(ret[next(iter(ret))]['changes'].keys()),
+            ['revision']
+        )
+        # Since the remote repo was incorrectly set up, the local head should
+        # not exist (therefore the old revision should be None).
+        self.assertEqual(
+            ret[next(iter(ret))]['changes']['revision']['old'],
+            None
+        )
+        # Make sure the new revision is a SHA (40 chars, all hex)
+        self.assertTrue(
+            len(ret[next(iter(ret))]['changes']['revision']['new']) == 40)
+        self.assertTrue(
+            all([x in string.hexdigits for x in
+                 ret[next(iter(ret))]['changes']['revision']['new']])
+        )
 
 
 if __name__ == '__main__':

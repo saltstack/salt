@@ -10,6 +10,10 @@ from __future__ import absolute_import
 import os
 import logging
 
+# Import Salt libs
+import salt.utils
+
+
 __outputter__ = {
     'display': 'txt',
     'install': 'txt',
@@ -57,6 +61,44 @@ def display(name):
     if out['retcode'] > 0 and out['stderr'] != '':
         return out['stderr']
     return out['stdout']
+
+
+def show_link(name):
+    '''
+    Display master link for the alternative
+
+    .. versionadded:: 2015.8.13,2016.3.4,Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' alternatives.show_link editor
+    '''
+
+    if __grains__['os_family'] == 'RedHat':
+        path = '/var/lib/'
+    elif __grains__['os_family'] == 'Suse':
+        path = '/var/lib/rpm/'
+    else:
+        path = '/var/lib/dpkg/'
+
+    path += 'alternatives/{0}'.format(name)
+
+    try:
+        with salt.utils.fopen(path, 'rb') as r_file:
+            return r_file.readlines()[1].rstrip('\n')
+    except OSError:
+        log.error(
+            'alternatives: {0} does not exist'.format(name)
+        )
+    except (IOError, IndexError) as exc:
+        log.error(
+            'alternatives: unable to get master link for {0}. '
+            'Exception: {1}'.format(name, exc)
+        )
+
+    return False
 
 
 def show_current(name):

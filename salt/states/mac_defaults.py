@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Writing/reading defaults from an OS X minion
-=======================
+============================================
 
 '''
 

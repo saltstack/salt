@@ -112,7 +112,7 @@ TAGS = {
 
 def get_event(
         node, sock_dir=None, transport='zeromq',
-        opts=None, listen=True, io_loop=None):
+        opts=None, listen=True, io_loop=None, keep_loop=False, raise_errors=False):
     '''
     Return an event object suitable for the named transport
 
@@ -125,8 +125,19 @@ def get_event(
     # TODO: AIO core is separate from transport
     if transport in ('zeromq', 'tcp'):
         if node == 'master':
-            return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop)
-        return SaltEvent(node, sock_dir, opts, listen=listen, io_loop=io_loop)
+            return MasterEvent(sock_dir,
+                               opts,
+                               listen=listen,
+                               io_loop=io_loop,
+                               keep_loop=keep_loop,
+                               raise_errors=raise_errors)
+        return SaltEvent(node,
+                         sock_dir,
+                         opts,
+                         listen=listen,
+                         io_loop=io_loop,
+                         keep_loop=keep_loop,
+                         raise_errors=raise_errors)
     elif transport == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.RAETEvent(node,
@@ -135,13 +146,13 @@ def get_event(
                                               opts=opts)
 
 
-def get_master_event(opts, sock_dir, listen=True, io_loop=None):
+def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False):
     '''
     Return an event object suitable for the named transport
     '''
     # TODO: AIO core is separate from transport
     if opts['transport'] in ('zeromq', 'tcp'):
-        return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop)
+        return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors)
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.MasterEvent(
@@ -177,14 +188,20 @@ class SaltEvent(object):
     '''
     def __init__(
             self, node, sock_dir=None,
-            opts=None, listen=True, io_loop=None):
+            opts=None, listen=True, io_loop=None,
+            keep_loop=False, raise_errors=False):
         '''
         :param IOLoop io_loop: Pass in an io_loop if you want asynchronous
                                operation for obtaining events. Eg use of
                                set_event_handler() API. Otherwise, operation
                                will be synchronous.
+        :param Bool keep_loop: Pass a boolean to determine if we want to keep
+                               the io loop or destroy it when the event handle
+                               is destroyed. This is useful when using event
+                               loops from within third party async code
         '''
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
+        self.keep_loop = keep_loop
         if io_loop is not None:
             self.io_loop = io_loop
             self._run_io_loop_sync = False
@@ -195,6 +212,7 @@ class SaltEvent(object):
         self.cpush = False
         self.subscriber = None
         self.pusher = None
+        self.raise_errors = raise_errors
 
         if opts is None:
             opts = {}
@@ -339,6 +357,18 @@ class SaltEvent(object):
             # set_event_handler() is invoked.
             self.cpub = True
         return self.cpub
+
+    def close_pub(self):
+        '''
+        Close the publish connection (if established)
+        '''
+        if not self.cpub:
+            return
+
+        self.subscriber.close()
+        self.subscriber = None
+        self.pending_events = []
+        self.cpub = False
 
     def connect_pull(self, timeout=1):
         '''
@@ -488,7 +518,12 @@ class SaltEvent(object):
                 ret = {'data': data, 'tag': mtag}
             except KeyboardInterrupt:
                 return {'tag': 'salt/event/exit', 'data': {}}
-            except (tornado.iostream.StreamClosedError, RuntimeError):
+            except tornado.iostream.StreamClosedError:
+                if self.raise_errors:
+                    raise
+                else:
+                    return None
+            except RuntimeError:
                 return None
 
             if not match_func(ret['tag'], tag):
@@ -512,7 +547,8 @@ class SaltEvent(object):
                   use_pending=None,
                   pending_tags=None,
                   match_type=None,
-                  no_block=False):
+                  no_block=False,
+                  auto_reconnect=False):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
@@ -576,7 +612,20 @@ class SaltEvent(object):
         ret = self._check_pending(tag, match_func)
         if ret is None:
             with salt.utils.async.current_ioloop(self.io_loop):
-                ret = self._get_event(wait, tag, match_func, no_block)
+                if auto_reconnect:
+                    raise_errors = self.raise_errors
+                    self.raise_errors = True
+                    while True:
+                        try:
+                            ret = self._get_event(wait, tag, match_func, no_block)
+                            break
+                        except tornado.iostream.StreamClosedError:
+                            self.close_pub()
+                            self.connect_pub(timeout=wait)
+                            continue
+                    self.raise_errors = raise_errors
+                else:
+                    ret = self._get_event(wait, tag, match_func, no_block)
 
         if ret is None or full:
             return ret
@@ -612,12 +661,13 @@ class SaltEvent(object):
         mtag, data = self.unpack(raw, self.serial)
         return {'data': data, 'tag': mtag}
 
-    def iter_events(self, tag='', full=False, match_type=None):
+    def iter_events(self, tag='', full=False, match_type=None, auto_reconnect=False):
         '''
         Creates a generator that continuously listens for events
         '''
         while True:
-            data = self.get_event(tag=tag, full=full, match_type=match_type)
+            data = self.get_event(tag=tag, full=full, match_type=match_type,
+                                  auto_reconnect=auto_reconnect)
             if data is None:
                 continue
             yield data
@@ -687,7 +737,7 @@ class SaltEvent(object):
             self.subscriber.close()
         if self.pusher is not None:
             self.pusher.close()
-        if self._run_io_loop_sync:
+        if self._run_io_loop_sync and not self.keep_loop:
             self.io_loop.close()
 
     def fire_ret_load(self, load):
@@ -750,9 +800,22 @@ class MasterEvent(SaltEvent):
     RAET compatible
     Create a master event management object
     '''
-    def __init__(self, sock_dir, opts=None, listen=True, io_loop=None):
+    def __init__(
+            self,
+            sock_dir,
+            opts=None,
+            listen=True,
+            io_loop=None,
+            keep_loop=False,
+            raise_errors=False):
         super(MasterEvent, self).__init__(
-            'master', sock_dir, opts, listen=listen, io_loop=io_loop)
+            'master',
+            sock_dir,
+            opts,
+            listen=listen,
+            io_loop=io_loop,
+            keep_loop=keep_loop,
+            raise_errors=raise_errors)
 
 
 class LocalClientEvent(MasterEvent):
@@ -785,10 +848,11 @@ class MinionEvent(SaltEvent):
     RAET compatible
     Create a master event management object
     '''
-    def __init__(self, opts, listen=True, io_loop=None):
+    def __init__(self, opts, listen=True, io_loop=None, raise_errors=False):
         super(MinionEvent, self).__init__(
             'minion', sock_dir=opts.get('sock_dir'),
-            opts=opts, listen=listen, io_loop=io_loop)
+            opts=opts, listen=listen, io_loop=io_loop,
+            raise_errors=raise_errors)
 
 
 class AsyncEventPublisher(object):

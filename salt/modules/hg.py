@@ -2,11 +2,14 @@
 '''
 Support for the Mercurial SCM
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 import logging
 
 # Import salt libs
-from salt import utils
+from salt.exceptions import CommandExecutionError
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +18,7 @@ def __virtual__():
     '''
     Only load if hg is installed
     '''
-    if utils.which('hg') is None:
+    if salt.utils.which('hg') is None:
         return (False,
                 'The hg execution module cannot be loaded: hg unavailable.')
     else:
@@ -23,7 +26,7 @@ def __virtual__():
 
 
 def _ssh_flag(identity_path):
-    return '--ssh "ssh -i {0}"'.format(identity_path)
+    return ['--ssh', 'ssh -i {0}'.format(identity_path)]
 
 
 def revision(cwd, rev='tip', short=False, user=None):
@@ -181,13 +184,20 @@ def pull(cwd, opts=None, user=None, identity=None, repository=None):
     '''
     cmd = ['hg', 'pull']
     if identity:
-        cmd.append(_ssh_flag(identity))
+        cmd.extend(_ssh_flag(identity))
     if opts:
         for opt in opts.split():
             cmd.append(opt)
     if repository is not None:
         cmd.append(repository)
-    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False)
+
+    ret = __salt__['cmd.run_all'](cmd, cwd=cwd, runas=user, python_shell=False)
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(
+            'Hg command failed: {0}'.format(ret.get('stderr', ret['stdout']))
+        )
+
+    return ret['stdout']
 
 
 def update(cwd, rev, force=False, user=None):
@@ -215,7 +225,14 @@ def update(cwd, rev, force=False, user=None):
     cmd = ['hg', 'update', '{0}'.format(rev)]
     if force:
         cmd.append('-C')
-    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False)
+
+    ret = __salt__['cmd.run_all'](cmd, cwd=cwd, runas=user, python_shell=False)
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(
+            'Hg command failed: {0}'.format(ret.get('stderr', ret['stdout']))
+        )
+
+    return ret['stdout']
 
 
 def clone(cwd, repository, opts=None, user=None, identity=None):
@@ -250,8 +267,15 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
         for opt in opts.split():
             cmd.append('{0}'.format(opt))
     if identity:
-        cmd.append(_ssh_flag(identity))
-    return __salt__['cmd.run'](cmd, runas=user, python_shell=False)
+        cmd.extend(_ssh_flag(identity))
+
+    ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(
+            'Hg command failed: {0}'.format(ret.get('stderr', ret['stdout']))
+        )
+
+    return ret['stdout']
 
 
 def status(cwd, opts=None, user=None):
@@ -298,7 +322,7 @@ def status(cwd, opts=None, user=None):
             ret[t].append(f)
         return ret
 
-    if utils.is_iter(cwd):
+    if salt.utils.is_iter(cwd):
         return dict((cwd, _status(cwd)) for cwd in cwd)
     else:
         return _status(cwd)

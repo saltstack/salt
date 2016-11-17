@@ -533,27 +533,29 @@ Example of a minimal profile:
 Cloning from a Snapshot
 =======================
 
-.. versionadded:: Carbon
 
-Cloning a template works similar to cloning a VM except for the fact that
-a snapshot number must be provided.
+.. versionadded:: 2016.3.5
+
+Cloning from a snapshot requires that one of the
+supported options be set in the cloud profile.
+
+Supported options are ``createNewChildDiskBacking``,
+``moveChildMostDiskBacking``, ``moveAllDiskBackingsAndAllowSharing``
+and ``moveAllDiskBackingsAndDisallowSharing``.
 
 Example of a minimal profile:
 
 .. code-block:: yaml
 
   my-template-clone:
-     provider: vcenter01
-     clonefrom: 'salt_vm'
-     snapshot: 3
-
-.. image:: /_static/snapshot_manager.png
-    :align: center
-    :scale: 70%
-
-.. note::
-    The previous diagram shows how to identify the snapshot number. Selected
-    (third snapshot) is number 3.
+    provider: vcenter01
+    clonefrom: 'salt_vm'
+    snapshot:
+      disk_move_type: createNewChildDiskBacking
+      # these types are also supported
+      # disk_move_type: moveChildMostDiskBacking
+      # disk_move_type: moveAllDiskBackingsAndAllowSharing
+      # disk_move_type: moveAllDiskBackingsAndDisallowSharing
 
 
 Creating a VM
@@ -612,6 +614,7 @@ Example of a complete profile:
           Hard disk 0:
             controller: 'SCSI controller 0'
             size: 20
+            mode: 'independent_nonpersistent'
         cd:
           CD/DVD drive 0:
             controller: 'IDE 0'
@@ -628,3 +631,30 @@ Example of a complete profile:
     be available. In such cases, the closest match to another ``image`` should
     be used. In the example above, a Debian 8 VM is created using the image
     ``debian7_64Guest`` which is for a Debian 7 guest.
+
+
+Specifying disk backing mode
+============================
+
+.. versionadded:: 2016.3.5
+
+Disk backing mode can now be specified when cloning a VM. This option
+can be set in the cloud profile as shown in example below:
+
+.. code-block:: yaml
+
+    my-vm:
+      provider: esx01
+      datastore: esx01-datastore
+      resourcepool: Resources
+      folder: vm
+
+
+      devices:
+        disk:
+          Hard disk 1:
+            mode: 'independent_nonpersistent'
+            size: 42
+
+          Hard disk 2:
+            mode: 'independent_nonpersistent'

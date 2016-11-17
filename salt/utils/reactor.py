@@ -59,8 +59,10 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
 
         if glob_ref.startswith('salt://'):
             glob_ref = self.minion.functions['cp.cache_file'](glob_ref)
-
-        for fn_ in glob.glob(glob_ref):
+        globbed_ref = glob.glob(glob_ref)
+        if not globbed_ref:
+            log.error('Can not render SLS {0} for tag {1}. File missing or not found.'.format(glob_ref, tag))
+        for fn_ in globbed_ref:
             try:
                 res = self.render_template(
                     fn_,
@@ -330,7 +332,7 @@ class ReactWrap(object):
         Wrap Caller to enable executing :ref:`caller modules <all-salt.caller>`
         '''
         log.debug("in caller with fun {0} args {1} kwargs {2}".format(fun, args, kwargs))
-        args = kwargs['args']
+        args = kwargs.get('args', [])
         if 'caller' not in self.client_cache:
             self.client_cache['caller'] = salt.client.Caller(self.opts['conf_file'])
         try:

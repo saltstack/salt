@@ -1807,6 +1807,8 @@ class State(object):
         Check if the low data chunk should send a failhard signal
         '''
         tag = _gen_tag(low)
+        if self.opts['test']:
+            return False
         if (low.get('failhard', False) or self.opts['failhard']
                 and tag in running):
             if running[tag]['result'] is None:
@@ -2763,12 +2765,8 @@ class BaseHighState(object):
         '''
         if not self.opts['autoload_dynamic_modules']:
             return
-        if self.opts.get('local', False):
-            syncd = self.state.functions['saltutil.sync_all'](list(matches),
-                                                              refresh=False)
-        else:
-            syncd = self.state.functions['saltutil.sync_all'](list(matches),
-                                                              refresh=False)
+        syncd = self.state.functions['saltutil.sync_all'](list(matches),
+                                                          refresh=False)
         if syncd['grains']:
             self.opts['grains'] = salt.loader.grains(self.opts)
             self.state.opts['pillar'] = self.state._gather_pillar()

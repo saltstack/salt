@@ -1228,6 +1228,10 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     elif iface_type == 'slave':
         adapters[iface]['master'] = opts['master']
 
+        opts['proto'] = 'manual'
+        iface_data['inet']['addrfam'] = 'inet'
+        iface_data['inet']['master'] = adapters[iface]['master']
+
     elif iface_type == 'vlan':
         iface_data['inet']['vlan_raw_device'] = re.sub(r'\.\d*', '', iface)
 
@@ -1456,12 +1460,6 @@ def _write_file_ifaces(iface, data, **settings):
 
     ifcfg = ''
     for adapter in adapters:
-        if 'type' in adapters[adapter] and adapters[adapter]['type'] == 'slave':
-            # Override values so the interfaces file is correct
-            adapters[adapter]['data']['inet']['addrfam'] = 'inet'
-            adapters[adapter]['data']['inet']['proto'] = 'manual'
-            adapters[adapter]['data']['inet']['master'] = adapters[adapter]['master']
-
         if 'type' in adapters[adapter] and adapters[adapter]['type'] == 'source':
             tmp = source_template.render({'name': adapter, 'data': adapters[adapter]})
         else:

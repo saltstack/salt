@@ -16,6 +16,7 @@ from contextlib import closing
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import shlex_quote as _cmd_quote
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 
 # Import salt libs
 import salt.utils
@@ -39,7 +40,7 @@ def __virtual__():
         return False
 
 
-def updateChecksum(fname, target, checksum):
+def _update_checksum(fname, target, checksum):
     lines = []
     compare_string = '{0}:{1}'.format(target, checksum)
     if os.path.exists(fname):
@@ -53,7 +54,7 @@ def updateChecksum(fname, target, checksum):
             f.write(line)
 
 
-def compareChecksum(fname, target, checksum):
+def _compare_checksum(fname, target, checksum):
     if os.path.exists(fname):
         compare_string = '{0}:{1}'.format(target, checksum)
         with salt.utils.fopen(fname, 'r') as f:
@@ -275,19 +276,47 @@ def extracted(name,
     if not name.endswith('/'):
         name += '/'
 
+    if __opts__['test']:
+        source_match = source
+    else:
+        try:
+            source_match = __salt__['file.source_list'](source,
+                                                        source_hash,
+                                                        __env__)[0]
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
+            return ret
+
+    urlparsed_source = _urlparse(source_match)
+    source_hash_name = urlparsed_source.path or urlparsed_source.netloc
+
     if if_missing is None:
         if_missing = name
     if source_hash and source_hash_update:
-        hash = source_hash.split("=")
-        source_file = '{0}.{1}'.format(os.path.basename(source), hash[0])
-        hash_fname = os.path.join(__opts__['cachedir'],
-                            'files',
-                            __env__,
-                            source_file)
-        if compareChecksum(hash_fname, name, hash[1]):
-            ret['result'] = True
-            ret['comment'] = 'Hash {0} has not changed'.format(hash[1])
+        if urlparsed_source.scheme != '':
+            ret['result'] = False
+            ret['comment'] = (
+                '\'source_hash_update\' is not yet implemented for a remote '
+                'source_hash'
+            )
             return ret
+        else:
+            try:
+                hash_type, hsum = source_hash.split('=')
+            except ValueError:
+                ret['result'] = False
+                ret['comment'] = 'Invalid source_hash format'
+                return ret
+            source_file = '{0}.{1}'.format(os.path.basename(source), hash_type)
+            hash_fname = os.path.join(__opts__['cachedir'],
+                                'files',
+                                __env__,
+                                source_file)
+            if _compare_checksum(hash_fname, name, hsum):
+                ret['result'] = True
+                ret['comment'] = 'Hash {0} has not changed'.format(hsum)
+                return ret
     elif (
         __salt__['file.directory_exists'](if_missing)
         or __salt__['file.file_exists'](if_missing)
@@ -303,18 +332,6 @@ def extracted(name,
                             '{0}.{1}'.format(re.sub('[:/\\\\]', '_', if_missing),
                                              archive_format))
 
-    if __opts__['test']:
-        source_match = source
-    else:
-        try:
-            source_match = __salt__['file.source_list'](source,
-                                                        source_hash,
-                                                        __env__)[0]
-        except CommandExecutionError as exc:
-            ret['result'] = False
-            ret['comment'] = exc.strerror
-            return ret
-
     if not os.path.exists(filename):
         if __opts__['test']:
             ret['result'] = None
@@ -327,13 +344,15 @@ def extracted(name,
             return ret
 
         log.debug('%s is not in cache, downloading it', source_match)
+
         file_result = __salt__['state.single']('file.managed',
                                                filename,
-                                               source=source,
+                                               source=source_match,
                                                source_hash=source_hash,
                                                makedirs=True,
                                                skip_verify=skip_verify,
-                                               saltenv=__env__)
+                                               saltenv=__env__,
+                                               source_hash_name=source_hash_name)
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
         try:
@@ -374,7 +393,16 @@ def extracted(name,
 
     log.debug('Extracting {0} to {1}'.format(filename, name))
     if archive_format == 'zip':
-        files = __salt__['archive.unzip'](filename, name, trim_output=trim_output, password=password)
+        if password is None and salt.utils.which('unzip'):
+            files = __salt__['archive.cmd_unzip'](filename, name, trim_output=trim_output)
+        else:
+            # https://bugs.python.org/issue15795
+            if password is not None:
+                log.warning('Password supplied: using archive.unzip')
+            if not salt.utils.which('unzip'):
+                log.warning('Cannot find unzip command for archive.cmd_unzip:'
+                            ' using archive.unzip instead')
+            files = __salt__['archive.unzip'](filename, name, trim_output=trim_output, password=password)
     elif archive_format == 'rar':
         files = __salt__['archive.unrar'](filename, name, trim_output=trim_output)
     else:
@@ -502,7 +530,7 @@ def extracted(name,
         if not keep:
             os.unlink(filename)
         if source_hash and source_hash_update:
-            updateChecksum(hash_fname, name, hash[1])
+            _update_checksum(hash_fname, name, hash[1])
 
     else:
         __salt__['file.remove'](if_missing)

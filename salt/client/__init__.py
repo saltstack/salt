@@ -73,7 +73,8 @@ def get_local_client(
         c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
         mopts=None,
         skip_perm_errors=False,
-        io_loop=None):
+        io_loop=None,
+        auto_reconnect=False):
     '''
     .. versionadded:: 2014.7.0
 
@@ -100,7 +101,8 @@ def get_local_client(
         return LocalClient(
             mopts=opts,
             skip_perm_errors=skip_perm_errors,
-            io_loop=io_loop)
+            io_loop=io_loop,
+            auto_reconnect=auto_reconnect)
 
 
 class LocalClient(object):
@@ -126,7 +128,7 @@ class LocalClient(object):
     def __init__(self,
                  c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
                  mopts=None, skip_perm_errors=False,
-                 io_loop=None):
+                 io_loop=None, keep_loop=False, auto_reconnect=False):
         '''
         :param IOLoop io_loop: io_loop used for events.
                                Pass in an io_loop if you want asynchronous
@@ -149,13 +151,15 @@ class LocalClient(object):
         self.salt_user = salt.utils.get_specific_user()
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
+        self.auto_reconnect = auto_reconnect
         self.event = salt.utils.event.get_event(
                 'master',
                 self.opts['sock_dir'],
                 self.opts['transport'],
                 opts=self.opts,
                 listen=False,
-                io_loop=io_loop)
+                io_loop=io_loop,
+                keep_loop=keep_loop)
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.returners = salt.loader.returners(self.opts, self.functions)
@@ -277,6 +281,7 @@ class LocalClient(object):
             timeout=None,
             jid='',
             kwarg=None,
+            listen=False,
             **kwargs):
         '''
         Asynchronously send a command to connected minions
@@ -303,6 +308,7 @@ class LocalClient(object):
                 ret,
                 jid=jid,
                 timeout=self._get_timeout(timeout),
+                listen=listen,
                 **kwargs)
         except SaltClientError:
             # Re-raise error with specific message
@@ -551,32 +557,38 @@ class LocalClient(object):
             function name.
         '''
         arg = salt.utils.args.condition_input(arg, kwarg)
-        pub_data = self.run_job(tgt,
-                                fun,
-                                arg,
-                                expr_form,
-                                ret,
-                                timeout,
-                                jid,
-                                **kwargs)
+        was_listening = self.event.cpub
 
-        if not pub_data:
-            return pub_data
+        try:
+            pub_data = self.run_job(tgt,
+                                    fun,
+                                    arg,
+                                    expr_form,
+                                    ret,
+                                    timeout,
+                                    jid,
+                                    listen=True,
+                                    **kwargs)
 
-        ret = {}
-        for fn_ret in self.get_cli_event_returns(
-                pub_data['jid'],
-                pub_data['minions'],
-                self._get_timeout(timeout),
-                tgt,
-                expr_form,
-                **kwargs):
+            if not pub_data:
+                return pub_data
 
-            if fn_ret:
-                for mid, data in six.iteritems(fn_ret):
-                    ret[mid] = data.get('ret', {})
+            ret = {}
+            for fn_ret in self.get_cli_event_returns(
+                    pub_data['jid'],
+                    pub_data['minions'],
+                    self._get_timeout(timeout),
+                    tgt,
+                    expr_form,
+                    **kwargs):
 
-        return ret
+                if fn_ret:
+                    for mid, data in six.iteritems(fn_ret):
+                        ret[mid] = data.get('ret', {})
+            return ret
+        finally:
+            if not was_listening:
+                self.event.close_pub()
 
     def cmd_cli(
             self,
@@ -601,40 +613,51 @@ class LocalClient(object):
         :returns: A generator
         '''
         arg = salt.utils.args.condition_input(arg, kwarg)
-        pub_data = self.run_job(
-            tgt,
-            fun,
-            arg,
-            expr_form,
-            ret,
-            timeout,
-            **kwargs)
+        was_listening = self.event.cpub
 
-        if not pub_data:
-            yield pub_data
-        else:
-            try:
-                for fn_ret in self.get_cli_event_returns(
-                        pub_data['jid'],
-                        pub_data['minions'],
-                        self._get_timeout(timeout),
-                        tgt,
-                        expr_form,
-                        verbose,
-                        progress,
-                        **kwargs):
+        try:
+            self.pub_data = self.run_job(
+                tgt,
+                fun,
+                arg,
+                expr_form,
+                ret,
+                timeout,
+                listen=True,
+                **kwargs)
 
-                    if not fn_ret:
-                        continue
+            if not self.pub_data:
+                yield self.pub_data
+            else:
+                try:
+                    for fn_ret in self.get_cli_event_returns(
+                            self.pub_data['jid'],
+                            self.pub_data['minions'],
+                            self._get_timeout(timeout),
+                            tgt,
+                            expr_form,
+                            verbose,
+                            progress,
+                            **kwargs):
 
-                    yield fn_ret
-            except KeyboardInterrupt:
-                msg = ('Exiting on Ctrl-C\nThis job\'s jid is:\n{0}\n'
-                       'The minions may not have all finished running and any '
-                       'remaining minions will return upon completion. To '
-                       'look up the return data for this job later run:\n'
-                       'salt-run jobs.lookup_jid {0}').format(pub_data['jid'])
-                raise SystemExit(msg)
+                        if not fn_ret:
+                            continue
+
+                        yield fn_ret
+                except KeyboardInterrupt:
+                    raise SystemExit(
+                        '\n'
+                        'This job\'s jid is: {0}\n'
+                        'Exiting gracefully on Ctrl-c\n'
+                        'The minions may not have all finished running and any '
+                        'remaining minions will return upon completion. To look '
+                        'up the return data for this job later, run the following '
+                        'command:\n\n'
+                        'salt-run jobs.lookup_jid {0}'.format(self.pub_data['jid'])
+                    )
+        finally:
+            if not was_listening:
+                self.event.close_pub()
 
     def cmd_iter(
             self,
@@ -664,28 +687,37 @@ class LocalClient(object):
             {'stewart': {'ret': True}}
         '''
         arg = salt.utils.args.condition_input(arg, kwarg)
-        pub_data = self.run_job(
-            tgt,
-            fun,
-            arg,
-            expr_form,
-            ret,
-            timeout,
-            **kwargs)
+        was_listening = self.event.cpub
 
-        if not pub_data:
-            yield pub_data
-        else:
-            for fn_ret in self.get_iter_returns(pub_data['jid'],
-                                                pub_data['minions'],
-                                                timeout=self._get_timeout(timeout),
-                                                tgt=tgt,
-                                                tgt_type=expr_form,
-                                                **kwargs):
-                if not fn_ret:
-                    continue
-                yield fn_ret
-            self._clean_up_subscriptions(pub_data['jid'])
+        try:
+            pub_data = self.run_job(
+                tgt,
+                fun,
+                arg,
+                expr_form,
+                ret,
+                timeout,
+                listen=True,
+                **kwargs)
+
+            if not pub_data:
+                yield pub_data
+            else:
+                if kwargs.get('yield_pub_data'):
+                    yield pub_data
+                for fn_ret in self.get_iter_returns(pub_data['jid'],
+                                                    pub_data['minions'],
+                                                    timeout=self._get_timeout(timeout),
+                                                    tgt=tgt,
+                                                    tgt_type=expr_form,
+                                                    **kwargs):
+                    if not fn_ret:
+                        continue
+                    yield fn_ret
+                self._clean_up_subscriptions(pub_data['jid'])
+        finally:
+            if not was_listening:
+                self.event.close_pub()
 
     def cmd_iter_no_block(
             self,
@@ -722,31 +754,38 @@ class LocalClient(object):
             {'stewart': {'ret': True}}
         '''
         arg = salt.utils.args.condition_input(arg, kwarg)
-        pub_data = self.run_job(
-            tgt,
-            fun,
-            arg,
-            expr_form,
-            ret,
-            timeout,
-            **kwargs)
+        was_listening = self.event.cpub
 
-        if not pub_data:
-            yield pub_data
-        else:
-            for fn_ret in self.get_iter_returns(pub_data['jid'],
-                                                pub_data['minions'],
-                                                timeout=timeout,
-                                                tgt=tgt,
-                                                tgt_type=expr_form,
-                                                block=False,
-                                                **kwargs):
-                if fn_ret and any([show_jid, verbose]):
-                    for minion in fn_ret.keys():
-                        fn_ret[minion]['jid'] = pub_data['jid']
-                yield fn_ret
+        try:
+            pub_data = self.run_job(
+                tgt,
+                fun,
+                arg,
+                expr_form,
+                ret,
+                timeout,
+                listen=True,
+                **kwargs)
 
-            self._clean_up_subscriptions(pub_data['jid'])
+            if not pub_data:
+                yield pub_data
+            else:
+                for fn_ret in self.get_iter_returns(pub_data['jid'],
+                                                    pub_data['minions'],
+                                                    timeout=timeout,
+                                                    tgt=tgt,
+                                                    tgt_type=expr_form,
+                                                    block=False,
+                                                    **kwargs):
+                    if fn_ret and any([show_jid, verbose]):
+                        for minion in fn_ret.keys():
+                            fn_ret[minion]['jid'] = pub_data['jid']
+                    yield fn_ret
+
+                self._clean_up_subscriptions(pub_data['jid'])
+        finally:
+            if not was_listening:
+                self.event.close_pub()
 
     def cmd_full_return(
             self,
@@ -763,24 +802,31 @@ class LocalClient(object):
         Execute a salt command and return
         '''
         arg = salt.utils.args.condition_input(arg, kwarg)
-        pub_data = self.run_job(
-            tgt,
-            fun,
-            arg,
-            expr_form,
-            ret,
-            timeout,
-            **kwargs)
+        was_listening = self.event.cpub
 
-        if not pub_data:
-            return pub_data
+        try:
+            pub_data = self.run_job(
+                tgt,
+                fun,
+                arg,
+                expr_form,
+                ret,
+                timeout,
+                listen=True,
+                **kwargs)
 
-        return (self.get_cli_static_event_returns(pub_data['jid'],
-                                                  pub_data['minions'],
-                                                  timeout,
-                                                  tgt,
-                                                  expr_form,
-                                                  verbose))
+            if not pub_data:
+                return pub_data
+
+            return (self.get_cli_static_event_returns(pub_data['jid'],
+                                                      pub_data['minions'],
+                                                      timeout,
+                                                      tgt,
+                                                      expr_form,
+                                                      verbose))
+        finally:
+            if not was_listening:
+                self.event.close_pub()
 
     def get_cli_returns(
             self,
@@ -848,7 +894,8 @@ class LocalClient(object):
         '''
 
         while True:
-            raw = self.event.get_event(wait=0.01, tag=tag, match_type=match_type, full=True, no_block=True)
+            raw = self.event.get_event(wait=0.01, tag=tag, match_type=match_type, full=True,
+                                       no_block=True, auto_reconnect=self.auto_reconnect)
             yield raw
 
     def get_iter_returns(
@@ -1079,7 +1126,7 @@ class LocalClient(object):
         while True:
             time_left = timeout_at - int(time.time())
             wait = max(1, time_left)
-            raw = self.event.get_event(wait, jid)
+            raw = self.event.get_event(wait, jid, auto_reconnect=self.auto_reconnect)
             if raw is not None and 'return' in raw:
                 found.add(raw['id'])
                 ret[raw['id']] = raw['return']
@@ -1232,7 +1279,7 @@ class LocalClient(object):
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
             jid_tag = 'salt/job/{0}'.format(jid)
-            raw = self.event.get_event(wait, jid_tag)
+            raw = self.event.get_event(wait, jid_tag, auto_reconnect=self.auto_reconnect)
             if raw is not None and 'return' in raw:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
@@ -1351,7 +1398,7 @@ class LocalClient(object):
             raise StopIteration()
         # Wait for the hosts to check in
         while True:
-            raw = self.event.get_event(timeout)
+            raw = self.event.get_event(timeout, auto_reconnect=self.auto_reconnect)
             if raw is None or time.time() > timeout_at:
                 # Timeout reached
                 break
@@ -1444,6 +1491,7 @@ class LocalClient(object):
             ret='',
             jid='',
             timeout=5,
+            listen=False,
             **kwargs):
         '''
         Take the required arguments and publish the given command.
@@ -1493,6 +1541,10 @@ class LocalClient(object):
                                                  master_uri=master_uri)
 
         try:
+            # Ensure that the event subscriber is connected.
+            # If not, we won't get a response, so error out
+            if listen and not self.event.connect_pub(timeout=timeout):
+                raise SaltReqTimeoutError()
             payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(

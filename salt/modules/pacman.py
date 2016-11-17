@@ -36,7 +36,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
-    if __grains__['os'] in ('Arch', 'Arch ARM', 'Antergos', 'ManjaroLinux'):
+    if __grains__['os_family'] == 'Arch':
         return __virtualname__
     return (False, 'The pacman module could not be loaded: unsupported OS family.')
 
@@ -155,10 +155,17 @@ def list_upgrades(refresh=False, root=None, **kwargs):  # pylint: disable=W0613
         out = call['stdout']
 
     for line in salt.utils.itertools.split(out, '\n'):
-        comps = line.split(' ')
-        if len(comps) != 2:
+        try:
+            pkgname, pkgver = line.split()
+        except ValueError:
             continue
-        upgrades[comps[0]] = comps[1]
+        if pkgname.lower() == 'downloading' and '.db' in pkgver.lower():
+            # Antergos (and possibly other Arch derivatives) add lines when pkg
+            # metadata is being downloaded. Because these lines, when split,
+            # contain two columns (i.e. 'downloading community.db...'), we will
+            # skip this line to keep it from being interpreted as an upgrade.
+            continue
+        upgrades[pkgname] = pkgver
     return upgrades
 
 

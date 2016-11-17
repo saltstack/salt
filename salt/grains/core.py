@@ -36,6 +36,8 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 import salt.log
 import salt.utils
 import salt.utils.network
+if salt.utils.is_windows():
+    import salt.utils.win_osinfo
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -866,6 +868,10 @@ def _windows_platform_data():
     Use the platform module for as much as we can.
     '''
     # Provides:
+    #    kernelrelease
+    #    osversion
+    #    osrelease
+    #    osservicepack
     #    osmanufacturer
     #    manufacturer
     #    productname
@@ -876,6 +882,7 @@ def _windows_platform_data():
     #    windowsdomain
     #    motherboard.productname
     #    motherboard.serialnumber
+    #    virtual
 
     if not HAS_WMI:
         return {}
@@ -884,7 +891,7 @@ def _windows_platform_data():
         wmi_c = wmi.WMI()
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
         systeminfo = wmi_c.Win32_ComputerSystem()[0]
-        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394239%28v=vs.85%29.aspx
+        # https://msdn.microsoft.com/en-us/library/aa394239(v=vs.85).aspx
         osinfo = wmi_c.Win32_OperatingSystem()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394077(v=vs.85).aspx
         biosinfo = wmi_c.Win32_BIOS()[0]
@@ -892,9 +899,8 @@ def _windows_platform_data():
         timeinfo = wmi_c.Win32_TimeZone()[0]
 
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
-        motherboard = {}
-        motherboard['product'] = None
-        motherboard['serial'] = None
+        motherboard = {'product': None,
+                       'serial': None}
         try:
             motherboardinfo = wmi_c.Win32_BaseBoard()[0]
             motherboard['product'] = motherboardinfo.Product
@@ -902,13 +908,40 @@ def _windows_platform_data():
         except IndexError:
             log.debug('Motherboard info not available on this system')
 
-        # the name of the OS comes with a bunch of other data about the install
-        # location. For example:
-        # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
-        (osfullname, _) = osinfo.Name.split('|', 1)
-        osfullname = osfullname.strip()
+        os_release = platform.release()
+        info = salt.utils.win_osinfo.get_os_version_info()
+
+        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
+        # started reporting the Desktop version instead of the Server version on
+        # Server versions of Windows, so we need to look those up
+        # Check for Python >=2.7.12 or >=3.5.2
+        ver = pythonversion()['pythonversion']
+        if ((six.PY2 and
+                salt.utils.compare_versions(ver, '>=', [2, 7, 12, 'final', 0]))
+            or
+            (six.PY3 and
+                salt.utils.compare_versions(ver, '>=', [3, 5, 2, 'final', 0]))):
+            # (Product Type 1 is Desktop, Everything else is Server)
+            if info['ProductType'] > 1:
+                server = {'Vista': '2008Server',
+                          '7': '2008ServerR2',
+                          '8': '2012Server',
+                          '8.1': '2012ServerR2',
+                          '10': '2016Server'}
+                os_release = server.get(os_release,
+                                        'Grain not found. Update lookup table '
+                                        'in the `_windows_platform_data` '
+                                        'function in `grains\\core.py`')
+
+        service_pack = None
+        if info['ServicePackMajor'] > 0:
+            service_pack = ''.join(['SP', str(info['ServicePackMajor'])])
 
         grains = {
+            'kernelrelease': osinfo.Version,
+            'osversion': osinfo.Version,
+            'osrelease': os_release,
+            'osservicepack': service_pack,
             'osmanufacturer': osinfo.Manufacturer,
             'manufacturer': systeminfo.Manufacturer,
             'productname': systeminfo.Model,
@@ -916,12 +949,12 @@ def _windows_platform_data():
             # 'PhoenixBIOS 4.0 Release 6.0     '
             'biosversion': biosinfo.Name.strip(),
             'serialnumber': biosinfo.SerialNumber,
-            'osfullname': osfullname,
+            'osfullname': osinfo.Caption,
             'timezone': timeinfo.Description,
             'windowsdomain': systeminfo.Domain,
             'motherboard': {
                 'productname': motherboard['product'],
-                'serialnumber': motherboard['serial']
+                'serialnumber': motherboard['serial'],
             }
         }
 
@@ -997,6 +1030,7 @@ _OS_NAME_MAP = {
     'enterprise': 'OEL',
     'oracleserv': 'OEL',
     'cloudserve': 'CloudLinux',
+    'cloudlinux': 'CloudLinux',
     'pidora': 'Fedora',
     'scientific': 'ScientificLinux',
     'synology': 'Synology',
@@ -1040,10 +1074,12 @@ _OS_FAMILY_MAP = {
     'SLES_SAP': 'Suse',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
+    'OmniOS': 'Solaris',
     'OpenIndiana Development': 'Solaris',
     'OpenIndiana': 'Solaris',
     'OpenSolaris Development': 'Solaris',
     'OpenSolaris': 'Solaris',
+    'Oracle Solaris': 'Solaris',
     'Arch ARM': 'Arch',
     'Manjaro': 'Arch',
     'Antergos': 'Arch',
@@ -1145,10 +1181,6 @@ def os_data():
         grains['os_family'] = 'proxy'
         grains['osfullname'] = 'proxy'
     elif salt.utils.is_windows():
-        with salt.utils.winapi.Com():
-            wmi_c = wmi.WMI()
-            grains['osrelease'] = grains['kernelrelease']
-            grains['osversion'] = grains['kernelrelease'] = wmi_c.Win32_OperatingSystem()[0].Version
         grains['os'] = 'Windows'
         grains['os_family'] = 'Windows'
         grains.update(_memdata(grains))
@@ -1188,7 +1220,7 @@ def os_data():
                 with salt.utils.fopen('/proc/1/cmdline') as fhr:
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     init_bin = salt.utils.which(init_cmdline[0])
-                    if init_bin is not None:
+                    if init_bin is not None and init_bin.endswith('bin/init'):
                         supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
                         edge_len = max(len(x) for x in supported_inits) - 1
                         try:
@@ -1217,9 +1249,11 @@ def os_data():
                                 'Unable to read from init_bin ({0}): {1}'
                                 .format(init_bin, exc)
                             )
+                    elif salt.utils.which('supervisord') in init_cmdline:
+                        grains['init'] = 'supervisord'
                     else:
-                        log.error(
-                            'Could not determine init location from command line: ({0})'
+                        log.info(
+                            'Could not determine init system from command line: ({0})'
                             .format(' '.join(init_cmdline))
                         )
 
@@ -1257,7 +1291,12 @@ def os_data():
                             grains[
                                 'lsb_{0}'.format(match.groups()[0].lower())
                             ] = match.groups()[1].rstrip()
-            if 'lsb_distrib_id' not in grains:
+            if grains.get('lsb_distrib_description', '').lower().startswith('antergos'):
+                # Antergos incorrectly configures their /etc/lsb-release,
+                # setting the DISTRIB_ID to "Arch". This causes the "os" grain
+                # to be incorrectly set to "Arch".
+                grains['osfullname'] = 'Antergos Linux'
+            elif 'lsb_distrib_id' not in grains:
                 if os.path.isfile('/etc/os-release') or os.path.isfile('/usr/lib/os-release'):
                     os_release = _parse_os_release()
                     if 'NAME' in os_release:
@@ -1385,12 +1424,19 @@ def os_data():
         grains.update(_linux_cpudata())
         grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
-        grains['os_family'] = 'Solaris'
         if salt.utils.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
-            uname_v = os.uname()[3]
+            uname_v = os.uname()[3]  # format: joyent_20161101T004406Z
+            uname_v = uname_v[uname_v.index('_')+1:]
             grains['os'] = grains['osfullname'] = 'SmartOS'
-            grains['osrelease'] = uname_v[uname_v.index('_')+1:]
+            # store a parsed version of YYYY.MM.DD as osrelease
+            grains['osrelease'] = ".".join([
+                uname_v.split('T')[0][0:4],
+                uname_v.split('T')[0][4:6],
+                uname_v.split('T')[0][6:8],
+            ])
+            # store a untouched copy of the timestamp in osrelease_stamp
+            grains['osrelease_stamp'] = uname_v
             if salt.utils.is_smartos_globalzone():
                 grains.update(_smartos_computenode_data())
         elif os.path.isfile('/etc/release'):
@@ -1398,10 +1444,10 @@ def os_data():
                 rel_data = fp_.read()
                 try:
                     release_re = re.compile(
-                        r'((?:Open)?Solaris|OpenIndiana) (Development)?'
-                        r'\s*(\d+ \d+\/\d+|oi_\S+|snv_\S+)?'
+                        r'((?:Open|Oracle )?Solaris|OpenIndiana|OmniOS) (Development)?'
+                        r'\s*(\d+\.?\d*|v\d+)\s?[A-Z]*\s?(r\d+|\d+\/\d+|oi_\S+|snv_\S+)?'
                     )
-                    osname, development, osrelease = \
+                    osname, development, osmajorrelease, osminorrelease = \
                         release_re.search(rel_data).groups()
                 except AttributeError:
                     # Set a blank osrelease grain and fallback to 'Solaris'
@@ -1411,8 +1457,26 @@ def os_data():
                 else:
                     if development is not None:
                         osname = ' '.join((osname, development))
+                    uname_v = os.uname()[3]
                     grains['os'] = grains['osfullname'] = osname
-                    grains['osrelease'] = osrelease
+                    if osname in ['Oracle Solaris'] and uname_v.startswith(osmajorrelease):
+                        # Oracla Solars 11 and up have minor version in uname
+                        grains['osrelease'] = uname_v
+                    elif osname in ['OmniOS']:
+                        # OmniOS
+                        osrelease = []
+                        osrelease.append(osmajorrelease[1:])
+                        osrelease.append(osminorrelease[1:])
+                        grains['osrelease'] = ".".join(osrelease)
+                        grains['osrelease_stamp'] = uname_v
+                    else:
+                        # Sun Solaris 10 and earlier/comparable
+                        osrelease = []
+                        osrelease.append(osmajorrelease)
+                        if osminorrelease:
+                            osrelease.append(osminorrelease)
+                        grains['osrelease'] = ".".join(osrelease)
+                        grains['osrelease_stamp'] = uname_v
 
         grains.update(_sunos_cpudata())
     elif grains['kernel'] == 'VMkernel':

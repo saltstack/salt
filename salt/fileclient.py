@@ -568,11 +568,20 @@ class Client(object):
                 raise CommandExecutionError(
                     'Path \'{0}\' is not absolute'.format(url_data.path)
                 )
+            if dest is None:
+                with salt.utils.fopen(url_data.path, 'r') as fp_:
+                    data = fp_.read()
+                return data
             return url_data.path
 
         if url_data.scheme == 'salt':
-            return self.get_file(
-                url, dest, makedirs, saltenv, cachedir=cachedir)
+            result = self.get_file(url, dest, makedirs, saltenv, cachedir=cachedir)
+            if result and dest is None:
+                with salt.utils.fopen(result, 'r') as fp_:
+                    data = fp_.read()
+                return data
+            return result
+
         if dest:
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
@@ -803,12 +812,17 @@ class Client(object):
         elif not os.path.isabs(cachedir):
             cachedir = os.path.join(self.opts['cachedir'], cachedir)
 
+        if url_data.query:
+            file_name = '-'.join([url_data.path, url_data.query])
+        else:
+            file_name = url_data.path
+
         return salt.utils.path_join(
             cachedir,
             'extrn_files',
             saltenv,
             netloc,
-            url_data.path
+            file_name
         )
 
 

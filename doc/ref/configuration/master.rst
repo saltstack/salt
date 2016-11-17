@@ -722,6 +722,15 @@ overridden on a per-minion basis in the roster (``minion_opts``)
     minion_opts:
       gpg_keydir: /root/gpg
 
+``thin_extra_mods``
+-------------------
+
+Default: None
+
+List of additional modules, needed to be included into the Salt Thin.
+Pass a list of importable Python modules that are typically located in
+the `site-packages` Python directory so they will be also always included
+into the Salt Thin, once generated.
 
 Master Security Settings
 ========================
@@ -2198,9 +2207,9 @@ exposed.
 .. code-block:: yaml
 
     minionfs_whitelist:
-      - base
-      - v1.*
-      - 'mybranch\d+'
+      - server01
+      - dev*
+      - 'mail\d+.mydomain.tld'
 
 .. conf_master:: minionfs_blacklist
 
@@ -2224,9 +2233,9 @@ exposed.
 .. code-block:: yaml
 
     minionfs_blacklist:
-      - base
-      - v1.*
-      - 'mybranch\d+'
+      - server01
+      - dev*
+      - 'mail\d+.mydomain.tld'
 
 
 .. _pillar-configuration:
@@ -2636,7 +2645,11 @@ Pillar Merging Options
 Default: ``smart``
 
 The pillar_source_merging_strategy option allows you to configure merging
-strategy between different sources. It accepts 4 values:
+strategy between different sources. It accepts 5 values:
+
+* ``none``:
+.. versionadded:: 2016.3.4
+  It will not do any merging at all and only parse the pillar data from the passed environment and 'base' if no environment was specified.
 
 * ``recurse``:
 
@@ -2921,7 +2934,7 @@ master, specify the log_file of the syndic daemon.
 
     syndic_log_file: salt-syndic.log
 
-.. master_conf:: syndic_failover
+.. conf_master:: syndic_failover
 
 ``syndic_failover``
 -------------------

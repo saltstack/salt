@@ -1200,6 +1200,7 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
             # The get_user call returns an user ARN:
             #    arn:aws:iam::027050522557:user/salt-test
             arn = ret['get_user_response']['get_user_result']['user']['arn']
+            account_id = arn.split(':')[4]
         except boto.exception.BotoServerError:
             # If call failed, then let's try to get the ARN from the metadata
             timeout = boto.config.getfloat(
@@ -1208,15 +1209,15 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
             attempts = boto.config.getint(
                 'Boto', 'metadata_service_num_attempts', 1
             )
-            metadata = boto.utils.get_instance_metadata(
+            identity = boto.utils.get_instance_identity(
                 timeout=timeout, num_retries=attempts
             )
             try:
-                arn = metadata['iam']['info']['InstanceProfileArn']
+                account_id = identity['document']['accountId']
             except KeyError:
-                log.error('Failed to get user or metadata ARN information in'
+                log.error('Failed to get account id from instance_identity in'
                           ' boto_iam.get_account_id.')
-        __context__[cache_key] = arn.split(':')[4]
+        __context__[cache_key] = account_id
     return __context__[cache_key]
 
 

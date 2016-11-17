@@ -75,7 +75,8 @@ __virtualname__ = 'influxdb'
 
 def __virtual__():
     if not HAS_INFLUXDB:
-        return False
+        return False, 'Could not import influxdb returner; ' \
+                      'influxdb python client is not installed.'
     return __virtualname__
 
 
@@ -158,7 +159,7 @@ def save_load(jid, load, minions=None):
         log.critical('Failed to store load with InfluxDB returner: {0}'.format(ex))
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Allows you to manage proxy settings on minions
-=======================
+==============================================
 
 Setup proxy settings on minions
 

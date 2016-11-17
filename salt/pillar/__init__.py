@@ -279,6 +279,7 @@ class Pillar(object):
         self.actual_file_roots = opts['file_roots']
         # use the local file client
         self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, ext=ext, pillarenv=pillarenv)
+        self.saltenv = saltenv
         self.client = salt.fileclient.get_file_client(self.opts, True)
 
         if opts.get('file_client', '') == 'local':
@@ -347,7 +348,7 @@ class Pillar(object):
             opts['grains'] = {}
         else:
             opts['grains'] = grains
-        if 'environment' not in opts:
+        if not opts.get('environment'):
             opts['environment'] = saltenv
         opts['id'] = self.minion_id
         if 'pillarenv' not in opts:
@@ -399,6 +400,11 @@ class Pillar(object):
                         ]
             else:
                 for saltenv in self._get_envs():
+                    if self.opts.get('pillar_source_merging_strategy', None) == "none":
+                        if self.saltenv and saltenv != self.saltenv:
+                            continue
+                        if not self.saltenv and not saltenv == 'base':
+                            continue
                     top = self.client.cache_file(
                             self.opts['state_top'],
                             saltenv
@@ -794,8 +800,8 @@ class Pillar(object):
                 self.rend = salt.loader.render(self.opts, self.functions)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches, errors=errors)
-                pillar = merge(pillar,
-                               self.opts['pillar'],
+                pillar = merge(self.opts['pillar'],
+                               pillar,
                                self.merge_strategy,
                                self.opts.get('renderer', 'yaml'),
                                self.opts.get('pillar_merge_lists', False))

@@ -157,7 +157,18 @@ def get_service_name(*args):
 
 def start(name):
     '''
-    Start the specified service
+    Start the specified service.
+
+    .. warning::
+        You cannot start a disabled service in Windows. If the service is
+        disabled, it will be changed to ``Manual`` start.
+
+    Args:
+
+        name (str): The name of the service to start
+
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -165,7 +176,12 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = ['net', 'start', name]
+    # Set the service to manual if disabled
+    if disabled(name):
+        cmd = ['sc', 'config', name, 'start=demand']
+        __salt__['cmd.retcode'](cmd, python_shell=False)
+
+    cmd = ['net', 'start', '/y', name]
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
@@ -183,7 +199,7 @@ def stop(name):
     # up if the service takes too long to stop with a misleading
     # "service could not be stopped" message and RC 0.
 
-    cmd = ['net', 'stop', name]
+    cmd = ['net', 'stop', '/y', name]
     res = __salt__['cmd.run'](cmd, python_shell=False)
     if 'service was stopped' in res:
         return True

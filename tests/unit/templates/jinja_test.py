@@ -477,6 +477,12 @@ class TestCustomExtensions(TestCase):
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
         self.assertEqual(dataset, yaml.load(rendered))
 
+    def test_serialize_yaml_str(self):
+        dataset = "str value"
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
+        self.assertEqual(dataset, rendered)
+
     def test_serialize_python(self):
         dataset = {
             "foo": True,

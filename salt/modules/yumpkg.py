@@ -286,7 +286,7 @@ def _get_yum_config():
         # fall back to parsing the config ourselves
         # Look for the config the same order yum does
         fn = None
-        paths = ('/etc/yum/yum.conf', '/etc/yum.conf')
+        paths = ('/etc/yum/yum.conf', '/etc/yum.conf', '/etc/dnf/dnf.conf')
         for path in paths:
             if os.path.exists(path):
                 fn = path

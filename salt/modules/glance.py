@@ -162,7 +162,6 @@ def _auth(profile=None, api_version=2, **connection_args):
         log.debug('Calling keystoneclient.v2_0.client.Client(' +
             '{0}, **{1})'.format(ks_endpoint, kwargs))
         keystone = kstone.Client(**kwargs)
-        log.debug(help(keystone.get_token))
         kwargs['token'] = keystone.get_token(keystone.session)
         # This doesn't realy prevent the password to show up
         # in the minion log as keystoneclient.session is
