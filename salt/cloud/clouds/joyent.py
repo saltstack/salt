@@ -341,6 +341,10 @@ def create_node(**kwargs):
     image = kwargs['image']
     location = kwargs['location']
     networks = kwargs.get('networks')
+    tag = kwargs.get('tag')
+    locality = kwargs.get('locality')
+    metadata = kwargs.get('metadata')
+    firewall_enabled = kwargs.get('firewall_enabled')
 
     create_data = {
         'name': name,
@@ -349,6 +353,21 @@ def create_node(**kwargs):
     }
     if networks is not None:
         create_data['networks'] = networks
+
+    if locality is not None:
+        create_data['locality'] = locality
+
+    if metadata is not None:
+        for key, value in metadata.iteritems():
+            create_data['metadata.{0}'.format(key)] = value
+
+    if tag is not None:
+        for key, value in tag.iteritems():
+          create_data['tag.{0}'.format(key)] = value
+
+    if firewall_enabled is not None:
+        create_data['firewall_enabled'] = firewall_enabled
+
     data = json.dumps(create_data)
 
     ret = query(command='/my/machines', data=data, method='POST',
@@ -731,11 +750,14 @@ def list_nodes(full=False, call=None):
         for location in JOYENT_LOCATIONS:
             result = query(command='my/machines', location=location,
                            method='GET')
-            nodes = result[1]
-            for node in nodes:
-                if 'name' in node:
-                    node['location'] = location
-                    ret[node['name']] = reformat_node(item=node, full=full)
+            if result[0] in VALID_RESPONSE_CODES:
+                nodes = result[1]
+                for node in nodes:
+                    if 'name' in node:
+                        node['location'] = location
+                        ret[node['name']] = reformat_node(item=node, full=full)
+            else:
+                log.error('Invalid response when listing Joyent nodes: {0}'.format(result[1]))
 
     else:
         result = query(command='my/machines', location=DEFAULT_LOCATION,
@@ -1053,7 +1075,7 @@ def query(action=None,
     hash_ = SHA256.new()
     hash_.update(timestamp)
     signed = base64.b64encode(rsa_.sign(hash_))
-    keyid = '/{0}/keys/{1}'.format(user, ssh_keyname)
+    keyid = '/{0}/keys/{1}'.format(user.split('/')[0], ssh_keyname)
 
     headers = {
         'Content-Type': 'application/json',
@@ -1100,3 +1122,25 @@ def query(action=None,
         return_content = yaml.safe_load(content)
 
     return [result['status'], return_content]
+
+
+def list_networks(call=None):
+    '''
+    List avaiable Joyent Networks
+    '''
+    if call == 'function':
+        # Technically this function may be called other ways too, but it
+        # definitely cannot be called with --function.
+        raise SaltCloudSystemExit(
+            'The query_instance action must be called with -a or --action.'
+        )
+
+    try:
+        ret = query(command='/my/networks', method='GET')
+        if ret[0] in VALID_RESPONSE_CODES:
+            return ret[1]
+        else:
+            log.error('Invalid response when listing Joyent networks: {0}'.format(string(ret)))
+    except Exception as exc:
+        log.error('Exception when listing Joyent networks: {0}'.format(exc))
+
