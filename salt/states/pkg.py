@@ -3,7 +3,7 @@
 Installation of packages using OS package managers such as yum or apt-get
 =========================================================================
 
-..note::
+.. note::
     On minions running systemd>=205, as of version 2015.8.12, 2016.3.3, and
     2016.11.0, `systemd-run(1)`_ is now used to isolate commands which modify
     installed packages from the ``salt-minion`` daemon's control group. This is
