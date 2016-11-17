@@ -1285,7 +1285,7 @@ def managed(name,
             for multiple files that have the same basename. So, in the
             example above, simply using ``foo.txt`` would not match.
 
-        .. versionadded:: 2016.3.5,2016.11.1
+        .. versionadded:: 2016.3.5
 
     user
         The user to own the file, this defaults to the user salt is running as

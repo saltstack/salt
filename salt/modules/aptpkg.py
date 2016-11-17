@@ -1773,6 +1773,168 @@ def del_repo(repo, **kwargs):
     )
 
 
+def _convert_if_int(value):
+    '''
+    .. versionadded:: nitrogen
+
+    Convert to an int if necessary.
+
+    :param str value: The value to check/convert.
+
+    :return: The converted or passed value.
+    :rtype: bool|int|str
+    '''
+    try:
+        value = int(str(value))
+    except ValueError:
+        pass
+    return value
+
+
+def get_repo_keys():
+    '''
+    .. versionadded:: nitrogen
+
+    List known repo key details.
+
+    :return: A dictionary containing the repo keys.
+    :rtype: dict
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.get_repo_keys
+    '''
+    ret = dict()
+    repo_keys = list()
+
+    # The double usage of '--with-fingerprint' is necessary in order to
+    # retrieve the fingerprint of the subkey.
+    cmd = ['apt-key', 'adv', '--list-public-keys', '--with-fingerprint',
+           '--with-fingerprint', '--with-colons', '--fixed-list-mode']
+
+    cmd_ret = __salt__['cmd.run_all'](cmd=cmd)
+
+    if cmd_ret['retcode'] != 0:
+        log.error(cmd_ret['stderr'])
+        return ret
+
+    lines = [line for line in cmd_ret['stdout'].splitlines() if line.strip()]
+
+    # Reference for the meaning of each item in the colon-separated
+    # record can be found here: https://goo.gl/KIZbvp
+    for line in lines:
+        items = [_convert_if_int(item.strip()) if item.strip() else None for item in line.split(':')]
+        key_props = dict()
+
+        if len(items) < 2:
+            log.debug('Skipping line: %s', line)
+            continue
+
+        if items[0] in ('pub', 'sub'):
+            key_props.update({
+                'algorithm': items[3],
+                'bits': items[2],
+                'capability': items[11],
+                'date_creation': items[5],
+                'date_expiration': items[6],
+                'keyid': items[4],
+                'validity': items[1]
+            })
+
+            if items[0] == 'pub':
+                repo_keys.append(key_props)
+            else:
+                repo_keys[-1]['subkey'] = key_props
+        elif items[0] == 'fpr':
+            if repo_keys[-1].get('subkey', False):
+                repo_keys[-1]['subkey'].update({'fingerprint': items[9]})
+            else:
+                repo_keys[-1].update({'fingerprint': items[9]})
+        elif items[0] == 'uid':
+            repo_keys[-1].update({
+                'uid': items[9],
+                'uid_hash': items[7]
+            })
+
+    for repo_key in repo_keys:
+        ret[repo_key['keyid']] = repo_key
+    return ret
+
+
+def add_repo_key(path=None, text=None, keyserver=None, keyid=None, saltenv='base'):
+    '''
+    .. versionadded:: nitrogen
+
+    Add a repo key using ``apt-key add``.
+
+    :param str path: The path of the key file to import.
+    :param str text: The key data to import, in string form.
+    :param str keyserver: The server to download the repo key specified by the keyid.
+    :param str keyid: The key id of the repo key to add.
+    :param str saltenv: The environment the key file resides in.
+
+    :return: A boolean representing whether the repo key was added.
+    :rtype: bool
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.add_repo_key 'salt://apt/sources/test.key'
+
+        salt '*' pkg.add_repo_key text="'$KEY1'"
+
+        salt '*' pkg.add_repo_key keyserver='keyserver.example' keyid='0000AAAA'
+    '''
+    cmd = ['apt-key']
+    kwargs = {'python_shell': False}
+
+    current_repo_keys = get_repo_keys()
+
+    if path:
+        cached_source_path = __salt__['cp.cache_file'](path, saltenv)
+
+        if not cached_source_path:
+            log.error('Unable to get cached copy of file: %s', path)
+            return False
+
+        cmd.extend(['add', cached_source_path])
+    elif text:
+        log.debug('Received value: %s', text)
+
+        cmd.extend(['add', '-'])
+        kwargs.update({'stdin': text})
+    elif keyserver:
+        if not keyid:
+            error_msg = 'No keyid or keyid too short for keyserver: {0}'.format(keyserver)
+            raise SaltInvocationError(error_msg)
+
+        cmd.extend(['adv', '--keyserver', keyserver, '--recv', keyid])
+    elif keyid:
+        error_msg = 'No keyserver specified for keyid: {0}'.format(keyid)
+        raise SaltInvocationError(error_msg)
+    else:
+        raise TypeError('{0}() takes at least 1 argument (0 given)'.format(add_repo_key.__name__))
+
+    # If the keyid is provided or determined, check it against the existing
+    # repo key ids to determine whether it needs to be imported.
+    if keyid:
+        for current_keyid in current_repo_keys:
+            if current_keyid[-(len(keyid)):] == keyid:
+                log.debug("The keyid '%s' already present: %s", keyid, current_keyid)
+                return True
+
+    kwargs.update({'cmd': cmd})
+    cmd_ret = __salt__['cmd.run_all'](**kwargs)
+
+    if cmd_ret['retcode'] == 0:
+        return True
+    log.error('Unable to add repo key: %s', cmd_ret['stderr'])
+    return False
+
+
 def del_repo_key(name=None, **kwargs):
     '''
     .. versionadded:: 2015.8.0
@@ -2197,8 +2359,7 @@ def expand_repo_def(**kwargs):
 
         if 'file' not in kwargs:
             filename = '/etc/apt/sources.list.d/{0}-{1}-{2}.list'
-            kwargs['file'] = filename.format(owner_name, ppa_name,
-                                                 dist)
+            kwargs['file'] = filename.format(owner_name, ppa_name, dist)
 
     source_entry = sourceslist.SourceEntry(repo)
     for kwarg in _MODIFY_OK:

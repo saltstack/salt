@@ -1790,7 +1790,7 @@ def event(tagmatch='*',
             listen=True)
 
     while True:
-        ret = sevent.get_event(full=True)
+        ret = sevent.get_event(full=True, auto_reconnect=True)
         if ret is None:
             continue
 

@@ -2261,12 +2261,17 @@ class ClearFuncs(object):
                     'enc': 'clear',
                     'load': {
                         'jid': None,
-                        'minions': minions
+                        'minions': minions,
+                        'error': 'Master could not resolve minions for target {0}'.format(clear_load['tgt'])
                     }
                 }
         jid = self._prep_jid(clear_load, extra)
         if jid is None:
-            return {}
+            return {'enc': 'clear',
+                    'load': {
+                        'error': 'Master failed to assign jid',
+                        }
+                    }
         payload = self._prep_pub(minions, jid, clear_load, extra)
 
         # Send it!

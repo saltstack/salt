@@ -36,7 +36,7 @@ class LocalClientTestCase(TestCase,
         jid_no_minions = {'jid': '1234', 'minions': []}
         valid_pub_data = {'minions': ['m1', 'm2'], 'jid': '1234'}
 
-        self.assertRaises(EauthAuthenticationError, self.client._check_pub_data, None)
+        self.assertRaises(EauthAuthenticationError, self.client._check_pub_data, '')
         self.assertDictEqual({},
             self.client._check_pub_data(just_minions),
             'Did not handle lack of jid correctly')

@@ -204,7 +204,7 @@ def validate_enabled(enabled):
 
 def confirm_updated(value, check_fun, normalize_ret=False, wait=5):
     '''
-    Wait upto ``wait`` seconds for a system parameter to be changed before
+    Wait up to ``wait`` seconds for a system parameter to be changed before
     deciding it hasn't changed.
 
     :param str value: The value indicating a successful change

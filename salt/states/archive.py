@@ -304,7 +304,7 @@ def extracted(name,
             for multiple files that have the same basename. So, in the
             example above, simply using ``foo.txt`` would not match.
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.0
 
     source_hash_update
         Set this to ``True`` if archive should be extracted if source_hash has

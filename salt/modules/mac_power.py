@@ -446,6 +446,7 @@ def set_restart_freeze(enabled):
     return salt.utils.mac_utils.confirm_updated(
         state,
         get_restart_freeze,
+        True
     )
 
 

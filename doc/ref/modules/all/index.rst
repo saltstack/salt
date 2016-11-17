@@ -426,5 +426,6 @@ execution modules
     zfs
     zk_concurrency
     znc
+    zoneadm
     zpool
     zypper

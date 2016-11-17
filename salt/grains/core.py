@@ -484,7 +484,6 @@ def _virtual(osdata):
     #   virtual
     #   virtual_subtype
     grains = {'virtual': 'physical'}
-    grains.update(_hw_data(grains))
 
     # Skip the below loop on platforms which have none of the desired cmds
     # This is a temporary measure until we can write proper virtual hardware

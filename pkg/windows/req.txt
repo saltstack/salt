@@ -26,7 +26,7 @@ pypiwin32==219
 pyOpenSSL==16.1.0
 python-dateutil==2.5.3
 python-gnupg==0.3.8
-pyzmq==15.3.0
+pyzmq==16.0.1
 requests==2.10.0
 singledispatch==3.4.0.3
 six==1.10.0

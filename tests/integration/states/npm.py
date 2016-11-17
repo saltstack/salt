@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
+from salttesting.helpers import destructiveTest, ensure_in_syspath, requires_network
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -20,6 +20,7 @@ import salt.utils
 @skipIf(salt.utils.which('npm') is None, 'npm not installed')
 class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
+    @requires_network()
     @destructiveTest
     def test_npm_installed_removed(self):
         '''
@@ -31,6 +32,7 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state('npm.removed', name='pm2')
         self.assertSaltTrueReturn(ret)
 
+    @requires_network()
     @destructiveTest
     def test_npm_install_url_referenced_package(self):
         '''
@@ -41,6 +43,7 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state('npm.removed', name='git://github.com/request/request')
         self.assertSaltTrueReturn(ret)
 
+    @requires_network()
     @destructiveTest
     def test_npm_installed_pkgs(self):
         '''
@@ -53,7 +56,7 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     @destructiveTest
     def test_npm_cache_clean(self):
         '''
-        Basic test to determine if NPM successfully cleans it's cached packages.
+        Basic test to determine if NPM successfully cleans its cached packages.
         '''
         ret = self.run_state('npm.cache_cleaned', name=None)
         self.assertSaltTrueReturn(ret)
