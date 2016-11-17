@@ -127,7 +127,7 @@ class CustomOption(optparse.Option, object):
 class OptionParser(optparse.OptionParser, object):
     VERSION = version.__saltstack_version__.formatted_version
 
-    usage = '%prog'
+    usage = '%prog [options]'
 
     epilog = ('You can find additional help about %prog issuing "man %prog" '
               'or on http://docs.saltstack.com')
@@ -1588,7 +1588,7 @@ class MasterOptionParser(six.with_metaclass(OptionParserMeta,
                                             DaemonMixIn,
                                             SaltfileMixIn)):
 
-    description = 'The Salt master, used to control the Salt minions.'
+    description = 'The Salt Master, used to control the Salt Minions.'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
@@ -1629,8 +1629,8 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
                                                  SaltfileMixIn)):  # pylint: disable=no-init
 
     description = (
-        'The Salt proxy minion, connects to and controls devices not able to run a minion.  '
-        'Receives commands from a remote Salt master.'
+        'The Salt Proxy Minion, connects to and controls devices not able to run a minion.\n'
+        'Receives commands from a remote Salt Master.'
     )
 
     # ConfigDirMixIn config filename attribute
@@ -1698,6 +1698,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
     # LogLevelMixIn attributes
     _default_logging_level_ = config.DEFAULT_MASTER_OPTS['log_level']
     _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['log_file']
+
     try:
         os.getcwd()
     except OSError:
@@ -1945,7 +1946,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                     # interface
                     for i in range(len(self.config['arg'])):
                         self.config['arg'][i] = salt.utils.args.parse_input(
-                                self.config['arg'][i])
+                            self.config['arg'][i])
                 else:
                     self.config['fun'] = self.args[1]
                     self.config['arg'] = self.args[2:]
@@ -2017,9 +2018,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                                              HardCrashMixin,
                                              SaltfileMixIn)):
 
-    description = 'Salt key is used to manage Salt authentication keys'
-
-    usage = '%prog [options]'
+    description = 'salt-key is used to manage Salt authentication keys'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
@@ -2859,7 +2858,7 @@ class SaltCloudParser(six.with_metaclass(OptionParserMeta,
         if 'DUMP_SALT_CLOUD_CONFIG' in os.environ:
             import pprint
 
-            print('Salt cloud configuration dump(INCLUDES SENSIBLE DATA):')
+            print('Salt Cloud configuration dump (INCLUDES SENSIBLE DATA):')
             pprint.pprint(self.config)
             self.exit(salt.defaults.exitcodes.EX_OK)
 
