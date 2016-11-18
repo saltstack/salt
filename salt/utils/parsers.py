@@ -1659,15 +1659,16 @@ class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
                                             SaltfileMixIn)):
 
     description = (
-        'A seamless master of masters. Scale Salt to thousands of hosts or '
+        'A seamless master of Salt Masters. Scale Salt to thousands of hosts or\n'
         'across many different networks.'
     )
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
     # LogLevelMixIn attributes
+    _logfile_config_setting_name_ = 'syndic_log_file'
     _default_logging_level_ = config.DEFAULT_MASTER_OPTS['log_level']
-    _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['syndic_log_file']
+    _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS[_logfile_config_setting_name_]
     _setup_mp_logging_listener_ = True
 
     def setup_config(self):
@@ -1689,6 +1690,11 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                              ArgsStdinMixIn)):
 
     default_timeout = 5
+
+    description = (
+        'Salt allows for commands to be executed across a swath of remote systems in\n'
+        'parallel, so they can be both controlled and queried with ease.'
+    )
 
     usage = '%prog [options] \'<target>\' <function> [arguments]'
 
@@ -1972,14 +1978,13 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
                                             HardCrashMixin,
                                             SaltfileMixIn)):
     description = (
-        'salt-cp is NOT intended to broadcast large files, it is intended to '
-        'handle text files.\nsalt-cp can be used to distribute configuration '
-        'files.'
+        'salt-cp is NOT intended to broadcast large files, it is intended to handle text\n'
+        'files. salt-cp can be used to distribute configuration files.'
     )
 
-    default_timeout = 5
-
     usage = '%prog [options] \'<target>\' SOURCE DEST'
+
+    default_timeout = 5
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
@@ -2026,7 +2031,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
     # LogLevelMixIn attributes
     _skip_console_logging_config_ = True
     _logfile_config_setting_name_ = 'key_logfile'
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'key')
+    _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS[_logfile_config_setting_name_]
 
     def _mixin_setup(self):
         actions_group = optparse.OptionGroup(self, 'Actions')
@@ -2259,7 +2264,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
         if self.options.gen_keys:
             # Since we're generating the keys, some defaults can be assumed
             # or tweaked
-            keys_config['key_logfile'] = os.devnull
+            keys_config[self._logfile_config_setting_name_] = os.devnull
             keys_config['pki_dir'] = self.options.gen_keys_dir
 
         return keys_config
@@ -2314,8 +2319,9 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
                                               ArgsStdinMixIn,
                                               ProfilingPMixIn)):
 
-    description = ('Salt call is used to execute module functions locally '
-                   'on a minion')
+    description = (
+        'salt-call is used to execute module functions locally on a Salt Minion'
+    )
 
     usage = '%prog [options] <function> [arguments]'
 
@@ -2525,7 +2531,12 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
 
     default_timeout = 1
 
-    usage = '%prog [options]'
+    description = (
+        'salt-run is the frontend command for executing Salt Runners.\n'
+        'Salt Runners are modules used to execute convenience functions on the Salt Master'
+    )
+
+    usage = '%prog [options] <function> [arguments]'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
@@ -2833,6 +2844,13 @@ class SaltCloudParser(six.with_metaclass(OptionParserMeta,
                                          HardCrashMixin,
                                          SaltfileMixIn)):
 
+    description = (
+        'Salt Cloud is the system used to provision virtual machines on various public\n'
+        'clouds via a cleanly controlled profile and mapping system'
+        )
+
+    usage = '%prog [options] <-m MAP | -p PROFILE> <NAME> [NAME2 ...]'
+
     # ConfigDirMixIn attributes
     _config_filename_ = 'cloud'
 
@@ -2879,16 +2897,17 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
                                    MergeConfigMixIn,
                                    SaltfileMixIn)):
     '''
-    The cli parser object used to fire up the salt spm system.
+    The CLI parser object used to fire up the Salt SPM system.
     '''
     description = 'SPM is used to manage 3rd party formulas and other Salt components'
 
-    usage = '%prog [options] <function> [arguments]'
+    usage = '%prog [options] <function> <argument>'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'spm'
     # LogLevelMixIn attributes
-    _default_logging_logfile_ = config.DEFAULT_SPM_OPTS['spm_logfile']
+    _logfile_config_setting_name_ = 'spm_logfile'
+    _default_logging_logfile_ = config.DEFAULT_SPM_OPTS[_logfile_config_setting_name_]
 
     def _mixin_setup(self):
         self.add_option(
@@ -2928,12 +2947,17 @@ class SaltAPIParser(six.with_metaclass(OptionParserMeta,
                                        DaemonMixIn,
                                        MergeConfigMixIn)):
     '''
-    The Salt API cli parser object used to fire up the salt api system.
+    The CLI parser object used to fire up the Salt API system.
     '''
+    description = (
+        'The Salt API system manages network API connectors for the Salt Master'
+    )
+
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
     # LogLevelMixIn attributes
-    _default_logging_logfile_ = config.DEFAULT_API_OPTS['api_logfile']
+    _logfile_config_setting_name_ = 'api_logfile'
+    _default_logging_logfile_ = config.DEFAULT_API_OPTS[_logfile_config_setting_name_]
 
     def setup_config(self):
         return salt.config.api_config(self.get_config_file_path())  # pylint: disable=no-member
