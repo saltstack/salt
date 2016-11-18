@@ -13,20 +13,35 @@ The Azure cloud module is used to control access to Microsoft Azure
 :configuration:
     Required provider parameters:
 
+    if using username and password:
     * ``subscription_id``
     * ``username``
     * ``password``
+
+    if using a service principal:
+    * ``subscription_id``
+    * ``tenant``
+    * ``client_id``
+    * ``secret``
 
 Example ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/azure.conf`` configuration:
 
 .. code-block:: yaml
 
-    my-azure-config:
+    my-azure-config with username and password:
       driver: azure
       subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
       username: larry
       password: 123pass
+
+    Or my-azure-config with service principal:
+      driver: azure
+      subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
+      tenant: ABCDEFAB-1234-ABCD-1234-ABCDEFABCDEF
+      client_id: ABCDEFAB-1234-ABCD-1234-ABCDEFABCDEF
+      secret: XXXXXXXXXXXXXXXXXXXXXXXX
+
 '''
 # pylint: disable=E0102
 
@@ -57,7 +72,10 @@ try:
     import salt.utils.msazure
     from salt.utils.msazure import object_to_dict
     import azure.storage
-    from azure.common.credentials import UserPassCredentials
+    from azure.common.credentials import (
+        UserPassCredentials,
+        ServicePrincipalCredentials,
+    )
     from azure.mgmt.compute import ComputeManagementClient
     from azure.mgmt.compute.models import (
         CachingTypes,
@@ -128,11 +146,19 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    return config.is_provider_configured(
+    provider = config.is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
-        ('subscription_id', 'username', 'password')
-    )
+        ('subscription_id', 'tenant', 'client_id', 'secret')
+        )
+    if provider is False:
+        return config.is_provider_configured(
+            __opts__,
+            __active_provider_name__ or __virtualname__,
+            ('subscription_id', 'username', 'password')
+        )
+    else:
+        return provider
 
 
 def get_dependencies():
@@ -157,17 +183,32 @@ def get_conn(Client=None):
         get_configured_provider(), __opts__, search_global=False
     )
 
-    username = config.get_cloud_config_value(
-        'username',
+    tenant = config.get_cloud_config_value(
+        'tenant',
         get_configured_provider(), __opts__, search_global=False
     )
 
-    password = config.get_cloud_config_value(
-        'password',
-        get_configured_provider(), __opts__, search_global=False
-    )
+    if tenant is None:
+        username = config.get_cloud_config_value(
+            'username',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        password = config.get_cloud_config_value(
+            'password',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        credentials = UserPassCredentials(username, password)
+    else:
+        client_id = config.get_cloud_config_value(
+            'client_id',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        secret = config.get_cloud_config_value(
+            'secret',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        credentials = ServicePrincipalCredentials(client_id, secret, tenant)
 
-    credentials = UserPassCredentials(username, password)
     client = Client(
         credentials=credentials,
         subscription_id=subscription_id,
