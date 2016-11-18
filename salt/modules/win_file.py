@@ -1330,7 +1330,7 @@ def mkdir(path,
           deny_perms=None,
           inheritance=True):
     '''
-    Ensure that the directory is available.
+    Ensure that the directory is available and permissions are set.
 
     Args:
 
@@ -1340,29 +1340,25 @@ def mkdir(path,
         account that created the directory, likely SYSTEM
 
         grant_perms (dict): A dictionary containing the user/group and the basic
-        permission to grant, ie: ``{'user': 'basic_permission'}``. To set
-        advanced permissions use a dict containing the user/group and a list of
-        advanced permissions to apply, ie:
-        ``{'user': ['adv_perm1', 'adv_perm2']}``
+        permissions to grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
+        You can also set the ``applies_to`` setting here. The default is
+        ``this_folder_subfolders_files``. Specify another ``applies_to`` setting
+        like this:
+
+        .. code-block:: yaml
+
+            {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
+
+        To set advanced permissions use a list for the ``perms`` parameter, ie:
+
+        .. code-block:: yaml
+
+            {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
 
         deny_perms (dict): A dictionary containing the user/group and
-        permissions to deny. Use the same format used for the ``grant_perms``
-        parameter. Remember, deny permissions supersede grant permissions.
-
-        applies_to (str): The objects to which these permissions will apply.
-        Acceptable options are:
-
-            - this_folder_only: Applies only to this object
-            - this_folder_subfolders_files (default): Applies to this object
-              and all sub containers and objects
-            - this_folder_subfolders: Applies to this object and all sub
-              containers, no files
-            - this_folder_files: Applies to this object and all file
-              objects, no containers
-            - subfolders_files: Applies to all containers and objects
-              beneath this object
-            - subfolders_only: Applies to all containers beneath this object
-            - files_only: Applies to all file objects beneath this object
+        permissions to deny along with the ``applies_to`` setting. Use the same
+        format used for the ``grant_perms`` parameter. Remember, deny
+        permissions supersede grant permissions.
 
         inheritance (bool): If True the object will inherit permissions from the
         parent, if False, inheritance will be disabled. Inheritance setting will
@@ -1376,13 +1372,13 @@ def mkdir(path,
     .. code-block:: bash
 
         # To grant the 'Users' group 'read & execute' permissions.
-        salt '*' file.mkdir C:\\Temp\\ Administrators "{'Users': 'read_execute'}"
+        salt '*' file.mkdir C:\\Temp\\ Administrators "{'Users': {'perms': 'read_execute'}}"
 
         # Locally using salt call
-        salt-call file.mkdir C:\\Temp\\ Administrators "{'Users': 'read_execute'}"
+        salt-call file.mkdir C:\\Temp\\ Administrators "{'Users': {'perms': 'read_execute', 'applies_to': 'this_folder_only'}}"
 
         # Specify advanced attributes with a list
-        salt '*' file.mkdir C:\\Temp\\ Administrators "{'jsnuffy': ['read_attributes', 'read_ea']}"
+        salt '*' file.mkdir C:\\Temp\\ Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder_only'}}"
     '''
     # Make sure the drive is valid
     if not os.path.isdir(os.path.splitdrive(path)[0]):
@@ -1410,7 +1406,6 @@ def makedirs(path,
              owner=None,
              grant_perms=None,
              deny_perms=None,
-             applies_to='this_folder_subfolders_files',
              inheritance=True):
     '''
     Ensure that the parent directory containing this path is available.
@@ -1423,28 +1418,25 @@ def makedirs(path,
         account that created the directly, likely SYSTEM
 
         grant_perms (dict): A dictionary containing the user/group and the basic
-        permission to grant, ie: ``{user: basic_permission}``. To set advanced
-        permissions use a dict containing the user/group and a list of advanced
-        permissions to apply, ie: ``{user: [adv_perm1, adv_perm2]}``
+        permissions to grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
+        You can also set the ``applies_to`` setting here. The default is
+        ``this_folder_subfolders_files``. Specify another ``applies_to`` setting
+        like this:
+
+        .. code-block:: yaml
+
+            {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
+
+        To set advanced permissions use a list for the ``perms`` parameter, ie:
+
+        .. code-block:: yaml
+
+            {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
 
         deny_perms (dict): A dictionary containing the user/group and
-        permissions to deny. Use the same format used for the ``grant_perms``
-        parameter. Remember, deny permissions supersede grant permissions.
-
-        applies_to (str): The objects to which these permissions will apply.
-        Acceptable options are:
-
-            - this_folder_only: Applies only to this object
-            - this_folder_subfolders_files (default): Applies to this object
-              and all sub containers and objects
-            - this_folder_subfolders: Applies to this object and all sub
-              containers, no files
-            - this_folder_files: Applies to this object and all file
-              objects, no containers
-            - subfolders_files: Applies to all containers and objects
-              beneath this object
-            - subfolders_only: Applies to all containers beneath this object
-            - files_only: Applies to all file objects beneath this object
+        permissions to deny along with the ``applies_to`` setting. Use the same
+        format used for the ``grant_perms`` parameter. Remember, deny
+        permissions supersede grant permissions.
 
         inheritance (bool): If True the object will inherit permissions from the
         parent, if False, inheritance will be disabled. Inheritance setting will
@@ -1463,14 +1455,13 @@ def makedirs(path,
     .. code-block:: bash
 
         # To grant the 'Users' group 'read & execute' permissions.
-        salt '*' file.makedirs C:\\Temp\\ Administrators "{'Users': 'read_execute'}"
+        salt '*' file.makedirs C:\\Temp\\ Administrators "{'Users': {'perms': 'read_execute'}}"
 
         # Locally using salt call
-        salt-call file.makedirs C:\\Temp\\ Administrators "{'Users': 'read_execute'}"
+        salt-call file.makedirs C:\\Temp\\ Administrators "{'Users': {'perms': 'read_execute', 'applies_to': 'this_folder_only'}}"
 
         # Specify advanced attributes with a list
-        salt '*' file.makedirs C:\\Temp\\ Administrators "{'jsnuffy': ['read_attributes', 'read_ea']}"
-
+        salt '*' file.makedirs C:\\Temp\\ Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder_only'}}"
     '''
     path = os.path.expanduser(path)
 
@@ -1511,107 +1502,14 @@ def makedirs(path,
     for directory_to_create in directories_to_create:
         # all directories have the user, group and mode set!!
         log.debug('Creating directory: %s', directory_to_create)
-        mkdir(path, owner, grant_perms, deny_perms, applies_to, inheritance)
+        mkdir(path, owner, grant_perms, deny_perms, inheritance)
 
 
 def makedirs_perms(path,
                    owner=None,
                    grant_perms=None,
                    deny_perms=None,
-                   applies_to='this_folder_subfolders_files',
                    inheritance=True):
-    '''
-    Set owner and permissions for each directory created.
-
-    Args:
-
-        path (str): The full path to the directory.
-
-        owner (str): The owner of the directory. If not passed, it will be the
-        account that created the directory, likely SYSTEM
-
-        grant_perms (dict): A dictionary containing the user/group and the basic
-        permission to grant, ie: ``{'user': 'basic_permission'}``. To set
-        advanced permissions use a dict containing the user/group and a list of
-        advanced permissions to apply, ie:
-        ``{'user': ['adv_perm1', 'adv_perm2']}``
-
-        deny_perms (dict): A dictionary containing the user/group and
-        permissions to deny. Use the same format used for the ``grant_perms``
-        parameter. Remember, deny permissions supersede grant permissions.
-
-        applies_to (str): The objects to which these permissions will apply.
-        Acceptable options are:
-
-            - this_folder_only: Applies only to this object
-            - this_folder_subfolders_files (default): Applies to this object
-              and all sub containers and objects
-            - this_folder_subfolders: Applies to this object and all sub
-              containers, no files
-            - this_folder_files: Applies to this object and all file
-              objects, no containers
-            - subfolders_files: Applies to all containers and objects
-              beneath this object
-            - subfolders_only: Applies to all containers beneath this object
-            - files_only: Applies to all file objects beneath this object
-
-        inheritance (bool): If True the object will inherit permissions from the
-        parent, if False, inheritance will be disabled. Inheritance setting will
-        not apply to parent directories if they must be created
-
-    Returns:
-        bool: True if successful, otherwise raise an error
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        # To grant the 'Users' group 'read & execute' permissions.
-        salt '*' file.makedirs_perms C:\\Temp\\ Administrators "{'Users': 'read_execute'}"
-
-        # Locally using salt call
-        salt-call file.makedirs_perms C:\\Temp\\ Administrators "{'Users': 'read_execute'}"
-
-        # Specify advanced attributes with a list
-        salt '*' file.makedirs_perms C:\\Temp\\ Administrators "{'jsnuffy': ['read_attributes', 'read_ea']}"
-    '''
-    # Expand any environment variables
-    path = os.path.expanduser(path)
-    path = os.path.expandvars(path)
-
-    # Get parent directory (head)
-    head, tail = os.path.split(path)
-
-    # If tail is empty, split head
-    if not tail:
-        head, tail = os.path.split(head)
-
-    # If head and tail are defined and head is not there, recurse
-    if head and tail and not os.path.exists(head):
-        try:
-            # Create the directory here, set inherited True because this is a
-            # parent directory, the inheritance setting will only apply to the
-            # child directory
-            makedirs_perms(head, owner, grant_perms, deny_perms, True)
-        except OSError as exc:
-            # be happy if someone already created the path
-            if exc.errno != errno.EEXIST:
-                raise
-        if tail == os.curdir:  # xxx/newdir/. exists if xxx/newdir exists
-            return {}
-
-    # Make the directory
-    mkdir(path, owner, grant_perms, deny_perms, applies_to, inheritance)
-
-    return True
-
-
-def check_perms(path,
-                ret=None,
-                owner=None,
-                grant_perms=None,
-                deny_perms=None,
-                inheritance=True):
     '''
     Set owner and permissions for each directory created.
 
@@ -1661,7 +1559,98 @@ def check_perms(path,
         salt-call file.makedirs_perms C:\\Temp\\ Administrators "{'Users': {'perms': 'read_execute', 'applies_to': 'this_folder_only'}}"
 
         # Specify advanced attributes with a list
-        salt '*' file.makedirs_perms C:\\Temp\\ Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'files_only'}}"
+        salt '*' file.makedirs_perms C:\\Temp\\ Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder_files'}}"
+    '''
+    # Expand any environment variables
+    path = os.path.expanduser(path)
+    path = os.path.expandvars(path)
+
+    # Get parent directory (head)
+    head, tail = os.path.split(path)
+
+    # If tail is empty, split head
+    if not tail:
+        head, tail = os.path.split(head)
+
+    # If head and tail are defined and head is not there, recurse
+    if head and tail and not os.path.exists(head):
+        try:
+            # Create the directory here, set inherited True because this is a
+            # parent directory, the inheritance setting will only apply to the
+            # child directory
+            makedirs_perms(head, owner, grant_perms, deny_perms, True)
+        except OSError as exc:
+            # be happy if someone already created the path
+            if exc.errno != errno.EEXIST:
+                raise
+        if tail == os.curdir:  # xxx/newdir/. exists if xxx/newdir exists
+            return {}
+
+    # Make the directory
+    mkdir(path, owner, grant_perms, deny_perms, applies_to, inheritance)
+
+    return True
+
+
+def check_perms(path,
+                ret=None,
+                owner=None,
+                grant_perms=None,
+                deny_perms=None,
+                inheritance=True):
+    '''
+    Set owner and permissions for each directory created.
+
+    Args:
+
+        path (str): The full path to the directory.
+
+        ret (dict): A dictionary to append changes to and return. If not passed,
+        will create a new dictionary to return.
+
+        owner (str): The owner of the directory. If not passed, it will be the
+        account that created the directory, likely SYSTEM
+
+        grant_perms (dict): A dictionary containing the user/group and the basic
+        permissions to grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
+        You can also set the ``applies_to`` setting here. The default is
+        ``this_folder_subfolders_files``. Specify another ``applies_to`` setting
+        like this:
+
+        .. code-block:: yaml
+
+            {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
+
+        To set advanced permissions use a list for the ``perms`` parameter, ie:
+
+        .. code-block:: yaml
+
+            {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
+
+        deny_perms (dict): A dictionary containing the user/group and
+        permissions to deny along with the ``applies_to`` setting. Use the same
+        format used for the ``grant_perms`` parameter. Remember, deny
+        permissions supersede grant permissions.
+
+        inheritance (bool): If True the object will inherit permissions from the
+        parent, if False, inheritance will be disabled. Inheritance setting will
+        not apply to parent directories if they must be created
+
+    Returns:
+        bool: True if successful, otherwise raise an error
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # To grant the 'Users' group 'read & execute' permissions.
+        salt '*' file.check_perms C:\\Temp\\ Administrators "{'Users': {'perms': 'read_execute'}}"
+
+        # Locally using salt call
+        salt-call file.check_perms C:\\Temp\\ Administrators "{'Users': {'perms': 'read_execute', 'applies_to': 'this_folder_only'}}"
+
+        # Specify advanced attributes with a list
+        salt '*' file.check_perms C:\\Temp\\ Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'files_only'}}"
     '''
     path = os.path.expanduser(path)
 
@@ -1684,7 +1673,7 @@ def check_perms(path,
             current_owner = salt.utils.win_dacl.get_owner(path)
             if owner != current_owner:
                 if __opts__['test'] is True:
-                    ret['changes']['owner'] = owner
+                    ret['pchanges']['owner'] = owner
                 else:
                     try:
                         salt.utils.win_dacl.set_owner(path, owner)
@@ -1719,7 +1708,6 @@ def check_perms(path,
                 applies_to = None
 
             if user_name not in cur_perms:
-
                 changes[user] = {'perms': deny_perms[user]['perms']}
                 if applies_to:
                     changes[user]['applies_to'] = applies_to
@@ -1730,11 +1718,6 @@ def check_perms(path,
                 if isinstance(deny_perms[user]['perms'], six.string_types):
                     if not salt.utils.win_dacl.has_permission(
                             path, user, deny_perms[user]['perms'], 'deny'):
-
-                        log.debug('*' * 68)
-                        log.debug(user_name)
-                        log.debug('*' * 68)
-
                         changes[user] = {'perms': deny_perms[user]['perms']}
                 else:
                     for perm in deny_perms[user]['perms']:
@@ -1760,7 +1743,7 @@ def check_perms(path,
             user_name = salt.utils.win_dacl.get_name(user)
 
             if __opts__['test'] is True:
-                ret['changes']['deny_perms'][user] = changes[user]
+                ret['pchanges']['deny_perms'][user] = changes[user]
             else:
                 # Get applies_to
                 applies_to = None
@@ -1954,10 +1937,55 @@ def check_perms(path,
     return ret
 
 
-def set_perms(path,
-              grant_perms=None,
-              deny_perms=None,
-              inheritance=True):
+def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True):
+    '''
+    Set permissions for the given path
+
+    Args:
+
+        path (str): The full path to the directory.
+
+        grant_perms (dict): A dictionary containing the user/group and the basic
+        permissions to grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
+        You can also set the ``applies_to`` setting here. The default is
+        ``this_folder_subfolders_files``. Specify another ``applies_to`` setting
+        like this:
+
+        .. code-block:: yaml
+
+            {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
+
+        To set advanced permissions use a list for the ``perms`` parameter, ie:
+
+        .. code-block:: yaml
+
+            {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
+
+        deny_perms (dict): A dictionary containing the user/group and
+        permissions to deny along with the ``applies_to`` setting. Use the same
+        format used for the ``grant_perms`` parameter. Remember, deny
+        permissions supersede grant permissions.
+
+        inheritance (bool): If True the object will inherit permissions from the
+        parent, if False, inheritance will be disabled. Inheritance setting will
+        not apply to parent directories if they must be created
+
+    Returns:
+        bool: True if successful, otherwise raise an error
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # To grant the 'Users' group 'read & execute' permissions.
+        salt '*' file.set_perms C:\\Temp\\ "{'Users': {'perms': 'read_execute'}}"
+
+        # Locally using salt call
+        salt-call file.set_perms C:\\Temp\\ "{'Users': {'perms': 'read_execute', 'applies_to': 'this_folder_only'}}"
+
+        # Specify advanced attributes with a list
+        salt '*' file.set_perms C:\\Temp\\ "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder_only'}}"
+    '''
     ret = {}
 
     # Get the DACL for the directory
