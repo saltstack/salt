@@ -42,6 +42,10 @@ Example ``/etc/salt/cloud.providers`` or
       client_id: ABCDEFAB-1234-ABCD-1234-ABCDEFABCDEF
       secret: XXXXXXXXXXXXXXXXXXXXXXXX
 
+      The Service Principal can be created with the new Azure CLI (https://github.com/Azure/azure-cli) with:
+      az ad sp create-for-rbac -n "http://<yourappname>" --role <role> --scopes <scope>
+      For example, this creates a service principal with 'owner' role for the whole subscription:
+      az ad sp create-for-rbac -n "http://mysaltapp" --role owner --scopes /subscriptions/3287abc8-f98a-c678-3bde-326766fd3617
 '''
 # pylint: disable=E0102
 
@@ -187,18 +191,7 @@ def get_conn(Client=None):
         'tenant',
         get_configured_provider(), __opts__, search_global=False
     )
-
-    if tenant is None:
-        username = config.get_cloud_config_value(
-            'username',
-            get_configured_provider(), __opts__, search_global=False
-        )
-        password = config.get_cloud_config_value(
-            'password',
-            get_configured_provider(), __opts__, search_global=False
-        )
-        credentials = UserPassCredentials(username, password)
-    else:
+    if tenant is not None:
         client_id = config.get_cloud_config_value(
             'client_id',
             get_configured_provider(), __opts__, search_global=False
@@ -208,6 +201,16 @@ def get_conn(Client=None):
             get_configured_provider(), __opts__, search_global=False
         )
         credentials = ServicePrincipalCredentials(client_id, secret, tenant)
+    else:
+        username = config.get_cloud_config_value(
+            'username',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        password = config.get_cloud_config_value(
+            'password',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        credentials = UserPassCredentials(username, password)
 
     client = Client(
         credentials=credentials,
