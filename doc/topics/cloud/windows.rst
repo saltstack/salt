@@ -64,6 +64,8 @@ script would open up port 445, and apply the changes:
 
     <powershell>
     New-NetFirewallRule -Name "SMB445" -DisplayName "SMB445" -Protocol TCP -LocalPort 445
+    New-NetFirewallRule -Name "SALT4505" -DisplayName "SALT4505" -Protocol TCP -LocalPort 4505
+    New-NetFirewallRule -Name "SALT4506" -DisplayName "SALT4506" -Protocol TCP -LocalPort 4506
     Set-Item (dir wsman:\localhost\Listener\*\Port -Recurse).pspath 445 -Force
     Restart-Service winrm
     </powershell>
@@ -85,6 +87,8 @@ userdata example:
     <powershell>
     New-NetFirewallRule -Name "SMB445" -DisplayName "SMB445" -Protocol TCP -LocalPort 445
     New-NetFirewallRule -Name "WINRM5986" -DisplayName "WINRM5986" -Protocol TCP -LocalPort 5986
+    New-NetFirewallRule -Name "SALT4505" -DisplayName "SALT4505" -Protocol TCP -LocalPort 4505
+    New-NetFirewallRule -Name "SALT4506" -DisplayName "SALT4506" -Protocol TCP -LocalPort 4506
 
     winrm quickconfig -q
     winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="300"}'
