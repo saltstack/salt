@@ -329,7 +329,7 @@ class Pillar(object):
             opts['grains'] = {}
         else:
             opts['grains'] = grains
-        if 'environment' not in opts:
+        if not opts.get('environment'):
             opts['environment'] = saltenv
         opts['id'] = self.minion_id
         if 'pillarenv' not in opts:

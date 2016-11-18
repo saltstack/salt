@@ -145,7 +145,8 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
     :param str exclude: The name of the feature to exclude when installing the
         named feature.
 
-        ..note:: As there is no exclude option for the ``Add-WindowsFeature``
+        .. note::
+            As there is no exclude option for the ``Add-WindowsFeature``
             command, the feature will be installed with other sub-features and
             will then be removed.
 

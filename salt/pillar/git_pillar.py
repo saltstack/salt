@@ -109,8 +109,9 @@ it:
       '*':
         - bar
 
-If ``__env__`` is specified as the branch name, then git_pillar will use the
-branch specified by :conf_master:`gitfs_base`:
+If ``__env__`` is specified as the branch name, then git_pillar will first look
+at the minion's :conf_minion:`environment` option. If unset, it will fall back
+to using branch specified by the master's :conf_master:`gitfs_base`:
 
 .. code-block:: yaml
 
@@ -132,6 +133,11 @@ The corresponding Pillar top file would look like this:
     through 2016.3.3, this feature can only be accessed using the legacy config
     described above. For 2016.3.4 and later, refer to explanation of the
     ``__env__`` parameter in the below section.
+
+    Versions 2016.3.0 through 2016.3.4 incorrectly check the *master's*
+    ``environment`` config option (instead of the minion's) before falling back
+    to :conf_master:`gitfs_base`. This has been fixed in the 2016.3.5 and
+    2016.11.1 releases (2016.11.0 contains the incorrect behavior).
 
 .. _git-pillar-2015-8-0-and-later:
 
@@ -233,14 +239,24 @@ The corresponding Pillar top file would look like this:
 .. note::
     This feature was unintentionally omitted when git_pillar was rewritten for
     the 2015.8.0 release. It was added again in the 2016.3.4 release, but it
-    has changed slightly in that release. On Salt masters running 2015.8.0
-    through 2016.3.3, this feature can only be accessed using the legacy config
-    in the previous section of this page.
-
-    For 2016.3.4 and later, the above example is accurate, and the value
-    replaced by ``__env__`` is :conf_master:`git_pillar_base`, while the legacy
-    config's version of this feature replaces ``__env__`` with
+    has changed slightly in that release. The fallback value replaced by
+    ``{{env}}`` is :conf_master: is :conf_master:`git_pillar_base`, while the
+    legacy config's version of this feature replaces ``{{env}}`` with
     :conf_master:`gitfs_base`.
+
+    On Salt masters running 2015.8.0 through 2016.3.3, this feature can only be
+    accessed using the legacy config in the previous section of this page.
+
+    The same issue which affected the behavior of the minion's
+    :conf_minion:`environment` config value using the legacy configuration
+    syntax (see the documentation in the pre-2015.8.0 section above for the
+    legacy support of this feature) also affects the new-style git_pillar
+    syntax in version 2016.3.4. This has been corrected in version 2016.3.5 and
+    2016.11.1 (2016.11.0 contains the incorrect behavior).
+
+    2016.3.4 incorrectly checks the *master's* ``environment`` config option
+    (instead of the minion's) before falling back to the master's
+    :conf_master:`git_pillar_base`.
 
 With the addition of pygit2_ support, git_pillar can now interact with
 authenticated remotes. Authentication works just like in gitfs (as outlined in

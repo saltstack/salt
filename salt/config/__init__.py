@@ -1452,7 +1452,7 @@ DEFAULT_MASTER_OPTS = {
 
 
 # ----- Salt Proxy Minion Configuration Defaults ----------------------------------->
-# Note that proxies use the same config path as regular minions.  DEFAULT_MINION_OPTS
+# Note DEFAULT_MINION_OPTS
 # is loaded first, then if we are setting up a proxy, the config is overwritten with
 # these settings.
 DEFAULT_PROXY_MINION_OPTS = {
@@ -3110,9 +3110,15 @@ def apply_minion_config(overrides=None,
         opts['id'] = _append_domain(opts)
 
     for directory in opts.get('append_minionid_config_dirs', []):
-        if directory in ['pki_dir', 'cachedir', 'extension_modules', 'pidfile']:
+        if directory in ['pki_dir', 'cachedir', 'extension_modules']:
             newdirectory = os.path.join(opts[directory], opts['id'])
             opts[directory] = newdirectory
+
+    # pidfile can be in the list of append_minionid_config_dirs, but pidfile
+    # is the actual path with the filename, not a directory.
+    if 'pidfile' in opts.get('append_minionid_config_dirs', []):
+        newpath_list = os.path.split(opts['pidfile'])
+        opts['pidfile'] = os.path.join(newpath_list[0], 'salt', opts['id'], newpath_list[1])
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')

@@ -284,7 +284,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 os.chdir(tempdir)
             if not os.path.isdir(top):
                 # top is a single file module
-                tfp.add(base, arcname=os.path.join('py{0}'.format(py_ver), base))
+                if os.path.exists(os.path.join(top_dirname, base)):
+                    tfp.add(base, arcname=os.path.join('py{0}'.format(py_ver), base))
                 continue
             for root, dirs, files in os.walk(base, followlinks=True):
                 for name in files:
