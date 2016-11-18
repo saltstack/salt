@@ -102,8 +102,10 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
 
     # Install the package
     ret['changes'] = {name: __salt__['chocolatey.install'](
-        name, version, source, force, pre_versions, install_args, override_args,
-        force_x86, package_args)}
+        name=name, version=version, source=source, force=force,
+        pre_versions=pre_versions, install_args=install_args,
+        override_args=override_args, force_x86=force_x86,
+        package_args=package_args)}
 
     if 'Running chocolatey failed' not in ret['changes']:
         ret['result'] = True
