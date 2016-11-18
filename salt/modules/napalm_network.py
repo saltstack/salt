@@ -134,7 +134,8 @@ def _config_logic(loaded_result, test=False, commit_config=True):
             loaded_result['already_configured'] = True
         _discarded = discard_config()
         if not _discarded.get('result', False):
-            loaded_result['comment'] += _discarded['out'] if _discarded['out'] else 'Unable to discard config.'
+            loaded_result['comment'] += _discarded['comment'] if _discarded.get('comment') \
+                                                              else 'Unable to discard config.'
             loaded_result['result'] = False
             # make sure it notifies
             # that something went wrong
@@ -146,20 +147,29 @@ def _config_logic(loaded_result, test=False, commit_config=True):
         return loaded_result
 
     if not test and commit_config:
+        # if not in testing mode and trying to commit
         if len(loaded_result.get('diff', '')) > 0:
             # if not testing mode
             # and also the user wants to commit (default)
             # and there are changes to commit
             _commit = commit()  # calls the function commit, defined below
             if not _commit.get('result', False):
-                loaded_result['comment'] += _commit['out'] if _commit['out'] else 'Unable to commit config.'
+                # if unable to commit
+                loaded_result['comment'] += _commit['comment'] if _commit.get('comment') else 'Unable to commit.'
                 loaded_result['result'] = False
+                # unable to commit, something went wrong
+                _discarded = discard_config()  # try to discard, thus release the config DB
+                if not _discarded.get('result', False):
+                    loaded_result['comment'] += '\n'
+                    loaded_result['comment'] += _discarded['comment'] if _discarded.get('comment') \
+                        else 'Unable to discard config.'
         else:
             # would like to commit, but there's no change
             # need to call discard_config() to release the config DB
             _discarded = discard_config()
             if not _discarded.get('result', False):
-                loaded_result['comment'] += _discarded['out'] if _discarded['out'] else 'Unable to discard config.'
+                loaded_result['comment'] += _discarded['comment'] if _discarded.get('comment') \
+                                                                  else 'Unable to discard config.'
                 loaded_result['result'] = False
                 # notify if anything goes wrong
                 return loaded_result
@@ -722,36 +732,36 @@ def mac(address='', interface='', vlan=0):
 # ----- Configuration specific functions ------------------------------------------------------------------------------>
 
 
-def load_config(filename=None, text=None, test=False, commit=True):
+def load_config(filename=None, text=None, test=False, commit=True, replace=False):
 
     '''
     Populates the candidate configuration. It can be loaded from a file or from a string. If you send both a
     filename and a string containing the configuration, the file takes precedence.
+
     If you use this method the existing configuration will be merged with the candidate configuration once
     you commit the changes.
+
     Be aware that by default this method will commit the configuration. If there are no changes, it does not commit and
-    the flag `already_configured` will be set as `True` to point this out.
+    the flag ``already_configured`` will be set as ``True`` to point this out.
 
     :param filename: Path to the file containing the desired configuration. By default is None.
     :param text: String containing the desired configuration.
-    :param test: Dry run? If set as True, will apply the config, discard and return the changes. Default: False
+    :param test: Dry run? If set as ``True``, will apply the config, discard and return the changes. Default: ``False``\
     and will commit the changes on the device.
-    :param commit: Commit? (default: True) Sometimes it is not needed to commit the config immediately
-                   after loading the changes. E.g.: a state loads a couple of parts (add / remove / update)
-                   and would not be optimal to commit after each operation.
-                   Also, from the CLI when the user needs to apply the similar changes before committing,
-                   can specify commit=False and will not discard the config.
+    :param commit: Commit? (default: ``True``) Sometimes it is not needed to commit the config immediately \
+                   after loading the changes. E.g.: a state loads a couple of parts (add / remove / update) \
+                   and would not be optimal to commit after each operation. \
+                   Also, from the CLI when the user needs to apply the similar changes before committing, \
+                   can specify ``commit=False`` and will not discard the config.
+    :param replace: Load and replace the configuration. Default: ``False``.
+    :return: a dictionary having the following keys:
 
-    :raise MergeConfigException: If there is an error on the configuration sent.
-
-    :return a dictionary having the following keys:
-
-        * result (bool): if the config was applied successfully. It is `False` only in case of failure. In case
-        there are no changes to be applied and successfully performs all operations it is still `True` and so will be
-        the `already_configured` flag (example below)
-        * comment (str): a message for the user
-        * already_configured (bool): flag to check if there were no changes applied
-        * diff (str): returns the config changes applied
+    * result (bool): if the config was applied successfully. It is ``False`` only in case of failure. In case
+    there are no changes to be applied and successfully performs all operations it is still ``True`` and so will be
+    the ``already_configured`` flag (example below)
+    * comment (str): a message for the user
+    * already_configured (bool): flag to check if there were no changes applied
+    * diff (str): returns the config changes applied
 
     CLI Example:
 
@@ -770,12 +780,16 @@ def load_config(filename=None, text=None, test=False, commit=True):
             'comment': 'Configuration discarded.',
             'already_configured': False,
             'result': True,
-            'diff': '[edit interfaces xe-0/0/5]\n+   description "Adding a description";'
+            'diff': '[edit interfaces xe-0/0/5]+   description "Adding a description";'
         }
     '''
 
+    fun = 'load_merge_candidate'
+    if replace:
+        fun = 'load_replace_candidate'
+
     _loaded = __proxy__['napalm.call'](
-        'load_merge_candidate',
+        fun,
         **{
             'filename': filename,
             'config': text
@@ -790,35 +804,37 @@ def load_template(template_name,
                   template_path=None,
                   test=False,
                   commit=True,
+                  replace=False,
                   **template_vars):
 
     '''
     Renders a configuration template (Jinja) and loads the result on the device.
-    By default will commit the changes. To force a dry run, set `test=True`.
+
+    By default will commit the changes. To force a dry run, set ``test=True``.
 
     :param template_name: Identifies the template name.
     :param template_source (optional): Inline config template to be rendered and loaded on the device.
     :param template_path (optional): Specifies the absolute path to a different directory for the configuration \
     templates. If not specified, by default will use the default templates defined in NAPALM.
-    :param test: Dry run? If set to True, will apply the config, discard and return the changes. Default: False and
-    will commit the changes on the device.
-    :param commit: Commit? (default: True) Sometimes it is not needed to commit the config immediately
-                   after loading the changes. E.g.: a state loads a couple of parts (add / remove / update)
-                   and would not be optimal to commit after each operation.
-                   Also, from the CLI when the user needs to apply the similar changes before committing,
-                   can specify commit=False and will not discard the config.
+    :param test: Dry run? If set to ``True``, will apply the config, discard and return the changes. Default: ``False``\
+    and will commit the changes on the device.
+    :param commit: Commit? (default: ``True``) Sometimes it is not needed to commit the config immediately \
+                   after loading the changes. E.g.: a state loads a couple of parts (add / remove / update) \
+                   and would not be optimal to commit after each operation. \
+                   Also, from the CLI when the user needs to apply the similar changes before committing, \
+                   can specify ``commit=False`` and will not discard the config.
+    :param replace: Load and replace the configuration.
     :param template_vars: Dictionary with the arguments to be used when the template is rendered.
+    :return: a dictionary having the following keys:
 
-    :return a dictionary having the following keys:
+    * result (bool): if the config was applied successfully. It is ``False`` only in case of failure. In case \
+    there are no changes to be applied and successfully performs all operations it is still `True` and so will be \
+    the ``already_configured`` flag (example below)
+    * comment (str): a message for the user
+    * already_configured (bool): flag to check if there were no changes applied
+    * diff (str): returns the config changes applied
 
-        * result (bool): if the config was applied successfully. It is `False` only in case of failure. In case
-        there are no changes to be applied and successfully performs all operations it is still `True` and so will be
-        the `already_configured` flag (example below)
-        * comment (str): a message for the user
-        * already_configured (bool): flag to check if there were no changes applied
-        * diff (str): returns the config changes applied
-
-    The template can use variables from the ``grains``, ``pillar`` or ``opts```, for example:
+    The template can use variables from the ``grains``, ``pillar`` or ``opts``, for example:
 
     .. code-block:: jinja
 
@@ -836,7 +852,7 @@ def load_template(template_name,
     .. code-block:: bash
 
         salt '*' net.load_template ntp_peers peers=[192.168.0.1]  # uses NAPALM default templates
-        salt '*' net.load_template set_hostname template_source='system {\n\tdomain-name {{domain_name}};}' \
+        salt '*' net.load_template set_hostname template_source='system { domain-name {{domain_name}}; }'
         domain_name='test.com'
         salt '*' net.load_template my_template template_path='/tmp/tpl/' my_param='aaa'  # will commit
         salt '*' net.load_template my_template template_path='/tmp/tpl/' my_param='aaa' test=True  # dry run
@@ -849,7 +865,7 @@ def load_template(template_name,
             'comment': '',
             'already_configured': False,
             'result': True,
-            'diff': '[edit system]\n+  host-name edge01.bjm01;''
+            'diff': '[edit system]+  host-name edge01.bjm01'
         }
     '''
 
@@ -859,6 +875,7 @@ def load_template(template_name,
             'template_name': template_name,
             'template_source': template_source,  # inline template
             'template_path': template_path,
+            'replace': replace,  # to load_replace_candidate after the template is rendered
             'pillar': __pillar__,  # inject pillar content, accessible as `pillar`
             'grains': __grains__,  # inject grains, accessible as `grains`
             'opts': __opts__  # inject opts, accessible as `opts`
