@@ -23,6 +23,8 @@ from salt.config import cloud_providers_config
 # Import Third-Party Libs
 from salt.ext.six.moves import range
 
+TIMEOUT = 500
+
 try:
     import azure  # pylint: disable=unused-import
     HAS_AZURE = True
@@ -143,11 +145,12 @@ class AzureTest(integration.ShellCase):
                     '-p {0} {1}'.format(
                         PROFILE_NAME,
                         INSTANCE_NAME
-                    )
+                    ), timeout=TIMEOUT
                 )]
             )
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
+                           timeout=TIMEOUT)
             raise
 
         # delete the instance
@@ -157,7 +160,7 @@ class AzureTest(integration.ShellCase):
                 [i.strip() for i in self.run_cloud(
                     '-d {0} --assume-yes'.format(
                         INSTANCE_NAME
-                    )
+                    ), timeout=TIMEOUT
                 )]
             )
         except AssertionError:
@@ -172,7 +175,8 @@ class AzureTest(integration.ShellCase):
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
+                           timeout=TIMEOUT)
 
 
 if __name__ == '__main__':
