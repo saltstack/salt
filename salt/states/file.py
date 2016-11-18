@@ -1258,6 +1258,10 @@ def managed(name,
             follow_symlinks=True,
             check_cmd=None,
             skip_verify=False,
+            win_owner=None,
+            win_perms=None,
+            win_deny_perms=None,
+            win_inheritance=True,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -1669,6 +1673,14 @@ def managed(name,
         argument will be ignored.
 
         .. versionadded:: 2016.3.0
+
+    win_owner : None
+
+    win_perms : None
+
+    win_deny_perms : None
+
+    win_inheritance : True
     '''
     if 'env' in kwargs:
         salt.utils.warn_until(
@@ -1838,15 +1850,23 @@ def managed(name,
                 return ret
 
     if not name:
-        return _error(ret, 'Must provide name to file.exists')
+        return _error(ret, 'Must provide name to file.managed')
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
+
+        # If win_owner not passed, use user
+        if win_owner is None:
+            win_owner = user if user else None
+
+        # Group isn't relevant to Windows, use win_perms/win_deny_perms
         if group is not None:
             log.warning(
-                'The group argument for {0} has been ignored as this '
-                'is a Windows system.'.format(name)
+                'The group argument for {0} has been ignored as this is '
+                'a Windows system. Please use the `win_*` parameters to set '
+                'permissions in Windows.'.format(name)
             )
         group = user
+
     if not create:
         if not os.path.isfile(name):
             # Don't create a file that is not already present
@@ -1877,8 +1897,13 @@ def managed(name,
 
     if not replace and os.path.exists(name):
         # Check and set the permissions if necessary
-        ret, _ = __salt__['file.check_perms'](name, ret, user, group, mode,
-                                              follow_symlinks)
+        if salt.utils.is_windows():
+            ret = __salt__['file.check_perms'](
+                name, ret, win_owner, win_perms, win_deny_perms,
+                win_inheritance)
+        else:
+            ret, _ = __salt__['file.check_perms'](
+                name, ret, user, group, mode, follow_symlinks)
         if __opts__['test']:
             ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
@@ -1912,6 +1937,12 @@ def managed(name,
                     keep_mode,
                     **kwargs
                 )
+
+                if salt.utils.is_windows():
+                    ret = __salt__['file.check_perms'](
+                        name, ret, win_owner, win_perms, win_deny_perms,
+                        win_inheritance)
+
             if isinstance(ret['pchanges'], tuple):
                 ret['result'], ret['comment'] = ret['pchanges']
             elif ret['pchanges']:
@@ -1997,6 +2028,10 @@ def managed(name,
                 follow_symlinks,
                 skip_verify,
                 keep_mode,
+                win_owner,
+                win_perms,
+                win_deny_perms,
+                win_inheritance,
                 **kwargs)
         except Exception as exc:
             ret['changes'] = {}
@@ -2056,6 +2091,10 @@ def managed(name,
                 follow_symlinks,
                 skip_verify,
                 keep_mode,
+                win_owner,
+                win_perms,
+                win_deny_perms,
+                win_inheritance,
                 **kwargs)
         except Exception as exc:
             ret['changes'] = {}
