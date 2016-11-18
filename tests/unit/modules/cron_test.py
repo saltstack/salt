@@ -39,6 +39,7 @@ CRONTAB = StringIO()
 cron.__salt__ = {}
 cron.__grains__ = {}
 
+
 def get_crontab(*args, **kw):
     return CRONTAB.getvalue()
 
@@ -836,6 +837,7 @@ class CronTestCase(TestCase):
                                                                runas=STUB_USER,
                                                                rstrip=False,
                                                                python_shell=False)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PsTestCase(TestCase):
