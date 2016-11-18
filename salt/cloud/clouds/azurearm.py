@@ -46,6 +46,7 @@ Example ``/etc/salt/cloud.providers`` or
       az ad sp create-for-rbac -n "http://<yourappname>" --role <role> --scopes <scope>
       For example, this creates a service principal with 'owner' role for the whole subscription:
       az ad sp create-for-rbac -n "http://mysaltapp" --role owner --scopes /subscriptions/3287abc8-f98a-c678-3bde-326766fd3617
+      *Note: review the details of Service Principals. Owner role is more than you normally need, and you can restrict scope to a resource group or individual resources.
 '''
 # pylint: disable=E0102
 
