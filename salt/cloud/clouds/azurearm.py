@@ -201,7 +201,7 @@ def get_conn(Client=None):
             'secret',
             get_configured_provider(), __opts__, search_global=False
         )
-        credentials = ServicePrincipalCredentials(client_id, secret, tenant)
+        credentials = ServicePrincipalCredentials(client_id, secret, tenant=tenant)
     else:
         username = config.get_cloud_config_value(
             'username',
