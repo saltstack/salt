@@ -41,7 +41,7 @@ def __virtual__():
     commands = ('tar', 'gzip', 'gunzip', 'zip', 'unzip', 'rar', 'unrar')
     # If none of the above commands are in $PATH this module is a no-go
     if not any(salt.utils.which(cmd) for cmd in commands):
-        return (False, 'Unable to find commands tar,gzip,gunzip,zip,unzip,rar,unrar')
+        return (False, 'Unable to find commands {0}'.format(','.join(commands)))
     return True
 
 
@@ -121,6 +121,9 @@ def list_(name,
             salt '*' archive.list ftp://10.1.2.3/foo.rar
     '''
     def _list_tar(name, cached, decompress_cmd):
+        '''
+        List the contents of a tar archive.
+        '''
         try:
             with contextlib.closing(tarfile.open(cached)) as tar_archive:
                 return [
@@ -169,6 +172,9 @@ def list_(name,
         )
 
     def _list_zip(name, cached):
+        '''
+        List the contents of a zip archive.
+        '''
         # Password-protected ZIP archives can still be listed by zipfile, so
         # there is no reason to invoke the unzip command.
         try:
@@ -178,6 +184,9 @@ def list_(name,
             raise CommandExecutionError('{0} is not a ZIP file'.format(name))
 
     def _list_rar(name, cached):
+        '''
+        List the contents of a rar archive.
+        '''
         output = __salt__['cmd.run'](
             ['rar', 'lt', path],
             python_shell=False,
@@ -200,6 +209,9 @@ def list_(name,
         path = parsed.path or parsed.netloc
 
         def _unsupported_format(archive_format):
+            '''
+            Raise the proper exception message for the given archive format.
+            '''
             if archive_format is None:
                 raise CommandExecutionError(
                     'Unable to guess archive format, please pass an '
@@ -578,13 +590,12 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
                     'Relative paths require the \'cwd\' parameter'
                 )
     else:
-        def _bad_cwd():
-            raise SaltInvocationError('cwd must be absolute')
+        err_msg = 'cwd must be absolute'
         try:
             if not os.path.isabs(cwd):
-                _bad_cwd()
+                raise SaltInvocationError(err_msg)
         except AttributeError:
-            _bad_cwd()
+            raise SaltInvocationError(err_msg)
 
     if runas and (euid != uinfo['uid'] or egid != uinfo['gid']):
         # Change the egid first, as changing it after the euid will fail
@@ -1050,9 +1061,9 @@ def unrar(rarfile, dest, excludes=None, template=None, runas=None, trim_output=F
             cmd.extend(['-x', '{0}'.format(exclude)])
     cmd.append('{0}'.format(dest))
     files = __salt__['cmd.run'](cmd,
-                               template=template,
-                               runas=runas,
-                               python_shell=False).splitlines()
+                                template=template,
+                                runas=runas,
+                                python_shell=False).splitlines()
 
     return _trim_files(files, trim_output)
 
@@ -1111,7 +1122,9 @@ def _render_filenames(filenames, zip_file, saltenv, template):
 
 
 def _trim_files(files, trim_output):
-    # Trim the file list for output
+    '''
+    Trim the file list for output.
+    '''
     count = 100
     if not isinstance(trim_output, bool):
         count = trim_output
