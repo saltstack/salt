@@ -1414,7 +1414,7 @@ def running(name,
 
             This option requires Docker 1.2.0 or newer.
     privileged
-        Give extended privileges to this container:
+        Give extended privileges to container.
 
         .. code-block:: yaml
             foo:
