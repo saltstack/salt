@@ -4746,7 +4746,15 @@ def manage_file(name,
             ret['changes']['diff'] = \
                 'Replace symbolic link with regular file'
 
-        ret, _ = check_perms(name, ret, user, group, mode, follow_symlinks)
+        if salt.utils.is_windows():
+            ret = check_perms(name,
+                              ret,
+                              kwargs.get('win_owner'),
+                              kwargs.get('win_perms'),
+                              kwargs.get('win_deny_perms'),
+                              kwargs.get('win_inheritance'))
+        else:
+            ret, _ = check_perms(name, ret, user, group, mode, follow_symlinks)
 
         if ret['changes']:
             ret['comment'] = 'File {0} updated'.format(name)

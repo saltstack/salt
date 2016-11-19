@@ -129,20 +129,24 @@ should match what you see when you look at the properties for an object.
 '''
 # Import Python libs
 from __future__ import absolute_import
+import logging
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six.moves import range
 import salt.ext.six as six
 
-
 # Import 3rd-party libs
 try:
     import win32security
+    import win32con
+    import win32api
     import pywintypes
     import salt.utils.win_functions
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 
 class Flags(object):
@@ -1139,6 +1143,25 @@ def set_owner(obj_name, principal, obj_type='file'):
 
     flags = Flags()
 
+    # To set the owner to something other than the logged in user requires
+    # SE_TAKE_OWNERSHIP_NAME and SE_RESTORE_NAME privileges
+    # Enable them for the logged in user
+    # Setup the privilege set
+    new_privs = set()
+    luid = win32security.LookupPrivilegeValue('', 'SeTakeOwnershipPrivilege')
+    new_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+    luid = win32security.LookupPrivilegeValue('', 'SeRestorePrivilege')
+    new_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+
+    # Get the current token
+    p_handle = win32api.GetCurrentProcess()
+    t_handle = win32security.OpenProcessToken(
+        p_handle,
+        win32security.TOKEN_ALL_ACCESS | win32con.TOKEN_ADJUST_PRIVILEGES)
+
+    # Enable the privileges
+    win32security.AdjustTokenPrivileges(t_handle, 0, new_privs)
+
     # Set the user
     try:
         win32security.SetNamedSecurityInfo(
@@ -1148,6 +1171,7 @@ def set_owner(obj_name, principal, obj_type='file'):
             sid,
             None, None, None)
     except pywintypes.error as exc:
+        log.debug('Failed to make {0} the owner: {1}'.format(principal, exc[2]))
         raise CommandExecutionError(
             'Failed to set owner: {0}'.format(exc[2]))
 
