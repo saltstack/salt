@@ -803,8 +803,8 @@
 # PID file of the syndic daemon:
 #syndic_pidfile: /var/run/salt-syndic.pid
 
-# LOG file of the syndic daemon:
-#syndic_log_file: syndic.log
+# The log file of the salt-syndic daemon:
+#syndic_log_file: /var/log/salt/syndic
 
 # The behaviour of the multi-syndic when connection to a master of masters failed.
 # Can specify ``random`` (default) or ``ordered``. If set to ``random``, masters
