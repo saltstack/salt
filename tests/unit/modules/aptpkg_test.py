@@ -92,6 +92,17 @@ LOWPKG_INFO = {
     }
 }
 
+APT_Q_UPDATE = '''
+Get:1 http://security.ubuntu.com trusty-security InRelease [65 kB]
+Get:2 http://security.ubuntu.com trusty-security/main Sources [120 kB]
+Get:3 http://security.ubuntu.com trusty-security/main amd64 Packages [548 kB]
+Get:4 http://security.ubuntu.com trusty-security/main i386 Packages [507 kB]
+Hit http://security.ubuntu.com trusty-security/main Translation-en
+Fetched 1240 kB in 10s (124 kB/s)
+Reading package lists...
+'''
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class AptPkgTestCase(TestCase):
     '''
@@ -211,6 +222,24 @@ class AptPkgTestCase(TestCase):
         mock = MagicMock(return_value='wget: /usr/bin/wget')
         with patch.dict(aptpkg.__salt__, {'cmd.run_stdout': mock}):
             self.assertEqual(aptpkg.owner(*paths), 'wget')
+
+    def test_refresh_db(self):
+        '''
+        Test - Updates the APT database to latest packages based upon repositories.
+        '''
+        refresh_db = {
+            'http://security.ubuntu.com trusty-security InRelease': True,
+            'http://security.ubuntu.com trusty-security/main Sources': True,
+            'http://security.ubuntu.com trusty-security/main Translation-en': None,
+            'http://security.ubuntu.com trusty-security/main amd64 Packages': True,
+            'http://security.ubuntu.com trusty-security/main i386 Packages': True
+        }
+        mock = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': APT_Q_UPDATE
+        })
+        with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
+            self.assertEqual(aptpkg.refresh_db(), refresh_db)
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error
