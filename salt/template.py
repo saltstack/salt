@@ -88,7 +88,7 @@ def compile_template(template,
             try:
                 input_data.seek(0)
             except Exception as exp:
-                log.error('error: {0}'.format(exp))
+                log.error('error while compiling template={1}: {0}'.format(exp,template))
 
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
