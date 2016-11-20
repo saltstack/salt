@@ -706,6 +706,21 @@ Pass in an alternative location for the salt-ssh roster file.
 
     roster_file: /root/roster
 
+.. conf_master:: ssh_log_file
+
+``ssh_log_file``
+-------------------
+
+.. versionadded:: 2016.3.5
+
+Default: ``/var/log/salt/ssh``
+
+Specify the log file of the ``salt-ssh`` command.
+
+.. code-block:: yaml
+
+    ssh_log_file: /var/log/salt/ssh
+
 .. conf_master:: ssh_minion_opts
 
 ``ssh_minion_opts``

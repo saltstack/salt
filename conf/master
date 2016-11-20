@@ -369,6 +369,9 @@
 # Pass in an alternative location for the salt-ssh roster file
 #roster_file: /etc/salt/roster
 
+# The log file of the salt-ssh command:
+#ssh_log_file: /var/log/salt/ssh
+
 # Pass in minion option overrides that will be inserted into the SHIM for
 # salt-ssh calls. The local minion config is not used for salt-ssh. Can be
 # overridden on a per-minion basis in the roster (`minion_opts`)

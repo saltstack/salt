@@ -771,6 +771,7 @@ VALID_OPTS = {
     # The length that the syndic event queue must hit before events are popped off and forwarded
     'syndic_jid_forward_cache_hwm': int,
 
+    # Salt SSH configuration
     'ssh_passwd': str,
     'ssh_port': str,
     'ssh_sudo': bool,
@@ -780,6 +781,7 @@ VALID_OPTS = {
     'ssh_scan_ports': str,
     'ssh_scan_timeout': float,
     'ssh_identities_only': bool,
+    'ssh_log_file': str,
 
     # Enable ioflo verbose logging. Warning! Very verbose!
     'ioflo_verbose': int,
@@ -1311,6 +1313,7 @@ DEFAULT_MASTER_OPTS = {
     'ssh_scan_ports': '22',
     'ssh_scan_timeout': 0.01,
     'ssh_identities_only': False,
+    'ssh_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'ssh'),
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
     'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
     'maintenance_floscript': os.path.join(FLO_DIR, 'maint.flo'),

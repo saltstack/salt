@@ -2600,14 +2600,15 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
                                              SaltfileMixIn,
                                              HardCrashMixin)):
 
-    usage = '%prog [options]'
+    usage = '%prog [options] \'<target>\' <function> [arguments]'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
 
     # LogLevelMixIn attributes
+    _logfile_config_setting_name_ = 'ssh_log_file'
     _default_logging_level_ = config.DEFAULT_MASTER_OPTS['log_level']
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'ssh')
+    _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS[_logfile_config_setting_name_]
 
     def _mixin_setup(self):
         self.add_option(
