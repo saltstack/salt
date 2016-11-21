@@ -1381,7 +1381,8 @@ def mkdir(path,
         salt '*' file.mkdir C:\\Temp\\ Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder_only'}}"
     '''
     # Make sure the drive is valid
-    if not os.path.isdir(os.path.splitdrive(path)[0]):
+    drive = os.path.splitdrive(path)[0]
+    if not os.path.isdir(drive):
         raise CommandExecutionError('Drive {0} is not mapped'.format(drive))
 
     path = os.path.expanduser(path)
@@ -1587,7 +1588,7 @@ def makedirs_perms(path,
             return {}
 
     # Make the directory
-    mkdir(path, owner, grant_perms, deny_perms, applies_to, inheritance)
+    mkdir(path, owner, grant_perms, deny_perms, inheritance)
 
     return True
 
@@ -1666,22 +1667,19 @@ def check_perms(path,
 
     # Check owner
     if owner:
-        if is_link(path) and not follow_symlinks:
-            pass
-        else:
-            owner = salt.utils.win_dacl.get_name(owner)
-            current_owner = salt.utils.win_dacl.get_owner(path)
-            if owner != current_owner:
-                if __opts__['test'] is True:
-                    ret['pchanges']['owner'] = owner
-                else:
-                    try:
-                        salt.utils.win_dacl.set_owner(path, owner)
-                        ret['changes']['owner'] = owner
-                    except CommandExecutionError:
-                        ret['result'] = False
-                        ret['comment'].append(
-                            'Failed to change owner to "{0}"'.format(owner))
+        owner = salt.utils.win_dacl.get_name(owner)
+        current_owner = salt.utils.win_dacl.get_owner(path)
+        if owner != current_owner:
+            if __opts__['test'] is True:
+                ret['pchanges']['owner'] = owner
+            else:
+                try:
+                    salt.utils.win_dacl.set_owner(path, owner)
+                    ret['changes']['owner'] = owner
+                except CommandExecutionError:
+                    ret['result'] = False
+                    ret['comment'].append(
+                        'Failed to change owner to "{0}"'.format(owner))
 
     # Check permissions
     cur_perms = salt.utils.win_dacl.get_permissions(path)
@@ -1796,7 +1794,7 @@ def check_perms(path,
                     ret['result'] = False
                     ret['comment'].append(
                         'Failed to deny permissions for "{0}" to '
-                        '{0}'.format(user, changes[user]))
+                        '{1}'.format(user, changes[user]))
 
     # Verify Grant Permissions
     changes = {}
@@ -1918,7 +1916,7 @@ def check_perms(path,
                     ret['result'] = False
                     ret['comment'].append(
                         'Failed to set inheritance for "{0}" to '
-                        '{0}'.format(path, inheritance))
+                        '{1}'.format(path, inheritance))
 
     # Re-add the Original Comment if defined
     if isinstance(orig_comment, six.string_types):

@@ -4788,9 +4788,14 @@ def manage_file(name,
 
             if salt.utils.is_windows():
                 # This function resides in win_file.py and will be available
-                # on Windows
-                makedirs_(name, win_owner, win_perms, win_deny_perms,
-                          win_inheritance)
+                # on Windows. The local function will be overridden
+                # pylint: disable=E1121
+                makedirs_(name,
+                          kwargs.get('win_owner'),
+                          kwargs.get('win_perms'),
+                          kwargs.get('win_deny_perms'),
+                          kwargs.get('win_inheritance'))
+                # pylint: enable=E1121
             else:
                 makedirs_(name, user=user, group=group, mode=dir_mode)
 

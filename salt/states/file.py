@@ -1263,7 +1263,7 @@ def managed(name,
             win_deny_perms=None,
             win_inheritance=True,
             **kwargs):
-    '''
+    r'''
     Manage a given file, this function allows for a file to be downloaded from
     the salt master and potentially run through a templating system.
 
@@ -2209,7 +2209,7 @@ def directory(name,
               win_deny_perms=None,
               win_inheritance=True,
               **kwargs):
-    '''
+    r'''
     Ensure that a named directory is present and has the right perms
 
     name
@@ -2507,8 +2507,7 @@ def directory(name,
                         return _error(
                             ret, 'Drive {0} is not mapped'.format(drive))
                     __salt__['file.makedirs'](name, win_owner, win_perms,
-                                              win_deny_perms, win_applies_to,
-                                              win_inheritance)
+                                              win_deny_perms, win_inheritance)
                 else:
                     __salt__['file.makedirs'](name, user=user, group=group,
                                               mode=dir_mode)
@@ -2604,7 +2603,7 @@ def directory(name,
                         if salt.utils.is_windows():
                             ret = __salt__['file.check_perms'](
                                 full, ret, win_owner, win_perms, win_deny_perms,
-                                win_applies_to, win_inheritance, follow_symlinks)
+                                win_inheritance)
                         else:
                             ret, _ = __salt__['file.check_perms'](
                                 full, ret, user, group, file_mode, follow_symlinks)
@@ -2619,7 +2618,7 @@ def directory(name,
                         if salt.utils.is_windows():
                             ret = __salt__['file.check_perms'](
                                 full, ret, win_owner, win_perms, win_deny_perms,
-                                win_applies_to, win_inheritance, follow_symlinks)
+                                win_inheritance)
                         else:
                             ret, _ = __salt__['file.check_perms'](
                                 full, ret, user, group, dir_mode, follow_symlinks)
