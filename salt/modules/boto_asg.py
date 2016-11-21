@@ -40,6 +40,7 @@ Connection module for Amazon Autoscale Groups
             region: us-east-1
 
 :depends: boto
+:depends: boto3
 '''
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
@@ -65,11 +66,17 @@ try:
     import boto.ec2.blockdevicemapping as blockdevicemapping
     import boto.ec2.autoscale as autoscale
     logging.getLogger('boto').setLevel(logging.CRITICAL)
+    import boto3  # pylint: disable=unused-import
+    from botocore.exceptions import ClientError
+    logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
+
 # Import Salt libs
+import salt.utils.boto3
+import salt.utils.compat
 import salt.utils.odict as odict
 
 
@@ -84,6 +91,14 @@ def __virtual__():
     setattr(sys.modules[__name__], '_get_ec2_conn',
             __utils__['boto.get_connection_func']('ec2'))
     return True
+
+
+def __init__(opts):
+    salt.utils.compat.pack_dunder(__name__)
+    if HAS_BOTO:
+        __utils__['boto3.assign_funcs'](
+            __name__, 'autoscaling',
+            get_conn_funcname='_get_conn_autoscaling_boto3')
 
 
 def exists(name, region=None, key=None, keyid=None, profile=None):
@@ -383,7 +398,7 @@ def _create_scheduled_actions(conn, as_name, scheduled_actions):
     Helper function to create scheduled actions
     '''
     if scheduled_actions:
-        for name, action in scheduled_actions.iteritems():
+        for name, action in six.iteritems(scheduled_actions):
             if 'start_time' in action and isinstance(action['start_time'], six.string_types):
                 action['start_time'] = datetime.datetime.strptime(
                     action['start_time'], DATE_FORMAT
@@ -484,7 +499,61 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
         return False
 
 
+def get_all_launch_configurations(region=None, key=None, keyid=None,
+                                  profile=None):
+    '''
+    Fetch and return all Launch Configuration with details.
+
+    CLI example::
+
+        salt myminion boto_asg.get_all_launch_configurations
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        return conn.get_all_launch_configurations()
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return []
+
+
+def list_launch_configurations(region=None, key=None, keyid=None,
+                                profile=None):
+    '''
+    List all Launch Configurations.
+
+    CLI example::
+
+        salt myminion boto_asg.list_launch_configurations
+    '''
+    ret = get_all_launch_configurations(region, key, keyid, profile)
+    return [r.name for r in ret]
+
+
+def describe_launch_configuration(name, region=None, key=None, keyid=None,
+                                  profile=None):
+    '''
+    Dump details of a given launch configuration.
+
+    CLI example::
+
+        salt myminion boto_asg.describe_launch_configuration mylc
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        lc = conn.get_all_launch_configurations(names=[name])
+        if lc:
+            return lc[0]
+        else:
+            msg = 'The launch configuration does not exist in region {0}'.format(region)
+            log.debug(msg)
+            return None
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return None
+
+
 def create_launch_configuration(name, image_id, key_name=None,
+                                vpc_id=None, vpc_name=None,
                                 security_groups=None, user_data=None,
                                 instance_type='m1.small', kernel_id=None,
                                 ramdisk_id=None, block_device_mappings=None,
@@ -519,6 +588,17 @@ def create_launch_configuration(name, image_id, key_name=None,
                     setattr(_block_device, attribute, value)
                 _block_device_map[block_device] = _block_device
         _bdms = [_block_device_map]
+
+    # If a VPC is specified, then determine the secgroup id's within that VPC, not
+    # within the default VPC. If a security group id is already part of the list,
+    # convert_to_group_ids leaves that entry without attempting a lookup on it.
+    if security_groups and (vpc_id or vpc_name):
+        security_groups = __salt__['boto_secgroup.convert_to_group_ids'](
+                               security_groups,
+                               vpc_id=vpc_id, vpc_name=vpc_name,
+                               region=region, key=key, keyid=keyid,
+                               profile=profile
+                           )
     lc = autoscale.LaunchConfiguration(
         name=name, image_id=image_id, key_name=key_name,
         security_groups=security_groups, user_data=user_data,
@@ -582,6 +662,51 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
     return None
 
 
+def get_all_groups(region=None, key=None, keyid=None, profile=None):
+    '''
+    Return all AutoScale Groups visible in the account
+    (as a list of boto.ec2.autoscale.group.AutoScalingGroup).
+
+    .. versionadded:: 2016.11.0
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt-call boto_asg.get_all_groups region=us-east-1 --output yaml
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        next_token = ''
+        asgs = []
+        while next_token is not None:
+            ret = conn.get_all_groups(next_token=next_token)
+            asgs += [a for a in ret]
+            next_token = ret.next_token
+        return asgs
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return []
+
+
+def list_groups(region=None, key=None, keyid=None, profile=None):
+    '''
+    Return all AutoScale Groups visible in the account
+    (as a list of names).
+
+    .. versionadded:: 2016.11.0
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt-call boto_asg.list_groups region=us-east-1
+
+    '''
+    return [a.name for a in get_all_groups(region=region, key=key, keyid=keyid, profile=profile)]
+
+
 def get_instances(name, lifecycle_state="InService", health_status="Healthy",
                   attribute="private_ip_address", attributes=None, region=None,
                   key=None, keyid=None, profile=None):
@@ -620,3 +745,56 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy",
         # properly handle case when not all instances have the requested attribute
         return [getattr(instance, attribute).encode("ascii") for instance in instances if getattr(instance, attribute)]
     return [getattr(instance, attribute).encode("ascii") for instance in instances]
+
+
+def enter_standby(name, instance_ids, should_decrement_desired_capacity=False,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Switch desired instances to StandBy mode
+
+    .. versionadded:: 2016.11.0
+
+    CLI example::
+
+        salt-call boto_asg.enter_standby my_autoscale_group_name '["i-xxxxxx"]'
+
+    '''
+    conn = _get_conn_autoscaling_boto3(
+        region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        response = conn.enter_standby(
+            InstanceIds=instance_ids,
+            AutoScalingGroupName=name,
+            ShouldDecrementDesiredCapacity=should_decrement_desired_capacity)
+    except ClientError as e:
+        err = salt.utils.boto3.get_error(e)
+        if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
+            return {'exists': False}
+        return {'error': err}
+    return all(activity['StatusCode'] != 'Failed' for activity in response['Activities'])
+
+
+def exit_standby(name, instance_ids, should_decrement_desired_capacity=False,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Exit desired instances from StandBy mode
+
+    .. versionadded:: 2016.11.0
+
+    CLI example::
+
+        salt-call boto_asg.exit_standby my_autoscale_group_name '["i-xxxxxx"]'
+
+    '''
+    conn = _get_conn_autoscaling_boto3(
+        region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        response = conn.exit_standby(
+            InstanceIds=instance_ids,
+            AutoScalingGroupName=name)
+    except ClientError as e:
+        err = salt.utils.boto3.get_error(e)
+        if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
+            return {'exists': False}
+        return {'error': err}
+    return all(activity['StatusCode'] != 'Failed' for activity in response['Activities'])

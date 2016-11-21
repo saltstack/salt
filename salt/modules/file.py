@@ -11,7 +11,6 @@ group, mode, and data
 from __future__ import absolute_import, print_function
 
 # Import python libs
-import contextlib  # For < 2.7 compat
 import datetime
 import difflib
 import errno
@@ -70,6 +69,7 @@ HASHES = {
     'sha1': 40,
     'md5': 32,
 }
+HASHES_REVMAP = dict([(y, x) for x, y in six.iteritems(HASHES)])
 
 
 def __virtual__():
@@ -537,6 +537,149 @@ def get_hash(path, form='sha256', chunk_size=65536):
         salt '*' file.get_hash /etc/shadow
     '''
     return salt.utils.get_hash(os.path.expanduser(path), form, chunk_size)
+
+
+def get_source_sum(file_name='',
+                   source='',
+                   source_hash=None,
+                   source_hash_name=None,
+                   saltenv='base'):
+    '''
+    .. versionadded:: 2016.11.0
+
+    Used by :py:func:`file.get_managed <salt.modules.file.get_managed>` to
+    obtain the hash and hash type from the parameters specified below.
+
+    file_name
+        Optional file name being managed, for matching with
+        :py:func:`file.extract_hash <salt.modules.file.extract_hash>`.
+
+        .. versionadded:: 2016.11.0
+
+    source
+        Source file, as used in :py:mod:`file <salt.states.file>` and other
+        states. If ``source_hash`` refers to a file containing hashes, then
+        this filename will be used to match a filename in that file. If the
+        ``source_hash`` is a hash expression, then this argument will be
+        ignored.
+
+    source_hash
+        Hash file/expression, as used in :py:mod:`file <salt.states.file>` and
+        other states. If this value refers to a remote URL or absolute path to
+        a local file, it will be cached and :py:func:`file.extract_hash
+        <salt.modules.file.extract_hash>` will be used to obtain a hash from
+        it.
+
+    source_hash_name
+        Specific file name to look for when ``source_hash`` refers to a remote
+        file, used to disambiguate ambiguous matches.
+
+        .. versionadded:: 2016.11.0
+
+    saltenv : base
+        Salt fileserver environment from which to retrive the source_hash. This
+        value will only be used when ``source_hash`` refers to a file on the
+        Salt fileserver (i.e. one beginning with ``salt://``).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.get_source_sum /tmp/foo.tar.gz source=http://mydomain.tld/foo.tar.gz source_hash=499ae16dcae71eeb7c3a30c75ea7a1a6
+        salt '*' file.get_source_sum /tmp/foo.tar.gz source=http://mydomain.tld/foo.tar.gz source_hash=https://mydomain.tld/hashes.md5
+        salt '*' file.get_source_sum /tmp/foo.tar.gz source=http://mydomain.tld/foo.tar.gz source_hash=https://mydomain.tld/hashes.md5 source_hash_name=./dir2/foo.tar.gz
+    '''
+    def _invalid_source_hash_format():
+        '''
+        DRY helper for reporting invalid source_hash input
+        '''
+        raise CommandExecutionError(
+            'Source hash {0} format is invalid. The supported formats are: '
+            '1) a hash, 2) an expression in the format <hash_type>=<hash>, or '
+            '3) either a path to a local file containing hashes, or a URI of '
+            'a remote hash file. Supported protocols for remote hash files '
+            'are: {1}. The hash may also not be of a valid length, the '
+            'following are supported hash types and lengths: {2}.'.format(
+                source_hash,
+                ', '.join(salt.utils.files.VALID_PROTOS),
+                ', '.join(
+                    ['{0} ({1})'.format(HASHES_REVMAP[x], x)
+                     for x in sorted(HASHES_REVMAP)]
+                ),
+            )
+        )
+
+    hash_fn = None
+    if os.path.isabs(source_hash):
+        hash_fn = source_hash
+    else:
+        try:
+            proto = _urlparse(source_hash).scheme
+            if proto in salt.utils.files.VALID_PROTOS:
+                hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
+                if not hash_fn:
+                    raise CommandExecutionError(
+                        'Source hash file {0} not found'.format(source_hash)
+                    )
+            else:
+                if proto != '':
+                    # Some unsupported protocol (e.g. foo://) is being used.
+                    # We'll get into this else block if a hash expression
+                    # (like md5=<md5 checksum here>), but in those cases, the
+                    # protocol will be an empty string, in which case we avoid
+                    # this error condition.
+                    _invalid_source_hash_format()
+        except (AttributeError, TypeError):
+            _invalid_source_hash_format()
+
+    if hash_fn is not None:
+        ret = extract_hash(hash_fn, '', file_name, source, source_hash_name)
+        if ret is None:
+            _invalid_source_hash_format()
+        return ret
+    else:
+        # The source_hash is a hash expression
+        ret = {}
+        try:
+            ret['hash_type'], ret['hsum'] = \
+                [x.strip() for x in source_hash.split('=', 1)]
+        except AttributeError:
+            _invalid_source_hash_format()
+        except ValueError:
+            # No hash type, try to figure out by hash length
+            if not re.match('^[{0}]+$'.format(string.hexdigits), source_hash):
+                _invalid_source_hash_format()
+            ret['hsum'] = source_hash
+            source_hash_len = len(source_hash)
+            if source_hash_len in HASHES_REVMAP:
+                ret['hash_type'] = HASHES_REVMAP[source_hash_len]
+            else:
+                _invalid_source_hash_format()
+
+        if ret['hash_type'] not in HASHES:
+            raise CommandExecutionError(
+                'Invalid hash type \'{0}\'. Supported hash types are: {1}. '
+                'Either remove the hash type and simply use \'{2}\' as the '
+                'source_hash, or change the hash type to a supported type.'
+                .format(ret['hash_type'], ', '.join(HASHES), ret['hsum'])
+            )
+        else:
+            hsum_len = len(ret['hsum'])
+            if hsum_len not in HASHES_REVMAP:
+                _invalid_source_hash_format()
+            elif hsum_len != HASHES[ret['hash_type']]:
+                raise CommandExecutionError(
+                    'Invalid length ({0}) for hash type \'{1}\'. Either '
+                    'remove the hash type and simply use \'{2}\' as the '
+                    'source_hash, or change the hash type to \'{3}\''.format(
+                        hsum_len,
+                        ret['hash_type'],
+                        ret['hsum'],
+                        HASHES_REVMAP[hsum_len],
+                    )
+                )
+
+        return ret
 
 
 def check_hash(path, file_hash):
@@ -1152,7 +1295,7 @@ def comment_line(path,
     if not salt.utils.is_windows():
         pre_user = get_user(path)
         pre_group = get_group(path)
-        pre_mode = __salt__['config.manage_mode'](get_mode(path))
+        pre_mode = salt.utils.normalize_mode(get_mode(path))
 
     # Create a copy to read from and to use as a backup later
     try:
@@ -1285,7 +1428,7 @@ def _mkstemp_copy(path,
     temp_file = None
     # Create the temp file
     try:
-        temp_file = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
+        temp_file = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
             "Unable to create temp file. "
@@ -1406,7 +1549,7 @@ def _get_line_indent(src, line, indent):
     return ''.join(idt) + line.strip()
 
 
-def line(path, content, match=None, mode=None, location=None,
+def line(path, content=None, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
          quiet=False, indent=True):
     '''
@@ -1420,7 +1563,7 @@ def line(path, content, match=None, mode=None, location=None,
         Filesystem path to the file to be edited.
 
     content
-        Content of the line.
+        Content of the line. Allowed to be empty if mode=delete.
 
     match
         Match the target line for an action by
@@ -1521,6 +1664,13 @@ def line(path, content, match=None, mode=None, location=None,
             raise CommandExecutionError('Mode was not defined. How to process the file?')
         else:
             raise CommandExecutionError('Unknown mode: "{0}"'.format(mode))
+
+    # We've set the content to be empty in the function params but we want to make sure
+    # it gets passed when needed. Feature #37092
+    modeswithemptycontent = ['delete']
+    if mode not in modeswithemptycontent and content is None:
+        raise CommandExecutionError('Content can only be empty if mode is {0}'.format(modeswithemptycontent))
+    del modeswithemptycontent
 
     # Before/after has privilege. If nothing defined, match is used by content.
     if before is None and after is None and not match:
@@ -1861,7 +2011,7 @@ def replace(path,
     if not salt.utils.is_windows():
         pre_user = get_user(path)
         pre_group = get_group(path)
-        pre_mode = __salt__['config.manage_mode'](get_mode(path))
+        pre_mode = salt.utils.normalize_mode(get_mode(path))
 
     # Avoid TypeErrors by forcing repl to be a string
     repl = str(repl)
@@ -2234,15 +2384,22 @@ def blockreplace(path,
         has_changes = diff is not ''
         if has_changes and not dry_run:
             # changes detected
-            # backup old content
-            if backup is not False:
-                shutil.copy2(path, '{0}{1}'.format(path, backup))
-
             # backup file attrs
             perms = {}
             perms['user'] = get_user(path)
             perms['group'] = get_group(path)
-            perms['mode'] = __salt__['config.manage_mode'](get_mode(path))
+            perms['mode'] = salt.utils.normalize_mode(get_mode(path))
+
+            # backup old content
+            if backup is not False:
+                backup_path = '{0}{1}'.format(path, backup)
+                shutil.copy2(path, backup_path)
+                # copy2 does not preserve ownership
+                check_perms(backup_path,
+                        None,
+                        perms['user'],
+                        perms['group'],
+                        perms['mode'])
 
             # write new content in the file while avoiding partial reads
             try:
@@ -2453,32 +2610,6 @@ def contains_regex(path, regex, lchar=''):
             return False
     except (IOError, OSError):
         return False
-
-
-def contains_regex_multiline(path, regex):
-    '''
-    .. deprecated:: 0.17.0
-       Use :func:`search` instead.
-
-    Return True if the given regular expression matches anything in the text
-    of a given file
-
-    Traverses multiple lines at a time, via the salt BufferedReader (reads in
-    chunks)
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' file.contains_regex_multiline /etc/crontab '^maint'
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        "file.contains_regex_multiline(path, regex) is deprecated in favor of "
-        "file.search(path, regex, multiline=True)"
-    )
-
-    search(path, regex, multiline=True)
 
 
 def contains_glob(path, glob_expr):
@@ -2751,8 +2882,8 @@ def seek_read(path, size, offset):
         salt '*' file.seek_read /path/to/file 4096 0
     '''
     path = os.path.expanduser(path)
+    seek_fh = os.open(path, os.O_RDONLY)
     try:
-        seek_fh = os.open(path, os.O_RDONLY)
         os.lseek(seek_fh, int(offset), 0)
         data = os.read(seek_fh, int(size))
     finally:
@@ -2782,8 +2913,8 @@ def seek_write(path, data, offset):
         salt '*' file.seek_write /path/to/file 'some data' 4096
     '''
     path = os.path.expanduser(path)
+    seek_fh = os.open(path, os.O_WRONLY)
     try:
-        seek_fh = os.open(path, os.O_WRONLY)
         os.lseek(seek_fh, int(offset), 0)
         ret = os.write(seek_fh, data)
         os.fsync(seek_fh)
@@ -2946,7 +3077,7 @@ def copy(src, dst, recurse=False, remove_existing=False):
     if not salt.utils.is_windows():
         pre_user = get_user(src)
         pre_group = get_group(src)
-        pre_mode = __salt__['config.manage_mode'](get_mode(src))
+        pre_mode = salt.utils.normalize_mode(get_mode(src))
 
     try:
         if (os.path.exists(dst) and os.path.isdir(dst)) or os.path.isdir(src):
@@ -3557,7 +3688,6 @@ def get_managed(
     # Copy the file to the minion and templatize it
     sfn = ''
     source_sum = {}
-    remote_protos = ('http', 'https', 'ftp', 'swift', 's3')
 
     def _get_local_file_source_sum(path):
         '''
@@ -3569,59 +3699,33 @@ def get_managed(
     # If we have a source defined, let's figure out what the hash is
     if source:
         urlparsed_source = _urlparse(source)
-        if urlparsed_source.scheme == 'salt':
+        parsed_scheme = urlparsed_source.scheme
+        parsed_path = os.path.join(
+                urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
+
+        if parsed_scheme and parsed_scheme.lower() in 'abcdefghijklmnopqrstuvwxyz':
+            parsed_path = ':'.join([parsed_scheme, parsed_path])
+            parsed_scheme = 'file'
+
+        if parsed_scheme == 'salt':
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
                 return '', {}, 'Source file {0} not found'.format(source)
-        elif not source_hash and urlparsed_source.scheme == 'file':
-            source_sum = _get_local_file_source_sum(urlparsed_source.path)
-        elif not source_hash and source.startswith('/'):
+        elif not source_hash and parsed_scheme == 'file':
+            source_sum = _get_local_file_source_sum(parsed_path)
+        elif not source_hash and source.startswith(os.sep):
             source_sum = _get_local_file_source_sum(source)
         else:
             if not skip_verify:
                 if source_hash:
-                    protos = ('salt', 'file') + remote_protos
-
-                    def _invalid_source_hash_format():
-                        '''
-                        DRY helper for reporting invalid source_hash input
-                        '''
-                        msg = (
-                            'Source hash {0} format is invalid. It '
-                            'must be in the format <hash type>=<hash>, '
-                            'or it must be a supported protocol: {1}'
-                            .format(source_hash, ', '.join(protos))
-                        )
-                        return '', {}, msg
-
                     try:
-                        source_hash_scheme = _urlparse(source_hash).scheme
-                    except TypeError:
-                        return '', {}, ('Invalid format for source_hash '
-                                        'parameter')
-                    if source_hash_scheme in protos:
-                        # The source_hash is a file on a server
-                        hash_fn = __salt__['cp.cache_file'](
-                            source_hash, saltenv)
-                        if not hash_fn:
-                            return '', {}, ('Source hash file {0} not found'
-                                            .format(source_hash))
-                        source_sum = extract_hash(
-                            hash_fn,
-                            '',
-                            name,
-                            source,
-                            source_hash_name)
-                        if source_sum is None:
-                            return _invalid_source_hash_format()
-
-                    else:
-                        # The source_hash is a hash string
-                        comps = source_hash.split('=', 1)
-                        if len(comps) < 2:
-                            return _invalid_source_hash_format()
-                        source_sum['hsum'] = comps[1].strip()
-                        source_sum['hash_type'] = comps[0].strip()
+                        source_sum = get_source_sum(name,
+                                                    source,
+                                                    source_hash,
+                                                    source_hash_name,
+                                                    saltenv)
+                    except CommandExecutionError as exc:
+                        return '', {}, exc.strerror
                 else:
                     msg = (
                         'Unable to verify upstream hash of source file {0}, '
@@ -3630,7 +3734,7 @@ def get_managed(
                     )
                     return '', {}, msg
 
-    if source and (template or urlparsed_source.scheme in remote_protos):
+    if source and (template or parsed_scheme in salt.utils.files.REMOTE_PROTOS):
         # Check if we have the template or remote file cached
         cached_dest = __salt__['cp.is_cached'](source, saltenv)
         if cached_dest and (source_hash or skip_verify):
@@ -3713,13 +3817,21 @@ def extract_hash(hash_fn,
         takes precedence over both the ``file_name`` and ``source``. When it is
         not specified, ``file_name`` takes precedence over ``source``. This
         allows for better capability for matching hashes.
+    .. versionchanged:: 2016.11.0
+        File name and source URI matches are no longer disregarded when
+        ``source_hash_name`` is specified. They will be used as fallback
+        matches if there is no match to the ``source_hash_name`` value.
 
     This routine is called from the :mod:`file.managed
     <salt.states.file.managed>` state to pull a hash from a remote file.
     Regular expressions are used line by line on the ``source_hash`` file, to
-    find a potential candidate of the indicated hash type.  This avoids many
-    problems of arbitrary file lay out rules. It specifically permits pulling
+    find a potential candidate of the indicated hash type. This avoids many
+    problems of arbitrary file layout rules. It specifically permits pulling
     hash codes from debian ``*.dsc`` files.
+
+    If no exact match of a hash and filename are found, then the first hash
+    found (if any) will be returned. If no hashes at all are found, then
+    ``None`` will be returned.
 
     For example:
 
@@ -3745,16 +3857,13 @@ def extract_hash(hash_fn,
                 'back to matching any supported hash_type', hash_type
             )
             hash_type = ''
-        hash_len_expr = '{0},{1}'.format(min(six.itervalues(HASHES)),
-                                         max(six.itervalues(HASHES)))
+        hash_len_expr = '{0},{1}'.format(min(HASHES_REVMAP), max(HASHES_REVMAP))
     else:
         hash_len_expr = str(hash_len)
 
     filename_separators = string.whitespace + r'\/'
 
-    if source_hash_name is not None:
-        #if not isinstance(source_hash_name, six.string_types):
-        #    source_hash_name = str(source_hash_name)
+    if source_hash_name:
         if not isinstance(source_hash_name, six.string_types):
             source_hash_name = str(source_hash_name)
         source_hash_name_idx = (len(source_hash_name) + 1) * -1
@@ -3764,9 +3873,12 @@ def extract_hash(hash_fn,
             'any supported' if not hash_type else hash_type,
             source_hash_name
         )
-    else:
+    if file_name:
         if not isinstance(file_name, six.string_types):
             file_name = str(file_name)
+        file_name_basename = os.path.basename(file_name)
+        file_name_idx = (len(file_name_basename) + 1) * -1
+    if source:
         if not isinstance(source, six.string_types):
             source = str(source)
         urlparsed_source = _urlparse(source)
@@ -3774,20 +3886,21 @@ def extract_hash(hash_fn,
             urlparsed_source.path or urlparsed_source.netloc
         )
         source_idx = (len(source_basename) + 1) * -1
-        file_name_basename = os.path.basename(file_name)
-        file_name_idx = (len(file_name_basename) + 1) * -1
-        searches = [x for x in (file_name, source) if x]
-        if searches:
-            log.debug(
-                'file.extract_hash: Extracting %s hash for file matching%s: %s',
-                'any supported' if not hash_type else hash_type,
-                '' if len(searches) == 1 else ' either of the following',
-                ', '.join(searches)
-            )
+
+    basename_searches = [x for x in (file_name, source) if x]
+    if basename_searches:
+        log.debug(
+            'file.extract_hash: %s %s hash for file matching%s: %s',
+            'If no source_hash_name match found, will extract'
+                if source_hash_name
+                else 'Extracting',
+            'any supported' if not hash_type else hash_type,
+            '' if len(basename_searches) == 1 else ' either of the following',
+            ', '.join(basename_searches)
+        )
 
     partial = None
     found = {}
-    hashes_revmap = dict([(y, x) for x, y in six.iteritems(HASHES)])
 
     with salt.utils.fopen(hash_fn, 'r') as fp_:
         for line in fp_:
@@ -3798,7 +3911,7 @@ def extract_hash(hash_fn,
             if hash_match:
                 matched_hsum = hash_match.group(1)
                 if matched_hsum is not None:
-                    matched_type = hashes_revmap.get(len(matched_hsum))
+                    matched_type = HASHES_REVMAP.get(len(matched_hsum))
                     if matched_type is None:
                         # There was a match, but it's not of the correct length
                         # to match one of the supported hash types.
@@ -3826,7 +3939,7 @@ def extract_hash(hash_fn,
                 found.setdefault(match_type, []).append(matched)
 
             hash_matched = False
-            if source_hash_name is not None:
+            if source_hash_name:
                 if line.endswith(source_hash_name):
                     # Checking the character before where the basename
                     # should start for either whitespace or a path
@@ -3844,37 +3957,36 @@ def extract_hash(hash_fn,
                     _add_to_matches(found, line, 'source_hash_name',
                                     source_hash_name, matched)
                     hash_matched = True
-            else:
-                if file_name:
-                    if line.endswith(file_name_basename):
-                        # Checking the character before where the basename
-                        # should start for either whitespace or a path
-                        # separator. We can't just rsplit on spaces/whitespace,
-                        # because the filename may contain spaces.
-                        try:
-                            if line[file_name_idx] in filename_separators:
-                                _add_to_matches(found, line, 'file_name',
-                                                file_name, matched)
-                                hash_matched = True
-                        except IndexError:
-                            pass
-                    elif re.match(file_name.replace('.', r'\.') + r'\s+', line):
-                        _add_to_matches(found, line, 'file_name',
-                                        file_name, matched)
-                        hash_matched = True
-                if source:
-                    if line.endswith(source_basename):
-                        # Same as above, we can't just do an rsplit here.
-                        try:
-                            if line[source_idx] in filename_separators:
-                                _add_to_matches(found, line, 'source',
-                                                source, matched)
-                                hash_matched = True
-                        except IndexError:
-                            pass
-                    elif re.match(source.replace('.', r'\.') + r'\s+', line):
-                        _add_to_matches(found, line, 'source', source, matched)
-                        hash_matched = True
+            if file_name:
+                if line.endswith(file_name_basename):
+                    # Checking the character before where the basename
+                    # should start for either whitespace or a path
+                    # separator. We can't just rsplit on spaces/whitespace,
+                    # because the filename may contain spaces.
+                    try:
+                        if line[file_name_idx] in filename_separators:
+                            _add_to_matches(found, line, 'file_name',
+                                            file_name, matched)
+                            hash_matched = True
+                    except IndexError:
+                        pass
+                elif re.match(file_name.replace('.', r'\.') + r'\s+', line):
+                    _add_to_matches(found, line, 'file_name',
+                                    file_name, matched)
+                    hash_matched = True
+            if source:
+                if line.endswith(source_basename):
+                    # Same as above, we can't just do an rsplit here.
+                    try:
+                        if line[source_idx] in filename_separators:
+                            _add_to_matches(found, line, 'source',
+                                            source, matched)
+                            hash_matched = True
+                    except IndexError:
+                        pass
+                elif re.match(source.replace('.', r'\.') + r'\s+', line):
+                    _add_to_matches(found, line, 'source', source, matched)
+                    hash_matched = True
 
             if not hash_matched:
                 log.debug(
@@ -3889,7 +4001,8 @@ def extract_hash(hash_fn,
         if found_type in found:
             if len(found[found_type]) > 1:
                 log.debug(
-                    'file.extract_hash: Multiple matches for %s: %s',
+                    'file.extract_hash: Multiple %s matches for %s: %s',
+                    found_type,
                     found_str,
                     ', '.join(
                         ['{0} ({1})'.format(x['hsum'], x['hash_type'])
@@ -3950,7 +4063,7 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
         raise CommandExecutionError('{0} does not exist'.format(name))
     perms['luser'] = cur['user']
     perms['lgroup'] = cur['group']
-    perms['lmode'] = __salt__['config.manage_mode'](cur['mode'])
+    perms['lmode'] = salt.utils.normalize_mode(cur['mode'])
 
     # Mode changes if needed
     if mode is not None:
@@ -3959,13 +4072,13 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
         if os.path.islink(name) and not follow_symlinks:
             pass
         else:
-            mode = __salt__['config.manage_mode'](mode)
+            mode = salt.utils.normalize_mode(mode)
             if mode != perms['lmode']:
                 if __opts__['test'] is True:
                     ret['changes']['mode'] = mode
                 else:
                     set_mode(name, mode)
-                    if mode != __salt__['config.manage_mode'](get_mode(name)):
+                    if mode != salt.utils.normalize_mode(get_mode(name)):
                         ret['result'] = False
                         ret['comment'].append(
                             'Failed to change mode to {0}'.format(mode)
@@ -4110,6 +4223,11 @@ def check_managed(
             return False, comments
     changes = check_file_meta(name, sfn, source, source_sum, user,
                               group, mode, saltenv, contents)
+    # Ignore permission for files written temporary directories
+    # Files in any path will still be set correctly using get_managed()
+    if name.startswith(tempfile.gettempdir()):
+        for key in ['user', 'group', 'mode']:
+            changes.pop(key, None)
     __clean_tmp(sfn)
     if changes:
         log.info(changes)
@@ -4134,6 +4252,7 @@ def check_managed_changes(
         saltenv,
         contents=None,
         skip_verify=False,
+        keep_mode=False,
         **kwargs):
     '''
     Return a dictionary of what changes need to be made for a file
@@ -4171,6 +4290,13 @@ def check_managed_changes(
         if comments:
             __clean_tmp(sfn)
             return False, comments
+        if sfn and source and keep_mode:
+            if _urlparse(source).scheme in ('salt', 'file') \
+                    or source.startswith('/'):
+                try:
+                    mode = salt.utils.st_mode_to_octal(os.stat(sfn).st_mode)
+                except Exception as exc:
+                    log.warning('Unable to stat %s: %s', sfn, exc)
     changes = check_file_meta(name, sfn, source, source_sum, user,
                               group, mode, saltenv, contents)
     __clean_tmp(sfn)
@@ -4252,10 +4378,9 @@ def check_file_meta(
                     if bdiff:
                         changes['diff'] = bdiff
                     else:
-                        with contextlib.nested(
-                                salt.utils.fopen(sfn, 'r'),
-                                salt.utils.fopen(name, 'r')) as (src, name_):
+                        with salt.utils.fopen(sfn, 'r') as src:
                             slines = src.readlines()
+                        with salt.utils.fopen(name, 'r') as name_:
                             nlines = name_.readlines()
                         changes['diff'] = \
                             ''.join(difflib.unified_diff(nlines, slines))
@@ -4264,15 +4389,16 @@ def check_file_meta(
 
     if contents is not None:
         # Write a tempfile with the static contents
-        tmp = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
-                                 text=True)
-        with salt.utils.fopen(tmp, 'wb') as tmp_:
+        tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
+                                       text=True)
+        if salt.utils.is_windows():
+            contents = os.linesep.join(contents.splitlines())
+        with salt.utils.fopen(tmp, 'w') as tmp_:
             tmp_.write(str(contents))
         # Compare the static contents with the named file
-        with contextlib.nested(
-                salt.utils.fopen(tmp, 'r'),
-                salt.utils.fopen(name, 'r')) as (src, name_):
+        with salt.utils.fopen(tmp, 'r') as src:
             slines = src.readlines()
+        with salt.utils.fopen(name, 'r') as name_:
             nlines = name_.readlines()
         __clean_tmp(tmp)
         if ''.join(nlines) != ''.join(slines):
@@ -4294,8 +4420,8 @@ def check_file_meta(
             and group != lstats['gid']):
         changes['group'] = group
     # Normalize the file mode
-    smode = __salt__['config.manage_mode'](lstats['mode'])
-    mode = __salt__['config.manage_mode'](mode)
+    smode = salt.utils.normalize_mode(lstats['mode'])
+    mode = salt.utils.normalize_mode(mode)
     if mode is not None and mode != smode:
         changes['mode'] = mode
     return changes
@@ -4304,7 +4430,6 @@ def check_file_meta(
 def get_diff(
         minionfile,
         masterfile,
-        env=None,
         saltenv='base'):
     '''
     Return unified diff of file compared to file on master
@@ -4319,25 +4444,15 @@ def get_diff(
 
     ret = ''
 
-    if isinstance(env, six.string_types):
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     if not os.path.exists(minionfile):
         ret = 'File {0} does not exist on the minion'.format(minionfile)
         return ret
 
     sfn = __salt__['cp.cache_file'](masterfile, saltenv)
     if sfn:
-        with contextlib.nested(salt.utils.fopen(sfn, 'r'),
-                               salt.utils.fopen(minionfile, 'r')) \
-                as (src, name_):
+        with salt.utils.fopen(sfn, 'r') as src:
             slines = src.readlines()
+        with salt.utils.fopen(minionfile, 'r') as name_:
             nlines = name_.readlines()
         if ''.join(nlines) != ''.join(slines):
             bdiff = _binary_replace(minionfile, sfn)
@@ -4364,11 +4479,13 @@ def manage_file(name,
                 backup,
                 makedirs=False,
                 template=None,   # pylint: disable=W0613
-                show_diff=True,
+                show_changes=True,
                 contents=None,
                 dir_mode=None,
                 follow_symlinks=True,
-                skip_verify=False):
+                skip_verify=False,
+                keep_mode=False,
+                **kwargs):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -4413,7 +4530,7 @@ def manage_file(name,
     template
         format of templating
 
-    show_diff
+    show_changes
         Include diff in state return
 
     contents:
@@ -4428,6 +4545,11 @@ def manage_file(name,
         argument will be ignored.
 
         .. versionadded:: 2016.3.0
+
+    keep_mode : False
+        If ``True``, and the ``source`` is a file from the Salt fileserver (or
+        a local file on the minion), the mode of the destination file will be
+        set to the mode of the source file.
 
     CLI Example:
 
@@ -4459,6 +4581,13 @@ def manage_file(name,
             'hash_type': htype,
             'hsum': get_hash(sfn, form=htype)
         }
+        if keep_mode:
+            if _urlparse(source).scheme in ('salt', 'file') \
+                    or source.startswith('/'):
+                try:
+                    mode = salt.utils.st_mode_to_octal(os.stat(sfn).st_mode)
+                except Exception as exc:
+                    log.warning('Unable to stat %s: %s', sfn, exc)
 
     # Check changes if the target file exists
     if os.path.isfile(name) or os.path.islink(name):
@@ -4489,7 +4618,10 @@ def manage_file(name,
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = (
                         'Specified {0} checksum for {1} ({2}) does not match '
-                        'actual checksum ({3})'.format(
+                        'actual checksum ({3}). If the \'source_hash\' value '
+                        'refers to a remote file with multiple possible '
+                        'matches, then it may be necessary to set '
+                        '\'source_hash_name\'.'.format(
                             source_sum['hash_type'],
                             source,
                             source_sum['hsum'],
@@ -4502,18 +4634,17 @@ def manage_file(name,
             # Print a diff equivalent to diff -u old new
             if __salt__['config.option']('obfuscate_templates'):
                 ret['changes']['diff'] = '<Obfuscated Template>'
-            elif not show_diff:
-                ret['changes']['diff'] = '<show_diff=False>'
+            elif not show_changes:
+                ret['changes']['diff'] = '<show_changes=False>'
             else:
                 # Check to see if the files are bins
                 bdiff = _binary_replace(real_name, sfn)
                 if bdiff:
                     ret['changes']['diff'] = bdiff
                 else:
-                    with contextlib.nested(
-                            salt.utils.fopen(sfn, 'r'),
-                            salt.utils.fopen(real_name, 'r')) as (src, name_):
+                    with salt.utils.fopen(sfn, 'r') as src:
                         slines = src.readlines()
+                    with salt.utils.fopen(real_name, 'r') as name_:
                         nlines = name_.readlines()
 
                     sndiff = ''.join(difflib.unified_diff(nlines, slines))
@@ -4533,26 +4664,25 @@ def manage_file(name,
 
         if contents is not None:
             # Write the static contents to a temporary file
-            tmp = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
-                                     text=True)
+            tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
+                                           text=True)
             if salt.utils.is_windows():
                 contents = os.linesep.join(contents.splitlines())
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
 
             # Compare contents of files to know if we need to replace
-            with contextlib.nested(
-                    salt.utils.fopen(tmp, 'r'),
-                    salt.utils.fopen(real_name, 'r')) as (src, name_):
+            with salt.utils.fopen(tmp, 'r') as src:
                 slines = src.readlines()
+            with salt.utils.fopen(real_name, 'r') as name_:
                 nlines = name_.readlines()
                 different = ''.join(slines) != ''.join(nlines)
 
             if different:
                 if __salt__['config.option']('obfuscate_templates'):
                     ret['changes']['diff'] = '<Obfuscated Template>'
-                elif not show_diff:
-                    ret['changes']['diff'] = '<show_diff=False>'
+                elif not show_changes:
+                    ret['changes']['diff'] = '<show_changes=False>'
                 else:
                     if salt.utils.istextfile(real_name):
                         ret['changes']['diff'] = \
@@ -4717,8 +4847,8 @@ def manage_file(name,
 
         if contents is not None:
             # Write the static contents to a temporary file
-            tmp = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
-                                     text=True)
+            tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
+                                           text=True)
             if salt.utils.is_windows():
                 contents = os.linesep.join(contents.splitlines())
             with salt.utils.fopen(tmp, 'w') as tmp_:
@@ -5451,17 +5581,16 @@ def grep(path,
     split_opts = []
     for opt in opts:
         try:
-            opt = salt.utils.shlex_split(opt)
+            split = salt.utils.shlex_split(opt)
         except AttributeError:
-            opt = salt.utils.shlex_split(str(opt))
-        if len(opt) > 1:
-            salt.utils.warn_until(
-                'Carbon',
-                'Additional command line options for file.grep should be '
-                'passed one at a time, please do not pass more than one in a '
-                'single argument.'
+            split = salt.utils.shlex_split(str(opt))
+        if len(split) > 1:
+            raise SaltInvocationError(
+                'Passing multiple command line arguments in a single string '
+                'is not supported, please pass the following arguments '
+                'separately: {0}'.format(opt)
             )
-        split_opts.extend(opt)
+        split_opts.extend(split)
 
     cmd = ['grep'] + split_opts + [pattern, path]
     try:

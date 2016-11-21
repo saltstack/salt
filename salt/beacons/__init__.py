@@ -27,7 +27,7 @@ class Beacon(object):
         self.beacons = salt.loader.beacons(opts, functions)
         self.interval_map = dict()
 
-    def process(self, config):
+    def process(self, config, grains):
         '''
         Process the configured beacons
         The config must be a list and looks like this in yaml
@@ -71,6 +71,7 @@ class Beacon(object):
             log.trace('Beacon processing: {0}'.format(mod))
             fun_str = '{0}.beacon'.format(mod)
             if fun_str in self.beacons:
+                runonce = self._determine_beacon_config(current_beacon_config, 'run_once')
                 interval = self._determine_beacon_config(current_beacon_config, 'interval')
                 if interval:
                     b_config = self._trim_config(b_config, mod, 'interval')
@@ -93,6 +94,8 @@ class Beacon(object):
                         else:
                             log.info('Skipping beacon {0}. State run in progress.'.format(mod))
                         continue
+                # Update __grains__ on the beacon
+                self.beacons[fun_str].__globals__['__grains__'] = grains
                 # Fire the beacon!
                 raw = self.beacons[fun_str](b_config[mod])
                 for data in raw:
@@ -102,6 +105,8 @@ class Beacon(object):
                     if 'id' not in data:
                         data['id'] = self.opts['id']
                     ret.append({'tag': tag, 'data': data})
+                if runonce:
+                    self.disable_beacon(mod)
             else:
                 log.debug('Unable to process beacon {0}'.format(mod))
         return ret

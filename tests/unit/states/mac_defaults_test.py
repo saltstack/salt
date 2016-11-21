@@ -141,6 +141,40 @@ class MacDefaultsTestCase(TestCase):
             assert not write_mock.called
             self.assertEqual(out, expected)
 
+    def test_absent_already(self):
+        '''
+            Test ensuring non-existent defaults value is absent
+        '''
+        expected = {
+            'changes': {},
+            'comment': 'com.apple.something Key is already absent',
+            'name': 'Key',
+            'result': True
+        }
+
+        mock = MagicMock(return_value={'retcode': 1})
+        with patch.dict(macdefaults.__salt__, {'macdefaults.delete': mock}):
+            out = macdefaults.absent('Key', 'com.apple.something')
+            mock.assert_called_once_with('com.apple.something', 'Key', None)
+            self.assertEqual(out, expected)
+
+    def test_absent_deleting_existing(self):
+        '''
+            Test removing an existing value
+        '''
+        expected = {
+            'changes': {'absent': 'com.apple.something Key is now absent'},
+            'comment': '',
+            'name': 'Key',
+            'result': True
+        }
+
+        mock = MagicMock(return_value={'retcode': 0})
+        with patch.dict(macdefaults.__salt__, {'macdefaults.delete': mock}):
+            out = macdefaults.absent('Key', 'com.apple.something')
+            mock.assert_called_once_with('com.apple.something', 'Key', None)
+            self.assertEqual(out, expected)
+
 
 if __name__ == '__main__':
     from integration import run_tests

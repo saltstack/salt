@@ -225,7 +225,7 @@ def _bind(username, password, anonymous=False, opts=None):
             )
             result = _ldap.search_s(basedn, int(scope), paramvalues['filter'])
             if len(result) < 1:
-                log.warn('Unable to find user {0}'.format(username))
+                log.warning('Unable to find user {0}'.format(username))
                 return False
             elif len(result) > 1:
                 # Active Directory returns something odd.  Though we do not

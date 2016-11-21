@@ -70,10 +70,10 @@
 
 
 
-    .. _`DSN`: http://raven.readthedocs.org/en/latest/config/index.html#the-sentry-dsn
+    .. _`DSN`: https://raven.readthedocs.io/en/latest/config/index.html#the-sentry-dsn
     .. _`Sentry`: https://getsentry.com
-    .. _`Raven`: http://raven.readthedocs.org
-    .. _`Raven client documentation`: http://raven.readthedocs.org/en/latest/config/index.html#client-arguments
+    .. _`Raven`: https://raven.readthedocs.io
+    .. _`Raven client documentation`: https://raven.readthedocs.io/en/latest/config/index.html#client-arguments
 '''
 from __future__ import absolute_import
 
@@ -124,8 +124,10 @@ def setup_handlers():
             if not transport_registry.supported_scheme(url.scheme):
                 raise ValueError('Unsupported Sentry DSN scheme: {0}'.format(url.scheme))
             dsn_config = {}
-            conf_extras = transport_registry.compute_scope(url, dsn_config)
-            dsn_config.update(conf_extras)
+            if (hasattr(transport_registry, 'compute_scope') and
+                    callable(transport_registry.compute_scope)):
+                conf_extras = transport_registry.compute_scope(url, dsn_config)
+                dsn_config.update(conf_extras)
             options.update({
                 'project': dsn_config['SENTRY_PROJECT'],
                 'servers': dsn_config['SENTRY_SERVERS'],

@@ -10,6 +10,7 @@ state modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    acme
     alias
     alternatives
     apache
@@ -25,14 +26,17 @@ state modules
     beacon
     bigip
     blockdev
+    boto_apigateway
     boto_asg
     boto_cfn
     boto_cloudtrail
     boto_cloudwatch_alarm
+    boto_cognitoidentity
     boto_datapipeline
     boto_dynamodb
     boto_ec2
     boto_elasticache
+    boto_elasticsearch_domain
     boto_elb
     boto_iam
     boto_iam_role
@@ -102,7 +106,9 @@ state modules
     iptables
     jboss7
     jenkins
+    junos
     k8s
+    kapacitor
     keyboard
     keystone
     kmod
@@ -117,6 +123,7 @@ state modules
     mac_assistive
     mac_defaults
     mac_keychain
+    mac_package
     mac_xattr
     makeconf
     marathon_app
@@ -133,10 +140,14 @@ state modules
     mysql_grants
     mysql_query
     mysql_user
+    netntp
+    netsnmp
+    netusers
     network
     nftables
     npm
     ntp
+    nxos
     openstack_config
     openvswitch_bridge
     openvswitch_port
@@ -145,7 +156,9 @@ state modules
     pagerduty_schedule
     pagerduty_service
     pagerduty_user
+    pcs
     pecl
+    pdbedit
     pip_state
     pkg
     pkgbuild
@@ -164,6 +177,7 @@ state modules
     postgres_tablespace
     postgres_user
     powerpath
+    probes
     process
     pushover
     pyenv
@@ -174,6 +188,7 @@ state modules
     rabbitmq_policy
     rabbitmq_user
     rabbitmq_vhost
+    rbac_solaris
     rbenv
     rdp
     redismod
@@ -226,6 +241,7 @@ state modules
     win_path
     win_powercfg
     win_servermanager
+    win_smtp_server
     win_system
     win_update
     winrepo

@@ -16,13 +16,17 @@ execution modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    acme
     aliases
     alternatives
     apache
+    apcups
+    apf
     aptpkg
     archive
     artifactory
     at
+    at_solaris
     augeas_cfg
     aws_sqs
     bamboohr
@@ -31,14 +35,17 @@ execution modules
     bigip
     blockdev
     bluez
+    boto_apigateway
     boto_asg
     boto_cfn
     boto_cloudtrail
     boto_cloudwatch
+    boto_cognitoidentity
     boto_datapipeline
     boto_dynamodb
     boto_ec2
     boto_elasticache
+    boto_elasticsearch_domain
     boto_elb
     boto_iam
     boto_iot
@@ -70,6 +77,7 @@ execution modules
     cp
     cpan
     cron
+    csf
     cyg
     cytest
     daemontools
@@ -157,6 +165,8 @@ execution modules
     jboss7_cli
     jenkins
     junos
+    k8s
+    kapacitor
     kerberos
     key
     keyboard
@@ -182,6 +192,7 @@ execution modules
     mac_desktop
     mac_group
     mac_keychain
+    mac_package
     mac_pkgutil
     mac_ports
     mac_power
@@ -214,6 +225,13 @@ execution modules
     nacl
     nagios
     nagios_rpc
+    napalm_bgp
+    napalm_network
+    napalm_ntp
+    napalm_probes
+    napalm_route
+    napalm_snmp
+    napalm_users
     netaddress
     netbsd_sysctl
     netbsdservice
@@ -223,10 +241,10 @@ execution modules
     nfs3
     nftables
     nginx
-    node
     nova
     npm
     nspawn
+    nxos
     omapi
     openbsd_sysctl
     openbsdpkg
@@ -241,7 +259,10 @@ execution modules
     pagerduty
     pagerduty_util
     pam
+    parallels
     parted
+    pcs
+    pdbedit
     pecl
     philips_hue
     pillar
@@ -271,6 +292,7 @@ execution modules
     raet_publish
     rallydev
     random_org
+    rbac_solaris
     rbenv
     rdp
     redismod
@@ -297,6 +319,7 @@ execution modules
     sdb
     seed
     selinux
+    sensehat
     sensors
     serverdensity_device
     service
@@ -304,6 +327,7 @@ execution modules
     slack_notify
     slsutil
     smartos_imgadm
+    smartos_nictagadm
     smartos_virt
     smartos_vmadm
     smbios
@@ -327,6 +351,7 @@ execution modules
     status
     stormpath
     supervisord
+    suse_apache
     svn
     swift
     sysbench
@@ -391,6 +416,7 @@ execution modules
     win_wua
     x509
     xapi
+    xbps-pkg
     xfs
     xmpp
     yumpkg
@@ -400,5 +426,6 @@ execution modules
     zfs
     zk_concurrency
     znc
+    zoneadm
     zpool
     zypper

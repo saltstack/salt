@@ -131,6 +131,7 @@ def send(tag,
         with_env=False,
         with_grains=False,
         with_pillar=False,
+        with_env_opts=False,
         **kwargs):
     '''
     Send an event to the Salt Master
@@ -168,6 +169,11 @@ def send(tag,
     :type with_pillar: Specify ``True`` to include all Pillar values, or
         specify a list of strings of Pillar keys to include. It is a
         best-practice to only specify a relevant subset of Pillar data.
+
+    :param with_env_opts: Include ``saltenv`` and ``pillarenv`` set on minion
+        at the moment when event is send into event data.
+    :type with_env_opts: Specify ``True`` to include ``saltenv`` and
+        ``pillarenv`` values or ``False`` to omit them.
 
     :param kwargs: Any additional keyword arguments passed to this function
         will be interpreted as key-value pairs and included in the event data.
@@ -217,6 +223,10 @@ def send(tag,
         else:
             data_dict['pillar'] = __pillar__
 
+    if with_env_opts:
+        data_dict['saltenv'] = __opts__.get('environment', 'base')
+        data_dict['pillarenv'] = __opts__.get('pillarenv')
+
     if kwargs:
         data_dict.update(kwargs)
 
@@ -224,4 +234,7 @@ def send(tag,
     if isinstance(data, collections.Mapping):
         data_dict.update(data)
 
-    return fire_master(data_dict, tag, preload=preload)
+    if __opts__.get('local') or __opts__.get('file_client') == 'local' or __opts__.get('master_type') == 'disable':
+        return fire(data_dict, tag)
+    else:
+        return fire_master(data_dict, tag, preload=preload)

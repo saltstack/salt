@@ -18,6 +18,8 @@ using the existing Libcloud driver for Dimension Data.
       region: dd-na
       driver: dimensiondata
 
+:maintainer: Anthony Shaw <anthonyshaw@apache.org>
+:depends: libcloud >= 1.2.1
 '''
 
 # Import python libs
@@ -35,7 +37,9 @@ try:
     from libcloud.loadbalancer.base import Member
     from libcloud.loadbalancer.types import Provider as Provider_lb
     from libcloud.loadbalancer.providers import get_driver as get_driver_lb
-
+    # See https://github.com/saltstack/salt/issues/32743
+    import libcloud.security
+    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
@@ -152,11 +156,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -168,12 +173,29 @@ def create(vm_):
         location = conn.ex_get_location_by_id(vm_['location'])
         images = conn.list_images(location=location)
         image = [x for x in images if x.id == vm_['image']][0]
-        networks = conn.ex_list_network_domains(location=location)
-        network_domain = [y for y in networks if y.name ==
-                          vm_['network_domain']][0]
-        # Use the first VLAN in the network domain
-        vlan = conn.ex_list_vlans(location=location,
-                                  network_domain=network_domain)[0]
+        network_domains = conn.ex_list_network_domains(location=location)
+        try:
+            network_domain = [y for y in network_domains
+                              if y.name == vm_['network_domain']][0]
+        except IndexError:
+            network_domain = conn.ex_create_network_domain(
+                location=location,
+                name=vm_['network_domain'],
+                plan='ADVANCED',
+                description=''
+            )
+
+        try:
+            vlan = [y for y in conn.ex_list_vlans(
+                location=location,
+                network_domain=network_domain)
+                    if y.name == vm_['vlan']][0]
+        except (IndexError, KeyError):
+            # Use the first VLAN in the network domain
+            vlan = conn.ex_list_vlans(
+                location=location,
+                network_domain=network_domain)[0]
+
         kwargs = {
             'name': vm_['name'],
             'image': image,
@@ -313,11 +335,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -395,7 +418,8 @@ def create_lb(kwargs=None, call=None):
         'event',
         'create load_balancer',
         'salt/cloud/loadbalancer/creating',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -407,7 +431,8 @@ def create_lb(kwargs=None, call=None):
         'event',
         'created load_balancer',
         'salt/cloud/loadbalancer/created',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_balancer(lb)

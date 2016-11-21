@@ -8,6 +8,9 @@ Module for sending messages to hipchat.
     directly or by specifying both in a configuration profile in the salt
     master/minion config.
 
+    It is possible to use a different API than http://api.hipchat.com,
+    by specifying the API URL in config as api_url, or by passing the value directly.
+
     For example:
 
     .. code-block:: yaml
@@ -15,6 +18,15 @@ Module for sending messages to hipchat.
         hipchat:
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
           api_version: v1
+
+    Custom API Example:
+
+    .. code-block:: yaml
+
+        hipchat:
+          api_url: http://api.hipchat.myteam.com
+          api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
+          api_version: v2
 '''
 # Import Python Libs
 from __future__ import absolute_import
@@ -47,6 +59,7 @@ def __virtual__():
 
 
 def _query(function,
+           api_url=None,
            api_key=None,
            api_version=None,
            room_id=None,
@@ -55,6 +68,7 @@ def _query(function,
     '''
     HipChat object method function to construct and execute on the API URL.
 
+    :param api_url:     The HipChat API URL.
     :param api_key:     The HipChat api key.
     :param function:    The HipChat api function to perform.
     :param api_version: The HipChat api version (v1 or v2).
@@ -64,6 +78,13 @@ def _query(function,
     '''
     headers = {}
     query_params = {}
+
+    if not api_url:
+        try:
+            options = __salt__['config.option']('hipchat')
+            api_url = options.get('api_url')
+        except (NameError, KeyError, AttributeError):
+            pass  # not mandatory, thus won't fail if not found
 
     if not api_key or not api_version:
         try:
@@ -112,8 +133,10 @@ def _query(function,
         },
     }
 
-    api_url = 'https://api.hipchat.com'
-    base_url = _urljoin(api_url, api_version + '/')
+    use_api_url = 'https://api.hipchat.com'  # default API URL
+    if api_url:
+        use_api_url = api_url
+    base_url = _urljoin(use_api_url, api_version + '/')
     path = hipchat_functions.get(api_version).get(function).get('request')
     url = _urljoin(base_url, path, False)
 
@@ -165,10 +188,13 @@ def _query(function,
         return False
 
 
-def list_rooms(api_key=None, api_version=None):
+def list_rooms(api_url=None,
+               api_key=None,
+               api_version=None):
     '''
     List all HipChat rooms.
 
+    :param api_url: The HipChat API URL, if not specified in the configuration.
     :param api_key: The HipChat admin api key.
     :param api_version: The HipChat api version, if not specified in the configuration.
     :return: The room list.
@@ -181,14 +207,21 @@ def list_rooms(api_key=None, api_version=None):
 
         salt '*' hipchat.list_rooms api_key=peWcBiMOS9HrZG15peWcBiMOS9HrZG15 api_version=v1
     '''
-    foo = _query(function='rooms', api_key=api_key, api_version=api_version)
+    foo = _query(function='rooms',
+                 api_url=api_url,
+                 api_key=api_key,
+                 api_version=api_version)
     log.debug('foo {0}'.format(foo))
     return foo
 
 
-def list_users(api_key=None, api_version=None):
+def list_users(api_url=None,
+               api_key=None,
+               api_version=None):
     '''
     List all HipChat users.
+
+    :param api_url: The HipChat API URL, if not specified in the configuration.
     :param api_key: The HipChat admin api key.
     :param api_version: The HipChat api version, if not specified in the configuration.
     :return: The user list.
@@ -201,13 +234,21 @@ def list_users(api_key=None, api_version=None):
 
         salt '*' hipchat.list_users api_key=peWcBiMOS9HrZG15peWcBiMOS9HrZG15 api_version=v1
     '''
-    return _query(function='users', api_key=api_key, api_version=api_version)
+    return _query(function='users',
+                  api_url=api_url,
+                  api_key=api_key,
+                  api_version=api_version)
 
 
-def find_room(name, api_key=None, api_version=None):
+def find_room(name,
+              api_url=None,
+              api_key=None,
+              api_version=None):
     '''
     Find a room by name and return it.
+
     :param name:    The room name.
+    :param api_url: The HipChat API URL, if not specified in the configuration.
     :param api_key: The HipChat admin api key.
     :param api_version: The HipChat api version, if not specified in the configuration.
     :return:        The room object.
@@ -220,7 +261,9 @@ def find_room(name, api_key=None, api_version=None):
 
         salt '*' hipchat.find_room name="Development Room" api_key=peWcBiMOS9HrZG15peWcBiMOS9HrZG15 api_version=v1
     '''
-    rooms = list_rooms(api_key=api_key, api_version=api_version)
+    rooms = list_rooms(api_url=api_url,
+                       api_key=api_key,
+                       api_version=api_version)
     if rooms:
         for x in range(0, len(rooms)):
             if rooms[x]['name'] == name:
@@ -228,10 +271,15 @@ def find_room(name, api_key=None, api_version=None):
     return False
 
 
-def find_user(name, api_key=None, api_version=None):
+def find_user(name,
+              api_url=None,
+              api_key=None,
+              api_version=None):
     '''
     Find a user by name and return it.
+
     :param name:        The user name.
+    :param api_url:     The HipChat API URL, if not specified in the configuration.
     :param api_key:     The HipChat admin api key.
     :param api_version: The HipChat api version, if not specified in the configuration.
     :return:            The user object.
@@ -244,7 +292,9 @@ def find_user(name, api_key=None, api_version=None):
 
         salt '*' hipchat.find_user name="Thomas Hatch" api_key=peWcBiMOS9HrZG15peWcBiMOS9HrZG15 api_version=v1
     '''
-    users = list_users(api_key=api_key, api_version=api_version)
+    users = list_users(api_url=api_url,
+                       api_key=api_key,
+                       api_version=api_version)
     if users:
         for x in range(0, len(users)):
             if users[x]['name'] == name:
@@ -255,15 +305,18 @@ def find_user(name, api_key=None, api_version=None):
 def send_message(room_id,
                  message,
                  from_name,
+                 api_url=None,
                  api_key=None,
                  api_version=None,
                  color='yellow',
                  notify=False):
     '''
     Send a message to a HipChat room.
+
     :param room_id:     The room id or room name, either will work.
     :param message:     The message to send to the HipChat room.
     :param from_name:   Specify who the message is from.
+    :param api_url:     The HipChat api URL, if not specified in the configuration.
     :param api_key:     The HipChat api key, if not specified in the configuration.
     :param api_version: The HipChat api version, if not specified in the configuration.
     :param color:       The color for the message, default: yellow.
@@ -288,6 +341,7 @@ def send_message(room_id,
     parameters['notify'] = notify
 
     result = _query(function='message',
+                    api_url=api_url,
                     api_key=api_key,
                     api_version=api_version,
                     room_id=room_id,

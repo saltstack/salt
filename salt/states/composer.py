@@ -157,7 +157,7 @@ def installed(name,
         )
     except (SaltException) as err:
         ret['result'] = False
-        ret['comment'] = 'Error executing composer in \'{0!r}\': {1!r}'.format(name, err)
+        ret['comment'] = 'Error executing composer in \'{0}\': {1}'.format(name, err)
         return ret
 
     # If composer retcode != 0 then an exception was thrown and we dealt with it.
@@ -271,7 +271,7 @@ def update(name,
         )
     except (SaltException) as err:
         ret['result'] = False
-        ret['comment'] = 'Error executing composer in \'{0!r}\': {1!r}'.format(name, err)
+        ret['comment'] = 'Error executing composer in \'{0}\': {1}'.format(name, err)
         return ret
 
     # If composer retcode != 0 then an exception was thrown and we dealt with it.

@@ -29,7 +29,7 @@ Changes:
 
 - Major performance improvements to Saltnado
 
-- Allow KVM module to operate under KVM itself or VMWare Fusion
+- Allow KVM module to operate under KVM itself or VMware Fusion
 
 - Various fixes to the Windows installation scripts
 

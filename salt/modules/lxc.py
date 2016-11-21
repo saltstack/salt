@@ -12,6 +12,7 @@ lxc >= 1.0 (even beta alpha) is required
 from __future__ import absolute_import, print_function
 import datetime
 import copy
+import string
 import textwrap
 import difflib
 import logging
@@ -286,7 +287,11 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     config
         any extra argument for the salt minion config
     dnsservers
-        dns servers to set inside the container
+        list of DNS servers to set inside the container
+        (Defaults to 8.8.8.8 and 4.4.4.4 until Oxygen release)
+    dns_via_dhcp
+        do not set the dns servers, let them be set by the dhcp.
+        (Defaults to False until Oxygen release)
     autostart
         autostart the container at boot time
     password
@@ -321,6 +326,8 @@ def cloud_init_interface(name, vm_=None, **kwargs):
             if using LVM: vgname
         lvname
             if using LVM: lvname
+        thinpool:
+            if using LVM: thinpool
         ip
             ip for the primary nic
         mac
@@ -397,12 +404,18 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     snapshot = _cloud_get('snapshot', False)
     autostart = bool(_cloud_get('autostart', True))
     dnsservers = _cloud_get('dnsservers', [])
-    if not dnsservers:
+    dns_via_dhcp = _cloud_get('dns_via_dhcp', False)
+    if not dnsservers and not dns_via_dhcp:
+        salt.utils.warn_until('Oxygen', (
+            'dnsservers will stop defaulting to 8.8.8.8 and 4.4.4.4 '
+            'in Oxygen.  Please set your dnsservers.'
+        ))
         dnsservers = ['8.8.8.8', '4.4.4.4']
     password = _cloud_get('password', 's3cr3t')
     password_encrypted = _cloud_get('password_encrypted', False)
     fstype = _cloud_get('fstype', None)
     lvname = _cloud_get('lvname', None)
+    thinpool = _cloud_get('thinpool', None)
     pub_key = _cloud_get('pub_key', None)
     priv_key = _cloud_get('priv_key', None)
     size = _cloud_get('size', '20G')
@@ -516,6 +529,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['vgname'] = vgname
     lxc_init_interface['size'] = size
     lxc_init_interface['lvname'] = lvname
+    lxc_init_interface['thinpool'] = thinpool
     lxc_init_interface['force_install'] = force_install
     lxc_init_interface['unconditional_install'] = (
         unconditional_install
@@ -540,10 +554,10 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     return lxc_init_interface
 
 
-def _get_profile(key, old_key, name, **kwargs):
+def _get_profile(key, name, **kwargs):
     if isinstance(name, dict):
         profilename = name.pop('name', None)
-        return _get_profile(key, old_key, profilename, **name)
+        return _get_profile(key, profilename, **name)
 
     if name is None:
         profile_match = {}
@@ -555,20 +569,9 @@ def _get_profile(key, old_key, name, **kwargs):
                 merge='recurse'
             )
         if profile_match is None:
-            # Try legacy profile location
-            profile_match = \
-                __salt__['config.get'](
-                    'lxc.{1}:{0}'.format(name, old_key), None)
-            if profile_match is not None:
-                salt.utils.warn_until(
-                    'Carbon',
-                    'lxc.{1} has been deprecated, please configure LXC '
-                    'container profiles under lxc.{0} instead'.format(
-                        key, old_key))
-            else:
-                # No matching profile, make the profile an empty dict so that
-                # overrides can be applied below.
-                profile_match = {}
+            # No matching profile, make the profile an empty dict so that
+            # overrides can be applied below.
+            profile_match = {}
 
     if not isinstance(profile_match, dict):
         raise CommandExecutionError('lxc.{0} must be a dictionary'.format(key))
@@ -619,7 +622,7 @@ def get_container_profile(name=None, **kwargs):
         salt-call lxc.get_container_profile centos
         salt-call lxc.get_container_profile ubuntu template=ubuntu backing=overlayfs
     '''
-    profile = _get_profile('container_profile', 'profile', name, **kwargs)
+    profile = _get_profile('container_profile', name, **kwargs)
     return profile
 
 
@@ -679,7 +682,7 @@ def get_network_profile(name=None, **kwargs):
         salt-call lxc.get_network_profile default
     '''
 
-    profile = _get_profile('network_profile', 'nic', name, **kwargs)
+    profile = _get_profile('network_profile', name, **kwargs)
     return profile
 
 
@@ -1130,7 +1133,6 @@ def init(name,
          memory=None,
          profile=None,
          network_profile=None,
-         nic=_marker,
          nic_opts=None,
          cpu=None,
          autostart=True,
@@ -1197,10 +1199,6 @@ def init(name,
         Network profile to use for the container
 
         .. versionadded:: 2015.5.0
-
-    nic
-        .. deprecated:: 2015.5.0
-            Use ``network_profile`` instead
 
     nic_opts
         Extra options for network interfaces, will override
@@ -1271,10 +1269,6 @@ def init(name,
 
         .. versionadded:: 2015.8.0
 
-    clone
-        .. deprecated:: 2015.5.0
-            Use ``clone_from`` instead
-
     clone_from
         Original from which to use a clone operation to create the container.
         Default: ``None``
@@ -1324,28 +1318,10 @@ def init(name,
            'changes': {}}
 
     profile = get_container_profile(copy.deepcopy(profile))
-    if bool(nic) and nic is not _marker:
-        salt.utils.warn_until(
-            'Carbon',
-            'The \'nic\' argument to \'lxc.init\' has been deprecated, '
-            'please use \'network_profile\' instead.'
-        )
-        network_profile = nic
     if not network_profile:
         network_profile = profile.get('network_profile')
     if not network_profile:
         network_profile = DEFAULT_NIC
-
-    try:
-        kwargs['clone_from'] = kwargs.pop('clone')
-    except KeyError:
-        pass
-    else:
-        salt.utils.warn_until(
-            'Carbon',
-            'The \'clone\' argument to \'lxc.init\' has been deprecated, '
-            'please use \'clone_from\' instead.'
-        )
 
     # Changes is a pointer to changes_dict['init']. This method is used so that
     # we can have a list of changes as they are made, providing an ordered list
@@ -1383,14 +1359,6 @@ def init(name,
     salt_config = _get_salt_config(config, **kwargs)
     approve_key = select('approve_key', True)
     clone_from = select('clone_from')
-    if password and password_encrypted is None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Starting with the Carbon release, passwords passed to the '
-            '\'lxc.init\' function will be assumed to be hashed, unless '
-            'password_encrypted=False. Please keep this in mind.'
-        )
-        password_encrypted = False
 
     # If using a volume group then set up to make snapshot cow clones
     if vgname and not clone_from:
@@ -1882,10 +1850,20 @@ def create(name,
     lvname
         Name of the LVM logical volume in which to create the volume for this
         container. Only applicable if ``backing=lvm``.
+
+    thinpool
+        Name of a pool volume that will be used for thin-provisioning this
+        container. Only applicable if ``backing=lvm``.
+
     nic_opts
         give extra opts overriding network profile values
+
     path
         parent path for the container creation (default: /var/lib/lxc)
+
+    zfsroot
+        Name of the ZFS root in which to create the volume for this container.
+        Only applicable if ``backing=zfs``. (default: tank/lxc)
 
         .. versionadded:: 2015.8.0
     '''
@@ -1933,14 +1911,16 @@ def create(name,
     if vgname and not backing:
         backing = 'lvm'
     lvname = select('lvname')
+    thinpool = select('thinpool')
     fstype = select('fstype')
     size = select('size', '1G')
+    zfsroot = select('zfsroot')
     if backing in ('dir', 'overlayfs', 'btrfs', 'zfs'):
         fstype = None
         size = None
     # some backends won't support some parameters
     if backing in ('aufs', 'dir', 'overlayfs', 'btrfs'):
-        lvname = vgname = None
+        lvname = vgname = thinpool = None
 
     if image:
         img_tar = __salt__['cp.cache_file'](image)
@@ -1961,11 +1941,16 @@ def create(name,
     if backing:
         backing = backing.lower()
         cmd += ' -B {0}'.format(backing)
+        if backing in ('zfs',):
+            if zfsroot:
+                cmd += ' --zfsroot {0}'.format(zfsroot)
         if backing in ('lvm',):
             if lvname:
                 cmd += ' --lvname {0}'.format(lvname)
             if vgname:
                 cmd += ' --vgname {0}'.format(vgname)
+            if thinpool:
+                cmd += ' --thinpool {0}'.format(thinpool)
         if backing not in ('dir', 'overlayfs'):
             if fstype:
                 cmd += ' --fstype {0}'.format(fstype)
@@ -2088,12 +2073,19 @@ def clone(name,
     size = select('size', '1G')
     if backing in ('dir', 'overlayfs', 'btrfs'):
         size = None
-    cmd = 'lxc-clone'
+    # LXC commands and options changed in 2.0 - CF issue #34086 for details
+    if version() >= distutils.version.LooseVersion('2.0'):
+        # https://linuxcontainers.org/lxc/manpages//man1/lxc-copy.1.html
+        cmd = 'lxc-copy'
+        cmd += ' {0} -n {1} -N {2}'.format(snapshot, orig, name)
+    else:
+        # https://linuxcontainers.org/lxc/manpages//man1/lxc-clone.1.html
+        cmd = 'lxc-clone'
+        cmd += ' {0} -o {1} -n {2}'.format(snapshot, orig, name)
     if path:
         cmd += ' -P {0}'.format(pipes.quote(path))
         if not os.path.exists(path):
             os.makedirs(path)
-    cmd += ' {0} -o {1} -n {2}'.format(snapshot, orig, name)
     if backing:
         backing = backing.lower()
         cmd += ' -B {0}'.format(backing)
@@ -2392,12 +2384,6 @@ def start(name, **kwargs):
     '''
     Start the named container
 
-    restart : False
-        .. deprecated:: 2015.5.0
-            Use :mod:`lxc.restart <salt.modules.lxc.restart>`
-
-        Restart the container if it is already running
-
     path
         path to the container parent directory
         default: /var/lib/lxc (system)
@@ -2432,13 +2418,6 @@ def start(name, **kwargs):
         cmd += ' -f {0}'.format(pipes.quote(lxc_config))
     cmd += ' -d'
     _ensure_exists(name, path=path)
-    if kwargs.get('restart', False):
-        salt.utils.warn_until(
-            'Carbon',
-            'The \'restart\' argument to \'lxc.start\' has been deprecated, '
-            'please use \'lxc.restart\' instead.'
-        )
-        return restart(name, path=path)
     if state(name, path=path) == 'frozen':
         raise CommandExecutionError(
             'Container \'{0}\' is frozen, use lxc.unfreeze'.format(name)
@@ -3706,59 +3685,6 @@ def _run(name,
         return ret[output]
 
 
-def run_cmd(name,
-            cmd,
-            no_start=False,
-            preserve_state=True,
-            stdin=None,
-            stdout=True,
-            stderr=False,
-            python_shell=True,
-            path=None,
-            output_loglevel='debug',
-            use_vt=False,
-            ignore_retcode=False,
-            chroot_fallback=False,
-            keep_env='http_proxy,https_proxy,no_proxy'):
-    '''
-
-    path
-        path to the container parent
-        default: /var/lib/lxc (system default)
-
-        .. versionadded:: 2015.8.0
-
-    .. deprecated:: 2015.5.0
-        Use :mod:`lxc.run <salt.modules.lxc.run>` instead
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'lxc.run_cmd has been deprecated, please use one of the lxc.run '
-        'functions (or lxc.retcode). See the documentation for more '
-        'information.'
-    )
-    if stdout and stderr:
-        output = 'all'
-    elif stdout:
-        output = 'stdout'
-    elif stderr:
-        output = 'stderr'
-    else:
-        output = 'retcode'
-    return _run(name,
-                cmd,
-                output=output,
-                no_start=no_start,
-                preserve_state=preserve_state,
-                stdin=stdin,
-                python_shell=python_shell,
-                path=path,
-                output_loglevel=output_loglevel,
-                use_vt=use_vt,
-                ignore_retcode=ignore_retcode,
-                keep_env=keep_env)
-
-
 def run(name,
         cmd,
         no_start=False,
@@ -4743,3 +4669,103 @@ def apply_network_profile(name, network_profile, nic_opts=None, path=None):
                                      tofile='after'):
         diff += line
     return diff
+
+
+def get_pid(name, path=None):
+    '''
+    Returns a container pid.
+    Throw an exception if the container isn't running.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.get_pid name
+    '''
+    if name not in list_(limit='running', path=path):
+        raise CommandExecutionError('Container {0} is not running, can\'t determine PID'.format(name))
+    info = __salt__['cmd.run']('lxc-info -n {0}'.format(name)).split("\n")
+    pid = [line.split(':')[1].strip() for line in info if re.match(r'\s*PID', line) != None][0]
+    return pid
+
+
+def add_veth(name, interface_name, bridge=None, path=None):
+    '''
+    Add a veth to a container.
+    Note : this function doesn't update the container config, just add the interface at runtime
+
+    name
+        Name of the container
+
+    interface_name
+        Name of the interface in the container
+
+    bridge
+        Name of the bridge to attach the interface to (facultative)
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' lxc.add_veth container_name eth1 br1
+        salt '*' lxc.add_veth container_name eth1
+    '''
+
+    # Get container init PID
+    pid = get_pid(name, path=path)
+
+    # Generate a ramdom string for veth and ensure that is isn't present on the system
+    while True:
+        random_veth = 'veth'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
+        if random_veth not in __salt__['network.interfaces']().keys():
+            break
+
+    # Check prerequisites
+    if not __salt__['file.directory_exists']('/var/run/'):
+        raise CommandExecutionError('Directory /var/run required for lxc.add_veth doesn\'t exists')
+    if not __salt__['file.file_exists']('/proc/{0}/ns/net'.format(pid)):
+        raise CommandExecutionError('Proc file for container {0} network namespace doesn\'t exists'.format(name))
+
+    if not __salt__['file.directory_exists']('/var/run/netns'):
+        __salt__['file.mkdir']('/var/run/netns')
+
+    # Ensure that the symlink is up to date (change on container restart)
+    if __salt__['file.is_link']('/var/run/netns/{0}'.format(name)):
+        __salt__['file.remove']('/var/run/netns/{0}'.format(name))
+
+    __salt__['file.symlink']('/proc/{0}/ns/net'.format(pid), '/var/run/netns/{0}'.format(name))
+
+    # Ensure that interface doesn't exists
+    interface_exists = 0 == __salt__['cmd.retcode']('ip netns exec {netns} ip address list {interface}'.format(
+            netns=name,
+            interface=interface_name
+        ))
+
+    if interface_exists:
+        raise CommandExecutionError('Interface {interface} already exists in {container}'.format(
+                interface=interface_name,
+                container=name
+            ))
+
+    # Create veth and bring it up
+    if __salt__['cmd.retcode']('ip link add name {veth} type veth peer name {veth}_c'.format(veth=random_veth)) != 0:
+        raise CommandExecutionError('Error while creating the veth pair {0}'.format(random_veth))
+    if __salt__['cmd.retcode']('ip link set dev {0} up'.format(random_veth)) != 0:
+        raise CommandExecutionError('Error while bringing up host-side veth {0}'.format(random_veth))
+
+    # Attach it to the container
+    attached = 0 == __salt__['cmd.retcode']('ip link set dev {veth}_c netns {container} name {interface_name}'.format(
+            veth=random_veth,
+            container=name,
+            interface_name=interface_name
+        ))
+    if not attached:
+        raise CommandExecutionError('Error while attaching the veth {veth} to container {container}'.format(
+                veth=random_veth,
+                container=name
+            ))
+
+    __salt__['file.remove']('/var/run/netns/{0}'.format(name))
+
+    if bridge is not None:
+        __salt__['bridge.addif'](bridge, random_veth)

@@ -25,7 +25,7 @@ def __virtual__():
     '''
     if salt.utils.is_darwin() or salt.utils.is_windows():
         return True
-    return False
+    return (False, 'Module proxy: module only works on Windows or MacOS systems')
 
 
 def _get_proxy_osx(function, network_service):

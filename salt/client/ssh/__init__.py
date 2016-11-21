@@ -24,6 +24,7 @@ import binascii
 import sys
 
 # Import salt libs
+import salt.output
 import salt.client.ssh.shell
 import salt.client.ssh.wrapper
 import salt.config
@@ -211,6 +212,8 @@ class SSH(object):
         else:
             self.event = None
         self.opts = opts
+        if self.opts['regen_thin']:
+            self.opts['ssh_wipe'] = True
         if not salt.utils.which('ssh'):
             raise salt.exceptions.SaltSystemExit('No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
         self.opts['_ssh_version'] = ssh_version()
@@ -223,14 +226,18 @@ class SSH(object):
         # If we're in a wfunc, we need to get the ssh key location from the
         # top level opts, stored in __master_opts__
         if '__master_opts__' in self.opts:
-            priv = self.opts['__master_opts__'].get(
-                    'ssh_priv',
-                    os.path.join(
-                        self.opts['__master_opts__']['pki_dir'],
-                        'ssh',
-                        'salt-ssh.rsa'
+            if self.opts['__master_opts__'].get('ssh_use_home_key') and \
+                    os.path.isfile(os.path.expanduser('~/.ssh/id_rsa')):
+                priv = os.path.expanduser('~/.ssh/id_rsa')
+            else:
+                priv = self.opts['__master_opts__'].get(
+                        'ssh_priv',
+                        os.path.join(
+                            self.opts['__master_opts__']['pki_dir'],
+                            'ssh',
+                            'salt-ssh.rsa'
+                            )
                         )
-                    )
         else:
             priv = self.opts.get(
                     'ssh_priv',
@@ -285,6 +292,9 @@ class SSH(object):
                 'ssh_identities_only',
                 salt.config.DEFAULT_MASTER_OPTS['ssh_identities_only']
             ),
+            'remote_port_forwards': self.opts.get(
+                'ssh_remote_port_forwards'
+            ),
         }
         if self.opts.get('rand_thin_dir'):
             self.defaults['thin_dir'] = os.path.join(
@@ -296,6 +306,7 @@ class SSH(object):
         self.fsclient = salt.fileclient.FSClient(self.opts)
         self.thin = salt.utils.thin.gen_thin(self.opts['cachedir'],
                                              extra_mods=self.opts.get('thin_extra_mods'),
+                                             overwrite=self.opts['regen_thin'],
                                              python2_bin=self.opts['python2_bin'],
                                              python3_bin=self.opts['python3_bin'])
         self.mods = mod_data(self.fsclient)
@@ -304,14 +315,19 @@ class SSH(object):
         '''
         Return the key string for the SSH public key
         '''
-        priv = self.opts.get(
-                'ssh_priv',
-                os.path.join(
-                    self.opts['pki_dir'],
-                    'ssh',
-                    'salt-ssh.rsa'
+        if '__master_opts__' in self.opts and \
+                self.opts['__master_opts__'].get('ssh_use_home_key') and \
+                os.path.isfile(os.path.expanduser('~/.ssh/id_rsa')):
+            priv = os.path.expanduser('~/.ssh/id_rsa')
+        else:
+            priv = self.opts.get(
+                    'ssh_priv',
+                    os.path.join(
+                        self.opts['pki_dir'],
+                        'ssh',
+                        'salt-ssh.rsa'
+                        )
                     )
-                )
         pub = '{0}.pub'.format(priv)
         with salt.utils.fopen(pub, 'r') as fp_:
             return '{0} rsa root@master'.format(fp_.read().split()[1])
@@ -463,6 +479,10 @@ class SSH(object):
                     returned.add(ret['id'])
                     yield {ret['id']: ret['ret']}
             except Exception:
+                # This bare exception is here to catch spurious exceptions
+                # thrown by que.get during healthy operation. Please do not
+                # worry about this bare exception, it is entirely here to
+                # control program flow.
                 pass
             for host in running:
                 if not running[host]['thread'].is_alive():
@@ -669,6 +689,7 @@ class Single(object):
             minion_opts=None,
             identities_only=False,
             sudo_user=None,
+            remote_port_forwards=None,
             **kwargs):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
         self.mine = mine
@@ -724,7 +745,8 @@ class Single(object):
                 'tty': tty,
                 'mods': self.mods,
                 'identities_only': identities_only,
-                'sudo_user': sudo_user}
+                'sudo_user': sudo_user,
+                'remote_port_forwards': remote_port_forwards}
         # Pre apply changeable defaults
         self.minion_opts = {
                     'grains_cache': True,
@@ -919,7 +941,7 @@ class Single(object):
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
 
-        # We're running in the mind, need to fetch the arguments from the
+        # We're running in the mine, need to fetch the arguments from the
         # roster, pillar, master config (in that order)
         if self.mine:
             mine_args = None
@@ -1302,6 +1324,10 @@ def mod_data(fsclient):
                     ret[ref] = mods_data
     if not ret:
         return {}
+
+    if six.PY3:
+        ver_base = salt.utils.to_bytes(ver_base)
+
     ver = hashlib.sha1(ver_base).hexdigest()
     ext_tar_path = os.path.join(
             fsclient.opts['cachedir'],

@@ -30,9 +30,10 @@ class Batch(object):
     def __init__(self, opts, eauth=None, quiet=False, parser=None):
         self.opts = opts
         self.eauth = eauth if eauth else {}
+        self.pub_kwargs = eauth if eauth else {}
         self.quiet = quiet
         self.local = salt.client.get_local_client(opts['conf_file'])
-        self.minions, self.ping_gen = self.__gather_minions()
+        self.minions, self.ping_gen, self.down_minions = self.__gather_minions()
         self.options = parser
 
     def __gather_minions(self):
@@ -51,15 +52,23 @@ class Batch(object):
         else:
             args.append(self.opts.get('expr_form', 'glob'))
 
-        ping_gen = self.local.cmd_iter(*args, **self.eauth)
+        self.pub_kwargs['yield_pub_data'] = True
+        ping_gen = self.local.cmd_iter(*args, **self.pub_kwargs)
 
         # Broadcast to targets
         fret = set()
+        nret = set()
         try:
             for ret in ping_gen:
-                m = next(six.iterkeys(ret))
-                if m is not None:
-                    fret.add(m)
+                if ('minions' and 'jid') in ret:
+                    for minion in ret['minions']:
+                        nret.add(minion)
+                    continue
+                else:
+                    m = next(six.iterkeys(ret))
+                    if m is not None:
+                        fret.add(m)
+            return (list(fret), ping_gen, nret.difference(fret))
         except StopIteration:
             if not self.quiet:
                 print_cli('No minions matched the target.')
@@ -129,6 +138,11 @@ class Batch(object):
         #   sure that the main while loop finishes even with unresp minions
         minion_tracker = {}
 
+        # We already know some minions didn't respond to the ping, so inform
+        # the user we won't be attempting to run a job on them
+        for down_minion in self.down_minions:
+            print_cli('Minion {0} did not respond. No job will be sent.'.format(down_minion))
+
         # Iterate while we still have things to execute
         while len(ret) < len(self.minions):
             next_ = []
@@ -197,11 +211,15 @@ class Batch(object):
                             parts.update({part['data']['id']: part})
                             if part['data']['id'] in minion_tracker[queue]['minions']:
                                 minion_tracker[queue]['minions'].remove(part['data']['id'])
+                            else:
+                                print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(part['id']))
                         else:
                             parts.update(part)
                             for id in part.keys():
                                 if id in minion_tracker[queue]['minions']:
                                     minion_tracker[queue]['minions'].remove(id)
+                                else:
+                                    print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(id))
                 except StopIteration:
                     # if a iterator is done:
                     # - set it to inactive

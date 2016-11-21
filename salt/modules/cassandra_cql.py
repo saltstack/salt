@@ -32,7 +32,8 @@ Cassandra Database Module
           port: 9000
           username: cas_admin
 
-.. versionchanged:: Carbon
+    .. versionchanged:: 2016.11.0
+
     Added support for ``ssl_options`` and ``protocol_version``.
 
     Example configuration with
@@ -86,6 +87,8 @@ import ssl
 from salt.exceptions import CommandExecutionError
 import salt.ext.six as six
 from salt.ext.six.moves import range
+
+SSL_VERSION = 'ssl_version'
 
 SSL_VERSION = 'ssl_version'
 
@@ -232,7 +235,8 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None,
         port = _load_properties(property_name=port, config_option='port', set_default=True, default=9042)
         cql_user = _load_properties(property_name=cql_user, config_option='username', set_default=True, default="cassandra")
         cql_pass = _load_properties(property_name=cql_pass, config_option='password', set_default=True, default="cassandra")
-        protocol_version = _load_properties(property_name=None, config_option='protocol_version',
+        protocol_version = _load_properties(property_name=protocol_version,
+                                            config_option='protocol_version',
                                             set_default=True, default=4)
 
         try:

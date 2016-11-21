@@ -61,7 +61,7 @@ class ComposerTestCase(TestCase):
                 mock = MagicMock(side_effect=[SaltException, {}])
                 with patch.dict(composer.__salt__, {'composer.install': mock}):
                     comt = ("Error executing composer in "
-                            "''CURL'': SaltException('',)")
+                            "'CURL': ")
                     ret.update({'comment': comt, 'result': False,
                                 'changes': {}})
                     self.assertDictEqual(composer.installed(name), ret)
@@ -99,7 +99,7 @@ class ComposerTestCase(TestCase):
                 mock = MagicMock(side_effect=[SaltException, {}])
                 with patch.dict(composer.__salt__, {'composer.update': mock}):
                     comt = ("Error executing composer in "
-                            "''CURL'': SaltException('',)")
+                            "'CURL': ")
                     ret.update({'comment': comt, 'result': False,
                                 'changes': {}})
                     self.assertDictEqual(composer.update(name), ret)

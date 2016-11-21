@@ -134,7 +134,10 @@ def _diff(state_data, resource_object):
             v = _escalation_rules_to_string(v)
             resource_value = _escalation_rules_to_string(resource_object[k])
         else:
-            resource_value = resource_object[k]
+            if k not in resource_object.keys():
+                objects_differ = True
+            else:
+                resource_value = resource_object[k]
         if v != resource_value:
             objects_differ = '{0} {1} {2}'.format(k, v, resource_value)
             break

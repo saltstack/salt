@@ -90,7 +90,10 @@ class OutputReturnTest(integration.ShellCase):
         '''
         opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         opts['output_file'] = os.path.join(
-            opts['root_dir'], 'outputtest')
+            integration.SYS_TMP_DIR,
+            'salt-tests-tmpdir',
+            'outputtest'
+        )
         data = {'foo': {'result': False,
                         'aaa': 'azerzaeréééé',
                         'comment': u'ééééàààà'}}

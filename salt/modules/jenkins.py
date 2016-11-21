@@ -71,12 +71,6 @@ def _connect():
     if not jenkins_url:
         raise SaltInvocationError('No Jenkins URL found.')
 
-    if not jenkins_user:
-        raise SaltInvocationError('No Jenkins User found.')
-
-    if not jenkins_password:
-        raise SaltInvocationError('No Jenkins Password or API token found.')
-
     return jenkins.Jenkins(jenkins_url,
                            username=jenkins_user,
                            password=jenkins_password)
@@ -426,3 +420,31 @@ def get_job_config(name=None):
 
     job_info = server.get_job_config(name)
     return job_info
+
+
+def plugin_installed(name):
+    '''
+    .. versionadded:: 2016.11.0
+
+    Return if the plugin is installed for the provided plugin name.
+
+    :param name: The name of the parameter to confirm installation.
+    :return: True if plugin exists, False if plugin does not exist.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jenkins.plugin_installed pluginName
+
+    '''
+
+    server = _connect()
+    plugins = server.get_plugins()
+
+    exists = [plugin for plugin in plugins.keys() if name in plugin]
+
+    if exists:
+        return True
+    else:
+        return False

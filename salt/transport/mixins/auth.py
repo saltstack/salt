@@ -14,7 +14,9 @@ import binascii
 import salt.crypt
 import salt.payload
 import salt.master
+import salt.transport.frame
 import salt.utils.event
+import salt.ext.six as six
 from salt.utils.cache import CacheCli
 
 # Import Third Party Libs
@@ -108,11 +110,14 @@ class AESReqServerMixin(object):
             return self.crypticle.dumps({})
         except IOError:
             log.error('AES key not found')
-            return 'AES key not found'
+            return {'error': 'AES key not found'}
 
         pret = {}
         cipher = PKCS1_OAEP.new(pub)
-        pret['key'] = cipher.encrypt(key)
+        if six.PY2:
+            pret['key'] = cipher.encrypt(key)
+        else:
+            pret['key'] = cipher.encrypt(salt.utils.to_bytes(key))
         pret[dictkey] = pcrypt.dumps(
             ret if ret is not False else {}
         )
@@ -370,7 +375,7 @@ class AESReqServerMixin(object):
 
         else:
             # Something happened that I have not accounted for, FAIL!
-            log.warn('Unaccounted for authentication failure')
+            log.warning('Unaccounted for authentication failure')
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}

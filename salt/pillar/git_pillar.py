@@ -283,6 +283,7 @@ import hashlib
 import os
 
 # Import salt libs
+import salt.utils
 import salt.utils.gitfs
 import salt.utils.dictupdate
 from salt.exceptions import FileserverConfigError
@@ -408,14 +409,13 @@ class _LegacyGitPillar(object):
         self.working_dir = ''
         self.repo = None
 
-        hash_type = getattr(hashlib, opts.get('hash_type', 'md5'))
+        hash_type = getattr(hashlib, opts['hash_type'])
         hash_str = '{0} {1}'.format(self.branch, self.rp_location)
-        repo_hash = hash_type(hash_str).hexdigest()
+        repo_hash = hash_type(salt.utils.to_bytes(hash_str)).hexdigest()
         rp_ = os.path.join(self.opts['cachedir'], 'pillar_gitfs', repo_hash)
 
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
-
         try:
             self.repo = git.Repo.init(rp_)
         except (git.exc.NoSuchPathError,
@@ -423,6 +423,10 @@ class _LegacyGitPillar(object):
             log.error('GitPython exception caught while '
                       'initializing the repo: {0}. Maybe '
                       'git is not available.'.format(exc))
+        except Exception as exc:
+            log.exception('Undefined exception in git pillar. '
+                    'This may be a bug should be reported to the '
+                    'SaltStack developers.')
 
         # Git directory we are working on
         # Should be the same as self.repo.working_dir
@@ -466,7 +470,7 @@ class _LegacyGitPillar(object):
         Return boolean whether it worked
         '''
         try:
-            log.debug('Updating fileserver for git_pillar module')
+            log.debug('Legacy git_pillar: Updating \'%s\'', self.rp_location)
             self.repo.git.fetch()
         except git.exc.GitCommandError as exc:
             log.error('Unable to fetch the latest changes from remote '
@@ -474,10 +478,15 @@ class _LegacyGitPillar(object):
             return False
 
         try:
-            self.repo.git.checkout('origin/{0}'.format(self.branch))
+            checkout_ref = 'origin/{0}'.format(self.branch)
+            log.debug('Legacy git_pillar: Checking out %s for \'%s\'',
+                      checkout_ref, self.rp_location)
+            self.repo.git.checkout(checkout_ref)
         except git.exc.GitCommandError as exc:
-            log.error('Unable to checkout branch '
-                      '{0}: {1}'.format(self.branch, exc))
+            log.error(
+                'Legacy git_pillar: Failed to checkout %s for \'%s\': %s',
+                checkout_ref, self.rp_location, exc
+            )
             return False
 
         return True
@@ -518,13 +527,20 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
         # Support multiple key=val attributes as custom parameters.
         DELIM = '='
         if DELIM not in extraopt:
-            log.error('Incorrectly formatted extra parameter. '
-                      'Missing \'{0}\': {1}'.format(DELIM, extraopt))
+            log.error(
+                'Legacy git_pillar: Incorrectly formatted extra parameter '
+                '\'%s\' within \'%s\' missing \'%s\')',
+                extraopt, repo_string, DELIM
+            )
         key, val = _extract_key_val(extraopt, DELIM)
         if key == 'root':
             root = val
         else:
-            log.warning('Unrecognized extra parameter: {0}'.format(key))
+            log.error(
+                'Legacy git_pillar: Unrecognized extra parameter \'%s\' '
+                'in \'%s\'',
+                key, repo_string
+            )
 
     # environment is "different" from the branch
     cfg_branch, _, environment = branch_env.partition(':')
@@ -540,12 +556,24 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
 
     # normpath is needed to remove appended '/' if root is empty string.
     pillar_dir = os.path.normpath(os.path.join(gitpil.working_dir, root))
+    log.debug(
+        'Legacy git_pillar: pillar_dir for \'%s\' is \'%s\'',
+        repo_string, pillar_dir
+    )
+    log.debug(
+        'Legacy git_pillar: branch for \'%s\' is \'%s\'',
+        repo_string, branch
+    )
 
     pillar_dirs.setdefault(pillar_dir, {})
 
     if cfg_branch == '__env__' and branch not in ['master', 'base']:
         gitpil.update()
     elif pillar_dirs[pillar_dir].get(branch, False):
+        log.debug(
+            'Already processed pillar_dir \'%s\' for \'%s\'',
+            pillar_dir, repo_string
+        )
         return {}  # we've already seen this combo
 
     pillar_dirs[pillar_dir].setdefault(branch, True)

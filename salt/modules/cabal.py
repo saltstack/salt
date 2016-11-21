@@ -32,6 +32,21 @@ def __virtual__():
 def update(user=None, env=None):
     '''
     Updates list of known packages.
+
+    user
+        The user to run cabal update with
+
+    env
+        Environment variables to set when invoking cabal. Uses the
+        same ``env`` format as the :py:func:`cmd.run
+        <salt.modules.cmdmod.run>` execution function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cabal.update
+
     '''
     return __salt__['cmd.run_all']('cabal update', runas=user, env=env)
 
@@ -148,6 +163,13 @@ def uninstall(pkg,
         Environment variables to set when invoking cabal. Uses the
         same ``env`` format as the :py:func:`cmd.run
         <salt.modules.cmdmod.run>` execution function
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cabal.uninstall ShellCheck
+
     '''
     cmd = ['ghc-pkg unregister']
     cmd.append('"{0}"'.format(pkg))

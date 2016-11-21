@@ -12,15 +12,18 @@ import sys
 import copy
 import json
 import time
+import stat
+import errno
 import signal
 import shutil
 import pprint
 import atexit
+import socket
 import logging
 import tempfile
+import threading
 import subprocess
 import multiprocessing
-from hashlib import md5
 from datetime import datetime, timedelta
 try:
     import pwd
@@ -57,10 +60,16 @@ import salt.version
 import salt.utils
 import salt.utils.process
 import salt.log.setup as salt_log_setup
+from salt.ext import six
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
-from salt.utils.process import MultiprocessingProcess
+from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
+
+try:
+    from shlex import quote as _quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _quote
 
 try:
     import salt.master
@@ -70,10 +79,125 @@ except ImportError:
 
 # Import 3rd-party libs
 import yaml
+import msgpack
 import salt.ext.six as six
+from salt.ext.six.moves import cStringIO
+
+try:
+    import salt.ext.six.moves.socketserver as socketserver
+except ImportError:
+    import socketserver
+
 if salt.utils.is_windows():
     import win32api
 
+from tornado import gen
+from tornado import ioloop
+
+try:
+    from salttesting.helpers import terminate_process_pid
+except ImportError:
+    # Once the latest salt-testing works against salt's develop branch
+    # uncomment the following 2 lines and delete the function defined
+    # in this except
+    #print('Please upgrade your version of salt-testing')
+    #sys.exit(1)
+
+    import psutil
+
+    def terminate_process_pid(pid, only_children=False):
+        children = []
+        process = None
+
+        # Let's begin the shutdown routines
+        if sys.platform.startswith('win'):
+            sigint = signal.CTRL_BREAK_EVENT  # pylint: disable=no-member
+            sigint_name = 'CTRL_BREAK_EVENT'
+        else:
+            sigint = signal.SIGINT
+            sigint_name = 'SIGINT'
+
+        try:
+            process = psutil.Process(pid)
+            if hasattr(process, 'children'):
+                children = process.children(recursive=True)
+        except psutil.NoSuchProcess:
+            log.info('No process with the PID %s was found running', pid)
+
+        if process and only_children is False:
+            try:
+                cmdline = process.cmdline()
+            except psutil.AccessDenied:
+                # OSX denies us access to the above information
+                cmdline = None
+            if not cmdline:
+                try:
+                    cmdline = process.as_dict()
+                except psutil.NoSuchProcess as exc:
+                    log.debug('No such process found. Stacktrace: {0}'.format(exc))
+            log.info('Sending %s to process: %s', sigint_name, cmdline)
+            process.send_signal(sigint)
+            try:
+                process.wait(timeout=10)
+            except psutil.TimeoutExpired:
+                pass
+
+            if psutil.pid_exists(pid):
+                log.info('Terminating process: %s', cmdline)
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except psutil.TimeoutExpired:
+                    pass
+
+            if psutil.pid_exists(pid):
+                log.warning('Killing process: %s', cmdline)
+                process.kill()
+
+            if psutil.pid_exists(pid):
+                log.warning('Process left behind which we were unable to kill: %s', cmdline)
+        if children:
+            # Lets log and kill any child processes which salt left behind
+            def kill_children(_children, terminate=False, kill=False):
+                for child in _children[:][::-1]:  # Iterate over a reversed copy of the list
+                    try:
+                        if not kill and child.status() == psutil.STATUS_ZOMBIE:
+                            # Zombie processes will exit once child processes also exit
+                            continue
+                        try:
+                            cmdline = child.cmdline()
+                        except psutil.AccessDenied as err:
+                            log.debug('Cannot obtain child process cmdline: %s', err)
+                            cmdline = ''
+                        if not cmdline:
+                            cmdline = child.as_dict()
+                        if kill:
+                            log.warning('Killing child process left behind: %s', cmdline)
+                            child.kill()
+                        elif terminate:
+                            log.warning('Terminating child process left behind: %s', cmdline)
+                            child.terminate()
+                        else:
+                            log.warning('Sending %s to child process left behind: %s', sigint_name, cmdline)
+                            child.send_signal(sigint)
+                        if not psutil.pid_exists(child.pid):
+                            _children.remove(child)
+                    except psutil.NoSuchProcess:
+                        _children.remove(child)
+
+            kill_children(children)
+
+            if children:
+                try:
+                    psutil.wait_procs(children, timeout=10, callback=lambda proc: kill_children(children, terminate=True))
+                except psutil.AccessDenied:
+                    kill_children(children, terminate=True)
+
+            if children:
+                try:
+                    psutil.wait_procs(children, timeout=5, callback=lambda proc: kill_children(children, kill=True))
+                except psutil.AccessDenied:
+                    kill_children(children, kill=True)
 
 SYS_TMP_DIR = os.path.realpath(
     # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
@@ -89,9 +213,42 @@ SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
 TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
 TMP_CONF_DIR = os.path.join(TMP, 'config')
+TMP_SUB_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, 'sub-minion')
+TMP_SYNDIC_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, 'syndic-minion')
+TMP_SYNDIC_MASTER_CONF_DIR = os.path.join(TMP_CONF_DIR, 'syndic-master')
 CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
 PILLAR_DIR = os.path.join(FILES, 'pillar')
+TMP_SCRIPT_DIR = os.path.join(TMP, 'scripts')
+ENGINES_DIR = os.path.join(FILES, 'engines')
+LOG_HANDLERS_DIR = os.path.join(FILES, 'log_handlers')
 
+SCRIPT_TEMPLATES = {
+    'salt': [
+        'from salt.scripts import salt_main\n',
+        'if __name__ == \'__main__\':\n'
+        '    salt_main()'
+    ],
+    'salt-api': [
+        'import salt.cli\n',
+        'def main():\n',
+        '    sapi = salt.cli.SaltAPI()',
+        '    sapi.run()\n',
+        'if __name__ == \'__main__\':',
+        '    main()'
+    ],
+    'common': [
+        'from salt.scripts import salt_{0}\n',
+        'from salt.utils import is_windows\n\n',
+        'if __name__ == \'__main__\':\n',
+        '    if is_windows():\n',
+        '        import os.path\n',
+        '        import py_compile\n',
+        '        cfile = os.path.splitext(__file__)[0] + ".pyc"\n',
+        '        if not os.path.exists(cfile):\n',
+        '            py_compile.compile(__file__, cfile)\n',
+        '    salt_{0}()'
+    ]
+}
 RUNTIME_CONFIGS = {}
 
 log = logging.getLogger(__name__)
@@ -105,6 +262,50 @@ def cleanup_runtime_config_instance(to_cleanup):
 
 
 atexit.register(cleanup_runtime_config_instance, RUNTIME_CONFIGS)
+
+_RUNTESTS_PORTS = {}
+
+
+def get_unused_localhost_port():
+    '''
+    Return a random unused port on localhost
+    '''
+    usock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+    usock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    usock.bind(('127.0.0.1', 0))
+    port = usock.getsockname()[1]
+    if port in (54505, 54506, 64505, 64506, 64510, 64511, 64520, 64521):
+        # These ports are hardcoded in the test configuration
+        port = get_unused_localhost_port()
+        usock.close()
+        return port
+
+    DARWIN = True if sys.platform.startswith('darwin') else False
+    BSD = True if 'bsd' in sys.platform else False
+
+    if DARWIN and port in _RUNTESTS_PORTS:
+        port = get_unused_localhost_port()
+        usock.close()
+        return port
+
+    _RUNTESTS_PORTS[port] = usock
+
+    if DARWIN or BSD:
+        usock.close()
+
+    return port
+
+
+def close_open_sockets(sockets_dict):
+    for port in list(sockets_dict):
+        sock = sockets_dict.pop(port)
+        sock.close()
+
+
+atexit.register(close_open_sockets, _RUNTESTS_PORTS)
+
+
+SALT_LOG_PORT = get_unused_localhost_port()
 
 
 def run_tests(*test_cases, **kwargs):
@@ -168,6 +369,321 @@ def run_tests(*test_cases, **kwargs):
     parser.finalize(0)
 
 
+class ThreadingMixIn(socketserver.ThreadingMixIn):
+    daemon_threads = True
+
+
+class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer):
+
+    allow_reuse_address = True
+
+    def server_activate(self):
+        self.shutting_down = threading.Event()
+        socketserver.TCPServer.server_activate(self)
+        #super(ThreadedSocketServer, self).server_activate()
+
+    def server_close(self):
+        if hasattr(self, 'shutting_down'):
+            self.shutting_down.set()
+        socketserver.TCPServer.server_close(self)
+        #super(ThreadedSocketServer, self).server_close()
+
+
+class SocketServerRequestHandler(socketserver.StreamRequestHandler):
+    def handle(self):
+        unpacker = msgpack.Unpacker(encoding='utf-8')
+        while not self.server.shutting_down.is_set():
+            try:
+                wire_bytes = self.request.recv(1024)
+                if not wire_bytes:
+                    break
+                unpacker.feed(wire_bytes)
+                for record_dict in unpacker:
+                    record = logging.makeLogRecord(record_dict)
+                    logger = logging.getLogger(record.name)
+                    logger.handle(record)
+            except (EOFError, KeyboardInterrupt, SystemExit):
+                break
+            except socket.error as exc:
+                try:
+                    if exc.errno == errno.WSAECONNRESET:
+                        # Connection reset on windows
+                        break
+                except AttributeError:
+                    # We're not on windows
+                    pass
+                log.exception(exc)
+            except Exception as exc:
+                log.exception(exc)
+
+
+class ScriptPathMixin(object):
+
+    def get_script_path(self, script_name):
+        '''
+        Return the path to a testing runtime script
+        '''
+        if not os.path.isdir(TMP_SCRIPT_DIR):
+            os.makedirs(TMP_SCRIPT_DIR)
+
+        script_path = os.path.join(TMP_SCRIPT_DIR,
+                                   'cli_{0}.py'.format(script_name.replace('-', '_')))
+
+        if not os.path.isfile(script_path):
+            log.info('Generating {0}'.format(script_path))
+
+            # Late import
+            import salt.utils
+
+            with salt.utils.fopen(script_path, 'w') as sfh:
+                script_template = SCRIPT_TEMPLATES.get(script_name, None)
+                if script_template is None:
+                    script_template = SCRIPT_TEMPLATES.get('common', None)
+                if script_template is None:
+                    raise RuntimeError(
+                        '{0} does not know how to handle the {1} script'.format(
+                            self.__class__.__name__,
+                            script_name
+                        )
+                    )
+                sfh.write(
+                    '#!{0}\n\n'.format(sys.executable) +
+                    'import sys\n' +
+                    'CODE_DIR="{0}"\n'.format(CODE_DIR) +
+                    'if CODE_DIR not in sys.path:\n' +
+                    '    sys.path.insert(0, CODE_DIR)\n\n' +
+                    '\n'.join(script_template).format(script_name.replace('salt-', ''))
+                )
+            fst = os.stat(script_path)
+            os.chmod(script_path, fst.st_mode | stat.S_IEXEC)
+
+        log.info('Returning script path %r', script_path)
+        return script_path
+
+
+class SaltScriptBase(ScriptPathMixin):
+    '''
+    Base class for Salt CLI scripts
+    '''
+
+    cli_script_name = None
+
+    def __init__(self,
+                 config,
+                 config_dir,
+                 bin_dir_path,
+                 io_loop=None):
+        self.config = config
+        self.config_dir = config_dir
+        self.bin_dir_path = bin_dir_path
+        self._io_loop = io_loop
+
+    @property
+    def io_loop(self):
+        '''
+        Return an IOLoop
+        '''
+        if self._io_loop is None:
+            self._io_loop = ioloop.IOLoop.current()
+        return self._io_loop
+
+    def get_script_args(self):  # pylint: disable=no-self-use
+        '''
+        Returns any additional arguments to pass to the CLI script
+        '''
+        return []
+
+
+class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
+    '''
+    Base class for Salt Daemon CLI scripts
+    '''
+
+    def __init__(self, *args, **kwargs):
+        super(SaltDaemonScriptBase, self).__init__(*args, **kwargs)
+        self._running = multiprocessing.Event()
+        self._connectable = multiprocessing.Event()
+        self._process = None
+
+    def is_alive(self):
+        '''
+        Returns true if the process is alive
+        '''
+        return self._running.is_set()
+
+    def get_check_ports(self):  # pylint: disable=no-self-use
+        '''
+        Return a list of ports to check against to ensure the daemon is running
+        '''
+        return []
+
+    def start(self):
+        '''
+        Start the daemon subprocess
+        '''
+        self._process = salt.utils.process.SignalHandlingMultiprocessingProcess(
+            target=self._start, args=(self._running,))
+        self._process.start()
+        self._running.set()
+        return True
+
+    def _start(self, running_event):
+        '''
+        The actual, coroutine aware, start method
+        '''
+        log.info('Starting %s %s DAEMON', self.display_name, self.__class__.__name__)
+        proc_args = [
+            self.get_script_path(self.cli_script_name),
+            '-c',
+            self.config_dir,
+        ] + self.get_script_args()
+        if salt.utils.is_windows():
+            # Windows need the python executable to come first
+            proc_args.insert(0, sys.executable)
+        log.info('Running \'%s\' from %s...', ' '.join(proc_args), self.__class__.__name__)
+
+        try:
+            terminal = NonBlockingPopen(proc_args, cwd=CODE_DIR)
+
+            while running_event.is_set() and terminal.poll() is None:
+                # We're not actually interested in processing the output, just consume it
+                if terminal.stdout is not None:
+                    terminal.recv()
+                if terminal.stderr is not None:
+                    terminal.recv_err()
+                time.sleep(0.125)
+        except (SystemExit, KeyboardInterrupt):
+            pass
+
+        terminate_process_pid(terminal.pid)
+#        terminal.communicate()
+
+    def terminate(self):
+        '''
+        Terminate the started daemon
+        '''
+        log.info('Terminating %s %s DAEMON', self.display_name, self.__class__.__name__)
+        self._running.clear()
+        self._connectable.clear()
+        time.sleep(0.0125)
+        terminate_process_pid(self._process.pid)
+#        self._process.join()
+        log.info('%s %s DAEMON terminated', self.display_name, self.__class__.__name__)
+
+    def wait_until_running(self, timeout=None):
+        '''
+        Blocking call to wait for the daemon to start listening
+        '''
+        if self._connectable.is_set():
+            return True
+        try:
+            return self.io_loop.run_sync(self._wait_until_running, timeout=timeout)
+        except ioloop.TimeoutError:
+            return False
+
+    @gen.coroutine
+    def _wait_until_running(self):
+        '''
+        The actual, coroutine aware, call to wait for the daemon to start listening
+        '''
+        check_ports = self.get_check_ports()
+        log.debug(
+            '%s is checking the following ports to assure running status: %s',
+            self.__class__.__name__,
+            check_ports
+        )
+        while self._running.is_set():
+            if not check_ports:
+                self._connectable.set()
+                break
+            for port in set(check_ports):
+                if isinstance(port, int):
+                    log.trace('Checking connectable status on port: %s', port)
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    conn = sock.connect_ex(('localhost', port))
+                    if conn == 0:
+                        log.debug('Port %s is connectable!', port)
+                        check_ports.remove(port)
+                        try:
+                            sock.shutdown(socket.SHUT_RDWR)
+                            sock.close()
+                        except socket.error as exc:
+                            if not sys.platform.startswith('darwin'):
+                                raise
+                            try:
+                                if exc.errno != errno.ENOTCONN:
+                                    raise
+                            except AttributeError:
+                                # This is not OSX !?
+                                pass
+                    del sock
+                elif isinstance(port, str):
+                    joined = self.run_run('manage.joined', config_dir=self.config_dir)
+                    joined = [x.lstrip('- ') for x in joined]
+                    if port in joined:
+                        check_ports.remove(port)
+            yield gen.sleep(0.125)
+        # A final sleep to allow the ioloop to do other things
+        yield gen.sleep(0.125)
+        log.info('All ports checked. %s running!', self.cli_script_name)
+        raise gen.Return(self._connectable.is_set())
+
+
+class SaltMinion(SaltDaemonScriptBase):
+    '''
+    Class which runs the salt-minion daemon
+    '''
+
+    cli_script_name = 'salt-minion'
+
+    def get_script_args(self):
+        script_args = ['-l', 'quiet']
+        if salt.utils.is_windows() is False:
+            script_args.append('--disable-keepalive')
+        return script_args
+
+    def get_check_ports(self):
+        if salt.utils.is_windows():
+            return set([self.config['tcp_pub_port'],
+                        self.config['tcp_pull_port']])
+        else:
+            return set([self.config['id']])
+
+
+class SaltMaster(SaltDaemonScriptBase):
+    '''
+    Class which runs the salt-minion daemon
+    '''
+
+    cli_script_name = 'salt-master'
+
+    def get_check_ports(self):
+        #return set([self.config['runtests_conn_check_port']])
+        return set([self.config['ret_port'],
+                    self.config['publish_port']])
+        # Disabled along with Pytest config until fixed.
+#                    self.config['runtests_conn_check_port']])
+
+    def get_script_args(self):
+        #return ['-l', 'debug']
+        return ['-l', 'quiet']
+
+
+class SaltSyndic(SaltDaemonScriptBase):
+    '''
+    Class which runs the salt-syndic daemon
+    '''
+
+    cli_script_name = 'salt-syndic'
+
+    def get_script_args(self):
+        #return ['-l', 'debug']
+        return ['-l', 'quiet']
+
+    def get_check_ports(self):
+        return set()
+
+
 class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
@@ -177,6 +693,10 @@ class TestDaemon(object):
     def __init__(self, parser):
         self.parser = parser
         self.colors = salt.utils.get_colors(self.parser.options.no_colors is False)
+        if salt.utils.is_windows():
+            # There's no shell color support on windows...
+            for key in self.colors:
+                self.colors[key] = ''
 
     def __enter__(self):
         '''
@@ -184,7 +704,7 @@ class TestDaemon(object):
         '''
         # Setup the multiprocessing logging queue listener
         salt_log_setup.setup_multiprocessing_logging_listener(
-            vars(self.parser.options)
+            self.master_opts
         )
 
         # Set up PATH to mockbin
@@ -256,25 +776,44 @@ class TestDaemon(object):
         '''
         Fire up the daemons used for zeromq tests
         '''
-        self.master_process = self.start_daemon(salt.master.Master,
-                                                self.master_opts,
-                                                'start')
+        self.log_server = ThreadedSocketServer(('localhost', SALT_LOG_PORT), SocketServerRequestHandler)
+        self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
+        self.log_server_process.daemon = True
+        self.log_server_process.start()
 
-        self.minion_process = self.start_daemon(salt.minion.Minion,
-                                                self.minion_opts,
-                                                'tune_in')
-
-        self.sub_minion_process = self.start_daemon(salt.minion.Minion,
-                                                    self.sub_minion_opts,
-                                                    'tune_in')
-
-        self.smaster_process = self.start_daemon(salt.master.Master,
-                                                self.syndic_master_opts,
-                                                'start')
-
-        self.syndic_process = self.start_daemon(salt.minion.Syndic,
-                                                self.syndic_opts,
-                                                'tune_in')
+        self.master_process = SaltMaster(self.master_opts, TMP_CONF_DIR, SCRIPT_DIR)
+        self.master_process.display_name = 'salt-master'
+        self.minion_process = SaltMinion(self.minion_opts, TMP_CONF_DIR, SCRIPT_DIR)
+        self.minion_process.display_name = 'salt-minion'
+        self.sub_minion_process = SaltMinion(self.sub_minion_opts, TMP_SUB_MINION_CONF_DIR, SCRIPT_DIR)
+        self.sub_minion_process.display_name = 'sub salt-minion'
+        self.smaster_process = SaltMaster(self.syndic_master_opts, TMP_SYNDIC_MASTER_CONF_DIR, SCRIPT_DIR)
+        self.smaster_process.display_name = 'syndic salt-master'
+        self.syndic_process = SaltSyndic(self.syndic_opts, TMP_SYNDIC_MINION_CONF_DIR, SCRIPT_DIR)
+        self.syndic_process.display_name = 'salt-syndic'
+        for process in (self.master_process, self.minion_process, self.sub_minion_process,
+                        self.smaster_process, self.syndic_process):
+            sys.stdout.write(
+                ' * {LIGHT_YELLOW}Starting {0} ... {ENDC}'.format(
+                    process.display_name,
+                    **self.colors
+                )
+            )
+            sys.stdout.flush()
+            process.start()
+            process.wait_until_running(timeout=15)
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
+            sys.stdout.write(
+                ' * {LIGHT_GREEN}Starting {0} ... STARTED!\n{ENDC}'.format(
+                    process.display_name,
+                    **self.colors
+                )
+            )
+            sys.stdout.flush()
 
     def start_raet_daemons(self):
         '''
@@ -307,7 +846,12 @@ class TestDaemon(object):
         '''
         Generate keys and start an ssh daemon on an alternate port
         '''
-        print(' * Initializing SSH subsystem')
+        sys.stdout.write(
+            ' * {LIGHT_GREEN}Starting {0} ... {ENDC}'.format(
+                'SSH server',
+                **self.colors
+            )
+        )
         keygen = salt.utils.which('ssh-keygen')
         sshd = salt.utils.which('sshd')
 
@@ -459,6 +1003,11 @@ class TestDaemon(object):
             with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
                 roster.write('  user: {0}\n'.format(pwd.getpwuid(os.getuid()).pw_name))
                 roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
+        sys.stdout.write(
+            ' {LIGHT_GREEN}STARTED!\n{ENDC}'.format(
+                **self.colors
+            )
+        )
 
     @classmethod
     def config(cls, role):
@@ -499,33 +1048,63 @@ class TestDaemon(object):
         if os.path.isdir(TMP_CONF_DIR):
             shutil.rmtree(TMP_CONF_DIR)
         os.makedirs(TMP_CONF_DIR)
+        os.makedirs(TMP_SUB_MINION_CONF_DIR)
+        os.makedirs(TMP_SYNDIC_MASTER_CONF_DIR)
+        os.makedirs(TMP_SYNDIC_MINION_CONF_DIR)
         print(' * Transplanting configuration files to \'{0}\''.format(TMP_CONF_DIR))
         if salt.utils.is_windows():
             running_tests_user = win32api.GetUserName()
         else:
             running_tests_user = pwd.getpwuid(os.getuid()).pw_name
-        master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
-        master_opts['user'] = running_tests_user
-        tests_know_hosts_file = os.path.join(TMP_CONF_DIR, 'salt_ssh_known_hosts')
-        with salt.utils.fopen(tests_know_hosts_file, 'w') as known_hosts:
+
+        tests_known_hosts_file = os.path.join(TMP_CONF_DIR, 'salt_ssh_known_hosts')
+        with salt.utils.fopen(tests_known_hosts_file, 'w') as known_hosts:
             known_hosts.write('')
-        master_opts['known_hosts_file'] = tests_know_hosts_file
 
-        minion_config_path = os.path.join(CONF_DIR, 'minion')
-        minion_opts = salt.config._read_conf_file(minion_config_path)
+        # This master connects to syndic_master via a syndic
+        master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
+        master_opts['known_hosts_file'] = tests_known_hosts_file
+        master_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        master_opts['user'] = running_tests_user
+        master_opts['config_dir'] = TMP_CONF_DIR
+        master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
+        master_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'master')
+
+        # This is the syndic for master
+        # Let's start with a copy of the syndic master configuration
+        syndic_opts = copy.deepcopy(master_opts)
+        # Let's update with the syndic configuration
+        syndic_opts.update(salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic')))
+        syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        syndic_opts['config_dir'] = TMP_SYNDIC_MINION_CONF_DIR
+
+        # This minion connects to master
+        minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'minion'))
+        minion_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
         minion_opts['user'] = running_tests_user
-        minion_opts['root_dir'] = master_opts['root_dir'] = os.path.join(TMP, 'master-minion-root')
+        minion_opts['config_dir'] = TMP_CONF_DIR
+        minion_opts['root_dir'] = os.path.join(TMP, 'rootdir')
+        minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
+        minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
+        minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
 
-        syndic_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic'))
-        syndic_opts['user'] = running_tests_user
-
+        # This sub_minion also connects to master
         sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
-        sub_minion_opts['root_dir'] = os.path.join(TMP, 'sub-minion-root')
+        sub_minion_opts['cachedir'] = os.path.join(TMP, 'rootdir-sub-minion', 'cache')
         sub_minion_opts['user'] = running_tests_user
+        sub_minion_opts['config_dir'] = TMP_SUB_MINION_CONF_DIR
+        sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
+        sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
+        sub_minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
+        sub_minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
 
+        # This is the master of masters
         syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
+        syndic_master_opts['cachedir'] = os.path.join(TMP, 'rootdir-syndic-master', 'cache')
         syndic_master_opts['user'] = running_tests_user
-        syndic_master_opts['root_dir'] = os.path.join(TMP, 'syndic-master-root')
+        syndic_master_opts['config_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
+        syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
+        syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
 
         if transport == 'raet':
             master_opts['transport'] = 'raet'
@@ -543,10 +1122,10 @@ class TestDaemon(object):
             syndic_master_opts['transport'] = 'tcp'
 
         # Set up config options that require internal data
-        master_opts['pillar_roots'] = {
+        master_opts['pillar_roots'] = syndic_master_opts['pillar_roots'] = {
             'base': [os.path.join(FILES, 'pillar', 'base')]
         }
-        master_opts['file_roots'] = {
+        master_opts['file_roots'] = syndic_master_opts['file_roots'] = {
             'base': [
                 os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
@@ -559,26 +1138,28 @@ class TestDaemon(object):
                 TMP_PRODENV_STATE_TREE
             ]
         }
-        master_opts['ext_pillar'].append(
-            {'cmd_yaml': 'cat {0}'.format(
-                os.path.join(
-                    FILES,
-                    'ext.yaml'
-                )
-            )}
-        )
+        for opts_dict in (master_opts, syndic_master_opts):
+            if 'ext_pillar' not in opts_dict:
+                opts_dict['ext_pillar'] = []
+            if salt.utils.is_windows():
+                opts_dict['ext_pillar'].append(
+                    {'cmd_yaml': 'type {0}'.format(os.path.join(FILES, 'ext.yaml'))})
+            else:
+                opts_dict['ext_pillar'].append(
+                    {'cmd_yaml': 'cat {0}'.format(os.path.join(FILES, 'ext.yaml'))})
 
-        # We need to copy the extension modules into the new master root_dir or
-        # it will be prefixed by it
-        new_extension_modules_path = os.path.join(master_opts['root_dir'], 'extension_modules')
-        if not os.path.exists(new_extension_modules_path):
-            shutil.copytree(
-                os.path.join(
-                    INTEGRATION_TEST_DIR, 'files', 'extension_modules'
-                ),
-                new_extension_modules_path
-            )
-        master_opts['extension_modules'] = os.path.join(TMP, 'master-minion-root', 'extension_modules')
+        for opts_dict in (master_opts, syndic_master_opts):
+            # We need to copy the extension modules into the new master root_dir or
+            # it will be prefixed by it
+            new_extension_modules_path = os.path.join(opts_dict['root_dir'], 'extension_modules')
+            if not os.path.exists(new_extension_modules_path):
+                shutil.copytree(
+                    os.path.join(
+                        INTEGRATION_TEST_DIR, 'files', 'extension_modules'
+                    ),
+                    new_extension_modules_path
+                )
+            opts_dict['extension_modules'] = os.path.join(opts_dict['root_dir'], 'extension_modules')
 
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):
@@ -587,10 +1168,18 @@ class TestDaemon(object):
             master_opts[optname] = optname_path
             minion_opts[optname] = optname_path
             sub_minion_opts[optname] = optname_path
+            syndic_opts[optname] = optname_path
+            syndic_master_opts[optname] = optname_path
+
+        for conf in (master_opts, minion_opts, sub_minion_opts, syndic_opts, syndic_master_opts):
+            if 'log_handlers_dirs' not in conf:
+                conf['log_handlers_dirs'] = []
+            conf['log_handlers_dirs'].insert(0, LOG_HANDLERS_DIR)
+            conf['runtests_log_port'] = SALT_LOG_PORT
 
         # ----- Transcribe Configuration ---------------------------------------------------------------------------->
         for entry in os.listdir(CONF_DIR):
-            if entry in ('master', 'minion', 'sub_minion', 'syndic_master'):
+            if entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
                 # These have runtime computed values and will be handled
                 # differently
                 continue
@@ -606,23 +1195,36 @@ class TestDaemon(object):
                     os.path.join(TMP_CONF_DIR, entry)
                 )
 
-        for entry in ('master', 'minion', 'sub_minion', 'syndic_master'):
+        for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
             with salt.utils.fopen(os.path.join(TMP_CONF_DIR, entry), 'w') as fp_:
                 fp_.write(yaml.dump(computed_config, default_flow_style=False))
+        sub_minion_computed_config = copy.deepcopy(sub_minion_opts)
+        salt.utils.fopen(os.path.join(TMP_SUB_MINION_CONF_DIR, 'minion'), 'w').write(
+            yaml.dump(sub_minion_computed_config, default_flow_style=False)
+        )
+        shutil.copyfile(os.path.join(TMP_CONF_DIR, 'master'), os.path.join(TMP_SUB_MINION_CONF_DIR, 'master'))
+
+        syndic_master_computed_config = copy.deepcopy(syndic_master_opts)
+        salt.utils.fopen(os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w').write(
+            yaml.dump(syndic_master_computed_config, default_flow_style=False)
+        )
+        syndic_computed_config = copy.deepcopy(syndic_opts)
+        salt.utils.fopen(os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w').write(
+            yaml.dump(syndic_computed_config, default_flow_style=False)
+        )
+        shutil.copyfile(os.path.join(TMP_CONF_DIR, 'master'), os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'master'))
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
 
         # ----- Verify Environment ---------------------------------------------------------------------------------->
         master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'master'))
-        minion_config_path = os.path.join(TMP_CONF_DIR, 'minion')
-        minion_opts = salt.config.minion_config(minion_config_path)
-
+        minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
         syndic_opts = salt.config.syndic_config(
-            os.path.join(TMP_CONF_DIR, 'syndic'),
-            minion_config_path
+            os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'master'),
+            os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'minion'),
         )
-        sub_minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'sub_minion'))
-        syndic_master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic_master'))
+        sub_minion_opts = salt.config.minion_config(os.path.join(TMP_SUB_MINION_CONF_DIR, 'minion'))
+        syndic_master_opts = salt.config.master_config(os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master'))
 
         RUNTIME_CONFIGS['master'] = freeze(master_opts)
         RUNTIME_CONFIGS['minion'] = freeze(minion_opts)
@@ -684,24 +1286,38 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        salt.utils.process.clean_proc(self.sub_minion_process, wait_for_kill=50)
-        self.sub_minion_process.join()
-        salt.utils.process.clean_proc(self.minion_process, wait_for_kill=50)
-        self.minion_process.join()
-        salt.utils.process.clean_proc(self.master_process, wait_for_kill=50)
-        self.master_process.join()
+        self.sub_minion_process.terminate()
+        self.minion_process.terminate()
+        self.master_process.terminate()
         try:
-            salt.utils.process.clean_proc(self.syndic_process, wait_for_kill=50)
-            self.syndic_process.join()
+            self.syndic_process.terminate()
         except AttributeError:
             pass
         try:
-            salt.utils.process.clean_proc(self.smaster_process, wait_for_kill=50)
-            self.smaster_process.join()
+            self.smaster_process.terminate()
         except AttributeError:
             pass
+        #salt.utils.process.clean_proc(self.sub_minion_process, wait_for_kill=50)
+        #self.sub_minion_process.join()
+        #salt.utils.process.clean_proc(self.minion_process, wait_for_kill=50)
+        #self.minion_process.join()
+        #salt.utils.process.clean_proc(self.master_process, wait_for_kill=50)
+        #self.master_process.join()
+        #try:
+        #    salt.utils.process.clean_proc(self.syndic_process, wait_for_kill=50)
+        #    self.syndic_process.join()
+        #except AttributeError:
+        #    pass
+        #try:
+        #    salt.utils.process.clean_proc(self.smaster_process, wait_for_kill=50)
+        #    self.smaster_process.join()
+        #except AttributeError:
+        #    pass
+        self.log_server.server_close()
+        self.log_server.shutdown()
         self._exit_mockbin()
         self._exit_ssh()
+        self.log_server_process.join()
         # Shutdown the multiprocessing logging queue listener
         salt_log_setup.shutdown_multiprocessing_logging()
         salt_log_setup.shutdown_multiprocessing_logging_listener(daemonizing=True)
@@ -712,71 +1328,9 @@ class TestDaemon(object):
         '''
 
     def setup_minions(self):
-        # Wait for minions to connect back
-        wait_minion_connections = MultiprocessingProcess(
-            target=self.wait_for_minion_connections,
-            args=(self.minion_targets, self.MINIONS_CONNECT_TIMEOUT)
-        )
-        wait_minion_connections.start()
-        wait_minion_connections.join()
-        wait_minion_connections.terminate()
-        if wait_minion_connections.exitcode > 0:
-            print(
-                '\n {LIGHT_RED}*{ENDC} ERROR: Minions failed to connect'.format(
-                    **self.colors
-                )
-            )
-            return False
-
-        del wait_minion_connections
-
-        sync_needed = self.parser.options.clean
-        if self.parser.options.clean is False:
-            def sumfile(fpath):
-                m = md5()
-                with salt.utils.fopen(fpath) as fobj:
-                    while True:
-                        d = fobj.read(8096)
-                        if not d:
-                            break
-                        m.update(d)
-                return m.hexdigest()
-            # Since we're not cleaning up, let's see if modules are already up
-            # to date so we don't need to re-sync them
-            modules_dir = os.path.join(FILES, 'file', 'base', '_modules')
-            for fname in os.listdir(modules_dir):
-                if not fname.endswith('.py'):
-                    continue
-                dfile = os.path.join(
-                    '/tmp/salttest/cachedir/extmods/modules/', fname
-                )
-
-                if not os.path.exists(dfile):
-                    sync_needed = True
-                    break
-
-                sfile = os.path.join(modules_dir, fname)
-                if sumfile(sfile) != sumfile(dfile):
-                    sync_needed = True
-                    break
-
-        if sync_needed:
-            # Wait for minions to "sync_all"
-            for target in [self.sync_minion_modules,
-                           self.sync_minion_states,
-                           self.sync_minion_grains]:
-                sync_minions = MultiprocessingProcess(
-                    target=target,
-                    args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
-                )
-                sync_minions.start()
-                sync_minions.join()
-                if sync_minions.exitcode > 0:
-                    return False
-                sync_minions.terminate()
-                del sync_minions
-
-        return True
+        '''
+        Minions setup routines
+        '''
 
     def post_setup_minions(self):
         '''
@@ -818,9 +1372,13 @@ class TestDaemon(object):
         '''
         Clean out the tmp files
         '''
+        def remove_readonly(func, path, excinfo):
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+
         for dirname in (TMP, TMP_STATE_TREE, TMP_PRODENV_STATE_TREE):
             if os.path.isdir(dirname):
-                shutil.rmtree(dirname)
+                shutil.rmtree(dirname, onerror=remove_readonly)
 
     def wait_for_jid(self, targets, jid, timeout=120):
         time.sleep(1)  # Allow some time for minions to accept jobs
@@ -1068,14 +1626,80 @@ class AdaptedConfigurationTestCaseMixIn(object):
         return TMP_CONF_DIR
 
     def get_config_file_path(self, filename):
+        if filename == 'syndic_master':
+            return os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master')
+        if filename == 'syndic':
+            return os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'minion')
+        if filename == 'sub_minion':
+            return os.path.join(TMP_SUB_MINION_CONF_DIR, 'minion')
         return os.path.join(TMP_CONF_DIR, filename)
 
     @property
     def master_opts(self):
         '''
-        Return the options used for the minion
+        Return the options used for the master
         '''
         return self.get_config('master')
+
+
+class SaltMinionEventAssertsMixIn(object):
+    '''
+    Asserts to verify that a given event was seen
+    '''
+
+    def __new__(cls, *args, **kwargs):
+        # We have to cross-call to re-gen a config
+        cls.q = multiprocessing.Queue()
+        cls.fetch_proc = multiprocessing.Process(target=cls._fetch, args=(cls.q,))
+        cls.fetch_proc.start()
+        return object.__new__(cls)
+
+    def __exit__(self, *args, **kwargs):
+        self.fetch_proc.join()
+
+    @staticmethod
+    def _fetch(q):
+        '''
+        Collect events and store them
+        '''
+        def _clean_queue():
+            print('Cleaning queue!')
+            while not q.empty():
+                queue_item = q.get()
+                queue_item.task_done()
+
+        atexit.register(_clean_queue)
+        a_config = AdaptedConfigurationTestCaseMixIn()
+        event = salt.utils.event.get_event('minion', sock_dir=a_config.get_config('minion')['sock_dir'], opts=a_config.get_config('minion'))
+        while True:
+            try:
+                events = event.get_event(full=False)
+            except Exception:
+                # This is broad but we'll see all kinds of issues right now
+                # if we drop the proc out from under the socket while we're reading
+                pass
+            q.put(events)
+
+    def assertMinionEventFired(self, tag):
+        #TODO
+        raise salt.exceptions.NotImplemented('assertMinionEventFired() not implemented')
+
+    def assertMinionEventReceived(self, desired_event):
+        queue_wait = 5  # 2.5s
+        while self.q.empty():
+            time.sleep(0.5)  # Wait for events to be pushed into the queue
+            queue_wait -= 1
+            if queue_wait <= 0:
+                raise AssertionError('Queue wait timer expired')
+        while not self.q.empty():  # This is not thread-safe and may be inaccurate
+            event = self.q.get()
+            if isinstance(event, dict):
+                event.pop('_stamp')
+            if desired_event == event:
+                self.fetch_proc.terminate()
+                return True
+        self.fetch_proc.terminate()
+        raise AssertionError('Event {0} was not received by minion'.format(desired_event))
 
 
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
@@ -1096,6 +1720,16 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
     '''
     Execute a module function
     '''
+
+    def runTest(self):
+        '''
+        TODO remove after salt-testing PR #74 is merged and deployed
+        '''
+        try:
+            super(ModuleCase, self).runTest()
+        except AttributeError:
+            log.error('ModuleCase runTest() could not execute. Requires at least v2016.8.3 of '
+                    'salt-testing package')
 
     def minion_run(self, _function, *args, **kw):
         '''
@@ -1217,7 +1851,7 @@ class SyndicCase(TestCase, SaltClientTestCaseMixIn):
         return orig['minion']
 
 
-class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
+class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixin):
     '''
     Execute a test for a shell command
     '''
@@ -1232,18 +1866,18 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         except OSError:
             os.chdir(INTEGRATION_TEST_DIR)
 
-    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=15):  # pylint: disable=W0221
+    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=30):  # pylint: disable=W0221
         '''
         Execute salt
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
+        return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout)
 
     def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False, timeout=25):  # pylint: disable=W0221
         '''
         Execute salt-ssh
         '''
-        arg_str = '-W -c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
+        arg_str = '-ldebug -W -c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout, raw=True)
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
@@ -1256,21 +1890,39 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
                                                   async_flag=' --async' if async else '')
         return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
 
-    def run_run_plus(self, fun, options='', *arg, **kwargs):
+    def run_run_plus(self, fun, *arg, **kwargs):
         '''
-        Execute Salt run and the salt run function and return the data from
-        each in a dict
+        Execute the runner function and return the return data and output in a dict
         '''
-        ret = {}
-        ret['out'] = self.run_run(
-            '{0} {1} {2}'.format(options, fun, ' '.join(arg)), catch_stderr=kwargs.get('catch_stderr', None)
-        )
+        ret = {'fun': fun}
+        from_scratch = bool(kwargs.pop('__reload_config', False))
+        # Have to create an empty dict and then update it, as the result from
+        # self.get_config() is an ImmutableDict which cannot be updated.
         opts = {}
-        opts.update(self.get_config('master'))
-        opts.update({'doc': False, 'fun': fun, 'arg': arg})
+        opts.update(self.get_config('client_config', from_scratch=from_scratch))
+        opts_arg = list(arg)
+        if kwargs:
+            opts_arg.append({'__kwarg__': True})
+            opts_arg[-1].update(kwargs)
+        opts.update({'doc': False, 'fun': fun, 'arg': opts_arg})
         with RedirectStdStreams():
             runner = salt.runner.Runner(opts)
-            ret['fun'] = runner.run()
+            ret['return'] = runner.run()
+            try:
+                ret['jid'] = runner.jid
+            except AttributeError:
+                ret['jid'] = None
+
+        # Compile output
+        # TODO: Support outputters other than nested
+        opts['color'] = False
+        opts['output_file'] = cStringIO()
+        try:
+            salt.output.display_output(ret['return'], opts=opts)
+            ret['out'] = opts['output_file'].getvalue().splitlines()
+        finally:
+            opts['output_file'].close()
+
         return ret
 
     def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
@@ -1378,7 +2030,10 @@ class SSHCase(ShellCase):
     def _arg_str(self, function, arg):
         return '{0} {1}'.format(function, ' '.join(arg))
 
-    def run_function(self, function, arg=(), timeout=25, **kwargs):
+    def run_function(self, function, arg=(), timeout=90, **kwargs):
+        '''
+        We use a 90s timeout here, which some slower systems do end up needing
+        '''
         ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout)
         try:
             return json.loads(ret)['localhost']

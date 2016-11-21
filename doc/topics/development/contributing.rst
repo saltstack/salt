@@ -18,13 +18,13 @@ Salt Coding Style
 -----------------
 
 SaltStack has its own coding style guide that informs contributors on various coding
-approaches. Please review the :ref:`Salt Coding Style<coding-style>`_ documentation
+approaches. Please review the :ref:`Salt Coding Style <coding-style>` documentation
 for information about Salt's particular coding patterns.
 
-Within the :ref:`Salt Coding Style<coding-style>`_ documentation, there is a section
+Within the :ref:`Salt Coding Style <coding-style>` documentation, there is a section
 about running Salt's ``.pylintrc`` file. SaltStack recommends running the ``.pylintrc``
 file on any files you are changing with your code contribution before submitting a
-pull request to Salt's repository. Please see the :ref:`Linting<pylint-instructions>`_
+pull request to Salt's repository. Please see the :ref:`Linting<pylint-instructions>`
 documentation for more information.
 
 

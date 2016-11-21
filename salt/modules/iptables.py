@@ -80,7 +80,7 @@ def _conf(family='ipv4'):
             return '/var/lib/ip6tables/rules-save'
         else:
             return '/var/lib/iptables/rules-save'
-    elif __grains__['os_family'] == 'Suse':
+    elif __grains__['os_family'] == 'SUSE':
         # SuSE does not seem to use separate files for IPv4 and IPv6
         return '/etc/sysconfig/scripts/SuSEfirewall2-custom'
     else:
@@ -207,8 +207,9 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             match_value = match_value.split(',')
         for match in match_value:
             rule.append('-m {0}'.format(match))
-            if 'name' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
-                rule.append('--name {0}'.format(kwargs['name']))
+            if 'name_' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
+                rule.append('--name {0}'.format(kwargs['name_']))
+                del kwargs['name_']
         del kwargs['match']
 
     if 'match-set' in kwargs:
@@ -413,12 +414,11 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
                 after_jump.append('--{0} {1}'.format(after_jump_argument, value))
             del kwargs[after_jump_argument]
 
-    for item in kwargs:
-        rule.append(maybe_add_negation(item))
-        if len(item) == 1:
-            rule.append('-{0} {1}'.format(item, kwargs[item]))
-        else:
-            rule.append('--{0} {1}'.format(item, kwargs[item]))
+    for key, value in kwargs.items():
+        negation = maybe_add_negation(key)
+        flag = '-' if len(key) == 1 else '--'
+        value = '' if value in (None, '') else ' {0}'.format(value)
+        rule.append('{0}{1}{2}{3}'.format(negation, flag, key, value))
 
     rule += after_jump
 
@@ -795,7 +795,7 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         return 'Error: Rule needs to be specified'
 
     if position < 0:
-        rules = get_rules(family='ipv4')
+        rules = get_rules(family=family)
         size = len(rules[table][chain]['rules'])
         position = (size + position) + 1
         if position is 0:

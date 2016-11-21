@@ -94,6 +94,7 @@ One could also create a simple shell script, named salt-ssh-copy-id.sh as follow
 
 Once keys are successfully deployed, salt-ssh can be used to control them.
 
+Alternatively ssh agent forwarding can be used by setting the priv to agent-forwarding.
 
 Calling Salt SSH
 ================
@@ -218,6 +219,12 @@ Boolean-style options should be specified in their YAML representation.
    be ``ssh_wipe`` and thus this is what should be configured in the
    ``Saltfile``.  Using the names of flags for this option, being ``wipe:
    True`` or ``w: True``, will not work.
+
+.. note::
+
+    For the `Saltfile` to be automatically detected it needs to be named
+    `Saltfile` with a capital `S` and be readable by the user running
+    salt-ssh.
 
 Debugging salt-ssh
 ==================

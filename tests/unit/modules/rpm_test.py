@@ -48,8 +48,11 @@ class RpmTestCase(TestCase):
         Test if it runs an rpm -Va on a system,
         and returns the results in a dict
         '''
-        mock = MagicMock(return_value='')
-        with patch.dict(rpm.__salt__, {'cmd.run': mock}):
+        mock = MagicMock(return_value={'stdout': '',
+                                       'stderr': '',
+                                       'retcode': 0,
+                                       'pid': 12345})
+        with patch.dict(rpm.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(rpm.verify('httpd'), {})
 
     # 'file_list' function tests: 1

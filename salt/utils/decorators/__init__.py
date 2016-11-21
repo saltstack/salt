@@ -13,6 +13,7 @@ from collections import defaultdict
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 from salt.version import SaltStackVersion, __saltstack_version__
 from salt.log import LOG_LEVELS
@@ -218,12 +219,12 @@ def identical_signature_wrapper(original_function, wrapped_function):
             original_function.__name__,
             # The function signature including defaults, i.e., 'timeout=1'
             inspect.formatargspec(
-                *inspect.getargspec(original_function)
+                *salt.utils.args.get_function_argspec(original_function)
             )[1:-1],
             # The function signature without the defaults
             inspect.formatargspec(
                 formatvalue=lambda val: '',
-                *inspect.getargspec(original_function)
+                *salt.utils.args.get_function_argspec(original_function)
             )[1:-1]
         ),
         '<string>',
@@ -237,14 +238,20 @@ def memoize(func):
     '''
     Memoize aka cache the return output of a function
     given a specific set of arguments
+
+    .. versionedited:: 2016.3.4
+
+    Added **kwargs support.
     '''
     cache = {}
 
     @wraps(func)
-    def _memoize(*args):
-        if args not in cache:
-            cache[args] = func(*args)
-        return cache[args]
+    def _memoize(*args, **kwargs):
+        args_ = ','.join(list(args) + ['{0}={1}'.format(k, kwargs[k]) for k in sorted(kwargs)])
+        if args_ not in cache:
+            cache[args_] = func(*args, **kwargs)
+        return cache[args_]
+
     return _memoize
 
 
@@ -465,7 +472,7 @@ class _WithDeprecated(_DeprecationDecorator):
 
 
     In case there is a need to deprecate a function and rename it,
-    the decorator shuld be used with the 'with_name' parameter. This
+    the decorator should be used with the 'with_name' parameter. This
     parameter is pointing to the existing deprecated function. In this
     case deprecation process as follows:
 

@@ -229,6 +229,7 @@ The directory to store the pki authentication keys.
 ---------------------
 
 .. versionchanged:: 2016.3.0
+
     The default location for this directory has been moved. Prior to this
     version, the location was a directory named ``extmods`` in the Salt
     cachedir (on most platforms, ``/var/cache/salt/extmods``). It has been
@@ -491,8 +492,9 @@ local job cache on the master.
 
 Default: ``''``
 
-Specify the returner to use to log events. A returner may have installation and
-configuration requirements. Read the returner's documentation.
+Specify the returner(s) to use to log events. Each returner may have
+installation and configuration requirements. Read the returner's
+documentation.
 
 .. note::
 
@@ -501,7 +503,9 @@ configuration requirements. Read the returner's documentation.
 
 .. code-block:: yaml
 
-    event_return: cassandra_cql
+    event_return:
+      - syslog
+      - splunk
 
 .. conf_master:: event_return_queue
 
@@ -532,11 +536,15 @@ Default: ``[]``
 
 Only return events matching tags in a whitelist.
 
+.. versionchanged:: 2016.11.0
+
+    Supports glob matching patterns.
+
 .. code-block:: yaml
 
     event_return_whitelist:
       - salt/master/a_tag
-      - salt/master/another_tag
+      - salt/run/*/ret
 
 .. conf_master:: event_return_blacklist
 
@@ -549,11 +557,15 @@ Default: ``[]``
 
 Store all event returns _except_ the tags in a blacklist.
 
+.. versionchanged:: 2016.11.0
+
+    Supports glob matching patterns.
+
 .. code-block:: yaml
 
     event_return_blacklist:
       - salt/master/not_this_tag
-      - salt/master/or_this_one
+      - salt/wheel/*/ret
 
 .. conf_master:: max_event_size
 
@@ -719,8 +731,20 @@ overridden on a per-minion basis in the roster (``minion_opts``)
 
 .. code-block:: yaml
 
-    minion_opts:
+    ssh_minion_opts:
       gpg_keydir: /root/gpg
+
+``ssh_use_home_key``
+--------------------
+
+Default: False
+
+Set this to True to default to using ``~/.ssh/id_rsa`` for salt-ssh
+authentication with minions
+
+.. code-block:: yaml
+
+    ssh_use_home_key: False
 
 ``thin_extra_mods``
 -------------------
@@ -731,6 +755,14 @@ List of additional modules, needed to be included into the Salt Thin.
 Pass a list of importable Python modules that are typically located in
 the `site-packages` Python directory so they will be also always included
 into the Salt Thin, once generated.
+
+``min_extra_mods``
+------------------
+
+Default: None
+
+Identical as `thin_extra_mods`, only applied to the Salt Minimal.
+
 
 Master Security Settings
 ========================
@@ -886,6 +918,27 @@ Default: 12 hours
 .. code-block:: yaml
 
     token_expire: 43200
+
+.. conf_master:: token_expire_user_override
+
+``token_expire_user_override``
+------------------------------
+
+Default: ``False``
+
+Allow eauth users to specify the expiry time of the tokens they generate.
+
+A boolean applies to all users or a dictionary of whitelisted eauth backends
+and usernames may be given:
+
+.. code-block:: yaml
+
+    token_expire_user_override:
+      pam:
+        - fred
+        - tom
+      ldap:
+        - gary
 
 .. conf_master:: file_recv
 
@@ -1231,6 +1284,20 @@ or just post what changes are going to be made.
 
     test: False
 
+.. conf_master:: runner_returns
+
+``runner_returns``
+------------------
+
+Default: ``False``
+
+If set to ``True``, runner jobs will be saved to job cache (defined by
+:conf_master:`master_job_cache`).
+
+.. code-block:: yaml
+
+    runner_returns: True
+
 Master File Server Settings
 ===========================
 
@@ -1313,6 +1380,36 @@ is impacted.
 .. code-block:: yaml
 
     fileserver_limit_traversal: False
+
+.. conf_master:: fileserver_list_cache_time
+
+``fileserver_list_cache_time``
+------------------------------
+
+.. versionadded:: 2014.1.0
+.. versionchanged:: 2016.11.0
+    The default was changed from ``30`` seconds to ``20``.
+
+Default: ``20``
+
+Salt caches the list of files/symlinks/directories for each fileserver backend
+and environment as they are requested, to guard against a performance
+bottleneck at scale when many minions all ask the fileserver which files are
+available simultaneously. This configuration parameter allows for the max age
+of that cache to be altered.
+
+Set this value to ``0`` to disable use of this cache altogether, but keep in
+mind that this may increase the CPU load on the master when running a highstate
+on a large number of minions.
+
+.. note::
+    Rather than altering this configuration parameter, it may be advisable to
+    use the :mod:`fileserver.clear_list_cache
+    <salt.runners.fileserver.clear_list_cache>` runner to clear these caches.
+
+.. code-block:: yaml
+
+    fileserver_list_cache_time: 5
 
 .. conf_master:: hash_type
 
@@ -1487,13 +1584,18 @@ compatible version installed will be the provider that is used.
 ``gitfs_ssl_verify``
 ********************
 
-Default: ``False``
+.. versionchanged:: 2016.11.0
+
+Default: ``True``
 
 Specifies whether or not to ignore SSL certificate errors when contacting the
 remote repository. The ``False`` setting is useful if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
+
+In the 2016.11.0 release, the default config value changed from ``False`` to
+``True``.
 
 .. code-block:: yaml
 
@@ -1561,8 +1663,32 @@ Defines which branch/tag should be used as the ``base`` environment.
     gitfs_base: salt
 
 .. versionchanged:: 2014.7.0
+
     Ability to specify the base on a per-remote basis was added. See :ref:`here
     <gitfs-per-remote-config>` for more info.
+
+.. conf_master:: gitfs_saltenv
+
+``gitfs_saltenv``
+*****************
+
+.. versionadded:: 2016.11.0
+
+Default: ``[]``
+
+Global settings for :ref:`per-saltenv configuration parameters
+<gitfs-per-saltenv-config>`. Though per-saltenv configuration parameters are
+typically one-off changes specific to a single gitfs remote, and thus more
+often configured on a per-remote basis, this parameter can be used to specify
+per-saltenv changes which should apply to all remotes. For example, the below
+configuration will map the ``develop`` branch to the ``dev`` saltenv for all
+gitfs remotes.
+
+.. code-block:: yaml
+
+    gitfs_saltenv:
+      - dev:
+        - ref: develop
 
 .. conf_master:: gitfs_env_whitelist
 
@@ -2315,6 +2441,24 @@ Default: ``[]``
 
 There are additional details at :ref:`salt-pillars`
 
+.. conf_master:: pillar_roots_override_ext_pillar
+
+``pillar_roots_override_ext_pillar``
+------------------------------------
+
+.. versionadded:: 2016.11.0
+
+Default: ``False``
+
+This option allows for external pillar sources to be evaluated before
+:conf_master:`pillar_roots`, which means that values obtained from
+:conf_master:`pillar_roots` take precedence over those found from
+:conf_master:`ext_pillar` sources.
+
+.. code-block:: yaml
+
+    pillar_roots_override_ext_pillar: False
+
 .. conf_master:: ext_pillar_first
 
 ``ext_pillar_first``
@@ -2326,11 +2470,25 @@ Default: ``False``
 
 This option allows for external pillar sources to be evaluated before
 :conf_master:`pillar_roots`. This allows for targeting file system pillar from
-ext_pillar.
+ext_pillar. Note that ext_pillar_first option is deprecated by
+pillar_roots_override_ext_pillar option and will be removed in future releases.
 
 .. code-block:: yaml
 
     ext_pillar_first: False
+
+.. conf_master:: pillar_raise_on_missing
+
+``pillar_raise_on_missing``
+---------------------------
+
+.. versionadded:: 2015.5.0
+
+Default: ``False``
+
+Set this option to ``True`` to force a ``KeyError`` to be raised whenever an
+attempt to retrieve a named value from pillar fails. When this option is set
+to ``False``, the failed attempt returns an empty string.
 
 .. _git-pillar-config-opts:
 
@@ -2479,6 +2637,7 @@ files would be looked for in a subdirectory called ``pillar``.
 *************************
 
 .. versionadded:: 2015.8.0
+.. versionchanged:: 2016.11.0
 
 Default: ``False``
 
@@ -2487,6 +2646,9 @@ remote repository. The ``False`` setting is useful if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
+
+In the 2016.11.0 release, the default config value changed from ``False`` to
+``True``.
 
 .. code-block:: yaml
 
@@ -3152,14 +3314,14 @@ The format of the console logging messages. See also
 ``log_fmt_logfile``
 -------------------
 
-Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
+Default: ``%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s``
 
 The format of the log file logging messages. See also
 :conf_log:`log_fmt_logfile`.
 
 .. code-block:: yaml
 
-    log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+    log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 
 .. conf_master:: log_granular_levels
@@ -3293,6 +3455,7 @@ used.
 ---------------
 
 .. versionchanged:: 2015.8.0
+
     Renamed from ``win_repo`` to ``winrepo_dir``.
 
 Default: ``/srv/salt/win/repo``
@@ -3329,9 +3492,11 @@ out for 2015.8.0 and later minions.
 ---------------------
 
 .. versionchanged:: 2015.8.0
+
     Renamed from ``win_repo_mastercachefile`` to ``winrepo_cachefile``
 
 .. note::
+
     2015.8.0 and later minions do not use this setting since the cachefile
     is now located on the minion.
 
@@ -3351,6 +3516,7 @@ created.
 -------------------
 
 .. versionchanged:: 2015.8.0
+
     Renamed from ``win_gitrepos`` to ``winrepo_remotes``.
 
 Default: ``['https://github.com/saltstack/salt-winrepo.git']``
@@ -3436,6 +3602,7 @@ branch/tag.
 ----------------------
 
 .. versionadded:: 2015.8.0
+.. versionchanged:: 2016.11.0
 
 Default: ``False``
 
@@ -3444,6 +3611,9 @@ remote repository. The  ``False`` setting is useful if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
+
+In the 2016.11.0 release, the default config value changed from ``False`` to
+``True``.
 
 .. code-block:: yaml
 

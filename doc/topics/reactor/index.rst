@@ -94,13 +94,28 @@ API and the runner system.  In this example, a command is published to the
 
 .. code-block:: yaml
 
-    {% if data['data']['orchestrate'] == 'refresh' %}
-    orchestrate_run:
-      runner.state.orchestrate
+    {% if data['data']['custom_var'] == 'runit' %}
+    call_runit_orch:
+      runner.state.orchestrate:
+        - mods: _orch.runit
     {% endif %}
 
-This example will execute the state.orchestrate runner and initiate an
-orchestrate execution.
+This example will execute the state.orchestrate runner and intiate an execution
+of the runit orchestrator located at ``/srv/salt/_orch/runit.sls``. Using
+``_orch/`` is any arbitrary path but it is recommended to avoid using "orchestrate"
+as this is most likely to cause confusion.
+
+Writing SLS Files
+-----------------
+
+Reactor SLS files are stored in the same location as State SLS files. This means
+that both ``file_roots`` and ``gitfs_remotes`` impact what SLS files are
+available to the reactor and orchestrator.
+
+It is recommended to keep reactor and orchestrator SLS files in their own uniquely
+named subdirectories such as ``_orch/``, ``orch/``, ``_orchestrate/``, ``react/``,
+``_reactor/``, etc. Keeping a unique name helps prevent confusion when trying to
+read through this a few years down the road.
 
 The Goal of Writing Reactor SLS Files
 =====================================
@@ -123,7 +138,8 @@ one. The worker pool is designed to handle complex and long-running processes
 such as Salt Orchestrate.
 
 tl;dr: Rendering Reactor SLS files MUST be simple and quick. The new process
-started by the worker threads can be long-running.
+started by the worker threads can be long-running. Using the reactor to fire
+an orchestrate runner would be ideal.
 
 Jinja Context
 -------------
@@ -158,14 +174,15 @@ For example:
     # /srv/reactor/some_event.sls
     invoke_orchestrate_file:
       runner.state.orchestrate:
-        - mods: orch.do_complex_thing
-        - pillar:
-            event_tag: {{ tag }}
-            event_data: {{ data | json() }}
+        - mods: _orch.do_complex_thing # /srv/salt/_orch/do_complex_thing.sls
+        - kwarg:
+            pillar:
+              event_tag: {{ tag }}
+              event_data: {{ data|json() }}
 
 .. code-block:: yaml
 
-    # /srv/salt/orch/do_complex_thing.sls
+    # /srv/salt/_orch/do_complex_thing.sls
     {% set tag = salt.pillar.get('event_tag') %}
     {% set data = salt.pillar.get('event_data') %}
 
@@ -183,8 +200,9 @@ For example:
         - tgt: {{ data.bar }}
         - sls:
           - do_thing_on_minion
-        - pillar:
-            baz: {{ data.baz }}
+        - kwarg:
+            pillar:
+              baz: {{ data.baz }}
         - require:
           - salt: do_first_thing
 
@@ -379,6 +397,28 @@ Use the ``expr_form`` argument to specify a matcher:
 Any other parameters in the :py:meth:`LocalClient().cmd()
 <salt.client.LocalClient.cmd>` method can be specified as well.
 
+Executing Reactors from the Minion
+----------------------------------
+
+The minion can be setup to use the Reactor via a reactor engine.  This just
+sets up and listens to the minions event bus, instead of to the masters.
+
+The biggest difference is that you have to use the caller method on the
+Reactor, which is the equivalent of salt-call, to run your commands.
+
+:ref:`Reactor Engine setup<salt.engines.reactor>`
+
+.. code-block:: yaml
+
+    clean_tmp:
+      caller.cmd.run:
+        - arg:
+          - rm -rf /tmp/*
+
+.. note:: Masterless Minions use this Reactor
+
+    This is the only way to run the Reactor if you use masterless minions.
+
 Calling Runner modules and Wheel modules
 ----------------------------------------
 
@@ -459,7 +499,7 @@ This works with Orchestrate files as well:
 
     call_some_orchestrate_file:
       runner.state.orchestrate:
-        - mods: some_orchestrate_file
+        - mods: _orch.some_orchestrate_file
         - pillar:
             stuff: things
 
@@ -467,7 +507,9 @@ Which is equivalent to the following command at the CLI:
 
 .. code-block:: bash
 
-    salt-run state.orchestrate some_orchestrate_file pillar='{stuff: things}'
+    salt-run state.orchestrate _orch.some_orchestrate_file pillar='{stuff: things}'
+
+This expects to find a file at /srv/salt/_orch/some_orchestrate_file.sls.
 
 Finally, that data is available in the state file using the normal Pillar
 lookup syntax. The following example is grabbing web server names and IP

@@ -11,7 +11,8 @@ def absent(name,
            user=None,
            password=None,
            host=None,
-           port=None):
+           port=None,
+           authdb=None):
     '''
     Ensure that the named database is absent
 
@@ -30,6 +31,8 @@ def absent(name,
     port
         The port to connect to
 
+    authdb
+        The database in which to authenticate
     '''
     ret = {'name': name,
            'changes': {},
@@ -37,13 +40,13 @@ def absent(name,
            'comment': ''}
 
     #check if database exists and remove it
-    if __salt__['mongodb.db_exists'](name, user, password, host, port):
+    if __salt__['mongodb.db_exists'](name, user, password, host, port, authdb=authdb):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = ('Database {0} is present and needs to be removed'
                     ).format(name)
             return ret
-        if __salt__['mongodb.db_remove'](name, user, password, host, port):
+        if __salt__['mongodb.db_remove'](name, user, password, host, port, authdb=authdb):
             ret['comment'] = 'Database {0} has been removed'.format(name)
             ret['changes'][name] = 'Absent'
             return ret

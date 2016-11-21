@@ -11,6 +11,7 @@ import time
 
 # Import Salt libs
 import salt.defaults.exitcodes
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +47,8 @@ class SaltException(Exception):
         Pack this exception into a serializable dictionary that is safe for
         transport via msgpack
         '''
+        if six.PY3:
+            return {'message': str(self), 'args': self.args}
         return dict(message=self.__unicode__(), args=self.args)
 
 
@@ -320,9 +323,7 @@ class SaltSystemExit(SystemExit):
     nothing else to do, salt should just exit.
     '''
     def __init__(self, code=0, msg=None):
-        SystemExit.__init__(self, code)
-        if msg:
-            self.message = msg
+        SystemExit.__init__(self, msg)
 
 
 class SaltCloudException(SaltException):
@@ -375,4 +376,43 @@ class NotImplemented(SaltException):
     '''
     Used when a module runs a command which returns an error and wants
     to show the user the output gracefully instead of dying
+    '''
+
+
+# VMware related exceptions
+class VMwareSaltError(CommandExecutionError):
+    '''
+    Used when a VMware object cannot be retrieved
+    '''
+
+
+class VMwareRuntimeError(VMwareSaltError):
+    '''
+    Used when a runtime error is encountered when communicating with the
+    vCenter
+    '''
+
+
+class VMwareConnectionError(VMwareSaltError):
+    '''
+    Used when the client fails to connect to a either a VMware vCenter server or
+    to a ESXi host
+    '''
+
+
+class VMwareObjectRetrievalError(VMwareSaltError):
+    '''
+    Used when a VMware object cannot be retrieved
+    '''
+
+
+class VMwareApiError(VMwareSaltError):
+    '''
+    Used when representing a generic VMware API error
+    '''
+
+
+class VMwareSystemError(VMwareSaltError):
+    '''
+    Used when representing a generic VMware system error
     '''

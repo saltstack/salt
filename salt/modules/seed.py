@@ -72,7 +72,7 @@ def _mount(path, ftype, root=None):
         return path
     elif ftype == 'file':
         if 'guestfs.mount' in __salt__:
-            util = 'qemu_nbd'
+            util = 'guestfs'
         elif 'qemu_nbd.init' in __salt__:
             util = 'qemu_nbd'
         else:
@@ -236,8 +236,6 @@ def mkconfig(config=None,
             fic.write(_file_or_content(priv_key))
         os.chmod(pubkeyfn, 0o600)
         os.chmod(privkeyfn, 0o600)
-        with salt.utils.fopen(pubkeyfn, 'w') as fic:
-            fic.write(_file_or_content(pub_key))
     else:
         salt.crypt.gen_keys(tmp, 'minion', 2048)
     if approve_key and not preseeded:

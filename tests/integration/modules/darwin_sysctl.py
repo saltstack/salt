@@ -11,6 +11,7 @@ import random
 # Import Salt Libs
 import integration
 import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
@@ -156,7 +157,7 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
         file will be restored in tearDown
         '''
         # Create new temporary file path and open needed files
-        temp_path = salt.utils.mkstemp()
+        temp_path = salt.utils.files.mkstemp()
         with salt.utils.fopen(CONFIG, 'r') as org_conf:
             with salt.utils.fopen(temp_path, 'w') as temp_sysconf:
                 # write sysctl lines to temp file

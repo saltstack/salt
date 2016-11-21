@@ -2,7 +2,8 @@
 {%endif%}{% if data.hotplug %}allow-hotplug {{name}}
 {%endif%}{%- if data.data['inet'] -%}
 {%- set interface = data.data['inet'] -%}
-{% if interface.proto %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
+{% if interface.proto and interface.address %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
+{%endif%}{% if interface.proto == 'dhcp' %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
 {%endif %}{% if interface.hwaddress %}    hwaddress {{interface.hwaddress}}
 {%endif%}{% if interface.vlan_raw_device %}    vlan-raw-device {{interface.vlan_raw_device}}
 {%endif%}{% if interface.address %}    address {{interface.address}}
@@ -90,5 +91,4 @@ iface {{name}} {{interface.addrfam}} {{interface.proto}}
 {%endif%}{% if interface.pre_down_cmds %}{% for cmd in interface.pre_down_cmds %}    pre-down {{ cmd }}
 {%endfor-%}
 {%endif%}{% if interface.post_down_cmds %}{% for cmd in interface.post_down_cmds %}    post-down {{ cmd }}
-{%endfor-%}{%endif%}
-{%endif%}
+{%endfor-%}{%endif%}{%endif%}

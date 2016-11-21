@@ -67,15 +67,15 @@ def managed(name,
 
     if cur == value:
         ret['result'] = True
-        ret['comment'] = 'Key {0!r} does not need to be updated'.format(name)
+        ret['comment'] = 'Key \'{0}\' does not need to be updated'.format(name)
         return ret
 
     if __opts__['test']:
         ret['result'] = None
         if cur is None:
-            ret['comment'] = 'Key {0!r} would be added'.format(name)
+            ret['comment'] = 'Key \'{0}\' would be added'.format(name)
         else:
-            ret['comment'] = 'Value of key {0!r} would be changed'.format(name)
+            ret['comment'] = 'Value of key \'{0}\' would be changed'.format(name)
         return ret
 
     try:
@@ -86,13 +86,13 @@ def managed(name,
         ret['comment'] = str(exc)
     else:
         if ret['result']:
-            ret['comment'] = 'Successfully set key {0!r}'.format(name)
+            ret['comment'] = 'Successfully set key \'{0}\''.format(name)
             if cur is not None:
                 ret['changes'] = {'old': cur, 'new': value}
             else:
                 ret['changes'] = {'key added': name, 'value': value}
         else:
-            ret['comment'] = 'Failed to set key {0!r}'.format(name)
+            ret['comment'] = 'Failed to set key \'{0}\''.format(name)
     return ret
 
 
@@ -142,18 +142,18 @@ def absent(name,
         if cur is not None and cur != value:
             ret['result'] = True
             ret['comment'] = (
-                'Value of key {0!r} ({1!r}) is not {2!r}'
+                'Value of key \'{0}\' (\'{1}\') is not \'{2}\''
                 .format(name, cur, value)
             )
             return ret
     if cur is None:
         ret['result'] = True
-        ret['comment'] = 'Key {0!r} does not exist'.format(name)
+        ret['comment'] = 'Key \'{0}\' does not exist'.format(name)
         return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Key {0!r} would be deleted'.format(name)
+        ret['comment'] = 'Key \'{0}\' would be deleted'.format(name)
         return ret
 
     try:
@@ -162,8 +162,8 @@ def absent(name,
         ret['comment'] = str(exc)
     else:
         if ret['result']:
-            ret['comment'] = 'Successfully deleted key {0!r}'.format(name)
+            ret['comment'] = 'Successfully deleted key \'{0}\''.format(name)
             ret['changes'] = {'key deleted': name, 'value': cur}
         else:
-            ret['comment'] = 'Failed to delete key {0!r}'.format(name)
+            ret['comment'] = 'Failed to delete key \'{0}\''.format(name)
     return ret

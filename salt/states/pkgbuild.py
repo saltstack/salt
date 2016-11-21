@@ -49,7 +49,6 @@ import logging
 import os
 
 # Import salt libs
-import salt.utils
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -88,7 +87,6 @@ def built(name,
           env=None,
           results=None,
           force=False,
-          always=None,
           saltenv='base',
           log_dir='/var/log/salt/pkgbuild'):
     '''
@@ -155,14 +153,6 @@ def built(name,
 
         .. versionadded:: 2015.8.2
 
-    always
-        If ``True``, packages will be built even if they already exist in the
-        ``dest_dir``. This is useful when building a package for continuous or
-        nightly package builds.
-
-        .. deprecated:: 2015.8.2
-            Use ``force`` instead.
-
     saltenv
         The saltenv to use for files downloaded from the salt filesever
 
@@ -177,14 +167,6 @@ def built(name,
            'changes': {},
            'comment': '',
            'result': True}
-
-    if always is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'The \'always\' argument to the pkgbuild.built state has been '
-            'deprecated, please use \'force\' instead.'
-        )
-        force = always
 
     if not results:
         ret['comment'] = '\'results\' argument is required'

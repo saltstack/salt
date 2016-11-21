@@ -28,6 +28,7 @@ def present(name,
             backing=None,
             vgname=None,
             lvname=None,
+            thinpool=None,
             path=None):
     '''
     .. versionchanged:: 2015.8.0
@@ -136,6 +137,10 @@ def present(name,
     lvname
         Name of the LVM logical volume in which to create the volume for this
         container. Only applicable if ``backing`` is set to ``lvm``.
+
+    thinpool
+        Name of a pool volume that will be used for thin-provisioning this
+        container. Only applicable if ``backing`` is set to ``lvm``.
     '''
     ret = {'name': name,
            'result': True,
@@ -239,7 +244,8 @@ def present(name,
                     backing=backing,
                     vgname=vgname,
                     path=path,
-                    lvname=lvname)
+                    lvname=lvname,
+                    thinpool=thinpool)
         except (CommandExecutionError, SaltInvocationError) as exc:
             ret['result'] = False
             ret['comment'] = exc.strerror
@@ -634,59 +640,6 @@ def stopped(name, kill=False, path=None):
     return ret
 
 
-# Deprecated states
-def created(name, **kwargs):
-    '''
-    .. deprecated:: 2015.5.0
-        Use :mod:`lxc.present <salt.states.lxc.present>`
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'The lxc.created state has been renamed to lxc.present, please use '
-        'lxc.present'
-    )
-    return present(name, **kwargs)
-
-
-def started(name, path=None, restart=False):
-    '''
-    .. deprecated:: 2015.5.0
-        Use :mod:`lxc.running <salt.states.lxc.running>`
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'The lxc.started state has been renamed to lxc.running, please use '
-        'lxc.running'
-    )
-    return running(name, restart=restart, path=path)
-
-
-def cloned(name,
-           orig,
-           snapshot=True,
-           size=None,
-           vgname=None,
-           path=None,
-           profile=None):
-    '''
-    .. deprecated:: 2015.5.0
-        Use :mod:`lxc.present <salt.states.lxc.present>`
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'The lxc.cloned state has been merged into the lxc.present state. '
-        'Please update your states to use lxc.present, with the '
-        '\'clone_from\' argument set to the name of the clone source.'
-    )
-    return present(name,
-                   clone_from=orig,
-                   snapshot=snapshot,
-                   size=size,
-                   vgname=vgname,
-                   path=path,
-                   profile=profile)
-
-
 def set_pass(name, **kwargs):  # pylint: disable=W0613
     '''
     .. deprecated:: 2015.5.0
@@ -726,6 +679,8 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
 
     Edit LXC configuration options
 
+    .. deprecated:: 2015.5.0
+
     path
         path to the container parent
         default: /var/lib/lxc (system default)
@@ -743,8 +698,11 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
             - lxc_conf_unset:
                 - lxc.utsname
     '''
+    # Until a reasonable alternative for this state function is created, we need
+    # to keep this function around and cannot officially remove it. Progress of
+    # the new function will be tracked in https://github.com/saltstack/salt/issues/35523
     salt.utils.warn_until(
-        'Carbon',
+        'Oxygen',
         'This state is unsuitable for setting parameters that appear more '
         'than once in an LXC config file, or parameters which must appear in '
         'a certain order (such as when configuring more than one network '

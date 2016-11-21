@@ -639,4 +639,4 @@ Both the instance and load-balancer must exist before using these functions.
     salt-cloud -f attach_lb gce name=lb member=w4
     salt-cloud -f detach_lb gce name=lb member=oops
 
-__ http://libcloud.readthedocs.org/en/latest/compute/drivers/gce.html#specifying-service-account-scopes
+__ https://libcloud.readthedocs.io/en/latest/compute/drivers/gce.html#specifying-service-account-scopes

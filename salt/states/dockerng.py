@@ -70,7 +70,7 @@ def __virtual__():
     if 'dockerng.version' in __salt__:
         global _validate_input  # pylint: disable=global-statement
         _validate_input = salt.utils.namespaced_function(
-            _validate_input, globals()
+            _validate_input, globals(), preserve_context=True,
         )
         return __virtualname__
     return (False, __salt__.missing_fun_string('dockerng.version'))
@@ -194,7 +194,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 else:
                     actual_env[key] = val
             log.trace('dockerng.running ({0}): munged actual value: {1}'
-                        .format(item, actual_env))
+                      .format(item, actual_env))
             env_diff = {}
             for key in data:
                 actual_val = actual_env.get(key)
@@ -293,17 +293,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 if container_port.endswith('/tcp'):
                     container_port = container_port[:-4]
                 for bind_data in bind_list:
-                    # Port range will have to be updated for future Docker
-                    # versions (see
-                    # https://github.com/docker/docker/issues/10220).  Note
-                    # that Docker 1.5.0 (released a few weeks after the fix
-                    # was merged) does not appear to have this fix in it,
-                    # so we're probably looking at 1.6.0 for this fix.
-                    if bind_data['HostPort'] == '' or \
-                            49153 <= int(bind_data['HostPort']) <= 65535:
-                        host_port = ''
-                    else:
-                        host_port = bind_data['HostPort']
+                    host_port = bind_data['HostPort']
                     if bind_data['HostIp'] in ('0.0.0.0', ''):
                         if host_port:
                             bind_def = (host_port, container_port)
@@ -344,16 +334,22 @@ def _compare(actual, create_kwargs, defaults_from_image):
                             )
                         else:
                             bind_def = container_port
+                    # The any address (0.0.0.0) is omitted from the
+                    # actual_binds comparison key, so be sure to
+                    # strip it from the desired_binds comparison
+                    # key if it's included.
+                    if bind_def.startswith('0.0.0.0:'):
+                        bind_def = bind_def.replace('0.0.0.0:', '')
                     desired_binds.append(bind_def)
             actual_binds.sort()
             desired_binds.sort()
             log.trace('dockerng.running ({0}): munged actual value: {1}'
-                        .format(item, actual_binds))
+                      .format(item, actual_binds))
             log.trace('dockerng.running ({0}): munged desired value: {1}'
-                        .format(item, desired_binds))
+                      .format(item, desired_binds))
             if actual_binds != desired_binds:
                 ret.update({item: {'old': actual_binds,
-                                    'new': desired_binds}})
+                                   'new': desired_binds}})
                 continue
 
         elif item == 'links':
@@ -383,7 +379,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             desired_links = sorted(data)
             if actual_links != desired_links:
                 ret.update({item: {'old': actual_links,
-                                    'new': desired_links}})
+                                   'new': desired_links}})
                 continue
 
         elif item == 'extra_hosts':
@@ -426,6 +422,17 @@ def _compare(actual, create_kwargs, defaults_from_image):
             if actual_data != data:
                 ret.update({item: {'old': actual_data, 'new': data}})
                 continue
+        elif item == 'log_config':
+            # https://github.com/saltstack/salt/issues/30577#issuecomment-238322721
+            if not data.get('Config', None) and actual_data.get('Config', None):
+                data['Config'] = {}
+                actual_data['Config'] = {}
+            if not data.get('Type', None) and actual_data.get('Type', None):
+                data['Type'] = None
+                actual_data['Type'] = None
+            if data != actual_data:
+                ret.update({item: {'old': actual_data, 'new': data}})
+            continue
         elif item in ('cmd', 'command', 'entrypoint'):
             if (actual_data is None and item not in create_kwargs and
                     _image_get(config['image_path'])):
@@ -449,12 +456,12 @@ def _compare(actual, create_kwargs, defaults_from_image):
             actual_data = sorted(actual_data)
             desired_data = sorted(data)
             log.trace('dockerng.running ({0}): munged actual value: {1}'
-                        .format(item, actual_data))
+                      .format(item, actual_data))
             log.trace('dockerng.running ({0}): munged desired value: {1}'
-                        .format(item, desired_data))
+                      .format(item, desired_data))
             if actual_data != desired_data:
                 ret.update({item: {'old': actual_data,
-                                    'new': desired_data}})
+                                   'new': desired_data}})
             continue
 
         else:
@@ -488,6 +495,7 @@ def image_present(name,
                   force=False,
                   insecure_registry=False,
                   client_timeout=CLIENT_TIMEOUT,
+                  dockerfile=None,
                   **kwargs):
     '''
     Ensure that an image is present. The image can either be pulled from a
@@ -517,6 +525,14 @@ def image_present(name,
               dockerng.image_present:
                 - build: /home/myuser/docker/myimage
 
+
+            myuser/myimage:mytag:
+              dockerng.image_present:
+                - build: /home/myuser/docker/myimage
+                - dockerfile: Dockerfile.alternative
+
+            .. versionadded:: develop
+
         The image will be built using :py:func:`dockerng.build
         <salt.modules.dockerng.build>` and the specified image name and tag
         will be applied to it.
@@ -539,6 +555,12 @@ def image_present(name,
     client_timeout
         Timeout in seconds for the Docker client. This is not a timeout for
         the state, but for receiving a response from the API.
+
+    dockerfile
+        Allows for an alternative Dockerfile to be specified.  Path to alternative
+        Dockefile is relative to the build path for the Docker container.
+
+        .. versionadded:: develop
     '''
     ret = {'name': name,
            'changes': {},
@@ -583,7 +605,9 @@ def image_present(name,
 
     if build:
         try:
-            image_update = __salt__['dockerng.build'](path=build, image=image)
+            image_update = __salt__['dockerng.build'](path=build,
+                                                      image=image,
+                                                      dockerfile=dockerfile)
         except Exception as exc:
             ret['comment'] = (
                 'Encountered error building {0} as {1}: {2}'
@@ -1107,14 +1131,14 @@ def running(name,
                   - /mnt/vol2
 
     cpu_shares
-        CPU shares (relative weight)
+        CPU shares (relative weight), specified as an integer between 2 and 1024.
 
         .. code-block:: yaml
 
             foo:
               dockerng.running:
                 - image: bar/baz:latest
-                - cpu_shares: 0.5
+                - cpu_shares: 256
 
     cpuset
         CPUs on which which to allow execution, specified as a string
@@ -1221,6 +1245,22 @@ def running(name,
             These LXC configuration parameters will only have the desired
             effect if the container is using the LXC execution driver, which
             has not been the default for some time.
+
+    security_opt:
+        Security configuration for MLS systems such as SELinux and AppArmor.
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - security_opts:
+                  - 'apparmor:unconfined'
+
+        .. note::
+
+            See the documentation for security_opt at
+            https://docs.docker.com/engine/reference/run/#security-configuration
 
     publish_all_ports : False
         Allocates a random host port for each port exposed using the ``ports``
@@ -1504,6 +1544,24 @@ def running(name,
         such as the django ``migrate`` and ``collectstatic`` commands. In
         instances such as this, the container only needs to be started the
         first time.
+
+    stop_signal
+        Specify the signal docker will send to the container when stopping.
+        Useful when running systemd as PID 1 inside the container.
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - stop_signal: SIGRTMIN+3
+
+        .. note::
+
+            This option requires Docker 1.9.0 or newer and
+            docker-py 1.7.0 or newer.
+
+        .. versionadded:: 2016.11.0
     '''
     ret = {'name': name,
            'changes': {},
@@ -1529,7 +1587,7 @@ def running(name,
     except TypeError:
         image = ':'.join(_get_repo_tag(str(image)))
 
-    if image not in __salt__['dockerng.list_tags']():
+    if image not in __salt__['dockerng.list_tags']() and not __opts__['test']:
         try:
             # Pull image
             pull_result = __salt__['dockerng.pull'](
@@ -1543,7 +1601,12 @@ def running(name,
         else:
             ret['changes']['image'] = pull_result
 
-    image_id = __salt__['dockerng.inspect_image'](image)['Id']
+    try:
+        image_id = __salt__['dockerng.inspect_image'](image)['Id']
+    except CommandExecutionError:
+        if not __opts__['test']:
+            raise
+        image_id = None
 
     if name not in __salt__['dockerng.list_containers'](all=True):
         pre_config = {}
@@ -1597,7 +1660,6 @@ def running(name,
         _validate_input(create_kwargs,
                         validate_ip_addrs=validate_ip_addrs)
 
-        defaults_from_image = _get_defaults_from_image(image_id)
         if create_kwargs.get('binds') is not None:
             # Be smart and try to provide `volumes` argument derived from the
             # "binds" configuration.
@@ -1675,7 +1737,11 @@ def running(name,
             )
         else:
             ret['result'] = None
-            ret['comment'] = 'Container \'{0}\' will be '.format(name)
+            if image_id is None:
+                ret['comment'] = 'Image \'{0}\' will be pulled. '.format(image)
+            else:
+                ret['comment'] = ''
+            ret['comment'] += 'Container \'{0}\' will be '.format(name)
             if pre_config and force:
                 ret['comment'] += 'forcibly replaced'
             else:
@@ -2005,8 +2071,8 @@ def stopped(name=None,
     stop_errors = []
     for target in to_stop:
         changes = __salt__['dockerng.stop'](target,
-                                             timeout=stop_timeout,
-                                             unpause=unpause)
+                                            timeout=stop_timeout,
+                                            unpause=unpause)
         if changes['result'] is True:
             ret['changes'][target] = changes
         else:
@@ -2325,7 +2391,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
                     name, driver=driver, driver_opts=driver_opts)
             except Exception as exc:
                 ret['comment'] = ('Failed to create volume \'{0}\': {1}'
-                                .format(name, exc))
+                                  .format(name, exc))
                 return ret
             else:
                 result = True

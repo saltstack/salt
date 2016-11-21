@@ -54,7 +54,8 @@ def managed(name,
             env_vars=None,
             no_use_wheel=False,
             pip_upgrade=False,
-            pip_pkgs=None):
+            pip_pkgs=None,
+            process_dependency_links=False):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -107,6 +108,11 @@ def managed(name,
         As an alternative to `requirements`, pass a list of pip packages that
         should be installed.
 
+    process_dependency_links: False
+        Run pip install with the --process_dependency_links flag.
+
+        .. versionadded:: Nitrogen
+
     Also accepts any kwargs that the virtualenv module will. However, some
     kwargs, such as the ``pip`` option, require ``- distribute: True``.
 
@@ -116,6 +122,8 @@ def managed(name,
           virtualenv.managed:
             - system_site_packages: False
             - requirements: salt://REQUIREMENTS.txt
+            - env_vars:
+                PATH_VAR: '/usr/local/bin/'
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -139,7 +147,7 @@ def managed(name,
                 requirements, __env__
             )
         # Check if the master version has changed.
-        if __salt__['cp.hash_file'](requirements, __env__) != \
+        if cached_requirements and __salt__['cp.hash_file'](requirements, __env__) != \
                 __salt__['cp.hash_file'](cached_requirements, __env__):
             cached_requirements = __salt__['cp.cache_file'](
                 requirements, __env__
@@ -147,7 +155,7 @@ def managed(name,
         if not cached_requirements:
             ret.update({
                 'result': False,
-                'comment': 'pip requirements file {0!r} not found'.format(
+                'comment': 'pip requirements file \'{0}\' not found'.format(
                     requirements
                 )
             })
@@ -256,6 +264,7 @@ def managed(name,
         _ret = __salt__['pip.install'](
             pkgs=pip_pkgs,
             requirements=requirements,
+            process_dependency_links=process_dependency_links,
             bin_env=name,
             use_wheel=use_wheel,
             no_use_wheel=no_use_wheel,

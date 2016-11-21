@@ -950,8 +950,21 @@ def get_hostname():
         salt '*' network.get_hostname
     '''
 
-    from socket import gethostname
-    return gethostname()
+    return socket.gethostname()
+
+
+def get_fqdn():
+    '''
+    Get fully qualified domain name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.get_fqdn
+    '''
+
+    return socket.getfqdn()
 
 
 def mod_hostname(hostname):
@@ -993,7 +1006,8 @@ def mod_hostname(hostname):
             if 'Static hostname' in line[0]:
                 o_hostname = line[1].strip()
     elif not salt.utils.is_sunos():
-        o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
+        # don't run hostname -f because -f is not supported on all platforms
+        o_hostname = socket.getfqdn()
     else:
         # output: Hostname core OK: fully qualified as core.acheron.be
         o_hostname = __salt__['cmd.run'](check_hostname_cmd).split(' ')[-1]
@@ -1036,7 +1050,7 @@ def mod_hostname(hostname):
                     fh_.write('HOSTNAME={0}\n'.format(hostname))
                 else:
                     fh_.write(net)
-    elif __grains__['os_family'] == 'Debian':
+    elif __grains__['os_family'] in ('Debian', 'NILinuxRT'):
         with salt.utils.fopen('/etc/hostname', 'w') as fh_:
             fh_.write(hostname + '\n')
     elif __grains__['os_family'] == 'OpenBSD':
@@ -1466,3 +1480,42 @@ def get_route(ip):
 
     else:
         raise CommandExecutionError('Not yet supported on this platform')
+
+
+def ifacestartswith(cidr):
+    '''
+    Retrieve the interface name from a specific CIDR
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ifacestartswith 10.0
+    '''
+    net_list = interfaces()
+    intfnames = []
+    pattern = str(cidr)
+    size = len(pattern)
+    for ifname, ifval in six.iteritems(net_list):
+        if 'inet' in ifval:
+            for inet in ifval['inet']:
+                if inet['address'][0:size] == pattern:
+                    intfnames.append(inet['label'])
+    return intfnames
+
+
+def iphexval(ip):
+    '''
+    Retrieve the interface name from a specific CIDR
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.iphexval 10.0.0.1
+    '''
+    a = ip.split('.')
+    hexval = ""
+    for val in a:
+        hexval = hexval.join(hex(int(val))[2:])
+    return hexval.upper()

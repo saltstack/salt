@@ -90,20 +90,11 @@ class NonBlockingPopen(subprocess.Popen):
             self._stderr_logger_name_.format(pid=self.pid)
         )
 
-        if logging_command is None:
-            log.info(
-                'Running command under pid {0}: {1!r}'.format(
-                    self.pid,
-                    *args
-                )
-            )
-        else:
-            log.info(
-                'Running command under pid {0}: {1!r}'.format(
-                    self.pid,
-                    logging_command
-                )
-            )
+        log.info(
+            'Running command under pid %s: \'%s\'',
+            self.pid,
+            args if logging_command is None else logging_command
+        )
 
     def recv(self, maxsize=None):
         return self._recv('stdout', maxsize)

@@ -39,6 +39,7 @@ import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
+    SaltInvocationError,
     SaltCloudNotFound,
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
@@ -289,11 +290,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -334,11 +336,27 @@ def create(vm_):
             )
         )
 
-    if key_filename is None:
+    if not __opts__.get('ssh_agent', False) and key_filename is None:
         raise SaltCloudConfigError(
             'The DigitalOcean driver requires an ssh_key_file and an ssh_key_name '
             'because it does not supply a root password upon building the server.'
         )
+
+    ssh_interface = config.get_cloud_config_value(
+        'ssh_interface', vm_, __opts__, search_global=False, default='public'
+    )
+
+    if ssh_interface == 'private':
+        log.info("ssh_interafce: Setting interface for ssh to 'private'.")
+        kwargs['ssh_interface'] = ssh_interface
+    else:
+        if ssh_interface != 'public':
+            raise SaltCloudConfigError(
+                "The DigitalOcean driver requires ssh_interface to be defined as 'public' or 'private'."
+            )
+        else:
+            log.info("ssh_interafce: Setting interface for ssh to 'public'.")
+            kwargs['ssh_interface'] = ssh_interface
 
     private_networking = config.get_cloud_config_value(
         'private_networking', vm_, __opts__, search_global=False, default=None,
@@ -348,6 +366,12 @@ def create(vm_):
         if not isinstance(private_networking, bool):
             raise SaltCloudConfigError("'private_networking' should be a boolean value.")
         kwargs['private_networking'] = private_networking
+
+    if not private_networking and ssh_interface == 'private':
+        raise SaltCloudConfigError(
+                "The DigitalOcean driver requires ssh_interface if defined as 'private' "
+                "then private_networking should be set as 'True'."
+    )
 
     backups_enabled = config.get_cloud_config_value(
         'backups_enabled', vm_, __opts__, search_global=False, default=None,
@@ -391,7 +415,11 @@ def create(vm_):
         )
         if dns_hostname and dns_domain:
             log.info('create_dns_record: using dns_hostname="{0}", dns_domain="{1}"'.format(dns_hostname, dns_domain))
-            __add_dns_addr__ = lambda t, d: post_dns_record(dns_domain, dns_hostname, t, d)
+            __add_dns_addr__ = lambda t, d: post_dns_record(dns_domain=dns_domain,
+                                                            name=dns_hostname,
+                                                            record_type=t,
+                                                            record_data=d)
+
             log.debug('create_dns_record: {0}'.format(__add_dns_addr__))
         else:
             log.error('create_dns_record: could not determine dns_hostname and/or dns_domain')
@@ -404,7 +432,8 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': kwargs},
+        args={'kwargs': kwargs},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -466,6 +495,7 @@ def create(vm_):
         if facing == 'public':
             if create_dns_record:
                 __add_dns_addr__(dns_rec_type, ip_address)
+        if facing == ssh_interface:
             if not vm_['ssh_host']:
                 vm_['ssh_host'] = ip_address
 
@@ -491,11 +521,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -675,6 +706,29 @@ def show_keypair(kwargs=None, call=None):
     return details
 
 
+def import_keypair(kwargs=None, call=None):
+    '''
+    Upload public key to cloud provider.
+    Similar to EC2 import_keypair.
+
+    .. versionadded:: 2016.11.0
+
+    kwargs
+        file(mandatory): public key file-name
+        keyname(mandatory): public key name in the provider
+    '''
+    with salt.utils.fopen(kwargs['file'], 'r') as public_key_filename:
+        public_key_content = public_key_filename.read()
+
+    digital_ocean_kwargs = {
+        'name': kwargs['keyname'],
+        'public_key': public_key_content
+    }
+
+    created_result = create_key(digital_ocean_kwargs, call=call)
+    return created_result
+
+
 def create_key(kwargs=None, call=None):
     '''
     Upload a public key
@@ -756,7 +810,8 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -794,7 +849,8 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -804,46 +860,30 @@ def destroy(name, call=None):
     return node
 
 
-def post_dns_record(dns_domain, name, record_type, record_data):
+def post_dns_record(**kwargs):
     '''
-    Creates or updates a DNS record for the given name if the domain is managed with DO.
+    Creates a DNS record for the given name if the domain is managed with DO.
     '''
-    domain = query(method='domains', droplet_id=dns_domain)
+    if 'kwargs' in kwargs:  # flatten kwargs if called via salt-cloud -f
+        f_kwargs = kwargs['kwargs']
+        del kwargs['kwargs']
+        kwargs.update(f_kwargs)
+    mandatory_kwargs = ('dns_domain', 'name', 'record_type', 'record_data')
+    for i in mandatory_kwargs:
+        if kwargs[i]:
+            pass
+        else:
+            error = '{0}="{1}" ## all mandatory args must be provided: {2}'.format(i, kwargs[i], str(mandatory_kwargs))
+            raise SaltInvocationError(error)
+
+    domain = query(method='domains', droplet_id=kwargs['dns_domain'])
 
     if domain:
         result = query(
             method='domains',
-            droplet_id=dns_domain,
+            droplet_id=kwargs['dns_domain'],
             command='records',
-            args={'type': record_type, 'name': name, 'data': record_data},
-            http_method='post'
-        )
-        return result
-
-    return False
-
-# Delete this with create_dns_record() and delete_dns_record() for Carbon release
-__deprecated_fqdn_parsing = lambda fqdn: ('.'.join(fqdn.split('.')[-2:]), '.'.join(fqdn.split('.')[:-2]))
-
-
-def create_dns_record(hostname, ip_address):
-    salt.utils.warn_until(
-        'Carbon',
-        'create_dns_record() is deprecated and will be removed in Carbon. Please use post_dns_record() instead.'
-    )
-    return __deprecated_create_dns_record(hostname, ip_address)
-
-
-def __deprecated_create_dns_record(hostname, ip_address):
-    domainname, subdomain = __deprecated_fqdn_parsing(hostname)
-    domain = query(method='domains', droplet_id=domainname)
-
-    if domain:
-        result = query(
-            method='domains',
-            droplet_id=domainname,
-            command='records',
-            args={'type': 'A', 'name': subdomain, 'data': ip_address},
+            args={'type': kwargs['record_type'], 'name': kwargs['name'], 'data': kwargs['record_data']},
             http_method='post'
         )
         return result
@@ -882,33 +922,6 @@ def destroy_dns_records(fqdn):
                 log.error('failed to delete DNS domain {0} record ID {1}.'.format(domain, hostname))
             log.debug('DNS deletion REST call returned: {0}'.format(pprint.pformat(ret)))
 
-    return False
-
-
-def delete_dns_record(hostname):
-    salt.utils.warn_until(
-        'Carbon',
-        'delete_dns_record() is deprecated and will be removed in Carbon. Please use destroy_dns_records() instead.'
-    )
-    return __deprecated_delete_dns_record(hostname)
-
-
-def __deprecated_delete_dns_record(hostname):
-    '''
-    Deletes a DNS for the given hostname if the domain is managed with DO.
-    '''
-    domainname, subdomain = __deprecated_fqdn_parsing(hostname)
-    records = query(method='domains', droplet_id=domainname, command='records')
-
-    if records:
-        for record in records['domain_records']:
-            if record['name'] == subdomain:
-                return query(
-                    method='domains',
-                    droplet_id=domainname,
-                    command='records/' + str(record['id']),
-                    http_method='delete'
-                )
     return False
 
 

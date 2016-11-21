@@ -143,6 +143,7 @@ import logging
 # Import salt libs
 from salt.ext.six import string_types
 import salt.utils
+import salt.utils.files
 import salt.ext.six as six
 
 # Enable proper logging
@@ -503,7 +504,7 @@ def loaded(name, tag='latest', source=None, source_hash='', force=False):
         comment = 'Image {0} will be loaded'.format(image_name)
         return _ret_status(name=name, comment=comment)
 
-    tmp_filename = salt.utils.mkstemp()
+    tmp_filename = salt.utils.files.mkstemp()
     __salt__['state.single']('file.managed',
                              name=tmp_filename,
                              source=source,
@@ -657,11 +658,11 @@ def installed(name,
     already_exists = cinfos['status']
     # if container exists but is not started, try to start it
     if already_exists:
-        return _valid(comment='Container {0!r} already exists'.format(name))
+        return _valid(comment='Container \'{0}\' already exists'.format(name))
     dports, denvironment = {}, {}
 
     if __opts__['test']:
-        comment = 'Container {0!r} will be created'.format(name)
+        comment = 'Container \'{0}\' will be created'.format(name)
         return _ret_status(name=name, comment=comment)
 
     if not ports:
@@ -737,7 +738,7 @@ def absent(name):
         is_running = __salt__['docker.is_running'](cid)
 
         if __opts__['test']:
-            comment = 'Container {0!r} will be stopped and destroyed'.format(cid)
+            comment = 'Container \'{0}\' will be stopped and destroyed'.format(cid)
             return _ret_status(name=name, comment=comment)
 
         # Stop container gracefully, if running
@@ -746,32 +747,32 @@ def absent(name):
             __salt__['docker.stop'](cid)
             is_running = __salt__['docker.is_running'](cid)
             if is_running:
-                return _invalid(comment=("Container {0!r} could not be stopped"
+                return _invalid(comment=('Container \'{0}\' could not be stopped'
                                          .format(cid)))
             else:
                 __salt__['docker.remove_container'](cid)
                 is_gone = __salt__['docker.exists'](cid)
                 if is_gone:
-                    return _valid(comment=('Container {0!r}'
+                    return _valid(comment=('Container \'{0}\''
                                   ' was stopped and destroyed, '.format(cid)),
                                   changes={name: True})
                 else:
-                    return _valid(comment=('Container {0!r}'
+                    return _valid(comment=('Container \'{0}\''
                                   ' was stopped but could not be destroyed,'.format(cid)),
                                   changes={name: True})
         else:
             __salt__['docker.remove_container'](cid)
             is_gone = __salt__['docker.exists'](cid)
             if is_gone:
-                return _valid(comment=('Container {0!r}'
+                return _valid(comment=('Container \'{0}\''
                               'is stopped and was destroyed, '.format(cid)),
                               changes={name: True})
             else:
-                return _valid(comment=('Container {0!r}'
+                return _valid(comment=('Container \'{0}\''
                               ' is stopped but could not be destroyed,'.format(cid)),
                               changes={name: True})
     else:
-        return _valid(comment="Container {0!r} not found".format(name))
+        return _valid(comment='Container \'{0}\' not found'.format(name))
 
 
 def present(name, image=None, tag='latest', is_latest=False):
@@ -886,7 +887,7 @@ def run(name,
                 return valid(comment='docked_unless execution succeeded')
 
     if __opts__['test']:
-        comment = 'Command {0!r} will be executed on container {1}'.format(name, cid)
+        comment = 'Command \'{0}\' will be executed on container {1}'.format(name, cid)
         return _ret_status(name=name, comment=comment)
 
     result = drun_all(cid, name)
@@ -1129,27 +1130,27 @@ def running(name,
 
     # if container exists but is not started, try to start it
     if already_exists_with_same_image and (is_running or not start):
-        return _valid(comment='container {0!r} already exists'.format(name))
+        return _valid(comment='container \'{0}\' already exists'.format(name))
     if not already_exists_with_same_image and already_exists:
         # Outdated container: It means it runs against an old image.
         # We're gonna have to stop and remove the old container, to let
         # the name available for the new one.
         if __opts__['test']:
-            comment = 'Will replace outdated container {0!r}'.format(name)
+            comment = 'Will replace outdated container \'{0}\''.format(name)
             return _ret_status(name=name, comment=comment)
         if is_running:
             stop_status = __salt__['docker.stop'](name)
             if not stop_status['status']:
-                return _invalid(comment='Failed to stop outdated container {0!r}'.format(name))
+                return _invalid(comment='Failed to stop outdated container \'{0}\''.format(name))
 
         remove_status = __salt__['docker.remove_container'](name)
         if not remove_status['status']:
-            return _invalid(comment='Failed to remove outdated container {0!r}'.format(name))
+            return _invalid(comment='Failed to remove outdated container \'{0}\''.format(name))
         already_exists = False
         # now it's clear, the name is available for the new container
 
     if __opts__['test']:
-        comment = 'Will create container {0!r}'.format(name)
+        comment = 'Will create container \'{0}\''.format(name)
         return _ret_status(name=name, comment=comment)
 
     # parse input data
@@ -1260,10 +1261,10 @@ def running(name,
             log.debug("Docker-io running:" + str(started))
             log.debug("Docker-io running:" + str(is_running))
             if is_running:
-                changes.append('Container {0!r} started.\n'.format(name))
+                changes.append('Container \'{0}\' started.\n'.format(name))
             else:
-                return _invalid(comment=('Container {0!r} cannot be started\n{1!s}'
+                return _invalid(comment=('Container \'{0}\' cannot be started\n{1!s}'
                                          .format(name, started['out'],)))
         else:
-            changes.append('Container {0!r} started.\n'.format(name))
+            changes.append('Container \'{0}\' started.\n'.format(name))
     return _valid(comment='\n'.join(changes), changes={name: True})

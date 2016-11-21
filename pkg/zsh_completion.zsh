@@ -25,7 +25,7 @@ _modules(){
     fi
 
     if _cache_invalid salt/modules || ! _retrieve_cache salt/modules; then
-        _funcs=( ${(M)${(f)"$(command salt-call --local -d 2>/dev/null)"}##[[:alnum:]._]##} )
+        _funcs=( ${${(Q)${${(s. .)"$(_call_program salt-call-cmd salt-call --local --out txt sys.list_functions)"}%%[],]##}#\[}:#local:} )
         _store_cache salt/modules _funcs
     fi
 
@@ -40,7 +40,7 @@ _runners(){
     fi
 
     if _cache_invalid salt/runners || ! _retrieve_cache salt/runners; then
-        _runs=( ${(M)${(Q)${(f)"$(command salt-run -d 2>/dev/null)"}}##[[:alnum:]._]##} )
+        _runs=( ${${(Q)${${(s. .)"$(_call_program salt-call-cmd salt-call --local --out txt sys.list_runner_functions)"}%%[],]##}#\[}:#local:} )
         _store_cache salt/runners _runs
     fi
 

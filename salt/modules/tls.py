@@ -677,7 +677,7 @@ def create_ca(ca_name,
                 key = OpenSSL.crypto.load_privatekey(
                     OpenSSL.crypto.FILETYPE_PEM, fic2.read())
             except OpenSSL.crypto.Error as err:
-                log.warn('Error loading existing private key'
+                log.warning('Error loading existing private key'
                     ' %s, generating a new key: %s', ca_keyp, str(err))
                 bck = "{0}.unloadable.{1}".format(ca_keyp,
                     datetime.utcnow().strftime("%Y%m%d%H%M%S"))
@@ -1562,10 +1562,10 @@ def cert_info(cert_path, digest='sha256'):
         'issuer': dict(cert.get_issuer().get_components()),
         'serial_number': cert.get_serial_number(),
         'not_before': calendar.timegm(time.strptime(
-            cert.get_notBefore(),
+            str(cert.get_notBefore().decode(__salt_system_encoding__)),
             date_fmt)),
         'not_after': calendar.timegm(time.strptime(
-            cert.get_notAfter(),
+            cert.get_notAfter().decode('utf-8'),
             date_fmt)),
     }
 
@@ -1574,7 +1574,7 @@ def cert_info(cert_path, digest='sha256'):
         ret['extensions'] = {}
         for i in _range(cert.get_extension_count()):
             ext = cert.get_extension(i)
-            ret['extensions'][ext.get_short_name()] = ext
+            ret['extensions'][ext.get_short_name()] = str(ext)
 
     if 'subjectAltName' in ret.get('extensions', {}):
         valid_names = set()

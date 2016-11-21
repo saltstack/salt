@@ -12,7 +12,7 @@ This module is a concrete implementation of the sql_base
 ext_pillar for SQLCipher.
 
 :maturity: new
-:depends: pysqlcipher
+:depends: pysqlcipher (for py2) or pysqlcipher3 (for py3)
 :platform: all
 
 Configuring the sqlcipher ext_pillar

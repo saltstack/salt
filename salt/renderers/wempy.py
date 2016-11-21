@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
 from __future__ import absolute_import
 
-# Import python libs
-from StringIO import StringIO
-
 # Import salt libs
+import salt.ext.six as six
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
@@ -33,4 +32,4 @@ def render(template_file,
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in the wempy renderer'))
-    return StringIO(tmp_data['data'])
+    return six.moves.StringIO(tmp_data['data'])

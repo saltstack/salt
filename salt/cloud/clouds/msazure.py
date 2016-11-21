@@ -14,7 +14,7 @@ The Azure cloud module is used to control access to Microsoft Azure
     * ``apikey``
     * ``certificate_path``
     * ``subscription_id``
-    * ``requests_lib``
+    * ``backend``
 
     A Management Certificate (.pem and .crt files) must be created and the .pem
     file placed on the same machine that salt-cloud is run from. Information on
@@ -23,7 +23,7 @@ The Azure cloud module is used to control access to Microsoft Azure
 
     http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-management/
 
-    For users with Python < 2.7.9, requests_lib must currently be set to True.
+    For users with Python < 2.7.9, ``backend`` must currently be set to ``requests``.
 
 Example ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/azure.conf`` configuration:
@@ -399,7 +399,12 @@ def show_instance(name, call=None):
     # Find under which cloud service the name is listed, if any
     if name not in nodes:
         return {}
-    __utils__['cloud.cache_node'](nodes[name], __active_provider_name__, __opts__)
+    if 'name' not in nodes[name]:
+        nodes[name]['name'] = nodes[name]['id']
+    try:
+        __utils__['cloud.cache_node'](nodes[name], __active_provider_name__, __opts__)
+    except TypeError:
+        log.warning('Unable to show cache node data; this may be because the node has been deleted')
     return nodes[name]
 
 
@@ -426,11 +431,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -462,13 +468,13 @@ def create(vm_):
         )
 
     ssh_port = config.get_cloud_config_value('port', vm_, __opts__,
-                                             default='22', search_global=True)
+                                             default=22, search_global=True)
 
     ssh_endpoint = azure.servicemanagement.ConfigurationSetInputEndpoint(
         name='SSH',
         protocol='TCP',
         port=ssh_port,
-        local_port='22',
+        local_port=22,
     )
 
     network_config = azure.servicemanagement.ConfigurationSet()
@@ -541,7 +547,8 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        event_kwargs,
+        args=event_kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     log.debug('vm_kwargs: {0}'.format(vm_kwargs))
@@ -656,7 +663,8 @@ def create(vm_):
             'event',
             'attaching volumes',
             'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
-            {'volumes': volumes},
+            args={'volumes': volumes},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
 
@@ -689,11 +697,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -2050,11 +2059,14 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
     for item in data:
         if 'Role' not in item:
             continue
-        input_endpoint = item['Role']['ConfigurationSets']['ConfigurationSet']['InputEndpoints']['InputEndpoint']
-        if not isinstance(input_endpoint, list):
-            input_endpoint = [input_endpoint]
-        for endpoint in input_endpoint:
-            ret[endpoint['Name']] = endpoint
+        for role in item['Role']:
+            input_endpoint = role['ConfigurationSets']['ConfigurationSet'].get('InputEndpoints', {}).get('InputEndpoint')
+            if not input_endpoint:
+                continue
+            if not isinstance(input_endpoint, list):
+                input_endpoint = [input_endpoint]
+            for endpoint in input_endpoint:
+                ret[endpoint['Name']] = endpoint
     return ret
 
 
@@ -3389,6 +3401,14 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         'requests_lib',
         get_configured_provider(), __opts__, search_global=False
     )
+    if requests_lib is not None:
+        salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
+                                        'please change your config')
+
+    backend = config.get_cloud_config_value(
+        'backend',
+        get_configured_provider(), __opts__, search_global=False
+    )
     url = 'https://{management_host}/{subscription_id}/{path}'.format(
         management_host=management_host,
         subscription_id=subscription_id,
@@ -3410,6 +3430,7 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         text=True,
         cert=certificate_path,
         requests_lib=requests_lib,
+        backend=backend,
         decode=decode,
         decode_type='xml',
     )

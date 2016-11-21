@@ -24,7 +24,8 @@ else:
 # Import salt libs
 from salt.log import is_console_configured
 from salt.log.setup import LOG_LEVELS
-from salt.exceptions import SaltClientError, SaltSystemExit
+from salt.exceptions import SaltClientError, SaltSystemExit, \
+    CommandExecutionError
 import salt.defaults.exitcodes
 import salt.utils
 
@@ -49,7 +50,7 @@ def zmq_version():
     if not match:
         msg = "Using untested zmq python bindings version: '{0}'".format(ver)
         if is_console_configured():
-            log.warn(msg)
+            log.warning(msg)
         else:
             sys.stderr.write("WARNING {0}\n".format(msg))
         return True
@@ -70,7 +71,7 @@ def zmq_version():
         if "dev" in ver and not point:
             msg = 'Using dev zmq module, please report unexpected results'
             if is_console_configured():
-                log.warn(msg)
+                log.warning(msg)
             else:
                 sys.stderr.write("WARNING: {0}\n".format(msg))
             return True
@@ -117,32 +118,27 @@ def verify_socket(interface, pub_port, ret_port):
     '''
 
     addr_family = lookup_family(interface)
-    pubsock = socket.socket(addr_family, socket.SOCK_STREAM)
-    retsock = socket.socket(addr_family, socket.SOCK_STREAM)
-    try:
-        pubsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        pubsock.bind((interface, int(pub_port)))
-        pubsock.close()
-        retsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        retsock.bind((interface, int(ret_port)))
-        retsock.close()
-        result = True
-    except Exception as exc:
-        if exc.args:
-            msg = ('Unable to bind socket, error: {0}'.format(str(exc)))
-        else:
-            msg = ('Unable to bind socket, this might not be a problem.'
-                   ' Is there another salt-master running?')
-        if is_console_configured():
-            log.warn(msg)
-        else:
-            sys.stderr.write('WARNING: {0}\n'.format(msg))
-        result = False
-    finally:
-        pubsock.close()
-        retsock.close()
+    for port in pub_port, ret_port:
+        sock = socket.socket(addr_family, socket.SOCK_STREAM)
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind((interface, int(port)))
+        except Exception as exc:
+            msg = 'Unable to bind socket {0}:{1}'.format(interface, port)
+            if exc.args:
+                msg = '{0}, error: {1}'.format(msg, str(exc))
+            else:
+                msg = '{0}, this might not be a problem.'.format(msg)
+            msg += '; Is there another salt-master running?'
+            if is_console_configured():
+                log.warning(msg)
+            else:
+                sys.stderr.write('WARNING: {0}\n'.format(msg))
+            return False
+        finally:
+            sock.close()
 
-    return result
+    return True
 
 
 def verify_files(files, user):
@@ -179,14 +175,12 @@ def verify_files(files, user):
                 raise SaltSystemExit(msg=msg)
             if err.errno != errno.EACCES:
                 raise
-            msg = 'No permissions to access "{0}", are you running as the correct user?\n'
-            sys.stderr.write(msg.format(fn_))
-            sys.exit(err.errno)
+            msg = 'No permissions to access "{0}", are you running as the correct user?'.format(fn_)
+            raise SaltSystemExit(msg=msg)
 
         except OSError as err:
-            msg = 'Failed to create path "{0}" - {1}\n'
-            sys.stderr.write(msg.format(fn_, err))
-            sys.exit(err.errno)
+            msg = 'Failed to create path "{0}" - {1}'.format(fn_, err)
+            raise SaltSystemExit(msg=msg)
 
         stats = os.stat(fn_)
         if uid != stats.st_uid:
@@ -203,7 +197,7 @@ def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
     can shake the salt
     '''
     if salt.utils.is_windows():
-        return True
+        return win_verify_env(dirs, permissive, pki_dir, skip_extra)
     import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
@@ -279,7 +273,7 @@ def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
         #
         # If the permissions aren't correct, default to the more secure 700.
         # If acls are enabled, the pki_dir needs to remain readable, this
-        # is still secure because the private keys are still only readbale
+        # is still secure because the private keys are still only readable
         # by the user running the master
         if dir_ == pki_dir:
             smode = stat.S_IMODE(mode.st_mode)
@@ -520,7 +514,118 @@ def verify_log(opts):
     '''
     If an insecre logging configuration is found, show a warning
     '''
-    level = LOG_LEVELS.get(opts.get('log_level').lower(), logging.NOTSET)
+    level = LOG_LEVELS.get(str(opts.get('log_level')).lower(), logging.NOTSET)
 
     if level < logging.INFO:
-        log.warn('Insecure logging configuration detected! Sensitive data may be logged.')
+        log.warning('Insecure logging configuration detected! Sensitive data may be logged.')
+
+
+def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
+    '''
+    Verify that the named directories are in place and that the environment
+    can shake the salt
+    '''
+    import salt.utils.win_functions
+    import salt.utils.win_dacl
+
+    # Get the root path directory where salt is installed
+    path = dirs[0]
+    while os.path.basename(path) not in ['salt', 'salt-tests-tmpdir']:
+        path, base = os.path.split(path)
+
+    # Create the root path directory if missing
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+    # Set permissions to the root path directory
+    current_user = salt.utils.win_functions.get_current_user()
+    if salt.utils.win_functions.is_admin(current_user):
+        try:
+            # Make the Administrators group owner
+            # Use the SID to be locale agnostic
+            salt.utils.win_dacl.set_owner(path, 'S-1-5-32-544')
+
+        except CommandExecutionError:
+            msg = 'Unable to securely set the owner of "{0}".'.format(path)
+            if is_console_configured():
+                log.critical(msg)
+            else:
+                sys.stderr.write("CRITICAL: {0}\n".format(msg))
+
+        if not permissive:
+            try:
+                # Get a clean dacl by not passing an obj_name
+                dacl = salt.utils.win_dacl.Dacl()
+
+                # Add aces to the dacl, use the GUID (locale non-specific)
+                # Administrators Group
+                dacl.add_ace('S-1-5-32-544', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # System
+                dacl.add_ace('S-1-5-18', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # Owner
+                dacl.add_ace('S-1-3-4', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # Users Group
+                dacl.add_ace('S-1-5-32-545', 'grant', 'read_execute',
+                             'this_folder_subfolders_files')
+
+                # Save the dacl to the object
+                dacl.save(path, True)
+
+            except CommandExecutionError:
+                msg = 'Unable to securely set the permissions of ' \
+                      '"{0}".'.format(path)
+                if is_console_configured():
+                    log.critical(msg)
+                else:
+                    sys.stderr.write("CRITICAL: {0}\n".format(msg))
+
+    # Create the directories
+    for dir_ in dirs:
+        if not dir_:
+            continue
+        if not os.path.isdir(dir_):
+            try:
+                os.makedirs(dir_)
+            except OSError as err:
+                msg = 'Failed to create directory path "{0}" - {1}\n'
+                sys.stderr.write(msg.format(dir_, err))
+                sys.exit(err.errno)
+
+        # The PKI dir gets its own permissions
+        if dir_ == pki_dir:
+            try:
+                # Make Administrators group the owner
+                salt.utils.win_dacl.set_owner(path, 'S-1-5-32-544')
+
+                # Give Admins, System and Owner permissions
+                # Get a clean dacl by not passing an obj_name
+                dacl = salt.utils.win_dacl.Dacl()
+
+                # Add aces to the dacl, use the GUID (locale non-specific)
+                # Administrators Group
+                dacl.add_ace('S-1-5-32-544', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # System
+                dacl.add_ace('S-1-5-18', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # Owner
+                dacl.add_ace('S-1-3-4', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+
+                # Save the dacl to the object
+                dacl.save(dir_, True)
+
+            except CommandExecutionError:
+                msg = 'Unable to securely set the permissions of "{0}".'
+                msg = msg.format(dir_)
+                if is_console_configured():
+                    log.critical(msg)
+                else:
+                    sys.stderr.write("CRITICAL: {0}\n".format(msg))
+
+    if skip_extra is False:
+        # Run the extra verification checks
+        zmq_version()

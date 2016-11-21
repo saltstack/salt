@@ -366,13 +366,16 @@ You can also select a custom merging strategy using a ``__`` object in a list:
 +----------------+-------------------------+-------------------------+
 '''
 
+# Import Python libs
 from __future__ import absolute_import
 import os
 import logging
 from functools import partial
-
 import yaml
 from jinja2 import FileSystemLoader, Environment, TemplateNotFound
+
+# Import Salt libs
+import salt.ext.six as six
 
 
 log = logging.getLogger(__name__)
@@ -388,7 +391,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         'grains': partial(salt.utils.traverse_dict_and_list, __grains__),
         'opts': partial(salt.utils.traverse_dict_and_list, __opts__),
         }
-    for matcher, matchs in kwargs.iteritems():
+    for matcher, matchs in six.iteritems(kwargs):
         t, matcher = matcher.split(':', 1)
         if t not in traverse:
             raise Exception('Unknown traverse option "{0}", '
@@ -399,7 +402,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         stack_config_files += cfgs
     for cfg in stack_config_files:
         if not os.path.isfile(cfg):
-            log.warn('Ignoring pillar stack cfg "{0}": '
+            log.warning('Ignoring pillar stack cfg "{0}": '
                      'file does not exist'.format(cfg))
             continue
         stack = _process_stack_cfg(cfg, stack, minion_id, pillar)
@@ -423,12 +426,18 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             obj = yaml.safe_load(jenv.get_template(path).render(stack=stack))
             if not isinstance(obj, dict):
                 log.info('Ignoring pillar stack template "{0}": Can\'t parse '
-                         'as a valid yaml dictionnary'.format(path))
+                         'as a valid yaml dictionary'.format(path))
                 continue
             stack = _merge_dict(stack, obj)
-        except TemplateNotFound:
-            log.info('Ignoring pillar stack template "{0}": can\'t find from '
-                     'root dir "{1}"'.format(path, basedir))
+        except TemplateNotFound as e:
+            if hasattr(e, 'name') and e.name != path:
+                log.info('Jinja include file "{0}" not found '
+                         'from root dir "{1}", which was included '
+                         'by stack template "{2}"'.format(
+                             e.name, basedir, path))
+            else:
+                log.info('Ignoring pillar stack template "{0}": can\'t find from '
+                         'root dir "{1}"'.format(path, basedir))
             continue
     return stack
 
@@ -437,7 +446,7 @@ def _cleanup(obj):
     if obj:
         if isinstance(obj, dict):
             obj.pop('__', None)
-            for k, v in obj.iteritems():
+            for k, v in six.iteritems(obj):
                 obj[k] = _cleanup(v)
         elif isinstance(obj, list) and isinstance(obj[0], dict) \
                 and '__' in obj[0]:
@@ -453,7 +462,7 @@ def _merge_dict(stack, obj):
     if strategy == 'overwrite':
         return _cleanup(obj)
     else:
-        for k, v in obj.iteritems():
+        for k, v in six.iteritems(obj):
             if strategy == 'remove':
                 stack.pop(k, None)
                 continue
@@ -498,7 +507,9 @@ def _merge_list(stack, obj):
 
 
 def _parse_stack_cfg(content):
-    """Allow top level cfg to be YAML"""
+    '''
+    Allow top level cfg to be YAML
+    '''
     try:
         obj = yaml.safe_load(content)
         if isinstance(obj, list):

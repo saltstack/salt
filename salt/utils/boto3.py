@@ -46,6 +46,7 @@ from functools import partial
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
 from salt.ext import six
+import salt.utils
 
 # Import third party libs
 # pylint: disable=import-error
@@ -55,6 +56,7 @@ try:
     import boto3
     import boto.exception
     import boto3.session
+    import botocore
 
     # pylint: enable=import-error
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
@@ -74,12 +76,17 @@ def __virtual__():
     '''
     # TODO: Determine minimal version we want to support. VPC requires > 2.8.0.
     required_boto_version = '2.0.0'
-    required_boto3_version = '1.2.1'
+    # boto_s3_bucket module requires boto3 1.2.6 and botocore 1.3.23 for
+    # idempotent ACL operations via the fix in  https://github.com/boto/boto3/issues/390
+    required_boto3_version = '1.2.6'
+    required_botocore_version = '1.3.23'
     if not HAS_BOTO:
         return False
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return False
     elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
+        return False
+    elif _LooseVersion(botocore.__version__) < _LooseVersion(required_botocore_version):
         return False
     else:
         return True
@@ -122,7 +129,10 @@ def _get_profile(service, region, key, keyid, profile):
 
     label = 'boto_{0}:'.format(service)
     if keyid:
-        cxkey = label + hashlib.md5(region + keyid + key).hexdigest()
+        hash_string = region + keyid + key
+        if six.PY3:
+            hash_string = salt.utils.to_bytes(hash_string)
+        cxkey = label + hashlib.md5(hash_string).hexdigest()
     else:
         cxkey = label + region
 
@@ -194,7 +204,7 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
 
     cxkey, region, key, keyid = _get_profile(service, region, key,
                                              keyid, profile)
-    cxkey = cxkey + ':conn'
+    cxkey = cxkey + ':conn3'
 
     if cxkey in __context__:
         return __context__[cxkey]
@@ -230,27 +240,40 @@ def get_connection_func(service, module=None):
     return partial(get_connection, service, module=module)
 
 
+def get_region(service, region, profile):
+    """
+    Retrieve the region for a particular AWS service based on configured region and/or profile.
+    """
+    _, region, _, _ = _get_profile(service, region, None, None, profile)
+
+    return region
+
+
 def get_error(e):
     # The returns from boto modules vary greatly between modules. We need to
     # assume that none of the data we're looking for exists.
     aws = {}
-    if hasattr(e, 'status'):
-        aws['status'] = e.status
-    if hasattr(e, 'reason'):
-        aws['reason'] = e.reason
-    if hasattr(e, 'message') and e.message != '':
-        aws['message'] = e.message
-    if hasattr(e, 'error_code') and e.error_code is not None:
-        aws['code'] = e.error_code
 
-    if 'message' in aws and 'reason' in aws:
-        message = '{0}: {1}'.format(aws['reason'], aws['message'])
-    elif 'message' in aws:
-        message = aws['message']
-    elif 'reason' in aws:
-        message = aws['reason']
-    else:
-        message = ''
+    message = ''
+    if six.PY2:
+        if hasattr(e, 'status'):
+            aws['status'] = e.status
+        if hasattr(e, 'reason'):
+            aws['reason'] = e.reason
+        if str(e) != '':
+            aws['message'] = str(e)
+        if hasattr(e, 'error_code') and e.error_code is not None:
+            aws['code'] = e.error_code
+
+        if 'message' in aws and 'reason' in aws:
+            message = '{0}: {1}'.format(aws['reason'], aws['message'])
+        elif 'message' in aws:
+            message = aws['message']
+        elif 'reason' in aws:
+            message = aws['reason']
+    elif six.PY3:
+        message = e.args[0]
+
     r = {'message': message}
     if aws:
         r['aws'] = aws
@@ -270,7 +293,9 @@ def exactly_one(l):
     return exactly_n(l)
 
 
-def assign_funcs(modname, service, module=None):
+def assign_funcs(modname, service, module=None,
+                get_conn_funcname='_get_conn', cache_id_funcname='_cache_id',
+                exactly_one_funcname='_exactly_one'):
     '''
     Assign _get_conn and _cache_id functions to the named module.
 
@@ -279,18 +304,21 @@ def assign_funcs(modname, service, module=None):
         _utils__['boto.assign_partials'](__name__, 'ec2')
     '''
     mod = sys.modules[modname]
-    setattr(mod, '_get_conn', get_connection_func(service, module=module))
-    setattr(mod, '_cache_id', cache_id_func(service))
+    setattr(mod, get_conn_funcname, get_connection_func(service, module=module))
+    setattr(mod, cache_id_funcname, cache_id_func(service))
 
     # TODO: Remove this and import salt.utils.exactly_one into boto_* modules instead
     # Leaving this way for now so boto modules can be back ported
-    setattr(mod, '_exactly_one', exactly_one)
+    if exactly_one_funcname is not None:
+        setattr(mod, exactly_one_funcname, exactly_one)
 
 
-def paged_call(function, marker_flag='NextMarker', marker_arg='Marker', *args, **kwargs):
+def paged_call(function, *args, **kwargs):
     """Retrieve full set of values from a boto3 API call that may truncate
     its results, yielding each page as it is obtained.
     """
+    marker_flag = kwargs.pop('marker_flag', 'NextMarker')
+    marker_arg = kwargs.pop('marker_arg', 'Marker')
     while True:
         ret = function(*args, **kwargs)
         marker = ret.get(marker_flag)

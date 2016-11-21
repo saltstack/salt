@@ -224,11 +224,12 @@ def create(server_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(server_['name']),
-        {
+        args={
             'name': server_['name'],
             'profile': server_['profile'],
             'provider': server_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -253,7 +254,8 @@ def create(server_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(server_['name']),
-        {'kwargs': kwargs},
+        args={'kwargs': kwargs},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -317,11 +319,12 @@ def create(server_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(server_['name']),
-        {
+        args={
             'name': server_['name'],
             'profile': server_['profile'],
             'provider': server_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -439,7 +442,8 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -453,7 +457,8 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 

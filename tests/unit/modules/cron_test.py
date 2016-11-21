@@ -161,7 +161,7 @@ class CronTestCase(TestCase):
             'salt.modules.cron.raw_cron',
             new=MagicMock(side_effect=get_crontab)
         ):
-            set_crontab(L + '* * * * * ls\n')
+            set_crontab(L + '* * * * * ls\n\n')
             cron.set_job(
                 user='root',
                 minute='*',
@@ -179,6 +179,7 @@ class CronTestCase(TestCase):
                 c1,
                 '# Lines below here are managed by Salt, do not edit\n'
                 '* * * * * ls\n'
+                '\n'
             )
             cron.set_job(
                 user='root',

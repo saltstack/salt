@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os
 import logging
 import copy
+import salt.utils
 
 # Import salt libs
 try:
@@ -173,7 +174,7 @@ def get_instance(name, provider=None):
 
     '''
     data = action(fun='show_instance', names=[name], provider=provider)
-    info = salt.utils.cloud.simple_types_filter(data)
+    info = salt.utils.simple_types_filter(data)
     try:
         # get the first: [alias][driver][vm_name]
         info = next(six.itervalues(next(six.itervalues(next(six.itervalues(info))))))
@@ -182,7 +183,7 @@ def get_instance(name, provider=None):
     return info
 
 
-def profile_(profile, names, vm_overrides=None, **kwargs):
+def profile_(profile, names, vm_overrides=None, opts=None, **kwargs):
     '''
     Spin up an instance using Salt Cloud
 
@@ -193,6 +194,8 @@ def profile_(profile, names, vm_overrides=None, **kwargs):
         salt '*' cloud.profile my-gce-config myinstance
     '''
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     info = client.profile(profile, names, vm_overrides=vm_overrides, **kwargs)
     return info
 
@@ -235,7 +238,7 @@ def action(
     return info
 
 
-def create(provider, names, **kwargs):
+def create(provider, names, opts=None, **kwargs):
     '''
     Create an instance using Salt Cloud
 
@@ -246,6 +249,8 @@ def create(provider, names, **kwargs):
         salt minionname cloud.create my-ec2-config myinstance image=ami-1624987f size='t1.micro' ssh_username=ec2-user securitygroup=default delvol_on_destroy=True
     '''
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     info = client.create(provider, names, **kwargs)
     return info
 

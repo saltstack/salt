@@ -67,21 +67,7 @@ class NetapiClientTest(TestCase):
         data.pop('_stamp', None)
 
         self.maxDiff = None
-        self.assertEqual({
-            'data': {
-                'return': {
-                    'minions_pre': [],
-                    'minions_rejected': [],
-                    'minions_denied': [],
-                    'local': [
-                        'master.pem', 'master.pub', 'minion.pem', 'minion.pub',
-                        'minion_master.pub', 'syndic_master.pub'
-                    ],
-                    'minions': ['minion', 'sub_minion']},
-                'success': True,
-                'user': 'saltdev_auto',
-                'fun': 'wheel.key.list_all'
-            }}, ret)
+        self.assertTrue(set(['master.pem', 'master.pub']).issubset(set(ret['data']['return']['local'])))
 
     def test_wheel_async(self):
         low = {'client': 'wheel_async', 'fun': 'key.list_all'}

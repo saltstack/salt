@@ -162,7 +162,7 @@ class DebianIpTestCase(TestCase):
         with patch.object(debian_ip, '_parse_interfaces',
                           MagicMock(return_value=mock_ret)):
             self.assertListEqual(debian_ip.get_interface('lo'),
-                                 [u'auto lo\n', u'iface lo inet loopback\n',
+                                 [u'auto lo\n',
                                   u'\n'])
 
             mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound
@@ -233,7 +233,8 @@ class DebianIpTestCase(TestCase):
     @patch('salt.modules.debian_ip._parse_network_settings',
            MagicMock(return_value={'networking': 'yes',
                                    'hostname': 'Salt.saltstack.com',
-                                   'domainname': 'saltstack.com'}))
+                                   'domainname': 'saltstack.com',
+                                   'search': 'test.saltstack.com'}))
     @patch('salt.modules.debian_ip._write_file_network',
            MagicMock(return_value=True))
     def test_build_network_settings(self):
@@ -249,7 +250,8 @@ class DebianIpTestCase(TestCase):
                 self.assertEqual(debian_ip.build_network_settings(),
                                  [u'NETWORKING=yes\n',
                                   u'HOSTNAME=Salt\n',
-                                  u'DOMAIN=saltstack.com\n'])
+                                  u'DOMAIN=saltstack.com\n',
+                                  u'SEARCH=test.saltstack.com\n'])
 
                 mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound
                                  ('error'))

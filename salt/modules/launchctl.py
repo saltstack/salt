@@ -11,7 +11,7 @@ Module for the management of MacOS systems that use launchd/launchctl
 :depends:   - plistlib Python module
 '''
 from __future__ import absolute_import
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 
 # Import python libs
 import logging
@@ -224,7 +224,10 @@ def status(job_label, runas=None):
 
     if launchctl_data:
         if BEFORE_YOSEMITE:
-            return 'PID' in dict(plistlib.readPlistFromString(launchctl_data))
+            if six.PY3:
+                return 'PID' in plistlib.loads(launchctl_data)
+            else:
+                return 'PID' in dict(plistlib.readPlistFromString(launchctl_data))
         else:
             pattern = '"PID" = [0-9]+;'
             return True if re.search(pattern, launchctl_data) else False

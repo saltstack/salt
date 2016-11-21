@@ -16,8 +16,8 @@ state_verbose:
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
 state_output:
-    The highstate outputter has five output modes, ``full``, ``terse``,
-    ``mixed``, ``changes`` and ``filter``.
+    The highstate outputter has six output modes, ``full``, ``terse``,
+    ``mixed``, ``mixed_id``, ``changes`` and ``filter``.
 
     * The default is set to ``full``, which will display many lines of detailed
       information for each executed chunk.
@@ -25,6 +25,9 @@ state_output:
       only one line.
     * If ``mixed`` is used, then terse output will be used unless a state
       failed, in which case full output will be used.
+    * If ``mixed_id`` is used, then the mixed form will be used, but the value for ``name``
+      will be drawn from the state ID. This is useful for cases where the name
+      value might be very long and hard to read.
     * If ``changes`` is used, then terse output will be used if there was no
       error and no changes, otherwise full output will be used.
     * If ``filter`` is used, then either or both of two different filters can be
@@ -117,11 +120,19 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def output(data):
+def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     The HighState Outputter is only meant to be used with the state.highstate
     function, or a function that returns highstate return data.
     '''
+
+    # Discard retcode in dictionary as present in orchestrate data
+    local_masters = [key for key in data.keys() if key.endswith('.local_master')]
+    orchestrator_output = 'retcode' in data.keys() and len(local_masters) == 1
+
+    if orchestrator_output:
+        del data['retcode']
+
     # If additional information is passed through via the "data" dictionary to
     # the highstate outputter, such as "outputter" or "retcode", discard it.
     # We only want the state data that was passed through, if it is wrapped up
@@ -179,7 +190,7 @@ def _format_host(host, data):
         # Verify that the needed data is present
         data_tmp = {}
         for tname, info in six.iteritems(data):
-            if isinstance(info, dict) and '__run_num__' not in info:
+            if isinstance(info, dict) and tname is not 'changes' and '__run_num__' not in info:
                 err = (u'The State execution failed to record the order '
                        'in which all states were executed. The state '
                        'return missing data is:')
@@ -273,7 +284,10 @@ def _format_host(host, data):
                 msg = _format_terse(tcolor, comps, ret, colors, tabular)
                 hstrs.append(msg)
                 continue
-            elif __opts__.get('state_output', 'full').lower() == 'mixed':
+            elif __opts__.get('state_output', 'full').lower().startswith('mixed'):
+                if __opts__['state_output'] == 'mixed_id':
+                    # Swap in the ID for the name. Refs #35137
+                    comps[2] = comps[1]
                 # Print terse unless it failed
                 if ret['result'] is not False:
                     msg = _format_terse(tcolor, comps, ret, colors, tabular)
@@ -475,12 +489,12 @@ def _nested_changes(changes):
     # anyway so have to restore it after the other outputter is done
     if __opts__['color']:
         __opts__['color'] = u'CYAN'
-    __opts__['nested_indent'] = 14
     ret = u'\n'
     ret += salt.output.out_format(
             changes,
             'nested',
-            __opts__)
+            __opts__,
+            nested_indent=14)
     __opts__ = opts
     return ret
 

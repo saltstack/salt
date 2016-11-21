@@ -156,6 +156,9 @@ HAS014 = False
 try:
     from libcloud.compute.drivers.openstack import OpenStackNetwork
     from libcloud.compute.drivers.openstack import OpenStack_1_1_FloatingIpPool
+    # See https://github.com/saltstack/salt/issues/32743
+    import libcloud.security
+    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS014 = True
 except Exception:
     pass
@@ -222,9 +225,9 @@ def __virtual__():
         return False
 
     salt.utils.warn_until(
-        'Carbon',
+        'Nitrogen',
         'This driver has been deprecated and will be removed in the '
-        'Carbon release of Salt. Please use the nova driver instead.'
+        'Nitrogen release of Salt. Please use the nova driver instead.'
     )
 
     return __virtualname__
@@ -540,10 +543,15 @@ def request_instance(vm_=None, call=None):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': {'name': kwargs['name'],
-                    'image': kwargs['image'].name,
-                    'size': kwargs['size'].name,
-                    'profile': vm_['profile']}},
+        args={
+            'kwargs': {
+                'name': kwargs['name'],
+                'image': kwargs['image'].name,
+                'size': kwargs['size'].name,
+                'profile': vm_['profile'],
+            }
+        },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -610,11 +618,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -712,22 +721,22 @@ def create(vm_):
         result = []
         private = node['private_ips']
         if private and not public:
-            log.warn(
+            log.warning(
                 'Private IPs returned, but not public... Checking for '
                 'misidentified IPs'
             )
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
                 if salt.utils.cloud.is_public_ip(private_ip):
-                    log.warn('{0} is a public IP'.format(private_ip))
+                    log.warning('{0} is a public IP'.format(private_ip))
                     data.public_ips.append(private_ip)
-                    log.warn(
+                    log.warning(
                         'Public IP address was not ready when we last checked.'
                         ' Appending public IP address now.'
                     )
                     public = data.public_ips
                 else:
-                    log.warn('{0} is a private IP'.format(private_ip))
+                    log.warning('{0} is a private IP'.format(private_ip))
                     ignore_ip = ignore_cidr(vm_, private_ip)
                     if private_ip not in data.private_ips and not ignore_ip:
                         result.append(private_ip)
@@ -812,11 +821,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -865,7 +875,7 @@ def _assign_floating_ips(vm_, conn, kwargs):
                 pool = OpenStack_1_1_FloatingIpPool(
                     '', conn.connection
                 )
-                for idx in [pool.create_floating_ip()]:
+                for idx in pool.list_floating_ips():
                     if idx.node_id is None:
                         floating.append(idx)
                 if not floating:

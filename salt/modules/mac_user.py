@@ -149,7 +149,7 @@ def delete(name, remove=False, force=False):
 
     # force is added for compatibility with user.absent state function
     if force:
-        log.warn('force option is unsupported on MacOS, ignoring')
+        log.warning('force option is unsupported on MacOS, ignoring')
 
     # remove home directory from filesystem
     if remove:
@@ -436,7 +436,15 @@ def primary_group(name):
 
 def list_groups(name):
     '''
-    Return a list of groups the named user belongs to
+    Return a list of groups the named user belongs to.
+
+    name
+
+        The name of the user for which to list groups. Starting in Salt 2016.11.0,
+        all groups for the user, including groups beginning with an underscore
+        will be listed.
+
+        .. versionchanged:: 2016.11.0
 
     CLI Example:
 
@@ -444,8 +452,7 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    groups = [group for group in salt.utils.get_group_list(name)
-              if not group.startswith('_')]
+    groups = [group for group in salt.utils.get_group_list(name)]
     return groups
 
 

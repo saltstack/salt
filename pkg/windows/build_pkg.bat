@@ -1,15 +1,22 @@
-@ echo off
-@ echo Salt Windows Build Package Script
-@ echo.
+@echo off
+@echo Salt Windows Build Package Script
+@echo ----------------------------------------------------------------------
+@echo.
 
 :: Define Variables
-@ echo Defining Variables...
-@ echo ---------------------
+@echo Defining Variables...
+@echo ----------------------------------------------------------------------
 Set "CurrDir=%cd%"
 Set "BinDir=%cd%\buildenv\bin"
 Set "InsDir=%cd%\installer"
 Set "PyDir=C:\Python27"
-Set "Version=%1"
+
+:: Get the version from git if not passed
+if [%1]==[] (
+    for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
+) else (
+    set "Version=%~1"
+)
 
 :: Find the NSIS Installer
 If Exist "C:\Program Files\NSIS\" (
@@ -18,28 +25,30 @@ If Exist "C:\Program Files\NSIS\" (
     Set NSIS="C:\Program Files (x86)\NSIS\"
 )
 Set "PATH=%NSIS%;%PATH%"
-@ echo.
+@echo.
 
-@ echo Copying C:\Python27 to bin...
-@ echo -----------------------------
+@echo Copying C:\Python27 to bin...
+@echo ----------------------------------------------------------------------
 :: Check for existing bin directory and remove
 If Exist "%BinDir%\" rd /S /Q "%BinDir%"
 
 :: Copy the Python27 directory to bin
 @echo xcopy /E /Q "%PyDir%" "%BinDir%\"
 xcopy /E /Q "%PyDir%" "%BinDir%\"
-@ echo.
+@echo.
 
 :: Remove the fixed path in .exe files
 @echo Removing fixed path from .exe files
+@echo ----------------------------------------------------------------------
 %PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
 %PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install-2.7.exe"
 %PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
 %PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip2.7.exe"
 %PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip2.exe"
+@echo.
 
-@ echo Cleaning up unused files and directories...
-@ echo -------------------------------------------
+@echo Cleaning up unused files and directories...
+@echo ----------------------------------------------------------------------
 :: Remove all Compiled Python files (.pyc)
 del /S /Q "%BinDir%\*.pyc" 1>nul
 :: Remove all Compiled HTML Help (.chm)
@@ -67,19 +76,20 @@ If Exist "%BinDir%\libs\_tkinter.lib" del /S /Q "%BinDir%\libs\_tkinter.lib" 1>n
 :: Delete .txt files
 If Exist "%BinDir%\NEWS.txt"   del /q "%BinDir%\NEWS.txt"   1>nul
 If Exist "%BinDir%\README.txt" del /q "%BinDir%\README.txt" 1>nul
-@ echo.
+@echo.
 
-@ echo Building the installer...
-@ echo -------------------------
+@echo Building the installer...
+@echo ----------------------------------------------------------------------
 makensis.exe /DSaltVersion=%Version% "%InsDir%\Salt-Minion-Setup.nsi"
-@ echo.
+makensis.exe /DSaltVersion=%Version% "%InsDir%\Salt-Setup.nsi"
+@echo.
 
-@ echo.
-@ echo ===================
-@ echo Script completed...
-@ echo -------------------
-@ echo Installation file can be found in the following directory:
-@ echo %InsDir%
+@echo.
+@echo ======================================================================
+@echo Script completed...
+@echo ======================================================================
+@echo Installation file can be found in the following directory:
+@echo %InsDir%
 
 :done
 if [%Version%] == [] pause

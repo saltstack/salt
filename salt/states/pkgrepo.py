@@ -91,8 +91,6 @@ from __future__ import absolute_import
 import sys
 
 # Import salt libs
-import salt.utils
-
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
@@ -128,7 +126,7 @@ def managed(name, ppa=None, **kwargs):
 
     humanname
         This is used as the "name" value in the repo file in
-        ``/etc/yum.repos.d/`` (or ``/etc/zypp/repos.d`` for Suse distros).
+        ``/etc/yum.repos.d/`` (or ``/etc/zypp/repos.d`` for SUSE distros).
 
     baseurl
         The URL to a yum repository
@@ -432,7 +430,7 @@ def managed(name, ppa=None, **kwargs):
     except Exception as exc:
         ret['result'] = False
         ret['comment'] = \
-            'Failed to confirm config of repo {0!r}: {1}'.format(name, exc)
+            'Failed to confirm config of repo \'{0}\': {1}'.format(name, exc)
 
     # Clear cache of available packages, if present, since changes to the
     # repositories may change the packages that are available.
@@ -517,7 +515,7 @@ def absent(name, **kwargs):
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = \
-            'Failed to configure repo {0!r}: {1}'.format(name, exc)
+            'Failed to configure repo \'{0}\': {1}'.format(name, exc)
         return ret
 
     if not repo:
@@ -526,7 +524,7 @@ def absent(name, **kwargs):
         return ret
 
     if __opts__['test']:
-        ret['comment'] = ('Package repo {0!r} will be removed. This may '
+        ret['comment'] = ('Package repo \'{0}\' will be removed. This may '
                           'cause pkg states to behave differently than stated '
                           'if this action is repeated without test=True, due '
                           'to the differences in the configured repositories.'

@@ -24,6 +24,7 @@ beacon modules
     proxy_example
     ps
     salt_proxy
+    sensehat
     service
     sh
     twilio_txt_msg

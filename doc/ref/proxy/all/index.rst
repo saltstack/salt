@@ -15,6 +15,8 @@ proxy modules
     fx2
     junos
     marathon
+    napalm
+    nxos
     philips_hue
     rest_sample
     ssh_sample

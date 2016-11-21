@@ -84,8 +84,8 @@ The option can can also be set to a list of masters, enabling
 
 Default: ``str``
 
-The type of the :conf_minion:`master` variable. Can be ``str``, ``failover`` or
-``func``.
+The type of the :conf_minion:`master` variable. Can be ``str``, ``failover``,
+``func`` or ``disable``.
 
 .. code-block:: yaml
 
@@ -106,6 +106,13 @@ of reading in the static master value, set this to ``func``. This can be used
 to manage the minion's master setting from an execution module. By simply
 changing the algorithm in the module to return a new master ip/fqdn, restart
 the minion and it will connect to the new master.
+
+.. code-block:: yaml
+
+    master_type: disable
+
+If you just want to run a masterless minion, this can be set and the minion
+will never attempt to talk to the master.
 
 .. conf_minion:: max_event_size
 
@@ -808,6 +815,39 @@ behavior is to have time-frame within all minions try to reconnect.
 
     recon_randomize: True
 
+.. conf_minion:: loop_interval
+
+``loop_interval``
+-----------------
+
+Default: ``1``
+
+The loop_interval sets how long in seconds the minion will wait between
+evaluating the scheduler and running cleanup tasks. This defaults to 1
+second on the minion scheduler.
+
+.. code-block:: yaml
+
+    loop_interval: 1
+
+
+.. conf_minion:: pub_ret
+
+``pub_ret``
+-----------
+
+Default: True
+
+Some installations choose to start all job returns in a cache or a returner
+and forgo sending the results back to a master. In this workflow, jobs
+are most often executed with --async from the Salt CLI and then results
+are evaluated by examining job caches on the minions or any configured returners.
+WARNING: Setting this to False will **disable** returns back to the master.
+
+.. code-block:: yaml
+
+    pub_ret: True
+
 .. conf_minion:: return_retry_timer
 
 ``return_retry_timer``
@@ -1015,6 +1055,30 @@ If certain returners should be disabled, this is the place
 
     disable_returners:
       - mongo_return
+
+
+.. conf_minion:: enable_whitelist_modules
+
+``whitelist_modules``
+----------------------------
+
+Default: ``[]`` (Module whitelisting is disabled.  Adding anything to the config option
+will cause only the listed modules to be enabled.  Modules not in the list will
+not be loaded.)
+
+This option is the reverse of disable_modules.
+
+Note that this is a very large hammer and it can be quite difficult to keep the minion working
+the way you think it should since Salt uses many modules internally itself.  At a bare minimum
+you need the following enabled or else the minion won't start.
+
+.. code-block:: yaml
+
+    whitelist_modules:
+      - cmdmod
+      - test
+      - config
+
 
 .. conf_minion:: module_dirs
 
@@ -1236,12 +1300,15 @@ This option has no default value. Set it to an environment name to ensure that
 
 .. note::
     Using this value does not change the merging strategy. For instance, if
-    :conf_minion:`top_file_merging_strategy` is left at its default, and
+    :conf_minion:`top_file_merging_strategy` is set to ``merge``, and
     :conf_minion:`state_top_saltenv` is set to ``foo``, then any sections for
     environments other than ``foo`` in the top file for the ``foo`` environment
     will be ignored. With :conf_minion:`state_top_saltenv` set to ``base``, all
     states from all environments in the ``base`` top file will be applied,
-    while all other top files are ignored.
+    while all other top files are ignored. The only way to set
+    :conf_minion:`state_top_saltenv` to something other than ``base`` and not
+    have the other environments in the targeted top file ignored, would be to
+    set :conf_minion:`top_file_merging_strategy` to ``merge_all``.
 
 .. code-block:: yaml
 
@@ -1252,6 +1319,9 @@ This option has no default value. Set it to an environment name to ensure that
 ``top_file_merging_strategy``
 -----------------------------
 
+.. versionchanged:: 2016.11.0
+    A ``merge_all`` strategy has been added.
+
 Default: ``merge``
 
 When no specific fileserver environment (a.k.a. ``saltenv``) has been specified
@@ -1259,12 +1329,16 @@ for a :ref:`highstate <running-highstate>`, all environments' top files are
 inspected. This config option determines how the SLS targets in those top files
 are handled.
 
-When set to the default value of ``merge``, all SLS files are interpreted. The
-first target expression for a given environment is kept, and when the same
-target expression is used in a different top file evaluated later, it is
-ignored. The environments will be evaluated in no specific order, for greater
-control over the order in which the environments are evaluated use
-:conf_minion:`env_order`.
+When set to ``merge``, the ``base`` environment's top file is evaluated first,
+followed by the other environments' top files. The first target expression
+(e.g. ``'*'``) for a given environment is kept, and when the same target
+expression is used in a different top file evaluated later, it is ignored.
+Because ``base`` is evaluated first, it is authoritative. For example, if there
+is a target for ``'*'`` for the ``foo`` environment in both the ``base`` and
+``foo`` environment's top files, the one in the ``foo`` environment would be
+ignored. The environments will be evaluated in no specific order (aside from
+``base`` coming first). For greater control over the order in which the
+environments are evaluated, use :conf_minion:`env_order`.
 
 When set to ``same``, then for each environment, only that environment's top
 file is processed, with the others being ignored. For example, only the ``dev``
@@ -1273,6 +1347,12 @@ SLS targets defined for ``dev`` in the ``base`` environment's (or any other
 environment's) top file will be ignored. If an environment does not have a top
 file, then the top file from the :conf_minion:`default_top` config parameter
 will be used as a fallback.
+
+When set to ``merge_all``, then all states in all environments in all top files
+will be applied. The order in which individual SLS files will be executed will
+depend on the order in which the top files were evaluated, and the environments
+will be evaluated in no specific order. For greater control over the order in
+which the environments are evaluated, use :conf_minion:`env_order`.
 
 .. code-block:: yaml
 
@@ -1305,13 +1385,47 @@ explicitly defined.
 Default: ``base``
 
 When :conf_minion:`top_file_merging_strategy` is set to ``same``, and no
-environment is specified for a :ref:`highstate <running-highstate>`, this
-config option specifies a fallback environment in which to look for a top file
-if an environment lacks one.
+environment is specified for a :ref:`highstate <running-highstate>` (i.e.
+:conf_minion:`environment` is not set for the minion), this config option
+specifies a fallback environment in which to look for a top file if an
+environment lacks one.
 
 .. code-block:: yaml
 
     default_top: dev
+
+.. conf_minion:: snapper_states
+
+``snapper_states``
+------------------
+
+Default: False
+
+The `snapper_states` value is used to enable taking snapper snapshots before
+and after salt state runs. This allows for state runs to be rolled back.
+
+For snapper states to function properly snapper needs to be installed and
+enabled.
+
+.. code-block:: yaml
+
+    snapper_states: True
+
+.. conf_minion:: snapper_states_config
+
+``snapper_states_config``
+-------------------------
+
+Default: ``root``
+
+Snapper can execute based on a snapper configuration. The configuration
+needs to be set up before snapper can use it. The default configuration
+is ``root``, this default makes snapper run on SUSE systems using the
+default configuration set up at install time.
+
+.. code-block:: yaml
+
+    snapper_states_config: root
 
 File Directory Settings
 =======================
@@ -1484,6 +1598,19 @@ the environment setting, but for pillar instead of states.
 
     pillarenv: None
 
+.. conf_minion:: pillar_raise_on_missing
+
+``pillar_raise_on_missing``
+---------------------------
+
+.. versionadded:: 2015.5.0
+
+Default: ``False``
+
+Set this option to ``True`` to force a ``KeyError`` to be raised whenever an
+attempt to retrieve a named value from pillar fails. When this option is set
+to ``False``, the failed attempt returns an empty string.
+
 .. conf_minion:: file_recv_max_size
 
 ``file_recv_max_size``
@@ -1587,6 +1714,57 @@ this can be set to ``True``.
 .. code-block:: yaml
 
     always_verify_signature: True
+
+.. conf_minion:: cmd_blacklist_glob
+
+``cmd_blacklist_glob``
+----------------------
+
+Default: ``[]``
+
+If :conf_minion:`cmd_blacklist_glob` is enabled then any shell command called over
+remote execution or via salt-call will be checked against the glob matches found in
+the `cmd_blacklist_glob` list and any matched shell command will be blocked.
+
+.. note::
+
+    This blacklist is only applied to direct executions made by the `salt` and
+    `salt-call` commands. This does NOT blacklist commands called from states
+    or shell commands executed from other modules.
+
+.. versionadded:: 2016.11.0
+
+.. code-block:: yaml
+
+    cmd_blacklist_glob:
+      - 'rm * '
+      - 'cat /etc/* '
+
+.. conf_minion:: cmd_whitelist_glob
+
+``cmd_whitelist_glob``
+----------------------
+
+Default: ``[]``
+
+If :conf_minion:`cmd_whitelist_glob` is enabled then any shell command called over
+remote execution or via salt-call will be checked against the glob matches found in
+the `cmd_whitelist_glob` list and any shell command NOT found in the list will be
+blocked. If `cmd_whitelist_glob` is NOT SET, then all shell commands are permitted.
+
+.. note::
+
+    This whitelist is only applied to direct executions made by the `salt` and
+    `salt-call` commands. This does NOT restrict commands called from states
+    or shell commands executed from other modules.
+
+.. versionadded:: 2016.11.0
+
+.. code-block:: yaml
+
+    cmd_whitelist_glob:
+      - 'ls * '
+      - 'cat /etc/fstab'
 
 
 Thread Settings
@@ -1735,14 +1913,14 @@ The format of the console logging messages. See also
 ``log_fmt_logfile``
 -------------------
 
-Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
+Default: ``%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s``
 
 The format of the log file logging messages. See also
 :conf_log:`log_fmt_logfile`.
 
 .. code-block:: yaml
 
-    log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+    log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 
 .. conf_minion:: log_granular_levels
@@ -1882,6 +2060,41 @@ have other services that need to go with it.
 
     update_restart_services: ['salt-minion']
 
+.. conf_minion:: winrepo_cache_expire_min
+
+``winrepo_cache_expire_min``
+----------------------------
+
+.. versionadded:: 2016.11.0
+
+Default: ``0``
+
+If set to a nonzero integer, then passing ``refresh=True`` to functions in the
+:mod:`windows pkg module <salt.modules.win_pkg>` will not refresh the windows
+repo metadata if the age of the metadata is less than this value. The exception
+to this is :py:func:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>`, which
+will always refresh the metadata, regardless of age.
+
+.. code-block:: yaml
+
+    winrepo_cache_expire_min: 1800
+
+.. conf_minion:: winrepo_cache_expire_max
+
+``winrepo_cache_expire_max``
+----------------------------
+
+.. versionadded:: 2016.11.0
+
+Default: ``21600``
+
+If the windows repo metadata is older than this value, and the metadata is
+needed by a function in the :mod:`windows pkg module <salt.modules.win_pkg>`,
+the metadata will be refreshed.
+
+.. code-block:: yaml
+
+    winrepo_cache_expire_max: 86400
 
 .. _winrepo-minion-config-opts:
 

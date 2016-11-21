@@ -22,7 +22,7 @@ requires very little. In the example:
         url: https://api.github.com/
       keys:
         url: https://api.github.com/users/{{user}}/keys
-        requests_lib: True
+        backend: requests
 
 The ``driver`` refers to the REST module, and must be set to ``rest`` in order
 to use this driver. Each of the other items inside this block refers to a
@@ -107,10 +107,14 @@ def query(key, value=None, service=None, profile=None):  # pylint: disable=W0613
 
     renderer = __opts__.get('renderer', 'yaml_jinja')
     rend = salt.loader.render(__opts__, {})
+    blacklist = __opts__.get('renderer_blacklist')
+    whitelist = __opts__.get('renderer_whitelist')
     url = compile_template(
         ':string:',
         rend,
         renderer,
+        blacklist,
+        whitelist,
         input_data=profile[key]['url'],
         **key_vars
     )

@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 '''
 Management of Jenkins
-==============================
+=====================
 
 .. versionadded:: 2016.3.0
 
 '''
 
-
+# Import Python libs
 from __future__ import absolute_import
-
 import difflib
-import salt.utils
-import StringIO
-
 import logging
+
+# Import Salt libs
+import salt.ext.six as six
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -42,7 +43,7 @@ def present(name,
 
     if _job_exists:
         _current_job_config = __salt__['jenkins.get_job_config'](name)
-        buf = StringIO.StringIO(_current_job_config)
+        buf = six.moves.StringIO(_current_job_config)
         _current_job_config = buf.readlines()
 
         cached_source_path = __salt__['cp.cache_file'](config, __env__)
@@ -62,7 +63,7 @@ def present(name,
 
         __salt__['jenkins.create_job'](name, config, __env__)
 
-        buf = StringIO.StringIO(new_config_xml)
+        buf = six.moves.StringIO(new_config_xml)
         _current_job_config = buf.readlines()
 
         diff = difflib.unified_diff('', buf, lineterm='')

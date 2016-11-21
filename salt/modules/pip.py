@@ -118,7 +118,7 @@ def _get_pip_bin(bin_env):
     executable itself, or from searching conventional filesystem locations
     '''
     if not bin_env:
-        which_result = __salt__['cmd.which_bin'](['pip2', 'pip', 'pip-python'])
+        which_result = __salt__['cmd.which_bin'](['pip', 'pip2', 'pip3', 'pip-python'])
         if which_result is None:
             raise CommandNotFoundError('Could not find a `pip` binary')
         if salt.utils.is_windows():
@@ -328,7 +328,6 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
 
 def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             requirements=None,
-            env=None,
             bin_env=None,
             use_wheel=False,
             no_use_wheel=False,
@@ -358,18 +357,17 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             user=None,
             no_chown=False,
             cwd=None,
-            activate=False,
             pre_releases=False,
             cert=None,
             allow_all_external=False,
             allow_external=None,
             allow_unverified=None,
             process_dependency_links=False,
-            __env__=None,
             saltenv='base',
             env_vars=None,
             use_vt=False,
-            trusted_host=None):
+            trusted_host=None,
+            no_cache_dir=False):
     '''
     Install packages with pip
 
@@ -390,9 +388,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         .. note::
             If installing into a virtualenv, just use the path to the
             virtualenv (e.g. ``/home/code/path/to/virtualenv/``)
-
-    env
-        Deprecated, use bin_env now
 
     use_wheel
         Prefer wheel archives (requires pip>=1.4)
@@ -496,14 +491,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     cwd
         Current working directory to run pip from
 
-    activate
-        Activates the virtual environment, if given via bin_env, before running
-        install.
-
-        .. deprecated:: 2014.7.2
-            If `bin_env` is given, pip will already be sourced from that
-            virtualenv, making `activate` effectively a noop.
-
     pre_releases
         Include pre-releases in the available versions
 
@@ -543,6 +530,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     use_vt
         Use VT terminal emulation (see output while installing)
 
+    no_cache_dir
+        Disable the cache.
+
     CLI Example:
 
     .. code-block:: bash
@@ -558,38 +548,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
-    # Switching from using `pip_bin` and `env` to just `bin_env`
-    # cause using an env and a pip bin that's not in the env could
-    # be problematic.
-    # Still using the `env` variable, for backwards compatibility's sake
-    # but going fwd you should specify either a pip bin or an env with
-    # the `bin_env` argument and we'll take care of the rest.
-    if env and not bin_env:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing \'env\' to the pip module is deprecated. Use bin_env instead. '
-            'This functionality will be removed in Salt Carbon.'
-        )
-        bin_env = env
-
-    if activate:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing \'activate\' to the pip module is deprecated. If '
-            'bin_env refers to a virtualenv, there is no need to activate '
-            'that virtualenv before using pip to install packages in it.'
-        )
-
-    if isinstance(__env__, string_types):
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'__env__\'. This functionality will be removed in Salt '
-            'Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = __env__
-
     pip_bin = _get_pip_bin(bin_env)
 
     cmd = [pip_bin, 'install']
@@ -752,6 +710,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if no_download:
         cmd.append('--no-download')
 
+    if no_cache_dir:
+        cmd.append('--no-cache-dir')
+
     if pre_releases:
         # Check the locally installed pip version
         pip_version = version(pip_bin)
@@ -870,7 +831,6 @@ def uninstall(pkgs=None,
               user=None,
               no_chown=False,
               cwd=None,
-              __env__=None,
               saltenv='base',
               use_vt=False):
     '''
@@ -925,16 +885,6 @@ def uninstall(pkgs=None,
     pip_bin = _get_pip_bin(bin_env)
 
     cmd = [pip_bin, 'uninstall', '-y']
-
-    if isinstance(__env__, string_types):
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'__env__\'. This functionality will be removed in Salt '
-            'Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = __env__
 
     cleanup_requirements, error = _process_requirements(
         requirements=requirements, cmd=cmd, saltenv=saltenv, user=user,

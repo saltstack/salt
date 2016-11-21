@@ -8,6 +8,7 @@ import tempfile
 import json
 import datetime
 import pprint
+import re
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -16,6 +17,8 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
+import salt.config
+import salt.ext.six as six
 import salt.loader
 import salt.utils
 from salt.exceptions import SaltRenderError
@@ -348,7 +351,9 @@ class TestGetTemplate(TestCase):
         fn = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
         out = JINJA(fn, opts=self.local_opts, saltenv='test')
         with salt.utils.fopen(out['data']) as fp:
-            result = fp.read().decode('utf-8')
+            result = fp.read()
+            if six.PY2:
+                result = result.decode('utf-8')
             self.assertEqual(u'Assunção\n', result)
 
     def test_get_context_has_enough_context(self):
@@ -392,6 +397,7 @@ class TestGetTemplate(TestCase):
             dict(opts=self.local_opts, saltenv='test')
         )
 
+    @skipIf(six.PY3, 'Not applicable to Python 3: skipping.')
     def test_render_with_unicode_syntax_error(self):
         encoding = builtins.__salt_system_encoding__
         builtins.__salt_system_encoding__ = 'utf-8'
@@ -455,6 +461,33 @@ class TestGetTemplate(TestCase):
 
 
 class TestCustomExtensions(TestCase):
+    def test_regex_escape(self):
+        dataset = 'foo?:.*/\\bar'
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|regex_escape }}').render(dataset=dataset)
+        self.assertEqual(rendered, re.escape(dataset))
+
+    def test_unique_string(self):
+        dataset = 'foo'
+        unique = set(dataset)
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
+        self.assertEqual(rendered, u"{0}".format(unique))
+
+    def test_unique_tuple(self):
+        dataset = ('foo', 'foo', 'bar')
+        unique = set(dataset)
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
+        self.assertEqual(rendered, u"{0}".format(unique))
+
+    def test_unique_list(self):
+        dataset = ['foo', 'foo', 'bar']
+        unique = ['foo', 'bar']
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
+        self.assertEqual(rendered, u"{0}".format(unique))
+
     def test_serialize_json(self):
         dataset = {
             "foo": True,

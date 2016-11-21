@@ -21,8 +21,46 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.modules import sysmod
 
+
+class MockDocstringable(object):
+    def __init__(self, docstr):
+        self.__doc__ = docstr
+
+    def set_module_docstring(self, docstr):
+        self.__globals__ = {'__doc__': docstr}
+
+
+_modules = set()
+_functions = [
+    'exist.exist',
+
+    'sys.doc', 'sys.list_functions', 'sys.list_modules',
+    'sysctl.get', 'sysctl.show',
+    'system.halt', 'system.reboot',
+
+    'udev.name', 'udev.path',
+    'user.add', 'user.info', 'user.rename',
+]
+_docstrings = {}
+_statedocstrings = {}
+
 sysmod.__salt__ = {}
 sysmod.__opts__ = {}
+
+
+for func in _functions:
+    docstring = 'docstring for {0}'.format(func)
+
+    sysmod.__salt__[func] = MockDocstringable(docstring)
+    _docstrings[func] = docstring
+
+    module = func.split('.')[0]
+    _statedocstrings[func] = docstring
+    _statedocstrings[module] = 'docstring for {0}'.format(module)
+
+    _modules.add(func.split('.')[0])
+
+_modules = sorted(list(_modules))
 
 
 class Mockstate(object):
@@ -31,9 +69,14 @@ class Mockstate(object):
     """
     class State(object):
         """
-        Mock of State
+        Mock state functions
         """
-        states = []
+        states = {}
+        for func in _functions:
+            docstring = 'docstring for {0}'.format(func)
+            mock = MockDocstringable(docstring)
+            mock.set_module_docstring('docstring for {0}'.format(func.split('.')[0]))
+            states[func] = mock
 
         def __init__(self, opts):
             pass
@@ -45,9 +88,9 @@ class Mockrunner(object):
     """
     class Runner(object):
         """
-        Mock of Runner
+        Mock runner functions
         """
-        functions = []
+        functions = sysmod.__salt__
 
         def __init__(self, opts):
             pass
@@ -57,30 +100,22 @@ class Mockloader(object):
     """
     Mock of loader
     """
-    flag = None
-    functions = []
+    functions = []  # ? does not have any effect on existing tests
 
     def __init__(self):
-        self.opts = None
-        self.lst = None
+        pass
 
     def returners(self, opts, lst):
         """
-        Mock of returners method
+        Mock returner functions
         """
-        self.opts = opts
-        self.lst = lst
-        if self.flag:
-            return {}
-        return []
+        return sysmod.__salt__
 
     def render(self, opts, lst):
         """
-        Mock of returners method
+        Mock renderers
         """
-        self.opts = opts
-        self.lst = lst
-        return {}
+        return sysmod.__salt__  # renderers do not have '.'s; but whatever. This is for convenience
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -91,73 +126,90 @@ class SysmodTestCase(TestCase):
     '''
     Test cases for salt.modules.sysmod
     '''
-    # 'doc' function tests: 1
+    # 'doc' function tests: 2
 
     def test_doc(self):
         '''
-        Test if it return the docstrings for all modules.
+        Test if it returns the docstrings for all modules.
         '''
-        self.assertDictEqual(sysmod.doc(), {})
+        self.assertDictEqual(sysmod.doc(), _docstrings)
 
-    # 'state_doc' function tests: 1
+        self.assertDictEqual(sysmod.doc('sys.doc'), {'sys.doc': 'docstring for sys.doc'})
+
+    # 'state_doc' function tests: 2
 
     def test_state_doc(self):
         '''
-        Test if it return the docstrings for all states.
+        Test if it returns the docstrings for all states.
         '''
-        self.assertDictEqual(sysmod.state_doc(), {})
+        self.assertDictEqual(sysmod.state_doc(), _statedocstrings)
 
-        self.assertDictEqual(sysmod.state_doc('sys.doc'), {})
+        self.assertDictEqual(sysmod.state_doc('sys.doc'), {'sys': 'docstring for sys', 'sys.doc': 'docstring for sys.doc'})
 
-    # 'runner_doc' function tests: 1
+    # 'runner_doc' function tests: 2
 
     def test_runner_doc(self):
         '''
-        Test if it return the docstrings for all runners.
+        Test if it returns the docstrings for all runners.
         '''
-        self.assertDictEqual(sysmod.runner_doc(), {})
+        self.assertDictEqual(sysmod.runner_doc(), _docstrings)
 
-        self.assertDictEqual(sysmod.runner_doc('sys.doc'), {})
+        self.assertDictEqual(sysmod.runner_doc('sys.doc'), {'sys.doc': 'docstring for sys.doc'})
 
-    # 'returner_doc' function tests: 1
+    # 'returner_doc' function tests: 2
 
     def test_returner_doc(self):
         '''
-        Test if it return the docstrings for all returners.
+        Test if it returns the docstrings for all returners.
         '''
-        self.assertDictEqual(sysmod.returner_doc(), {})
+        self.assertDictEqual(sysmod.returner_doc(), _docstrings)
 
-        self.assertDictEqual(sysmod.returner_doc('sqlite3.get_*'), {})
+        self.assertDictEqual(sysmod.returner_doc('sys.doc'), {'sys.doc': 'docstring for sys.doc'})
 
-    # 'renderer_doc' function tests: 1
+    # 'renderer_doc' function tests: 2
 
     def test_renderer_doc(self):
         '''
-        Test if it return the docstrings for all renderers.
+        Test if it returns the docstrings for all renderers.
         '''
-        self.assertDictEqual(sysmod.renderer_doc(), {})
+        self.assertDictEqual(sysmod.renderer_doc(), _docstrings)
 
-        self.assertDictEqual(sysmod.renderer_doc('c*', 'j*'), {})
+        self.assertDictEqual(sysmod.renderer_doc('sys.doc'), {'sys.doc': 'docstring for sys.doc'})
 
-    # 'list_functions' function tests: 1
+    # 'list_functions' function tests: 7
 
     def test_list_functions(self):
         '''
-        Test if it list the functions for all modules.
+        Test if it lists the functions for all modules.
         '''
-        self.assertListEqual(sysmod.list_functions(), [])
+        self.assertListEqual(sysmod.list_functions(), _functions)
 
-        self.assertListEqual(sysmod.list_functions('sys'), [])
+        self.assertListEqual(sysmod.list_functions('nonexist'), [])
 
-    # 'list_modules' function tests: 1
+        # list all functions in/given a specific module
+        self.assertListEqual(sysmod.list_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
+
+        # globs can be used for both module names and function names:
+        self.assertListEqual(sysmod.list_functions('sys*'), ['sys.doc', 'sys.list_functions', 'sys.list_modules', 'sysctl.get', 'sysctl.show', 'system.halt', 'system.reboot'])
+        self.assertListEqual(sysmod.list_functions('sys.list*'), ['sys.list_functions', 'sys.list_modules'])
+
+        # "list", or check for a specific function:
+        self.assertListEqual(sysmod.list_functions('sys.list'), [])
+        self.assertListEqual(sysmod.list_functions('exist.exist'), ['exist.exist'])
+
+    # 'list_modules' function tests: 4
 
     def test_list_modules(self):
         '''
-        Test if it list the modules loaded on the minion
+        Test if it lists the modules loaded on the minion
         '''
-        self.assertListEqual(sysmod.list_modules(), [])
+        self.assertListEqual(sysmod.list_modules(), _modules)
 
-        self.assertListEqual(sysmod.list_modules('s*'), [])
+        self.assertListEqual(sysmod.list_modules('nonexist'), [])
+
+        self.assertListEqual(sysmod.list_modules('user'), ['user'])
+
+        self.assertListEqual(sysmod.list_modules('s*'), ['sys', 'sysctl', 'system'])
 
     # 'reload_modules' function tests: 1
 
@@ -203,77 +255,124 @@ class SysmodTestCase(TestCase):
         '''
         self.assertDictEqual(sysmod.runner_argspec(), {})
 
-    # 'list_state_functions' function tests: 1
+    # 'list_state_functions' function tests: 7
 
     def test_list_state_functions(self):
         '''
-        Test if it list the functions for all state modules.
+        Test if it lists the functions for all state modules.
         '''
-        self.assertListEqual(sysmod.list_state_functions(), [])
+        self.assertListEqual(sysmod.list_state_functions(), _functions)
 
-        self.assertListEqual(sysmod.list_state_functions('file.s*'), [])
+        self.assertListEqual(sysmod.list_state_functions('nonexist'), [])
 
-    # 'list_state_modules' function tests: 1
+        # list all functions in/given a specific module
+        self.assertListEqual(sysmod.list_state_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
+
+        # globs can be used for both module names and function names:
+        self.assertListEqual(sysmod.list_state_functions('sys*'), ['sys.doc', 'sys.list_functions', 'sys.list_modules', 'sysctl.get', 'sysctl.show', 'system.halt', 'system.reboot'])
+        self.assertListEqual(sysmod.list_state_functions('sys.list*'), ['sys.list_functions', 'sys.list_modules'])
+
+        # "list", or check for a specific function:
+        self.assertListEqual(sysmod.list_state_functions('sys.list'), [])
+        self.assertListEqual(sysmod.list_state_functions('exist.exist'), ['exist.exist'])
+
+    # 'list_state_modules' function tests: 4
 
     def test_list_state_modules(self):
         '''
-        Test if it list the modules loaded on the minion.
+        Test if it lists the modules loaded on the minion.
         '''
-        self.assertListEqual(sysmod.list_state_modules(), [])
+        self.assertListEqual(sysmod.list_state_modules(), _modules)
 
-        self.assertListEqual(sysmod.list_state_modules('mysql_*'), [])
+        self.assertListEqual(sysmod.list_state_modules('nonexist'), [])
 
-    # 'list_runners' function tests: 1
+        self.assertListEqual(sysmod.list_state_modules('user'), ['user'])
+
+        self.assertListEqual(sysmod.list_state_modules('s*'), ['sys', 'sysctl', 'system'])
+
+    # 'list_runners' function tests: 4
 
     def test_list_runners(self):
         '''
         Test if it list the runners loaded on the minion.
         '''
-        self.assertListEqual(sysmod.list_runners(), [])
+        self.assertListEqual(sysmod.list_runners(), _modules)
 
-        self.assertListEqual(sysmod.list_runners('m*'), [])
+        self.assertListEqual(sysmod.list_runners('nonexist'), [])
 
-    # 'list_runner_functions' function tests: 1
+        self.assertListEqual(sysmod.list_runners('user'), ['user'])
+
+        self.assertListEqual(sysmod.list_runners('s*'), ['sys', 'sysctl', 'system'])
+
+    # 'list_runner_functions' function tests: 7
 
     def test_list_runner_functions(self):
         '''
-        Test if it list the functions for all runner modules.
+        Test if it lists the functions for all runner modules.
         '''
-        self.assertListEqual(sysmod.list_runner_functions(), [])
+        self.assertListEqual(sysmod.list_runner_functions(), _functions)
 
-        self.assertListEqual(sysmod.list_runner_functions('state.*'), [])
+        self.assertListEqual(sysmod.list_runner_functions('nonexist'), [])
 
-    # 'list_returners' function tests: 1
+        # list all functions in/given a specific module
+        self.assertListEqual(sysmod.list_runner_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
+
+        # globs can be used for both module names and function names:
+        self.assertListEqual(sysmod.list_runner_functions('sys*'), ['sys.doc', 'sys.list_functions', 'sys.list_modules', 'sysctl.get', 'sysctl.show', 'system.halt', 'system.reboot'])
+        self.assertListEqual(sysmod.list_runner_functions('sys.list*'), ['sys.list_functions', 'sys.list_modules'])
+
+        # "list", or check for a specific function:
+        self.assertListEqual(sysmod.list_runner_functions('sys.list'), [])
+        self.assertListEqual(sysmod.list_runner_functions('exist.exist'), ['exist.exist'])
+
+    # 'list_returners' function tests: 4
 
     def test_list_returners(self):
         '''
-        Test if it list the runners loaded on the minion
+        Test if it lists the returners loaded on the minion
         '''
-        Mockloader.flag = True
-        self.assertListEqual(sysmod.list_returners(), [])
+        self.assertListEqual(sysmod.list_returners(), _modules)
 
-        self.assertListEqual(sysmod.list_returners('s*'), [])
+        self.assertListEqual(sysmod.list_returners('nonexist'), [])
 
-    # 'list_returner_functions' function tests: 1
+        self.assertListEqual(sysmod.list_returners('user'), ['user'])
+
+        self.assertListEqual(sysmod.list_returners('s*'), ['sys', 'sysctl', 'system'])
+
+    # 'list_returner_functions' function tests: 7
 
     def test_list_returner_functions(self):
         '''
-        Test if it list the functions for all returner modules.
+        Test if it lists the functions for all returner modules.
         '''
-        self.assertListEqual(sysmod.list_returner_functions(), [])
+        self.assertListEqual(sysmod.list_returner_functions(), _functions)
 
-        self.assertListEqual(sysmod.list_returner_functions('sqlite3.get_*'),
-                             [])
+        self.assertListEqual(sysmod.list_returner_functions('nonexist'), [])
 
-    # 'list_renderers' function tests: 1
+        # list all functions in/given a specific module
+        self.assertListEqual(sysmod.list_returner_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
+
+        # globs can be used for both module names and function names:
+        self.assertListEqual(sysmod.list_returner_functions('sys*'), ['sys.doc', 'sys.list_functions', 'sys.list_modules', 'sysctl.get', 'sysctl.show', 'system.halt', 'system.reboot'])
+        self.assertListEqual(sysmod.list_returner_functions('sys.list*'), ['sys.list_functions', 'sys.list_modules'])
+
+        # "list", or check for a specific function:
+        self.assertListEqual(sysmod.list_returner_functions('sys.list'), [])
+        self.assertListEqual(sysmod.list_returner_functions('exist.exist'), ['exist.exist'])
+
+    # 'list_renderers' function tests: 4
 
     def test_list_renderers(self):
         '''
         Test if it list the renderers loaded on the minion.
         '''
-        self.assertListEqual(sysmod.list_renderers(), [])
+        self.assertListEqual(sysmod.list_renderers(), _functions)
 
-        self.assertListEqual(sysmod.list_renderers('sqlite3.get_*'), [])
+        self.assertListEqual(sysmod.list_renderers('nonexist'), [])
+
+        self.assertListEqual(sysmod.list_renderers('user.info'), ['user.info'])
+
+        self.assertListEqual(sysmod.list_renderers('syst*'), ['system.halt', 'system.reboot'])
 
 
 if __name__ == '__main__':

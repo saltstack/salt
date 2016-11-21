@@ -16,6 +16,8 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
+import salt.ext.six as six
+import salt.utils
 from salt.modules import launchctl
 
 # Globals
@@ -84,6 +86,8 @@ class LaunchctlTestCase(TestCase):
                           '_service_by_name',
                           return_value={'plist':
                                         {'Label': 'A'}}):
+            if six.PY3:
+                launchctl_data = salt.utils.to_bytes(launchctl_data)
             with patch.object(launchctl, '_get_launchctl_data',
                               return_value=launchctl_data):
                 self.assertTrue(launchctl.status('job_label'))

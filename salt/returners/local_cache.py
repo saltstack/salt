@@ -12,7 +12,6 @@ import logging
 import os
 import shutil
 import time
-import hashlib
 import bisect
 
 # Import salt libs
@@ -23,6 +22,7 @@ import salt.utils.jid
 import salt.exceptions
 
 # Import 3rd-party libs
+import msgpack
 import salt.ext.six as six
 
 
@@ -48,21 +48,7 @@ def _job_dir():
     '''
     Return root of the jobs cache directory
     '''
-    return os.path.join(__opts__['cachedir'],
-                        'jobs')
-
-
-def _jid_dir(jid):
-    '''
-    Return the jid_dir for the given job id
-    '''
-    if six.PY3:
-        jhash = getattr(hashlib, __opts__['hash_type'])(jid.encode('utf-8')).hexdigest()
-    else:
-        jhash = getattr(hashlib, __opts__['hash_type'])(str(jid)).hexdigest()
-    return os.path.join(_job_dir(),
-                        jhash[:2],
-                        jhash[2:])
+    return os.path.join(__opts__['cachedir'], 'jobs')
 
 
 def _walk_through(job_dir):
@@ -105,29 +91,29 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
     else:
         jid = passed_jid
 
-    jid_dir_ = _jid_dir(jid)
+    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
 
     # Make sure we create the jid dir, otherwise someone else is using it,
     # meaning we need a new jid.
-    if not os.path.isdir(jid_dir_):
+    if not os.path.isdir(jid_dir):
         try:
-            os.makedirs(jid_dir_)
+            os.makedirs(jid_dir)
         except OSError:
             time.sleep(0.1)
             if passed_jid is None:
                 return prep_jid(nocache=nocache, recurse_count=recurse_count+1)
 
     try:
-        with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'wb+') as fn_:
+        with salt.utils.fopen(os.path.join(jid_dir, 'jid'), 'wb+') as fn_:
             if six.PY2:
                 fn_.write(jid)
             else:
                 fn_.write(bytes(jid, 'utf-8'))
         if nocache:
-            with salt.utils.fopen(os.path.join(jid_dir_, 'nocache'), 'wb+') as fn_:
-                fn_.write('')
+            with salt.utils.fopen(os.path.join(jid_dir, 'nocache'), 'wb+') as fn_:
+                fn_.write(b'')
     except IOError:
-        log.warn('Could not write out jid file for job {0}. Retrying.'.format(jid))
+        log.warning('Could not write out jid file for job {0}. Retrying.'.format(jid))
         time.sleep(0.1)
         return prep_jid(passed_jid=jid, nocache=nocache,
                         recurse_count=recurse_count+1)
@@ -145,7 +131,7 @@ def returner(load):
     if load['jid'] == 'req':
         load['jid'] = prep_jid(nocache=load.get('nocache', False))
 
-    jid_dir = _jid_dir(load['jid'])
+    jid_dir = salt.utils.jid.jid_dir(load['jid'], _job_dir(), __opts__['hash_type'])
     if os.path.exists(os.path.join(jid_dir, 'nocache')):
         return
 
@@ -205,7 +191,7 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
         log.error(err)
         raise salt.exceptions.SaltCacheError(err)
 
-    jid_dir = _jid_dir(jid)
+    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
 
     serial = salt.payload.Serial(__opts__)
 
@@ -234,7 +220,7 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
                          recurse_count=recurse_count+1)
 
     # if you have a tgt, save that for the UI etc
-    if 'tgt' in clear_load:
+    if 'tgt' in clear_load and clear_load['tgt'] != '':
         if minions is None:
             ckminions = salt.utils.minions.CkMinions(__opts__)
             # Retrieve the minions list
@@ -258,7 +244,19 @@ def save_minions(jid, minions, syndic_id=None):
     )
     serial = salt.payload.Serial(__opts__)
 
-    jid_dir = _jid_dir(jid)
+    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
+
+    try:
+        if not os.path.exists(jid_dir):
+            os.makedirs(jid_dir)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST:
+            # rarely, the directory can be already concurrently created between
+            # the os.path.exists and the os.makedirs lines above
+            pass
+        else:
+            raise
+
     if syndic_id is not None:
         minions_path = os.path.join(
             jid_dir,
@@ -285,7 +283,7 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    jid_dir = _jid_dir(jid)
+    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
     load_fn = os.path.join(jid_dir, LOAD_P)
     if not os.path.exists(jid_dir) or not os.path.exists(load_fn):
         return {}
@@ -317,7 +315,7 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    jid_dir = _jid_dir(jid)
+    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
     serial = salt.payload.Serial(__opts__)
 
     ret = {}
@@ -445,7 +443,7 @@ def update_endtime(jid, time):
 
     Endtime is stored as a plain text string
     '''
-    jid_dir = _jid_dir(jid)
+    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
     try:
         if not os.path.exists(jid_dir):
             os.makedirs(jid_dir)
@@ -461,10 +459,54 @@ def get_endtime(jid):
 
     Returns False if no endtime is present
     '''
-    jid_dir = _jid_dir(jid)
+    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
     etpath = os.path.join(jid_dir, ENDTIME)
     if not os.path.exists(etpath):
         return False
     with salt.utils.fopen(etpath, 'r') as etfile:
         endtime = etfile.read().strip('\n')
     return endtime
+
+
+def _reg_dir():
+    '''
+    Return the reg_dir for the given job id
+    '''
+    return os.path.join(__opts__['cachedir'], 'thorium')
+
+
+def save_reg(data):
+    '''
+    Save the register to msgpack files
+    '''
+    reg_dir = _reg_dir()
+    regfile = os.path.join(reg_dir, 'register')
+    try:
+        if not os.path.exists():
+            os.makedirs(reg_dir)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST:
+            pass
+        else:
+            raise
+    try:
+        with salt.utils.fopen(regfile, 'a') as fh_:
+            msgpack.dump(data, fh_)
+        fh_.close()
+    except:
+        log.error('Could not write to msgpack file {0}'.format(__opts__['outdir']))
+        raise
+
+
+def load_reg():
+    '''
+    Load the register from msgpack files
+    '''
+    reg_dir = _reg_dir()
+    regfile = os.path.join(reg_dir, 'register')
+    try:
+        with salt.utils.fopen(regfile, 'r') as fh_:
+            return msgpack.load(fh_)
+    except:
+        log.error('Could not write to msgpack file {0}'.format(__opts__['outdir']))
+        raise

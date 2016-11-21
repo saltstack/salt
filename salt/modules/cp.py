@@ -13,6 +13,7 @@ import fnmatch
 import salt.minion
 import salt.fileclient
 import salt.utils
+import salt.utils.files
 import salt.utils.url
 import salt.crypt
 import salt.transport
@@ -137,7 +138,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
         temp file, rendering that file, and returning the result.
         '''
         # write out path to temp file
-        tmp_path_fn = salt.utils.mkstemp()
+        tmp_path_fn = salt.utils.files.mkstemp()
         with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](
@@ -167,7 +168,6 @@ def get_file(path,
              makedirs=False,
              template=None,
              gzip=None,
-             env=None,
              **kwargs):
     '''
     Used to get a single file from the salt master
@@ -211,15 +211,6 @@ def get_file(path,
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
 
     path, senv = salt.utils.url.split_env(path)
@@ -241,7 +232,6 @@ def get_template(path,
                  dest,
                  template='jinja',
                  saltenv='base',
-                 env=None,
                  makedirs=False,
                  **kwargs):
     '''
@@ -255,15 +245,6 @@ def get_template(path,
 
         salt '*' cp.get_template salt://path/to/template /minion/dest
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     if 'salt' not in kwargs:
         kwargs['salt'] = __salt__
     if 'pillar' not in kwargs:
@@ -281,7 +262,7 @@ def get_template(path,
             **kwargs)
 
 
-def get_dir(path, dest, saltenv='base', template=None, gzip=None, env=None, **kwargs):
+def get_dir(path, dest, saltenv='base', template=None, gzip=None, **kwargs):
     '''
     Used to recursively copy a directory from the salt master
 
@@ -293,23 +274,14 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, env=None, **kw
 
     get_dir supports the same template and gzip arguments as get_file.
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
 
     return _client().get_dir(path, dest, saltenv, gzip)
 
 
-def get_url(path, dest='', saltenv='base', env=None):
+def get_url(path, dest='', saltenv='base', makedirs=False):
     '''
-    Used to get a single file from a URL
+    Used to get a single file from a URL.
 
     path
         A URL to download a file from. Supported URL schemes are: ``salt://``,
@@ -345,29 +317,20 @@ def get_url(path, dest='', saltenv='base', env=None):
         salt '*' cp.get_url salt://my/file /tmp/this_file_is_mine
         salt '*' cp.get_url http://www.slashdot.org /tmp/index.html
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     if isinstance(dest, six.string_types):
-        result = _client().get_url(path, dest, False, saltenv)
+        result = _client().get_url(path, dest, makedirs, saltenv)
     else:
-        result = _client().get_url(path, None, False, saltenv, no_cache=True)
+        result = _client().get_url(path, None, makedirs, saltenv, no_cache=True)
     if not result:
         log.error(
-            'Unable to fetch file {0!r} from saltenv {1!r}.'.format(
+            'Unable to fetch file {0} from saltenv {1}.'.format(
                 path, saltenv
             )
         )
     return result
 
 
-def get_file_str(path, saltenv='base', env=None):
+def get_file_str(path, saltenv='base'):
     '''
     Return the contents of a file from a URL
 
@@ -379,15 +342,6 @@ def get_file_str(path, saltenv='base', env=None):
 
         salt '*' cp.get_file_str salt://my/file
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     fn_ = cache_file(path, saltenv)
     if isinstance(fn_, six.string_types):
         with salt.utils.fopen(fn_, 'r') as fp_:
@@ -396,7 +350,7 @@ def get_file_str(path, saltenv='base', env=None):
     return fn_
 
 
-def cache_file(path, saltenv='base', env=None):
+def cache_file(path, saltenv='base'):
     '''
     Used to cache a single file on the salt-minion
     Returns the location of the new cached file on the minion
@@ -421,15 +375,6 @@ def cache_file(path, saltenv='base', env=None):
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     contextkey = '{0}_|-{1}_|-{2}'.format('cp.cache_file', path, saltenv)
     path_is_remote = _urlparse(path).scheme in ('http', 'https', 'ftp')
     try:
@@ -467,7 +412,7 @@ def cache_file(path, saltenv='base', env=None):
     return result
 
 
-def cache_files(paths, saltenv='base', env=None):
+def cache_files(paths, saltenv='base'):
     '''
     Used to gather many files from the master, the gathered files will be
     saved in the minion cachedir reflective to the paths retrieved from the
@@ -503,20 +448,11 @@ def cache_files(paths, saltenv='base', env=None):
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     return _client().cache_files(paths, saltenv)
 
 
 def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
-              exclude_pat=None, env=None):
+              exclude_pat=None):
     '''
     Download and cache everything under a directory from the master
 
@@ -548,21 +484,12 @@ def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
         salt '*' cp.cache_dir salt://path/to/dir
         salt '*' cp.cache_dir salt://path/to/dir include_pat='E@*.py$'
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     return _client().cache_dir(
         path, saltenv, include_empty, include_pat, exclude_pat
     )
 
 
-def cache_master(saltenv='base', env=None):
+def cache_master(saltenv='base'):
     '''
     Retrieve all of the files on the master and cache them locally
 
@@ -572,15 +499,6 @@ def cache_master(saltenv='base', env=None):
 
         salt '*' cp.cache_master
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     return _client().cache_master(saltenv)
 
 
@@ -611,7 +529,7 @@ def cache_local_file(path):
     return _client().cache_local_file(path)
 
 
-def list_states(saltenv='base', env=None):
+def list_states(saltenv='base'):
     '''
     List all of the available state modules in an environment
 
@@ -621,19 +539,10 @@ def list_states(saltenv='base', env=None):
 
         salt '*' cp.list_states
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     return _client().list_states(saltenv)
 
 
-def list_master(saltenv='base', prefix='', env=None):
+def list_master(saltenv='base', prefix=''):
     '''
     List all of the files stored on the master
 
@@ -643,19 +552,10 @@ def list_master(saltenv='base', prefix='', env=None):
 
         salt '*' cp.list_master
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     return _client().file_list(saltenv, prefix)
 
 
-def list_master_dirs(saltenv='base', prefix='', env=None):
+def list_master_dirs(saltenv='base', prefix=''):
     '''
     List all of the directories stored on the master
 
@@ -665,19 +565,10 @@ def list_master_dirs(saltenv='base', prefix='', env=None):
 
         salt '*' cp.list_master_dirs
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     return _client().dir_list(saltenv, prefix)
 
 
-def list_master_symlinks(saltenv='base', prefix='', env=None):
+def list_master_symlinks(saltenv='base', prefix=''):
     '''
     List all of the symlinks stored on the master
 
@@ -687,19 +578,10 @@ def list_master_symlinks(saltenv='base', prefix='', env=None):
 
         salt '*' cp.list_master_symlinks
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     return _client().symlink_list(saltenv, prefix)
 
 
-def list_minion(saltenv='base', env=None):
+def list_minion(saltenv='base'):
     '''
     List all of the files cached on the minion
 
@@ -709,19 +591,10 @@ def list_minion(saltenv='base', env=None):
 
         salt '*' cp.list_minion
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     return _client().file_local_list(saltenv)
 
 
-def is_cached(path, saltenv='base', env=None):
+def is_cached(path, saltenv='base'):
     '''
     Return a boolean if the given path on the master has been cached on the
     minion
@@ -732,19 +605,10 @@ def is_cached(path, saltenv='base', env=None):
 
         salt '*' cp.is_cached salt://path/to/file
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     return _client().is_cached(path, saltenv)
 
 
-def hash_file(path, saltenv='base', env=None):
+def hash_file(path, saltenv='base'):
     '''
     Return the hash of a file, to get the hash of a file on the
     salt master file server prepend the path with salt://<file on server>
@@ -756,15 +620,6 @@ def hash_file(path, saltenv='base', env=None):
 
         salt '*' cp.hash_file salt://path/to/file
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     path, senv = salt.utils.url.split_env(path)
     if senv:
         saltenv = senv
@@ -774,6 +629,8 @@ def hash_file(path, saltenv='base', env=None):
 
 def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     '''
+    WARNING Files pushed to the master will have global read permissions..
+
     Push a file from the minion up to the master, the file will be saved to
     the salt master in the master's minion files cachedir
     (defaults to ``/var/cache/salt/master/minions/minion-id/files``)

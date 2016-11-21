@@ -168,6 +168,7 @@ import salt.ext.six as six
 import salt.utils
 import salt.utils.vmware
 import salt.utils.http
+from salt.utils import dictupdate
 from salt.exceptions import CommandExecutionError
 
 # Import Third Party Libs
@@ -194,7 +195,7 @@ def __virtual__():
     return __virtualname__
 
 
-def esxcli_cmd(host, username, password, cmd_str, protocol=None, port=None, esxi_hosts=None):
+def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, port=None, esxi_hosts=None):
     '''
     Run an ESXCLI command directly on the host or list of hosts.
 
@@ -1615,7 +1616,7 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
     response = _get_vsan_eligible_disks(service_instance, host, host_names)
 
     ret = {}
-    for host_name, value in response.iteritems():
+    for host_name, value in six.iteritems(response):
         error = value.get('Error')
         if error:
             ret.update({host_name: {'Error': error}})
@@ -1670,7 +1671,11 @@ def system_info(host, username, password, protocol=None, port=None):
                                                               password=password,
                                                               protocol=protocol,
                                                               port=port)
-    return salt.utils.vmware.get_inventory(service_instance).about.__dict__
+    ret = salt.utils.vmware.get_inventory(service_instance).about.__dict__
+    if 'apiType' in ret:
+        if ret['apiType'] == 'HostAgent':
+            ret = dictupdate.update(ret, salt.utils.vmware.get_hardware_grains(service_instance))
+    return ret
 
 
 def list_datacenters(host, username, password, protocol=None, port=None):
@@ -3008,7 +3013,7 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
     response = _get_vsan_eligible_disks(service_instance, host, host_names)
 
     ret = {}
-    for host_name, value in response.iteritems():
+    for host_name, value in six.iteritems(response):
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vsan_system = host_ref.configManager.vsanSystem
 

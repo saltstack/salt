@@ -8,7 +8,10 @@ information about the version numbering scheme.
 Latest Branch Release
 =====================
 
-|current_release_doc|
+.. after carbon releases, replace :ref:`Release Candidate` with the following:
+   |current_release_doc|
+
+:ref:`Release Candidate <release-candidate>`
 
 Previous Releases
 =================
@@ -17,6 +20,7 @@ Previous Releases
     :maxdepth: 1
     :glob:
 
+    2016.11.*
     2016.3.*
     2015.8.*
     2015.5.*

@@ -20,6 +20,7 @@ import re
 import subprocess
 
 # Import salt libs
+import salt.ext.six as six
 import salt.utils
 import salt.utils.files
 import salt.utils.decorators as decorators
@@ -31,6 +32,9 @@ from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 DEFAULT_SSH_PORT = 22
+
+if six.PY3:
+    import base64
 
 
 def __virtual__():
@@ -234,7 +238,10 @@ def _fingerprint(public_key):
     If the key is invalid (incorrect base64 string), return None
     '''
     try:
-        raw_key = public_key.decode('base64')
+        if six.PY2:
+            raw_key = public_key.decode('base64')
+        else:
+            raw_key = base64.b64decode(public_key, validate=True)  # pylint: disable=E1123
     except binascii.Error:
         return None
     ret = hashlib.md5(raw_key).hexdigest()
@@ -362,8 +369,7 @@ def auth_keys(user=None, config='.ssh/authorized_keys'):
 def check_key_file(user,
                    source,
                    config='.ssh/authorized_keys',
-                   saltenv='base',
-                   env=None):
+                   saltenv='base'):
     '''
     Check a keyfile from a source destination against the local keys and
     return the keys to change
@@ -374,15 +380,6 @@ def check_key_file(user,
 
         salt '*' ssh.check_key_file root salt://ssh/keyfile
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     keyfile = __salt__['cp.cache_file'](source, saltenv)
     if not keyfile:
         return {}
@@ -451,8 +448,7 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
 def rm_auth_key_from_file(user,
              source,
              config='.ssh/authorized_keys',
-             saltenv='base',
-             env=None):
+             saltenv='base'):
     '''
     Remove an authorized key from the specified user's authorized key file,
     using a file as source
@@ -463,15 +459,6 @@ def rm_auth_key_from_file(user,
 
         salt '*' ssh.rm_auth_key_from_file <user> salt://ssh_keys/<user>.id_rsa.pub
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     lfile = __salt__['cp.cache_file'](source, saltenv)
     if not os.path.isfile(lfile):
         raise CommandExecutionError(
@@ -566,7 +553,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
             with salt.utils.fopen(full, 'w') as _fh:
                 _fh.writelines(lines)
         except (IOError, OSError) as exc:
-            log.warn('Could not read/write key file: {0}'.format(str(exc)))
+            log.warning('Could not read/write key file: {0}'.format(str(exc)))
             return 'Key not removed'
         return 'Key removed'
     # TODO: Should this function return a simple boolean?
@@ -576,8 +563,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
 def set_auth_key_from_file(user,
                            source,
                            config='.ssh/authorized_keys',
-                           saltenv='base',
-                           env=None):
+                           saltenv='base'):
     '''
     Add a key to the authorized_keys file, using a file as the source.
 
@@ -587,15 +573,6 @@ def set_auth_key_from_file(user,
 
         salt '*' ssh.set_auth_key_from_file <user> salt://ssh_keys/<user>.id_rsa.pub
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     # TODO: add support for pulling keys from other file sources as well
     lfile = __salt__['cp.cache_file'](source, saltenv)
     if not os.path.isfile(lfile):
@@ -668,6 +645,15 @@ def set_auth_key(
     uinfo = __salt__['user.info'](user)
     if not uinfo:
         return 'fail'
+
+    # A 'valid key' to us pretty much means 'decodable as base64', which is
+    # the same filtering done when reading the authorized_keys file. Apply
+    # the same check to ensure we don't insert anything that will not
+    # subsequently be read)
+    key_is_valid = _fingerprint(key) is not None
+    if not key_is_valid:
+        return 'Invalid public key'
+
     status = check_key(user, key, enc, comment, options, config, cache_keys)
     if status == 'update':
         _replace_auth_key(user, key, enc, comment, options or [], config)
@@ -773,7 +759,6 @@ def get_known_host(user, hostname, config=None, port=None):
 def recv_known_host(hostname,
                     enc=None,
                     port=None,
-                    hash_hostname=True,
                     hash_known_hosts=True,
                     timeout=5):
     '''
@@ -790,13 +775,6 @@ def recv_known_host(hostname,
         optional parameter, denoting the port of the remote host, which will be
         used in case, if the public key will be requested from it. By default
         the port 22 is used.
-
-    hash_hostname : True
-        Hash all hostnames and addresses in the known hosts file.
-
-        .. deprecated:: Carbon
-
-            Please use hash_known_hosts instead.
 
     hash_known_hosts : True
         Hash all hostnames and addresses in the known hosts file.
@@ -815,15 +793,6 @@ def recv_known_host(hostname,
 
         salt '*' ssh.recv_known_host <hostname> enc=<enc> port=<port>
     '''
-
-    if not hash_hostname:
-        salt.utils.warn_until(
-            'Carbon',
-            'The hash_hostname parameter is misleading as ssh-keygen can only '
-            'hash the whole known hosts file, not entries for individual '
-            'hosts. Please use hash_known_hosts=False instead.')
-        hash_known_hosts = hash_hostname
-
     # The following list of OSes have an old version of openssh-clients
     # and thus require the '-t' option for ssh-keyscan
     need_dash_t = ('CentOS-5',)
@@ -928,7 +897,6 @@ def set_known_host(user=None,
                    key=None,
                    port=None,
                    enc=None,
-                   hash_hostname=True,
                    config=None,
                    hash_known_hosts=True,
                    timeout=5):
@@ -962,13 +930,6 @@ def set_known_host(user=None,
         Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
         or ssh-dss
 
-    hash_hostname : True
-        Hash all hostnames and addresses in the known hosts file.
-
-        .. deprecated:: Carbon
-
-            Please use hash_known_hosts instead.
-
     config
         The location of the authorized keys file relative to the user's home
         directory, defaults to ".ssh/known_hosts". If no user is specified,
@@ -995,14 +956,6 @@ def set_known_host(user=None,
     if not hostname:
         return {'status': 'error',
                 'error': 'hostname argument required'}
-
-    if not hash_hostname:
-        salt.utils.warn_until(
-            'Carbon',
-            'The hash_hostname parameter is misleading as ssh-keygen can only '
-            'hash the whole known hosts file, not entries for individual '
-            'hosts. Please use hash_known_hosts=False instead.')
-        hash_known_hosts = hash_hostname
 
     if port is not None and port != DEFAULT_SSH_PORT and hash_known_hosts:
         return {'status': 'error',
@@ -1167,7 +1120,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
             if os.path.exists(fn_):
                 try:
                     with salt.utils.fopen(fn_, 'r') as _fh:
-                        keys[u][keyname] = ''.join(_fh.readlines())
+                        keys[u][keyname] = ''.join(_fh.readlines()).strip()
                 except (IOError, OSError):
                     pass
 
@@ -1209,8 +1162,10 @@ def hash_known_hosts(user=None, config=None):
     if not os.path.isfile(full):
         return {'status': 'error',
                 'error': 'Known hosts file {0} does not exist'.format(full)}
+    origmode = os.stat(full).st_mode
     cmd = ['ssh-keygen', '-H', '-f', full]
     cmd_result = __salt__['cmd.run'](cmd, python_shell=False)
+    os.stat(full, origmode)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0 and user:
         uinfo = __salt__['user.info'](user)

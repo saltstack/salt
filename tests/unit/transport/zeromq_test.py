@@ -19,6 +19,7 @@ from tornado.testing import AsyncTestCase
 import tornado.gen
 
 import salt.config
+import salt.ext.six as six
 import salt.utils
 import salt.transport.server
 import salt.transport.client
@@ -51,6 +52,8 @@ class BaseZMQReqCase(TestCase):
     '''
     @classmethod
     def setUpClass(cls):
+        if not hasattr(cls, '_handle_payload'):
+            return
         cls.master_opts = salt.config.master_config(get_config_file_path('master'))
         cls.master_opts.update({
             'transport': 'zeromq',
@@ -80,6 +83,8 @@ class BaseZMQReqCase(TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        if not hasattr(cls, '_handle_payload'):
+            return
         # Attempting to kill the children hangs the test suite.
         # Let the test suite handle this instead.
         cls.process_manager.kill_children()
@@ -140,7 +145,7 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         msgs = ['', [], tuple()]
         for msg in msgs:
             with self.assertRaises(salt.exceptions.AuthenticationError):
-                ret = self.channel.send(msg, timeout=1)
+                ret = self.channel.send(msg, timeout=5)
 
 
 class BaseZMQPubCase(AsyncTestCase):
@@ -198,7 +203,7 @@ class BaseZMQPubCase(AsyncTestCase):
     def tearDown(self):
         super(BaseZMQPubCase, self).tearDown()
         failures = []
-        for k, v in self.io_loop._handlers.iteritems():
+        for k, v in six.iteritems(self.io_loop._handlers):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
         if len(failures) > 0:

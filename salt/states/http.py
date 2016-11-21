@@ -11,12 +11,14 @@ Perform an HTTP query and statefully return the result
 from __future__ import absolute_import
 import re
 
+import time
+
 __monitor__ = [
         'query',
         ]
 
 
-def query(name, match=None, match_type='string', status=None, **kwargs):
+def query(name, match=None, match_type='string', status=None, wait_for=None, **kwargs):
     '''
     Perform an HTTP query and statefully return the result
 
@@ -82,7 +84,10 @@ def query(name, match=None, match_type='string', status=None, **kwargs):
     if __opts__['test']:
         kwargs['test'] = True
 
-    data = __salt__['http.query'](name, **kwargs)
+    if wait_for:
+        data = __salt__['http.wait_for_successful_query'](name, wait_for=wait_for, **kwargs)
+    else:
+        data = __salt__['http.query'](name, **kwargs)
 
     if match is not None:
         if match_type == 'string':
@@ -118,3 +123,28 @@ def query(name, match=None, match_type='string', status=None, **kwargs):
 
     ret['data'] = data
     return ret
+
+
+def wait_for_successful_query(name, wait_for=300, **kwargs):
+    '''
+    Like query but, repeat and wait until match/match_type or status is fulfilled. State returns result from last
+    query state in case of success or if no successful query was made within wait_for timeout.
+    '''
+    starttime = time.time()
+
+    while True:
+        caught_exception = None
+        ret = None
+        try:
+            ret = query(name, wait_for=wait_for, **kwargs)
+            if ret['result']:
+                return ret
+        except Exception as exc:
+            caught_exception = exc
+
+        if time.time() > starttime + wait_for:
+            if not ret and caught_exception:
+                # workaround pylint bug https://www.logilab.org/ticket/3207
+                raise caught_exception  # pylint: disable=E0702
+
+            return ret

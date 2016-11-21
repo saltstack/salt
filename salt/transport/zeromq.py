@@ -199,10 +199,13 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             )
         aes = cipher.decrypt(ret['key'])
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        raise tornado.gen.Return(pcrypt.loads(ret[dictkey]))
+        data = pcrypt.loads(ret[dictkey])
+        if six.PY3:
+            data = salt.transport.frame.decode_embedded_strs(data)
+        raise tornado.gen.Return(data)
 
     @tornado.gen.coroutine
-    def _crypted_transfer(self, load, tries=3, timeout=60):
+    def _crypted_transfer(self, load, tries=3, timeout=60, raw=False):
         '''
         Send a load across the wire, with encryption
 
@@ -229,7 +232,9 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             # communication, we do not subscribe to return events, we just
             # upload the results to the master
             if data:
-                data = self.auth.crypticle.loads(data)
+                data = self.auth.crypticle.loads(data, raw)
+            if six.PY3 and not raw:
+                data = salt.transport.frame.decode_embedded_strs(data)
             raise tornado.gen.Return(data)
         if not self.auth.authenticated:
             # Return control back to the caller, resume when authentication succeeds
@@ -261,14 +266,14 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         raise tornado.gen.Return(ret)
 
     @tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60):
+    def send(self, load, tries=3, timeout=60, raw=False):
         '''
         Send a request, return a future which will complete when we send the message
         '''
         if self.crypt == 'clear':
             ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
         else:
-            ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout)
+            ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout, raw=raw)
         raise tornado.gen.Return(ret)
 
 
@@ -299,12 +304,12 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
 
         if self.opts['zmq_filtering']:
             # TODO: constants file for "broadcast"
-            self._socket.setsockopt(zmq.SUBSCRIBE, 'broadcast')
+            self._socket.setsockopt(zmq.SUBSCRIBE, b'broadcast')
             self._socket.setsockopt(zmq.SUBSCRIBE, self.hexid)
         else:
-            self._socket.setsockopt(zmq.SUBSCRIBE, '')
+            self._socket.setsockopt(zmq.SUBSCRIBE, b'')
 
-        self._socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+        self._socket.setsockopt(zmq.IDENTITY, salt.utils.to_bytes(self.opts['id']))
 
         # TODO: cleanup all the socket opts stuff
         if hasattr(zmq, 'TCP_KEEPALIVE'):
@@ -497,6 +502,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         if self._closing:
             return
+        log.info('MWorkerQueue under PID %s is closing', os.getpid())
         self._closing = True
         if hasattr(self, '_monitor') and self._monitor is not None:
             self._monitor.stop()
@@ -510,6 +516,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             self.workers.close()
         if hasattr(self, 'stream'):
             self.stream.close()
+        if hasattr(self, '_socket') and self._socket.closed is False:
+            self._socket.close()
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
 
@@ -637,7 +645,40 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             msg += 'SIGTERM'
         msg += '. Exiting'
         log.debug(msg)
+        self.close()
         sys.exit(salt.defaults.exitcodes.EX_OK)
+
+
+def _set_tcp_keepalive(zmq_socket, opts):
+    '''
+    Ensure that TCP keepalives are set as specified in "opts".
+
+    Warning: Failure to set TCP keepalives on the salt-master can result in
+    not detecting the loss of a minion when the connection is lost or when
+    it's host has been terminated without first closing the socket.
+    Salt's Presence System depends on this connection status to know if a minion
+    is "present".
+
+    Warning: Failure to set TCP keepalives on minions can result in frequent or
+    unexpected disconnects!
+    '''
+    if hasattr(zmq, 'TCP_KEEPALIVE') and opts:
+        if 'tcp_keepalive' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE, opts['tcp_keepalive']
+            )
+        if 'tcp_keepalive_idle' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE_IDLE, opts['tcp_keepalive_idle']
+            )
+        if 'tcp_keepalive_cnt' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE_CNT, opts['tcp_keepalive_cnt']
+            )
+        if 'tcp_keepalive_intvl' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE_INTVL, opts['tcp_keepalive_intvl']
+            )
 
 
 class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
@@ -647,6 +688,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
+        self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
     def connect(self):
         return tornado.gen.sleep(5)
@@ -660,6 +702,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         context = zmq.Context(1)
         # Prepare minion publish socket
         pub_sock = context.socket(zmq.PUB)
+        _set_tcp_keepalive(pub_sock, self.opts)
         # if 2.1 >= zmq < 3.0, we only have one HWM setting
         try:
             pub_sock.setsockopt(zmq.HWM, self.opts.get('pub_hwm', 1000))
@@ -705,6 +748,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                 try:
                     package = pull_sock.recv()
                     unpacked_package = salt.payload.unpackage(package)
+                    if six.PY3:
+                        unpacked_package = salt.transport.frame.decode_embedded_strs(unpacked_package)
                     payload = unpacked_package['payload']
                     if self.opts['zmq_filtering']:
                         # if you have a specific topic list, use that
@@ -779,6 +824,18 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         # add some targeting stuff for lists only (for now)
         if load['tgt_type'] == 'list':
             int_payload['topic_lst'] = load['tgt']
+
+        # If zmq_filtering is enabled, target matching has to happen master side
+        match_targets = ["pcre", "glob", "list"]
+        if self.opts['zmq_filtering'] and load['tgt_type'] in match_targets:
+            # Fetch a list of minions that match
+            match_ids = self.ckminions.check_minions(load['tgt'],
+                                                     expr_form=load['tgt_type']
+                                                     )
+
+            log.debug("Publish Side Match: {0}".format(match_ids))
+            # Send list of miions thru so zmq can target them
+            int_payload['topic_lst'] = match_ids
 
         pub_sock.send(self.serial.dumps(int_payload))
         pub_sock.close()
@@ -858,7 +915,7 @@ class AsyncReqMessageClient(object):
                 zmq.RECONNECT_IVL_MAX, 5000
             )
 
-        self._set_tcp_keepalive()
+        _set_tcp_keepalive(self.socket, self.opts)
         if self.addr.startswith('tcp://['):
             # Hint PF type if bracket enclosed IPv6 address
             if hasattr(zmq, 'IPV6'):
@@ -868,31 +925,6 @@ class AsyncReqMessageClient(object):
         self.socket.linger = self.linger
         self.socket.connect(self.addr)
         self.stream = zmq.eventloop.zmqstream.ZMQStream(self.socket, io_loop=self.io_loop)
-
-    def _set_tcp_keepalive(self):
-        '''
-        Ensure that TCP keepalives are set for the ReqServer.
-
-        Warning: Failure to set TCP keepalives can result in frequent or unexpected
-        disconnects!
-        '''
-        if hasattr(zmq, 'TCP_KEEPALIVE') and self.opts:
-            if 'tcp_keepalive' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
-                )
-            if 'tcp_keepalive_idle' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
-                )
-            if 'tcp_keepalive_cnt' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
-                )
-            if 'tcp_keepalive_intvl' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
-                )
 
     @tornado.gen.coroutine
     def _internal_send_recv(self):
@@ -907,7 +939,8 @@ class AsyncReqMessageClient(object):
             # send
             def mark_future(msg):
                 if not future.done():
-                    future.set_result(self.serial.loads(msg[0]))
+                    data = self.serial.loads(msg[0])
+                    future.set_result(data)
             self.stream.on_recv(mark_future)
             self.stream.send(message)
 
@@ -954,7 +987,7 @@ class AsyncReqMessageClient(object):
             else:
                 future.set_exception(SaltReqTimeoutError('Message timed out'))
 
-    def send(self, message, timeout=None, tries=3, future=None, callback=None):
+    def send(self, message, timeout=None, tries=3, future=None, callback=None, raw=False):
         '''
         Return a future which will be completed when the message has a response
         '''
@@ -972,6 +1005,9 @@ class AsyncReqMessageClient(object):
             future.add_done_callback(handle_future)
         # Add this future to the mapping
         self.send_future_map[message] = future
+
+        if self.opts.get('detect_mode') is True:
+            timeout = 1
 
         if timeout is not None:
             send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message)

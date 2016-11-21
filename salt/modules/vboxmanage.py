@@ -48,6 +48,12 @@ def __virtual__():
 def vboxcmd():
     '''
     Return the location of the VBoxManage command
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vboxmanage.vboxcmd
     '''
     return salt.utils.which('VBoxManage')
 
@@ -55,6 +61,12 @@ def vboxcmd():
 def list_ostypes():
     '''
     List the available OS Types
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vboxmanage.list_ostypes
     '''
     return list_items('ostypes', True, 'ID')
 
@@ -62,6 +74,12 @@ def list_ostypes():
 def list_nodes_min():
     '''
     Return a list of registered VMs, with minimal information
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vboxmanage.list_nodes_min
     '''
     ret = {}
     cmd = '{0} list vms'.format(vboxcmd())
@@ -77,6 +95,12 @@ def list_nodes_min():
 def list_nodes_full():
     '''
     Return a list of registered VMs, with detailed information
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vboxmanage.list_nodes_full
     '''
     return list_items('vms', True, 'Name')
 
@@ -84,6 +108,12 @@ def list_nodes_full():
 def list_nodes():
     '''
     Return a list of registered VMs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vboxmanage.list_nodes
     '''
     ret = {}
     nodes = list_nodes_full()
@@ -106,6 +136,12 @@ def list_nodes():
 def start(name):
     '''
     Start a VM
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vboxmanage.start my_vm
     '''
     ret = {}
     cmd = '{0} startvm {1}'.format(vboxcmd(), name)
@@ -116,6 +152,12 @@ def start(name):
 def stop(name):
     '''
     Stop a VM
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vboxmanage.stop my_vm
     '''
     cmd = '{0} controlvm {1} poweroff'.format(vboxcmd(), name)
     ret = salt.modules.cmdmod.run(cmd).splitlines()
@@ -125,6 +167,12 @@ def stop(name):
 def register(filename):
     '''
     Register a VM
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vboxmanage.register my_vm_filename
     '''
     if not os.path.isfile(filename):
         raise CommandExecutionError(
@@ -141,6 +189,12 @@ def register(filename):
 def unregister(name, delete=False):
     '''
     Unregister a VM
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vboxmanage.unregister my_vm_filename
     '''
     nodes = list_nodes_min()
     if name not in nodes:
@@ -160,6 +214,12 @@ def unregister(name, delete=False):
 def destroy(name):
     '''
     Unregister and destroy a VM
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vboxmanage.destroy my_vm
     '''
     return unregister(name, True)
 

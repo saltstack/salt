@@ -13,13 +13,17 @@ Edit ini files
 from __future__ import absolute_import, print_function
 
 # Import Python libs
+from __future__ import print_function
+from __future__ import absolute_import
+import os
 import re
 import json
 
 # Import Salt libs
-from salt.utils.odict import OrderedDict
-from salt.utils import fopen as _fopen
+import salt.ext.six as six
+import salt.utils
 from salt.exceptions import CommandExecutionError
+from salt.utils.odict import OrderedDict
 
 
 __virtualname__ = 'ini'
@@ -35,10 +39,9 @@ def __virtual__():
 ini_regx = re.compile(r'^\s*\[(.+?)\]\s*$', flags=re.M)
 com_regx = re.compile(r'^\s*(#|;)\s*(.*)')
 indented_regx = re.compile(r'(\s+)(.*)')
-opt_regx = re.compile(r'(\s*)(.+?)\s*(\=|\:)\s*(.*)\s*')
 
 
-def set_option(file_name, sections=None):
+def set_option(file_name, sections=None, separator='='):
     '''
     Edit an ini file, replacing one or more sections. Returns a dictionary
     containing the changes made.
@@ -52,6 +55,12 @@ def set_option(file_name, sections=None):
         containing the options
         If the ini file does not contain sections the keys and values represent
         the options
+
+    separator : =
+        A character used to separate keys and values. Standard ini files use
+        the "=" character.
+
+        .. versionadded:: 2016.11.0
 
     API Example:
 
@@ -69,13 +78,14 @@ def set_option(file_name, sections=None):
         salt '*' ini.set_option /path/to/ini '{section_foo: {key: value}}'
     '''
     sections = sections or {}
-    inifile = _Ini.get_ini_file(file_name)
+    changes = {}
+    inifile = _Ini.get_ini_file(file_name, separator=separator)
     changes = inifile.update(sections)
     inifile.flush()
     return changes
 
 
-def get_option(file_name, section, option):
+def get_option(file_name, section, option, separator='='):
     '''
     Get value of a key from a section in an ini file. Returns ``None`` if
     no matching key was found.
@@ -95,11 +105,11 @@ def get_option(file_name, section, option):
 
         salt '*' ini.get_option /path/to/ini section_name option_name
     '''
-    inifile = _Ini.get_ini_file(file_name)
+    inifile = _Ini.get_ini_file(file_name, separator=separator)
     return inifile.get(section, {}).get(option, None)
 
 
-def remove_option(file_name, section, option):
+def remove_option(file_name, section, option, separator='='):
     '''
     Remove a key/value pair from a section in an ini file. Returns the value of
     the removed key, or ``None`` if nothing was removed.
@@ -119,13 +129,13 @@ def remove_option(file_name, section, option):
 
         salt '*' ini.remove_option /path/to/ini section_name option_name
     '''
-    inifile = _Ini.get_ini_file(file_name)
+    inifile = _Ini.get_ini_file(file_name, separator=separator)
     value = inifile.get(section, {}).pop(option, None)
     inifile.flush()
     return value
 
 
-def get_section(file_name, section):
+def get_section(file_name, section, separator='='):
     '''
     Retrieve a section from an ini file. Returns the section as dictionary. If
     the section is not found, an empty dictionary is returned.
@@ -145,15 +155,15 @@ def get_section(file_name, section):
 
         salt '*' ini.get_section /path/to/ini section_name
     '''
-    inifile = _Ini.get_ini_file(file_name)
+    inifile = _Ini.get_ini_file(file_name, separator=separator)
     ret = {}
-    for key, value in inifile.get(section, {}).iteritems():
+    for key, value in six.iteritems(inifile.get(section, {})):
         if key[0] != '#':
             ret.update({key: value})
     return ret
 
 
-def remove_section(file_name, section):
+def remove_section(file_name, section, separator='='):
     '''
     Remove a section in an ini file. Returns the removed section as dictionary,
     or ``None`` if nothing was removed.
@@ -173,35 +183,45 @@ def remove_section(file_name, section):
 
         salt '*' ini.remove_section /path/to/ini section_name
     '''
-    inifile = _Ini.get_ini_file(file_name)
+
+    inifile = _Ini.get_ini_file(file_name, separator=separator)
     section = inifile.pop(section, {})
     inifile.flush()
     ret = {}
-    for key, value in section.iteritems():
+    for key, value in six.iteritems(section):
         if key[0] != '#':
             ret.update({key: value})
     return ret
 
 
 class _Section(OrderedDict):
-    def __init__(self, name, inicontents='', seperator='=', commenter='#'):
+    def __init__(self, name, inicontents='', separator='=', commenter='#'):
         super(_Section, self).__init__(self)
         self.name = name
         self.inicontents = inicontents
-        self.sep = seperator
+        self.sep = separator
         self.com = commenter
+
+        opt_regx_prefix = r'(\s*)(.+?)\s*'
+        opt_regx_suffix = r'\s*(.*)\s*'
+        self.opt_regx_str = r'{0}(\{1}){2}'.format(
+            opt_regx_prefix, self.sep, opt_regx_suffix
+        )
+        self.opt_regx = re.compile(self.opt_regx_str)
 
     def refresh(self, inicontents=None):
         comment_count = 1
         unknown_count = 1
         curr_indent = ''
         inicontents = inicontents or self.inicontents
-        inicontents = inicontents.strip('\n')
+        inicontents = inicontents.strip(os.linesep)
+
         if not inicontents:
             return
         for opt in self:
             self.pop(opt)
-        for opt_str in inicontents.split('\n'):
+        for opt_str in inicontents.split(os.linesep):
+            # Match comments
             com_match = com_regx.match(opt_str)
             if com_match:
                 name = '#comment{0}'.format(comment_count)
@@ -209,6 +229,7 @@ class _Section(OrderedDict):
                 comment_count += 1
                 self.update({name: opt_str})
                 continue
+            # Add indented lines to the value of the previous entry.
             indented_match = indented_regx.match(opt_str)
             if indented_match:
                 indent = indented_match.group(1).replace('\t', '    ')
@@ -217,14 +238,16 @@ class _Section(OrderedDict):
                     if options:
                         prev_opt = options[-1]
                         value = self.get(prev_opt)
-                        self.update({prev_opt: '\n'.join((value, opt_str))})
+                        self.update({prev_opt: os.linesep.join((value, opt_str))})
                     continue
-            opt_match = opt_regx.match(opt_str)
+            # Match normal key+value lines.
+            opt_match = self.opt_regx.match(opt_str)
             if opt_match:
                 curr_indent, name, self.sep, value = opt_match.groups()
                 curr_indent = curr_indent.replace('\t', '    ')
                 self.update({name: value})
                 continue
+            # Anything remaining is a mystery.
             name = '#unknown{0}'.format(unknown_count)
             self.update({name: opt_str})
             unknown_count += 1
@@ -237,35 +260,47 @@ class _Section(OrderedDict):
         # and to make sure options without sectons go above any section
         options_backup = OrderedDict()
         comment_index = None
-        for key, value in self.iteritems():
+        for key, value in six.iteritems(self):
             if comment_index is not None:
                 options_backup.update({key: value})
                 continue
             if '#comment' not in key:
                 continue
-            opt_match = opt_regx.match(value.lstrip('#'))
+            opt_match = self.opt_regx.match(value.lstrip('#'))
             if opt_match and opt_match.group(2) == opt_key:
                 comment_index = key
         for key in options_backup:
             self.pop(key)
         self.pop(comment_index, None)
         super(_Section, self).update({opt_key: None})
-        for key, value in options_backup.iteritems():
+        for key, value in six.iteritems(options_backup):
             super(_Section, self).update({key: value})
 
     def update(self, update_dict):
         changes = {}
-        for key, value in update_dict.iteritems():
+        for key, value in six.iteritems(update_dict):
+            # Ensure the value is either a _Section or a string
+            if hasattr(value, 'iteritems'):
+                sect = _Section(
+                    name=key, inicontents='',
+                    separator=self.sep, commenter=self.com
+                )
+                sect.update(value)
+                value = sect
+                value_plain = value.as_dict()
+            else:
+                value = str(value)
+                value_plain = value
+
             if key not in self:
                 changes.update({key: {'before': None,
-                                      'after': value}})
-                if hasattr(value, 'iteritems'):
-                    sect = _Section(key, '', self.sep, self.com)
-                    sect.update(value)
-                    super(_Section, self).update({key: sect})
-                else:
+                                      'after': value_plain}})
+                # If it's not a section, it may already exist as a
+                # commented-out key/value pair
+                if not hasattr(value, 'iteritems'):
                     self._uncomment_if_commented(key)
-                    super(_Section, self).update({key: value})
+
+                super(_Section, self).update({key: value})
             else:
                 curr_value = self.get(key, None)
                 if isinstance(curr_value, _Section):
@@ -273,23 +308,31 @@ class _Section(OrderedDict):
                     if sub_changes:
                         changes.update({key: sub_changes})
                 else:
-                    if not curr_value == value:
+                    if curr_value != value:
                         changes.update({key: {'before': curr_value,
-                                              'after': value}})
+                                              'after': value_plain}})
                         super(_Section, self).update({key: value})
         return changes
 
     def gen_ini(self):
-        yield '\n[{0}]\n'.format(self.name)
+        yield '{0}[{1}]{0}'.format(os.linesep, self.name)
         sections_dict = OrderedDict()
-        for name, value in self.iteritems():
+        for name, value in six.iteritems(self):
             if com_regx.match(name):
-                yield '{0}\n'.format(value)
+                yield '{0}{1}'.format(value, os.linesep)
             elif isinstance(value, _Section):
                 sections_dict.update({name: value})
             else:
-                yield '{0} {1} {2}\n'.format(name, self.sep, value)
-        for name, value in sections_dict.iteritems():
+                yield '{0}{1}{2}{3}'.format(
+                    name,
+                    (
+                        ' {0} '.format(self.sep) if self.sep != ' '
+                        else self.sep
+                    ),
+                    value,
+                    os.linesep
+                )
+        for name, value in six.iteritems(sections_dict):
             for line in value.gen_ini():
                 yield line
 
@@ -305,7 +348,7 @@ class _Section(OrderedDict):
     def __repr__(self, _repr_running=None):
         _repr_running = _repr_running or {}
         super_repr = super(_Section, self).__repr__(_repr_running)
-        return '\n'.join((super_repr, json.dumps(self, indent=4)))
+        return os.linesep.join((super_repr, json.dumps(self, indent=4)))
 
     def __str__(self):
         return json.dumps(self, indent=4)
@@ -320,12 +363,12 @@ class _Section(OrderedDict):
 
 
 class _Ini(_Section):
-    def __init__(self, name, inicontents='', seperator='=', commenter='#'):
-        super(_Ini, self).__init__(name, inicontents, seperator, commenter)
+    def __init__(self, name, inicontents='', separator='=', commenter='#'):
+        super(_Ini, self).__init__(name, inicontents, separator, commenter)
 
     def refresh(self, inicontents=None):
         try:
-            inicontents = inicontents or _fopen(self.name).read()
+            inicontents = inicontents or salt.utils.fopen(self.name).read()
         except (OSError, IOError) as exc:
             raise CommandExecutionError(
                 "Unable to open file '{0}'. "
@@ -333,19 +376,24 @@ class _Ini(_Section):
             )
         if not inicontents:
             return
+        # Remove anything left behind from a previous run.
         for opt in self:
             self.pop(opt)
         inicontents = ini_regx.split(inicontents)
         inicontents.reverse()
+        # Pop anything defined outside of a section (ie. at the top of
+        # the ini file).
         super(_Ini, self).refresh(inicontents.pop())
         for section_name, sect_ini in self._gen_tuples(inicontents):
-            sect_obj = _Section(section_name, sect_ini)
+            sect_obj = _Section(
+                section_name, sect_ini, separator=self.sep
+            )
             sect_obj.refresh()
             self.update({sect_obj.name: sect_obj})
 
     def flush(self):
         try:
-            with _fopen(self.name, 'w') as outfile:
+            with salt.utils.fopen(self.name, 'w') as outfile:
                 ini_gen = self.gen_ini()
                 next(ini_gen)
                 outfile.writelines(ini_gen)
@@ -356,8 +404,8 @@ class _Ini(_Section):
             )
 
     @staticmethod
-    def get_ini_file(file_name):
-        inifile = _Ini(file_name)
+    def get_ini_file(file_name, separator='='):
+        inifile = _Ini(file_name, separator=separator)
         inifile.refresh()
         return inifile
 

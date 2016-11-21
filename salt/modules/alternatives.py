@@ -67,7 +67,7 @@ def show_link(name):
     '''
     Display master link for the alternative
 
-    .. versionadded:: 2015.8.13,2016.3.4,Carbon
+    .. versionadded:: 2015.8.13,2016.3.4,2016.11.0
 
     CLI Example:
 
@@ -140,7 +140,7 @@ def check_exists(name, path):
     if out['retcode'] > 0 and out['stderr'] != '':
         return False
 
-    return path in out['stdout'].splitlines()
+    return any((line.startswith(path) for line in out['stdout'].splitlines()))
 
 
 def check_installed(name, path):

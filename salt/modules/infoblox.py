@@ -115,6 +115,7 @@ def delete_record(name,
         _throw_no_creds()
         return None
 
+    record_type = record_type.lower()
     currentRecords = get_record(name,
                                 record_type,
                                 infoblox_server,
@@ -193,6 +194,7 @@ def update_record(name,
         _throw_no_creds()
         return None
 
+    record_type = record_type.lower()
     currentRecords = get_record(name,
                                 record_type,
                                 infoblox_server,
@@ -443,6 +445,7 @@ def get_record(record_name,
                                                                          infoblox_user,
                                                                          infoblox_password)
 
+    record_type = record_type.lower()
     if infoblox_server is None and infoblox_user is None and infoblox_password is None:
         _throw_no_creds()
         return None

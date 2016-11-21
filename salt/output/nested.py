@@ -142,11 +142,12 @@ class NestDisplay(object):
         return out
 
 
-def output(ret):
+def output(ret, **kwargs):
     '''
     Display ret data
     '''
+    # Prefer kwargs before opts
+    base_indent = kwargs.get('nested_indent', 0) \
+        or __opts__.get('nested_indent', 0)
     nest = NestDisplay()
-    return '\n'.join(
-        nest.display(ret, __opts__.get('nested_indent', 0), '', [])
-    )
+    return '\n'.join(nest.display(ret, base_indent, '', []))

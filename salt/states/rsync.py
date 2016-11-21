@@ -116,10 +116,7 @@ def synchronized(name, source,
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    if not os.path.exists(source):
-        ret['result'] = False
-        ret['comment'] = "Source directory {src} was not found.".format(src=source)
-    elif not os.path.exists(name) and not force and not prepare:
+    if not os.path.exists(name) and not force and not prepare:
         ret['result'] = False
         ret['comment'] = "Destination directory {dest} was not found.".format(dest=name)
     else:

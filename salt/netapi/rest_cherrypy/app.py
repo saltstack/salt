@@ -17,7 +17,7 @@ A REST API for Salt
       CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
 :optdepends:    - ws4py Python module for websockets support.
 :client_libraries:
-    - Java: https://github.com/SUSE/saltstack-netapi-client-java
+    - Java: https://github.com/SUSE/salt-netapi-client
     - Python: https://github.com/saltstack/pepper
 :setup:
     All steps below are performed on the machine running the Salt Master
@@ -72,10 +72,23 @@ A REST API for Salt
     debug : ``False``
         Starts the web server in development mode. It will reload itself when
         the underlying code is changed and will output more debugging info.
+    log_access_file
+        Path to a file to write HTTP access logs.
+
+        .. versionaddedd:: 2016.11.0
+
+    log_error_file
+        Path to a file to write HTTP error logs.
+
+        .. versionaddedd:: 2016.11.0
+
     ssl_crt
         The path to a SSL certificate. (See below)
     ssl_key
         The path to the private key for your SSL certificate. (See below)
+    ssl_chain
+        (Optional when using PyOpenSSL) the certificate chain to pass to
+        ``Context.load_verify_locations``.
     disable_ssl
         A flag to disable SSL. Warning: your Salt authentication credentials
         will be sent in the clear!
@@ -104,7 +117,7 @@ A REST API for Salt
     static_path : ``/static``
         The URL prefix to use when serving static assets out of the directory
         specified in the ``static`` setting.
-    app
+    app : ``index.html``
         A filesystem path to an HTML file that will be served as a static file.
         This is useful for bootstrapping a single-page JavaScript app.
     app_path : ``/app``
@@ -173,6 +186,30 @@ cookie. The latter is far more convenient for clients that support cookies.
             -d client=local \\
             -d tgt='*' \\
             -d fun=test.ping
+
+  Another example using the :program:`requests` library in Python:
+
+  .. code-block:: python
+
+      >>> import requests
+      >>> session = requests.Session()
+      >>> session.post('http://localhost:8000/login', json={
+          'username': 'saltdev',
+          'password': 'saltdev',
+          'eauth': 'auto',
+      })
+      <Response [200]>
+      >>> resp = session.post('http://localhost:8000', json=[{
+          'client': 'local',
+          'tgt': '*',
+          'fun': 'test.arg',
+          'arg': ['foo', 'bar'],
+          'kwarg': {'baz': 'Baz!'},
+      }])
+      >>> resp.json()
+      {u'return': [{
+          ...snip...
+      }]}
 
 .. seealso:: You can bypass the session handling via the :py:class:`Run` URL.
 
@@ -410,6 +447,7 @@ Here is an example of sending urlencoded data:
     :mailheader:`Accept` request header.
 
 .. |200| replace:: success
+.. |400| replace:: bad or malformed request
 .. |401| replace:: authentication required
 .. |406| replace:: requested Content-Type not available
 
@@ -424,7 +462,7 @@ import itertools
 import functools
 import logging
 import json
-import StringIO
+import os
 import tarfile
 import time
 from multiprocessing import Process, Pipe
@@ -685,6 +723,8 @@ def hypermedia_handler(*args, **kwargs):
     except (salt.exceptions.EauthAuthenticationError,
             salt.exceptions.TokenAuthenticationError):
         raise cherrypy.HTTPError(401)
+    except salt.exceptions.SaltInvocationError:
+        raise cherrypy.HTTPError(400)
     except (salt.exceptions.SaltDaemonNotRunning,
             salt.exceptions.SaltReqTimeoutError) as exc:
         raise cherrypy.HTTPError(503, exc.strerror)
@@ -998,14 +1038,9 @@ class LowDataAdapter(object):
         '''
         import inspect
 
-        # Grab all available client interfaces
-        clients = [name for name, _ in inspect.getmembers(salt.netapi.NetapiClient,
-            predicate=inspect.ismethod) if not name.startswith('__')]
-        clients.remove('run')  # run method calls client interfaces
-
         return {
             'return': "Welcome",
-            'clients': clients,
+            'clients': salt.netapi.CLIENTS,
         }
 
     @cherrypy.tools.salt_token()
@@ -1023,6 +1058,7 @@ class LowDataAdapter(object):
             :resheader Content-Type: |res_ct|
 
             :status 200: |200|
+            :status 400: |400|
             :status 401: |401|
             :status 406: |406|
 
@@ -1140,6 +1176,7 @@ class Minions(LowDataAdapter):
             :resheader Content-Type: |res_ct|
 
             :status 200: |200|
+            :status 400: |400|
             :status 401: |401|
             :status 406: |406|
 
@@ -1285,16 +1322,9 @@ class Jobs(LowDataAdapter):
         '''
         lowstate = [{
             'client': 'runner',
-            'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
+            'fun': 'jobs.list_job' if jid else 'jobs.list_jobs',
             'jid': jid,
         }]
-
-        if jid:
-            lowstate.append({
-                'client': 'runner',
-                'fun': 'jobs.list_job',
-                'jid': jid,
-            })
 
         cherrypy.request.lowstate = lowstate
         job_ret_info = list(self.exec_lowstate(
@@ -1302,12 +1332,18 @@ class Jobs(LowDataAdapter):
 
         ret = {}
         if jid:
-            job_ret, job_info = job_ret_info
-            ret['info'] = [job_info]
+            ret['info'] = [job_ret_info[0]]
+            minion_ret = {}
+            returns = job_ret_info[0].get('Result')
+            for minion in returns.keys():
+                if u'return' in returns[minion]:
+                    minion_ret[minion] = returns[minion].get(u'return')
+                else:
+                    minion_ret[minion] = returns[minion].get('return')
+            ret['return'] = [minion_ret]
         else:
-            job_ret = job_ret_info[0]
+            ret['return'] = [job_ret_info[0]]
 
-        ret['return'] = [job_ret]
         return ret
 
 
@@ -1488,10 +1524,10 @@ class Keys(LowDataAdapter):
         priv_key_file = tarfile.TarInfo('minion.pem')
         priv_key_file.size = len(priv_key)
 
-        fileobj = StringIO.StringIO()
+        fileobj = six.moves.StringIO()
         tarball = tarfile.open(fileobj=fileobj, mode='w')
-        tarball.addfile(pub_key_file, StringIO.StringIO(pub_key))
-        tarball.addfile(priv_key_file, StringIO.StringIO(priv_key))
+        tarball.addfile(pub_key_file, six.moves.StringIO(pub_key))
+        tarball.addfile(priv_key_file, six.moves.StringIO(priv_key))
         tarball.close()
 
         headers = cherrypy.response.headers
@@ -1726,6 +1762,7 @@ class Run(LowDataAdapter):
             request body.
 
             :status 200: |200|
+            :status 400: |400|
             :status 401: |401|
             :status 406: |406|
 
@@ -1864,9 +1901,9 @@ class Events(object):
 
         # First check if the given token is in our session table; if so it's a
         # salt-api token and we need to get the Salt token from there.
-        orig_sesion, _ = cherrypy.session.cache.get(auth_token, ({}, None))
+        orig_session, _ = cherrypy.session.cache.get(auth_token, ({}, None))
         # If it's not in the session table, assume it's a regular Salt token.
-        salt_token = orig_sesion.get('token', auth_token)
+        salt_token = orig_session.get('token', auth_token)
 
         # The eauth system does not currently support perms for the event
         # stream, so we're just checking if the token exists not if the token
@@ -1939,10 +1976,30 @@ class Events(object):
             source.onopen = function() { console.info('Listening ...') };
             source.onerror = function(err) { console.error(err) };
             source.onmessage = function(message) {
-              var saltEvent = JSON.parse(message.data);
-              console.info(saltEvent.tag)
-              console.debug(saltEvent.data)
+                var saltEvent = JSON.parse(message.data);
+                console.log(saltEvent.tag, saltEvent.data);
             };
+
+        Note, the SSE stream is fast and completely asynchronous and Salt is
+        very fast. If a job is created using a regular POST request, it is
+        possible that the job return will be available on the SSE stream before
+        the response for the POST request arrives. It is important to take that
+        asynchronity into account when designing an application. Below are some
+        general guidelines.
+
+        * Subscribe to the SSE stream _before_ creating any events.
+        * Process SSE events directly as they arrive and don't wait for any
+          other process to "complete" first (like an ajax request).
+        * Keep a buffer of events if the event stream must be used for
+          synchronous lookups.
+        * Be cautious in writing Salt's event stream directly to the DOM. It is
+          very busy and can quickly overwhelm the memory allocated to a
+          browser tab.
+
+        A full, working proof-of-concept JavaScript appliction is available
+        :blob:`adjacent to this file <salt/netapi/rest_cherrypy/index.html>`.
+        It can be viewed by pointing a browser at the ``/app`` endpoint in a
+        running ``rest_cherrypy`` instance.
 
         Or using CORS:
 
@@ -2151,8 +2208,8 @@ class WebsocketEndpoint(object):
         # Pulling the session token from an URL param is a workaround for
         # browsers not supporting CORS in the EventSource API.
         if token:
-            orig_sesion, _ = cherrypy.session.cache.get(token, ({}, None))
-            salt_token = orig_sesion.get('token')
+            orig_session, _ = cherrypy.session.cache.get(token, ({}, None))
+            salt_token = orig_session.get('token')
         else:
             salt_token = cherrypy.session.get('token')
 
@@ -2434,7 +2491,12 @@ class App(object):
             :status 401: |401|
         '''
         apiopts = cherrypy.config['apiopts']
-        return cherrypy.lib.static.serve_file(apiopts['app'])
+
+        default_index = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), 'index.html'))
+
+        return cherrypy.lib.static.serve_file(
+                apiopts.get('app', default_index))
 
 
 class API(object):
@@ -2477,10 +2539,9 @@ class API(object):
         })
 
         # Enable the single-page JS app URL.
-        if 'app' in self.apiopts:
-            self.url_map.update({
-                self.apiopts.get('app_path', 'app').lstrip('/'): App,
-            })
+        self.url_map.update({
+            self.apiopts.get('app_path', 'app').lstrip('/'): App,
+        })
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
@@ -2505,6 +2566,8 @@ class API(object):
                 'max_request_body_size': self.apiopts.get(
                     'max_request_body_size', 1048576),
                 'debug': self.apiopts.get('debug', False),
+                'log.access_file': self.apiopts.get('log_access_file', ''),
+                'log.error_file': self.apiopts.get('log_error_file', ''),
             },
             '/': {
                 'request.dispatch': cherrypy.dispatch.MethodDispatcher(),

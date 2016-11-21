@@ -5,9 +5,11 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 
 # Import python libs
 from __future__ import absolute_import
+import collections
 import json
 import pprint
 import logging
+import re
 from os import path
 from functools import wraps
 
@@ -54,17 +56,8 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     '''
-    def __init__(self, opts, saltenv='base', encoding='utf-8', env=None,
+    def __init__(self, opts, saltenv='base', encoding='utf-8',
                  pillar_rend=False):
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
@@ -163,10 +156,10 @@ class PrintableDict(OrderedDict):
         for key, value in six.iteritems(self):
             if isinstance(value, six.string_types):
                 # keeps quotes around strings
-                output.append('{0!r}: {1!r}'.format(key, value))
+                output.append('{0!r}: {1!r}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
             else:
                 # let default output
-                output.append('{0!r}: {1!s}'.format(key, value))
+                output.append('{0!r}: {1!s}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
         return '{' + ', '.join(output) + '}'
 
     def __repr__(self):  # pylint: disable=W0221
@@ -174,7 +167,7 @@ class PrintableDict(OrderedDict):
         for key, value in six.iteritems(self):
             # Raw string formatter required here because this is a repr
             # function.
-            output.append('{0!r}: {1!r}'.format(key, value))
+            output.append('{0!r}: {1!r}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
         return '{' + ', '.join(output) + '}'
 
 
@@ -339,11 +332,44 @@ class SerializerExtension(Extension, object):
         {% from "doc1.sls" import var1, var2 as local2 %}
         {{ var1.foo }} {{ local2.bar }}
 
+    ** Escape Filters **
+
+    ..versionadded:: Nitrogen
+
+    Allows escaping of strings so they can be interpreted literally by another
+    function.
+
+    For example:
+
+    .. code-block:: jinja
+
+        escape_regex = {{ 'https://example.com?foo=bar%20baz' | escape_regex }}
+
+    will be rendered as::
+
+        escape_regex = https\\:\\/\\/example\\.com\\?foo\\=bar\\%20baz
+
+    ** Set Theory Filters **
+
+    ..versionadded:: Nitrogen
+
+    Performs set math using Jinja filters.
+
+    For example:
+
+    .. code-block:: jinja
+
+        unique = {{ ['foo', 'foo', 'bar'] | unique }}
+
+    will be rendered as::
+
+        unique = ['foo', 'bar']
+
     .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
     tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
-                'load_text', 'import_text'])
+                'load_text', 'import_text', 'regex_escape', 'unique'])
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -355,6 +381,8 @@ class SerializerExtension(Extension, object):
             'load_yaml': self.load_yaml,
             'load_json': self.load_json,
             'load_text': self.load_text,
+            'regex_escape': self.regex_escape,
+            'unique': self.unique,
         })
 
         if self.environment.finalize is None:
@@ -542,3 +570,17 @@ class SerializerExtension(Extension, object):
             ).set_lineno(lineno)
         ]
     # pylint: enable=E1120,E1121
+
+    def regex_escape(self, value):
+        return re.escape(value)
+
+    def unique(self, values):
+        ret = None
+        if isinstance(values, collections.Hashable):
+            ret = set(values)
+        else:
+            ret = []
+            for value in values:
+                if value not in ret:
+                    ret.append(value)
+        return ret

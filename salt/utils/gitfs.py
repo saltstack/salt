@@ -42,6 +42,11 @@ AUTH_PROVIDERS = ('pygit2',)
 AUTH_PARAMS = ('user', 'password', 'pubkey', 'privkey', 'passphrase',
                'insecure_auth')
 
+# GitFS only: params which can be overridden for a single saltenv. Aside from
+# 'ref', this must be a subset of the per-remote params passed to the
+# constructor for the GitProvider subclasses.
+PER_SALTENV_PARAMS = ('mountpoint', 'root', 'ref')
+
 _RECOMMEND_GITPYTHON = (
     'GitPython is installed, you may wish to set {0}_provider to '
     '\'gitpython\' to use GitPython for {0} support.'
@@ -108,6 +113,33 @@ LIBGIT2_MINVER = '0.20.0'
 DULWICH_MINVER = (0, 9, 4)
 
 
+def enforce_types(key, val):
+    '''
+    Force params to be strings unless they should remain a different type
+    '''
+    non_string_params = {
+        'ssl_verify': bool,
+        'insecure_auth': bool,
+        'env_whitelist': 'stringlist',
+        'env_blacklist': 'stringlist',
+        'gitfs_env_whitelist': 'stringlist',
+        'gitfs_env_blacklist': 'stringlist',
+    }
+
+    if key not in non_string_params:
+        return six.text_type(val)
+    else:
+        expected = non_string_params[key]
+        if expected is bool:
+            return val
+        elif expected == 'stringlist':
+            if not isinstance(val, (six.string_types, list)):
+                val = six.text_type(val)
+            if isinstance(val, six.string_types):
+                return [x.strip() for x in val.split(',')]
+            return [six.text_type(x) for x in val]
+
+
 def failhard(role):
     '''
     Fatal configuration issue, raise an exception
@@ -123,18 +155,29 @@ class GitProvider(object):
     self.provider should be set in the sub-class' __init__ function before
     invoking GitProvider.__init__().
     '''
-    def __init__(self, opts, remote, per_remote_defaults,
+    def __init__(self, opts, remote, per_remote_defaults, per_remote_only,
                  override_params, cache_root, role='gitfs'):
         self.opts = opts
         self.role = role
-        self.env_blacklist = self.opts.get(
-            '{0}_env_blacklist'.format(self.role), [])
-        self.env_whitelist = self.opts.get(
-            '{0}_env_whitelist'.format(self.role), [])
-        repo_conf = copy.deepcopy(per_remote_defaults)
+        self.global_saltenv = salt.utils.repack_dictlist(
+            self.opts.get('{0}_saltenv'.format(self.role), []),
+            strict=True,
+            recurse=True,
+            key_cb=six.text_type,
+            val_cb=lambda x, y: six.text_type(y))
+        self.conf = copy.deepcopy(per_remote_defaults)
+
+        # Remove the 'salt://' from the beginning of any globally-defined
+        # per-saltenv mountpoints
+        for saltenv, saltenv_conf in six.iteritems(self.global_saltenv):
+            if 'mountpoint' in saltenv_conf:
+                self.global_saltenv[saltenv]['mountpoint'] = \
+                    salt.utils.url.strip_proto(
+                        self.global_saltenv[saltenv]['mountpoint']
+                    )
 
         per_remote_collisions = [x for x in override_params
-                                 if x in PER_REMOTE_ONLY]
+                                 if x in per_remote_only]
         if per_remote_collisions:
             log.critical(
                 'The following parameter names are restricted to per-remote '
@@ -144,37 +187,36 @@ class GitProvider(object):
             )
 
         try:
-            valid_per_remote_params = override_params + PER_REMOTE_ONLY
+            valid_per_remote_params = override_params + per_remote_only
         except TypeError:
             valid_per_remote_params = \
-                list(override_params) + list(PER_REMOTE_ONLY)
+                list(override_params) + list(per_remote_only)
 
         if isinstance(remote, dict):
             self.id = next(iter(remote))
             self.get_url()
-            per_remote_conf = dict(
-                [(key, six.text_type(val)) for key, val in
-                 six.iteritems(salt.utils.repack_dictlist(remote[self.id]))]
-            )
+
+            per_remote_conf = salt.utils.repack_dictlist(
+                remote[self.id],
+                strict=True,
+                recurse=True,
+                key_cb=six.text_type,
+                val_cb=enforce_types)
+
             if not per_remote_conf:
                 log.critical(
-                    'Invalid per-remote configuration for {0} remote \'{1}\'. '
+                    'Invalid per-remote configuration for %s remote \'%s\'. '
                     'If no per-remote parameters are being specified, there '
                     'may be a trailing colon after the URL, which should be '
-                    'removed. Check the master configuration file.'
-                    .format(self.role, self.id)
+                    'removed. Check the master configuration file.',
+                    self.role, self.id
                 )
                 failhard(self.role)
-
-            # Separate the per-remote-only (non-global) parameters
-            per_remote_only = {}
-            for param in PER_REMOTE_ONLY:
-                if param in per_remote_conf:
-                    per_remote_only[param] = per_remote_conf.pop(param)
 
             per_remote_errors = False
             for param in (x for x in per_remote_conf
                           if x not in valid_per_remote_params):
+                per_remote_errors = True
                 if param in AUTH_PARAMS \
                         and self.provider not in AUTH_PROVIDERS:
                     msg = (
@@ -212,12 +254,10 @@ class GitProvider(object):
                         )
                     log.critical(msg)
 
-                per_remote_errors = True
             if per_remote_errors:
                 failhard(self.role)
 
-            repo_conf.update(per_remote_conf)
-            repo_conf.update(per_remote_only)
+            self.conf.update(per_remote_conf)
         else:
             self.id = remote
             self.get_url()
@@ -225,29 +265,49 @@ class GitProvider(object):
         # Winrepo doesn't support the 'root' option, but it still must be part
         # of the GitProvider object because other code depends on it. Add it as
         # an empty string.
-        if 'root' not in repo_conf:
-            repo_conf['root'] = ''
+        if 'root' not in self.conf:
+            self.conf['root'] = ''
 
-        if self.role == 'winrepo' and 'name' not in repo_conf:
+        if self.role == 'winrepo' and 'name' not in self.conf:
             # Ensure that winrepo has the 'name' parameter set if it wasn't
             # provided. Default to the last part of the URL, minus the .git if
             # it is present.
-            repo_conf['name'] = self.url.rsplit('/', 1)[-1]
+            self.conf['name'] = self.url.rsplit('/', 1)[-1]
             # Remove trailing .git from name
-            if repo_conf['name'].lower().endswith('.git'):
-                repo_conf['name'] = repo_conf['name'][:-4]
+            if self.conf['name'].lower().endswith('.git'):
+                self.conf['name'] = self.conf['name'][:-4]
 
-        # Set all repo config params as attributes
-        for key, val in six.iteritems(repo_conf):
-            setattr(self, key, val)
-
-        if hasattr(self, 'mountpoint'):
-            self.mountpoint = salt.utils.url.strip_proto(self.mountpoint)
-            self.mountpoint = self.mountpoint.strip('/')
+        if 'mountpoint' in self.conf:
+            # Remove the 'salt://' from the beginning of the mountpoint, as
+            # well as any additional leading/trailing slashes
+            self.conf['mountpoint'] = \
+                salt.utils.url.strip_proto(self.conf['mountpoint']).strip('/')
         else:
             # For providers which do not use a mountpoint, assume the
             # filesystem is mounted at the root of the fileserver.
-            self.mountpoint = ''
+            self.conf['mountpoint'] = ''
+
+        if 'saltenv' not in self.conf:
+            self.conf['saltenv'] = {}
+        else:
+            for saltenv, saltenv_conf in six.iteritems(self.conf['saltenv']):
+                if 'mountpoint' in saltenv_conf:
+                    saltenv_ptr = self.conf['saltenv'][saltenv]
+                    saltenv_ptr['mountpoint'] = \
+                        salt.utils.url.strip_proto(saltenv_ptr['mountpoint'])
+
+        for key, val in six.iteritems(self.conf):
+            if key not in PER_SALTENV_PARAMS:
+                setattr(self, key, val)
+
+        for key in PER_SALTENV_PARAMS:
+            if key != 'ref':
+                setattr(self, '_' + key, self.conf[key])
+            self.add_conf_overlay(key)
+
+        # Discard the conf dictionary since we have set all of the config
+        # params as attributes
+        delattr(self, 'conf')
 
         if not isinstance(self.url, six.string_types):
             log.critical(
@@ -287,10 +347,19 @@ class GitProvider(object):
             resulting env is exposed via whitelist/blacklist, add it to the
             env_set.
             '''
-            if base_ref is not None and base_ref == rname:
-                rname = 'base'
-            if self.env_is_exposed(rname):
-                env_set.add(rname)
+            _envs = []
+            if rname in self.saltenv_revmap:
+                _envs.extend(self.saltenv_revmap[rname])
+                if base_ref == rname:
+                    _envs.append('base')
+            else:
+                if base_ref == rname:
+                    _envs.append('base')
+                else:
+                    _envs.append(rname)
+            for env_name in _envs:
+                if self.env_is_exposed(env_name):
+                    env_set.add(env_name)
 
         ret = set()
         base_ref = getattr(self, 'base', None)
@@ -308,13 +377,49 @@ class GitProvider(object):
     def _get_lock_file(self, lock_type='update'):
         return salt.utils.path_join(self.gitdir, lock_type + '.lk')
 
+    @classmethod
+    def add_conf_overlay(cls, name):
+        '''
+        Programatically determine config value based on the desired saltenv
+        '''
+        def _getconf(self, tgt_env='base'):
+            strip_sep = lambda x: x.rstrip(os.sep) \
+                if name in ('root', 'mountpoint') \
+                else x
+            if self.role != 'gitfs':
+                return strip_sep(getattr(self, '_' + name))
+            # Get saltenv-specific configuration
+            saltenv_conf = self.saltenv.get(tgt_env, {})
+            if name == 'ref':
+                if tgt_env == 'base':
+                    return self.base
+                else:
+                    if name in saltenv_conf:
+                        return saltenv_conf[name]
+                    elif tgt_env in self.global_saltenv \
+                            and name in self.global_saltenv[tgt_env]:
+                        return self.global_saltenv[tgt_env][name]
+                    else:
+                        return tgt_env
+            if name in saltenv_conf:
+                return strip_sep(saltenv_conf[name])
+            elif tgt_env in self.global_saltenv \
+                    and name in self.global_saltenv[tgt_env]:
+                return strip_sep(self.global_saltenv[tgt_env][name])
+            else:
+                return strip_sep(getattr(self, '_' + name))
+        setattr(cls, name, _getconf)
+
     def check_root(self):
         '''
         Check if the relative root path exists in the checked-out copy of the
         remote. Return the full path to that relative root if it does exist,
         otherwise return None.
         '''
-        root_dir = salt.utils.path_join(self.cachedir, self.root).rstrip(os.sep)
+        # No need to pass an environment to self.root() here since per-saltenv
+        # configuration is a gitfs-only feature and check_root() is not used
+        # for gitfs.
+        root_dir = salt.utils.path_join(self.cachedir, self.root()).rstrip(os.sep)
         if os.path.isdir(root_dir):
             return root_dir
         log.error(
@@ -621,11 +726,11 @@ class GitPython(GitProvider):
     '''
     Interface to GitPython
     '''
-    def __init__(self, opts, remote, per_remote_defaults,
+    def __init__(self, opts, remote, per_remote_defaults, per_remote_only,
                  override_params, cache_root, role='gitfs'):
         self.provider = 'gitpython'
         GitProvider.__init__(self, opts, remote, per_remote_defaults,
-                             override_params, cache_root, role)
+                             per_remote_only, override_params, cache_root, role)
 
     def checkout(self):
         '''
@@ -758,20 +863,20 @@ class GitPython(GitProvider):
         tree = self.get_tree(tgt_env)
         if not tree:
             return ret
-        if self.root:
+        if self.root(tgt_env):
             try:
-                tree = tree / self.root
+                tree = tree / self.root(tgt_env)
             except KeyError:
                 return ret
-            relpath = lambda path: os.path.relpath(path, self.root)
+            relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint, path)
+        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
         for blob in tree.traverse():
             if isinstance(blob, git.Tree):
                 ret.add(add_mountpoint(relpath(blob.path)))
-        if self.mountpoint:
-            ret.add(self.mountpoint)
+        if self.mountpoint(tgt_env):
+            ret.add(self.mountpoint(tgt_env))
         return ret
 
     def envs(self):
@@ -834,15 +939,15 @@ class GitPython(GitProvider):
         if not tree:
             # Not found, return empty objects
             return files, symlinks
-        if self.root:
+        if self.root(tgt_env):
             try:
-                tree = tree / self.root
+                tree = tree / self.root(tgt_env)
             except KeyError:
                 return files, symlinks
-            relpath = lambda path: os.path.relpath(path, self.root)
+            relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint, path)
+        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
         for file_blob in tree.traverse():
             if not isinstance(file_blob, git.Blob):
                 continue
@@ -864,7 +969,7 @@ class GitPython(GitProvider):
         tree = self.get_tree(tgt_env)
         if not tree:
             # Branch/tag/SHA not found
-            return None, None
+            return None, None, None
         blob = None
         depth = 0
         while True:
@@ -895,16 +1000,15 @@ class GitPython(GitProvider):
                 # File not found or repo_path points to a directory
                 blob = None
                 break
-        return blob, blob.hexsha if blob is not None else blob
+        if isinstance(blob, git.Blob):
+            return blob, blob.hexsha, blob.mode
+        return None, None, None
 
     def get_tree(self, tgt_env):
         '''
         Return a git.Tree object if the branch/tag/SHA is found, otherwise None
         '''
-        if tgt_env == 'base':
-            tgt_ref = self.base
-        else:
-            tgt_ref = tgt_env
+        tgt_ref = self.ref(tgt_env)
         for ref in self.repo.refs:
             if isinstance(ref, (git.RemoteReference, git.TagReference)):
                 parted = ref.name.partition('/')
@@ -934,14 +1038,14 @@ class Pygit2(GitProvider):
     '''
     Interface to Pygit2
     '''
-    def __init__(self, opts, remote, per_remote_defaults,
+    def __init__(self, opts, remote, per_remote_defaults, per_remote_only,
                  override_params, cache_root, role='gitfs'):
         self.provider = 'pygit2'
         self.use_callback = \
             distutils.version.LooseVersion(pygit2.__version__) >= \
             distutils.version.LooseVersion('0.23.2')
         GitProvider.__init__(self, opts, remote, per_remote_defaults,
-                             override_params, cache_root, role)
+                             per_remote_only, override_params, cache_root, role)
 
     def checkout(self):
         '''
@@ -1267,25 +1371,25 @@ class Pygit2(GitProvider):
         tree = self.get_tree(tgt_env)
         if not tree:
             return ret
-        if self.root:
+        if self.root(tgt_env):
             try:
-                oid = tree[self.root].oid
+                oid = tree[self.root(tgt_env)].oid
                 tree = self.repo[oid]
             except KeyError:
                 return ret
             if not isinstance(tree, pygit2.Tree):
                 return ret
-            relpath = lambda path: os.path.relpath(path, self.root)
+            relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
         blobs = []
         if len(tree):
-            _traverse(tree, blobs, self.root)
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint, path)
+            _traverse(tree, blobs, self.root(tgt_env))
+        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
         for blob in blobs:
             ret.add(add_mountpoint(relpath(blob)))
-        if self.mountpoint:
-            ret.add(self.mountpoint)
+        if self.mountpoint(tgt_env):
+            ret.add(self.mountpoint(tgt_env))
         return ret
 
     def envs(self):
@@ -1385,23 +1489,23 @@ class Pygit2(GitProvider):
         if not tree:
             # Not found, return empty objects
             return files, symlinks
-        if self.root:
+        if self.root(tgt_env):
             try:
                 # This might need to be changed to account for a root that
                 # spans more than one directory
-                oid = tree[self.root].oid
+                oid = tree[self.root(tgt_env)].oid
                 tree = self.repo[oid]
             except KeyError:
                 return files, symlinks
             if not isinstance(tree, pygit2.Tree):
                 return files, symlinks
-            relpath = lambda path: os.path.relpath(path, self.root)
+            relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
         blobs = {}
         if len(tree):
-            _traverse(tree, blobs, self.root)
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint, path)
+            _traverse(tree, blobs, self.root(tgt_env))
+        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
         for repo_path in blobs.get('files', []):
             files.add(add_mountpoint(relpath(repo_path)))
         for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
@@ -1415,8 +1519,9 @@ class Pygit2(GitProvider):
         tree = self.get_tree(tgt_env)
         if not tree:
             # Branch/tag/SHA not found in repo
-            return None, None
+            return None, None, None
         blob = None
+        mode = None
         depth = 0
         while True:
             depth += 1
@@ -1424,16 +1529,17 @@ class Pygit2(GitProvider):
                 blob = None
                 break
             try:
-                if stat.S_ISLNK(tree[path].filemode):
+                entry = tree[path]
+                mode = entry.filemode
+                if stat.S_ISLNK(mode):
                     # Path is a symlink. The blob data corresponding to this
                     # path's object ID will be the target of the symlink. Follow
                     # the symlink and set path to the location indicated
                     # in the blob data.
-                    link_tgt = self.repo[tree[path].oid].data
+                    link_tgt = self.repo[entry.oid].data
                     path = salt.utils.path_join(os.path.dirname(path), link_tgt)
                 else:
-                    oid = tree[path].oid
-                    blob = self.repo[oid]
+                    blob = self.repo[entry.oid]
                     if isinstance(blob, pygit2.Tree):
                         # Path is a directory, not a file.
                         blob = None
@@ -1441,17 +1547,16 @@ class Pygit2(GitProvider):
             except KeyError:
                 blob = None
                 break
-        return blob, blob.hex if blob is not None else blob
+        if isinstance(blob, pygit2.Blob):
+            return blob, blob.hex, mode
+        return None, None, None
 
     def get_tree(self, tgt_env):
         '''
         Return a pygit2.Tree object if the branch/tag/SHA is found, otherwise
         None
         '''
-        if tgt_env == 'base':
-            tgt_ref = self.base
-        else:
-            tgt_ref = tgt_env
+        tgt_ref = self.ref(tgt_env)
         for ref in self.repo.listall_references():
             _, rtype, rspec = ref.split('/', 2)
             if rtype in ('remotes', 'tags'):
@@ -1609,7 +1714,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
     '''
     Interface to dulwich
     '''
-    def __init__(self, opts, remote, per_remote_defaults,
+    def __init__(self, opts, remote, per_remote_defaults, per_remote_only,
                  override_params, cache_root, role='gitfs'):
         self.get_env_refs = lambda refs: [
             x for x in refs if re.match('refs/(remotes|tags)', x)
@@ -1617,7 +1722,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         ]
         self.provider = 'dulwich'
         GitProvider.__init__(self, opts, remote, per_remote_defaults,
-                             override_params, cache_root, role)
+                             per_remote_only, override_params, cache_root, role)
 
     def dir_list(self, tgt_env):
         '''
@@ -1642,21 +1747,21 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
 
         ret = set()
         tree = self.get_tree(tgt_env)
-        tree = self.walk_tree(tree, self.root)
+        tree = self.walk_tree(tree, self.root(tgt_env))
         if not isinstance(tree, dulwich.objects.Tree):
             return ret
         blobs = []
         if len(tree):
-            _traverse(tree, blobs, self.root)
-        if self.root:
-            relpath = lambda path: os.path.relpath(path, self.root)
+            _traverse(tree, blobs, self.root(tgt_env))
+        if self.root(tgt_env):
+            relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint, path)
+        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
         for blob in blobs:
             ret.add(add_mountpoint(relpath(blob)))
-        if self.mountpoint:
-            ret.add(self.mountpoint)
+        if self.mountpoint(tgt_env):
+            ret.add(self.mountpoint(tgt_env))
         return ret
 
     def envs(self):
@@ -1764,17 +1869,17 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         files = set()
         symlinks = {}
         tree = self.get_tree(tgt_env)
-        tree = self.walk_tree(tree, self.root)
+        tree = self.walk_tree(tree, self.root(tgt_env))
         if not isinstance(tree, dulwich.objects.Tree):
             return files, symlinks
         blobs = {}
         if len(tree):
-            _traverse(tree, blobs, self.root)
-        if self.root:
-            relpath = lambda path: os.path.relpath(path, self.root)
+            _traverse(tree, blobs, self.root(tgt_env))
+        if self.root(tgt_env):
+            relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint, path)
+        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
         for repo_path in blobs.get('files', []):
             files.add(add_mountpoint(relpath(repo_path)))
         for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
@@ -1788,8 +1893,9 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         tree = self.get_tree(tgt_env)
         if not tree:
             # Branch/tag/SHA not found
-            return None, None
+            return None, None, None
         blob = None
+        mode = None
         depth = 0
         while True:
             depth += 1
@@ -1819,7 +1925,9 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
             except KeyError:
                 blob = None
                 break
-        return blob, blob.sha().hexdigest() if blob is not None else blob
+        if isinstance(blob, dulwich.objects.Blob):
+            return blob, blob.sha().hexdigest(), mode
+        return None, None, None
 
     def get_conf(self):
         '''
@@ -1840,10 +1948,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         Return a dulwich.objects.Tree object if the branch/tag/SHA is found,
         otherwise None
         '''
-        if tgt_env == 'base':
-            tgt_ref = self.base
-        else:
-            tgt_ref = tgt_env
+        tgt_ref = self.ref(tgt_env)
         refs = self.repo.get_refs()
         # Sorting ensures we check heads (branches) before tags
         for ref in sorted(self.get_env_refs(refs)):
@@ -2015,7 +2120,8 @@ class GitBase(object):
         self.file_list_cachedir = salt.utils.path_join(
             self.opts['cachedir'], 'file_lists', self.role)
 
-    def init_remotes(self, remotes, per_remote_overrides):
+    def init_remotes(self, remotes, per_remote_overrides,
+                     per_remote_only=PER_REMOTE_ONLY):
         '''
         Initialize remotes
         '''
@@ -2052,11 +2158,11 @@ class GitBase(object):
             key = '{0}_{1}'.format(self.role, param)
             if key not in self.opts:
                 log.critical(
-                    'Key \'{0}\' not present in global configuration. This is '
-                    'a bug, please report it.'.format(key)
+                    'Key \'%s\' not present in global configuration. This is '
+                    'a bug, please report it.', key
                 )
                 failhard(self.role)
-            per_remote_defaults[param] = six.text_type(self.opts[key])
+            per_remote_defaults[param] = enforce_types(key, self.opts[key])
 
         self.remotes = []
         for remote in remotes:
@@ -2064,20 +2170,59 @@ class GitBase(object):
                 self.opts,
                 remote,
                 per_remote_defaults,
+                per_remote_only,
                 override_params,
                 self.cache_root,
                 self.role
             )
             if hasattr(repo_obj, 'repo'):
-                # Strip trailing slashes from the gitfs root as these cause
-                # path searches to fail.
-                repo_obj.root = repo_obj.root.rstrip(os.path.sep)
                 # Sanity check and assign the credential parameter
                 repo_obj.verify_auth()
                 if self.opts['__role'] == 'minion' and repo_obj.new:
-                    # Perform initial fetch
+                    # Perform initial fetch on masterless minion
                     repo_obj.fetch()
+
+                # Reverse map to be used when running envs() to detect the
+                # available envs.
+                repo_obj.saltenv_revmap = {}
+
+                for saltenv, saltenv_conf in six.iteritems(repo_obj.saltenv):
+                    if 'ref' in saltenv_conf:
+                        ref = saltenv_conf['ref']
+                        if saltenv == 'base':
+                            # Remove redundant 'ref' config for base saltenv
+                            repo_obj.saltenv[saltenv].pop('ref')
+                            if ref != repo_obj.base:
+                                log.warning(
+                                    'The \'base\' environment has been '
+                                    'defined in the \'saltenv\' param for %s '
+                                    'remote %s and will override the '
+                                    'branch/tag specified by %s_base (or a '
+                                    'per-remote \'base\' parameter).',
+                                    self.role, repo_obj.id, self.role
+                                )
+                                # Rewrite 'base' config param
+                                repo_obj.base = ref
+                        else:
+                            repo_obj.saltenv_revmap.setdefault(
+                                ref, []).append(saltenv)
+
+                # Build list of all envs defined by ref mappings in the
+                # per-remote 'saltenv' param. We won't add any matching envs
+                # from the global saltenv map to the revmap.
+                all_envs = []
+                for env_names in six.itervalues(repo_obj.saltenv_revmap):
+                    all_envs.extend(env_names)
+
+                # Add the global saltenv map to the reverse map, skipping envs
+                # explicitly mapped in the per-remote 'saltenv' param.
+                for key, conf in six.iteritems(repo_obj.global_saltenv):
+                    if key not in all_envs and 'ref' in conf:
+                        repo_obj.saltenv_revmap.setdefault(
+                            conf['ref'], []).append(key)
+
                 self.remotes.append(repo_obj)
+        repo_obj.mountpoint('frap')
 
         # Don't allow collisions in cachedir naming
         cachedir_map = {}
@@ -2615,16 +2760,30 @@ class GitFS(GitBase):
                 os.makedirs(hashdir)
 
         for repo in self.remotes:
-            if repo.mountpoint \
-                    and not path.startswith(repo.mountpoint + os.path.sep):
+            if repo.mountpoint(tgt_env) \
+                    and not path.startswith(repo.mountpoint(tgt_env) + os.sep):
                 continue
-            repo_path = path[len(repo.mountpoint):].lstrip(os.path.sep)
-            if repo.root:
-                repo_path = salt.utils.path_join(repo.root, repo_path)
+            repo_path = path[len(repo.mountpoint(tgt_env)):].lstrip(os.sep)
+            if repo.root(tgt_env):
+                repo_path = salt.utils.path_join(repo.root(tgt_env), repo_path)
 
-            blob, blob_hexsha = repo.find_file(repo_path, tgt_env)
+            blob, blob_hexsha, blob_mode = repo.find_file(repo_path, tgt_env)
             if blob is None:
                 continue
+
+            def _add_file_stat(fnd, mode):
+                '''
+                Add a the mode to the return dict. In other fileserver backends
+                we stat the file to get its mode, and add the stat result
+                (passed through list() for better serialization) to the 'stat'
+                key in the return dict. However, since we aren't using the
+                stat result for anything but the mode at this time, we can
+                avoid unnecessary work by just manually creating the list and
+                not running an os.stat() on all files in the repo.
+                '''
+                if mode is not None:
+                    fnd['stat'] = [mode]
+                return fnd
 
             salt.fileserver.wait_lock(lk_fn, dest)
             if os.path.isfile(blobshadest) and os.path.isfile(dest):
@@ -2633,7 +2792,7 @@ class GitFS(GitBase):
                     if sha == blob_hexsha:
                         fnd['rel'] = path
                         fnd['path'] = dest
-                        return fnd
+                        return _add_file_stat(fnd, blob_mode)
             with salt.utils.fopen(lk_fn, 'w+') as fp_:
                 fp_.write('')
             for filename in glob.glob(hashes_glob):
@@ -2651,7 +2810,7 @@ class GitFS(GitBase):
                 pass
             fnd['rel'] = path
             fnd['path'] = dest
-            return fnd
+            return _add_file_stat(fnd, blob_mode)
 
         # No matching file was found in tgt_env. Return a dict with empty paths
         # so the calling function knows the file could not be found.
@@ -2663,11 +2822,12 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Carbon.'
-            )
-            load['saltenv'] = load.pop('env')
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
 
         ret = {'data': '',
                'dest': ''}
@@ -2699,14 +2859,15 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Carbon.'
-            )
-            load['saltenv'] = load.pop('env')
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
 
         if not all(x in load for x in ('path', 'saltenv')):
-            return ''
+            return '', None
         ret = {'hash_type': self.opts['hash_type']}
         relpath = fnd['rel']
         path = fnd['path']
@@ -2732,11 +2893,12 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Carbon.'
-            )
-            load['saltenv'] = load.pop('env')
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
 
         if not os.path.isdir(self.file_list_cachedir):
             try:
@@ -2805,11 +2967,12 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Carbon.'
-            )
-            load['saltenv'] = load.pop('env')
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
 
         if not salt.utils.is_hex(load['saltenv']) \
                 and load['saltenv'] not in self.envs():

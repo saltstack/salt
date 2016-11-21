@@ -204,8 +204,7 @@ would be passed on the command line.
 run_run_plus
 ~~~~~~~~~~~~
 
-Execute Salt run and the salt run function and return the data from
-each in a dict.
+Execute the runner function the and return the return data and output in a dict
 
 run_salt
 ~~~~~~~~
@@ -361,6 +360,29 @@ Testing salt-ssh functionality can be done using the SSHCase test class:
         cmd = self.run_function('grains.get', ['id'])
         self.assertEqual(cmd, 'localhost')
 
+
+Testing Event System via SaltMinionEventAssertsMixin
+----------------------------------------------------
+
+The fundamentially asynchronous nature of Salt makes testing the event system a challenge.
+The ``SaltMinionEventAssertsMixin`` provides a facility for testing that events were received
+on a minion event bus.
+
+.. code-block:: python
+
+    import integration
+
+    class TestEvent(integration.SaltEventAssertsMixin):
+        '''
+        Example test of firing an event and receiving it
+        '''
+
+        def test_event(self):
+            e = salt.utils.event.get_event('minion', sock_dir=self.minion_opts['sock_dir'], opts=self.minion_opts)
+
+            e.fire_event({'a': 'b'}, '/test_event')
+
+            self.assertMinionEventReceived({'a': 'b'})
 
 
 Syndic Example via SyndicCase

@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
+from salt.exceptions import SaltInvocationError
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
@@ -206,7 +207,7 @@ class DockerngTestCase(TestCase):
         protocol declaration passed as tuple. As stated by docker-py
         documentation
 
-        https://docker-py.readthedocs.org/en/latest/port-bindings/
+        https://docker-py.readthedocs.io/en/latest/port-bindings/
 
         In sls:
 
@@ -568,7 +569,7 @@ class DockerngTestCase(TestCase):
                                'result': True,
                                })
 
-    def test_running_discard_wrong_environemnt_values(self):
+    def test_running_discard_wrong_environment_values(self):
         '''
         environment values should be string.
         It is easy to write wrong sls this way
@@ -1083,6 +1084,21 @@ class DockerngTestCase(TestCase):
                                            name='cont',
                                            client_timeout=60)
 
+    def test_validate_input_min_docker_py(self):
+        docker_mock = Mock()
+        docker_mock.version_info = (1, 0, 0)
+        dockerng_mod.docker = None
+        with patch.dict(dockerng_mod.VALID_CREATE_OPTS['command'],
+                        {'path': 'Config:Cmd',
+                         'image_path': 'Config:Cmd',
+                         'min_docker_py': (999, 0, 0)}):
+            with patch.object(dockerng_mod, 'docker', docker_mock):
+                self.assertRaisesRegexp(SaltInvocationError,
+                                        "The 'command' parameter requires at"
+                                        " least docker-py 999.0.0.*$",
+                                        dockerng_state._validate_input,
+                                        {'command': 'echo boom'})
+
     def test_command_defined_on_image_layer_dont_diff_if_attempted_to_blank(self):
         '''
         Assuming the docker image has a command defined, like ``sh``.
@@ -1182,6 +1198,7 @@ class DockerngTestCase(TestCase):
                                'changes': {},
                                'result': True,
                                })
+
 
 if __name__ == '__main__':
     from integration import run_tests

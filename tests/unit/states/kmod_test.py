@@ -158,7 +158,7 @@ class KmodTestCase(TestCase):
         mock_mod_list = MagicMock(return_value=mods)
         with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
             with patch.dict(kmod.__opts__, {'test': True}):
-                comment = 'Kernel modules {0} are set to be removed'.format(', '.join(mods))
+                comment = 'Kernel modules {0} are set to be removed'.format(', '.join(sorted(mods)))
                 ret.update({'comment': comment, 'result': None})
                 self.assertDictEqual(kmod.absent(name, mods=mods), ret)
 

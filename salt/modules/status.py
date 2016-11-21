@@ -27,7 +27,6 @@ import salt.utils.event
 from salt.utils.network import host_to_ips as _host_to_ips
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
-from salt.utils.decorators import with_deprecated
 from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'status'
@@ -132,67 +131,74 @@ def custom():
     return ret
 
 
-@with_deprecated(globals(), "Carbon")
 def uptime():
     '''
     Return the uptime for this system.
 
+    .. versionchanged:: 2015.8.9
+        The uptime function was changed to return a dictionary of easy-to-read
+        key/value pairs containing uptime information, instead of the output
+        from a ``cmd.run`` call.
+
+    .. versionchanged:: 2016.11.0
+        Support for OpenBSD, FreeBSD, NetBSD, MacOS, and Solaris
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' status.uptime
     '''
-    ut_ret = {'seconds': 0}
+    curr_seconds = time.time()
+
+    # Get uptime in seconds
     if salt.utils.is_linux():
         ut_path = "/proc/uptime"
         if not os.path.exists(ut_path):
             raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
-        ut_ret['seconds'] = int(float(open(ut_path).read().strip().split()[0]))
+        seconds = int(float(salt.utils.fopen(ut_path).read().split()[0]))
     elif salt.utils.is_sunos():
-        cmd = "kstat -p unix:0:system_misc:boot_time | nawk '{printf \"%d\\n\", srand()-$2}'"
-        ut_ret['seconds'] = int(__salt__['cmd.shell'](cmd, output_loglevel='trace').strip() or 0)
+        # note: some flavors/vesions report the host uptime inside a zone
+        #       https://support.oracle.com/epmos/faces/BugDisplay?id=15611584
+        res = __salt__['cmd.run_all']('kstat -p unix:0:system_misc:boot_time')
+        if res['retcode'] > 0:
+            raise CommandExecutionError('The boot_time kstat was not found.')
+        seconds = int(curr_seconds - int(res['stdout'].split()[-1]))
+    elif salt.utils.is_openbsd() or salt.utils.is_netbsd():
+        bt_data = __salt__['sysctl.get']('kern.boottime')
+        if not bt_data:
+            raise CommandExecutionError('Cannot find kern.boottime system parameter')
+        seconds = int(curr_seconds - int(bt_data))
+    elif salt.utils.is_freebsd() or salt.utils.is_darwin():
+        # format: { sec = 1477761334, usec = 664698 } Sat Oct 29 17:15:34 2016
+        bt_data = __salt__['sysctl.get']('kern.boottime')
+        if not bt_data:
+            raise CommandExecutionError('Cannot find kern.boottime system parameter')
+        data = bt_data.split("{")[-1].split("}")[0].strip().replace(' ', '')
+        uptime = dict([(k, int(v,)) for k, v in [p.strip().split('=') for p in data.split(',')]])
+        seconds = int(curr_seconds - uptime['sec'])
     else:
-        raise CommandExecutionError('This platform is not supported')
+        return __salt__['cmd.run']('uptime')
 
-    utc_time = datetime.datetime.utcfromtimestamp(time.time() - ut_ret['seconds'])
-    ut_ret['since_iso'] = utc_time.isoformat()
-    ut_ret['since_t'] = time.mktime(utc_time.timetuple())
-    ut_ret['days'] = ut_ret['seconds'] / 60 / 60 / 24
-    hours = (ut_ret['seconds'] - (ut_ret['days'] * 24 * 60 * 60)) / 60 / 60
-    minutes = ((ut_ret['seconds'] - (ut_ret['days'] * 24 * 60 * 60)) / 60) - hours * 60
-    ut_ret['time'] = '{0}:{1}'.format(hours, minutes)
-    ut_ret['users'] = len(__salt__['cmd.run']("who -s").split(os.linesep))
+    # Setup datetime and timedelta objects
+    boot_time = datetime.datetime.utcfromtimestamp(curr_seconds - seconds)
+    curr_time = datetime.datetime.utcfromtimestamp(curr_seconds)
+    up_time = curr_time - boot_time
+
+    # Construct return information
+    ut_ret = {
+        'seconds': seconds,
+        'since_iso': boot_time.isoformat(),
+        'since_t': int(curr_seconds - seconds),
+        'days': up_time.days,
+        'time': '{0}:{1}'.format(up_time.seconds // 3600, up_time.seconds % 3600 // 60),
+    }
+
+    if salt.utils.which('who'):
+        who_cmd = 'who' if salt.utils.is_openbsd() else 'who -s'  # OpenBSD does not support -s
+        ut_ret['users'] = len(__salt__['cmd.run'](who_cmd).split(os.linesep))
 
     return ut_ret
-
-
-def _uptime(human_readable=True):
-    '''
-    Return the uptime for this minion
-
-    human_readable: True
-        If ``True`` return the output provided by the system.  If ``False``
-        return the output in seconds.
-
-        .. versionadded:: 2015.8.4
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' status.uptime
-    '''
-    if human_readable:
-        return __salt__['cmd.run']('uptime')
-    else:
-        if os.path.exists('/proc/uptime'):
-            out = __salt__['cmd.run']('cat /proc/uptime').split()
-            if len(out):
-                return out[0]
-            else:
-                return 'unexpected format in /proc/uptime'
-        return 'cannot find /proc/uptime'
 
 
 def loadavg():
@@ -603,10 +609,10 @@ def diskusage(*args):
                     ifile = fp_.read().splitlines()
             except OSError:
                 return {}
-        elif __grains__['kernel'] == 'FreeBSD':
+        elif __grains__['kernel'] in ('FreeBSD', 'SunOS'):
             ifile = __salt__['cmd.run']('mount -p').splitlines()
-        elif __grains__['kernel'] == 'SunOS':
-            ifile = __salt__['cmd.run']('mount -p').splitlines()
+        else:
+            ifile = []
 
         for line in ifile:
             comps = line.split()
@@ -949,7 +955,7 @@ def all_status():
             'meminfo': meminfo(),
             'netdev': netdev(),
             'netstats': netstats(),
-            'uptime': uptime() if not __grains__['kernel'] == 'SunOS' else _uptime(),
+            'uptime': uptime(),
             'vmstats': vmstats(),
             'w': w()}
 
@@ -1017,10 +1023,10 @@ def master(master=None, connected=True):
     '''
     .. versionadded:: 2014.7.0
 
-    Fire an event if the minion gets disconnected from its master. This
-    function is meant to be run via a scheduled job from the minion. If
-    master_ip is an FQDN/Hostname, it must be resolvable to a valid IPv4
-    address.
+    Return the connection status with master. Fire an event if the
+    connection to master is not as expected. This function is meant to be
+    run via a scheduled job from the minion. If master_ip is an FQDN/Hostname,
+    it must be resolvable to a valid IPv4 address.
 
     CLI Example:
 
@@ -1053,16 +1059,18 @@ def master(master=None, connected=True):
     if master_connection_status is not connected:
         event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
         if master_connection_status:
-            event.fire_event({'master': master}, '__master_connected')
+            event.fire_event({'master': master}, salt.minion.master_event(type='connected'))
         else:
-            event.fire_event({'master': master}, '__master_disconnected')
+            event.fire_event({'master': master}, salt.minion.master_event(type='disconnected'))
+
+    return master_connection_status
 
 
 def ping_master(master):
     '''
     .. versionadded:: 2016.3.0
 
-    Sends ping request to the given master. Fires '__master_alive' event on success.
+    Sends ping request to the given master. Fires '__master_failback' event on success.
     Returns bool result.
 
     CLI Example:
@@ -1097,7 +1105,7 @@ def ping_master(master):
 
     if result:
         event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-        event.fire_event({'master': master}, '__master_failback')
+        event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
 
     return result
 

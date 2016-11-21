@@ -9,7 +9,7 @@ use of private, public, and hybrid IaaS clouds.
 Dependencies
 ============
 The driver requires Python's ``lxml`` library to be installed. It also requires an OpenNebula installation running
-version ``4.12``.
+version ``4.12`` or greater.
 
 
 Configuration
@@ -160,3 +160,21 @@ The Salt Cloud driver for OpenNebula was written using OpenNebula's native XML R
 and ``--action`` calls were added to the OpenNebula driver to enhance support for an OpenNebula infrastructure with
 additional control from Salt Cloud. See the :py:mod:`OpenNebula function definitions <salt.cloud.clouds.opennebula>`
 for more information.
+
+
+Access via DNS entry instead of IP
+==================================
+Some OpenNebula installations do not assign IP addresses to new VMs, instead they establish the new VM's hostname based
+on OpenNebula's name of the VM, and then allocate an IP out of DHCP with dynamic DNS attaching the hostname.  This driver
+supports this behavior by adding the entry `fqdn_base` to the driver configuration or the OpenNebula profile with a value
+matching the base fully-qualified domain.  For example:
+
+.. code-block:: yaml
+
+    # Note: This example is for /etc/salt/cloud.providers or any file in the
+    # /etc/salt/cloud.providers.d/ directory.
+
+    my-opennebula-provider:
+      [...]
+      fqdn_base: corp.example.com
+      [...]

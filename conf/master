@@ -45,6 +45,13 @@
 # Directory used to store public key data:
 #pki_dir: /etc/salt/pki/master
 
+# Key cache. Increases master speed for large numbers of accepted
+# keys. Available options: 'sched'. (Updates on a fixed schedule.)
+# Note that enabling this feature means that minions will not be
+# available to target for up to the length of the maintanence loop
+# which by default is 60s.
+#key_cache: ''
+
 # Directory to store job and cache data:
 # This directory may contain sensitive data and should be protected accordingly.
 #
@@ -136,15 +143,15 @@
 # By default, events are not queued.
 #event_return_queue: 0
 
-# Only return events matching tags in a whitelist,
-# event_return_whitelist:
-#   - salt/master/a_tag
-#   - salt/master/another_tag
+# Only return events matching tags in a whitelist, supports glob matches.
+#event_return_whitelist:
+#  - salt/master/a_tag
+#  - salt/run/*/ret
 
-# Store all event returns _except_ the tags in a blacklist.
-# event_return_blacklist:
-#   - salt/master/not_this_tag
-#   - salt/master/or_this_one
+# Store all event returns **except** the tags in a blacklist, supports globs.
+#event_return_blacklist:
+#  - salt/master/not_this_tag
+#  - salt/wheel/*/ret
 
 # Passing very large events can cause the minion to consume large amounts of
 # memory. This value tunes the maximum size of a message allowed onto the
@@ -270,7 +277,7 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
-# Time in minutes that a incoming public key with a matching name found in
+# Time in minutes that an incoming public key with a matching name found in
 # pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
 # are removed when the master checks the minion_autosign directory.
 # 0 equals no timeout
@@ -298,7 +305,7 @@
 # This setting should be treated with care since it opens up execution
 # capabilities to non root users. By default this capability is completely
 # disabled.
-#pulisher_acl:
+#publisher_acl:
 #  larry:
 #    - test.ping
 #    - network.*
@@ -326,7 +333,7 @@
 # publisher_acl_blacklist instead.
 
 # Enforce publisher_acl & publisher_acl_blacklist when users have sudo
-# access to the salt command. 
+# access to the salt command.
 #
 #sudo_acl: False
 
@@ -339,6 +346,18 @@
 #
 # Time (in seconds) for a newly generated token to live. Default: 12 hours
 #token_expire: 43200
+#
+# Allow eauth users to specify the expiry time of the tokens they generate.
+# A boolean applies to all users or a dictionary of whitelisted eauth backends
+# and usernames may be given.
+# token_expire_user_override:
+#   pam:
+#     - fred
+#     - tom
+#   ldap:
+#     - gary
+#
+#token_expire_user_override: False
 
 # Allow minions to push files to the master. This is disabled by default, for
 # security purposes.
@@ -374,6 +393,10 @@
 # overridden on a per-minion basis in the roster (`minion_opts`)
 #ssh_minion_opts:
 #  gpg_keydir: /root/gpg
+
+# Set this to True to default to using ~/.ssh/id_rsa for salt-ssh
+# authentication with minions
+#ssh_use_home_key: False
 
 #####    Master Module Management    #####
 ##########################################
@@ -503,12 +526,12 @@
 # the master server. The default is md5 but sha1, sha224, sha256, sha384
 # and sha512 are also supported.
 #
-# WARNING: While md5 is supported, do not use it due to the high chance
+# WARNING: While md5 is also supported, do not use it due to the high chance
 # of possible collisions and thus security breach.
 #
-# Prior to changing this value, the master should be stopped and all Salt 
+# Prior to changing this value, the master should be stopped and all Salt
 # caches should be cleared.
-#hash_type: md5
+#hash_type: sha256
 
 # The buffer size in the file server can be adjusted here:
 #file_buffer_size: 1048576
@@ -583,20 +606,20 @@
 # Along with gitfs_password, is used to authenticate to HTTPS remotes.
 # gitfs_user: ''
 
-# Along with gitfs_user, is used to authenticate to HTTPS remotes. 
+# Along with gitfs_user, is used to authenticate to HTTPS remotes.
 # This parameter is not required if the repository does not use authentication.
 #gitfs_password: ''
 
-# By default, Salt will not authenticate to an HTTP (non-HTTPS) remote. 
+# By default, Salt will not authenticate to an HTTP (non-HTTPS) remote.
 # This parameter enables authentication over HTTP. Enable this at your own risk.
 #gitfs_insecure_auth: False
 
-# Along with gitfs_privkey (and optionally gitfs_passphrase), is used to 
+# Along with gitfs_privkey (and optionally gitfs_passphrase), is used to
 # authenticate to SSH remotes. This parameter (or its per-remote counterpart)
 # is required for SSH remotes.
 #gitfs_pubkey: ''
 
-# Along with gitfs_pubkey (and optionally gitfs_passphrase), is used to 
+# Along with gitfs_pubkey (and optionally gitfs_passphrase), is used to
 # authenticate to SSH remotes. This parameter (or its per-remote counterpart)
 # is required for SSH remotes.
 #gitfs_privkey: ''
@@ -682,6 +705,11 @@
 # Recursively merge lists by aggregating them instead of replacing them.
 #pillar_merge_lists: False
 
+# Set this option to 'True' to force a 'KeyError' to be raised whenever an
+# attempt to retrieve a named value from pillar fails. When this option is set
+# to 'False', the failed attempt returns an empty string. Default is 'False'.
+#pillar_raise_on_missing: False
+
 # Git External Pillar (git_pillar) Configuration Options
 #
 # Specify the provider to be used for git_pillar. Must be either pygit2 or
@@ -699,7 +727,7 @@
 # be used instead
 #git_pillar_branch: master
 
-# Environment to use for git_pillar remotes. This is normally derived from 
+# Environment to use for git_pillar remotes. This is normally derived from
 # the branch/tag (or from a per-remote env parameter), but if set this will
 # override the process of deriving the env from the branch/tag name.
 #git_pillar_env: ''
@@ -709,12 +737,12 @@
 #git_pillar_root: ''
 
 # Specifies whether or not to ignore SSL certificate errors when contacting
-# the remote repository. 
+# the remote repository.
 #git_pillar_ssl_verify: False
 
 # When set to False, if there is an update/checkout lock for a git_pillar
 # remote and the pid written to it is not running on the master, the lock
-# file will be automatically cleared and a new lock will be obtained. 
+# file will be automatically cleared and a new lock will be obtained.
 #git_pillar_global_lock: True
 
 # Git External Pillar Authentication Options
@@ -759,13 +787,13 @@
 # pillar is recompiled and stored.
 #pillar_cache_ttl: 3600
 
-# If an only if a master has set ``pillar_cache: True``, one of several storage providers
-# can be utilized:
+# If and only if a master has set `pillar_cache: True`, one of several storage providers
+# can be utililzed.
 #
-#   disk: The default storage backend. This caches rendered pillars to the master cache.
-#         Rendered pillars are serialized and deserialized as ``msgpack`` structures for
-#         speed. Note that pillars are stored UNENCRYPTED. Ensure that the master cache
-#         has permissions set appropriately (sane defaults are provided).
+# `disk`: The default storage backend. This caches rendered pillars to the master cache.
+#         Rendered pillars are serialized and deserialized as msgpack structures for speed.
+#         Note that pillars are stored UNENCRYPTED. Ensure that the master cache
+#         has permissions set appropriately. (Same defaults are provided.)
 #
 # memory: [EXPERIMENTAL] An optional backend for pillar caches which uses a pure-Python
 #         in-memory data structure for maximal performance. There are several caveats,
@@ -923,7 +951,7 @@
 #log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #
-#log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+#log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This
 # example sets the main salt library at the 'warning' level, but sets
@@ -995,9 +1023,46 @@
 # Default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
 #event_match_type: startswith
 
-# Permanently include any available Python 3rd party modules into Salt Thin
+# Save runner returns to the job cache
+#runner_returns: True
+
+# Permanently include any available Python 3rd party modules into thin and minimal Salt
 # when they are generated for Salt-SSH or other purposes.
 # The modules should be named by the names they are actually imported inside the Python.
 # The value of the parameters can be either one module or a comma separated list of them.
 #thin_extra_mods: foo,bar
+#min_extra_mods: foo,bar,baz
+
+
+######      Keepalive settings        ######
+############################################
+# Warning: Failure to set TCP keepalives on the salt-master can result in
+# not detecting the loss of a minion when the connection is lost or when
+# it's host has been terminated without first closing the socket.
+# Salt's Presence System depends on this connection status to know if a minion
+# is "present".
+# ZeroMQ now includes support for configuring SO_KEEPALIVE if supported by
+# the OS. If connections between the minion and the master pass through
+# a state tracking device such as a firewall or VPN gateway, there is
+# the risk that it could tear down the connection the master and minion
+# without informing either party that their connection has been taken away.
+# Enabling TCP Keepalives prevents this from happening.
+
+# Overall state of TCP Keepalives, enable (1 or True), disable (0 or False)
+# or leave to the OS defaults (-1), on Linux, typically disabled. Default True, enabled.
+#tcp_keepalive: True
+
+# How long before the first keepalive should be sent in seconds. Default 300
+# to send the first keepalive after 5 minutes, OS default (-1) is typically 7200 seconds
+# on Linux see /proc/sys/net/ipv4/tcp_keepalive_time.
+#tcp_keepalive_idle: 300
+
+# How many lost probes are needed to consider the connection lost. Default -1
+# to use OS defaults, typically 9 on Linux, see /proc/sys/net/ipv4/tcp_keepalive_probes.
+#tcp_keepalive_cnt: -1
+
+# How often, in seconds, to send keepalives after the first one. Default -1 to
+# use OS defaults, typically 75 seconds on Linux, see
+# /proc/sys/net/ipv4/tcp_keepalive_intvl.
+#tcp_keepalive_intvl: -1
 

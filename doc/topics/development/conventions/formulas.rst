@@ -788,10 +788,9 @@ service/software/etc, managed by the formula:
 
 .. code-block:: yaml
 
-mysql:
-  lookup:
-    version: 5.7.11
-    ...
+    mysql:
+      lookup:
+        version: 5.7.11
 
 Collecting common values
 ````````````````````````
@@ -799,7 +798,7 @@ Collecting common values
 Common values can be collected into a *base* dictionary.  This
 minimizes repetition of identical values in each of the
 ``lookup_dict`` sub-dictionaries.  Now only the values that are
-different from the base must be specified of the alternates:
+different from the base must be specified by the alternates:
 
 :file:`map.jinja`:
 
@@ -827,7 +826,7 @@ different from the base must be specified of the alternates:
             'python': 'dev-python/mysql-python',
         },
     },
-    merge=salt['pillar.get']('mysql:lookup', default='default') %}
+    merge=salt['pillar.get']('mysql:lookup'), base='default') %}
 
 
 Overriding values in the lookup table
@@ -1163,7 +1162,7 @@ Pillar overrides
 
 Pillar lookups must use the safe :py:func:`~salt.modules.pillar.get`
 and must provide a default value. Create local variables using the Jinja
-``set`` construct to increase redability and to avoid potentially hundreds or
+``set`` construct to increase readability and to avoid potentially hundreds or
 thousands of function calls across a large state tree.
 
 .. code-block:: jinja

@@ -5,6 +5,7 @@ Execute puppet routines
 
 # Import python libs
 from __future__ import absolute_import
+from distutils import version  # pylint: disable=no-name-in-module
 import logging
 import os
 import datetime
@@ -64,10 +65,17 @@ class _Puppet(object):
             self.vardir = 'C:\\ProgramData\\PuppetLabs\\puppet\\var'
             self.rundir = 'C:\\ProgramData\\PuppetLabs\\puppet\\run'
             self.confdir = 'C:\\ProgramData\\PuppetLabs\\puppet\\etc'
+            self.useshell = True
         else:
-            if 'Enterprise' in __salt__['cmd.run']('puppet --version'):
+            self.useshell = False
+            self.puppet_version = __salt__['cmd.run']('puppet --version')
+            if 'Enterprise' in self.puppet_version:
                 self.vardir = '/var/opt/lib/pe-puppet'
                 self.rundir = '/var/opt/run/pe-puppet'
+                self.confdir = '/etc/puppetlabs/puppet'
+            elif self.puppet_version != [] and version.StrictVersion(self.puppet_version) >= version.StrictVersion('4.0.0'):
+                self.vardir = '/opt/puppetlabs/puppet/cache'
+                self.rundir = '/var/run/puppetlabs'
                 self.confdir = '/etc/puppetlabs/puppet'
             else:
                 self.vardir = '/var/lib/puppet'
@@ -158,7 +166,7 @@ def run(*args, **kwargs):
 
     puppet.kwargs.update(salt.utils.clean_kwargs(**kwargs))
 
-    ret = __salt__['cmd.run_all'](repr(puppet), python_shell=False)
+    ret = __salt__['cmd.run_all'](repr(puppet), python_shell=puppet.useshell)
     if ret['retcode'] in [0, 2]:
         ret['retcode'] = 0
     else:

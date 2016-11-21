@@ -236,6 +236,155 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
+def group_list():
+    '''
+    .. versionadded:: 2016.11.0
+
+    Lists all groups known by pacman on this system
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.group_list
+    '''
+
+    ret = {'installed': [],
+        'partially_installed': [],
+        'available': []}
+
+    # find out what's available
+
+    cmd = ['pacman', '-Sgg']
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+
+    available = {}
+
+    for line in salt.utils.itertools.split(out, '\n'):
+        if not line:
+            continue
+        try:
+            group, pkg = line.split()[0:2]
+        except ValueError:
+            log.error('Problem parsing pacman -Sgg: Unexpected formatting in '
+                      'line: \'{0}\''.format(line))
+        else:
+            available.setdefault(group, []).append(pkg)
+
+    # now get what's installed
+
+    cmd = ['pacman', '-Qg']
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    installed = {}
+    for line in salt.utils.itertools.split(out, '\n'):
+        if not line:
+            continue
+        try:
+            group, pkg = line.split()[0:2]
+        except ValueError:
+            log.error('Problem parsing pacman -Qg: Unexpected formatting in '
+                      'line: \'{0}\''.format(line))
+        else:
+            installed.setdefault(group, []).append(pkg)
+
+    # move installed and partially-installed items from available to appropriate other places
+
+    for group in installed:
+        if group not in available:
+            log.error('Pacman reports group {0} installed, but it is not in the available list ({1})!'.format(group, available))
+            continue
+        if len(installed[group]) == len(available[group]):
+            ret['installed'].append(group)
+        else:
+            ret['partially_installed'].append(group)
+        available.pop(group)
+
+    ret['installed'].sort()
+    ret['partially_installed'].sort()
+
+    # Now installed and partially installed are set, whatever is left is the available list.
+    # In Python 3, .keys() returns an iterable view instead of a list. sort() cannot be
+    # called on views. Use sorted() instead. Plus it's just as efficient as sort().
+    ret['available'] = sorted(available.keys())
+
+    return ret
+
+
+def group_info(name):
+    '''
+    .. versionadded:: 2016.11.0
+
+    Lists all packages in the specified group
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.group_info 'xorg'
+    '''
+
+    pkgtypes = ('mandatory', 'optional', 'default', 'conditional')
+    ret = {}
+    for pkgtype in pkgtypes:
+        ret[pkgtype] = set()
+
+    cmd = ['pacman', '-Sgg', name]
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+
+    for line in salt.utils.itertools.split(out, '\n'):
+        if not line:
+            continue
+        try:
+            pkg = line.split()[1]
+        except ValueError:
+            log.error('Problem parsing pacman -Sgg: Unexpected formatting in '
+                      'line: \'{0}\''.format(line))
+        else:
+            ret['default'].add(pkg)
+
+    for pkgtype in pkgtypes:
+        ret[pkgtype] = sorted(ret[pkgtype])
+
+    return ret
+
+
+def group_diff(name):
+
+    '''
+    .. versionadded:: 2016.11.0
+
+    Lists which of a group's packages are installed and which are not
+    installed
+
+    Compatible with yumpkg.group_diff for easy support of state.pkg.group_installed
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.group_diff 'xorg'
+    '''
+
+    # Use a compatible structure with yum, so we can leverage the existing state.group_installed
+    # In pacmanworld, everything is the default, but nothing is mandatory
+
+    pkgtypes = ('mandatory', 'optional', 'default', 'conditional')
+    ret = {}
+    for pkgtype in pkgtypes:
+        ret[pkgtype] = {'installed': [], 'not installed': []}
+
+    # use indirect references to simplify unit testing
+    pkgs = __salt__['pkg.list_pkgs']()
+    group_pkgs = __salt__['pkg.group_info'](name)
+    for pkgtype in pkgtypes:
+        for member in group_pkgs.get(pkgtype, []):
+            if member in pkgs:
+                ret[pkgtype]['installed'].append(member)
+            else:
+                ret[pkgtype]['not installed'].append(member)
+    return ret
+
+
 def refresh_db(root=None):
     '''
     Just run a ``pacman -Sy``, return a dict::
@@ -289,7 +438,7 @@ def install(name=None,
             sources=None,
             **kwargs):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -452,7 +601,7 @@ def install(name=None,
 
 def upgrade(refresh=False, root=None, **kwargs):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -471,10 +620,13 @@ def upgrade(refresh=False, root=None, **kwargs):
     refresh
         Whether or not to refresh the package database before installing.
 
-    Return a dict containing the new package names and versions::
+    Returns a dictionary containing the changes:
 
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
 
     CLI Example:
 
@@ -499,19 +651,18 @@ def upgrade(refresh=False, root=None, **kwargs):
     if root is not None:
         cmd.extend(('-r', root))
 
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False,
-                                   redirect_stderr=True)
-
-    if call['retcode'] != 0:
-        ret['result'] = False
-        if call['stdout']:
-            ret['comment'] = call['stdout']
-
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
 
     return ret
 
@@ -569,7 +720,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
 
 def remove(name=None, pkgs=None, **kwargs):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -613,7 +764,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
 def purge(name=None, pkgs=None, **kwargs):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd

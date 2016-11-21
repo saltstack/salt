@@ -15,9 +15,9 @@ index cfafe24..d581916 100644
 @@ -47,7 +47,7 @@ def __virtual__():
      if __grains__['kernel'] != 'Linux':
          return False
-     # Suse >=12.0 uses systemd
+     # SUSE >=12.0 uses systemd
 -    if __grains__.get('os', '') == 'openSUSE':
-+    if __grains__.get('os_family', '') == 'Suse':
++    if __grains__.get('os_family', '') == 'SUSE':
          try:
              if int(__grains__.get('osrelease', '').split('.')[0]) >= 12:
                  return False

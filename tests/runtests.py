@@ -22,6 +22,12 @@ if not salt.utils.is_windows():
 # Import Salt Testing libs
 from salttesting.parser import PNUM, print_header
 from salttesting.parser.cover import SaltCoverageTestingParser
+try:
+    from salttesting.helpers import terminate_process_pid
+    RUNTESTS_WITH_HARD_KILL = True
+except ImportError:
+    from integration import terminate_process_pid
+    RUNTESTS_WITH_HARD_KILL = False
 
 XML_OUTPUT_DIR = os.environ.get(
     'SALT_XML_TEST_REPORTS_DIR',
@@ -51,11 +57,99 @@ MAX_OPEN_FILES = {
     },
 }
 
+# Combine info from command line options and test suite directories.  A test
+# suite is a python package of test modules relative to the tests directory.
+TEST_SUITES = {
+    'unit':
+       {'display_name': 'Unit',
+        'path': 'unit'},
+    'module':
+       {'display_name': 'Module',
+        'path': 'integration/modules'},
+    'state':
+       {'display_name': 'State',
+        'path': 'integration/states'},
+    'cli':
+       {'display_name': 'CLI',
+        'path': 'integration/cli'},
+    'client':
+       {'display_name': 'Client',
+        'path': 'integration/client'},
+    'shell':
+       {'display_name': 'Shell',
+        'path': 'integration/shell'},
+    'runners':
+       {'display_name': 'Runners',
+        'path': 'integration/runners'},
+    'renderers':
+       {'display_name': 'Renderers',
+        'path': 'integration/renderers'},
+    'returners':
+        {'display_name': 'Returners',
+         'path': 'integration/returners'},
+    'loader':
+       {'display_name': 'Loader',
+        'path': 'integration/loader'},
+    'outputter':
+       {'display_name': 'Outputter',
+        'path': 'integration/output'},
+    'fileserver':
+       {'display_name': 'Fileserver',
+        'path': 'integration/fileserver'},
+    'wheel':
+       {'display_name': 'Wheel',
+        'path': 'integration/wheel'},
+    'api':
+       {'display_name': 'NetAPI',
+        'path': 'integration/netapi'},
+    'cloud_provider':
+       {'display_name': 'Cloud Provider',
+        'path': 'integration/cloud/providers'},
+    'minion':
+        {'display_name': 'Minion',
+         'path': 'integration/minion'},
+    'reactor':
+        {'display_name': 'Reactor',
+         'path': 'integration/reactor'},
+}
+
 
 class SaltTestsuiteParser(SaltCoverageTestingParser):
     support_docker_execution = True
     support_destructive_tests_selection = True
     source_code_basedir = SALT_ROOT
+
+    def _get_suites(self, include_unit=False, include_cloud_provider=False):
+        '''
+        Return a set of all test suites except unit and cloud provider tests
+        unless requested
+        '''
+        suites = set(TEST_SUITES.keys())
+        if not include_unit:
+            suites -= set(['unit'])
+        if not include_cloud_provider:
+            suites -= set(['cloud_provider'])
+
+        return suites
+
+    def _check_enabled_suites(self, include_unit=False, include_cloud_provider=False):
+        '''
+        Query whether test suites have been enabled
+        '''
+        suites = self._get_suites(include_unit=include_unit,
+                                  include_cloud_provider=include_cloud_provider)
+
+        return any([getattr(self.options, suite) for suite in suites])
+
+    def _enable_suites(self, include_unit=False, include_cloud_provider=False):
+        '''
+        Enable test suites for current test run
+        '''
+        suites = self._get_suites(include_unit=include_unit,
+                                  include_cloud_provider=include_cloud_provider)
+
+        for suite in suites:
+            setattr(self.options, suite, True)
 
     def setup_additional_options(self):
         self.add_option(
@@ -76,6 +170,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Do not run any tests. Simply start the daemons.'
+        )
+        self.output_options_group.add_option(
+            '--no-colors',
+            '--no-colours',
+            default=False,
+            action='store_true',
+            help='Disable colour printing.'
         )
 
         self.test_selection_group.add_option(
@@ -126,6 +227,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.test_selection_group.add_option(
             '-s',
             '--shell',
+            '--shell-tests',
             dest='shell',
             default=False,
             action='store_true',
@@ -134,6 +236,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.test_selection_group.add_option(
             '-r',
             '--runners',
+            '--runner-tests',
             dest='runners',
             default=False,
             action='store_true',
@@ -142,10 +245,18 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.test_selection_group.add_option(
             '-R',
             '--renderers',
+            '--renderer-tests',
             dest='renderers',
             default=False,
             action='store_true',
             help='Run salt/renderers/*.py tests'
+        )
+        self.test_selection_group.add_option(
+            '--reactor',
+            dest='reactor',
+            default=False,
+            action='store_true',
+            help='Run salt/reactor/*.py tests'
         )
         self.test_selection_group.add_option(
             '--minion',
@@ -165,6 +276,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.test_selection_group.add_option(
             '-l',
             '--loader',
+            '--loader-tests',
+            dest='loader',
             default=False,
             action='store_true',
             help='Run loader tests'
@@ -179,6 +292,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run unit tests'
         )
         self.test_selection_group.add_option(
+            '--fileserver',
             '--fileserver-tests',
             dest='fileserver',
             default=False,
@@ -188,6 +302,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.test_selection_group.add_option(
             '-w',
             '--wheel',
+            '--wheel-tests',
+            dest='wheel',
             action='store_true',
             default=False,
             help='Run wheel tests'
@@ -195,12 +311,16 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.test_selection_group.add_option(
             '-o',
             '--outputter',
+            '--outputter-tests',
+            dest='outputter',
             action='store_true',
             default=False,
             help='Run outputter tests'
         )
         self.test_selection_group.add_option(
+            '--cloud-provider',
             '--cloud-provider-tests',
+            dest='cloud_provider',
             action='store_true',
             default=False,
             help=('Run cloud provider tests. These tests create and delete '
@@ -209,6 +329,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         )
         self.test_selection_group.add_option(
             '--ssh',
+            '--ssh-tests',
+            dest='ssh',
             action='store_true',
             default=False,
             help='Run salt-ssh tests. These tests will spin up a temporary '
@@ -217,45 +339,24 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         )
         self.test_selection_group.add_option(
             '-A',
+            '--api',
             '--api-tests',
             dest='api',
             action='store_true',
             default=False,
             help='Run salt-api tests'
         )
-        self.output_options_group.add_option(
-            '--no-colors',
-            '--no-colours',
-            default=False,
-            action='store_true',
-            help='Disable colour printing.'
-        )
 
     def validate_options(self):
-        if self.options.cloud_provider_tests:
+        if self.options.cloud_provider:
             # Turn on expensive tests execution
             os.environ['EXPENSIVE_TESTS'] = 'True'
 
         if self.options.coverage and any((
-                self.options.module,
-                self.options.cli,
-                self.options.client,
-                self.options.grains,
-                self.options.shell,
-                self.options.unit,
-                self.options.state,
-                self.options.runners,
-                self.options.renderers,
-                self.options.returners,
-                self.options.loader,
-                self.options.name,
-                self.options.outputter,
-                self.options.fileserver,
-                self.options.wheel,
-                self.options.api,
-                self.options.minion,
-                os.geteuid() != 0,
-                not self.options.run_destructive)):
+                    self.options.name,
+                    os.geteuid() != 0,
+                    not self.options.run_destructive)) \
+                and self._check_enabled_suites(include_unit=True):
             self.error(
                 'No sense in generating the tests coverage report when '
                 'not running the full test suite, including the '
@@ -263,34 +364,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 'incorrect results.'
             )
 
-        # Set test suite defaults if no specific suite options are provided
-        if not any((self.options.module, self.options.cli, self.options.client,
-                    self.options.grains, self.options.shell, self.options.unit,
-                    self.options.state, self.options.runners,
-                    self.options.loader, self.options.name,
-                    self.options.outputter, self.options.cloud_provider_tests,
-                    self.options.fileserver,
-                    self.options.wheel,
-                    self.options.api,
-                    self.options.minion,
-                    self.options.returners,
-                    self.options.renderers)):
-            self.options.module = True
-            self.options.cli = True
-            self.options.client = True
-            self.options.grains = True
-            self.options.shell = True
-            self.options.unit = True
-            self.options.runners = True
-            self.options.renderers = True
-            self.options.returners = True
-            self.options.state = True
-            self.options.loader = True
-            self.options.outputter = True
-            self.options.fileserver = True
-            self.options.wheel = True
-            self.options.api = True
-            self.options.minion = True
+        # When no tests are specifically enumerated on the command line, setup
+        # a default run: +unit -cloud_provider
+        if not self.options.name and not \
+                self._check_enabled_suites(include_unit=True, include_cloud_provider=True):
+            self._enable_suites(include_unit=True)
 
         self.start_coverage(
             branch=True,
@@ -305,12 +383,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if self.options.clean:
             TestDaemon.clean()
 
-    def run_integration_suite(self, suite_folder, display_name):
+    def run_integration_suite(self, path='', display_name=''):
         '''
         Run an integration test suite
         '''
-        path = os.path.join(TEST_DIR, 'integration', suite_folder)
-        return self.run_suite(path, display_name)
+        full_path = os.path.join(TEST_DIR, path)
+        return self.run_suite(full_path, display_name)
 
     def start_daemons_only(self):
         if not salt.utils.is_windows():
@@ -327,13 +405,20 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             print_header(' * Salt daemons started')
             master_conf = TestDaemon.config('master')
             minion_conf = TestDaemon.config('minion')
+            sub_minion_conf = TestDaemon.config('sub_minion')
             syndic_conf = TestDaemon.config('syndic')
             syndic_master_conf = TestDaemon.config('syndic_master')
 
-            print_header(' * Syndic master configuration values', top=False)
+            print_header(' * Syndic master configuration values (MoM)', top=False)
             print('interface: {0}'.format(syndic_master_conf['interface']))
             print('publish port: {0}'.format(syndic_master_conf['publish_port']))
             print('return port: {0}'.format(syndic_master_conf['ret_port']))
+            print('\n')
+
+            print_header(' * Syndic configuration values', top=True)
+            print('interface: {0}'.format(syndic_conf['interface']))
+            print('syndic master: {0}'.format(syndic_conf['syndic_master']))
+            print('syndic master port: {0}'.format(syndic_conf['syndic_master_port']))
             print('\n')
 
             print_header(' * Master configuration values', top=True)
@@ -344,15 +429,24 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
             print_header(' * Minion configuration values', top=True)
             print('interface: {0}'.format(minion_conf['interface']))
+            print('master: {0}'.format(minion_conf['master']))
+            print('master port: {0}'.format(minion_conf['master_port']))
+            if minion_conf['ipc_mode'] == 'tcp':
+                print('tcp pub port: {0}'.format(minion_conf['tcp_pub_port']))
+                print('tcp pull port: {0}'.format(minion_conf['tcp_pull_port']))
             print('\n')
 
-            print_header(' * Syndic configuration values', top=True)
-            print('interface: {0}'.format(syndic_conf['interface']))
-            print('syndic master port: {0}'.format(syndic_conf['syndic_master']))
+            print_header(' * Sub Minion configuration values', top=True)
+            print('interface: {0}'.format(sub_minion_conf['interface']))
+            print('master: {0}'.format(sub_minion_conf['master']))
+            print('master port: {0}'.format(sub_minion_conf['master_port']))
+            if sub_minion_conf['ipc_mode'] == 'tcp':
+                print('tcp pub port: {0}'.format(sub_minion_conf['tcp_pub_port']))
+                print('tcp pull port: {0}'.format(sub_minion_conf['tcp_pull_port']))
             print('\n')
 
             print_header(' Your client configuration is at {0}'.format(TestDaemon.config_location()))
-            print('To access the minion: `salt -c {0} minion test.ping'.format(TestDaemon.config_location()))
+            print('To access the minion: salt -c {0} minion test.ping'.format(TestDaemon.config_location()))
 
             while True:
                 time.sleep(1)
@@ -420,27 +514,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     continue
                 named_tests.append(test)
 
-        if (self.options.unit or named_unit_test) and not \
-                (self.options.runners or
-                 self.options.renderers or
-                 self.options.returners or
-                 self.options.state or
-                 self.options.module or
-                 self.options.cli or
-                 self.options.client or
-                 self.options.grains or
-                 self.options.loader or
-                 self.options.outputter or
-                 self.options.fileserver or
-                 self.options.wheel or
-                 self.options.cloud_provider_tests or
-                 self.options.api or
-                 self.options.minion or
-                 named_tests):
-            # We're either not running any of runners, state, module and client
-            # tests, or, we're only running unittests by passing --unit or by
-            # passing only `unit.<whatever>` to --name.
-            # We don't need the tests daemon running
+        if (self.options.unit or named_unit_test) and not named_tests and not \
+                self._check_enabled_suites(include_cloud_provider=True):
+            # We're either not running any integration test suites, or we're
+            # only running unit tests by passing --unit or by passing only
+            # `unit.<whatever>` to --name.  We don't need the tests daemon
+            # running
             return [True]
         if not salt.utils.is_windows():
             self.set_filehandle_limits('integration')
@@ -454,17 +533,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             print_header(' * Setting up Salt daemons to execute tests', top=False)
 
         status = []
-        if not any([self.options.cli, self.options.client, self.options.grains,
-                    self.options.module, self.options.runners,
-                    self.options.shell, self.options.state,
-                    self.options.loader, self.options.outputter,
-                    self.options.name, self.options.cloud_provider_tests,
-                    self.options.api,
-                    self.options.renderers,
-                    self.options.returners,
-                    self.options.fileserver,
-                    self.options.wheel,
-                    self.options.minion]):
+        # Return an empty status if no tests have been enabled
+        if not self._check_enabled_suites(include_cloud_provider=True) and not self.options.name:
             return status
 
         with TestDaemon(self):
@@ -474,39 +544,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                         continue
                     results = self.run_suite('', name, load_from_name=True)
                     status.append(results)
-            if self.options.loader:
-                status.append(self.run_integration_suite('loader', 'Loader'))
-            if self.options.runners:
-                status.append(self.run_integration_suite('runners', 'Runners'))
-            if self.options.module:
-                status.append(self.run_integration_suite('modules', 'Module'))
-            if self.options.state:
-                status.append(self.run_integration_suite('states', 'State'))
-            if self.options.cli:
-                status.append(self.run_integration_suite('cli', 'CLI'))
-            if self.options.client:
-                status.append(self.run_integration_suite('client', 'Client'))
-            # No grains integration tests at this time, uncomment if we add any
-            #if self.options.grains:
-            #    status.append(self.run_integration_suite('grains', 'Grains'))
-            if self.options.shell:
-                status.append(self.run_integration_suite('shell', 'Shell'))
-            if self.options.outputter:
-                status.append(self.run_integration_suite('output', 'Outputter'))
-            if self.options.fileserver:
-                status.append(self.run_integration_suite('fileserver', 'Fileserver'))
-            if self.options.wheel:
-                status.append(self.run_integration_suite('wheel', 'Wheel'))
-            if self.options.cloud_provider_tests:
-                status.append(self.run_integration_suite('cloud/providers', 'Cloud Provider'))
-            if self.options.api:
-                status.append(self.run_integration_suite('netapi', 'NetAPI'))
-            if self.options.returners:
-                status.append(self.run_integration_suite('returners', 'Returners'))
-            if self.options.renderers:
-                status.append(self.run_integration_suite('renderers', 'Renderers'))
-            if self.options.minion:
-                status.append(self.run_integration_suite('minion', 'Minion'))
+            for suite in TEST_SUITES:
+                if suite != 'unit' and getattr(self.options, suite):
+                    status.append(self.run_integration_suite(**TEST_SUITES[suite]))
         return status
 
     def run_unit_tests(self):
@@ -544,6 +584,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             )
             status.append(results)
         return status
+
+    def print_overall_testsuite_report(self):
+        if RUNTESTS_WITH_HARD_KILL is False:
+            terminate_process_pid(os.getpid(), only_children=True)
+        SaltCoverageTestingParser.print_overall_testsuite_report(self)
 
 
 def main():

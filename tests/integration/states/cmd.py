@@ -4,6 +4,7 @@ Tests for the file state
 '''
 # Import python libs
 from __future__ import absolute_import
+import errno
 import os
 import textwrap
 import tempfile
@@ -16,7 +17,7 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
-
+IS_WINDOWS = salt.utils.is_windows()
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
 
@@ -29,7 +30,8 @@ class CMDTest(integration.ModuleCase,
         '''
         cmd.run
         '''
-        ret = self.run_state('cmd.run', name='ls', cwd=tempfile.gettempdir())
+        cmd = 'dir' if IS_WINDOWS else 'ls'
+        ret = self.run_state('cmd.run', name=cmd, cwd=tempfile.gettempdir())
         self.assertSaltTrueReturn(ret)
 
     def test_test_run_simple(self):
@@ -40,52 +42,52 @@ class CMDTest(integration.ModuleCase,
                              cwd=tempfile.gettempdir(), test=True)
         self.assertSaltNoneReturn(ret)
 
-    def test_run_redirect(self):
-        '''
-        test cmd.run with shell redirect
-        '''
-        state_name = 'run_redirect'
-        state_filename = state_name + '.sls'
-        state_file = os.path.join(STATE_DIR, state_filename)
 
-        date_file = tempfile.mkstemp()[1]
-        state_key = 'cmd_|-date > {0}_|-date > {0}_|-run'.format(date_file)
+class CMDRunRedirectTest(integration.ModuleCase,
+                         integration.SaltReturnAssertsMixIn):
+    '''
+    Validate the cmd state of run_redirect
+    '''
+    def setUp(self):
+        self.state_name = 'run_redirect'
+        state_filename = self.state_name + '.sls'
+        self.state_file = os.path.join(STATE_DIR, state_filename)
+
+        # Create the testfile and release the handle
+        self.fd, self.test_file = tempfile.mkstemp()
         try:
-            with salt.utils.fopen(state_file, 'w') as fp_:
-                fp_.write(textwrap.dedent('''\
-                date > {0}:
-                  cmd.run
-                '''.format(date_file)))
+            os.close(self.fd)
+        except OSError as exc:
+            if exc.errno != errno.EBADF:
+                raise exc
 
-            ret = self.run_function('state.sls', [state_name])
-            self.assertTrue(ret[state_key]['result'])
-        finally:
-            os.remove(state_file)
-            os.remove(date_file)
+        super(CMDRunRedirectTest, self).setUp()
+
+    def tearDown(self):
+        try:
+            os.remove(self.state_file)
+            os.remove(self.test_file)
+        except OSError:
+            # Not all of the tests leave files around that we want to remove
+            # As some of the tests create the sls files in the test itself,
+            # And some are using files in the integration test file state tree.
+            pass
+        super(CMDRunRedirectTest, self).tearDown()
 
     def test_run_unless(self):
         '''
         test cmd.run unless
         '''
-        state_name = 'run_redirect'
-        state_filename = state_name + '.sls'
-        state_file = os.path.join(STATE_DIR, state_filename)
-
-        unless_file = tempfile.mkstemp()[1]
         state_key = 'cmd_|-/var/log/messages_|-/var/log/messages_|-run'
-        try:
-            with salt.utils.fopen(state_file, 'w') as fp_:
-                fp_.write(textwrap.dedent('''\
+        with salt.utils.fopen(self.state_file, 'w') as fb_:
+            fb_.write(textwrap.dedent('''
                 /var/log/messages:
                   cmd.run:
                     - unless: echo cheese > {0}
-                '''.format(unless_file)))
+                '''.format(self.test_file)))
 
-            ret = self.run_function('state.sls', [state_name])
-            self.assertTrue(ret[state_key]['result'])
-        finally:
-            os.remove(state_file)
-            os.remove(unless_file)
+        ret = self.run_function('state.sls', [self.state_name])
+        self.assertTrue(ret[state_key]['result'])
 
     def test_run_unless_multiple_cmds(self):
         '''
@@ -107,88 +109,93 @@ class CMDTest(integration.ModuleCase,
         '''
         test cmd.run creates already there
         '''
-        state_name = 'run_redirect'
-        state_filename = state_name + '.sls'
-        state_file = os.path.join(STATE_DIR, state_filename)
-
-        creates_file = tempfile.mkstemp()[1]
-        state_key = 'cmd_|-touch {0}_|-touch {0}_|-run'.format(creates_file)
-        try:
-            with salt.utils.fopen(state_file, 'w') as fp_:
-                fp_.write(textwrap.dedent('''\
-                touch {0}:
+        state_key = 'cmd_|-echo >> {0}_|-echo >> {0}_|-run'.format(self.test_file)
+        with salt.utils.fopen(self.state_file, 'w') as fb_:
+            fb_.write(textwrap.dedent('''
+                echo >> {0}:
                   cmd.run:
                     - creates: {0}
-                '''.format(creates_file)))
+                '''.format(self.test_file)))
 
-            ret = self.run_function('state.sls', [state_name])
-            self.assertTrue(ret[state_key]['result'])
-            self.assertEqual(len(ret[state_key]['changes']), 0)
-        finally:
-            os.remove(state_file)
-            os.remove(creates_file)
+        ret = self.run_function('state.sls', [self.state_name])
+        self.assertTrue(ret[state_key]['result'])
+        self.assertEqual(len(ret[state_key]['changes']), 0)
 
     def test_run_creates_new(self):
         '''
         test cmd.run creates not there
         '''
-        state_name = 'run_redirect'
-        state_filename = state_name + '.sls'
-        state_file = os.path.join(STATE_DIR, state_filename)
-
-        creates_file = tempfile.mkstemp()[1]
-        os.remove(creates_file)
-        state_key = 'cmd_|-touch {0}_|-touch {0}_|-run'.format(creates_file)
-        try:
-            with salt.utils.fopen(state_file, 'w') as fp_:
-                fp_.write(textwrap.dedent('''\
-                touch {0}:
+        os.remove(self.test_file)
+        state_key = 'cmd_|-echo >> {0}_|-echo >> {0}_|-run'.format(self.test_file)
+        with salt.utils.fopen(self.state_file, 'w') as fb_:
+            fb_.write(textwrap.dedent('''
+                echo >> {0}:
                   cmd.run:
                     - creates: {0}
-                '''.format(creates_file)))
+                '''.format(self.test_file)))
 
-            ret = self.run_function('state.sls', [state_name])
-            self.assertTrue(ret[state_key]['result'])
-            self.assertEqual(len(ret[state_key]['changes']), 4)
-        finally:
-            os.remove(state_file)
-            os.remove(creates_file)
+        ret = self.run_function('state.sls', [self.state_name])
+        self.assertTrue(ret[state_key]['result'])
+        self.assertEqual(len(ret[state_key]['changes']), 4)
+
+    def test_run_redirect(self):
+        '''
+        test cmd.run with shell redirect
+        '''
+        state_key = 'cmd_|-echo test > {0}_|-echo test > {0}_|-run'.format(self.test_file)
+        with salt.utils.fopen(self.state_file, 'w') as fb_:
+            fb_.write(textwrap.dedent('''
+                echo test > {0}:
+                  cmd.run
+                '''.format(self.test_file)))
+
+        ret = self.run_function('state.sls', [self.state_name])
+        self.assertTrue(ret[state_key]['result'])
+
+
+class CMDRunWatchTest(integration.ModuleCase,
+                      integration.SaltReturnAssertsMixIn):
+    '''
+    Validate the cmd state of run_watch
+    '''
+    def setUp(self):
+        self.state_name = 'run_watch'
+        state_filename = self.state_name + '.sls'
+        self.state_file = os.path.join(STATE_DIR, state_filename)
+        super(CMDRunWatchTest, self).setUp()
+
+    def tearDown(self):
+        os.remove(self.state_file)
+        super(CMDRunWatchTest, self).tearDown()
 
     def test_run_watch(self):
         '''
         test cmd.run watch
         '''
-        state_name = 'run_watch'
-        state_filename = state_name + '.sls'
-        state_file = os.path.join(STATE_DIR, state_filename)
+        saltines_key = 'cmd_|-saltines_|-echo changed=true_|-run'
+        biscuits_key = 'cmd_|-biscuits_|-echo biscuits_|-wait'
 
-        saltines_key = 'cmd_|-saltines_|-echo_|-run'
-        biscuits_key = 'cmd_|-biscuits_|-echo hello_|-wait'
-
-        try:
-            with salt.utils.fopen(state_file, 'w') as fp_:
-                fp_.write(textwrap.dedent('''\
+        with salt.utils.fopen(self.state_file, 'w') as fb_:
+            fb_.write(textwrap.dedent('''
                 saltines:
                   cmd.run:
-                    - name: echo
+                    - name: echo changed=true
                     - cwd: /
                     - stateful: True
 
                 biscuits:
                   cmd.wait:
-                    - name: echo hello
+                    - name: echo biscuits
                     - cwd: /
                     - watch:
                         - cmd: saltines
                 '''))
 
-            ret = self.run_function('state.sls', [state_name])
-            self.assertTrue(ret[saltines_key]['result'])
-            self.assertTrue(ret[biscuits_key]['result'])
-        finally:
-            os.remove(state_file)
+        ret = self.run_function('state.sls', [self.state_name])
+        self.assertTrue(ret[saltines_key]['result'])
+        self.assertTrue(ret[biscuits_key]['result'])
 
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(CMDTest)
+    run_tests([CMDTest, CMDRunRedirectTest, CMDRunWatchTest])

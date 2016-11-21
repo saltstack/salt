@@ -18,7 +18,7 @@ Documentation
 =============
 
 The documentation for Salt Cloud can be found on Read the Docs:
-http://salt-cloud.readthedocs.org
+https://salt-cloud.readthedocs.io
 
 Download
 ========

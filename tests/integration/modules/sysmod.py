@@ -19,38 +19,6 @@ class SysModuleTest(integration.ModuleCase):
     '''
     Validate the sys module
     '''
-    def test_list_functions(self):
-        '''
-        sys.list_functions
-        '''
-        # Get all functions
-        funcs = self.run_function('sys.list_functions')
-        self.assertIn('hosts.list_hosts', funcs)
-        self.assertIn('pkg.install', funcs)
-
-        # Just sysctl
-        funcs = self.run_function('sys.list_functions', ('sysctl',))
-        self.assertNotIn('sys.doc', funcs)
-        self.assertIn('sysctl.get', funcs)
-
-        # Just sys
-        funcs = self.run_function('sys.list_functions', ('sys.',))
-        self.assertNotIn('sysctl.get', funcs)
-        self.assertIn('sys.doc', funcs)
-
-        # Staring with sys
-        funcs = self.run_function('sys.list_functions', ('sys',))
-        self.assertNotIn('sysctl.get', funcs)
-        self.assertIn('sys.doc', funcs)
-
-    def test_list_modules(self):
-        '''
-        sys.list_moduels
-        '''
-        mods = self.run_function('sys.list_modules')
-        self.assertTrue('hosts' in mods)
-        self.assertTrue('pkg' in mods)
-
     def test_valid_docs(self):
         '''
         Make sure no functions are exposed that don't have valid docstrings
@@ -60,6 +28,7 @@ class SysModuleTest(integration.ModuleCase):
         noexample = set()
         allow_failure = (
                 'cp.recv',
+                'libcloud_dns.get_driver',
                 'lxc.run_cmd',
                 'ipset.long_range',
                 'pkg.expand_repo_def',
@@ -77,6 +46,8 @@ class SysModuleTest(integration.ModuleCase):
                 'lowpkg.bin_pkg_info',
                 'state.apply',
                 'pip.iteritems',
+                'cmd.win_runas',
+                'status.list2cmdline'
         )
 
         for fun in docs:

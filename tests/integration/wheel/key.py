@@ -13,12 +13,12 @@ class KeyWheelModuleTest(integration.TestCase, integration.AdaptedConfigurationT
         self.wheel = salt.wheel.Wheel(dict(self.get_config('client_config')))
 
     def test_list_all(self):
-        ret = self.wheel.call_func('key.list_all')
+        ret = self.wheel.cmd('key.list_all', print_event=False)
         for host in ['minion', 'sub_minion']:
             self.assertIn(host, ret['minions'])
 
     def test_gen(self):
-        ret = self.wheel.call_func('key.gen', id_='soundtechniciansrock')
+        ret = self.wheel.cmd('key.gen', kwarg={'id_': 'soundtechniciansrock'}, print_event=False)
 
         self.assertIn('pub', ret)
         self.assertIn('priv', ret)

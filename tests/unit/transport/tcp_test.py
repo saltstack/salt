@@ -13,6 +13,7 @@ import tornado.ioloop
 from tornado.testing import AsyncTestCase
 
 import salt.config
+import salt.ext.six as six
 import salt.utils
 import salt.transport.server
 import salt.transport.client
@@ -40,6 +41,8 @@ class BaseTCPReqCase(TestCase):
     '''
     @classmethod
     def setUpClass(cls):
+        if not hasattr(cls, '_handle_payload'):
+            return
         cls.master_opts = salt.config.master_config(get_config_file_path('master'))
         cls.master_opts.update({
             'transport': 'tcp',
@@ -67,6 +70,8 @@ class BaseTCPReqCase(TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        if not hasattr(cls, '_handle_payload'):
+            return
         cls.io_loop.stop()
         cls.server_thread.join()
         cls.process_manager.kill_children()
@@ -181,7 +186,7 @@ class BaseTCPPubCase(AsyncTestCase):
     def tearDown(self):
         super(BaseTCPPubCase, self).tearDown()
         failures = []
-        for k, v in self.io_loop._handlers.iteritems():
+        for k, v in six.iteritems(self.io_loop._handlers):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
         if len(failures) > 0:

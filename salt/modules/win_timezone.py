@@ -251,6 +251,7 @@ LINTOWIN = {
     'Asia/Jerusalem': 'Israel Standard Time',
     'Asia/Kabul': 'Afghanistan Standard Time',
     'Asia/Karachi': 'Pakistan Standard Time',
+    'Asia/Kathmandu': 'Nepal Standard Time',
     'Asia/Katmandu': 'Nepal Standard Time',
     'Asia/Krasnoyarsk': 'North Asia Standard Time',
     'Asia/Kuala_Lumpur': 'Singapore Standard Time',

@@ -1,13 +1,25 @@
+# Master Settings
+# This is the Master of Masters
+id: syndic_master
+interface: 127.0.0.1
 publish_port: 54505
 ret_port: 54506
 worker_threads: 3
-root_dir: /tmp/saltsyndictest
-pidfile: syndicmasterpid
-pki_dir: pki
-cachedir: cache
+pidfile: syndic_master.pid
+sock_dir: syndic_master_sock
 timeout: 1
-sock_dir: .salt-unix-syndic
 open_mode: True
-order_masters: True
 fileserver_list_cache_time: 0
 pillar_opts: True
+log_file: syndic_master.log
+log_level_logfile: debug
+
+# These settings needed for tests on Windows which defaults
+# to ipc_mode: tcp
+tcp_master_pub_port: 54512
+tcp_master_pull_port: 54513
+tcp_master_publish_pull: 54514
+tcp_master_workers: 54515
+
+# Syndic Settings
+order_masters: True

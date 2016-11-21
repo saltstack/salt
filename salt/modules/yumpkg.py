@@ -16,6 +16,7 @@ Support for YUM/DNF
 
 # Import python libs
 from __future__ import absolute_import
+import contextlib
 import copy
 import fnmatch
 import itertools
@@ -68,7 +69,7 @@ def __virtual__():
     except Exception:
         return (False, "Module yumpkg: no yum based system detected")
 
-    enabled = ('amazon', 'xcp', 'xenserver', 'virtuozzolinux')
+    enabled = ('amazon', 'xcp', 'xenserver', 'virtuozzolinux', 'virtuozzo')
 
     if os_family == 'redhat' or os_grain in enabled:
         return __virtualname__
@@ -677,21 +678,6 @@ def list_repo_pkgs(*args, **kwargs):
                 return True
         return False
 
-    def _no_repository_packages():
-        '''
-        Check yum version, the repository-packages subcommand is only in
-        3.4.3 and newer.
-        '''
-        if _yum() == 'yum':
-            yum_version = _LooseVersion(
-                __salt__['cmd.run'](
-                    ['yum', '--version'],
-                    python_shell=False
-                ).splitlines()[0].strip()
-            )
-            return yum_version < _LooseVersion('3.4.3')
-        return False
-
     def _parse_output(output, strict=False):
         for pkg in _yum_pkginfo(output):
             if strict and (pkg.repoid not in repos
@@ -701,8 +687,29 @@ def list_repo_pkgs(*args, **kwargs):
             version_list = repo_dict.setdefault(pkg.name, set())
             version_list.add(pkg.version)
 
-    if _no_repository_packages():
+    yum_version = None if _yum() != 'yum' else _LooseVersion(
+                __salt__['cmd.run'](
+                    ['yum', '--version'],
+                    python_shell=False
+                ).splitlines()[0].strip()
+            )
+    # Really old version of yum; does not even have --showduplicates option
+    if yum_version and yum_version < _LooseVersion('3.2.13'):
         cmd_prefix = ['yum', '--quiet', 'list']
+        for pkg_src in ('installed', 'available'):
+            # Check installed packages first
+            out = __salt__['cmd.run_all'](
+                cmd_prefix + [pkg_src],
+                output_loglevel='trace',
+                ignore_retcode=True,
+                python_shell=False
+            )
+            if out['retcode'] == 0:
+                _parse_output(out['stdout'], strict=True)
+    # The --showduplicates option is added in 3.2.13, but the
+    # repository-packages subcommand is only in 3.4.3 and newer
+    elif yum_version and yum_version < _LooseVersion('3.4.3'):
+        cmd_prefix = ['yum', '--quiet', 'list', '--showduplicates']
         for pkg_src in ('installed', 'available'):
             # Check installed packages first
             out = __salt__['cmd.run_all'](
@@ -895,9 +902,10 @@ def install(name=None,
             sources=None,
             reinstall=False,
             normalize=True,
+            update_holds=False,
             **kwargs):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -953,6 +961,15 @@ def install(name=None,
     version
         Install a specific version of the package, e.g. 1.2.3-4.el5. Ignored
         if "pkgs" or "sources" is passed.
+
+    update_holds : False
+        If ``True``, and this function would update the package version, any
+        packages held using the yum/dnf "versionlock" plugin will be unheld so
+        that they can be updated. Otherwise, if this function attempts to
+        update a held package, the held package(s) will be skipped and an
+        error will be raised.
+
+        .. versionadded:: 2016.11.0
 
 
     Repository Options:
@@ -1051,9 +1068,26 @@ def install(name=None,
     # Use of __context__ means no duplicate work here, just accessing
     # information already in __context__ from the previous call to list_pkgs()
     old_as_list = list_pkgs(versions_as_list=True)
-    targets = []
-    downgrade = []
-    to_reinstall = {}
+
+    to_install = []
+    to_downgrade = []
+    to_reinstall = []
+    # The above three lists will be populated with tuples containing the
+    # package name and the string being used for this particular package
+    # modification. The reason for this method is that the string we use for
+    # installation, downgrading, or reinstallation will be different than the
+    # package name in a couple cases:
+    #
+    #   1) A specific version is being targeted. In this case the string being
+    #      passed to install/downgrade/reinstall will contain the version
+    #      information after the package name.
+    #   2) A binary package is being installed via the "sources" param. In this
+    #      case the string being passed will be the path to the local copy of
+    #      the package in the minion cachedir.
+    #
+    # The reason that we need both items is to be able to modify the installed
+    # version of held packages.
+
     if pkg_type == 'repository':
         pkg_params_items = six.iteritems(pkg_params)
     else:
@@ -1090,11 +1124,11 @@ def install(name=None,
         if version_num is None:
             if pkg_type == 'repository':
                 if reinstall and pkgname in old:
-                    to_reinstall[pkgname] = pkgname
+                    to_reinstall.append((pkgname, pkgname))
                 else:
-                    targets.append(pkgname)
+                    to_install.append((pkgname, pkgname))
             else:
-                targets.append(pkgpath)
+                to_install.append((pkgname, pkgpath))
         else:
             # If we are installing a package file and not one from the repo,
             # and version_num is not None, then we can assume that pkgname is
@@ -1137,11 +1171,11 @@ def install(name=None,
                                                    cmp_func=version_cmp):
                         # This version is already installed, so we need to
                         # reinstall.
-                        to_reinstall[pkgname] = pkgstr
+                        to_reinstall.append((pkgname, pkgstr))
                         break
             else:
                 if not cver:
-                    targets.append(pkgstr)
+                    to_install.append((pkgname, pkgstr))
                 else:
                     for ver in cver:
                         ver = norm_epoch(ver, version_num)
@@ -1149,7 +1183,7 @@ def install(name=None,
                                                        oper='>=',
                                                        ver2=ver,
                                                        cmp_func=version_cmp):
-                            targets.append(pkgstr)
+                            to_install.append((pkgname, pkgstr))
                             break
                     else:
                         if re.match('kernel(-.+)?', name):
@@ -1164,12 +1198,12 @@ def install(name=None,
                             # a lower version than the currently-installed one.
                             # TODO: find a better way to determine if a package
                             # supports multiple installs.
-                            targets.append(pkgstr)
+                            to_install.append((pkgname, pkgstr))
                         else:
                             # None of the currently-installed versions are
                             # greater than the specified version, so this is a
                             # downgrade.
-                            downgrade.append(pkgstr)
+                            to_downgrade.append((pkgname, pkgstr))
 
     def _add_common_args(cmd):
         '''
@@ -1181,73 +1215,139 @@ def install(name=None,
         if skip_verify:
             cmd.append('--nogpgcheck')
 
+    try:
+        holds = list_holds(full=False)
+    except SaltInvocationError:
+        holds = []
+        log.debug(
+            'Failed to get holds, versionlock plugin is probably not '
+            'installed'
+        )
+    unhold_prevented = []
     errors = []
 
-    if targets:
-        cmd = []
-        if salt.utils.systemd.has_scope(__context__) \
-                and __salt__['config.get']('systemd.scope', True):
-            cmd.extend(['systemd-run', '--scope'])
-        cmd.extend([_yum(), '-y'])
-        if _yum() == 'dnf':
-            cmd.extend(['--best', '--allowerasing'])
-        _add_common_args(cmd)
-        cmd.append('install')
-        cmd.extend(targets)
-        out = __salt__['cmd.run_all'](
-            cmd,
-            output_loglevel='trace',
-            python_shell=False,
-            redirect_stderr=True
-        )
-        if out['retcode'] != 0:
-            errors.append(out['stdout'])
+    @contextlib.contextmanager
+    def _temporarily_unhold(pkgs, targets):
+        '''
+        Temporarily unhold packages that need to be updated. Add any
+        successfully-removed ones (and any packages not in the list of current
+        holds) to the list of targets.
+        '''
+        to_unhold = {}
+        for pkgname, pkgstr in pkgs:
+            if pkgname in holds:
+                if update_holds:
+                    to_unhold[pkgname] = pkgstr
+                else:
+                    unhold_prevented.append(pkgname)
+            else:
+                targets.append(pkgstr)
 
-    if downgrade:
-        cmd = []
-        if salt.utils.systemd.has_scope(__context__) \
-                and __salt__['config.get']('systemd.scope', True):
-            cmd.extend(['systemd-run', '--scope'])
-        cmd.extend([_yum(), '-y'])
-        _add_common_args(cmd)
-        cmd.append('downgrade')
-        cmd.extend(downgrade)
-        out = __salt__['cmd.run_all'](
-            cmd,
-            output_loglevel='trace',
-            python_shell=False,
-            redirect_stderr=True
-        )
-        if out['retcode'] != 0:
-            errors.append(out['stdout'])
+        if not to_unhold:
+            yield
+        else:
+            log.debug('Unholding packages: {0}'.format(', '.join(to_unhold)))
+            try:
+                # Using list() here for python3 compatibility, dict.keys() no
+                # longer returns a list in python3.
+                unhold_names = list(to_unhold.keys())
+                for unheld_pkg, outcome in \
+                        six.iteritems(unhold(pkgs=unhold_names)):
+                    if outcome['result']:
+                        # Package was successfully unheld, add to targets
+                        targets.append(to_unhold[unheld_pkg])
+                    else:
+                        # Failed to unhold package
+                        errors.append(unheld_pkg)
+                yield
+            except Exception as exc:
+                errors.append(
+                    'Error encountered unholding packages {0}: {1}'
+                    .format(', '.join(to_unhold), exc)
+                )
+            finally:
+                hold(pkgs=unhold_names)
 
-    if to_reinstall:
-        cmd = []
-        if salt.utils.systemd.has_scope(__context__) \
+    targets = []
+    with _temporarily_unhold(to_install, targets):
+        if targets:
+            cmd = []
+            if salt.utils.systemd.has_scope(__context__) \
                 and __salt__['config.get']('systemd.scope', True):
-            cmd.extend(['systemd-run', '--scope'])
-        cmd.extend([_yum(), '-y'])
-        _add_common_args(cmd)
-        cmd.append('reinstall')
-        cmd.extend(six.itervalues(to_reinstall))
-        out = __salt__['cmd.run_all'](
-            cmd,
-            output_loglevel='trace',
-            python_shell=False,
-            redirect_stderr=True
-        )
-        if out['retcode'] != 0:
-            errors.append(out['stdout'])
+                cmd.extend(['systemd-run', '--scope'])
+            cmd.extend([_yum(), '-y'])
+            if _yum() == 'dnf':
+                cmd.extend(['--best', '--allowerasing'])
+            _add_common_args(cmd)
+            cmd.append('install')
+            cmd.extend(targets)
+            out = __salt__['cmd.run_all'](
+                cmd,
+                output_loglevel='trace',
+                python_shell=False,
+                redirect_stderr=True
+            )
+            if out['retcode'] != 0:
+                errors.append(out['stdout'])
+
+    targets = []
+    with _temporarily_unhold(to_downgrade, targets):
+        if targets:
+            cmd = []
+            if salt.utils.systemd.has_scope(__context__) \
+                and __salt__['config.get']('systemd.scope', True):
+                cmd.extend(['systemd-run', '--scope'])
+            cmd.extend([_yum(), '-y'])
+            _add_common_args(cmd)
+            cmd.append('downgrade')
+            cmd.extend(targets)
+            out = __salt__['cmd.run_all'](
+                cmd,
+                output_loglevel='trace',
+                python_shell=False,
+                redirect_stderr=True
+            )
+            if out['retcode'] != 0:
+                errors.append(out['stdout'])
+
+    targets = []
+    with _temporarily_unhold(to_reinstall, targets):
+        if targets:
+            cmd = []
+            if salt.utils.systemd.has_scope(__context__) \
+                and __salt__['config.get']('systemd.scope', True):
+                cmd.extend(['systemd-run', '--scope'])
+            cmd.extend([_yum(), '-y'])
+            _add_common_args(cmd)
+            cmd.append('reinstall')
+            cmd.extend(targets)
+            out = __salt__['cmd.run_all'](
+                cmd,
+                output_loglevel='trace',
+                python_shell=False,
+                redirect_stderr=True
+            )
+            if out['retcode'] != 0:
+                errors.append(out['stdout'])
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs(versions_as_list=False)
 
     ret = salt.utils.compare_dicts(old, new)
 
-    for pkgname in to_reinstall:
+    for pkgname, _ in to_reinstall:
         if pkgname not in ret or pkgname in old:
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
+
+    if unhold_prevented:
+        errors.append(
+            'The following package(s) could not be updated because they are '
+            'being held: {0}. Set \'update_holds\' to True to temporarily '
+            'unhold these packages so that they can be updated.'.format(
+                ', '.join(unhold_prevented)
+            )
+        )
 
     if errors:
         raise CommandExecutionError(
@@ -1272,7 +1372,7 @@ def upgrade(name=None,
     not be installed.
 
     .. versionchanged:: 2014.7.0
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -1288,10 +1388,13 @@ def upgrade(name=None,
 
     Run a full system upgrade, a yum upgrade
 
-    Return a dict containing the new package names and versions::
+    Returns a dictionary containing the changes:
 
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
 
     CLI Example:
 
@@ -1405,16 +1508,25 @@ def upgrade(name=None,
     cmd.append('upgrade')
     cmd.extend(targets)
 
-    __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
+
     return ret
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -1495,7 +1607,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
 def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -1786,6 +1898,9 @@ def verify(*names, **kwargs):
 
     Runs an rpm -Va on a system, and returns the results in a dict
 
+    Pass options to modify rpm verify behavior using the ``verify_options``
+    keyword argument
+
     Files with an attribute of config, doc, ghost, license or readme in the
     package header can be ignored using the ``ignore_types`` keyword argument
 
@@ -1797,6 +1912,7 @@ def verify(*names, **kwargs):
         salt '*' pkg.verify httpd
         salt '*' pkg.verify 'httpd postfix'
         salt '*' pkg.verify 'httpd postfix' ignore_types=['config','doc']
+        salt '*' pkg.verify 'httpd postfix' verify_options=['nodeps','nosize']
     '''
     return __salt__['lowpkg.verify'](*names, **kwargs)
 

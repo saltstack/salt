@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+# Import Python libs
+from __future__ import absolute_import
+
+# Import Salt libs
+import salt.ext.six as six
+
 
 class ReqChannelMixin(object):
     def test_basic(self):
@@ -27,7 +33,7 @@ class ReqChannelMixin(object):
         ]
         for msg in msgs:
             ret = self.channel.send(msg, timeout=2, tries=1)
-            for k, v in ret['load'].iteritems():
+            for k, v in six.iteritems(ret['load']):
                 self.assertEqual(types[k], type(v))
 
     def test_badload(self):

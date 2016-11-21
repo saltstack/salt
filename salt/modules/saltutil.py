@@ -907,6 +907,22 @@ def term_job(jid):
     return signal_job(jid, signal.SIGTERM)
 
 
+def term_all_jobs():
+    '''
+    Sends a termination signal (SIGTERM 15) to all currently running jobs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.term_all_jobs
+    '''
+    ret = []
+    for data in running():
+        ret.append(signal_job(data['jid'], signal.SIGTERM))
+    return ret
+
+
 def kill_job(jid):
     '''
     Sends a kill signal (SIGKILL 9) to the named salt job's process
@@ -920,6 +936,24 @@ def kill_job(jid):
     # Some OS's (Win32) don't have SIGKILL, so use salt_SIGKILL which is set to
     # an appropriate value for the operating system this is running on.
     return signal_job(jid, salt_SIGKILL)
+
+
+def kill_all_jobs():
+    '''
+    Sends a kill signal (SIGKILL 9) to all currently running jobs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.kill_all_jobs
+    '''
+    # Some OS's (Win32) don't have SIGKILL, so use salt_SIGKILL which is set to
+    # an appropriate value for the operating system this is running on.
+    ret = []
+    for data in running():
+        ret.append(signal_job(data['jid'], salt_SIGKILL))
+    return ret
 
 
 def regen_keys():
@@ -1098,7 +1132,9 @@ def cmd_iter(tgt,
 
 def runner(name, **kwargs):
     '''
-    Execute a runner module (this function must be run on the master)
+    Execute a runner function. This function must be run on the master,
+    either by targeting a minion running on a master or by using
+    salt-call on a master.
 
     .. versionadded:: 2014.7.0
 
@@ -1110,10 +1146,14 @@ def runner(name, **kwargs):
 
     CLI Example:
 
+    In this example, assume that `master_minion` is a minion running
+    on a master.
+
     .. code-block:: bash
 
-        salt '*' saltutil.runner jobs.list_jobs
+        salt master_minion saltutil.runner jobs.list_jobs
     '''
+    jid = kwargs.pop('__orchestration_jid__', None)
     saltenv = kwargs.pop('__env__', 'base')
     kwargs = salt.utils.clean_kwargs(**kwargs)
 
@@ -1130,7 +1170,15 @@ def runner(name, **kwargs):
         if 'saltenv' in aspec.args:
             kwargs['saltenv'] = saltenv
 
-    return rclient.cmd(name, kwarg=kwargs, print_event=False)
+    if jid:
+        salt.utils.event.fire_args(
+            __opts__,
+            jid,
+            {'type': 'runner', 'name': name, 'args': kwargs},
+            prefix='run'
+        )
+
+    return rclient.cmd(name, kwarg=kwargs, print_event=False, full_return=True)
 
 
 def wheel(name, *args, **kwargs):
@@ -1168,6 +1216,7 @@ def wheel(name, *args, **kwargs):
         their return data.
 
     '''
+    jid = kwargs.pop('__orchestration_jid__', None)
     saltenv = kwargs.pop('__env__', 'base')
 
     if __opts__['__role'] == 'minion':
@@ -1196,11 +1245,20 @@ def wheel(name, *args, **kwargs):
             if 'saltenv' in aspec.args:
                 valid_kwargs['saltenv'] = saltenv
 
+        if jid:
+            salt.utils.event.fire_args(
+                __opts__,
+                jid,
+                {'type': 'wheel', 'name': name, 'args': valid_kwargs},
+                prefix='run'
+            )
+
         ret = wheel_client.cmd(name,
                                arg=args,
                                pub_data=pub_data,
                                kwarg=valid_kwargs,
-                               print_event=False)
+                               print_event=False,
+                               full_return=True)
     except SaltInvocationError:
         raise CommandExecutionError(
             'This command can only be executed on a minion that is located on '

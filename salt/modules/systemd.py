@@ -264,7 +264,7 @@ def _runlevel():
     contextkey = 'systemd._runlevel'
     if contextkey in __context__:
         return __context__[contextkey]
-    out = __salt__['cmd.run']('runlevel', python_shell=False)
+    out = __salt__['cmd.run']('runlevel', python_shell=False, ignore_retcode=True)
     try:
         ret = out.split()[1]
     except IndexError:
@@ -366,6 +366,45 @@ def systemctl_reload():
         )
     _clear_context()
     return True
+
+
+def get_running():
+    '''
+    Return a list of all running services, so far as systemd is concerned
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.get_running
+    '''
+    ret = set()
+    # Get running systemd units
+    out = __salt__['cmd.run'](
+        _systemctl_cmd('--full --no-legend --no-pager'),
+        python_shell=False,
+        ignore_retcode=True,
+    )
+    for line in salt.utils.itertools.split(out, '\n'):
+        try:
+            comps = line.strip().split()
+            fullname = comps[0]
+            if len(comps) > 3:
+                active_state = comps[3]
+        except ValueError as exc:
+            log.error(exc)
+            continue
+        else:
+            if active_state != 'running':
+                continue
+        try:
+            unit_name, unit_type = fullname.rsplit('.', 1)
+        except ValueError:
+            continue
+        if unit_type in VALID_UNIT_TYPES:
+            ret.add(unit_name if unit_type == 'service' else fullname)
+
+    return sorted(ret)
 
 
 def get_enabled():
@@ -539,7 +578,7 @@ def missing(name):
 def unmask(name):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands run by this function from the ``salt-minion`` daemon's
         control group. This is done to avoid a race condition in cases where
@@ -578,7 +617,7 @@ def unmask(name):
 def mask(name, runtime=False):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands run by this function from the ``salt-minion`` daemon's
         control group. This is done to avoid a race condition in cases where
@@ -647,7 +686,7 @@ def masked(name):
 
 def start(name):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands run by this function from the ``salt-minion`` daemon's
         control group. This is done to avoid a race condition in cases where
@@ -675,7 +714,7 @@ def start(name):
 
 def stop(name):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands run by this function from the ``salt-minion`` daemon's
         control group. This is done to avoid a race condition in cases where
@@ -702,7 +741,7 @@ def stop(name):
 
 def restart(name):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands run by this function from the ``salt-minion`` daemon's
         control group. This is done to avoid a race condition in cases where
@@ -730,7 +769,7 @@ def restart(name):
 
 def reload_(name):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands run by this function from the ``salt-minion`` daemon's
         control group. This is done to avoid a race condition in cases where
@@ -758,7 +797,7 @@ def reload_(name):
 
 def force_reload(name):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands run by this function from the ``salt-minion`` daemon's
         control group. This is done to avoid a race condition in cases where
@@ -809,7 +848,7 @@ def status(name, sig=None):  # pylint: disable=unused-argument
 # established by Salt's service management states.
 def enable(name, **kwargs):  # pylint: disable=unused-argument
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands run by this function from the ``salt-minion`` daemon's
         control group. This is done to avoid a race condition in cases where
@@ -853,7 +892,7 @@ def enable(name, **kwargs):  # pylint: disable=unused-argument
 # established by Salt's service management states.
 def disable(name, **kwargs):  # pylint: disable=unused-argument
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands run by this function from the ``salt-minion`` daemon's
         control group. This is done to avoid a race condition in cases where

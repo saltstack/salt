@@ -31,6 +31,7 @@ import salt.client
 import salt.loader
 import salt.utils
 import salt.utils.cloud
+import salt.utils.files
 import salt.syspaths
 from salt.utils import reinit_crypto
 from salt.utils import context
@@ -252,7 +253,7 @@ class CloudClient(object):
         List all available sizes in configured cloud systems
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
-        return salt.utils.cloud.simple_types_filter(
+        return salt.utils.simple_types_filter(
             mapper.size_list(provider)
         )
 
@@ -261,7 +262,7 @@ class CloudClient(object):
         List all available images in configured cloud systems
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
-        return salt.utils.cloud.simple_types_filter(
+        return salt.utils.simple_types_filter(
             mapper.image_list(provider)
         )
 
@@ -270,7 +271,7 @@ class CloudClient(object):
         List all available locations in configured cloud systems
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
-        return salt.utils.cloud.simple_types_filter(
+        return salt.utils.simple_types_filter(
             mapper.location_list(provider)
         )
 
@@ -344,7 +345,7 @@ class CloudClient(object):
         mapper = salt.cloud.Map(self._opts_defaults(**kwargs))
         if isinstance(names, str):
             names = names.split(',')
-        return salt.utils.cloud.simple_types_filter(
+        return salt.utils.simple_types_filter(
             mapper.run_profile(profile, names, vm_overrides=vm_overrides)
         )
 
@@ -356,7 +357,7 @@ class CloudClient(object):
         kwarg.update(kwargs)
         mapper = salt.cloud.Map(self._opts_defaults(**kwarg))
         dmap = mapper.map_data()
-        return salt.utils.cloud.simple_types_filter(
+        return salt.utils.simple_types_filter(
             mapper.run_map(dmap)
         )
 
@@ -367,7 +368,7 @@ class CloudClient(object):
         mapper = salt.cloud.Map(self._opts_defaults(destroy=True))
         if isinstance(names, str):
             names = names.split(',')
-        return salt.utils.cloud.simple_types_filter(
+        return salt.utils.simple_types_filter(
             mapper.destroy(names)
         )
 
@@ -404,7 +405,7 @@ class CloudClient(object):
             vm_['name'] = name
             vm_['driver'] = provider
             vm_['profile'] = None
-            ret[name] = salt.utils.cloud.simple_types_filter(
+            ret[name] = salt.utils.simple_types_filter(
                 mapper.create(vm_))
         return ret
 
@@ -439,7 +440,7 @@ class CloudClient(object):
             extra_['provider'] = provider
             extra_['profile'] = None
             extra_['action'] = action
-            ret[name] = salt.utils.cloud.simple_types_filter(
+            ret[name] = salt.utils.simple_types_filter(
                 mapper.extras(extra_)
             )
         return ret
@@ -465,7 +466,13 @@ class CloudClient(object):
                 kwargs={'image': 'ami-10314d79'}
             )
         '''
-        mapper = salt.cloud.Map(self._opts_defaults(action=fun, names=names))
+        if kwargs is None:
+            kwargs = {}
+
+        mapper = salt.cloud.Map(self._opts_defaults(
+            action=fun,
+            names=names,
+            **kwargs))
         if instance:
             if names:
                 raise SaltCloudConfigError(
@@ -1202,8 +1209,8 @@ class Cloud(object):
 
         if deploy:
             if not make_master and 'master' not in minion_dict:
-                log.warn(
-                    'There\'s no master defined on the {0!r} VM settings.'.format(
+                log.warning(
+                    'There\'s no master defined on the \'{0}\' VM settings.'.format(
                         vm_['name']
                     )
                 )
@@ -1614,7 +1621,7 @@ class Cloud(object):
                 fun = '{0}.get_configured_provider'.format(driver)
                 if fun not in self.clouds:
                     # Mis-configured provider that got removed?
-                    log.warn(
+                    log.warning(
                         'The cloud driver, \'{0}\', configured under the '
                         '\'{1}\' cloud provider alias, could not be loaded. '
                         'Please check your provider configuration files and '
@@ -1640,7 +1647,7 @@ class Cloud(object):
                     __active_provider_name__=':'.join([alias, driver])
                 ):
                     if self.clouds[fun]() is False:
-                        log.warn(
+                        log.warning(
                             'The cloud driver, \'{0}\', configured under the '
                             '\'{1}\' cloud provider alias is not properly '
                             'configured. Removing it from the available '
@@ -1757,17 +1764,28 @@ class Map(Cloud):
         if self.opts.get('map', None) is None:
             return {}
 
+        local_minion_opts = copy.deepcopy(self.opts)
+        local_minion_opts['file_client'] = 'local'
+        self.minion = salt.minion.MasterMinion(local_minion_opts)
+
         if not os.path.isfile(self.opts['map']):
-            log.error(
-                'The specified map file does not exist: \'{0}\''.format(
-                    self.opts['map'])
-            )
-            raise SaltCloudNotFound()
+            if not (self.opts['map']).startswith('salt://'):
+                log.error(
+                    'The specified map file does not exist: \'{0}\''.format(
+                        self.opts['map'])
+                )
+                raise SaltCloudNotFound()
+        if (self.opts['map']).startswith('salt://'):
+            cached_map = self.minion.functions['cp.cache_file'](self.opts['map'])
+        else:
+            cached_map = self.opts['map']
         try:
             renderer = self.opts.get('renderer', 'yaml_jinja')
             rend = salt.loader.render(self.opts, {})
+            blacklist = self.opts.get('renderer_blacklist')
+            whitelist = self.opts.get('renderer_whitelist')
             map_ = compile_template(
-                self.opts['map'], rend, renderer
+                cached_map, rend, renderer, blacklist, whitelist
             )
         except Exception as exc:
             log.error(
@@ -1930,7 +1948,7 @@ class Map(Cloud):
                                 'requires'):
                     deprecated = 'map_{0}'.format(setting)
                     if deprecated in overrides:
-                        log.warn(
+                        log.warning(
                             'The use of \'{0}\' on the \'{1}\' mapping has '
                             'been deprecated. The preferred way now is to '
                             'just define \'{2}\'. For now, salt-cloud will do '
@@ -1988,7 +2006,7 @@ class Map(Cloud):
                             # Machine already removed
                             break
 
-                        log.warn('\'{0}\' already exists, removing from '
+                        log.warning("'{0}' already exists, removing from "
                                  'the create map.'.format(name))
 
                         if 'existing' not in ret:
@@ -2078,7 +2096,7 @@ class Map(Cloud):
 
             # Generate the fingerprint of the master pubkey in order to
             # mitigate man-in-the-middle attacks
-            master_temp_pub = salt.utils.mkstemp()
+            master_temp_pub = salt.utils.files.mkstemp()
             with salt.utils.fopen(master_temp_pub, 'w') as mtp:
                 mtp.write(pub)
             master_finger = salt.utils.pem_finger(master_temp_pub, sum_type=self.opts['hash_type'])
@@ -2306,7 +2324,7 @@ def create_multiprocessing(parallel_data, queue=None):
         output.pop('deploy_kwargs', None)
 
     return {
-        parallel_data['name']: salt.utils.cloud.simple_types_filter(output)
+        parallel_data['name']: salt.utils.simple_types_filter(output)
     }
 
 
@@ -2342,7 +2360,7 @@ def destroy_multiprocessing(parallel_data, queue=None):
         return {parallel_data['name']: {'Error': str(exc)}}
 
     return {
-        parallel_data['name']: salt.utils.cloud.simple_types_filter(output)
+        parallel_data['name']: salt.utils.simple_types_filter(output)
     }
 
 
@@ -2365,7 +2383,7 @@ def run_parallel_map_providers_query(data, queue=None):
             return (
                 data['alias'],
                 data['driver'],
-                salt.utils.cloud.simple_types_filter(
+                salt.utils.simple_types_filter(
                     cloud.clouds[data['fun']]()
                 )
             )

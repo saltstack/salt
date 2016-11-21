@@ -49,16 +49,18 @@ class ScheduleTestCase(TestCase):
         Tests ensuring the job exists and deleting it
         '''
         self.schedule.opts.update({'schedule': {'foo': 'bar'}, 'pillar': ''})
+        self.assertIn('foo', self.schedule.opts['schedule'])
         self.schedule.delete_job('foo')
-        self.assertNotIn('foo', self.schedule.opts)
+        self.assertNotIn('foo', self.schedule.opts['schedule'])
 
     def test_delete_job_in_pillar(self):
         '''
         Tests deleting job in pillar
         '''
         self.schedule.opts.update({'pillar': {'schedule': {'foo': 'bar'}}, 'schedule': ''})
-        self.schedule.delete_job('foo')
-        self.assertNotIn('foo', self.schedule.opts)
+        self.assertIn('foo', self.schedule.opts['pillar']['schedule'])
+        self.schedule.delete_job('foo', where='pillar')
+        self.assertNotIn('foo', self.schedule.opts['pillar']['schedule'])
 
     def test_delete_job_intervals(self):
         '''
@@ -68,6 +70,30 @@ class ScheduleTestCase(TestCase):
         self.schedule.intervals = {'foo': 'bar'}
         self.schedule.delete_job('foo')
         self.assertNotIn('foo', self.schedule.intervals)
+
+    def test_delete_job_prefix(self):
+        '''
+        Tests ensuring jobs exists and deleting them by prefix
+        '''
+        self.schedule.opts.update({'schedule': {'foobar': 'bar', 'foobaz': 'baz', 'fooboo': 'boo'},
+                                   'pillar': ''})
+        ret = copy.deepcopy(self.schedule.opts)
+        del ret['schedule']['foobar']
+        del ret['schedule']['foobaz']
+        self.schedule.delete_job_prefix('fooba')
+        self.assertEqual(self.schedule.opts, ret)
+
+    def test_delete_job_prefix_in_pillar(self):
+        '''
+        Tests deleting jobs by prefix in pillar
+        '''
+        self.schedule.opts.update({'pillar': {'schedule': {'foobar': 'bar', 'foobaz': 'baz', 'fooboo': 'boo'}},
+                                   'schedule': ''})
+        ret = copy.deepcopy(self.schedule.opts)
+        del ret['pillar']['schedule']['foobar']
+        del ret['pillar']['schedule']['foobaz']
+        self.schedule.delete_job_prefix('fooba', where='pillar')
+        self.assertEqual(self.schedule.opts, ret)
 
     # add_job tests
 
@@ -90,7 +116,7 @@ class ScheduleTestCase(TestCase):
         Tests adding a job to the schedule
         '''
         data = {'foo': {'bar': 'baz'}}
-        ret = copy.deepcopy(DEFAULT_CONFIG)
+        ret = copy.deepcopy(self.schedule.opts)
         ret.update({'schedule': {'foo': {'bar': 'baz', 'enabled': True},
                                  'hello': {'world': 'peace', 'enabled': True}}})
         self.schedule.opts.update({'schedule': {'hello': {'world': 'peace', 'enabled': True}}})
@@ -105,7 +131,6 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts.update({'schedule': {'name': {'enabled': 'foo'}}})
         Schedule.enable_job(self.schedule, 'name')
-        del self.schedule.opts['sock_dir']
         self.assertTrue(self.schedule.opts['schedule']['name']['enabled'])
 
     def test_enable_job_pillar(self):
@@ -114,7 +139,6 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts.update({'pillar': {'schedule': {'name': {'enabled': 'foo'}}}})
         Schedule.enable_job(self.schedule, 'name', persist=False, where='pillar')
-        del self.schedule.opts['sock_dir']
         self.assertTrue(self.schedule.opts['pillar']['schedule']['name']['enabled'])
 
     # disable_job tests
@@ -125,7 +149,6 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts.update({'schedule': {'name': {'enabled': 'foo'}}})
         Schedule.disable_job(self.schedule, 'name')
-        del self.schedule.opts['sock_dir']
         self.assertFalse(self.schedule.opts['schedule']['name']['enabled'])
 
     def test_disable_job_pillar(self):
@@ -134,7 +157,6 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts.update({'pillar': {'schedule': {'name': {'enabled': 'foo'}}}})
         Schedule.disable_job(self.schedule, 'name', persist=False, where='pillar')
-        del self.schedule.opts['sock_dir']
         self.assertFalse(self.schedule.opts['pillar']['schedule']['name']['enabled'])
 
     # modify_job tests
@@ -144,7 +166,7 @@ class ScheduleTestCase(TestCase):
         Tests modifying a job in the scheduler
         '''
         schedule = {'schedule': {'foo': 'bar'}}
-        ret = copy.deepcopy(DEFAULT_CONFIG)
+        ret = copy.deepcopy(self.schedule.opts)
         ret.update({'schedule': {'foo': 'bar', 'name': {'schedule': {'foo': 'bar'}}}})
         self.schedule.opts.update({'schedule': {'foo': 'bar'}})
         Schedule.modify_job(self.schedule, 'name', schedule)
@@ -155,7 +177,7 @@ class ScheduleTestCase(TestCase):
         Tests modifying a job in the scheduler in pillar
         '''
         schedule = {'foo': 'bar'}
-        ret = copy.deepcopy(DEFAULT_CONFIG)
+        ret = copy.deepcopy(self.schedule.opts)
         ret.update({'pillar': {'schedule': {'name': {'foo': 'bar'}}}})
         self.schedule.opts.update({'pillar': {'schedule': {'name': {'foo': 'bar'}}}})
         Schedule.modify_job(self.schedule, 'name', schedule, persist=False, where='pillar')
@@ -171,7 +193,6 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts.update({'schedule': {'enabled': 'foo'}})
         Schedule.enable_schedule(self.schedule)
-        del self.schedule.opts['sock_dir']
         self.assertTrue(self.schedule.opts['schedule']['enabled'])
 
     # disable_schedule tests
@@ -182,7 +203,6 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts.update({'schedule': {'enabled': 'foo'}})
         Schedule.disable_schedule(self.schedule)
-        del self.schedule.opts['sock_dir']
         self.assertFalse(self.schedule.opts['schedule']['enabled'])
 
     # reload tests
@@ -193,7 +213,7 @@ class ScheduleTestCase(TestCase):
         saved schedule and self.schedule.opts contain a schedule key
         '''
         saved = {'schedule': {'foo': 'bar'}}
-        ret = copy.deepcopy(DEFAULT_CONFIG)
+        ret = copy.deepcopy(self.schedule.opts)
         ret.update({'schedule': {'foo': 'bar', 'hello': 'world'}})
         self.schedule.opts.update({'schedule': {'hello': 'world'}})
         Schedule.reload(self.schedule, saved)
@@ -202,10 +222,10 @@ class ScheduleTestCase(TestCase):
     def test_reload_update_schedule_no_key(self):
         '''
         Tests reloading the schedule from saved schedule that does not
-        contain a schedule key but self.schedule.opts does not
+        contain a schedule key but self.schedule.opts does
         '''
         saved = {'foo': 'bar'}
-        ret = copy.deepcopy(DEFAULT_CONFIG)
+        ret = copy.deepcopy(self.schedule.opts)
         ret.update({'schedule': {'foo': 'bar', 'hello': 'world'}})
         self.schedule.opts.update({'schedule': {'hello': 'world'}})
         Schedule.reload(self.schedule, saved)
@@ -216,10 +236,10 @@ class ScheduleTestCase(TestCase):
         Tests reloading the schedule from saved schedule that does not
         contain a schedule key and neither does self.schedule.opts
         '''
-        saved = copy.deepcopy(DEFAULT_CONFIG)
-        saved.update({'schedule': {'foo': 'bar'}})
-        ret = copy.deepcopy(DEFAULT_CONFIG)
-        ret.update({'schedule': {'foo': 'bar'}})
+        saved = {'foo': 'bar'}
+        ret = copy.deepcopy(self.schedule.opts)
+        ret['schedule'] = {'foo': 'bar'}
+        self.schedule.opts.pop('schedule', None)
         Schedule.reload(self.schedule, saved)
         self.assertEqual(self.schedule.opts, ret)
 
@@ -229,8 +249,9 @@ class ScheduleTestCase(TestCase):
         a schedule key, but self.schedule.opts does not
         '''
         saved = {'schedule': {'foo': 'bar'}}
-        ret = copy.deepcopy(DEFAULT_CONFIG)
-        ret.update({'schedule': {'foo': 'bar'}})
+        ret = copy.deepcopy(self.schedule.opts)
+        ret['schedule'] = {'foo': 'bar'}
+        self.schedule.opts.pop('schedule', None)
         Schedule.reload(self.schedule, saved)
         self.assertEqual(self.schedule.opts, ret)
 

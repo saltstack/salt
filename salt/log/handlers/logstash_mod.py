@@ -21,6 +21,7 @@
           host: 127.0.0.1
           port: 9999
           version: 0
+          msg_type: logstash
 
     In the `Logstash`_ configuration file:
 
@@ -43,6 +44,7 @@
           host: 127.0.0.1
           port: 9999
           version: 1
+          msg_type: logstash
 
     In the `Logstash`_ configuration file:
 
@@ -199,6 +201,7 @@ def setup_handlers():
         host = __opts__['logstash_udp_handler'].get('host', None)
         port = __opts__['logstash_udp_handler'].get('port', None)
         version = __opts__['logstash_udp_handler'].get('version', 0)
+        msg_type = __opts__['logstash_udp_handler'].get('msg_type', 'logstash')
 
         if host is None and port is None:
             log.debug(
@@ -207,7 +210,7 @@ def setup_handlers():
                 'configuring the logstash UDP logging handler.'
             )
         else:
-            logstash_formatter = LogstashFormatter(version=version)
+            logstash_formatter = LogstashFormatter(msg_type=msg_type, version=version)
             udp_handler = DatagramLogstashHandler(host, port)
             udp_handler.setFormatter(logstash_formatter)
             udp_handler.setLevel(

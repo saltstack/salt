@@ -23,6 +23,7 @@ import logging
 import datetime
 import traceback
 import re
+import random
 
 # Import salt libs
 import salt.utils
@@ -50,7 +51,7 @@ import salt.utils.yamlloader as yamlloader
 # Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
-from salt.ext.six.moves import map, range
+from salt.ext.six.moves import map, range, reload_module
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'failhard',
     'onlyif',
     'unless',
+    'retry',
     'order',
     'prereq',
     'prereq_in',
@@ -96,6 +98,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     '__env__',
     '__sls__',
     '__id__',
+    '__orchestration_jid__',
     '__pub_user',
     '__pub_arg',
     '__pub_jid',
@@ -185,7 +188,7 @@ def find_name(name, state, high):
         ext_id.append((name, state))
     # if we are requiring an entire SLS, then we need to add ourselves to everything in that SLS
     elif state == 'sls':
-        for nid, item in high.iteritems():
+        for nid, item in six.iteritems(high):
             if item['__sls__'] == name:
                 ext_id.append((nid, next(iter(item))))
     # otherwise we are requiring a single state, lets find it
@@ -300,8 +303,12 @@ class Compiler(object):
         '''
         Enforce the states in a template
         '''
-        high = compile_template(
-            template, self.rend, self.opts['renderer'], **kwargs)
+        high = compile_template(template,
+                                self.rend,
+                                self.opts['renderer'],
+                                self.opts['renderer_blacklist'],
+                                self.opts['renderer_whitelist'],
+                                **kwargs)
         if not high:
             return high
         return self.pad_funcs(high)
@@ -901,7 +908,7 @@ class State(object):
             # process 'site-packages', the 'site' module needs to be reloaded in
             # order for the newly installed package to be importable.
             try:
-                reload(site)
+                reload_module(site)
             except RuntimeError:
                 log.error('Error encountered during module reload. Modules were not reloaded.')
             except TypeError:
@@ -1255,7 +1262,7 @@ class State(object):
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
-    def compile_high_data(self, high):
+    def compile_high_data(self, high, orchestration_jid=None):
         '''
         "Compile" the high data as it is retrieved from the CLI or YAML into
         the individual state executor structures
@@ -1271,6 +1278,8 @@ class State(object):
                     continue
                 chunk = {'state': state,
                          'name': name}
+                if orchestration_jid is not None:
+                    chunk['__orchestration_jid__'] = orchestration_jid
                 if '__sls__' in body:
                     chunk['__sls__'] = body['__sls__']
                 if '__env__' in body:
@@ -1635,13 +1644,17 @@ class State(object):
         errors.extend(req_in_errors)
         return req_in_high, errors
 
-    def call(self, low, chunks=None, running=None):
+    def call(self, low, chunks=None, running=None, retries=1):
         '''
         Call a state directly with the low data structure, verify data
         before processing.
         '''
         start_time = datetime.datetime.now()
-        log.info('Running state [{0}] at time {1}'.format(low['name'], start_time.time().isoformat()))
+        log.info('Running state [{0}] at time {1}'.format(
+            low['name'].strip() if isinstance(low['name'], str)
+                else low['name'],
+            start_time.time().isoformat())
+        )
         errors = self.verify_data(low)
         if errors:
             ret = {
@@ -1662,10 +1675,13 @@ class State(object):
 
         if not low.get('__prereq__'):
             log.info(
-                    'Executing state {0[state]}.{0[fun]} for {0[name]}'.format(
-                        low
-                        )
-                    )
+                'Executing state {0}.{1} for [{2}]'.format(
+                    low['state'],
+                    low['fun'],
+                    low['name'].strip() if isinstance(low['name'], str)
+                        else low['name']
+                )
+            )
 
         if 'provider' in low:
             self.load_modules(low)
@@ -1723,6 +1739,10 @@ class State(object):
             else:
                 # Let's use the default environment
                 inject_globals['__env__'] = 'base'
+
+            if '__orchestration_jid__' in low:
+                inject_globals['__orchestration_jid__'] = \
+                    low['__orchestration_jid__']
 
             if 'result' not in ret or ret['result'] is False:
                 self.states.inject_globals = inject_globals
@@ -1782,8 +1802,86 @@ class State(object):
         duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
         ret['duration'] = duration
         ret['__id__'] = low['__id__']
-        log.info('Completed state [{0}] at time {1} duration_in_ms={2}'.format(low['name'], finish_time.time().isoformat(), duration))
+        log.info(
+            'Completed state [{0}] at time {1} duration_in_ms={2}'.format(
+                low['name'].strip() if isinstance(low['name'], str)
+                    else low['name'],
+                finish_time.time().isoformat(),
+                duration
+            )
+        )
+        if 'retry' in low:
+            low['retry'] = self.verify_retry_data(low['retry'])
+            if not sys.modules[self.states[cdata['full']].__module__].__opts__['test']:
+                if low['retry']['until'] != ret['result']:
+                    if low['retry']['attempts'] > retries:
+                        interval = low['retry']['interval']
+                        if low['retry']['splay'] != 0:
+                            interval = interval + random.randint(0, low['retry']['splay'])
+                        log.info(('State result does not match retry until value'
+                                  ', state will be re-run in {0} seconds'.format(interval)))
+                        self.functions['test.sleep'](interval)
+                        retry_ret = self.call(low, chunks, running, retries=retries+1)
+                        orig_ret = ret
+                        ret = retry_ret
+                        ret['comment'] = '\n'.join(
+                                [(
+                                     'Attempt {0}: Returned a result of "{1}", '
+                                     'with the following comment: "{2}"'.format(
+                                         retries,
+                                         orig_ret['result'],
+                                         orig_ret['comment'])
+                                 ),
+                                 '' if not ret['comment'] else ret['comment']])
+                        ret['duration'] = ret['duration'] + orig_ret['duration'] + (interval * 1000)
+                        if retries == 1:
+                            ret['start_time'] = orig_ret['start_time']
+            else:
+                ret['comment'] = '  '.join(
+                        ['' if not ret['comment'] else ret['comment'],
+                         ('The state would be retried every {1} seconds '
+                          '(with a splay of up to {3} seconds) '
+                          'a maximum of {0} times or until a result of {2} '
+                          'is returned').format(low['retry']['attempts'],
+                                                low['retry']['interval'],
+                                                low['retry']['until'],
+                                                low['retry']['splay'])])
         return ret
+
+    def verify_retry_data(self, retry_data):
+        '''
+        verifies the specified retry data
+        '''
+        retry_defaults = {
+                'until': True,
+                'attempts': 2,
+                'splay': 0,
+                'interval': 30,
+        }
+        expected_data = {
+            'until': bool,
+            'attempts': int,
+            'interval': int,
+            'splay': int,
+        }
+        validated_retry_data = {}
+        if isinstance(retry_data, dict):
+            for expected_key, value_type in expected_data.iteritems():
+                if expected_key in retry_data:
+                    if isinstance(retry_data[expected_key], value_type):
+                        validated_retry_data[expected_key] = retry_data[expected_key]
+                    else:
+                        log.warning(('An invalid value was passed for the retry {0}, '
+                                     'using default value {1}'.format(expected_key,
+                                                                      retry_defaults[expected_key])))
+                        validated_retry_data[expected_key] = retry_defaults[expected_key]
+                else:
+                    validated_retry_data[expected_key] = retry_defaults[expected_key]
+        else:
+            log.warning(('State is set to retry, but a valid dict for retry '
+                         'configuration was not found.  Using retry defaults'))
+            validated_retry_data = retry_defaults
+        return validated_retry_data
 
     def call_chunks(self, chunks):
         '''
@@ -1892,7 +1990,7 @@ class State(object):
                     continue
                 if r_state == 'onfail':
                     if run_dict[tag]['result'] is True:
-                        fun_stats.add('onfail')
+                        fun_stats.add('onfail')  # At least one state is OK
                         continue
                 else:
                     if run_dict[tag]['result'] is False:
@@ -1923,8 +2021,8 @@ class State(object):
                 status = 'met'
             else:
                 status = 'pre'
-        elif 'onfail' in fun_stats:
-            status = 'onfail'
+        elif 'onfail' in fun_stats and 'met' not in fun_stats:
+            status = 'onfail'  # all onfail states are OK
         elif 'onchanges' in fun_stats and 'onchangesmet' not in fun_stats:
             status = 'onchanges'
         elif 'change' in fun_stats:
@@ -2232,7 +2330,7 @@ class State(object):
         running.update(errors)
         return running
 
-    def call_high(self, high):
+    def call_high(self, high, orchestration_jid=None):
         '''
         Process a high data call and ensure the defined states.
         '''
@@ -2250,7 +2348,7 @@ class State(object):
         if errors:
             return errors
         # Compile and verify the raw chunks
-        chunks = self.compile_high_data(high)
+        chunks = self.compile_high_data(high, orchestration_jid)
 
         # Check for any disabled states
         disabled = {}
@@ -2384,8 +2482,11 @@ class State(object):
         '''
         Enforce the states in a template
         '''
-        high = compile_template(
-            template, self.rend, self.opts['renderer'])
+        high = compile_template(template,
+                                self.rend,
+                                self.opts['renderer'],
+                                self.opts['renderer_blacklist'],
+                                self.opts['renderer_whitelist'])
         if not high:
             return high
         high, errors = self.render_template(high, template)
@@ -2397,8 +2498,11 @@ class State(object):
         '''
         Enforce the states in a template, pass the template as a string
         '''
-        high = compile_template_str(
-            template, self.rend, self.opts['renderer'])
+        high = compile_template_str(template,
+                                    self.rend,
+                                    self.opts['renderer'],
+                                    self.opts['renderer_blacklist'],
+                                    self.opts['renderer_whitelist'])
         if not high:
             return high
         high, errors = self.render_template(high, '<template-str>')
@@ -2482,8 +2586,8 @@ class BaseHighState(object):
         '''
         envs = ['base']
         if 'file_roots' in self.opts:
-            envs.extend(list(self.opts['file_roots']))
-        client_envs = self.client.envs()
+            envs.extend([x for x in list(self.opts['file_roots'])
+                         if x not in envs])
         env_order = self.opts.get('env_order', [])
         client_envs = self.client.envs()
         if env_order and client_envs:
@@ -2491,17 +2595,17 @@ class BaseHighState(object):
             env_intersection = set(env_order).intersection(client_env_list)
             final_list = []
             for ord_env in env_order:
-                if ord_env in env_intersection:
+                if ord_env in env_intersection and ord_env not in final_list:
                     final_list.append(ord_env)
-            return set(final_list)
+            return final_list
 
         elif env_order:
-            return set(env_order)
+            return env_order
         else:
             for cenv in client_envs:
                 if cenv not in envs:
                     envs.append(cenv)
-            return set(envs)
+            return envs
 
     def get_tops(self):
         '''
@@ -2512,12 +2616,13 @@ class BaseHighState(object):
         done = DefaultOrderedDict(list)
         found = 0  # did we find any contents in the top files?
         # Gather initial top files
-        if self.opts['top_file_merging_strategy'] == 'same' and \
-        not self.opts['environment']:
+        merging_strategy = self.opts['top_file_merging_strategy']
+        if merging_strategy == 'same' and not self.opts['environment']:
             if not self.opts['default_top']:
-                raise SaltRenderError('Top file merge strategy set to same, but no default_top '
-                          'configuration option was set')
-            self.opts['environment'] = self.opts['default_top']
+                raise SaltRenderError(
+                    'top_file_merging_strategy set to \'same\', but no '
+                    'default_top configuration option was set'
+                )
 
         if self.opts['environment']:
             contents = self.client.cache_file(
@@ -2531,15 +2636,23 @@ class BaseHighState(object):
                         contents,
                         self.state.rend,
                         self.state.opts['renderer'],
+                        self.state.opts['renderer_blacklist'],
+                        self.state.opts['renderer_whitelist'],
                         saltenv=self.opts['environment']
                     )
                 ]
             else:
                 tops[self.opts['environment']] = [{}]
-        elif self.opts['top_file_merging_strategy'] == 'merge':
+
+        else:
             found = 0
-            if self.opts.get('state_top_saltenv', False):
-                saltenv = self.opts['state_top_saltenv']
+            state_top_saltenv = self.opts.get('state_top_saltenv', False)
+            if state_top_saltenv \
+                    and not isinstance(state_top_saltenv, six.string_types):
+                state_top_saltenv = str(state_top_saltenv)
+
+            for saltenv in [state_top_saltenv] if state_top_saltenv \
+                    else self._get_envs():
                 contents = self.client.cache_file(
                     self.opts['state_top'],
                     saltenv
@@ -2551,43 +2664,30 @@ class BaseHighState(object):
                             contents,
                             self.state.rend,
                             self.state.opts['renderer'],
+                            self.state.opts['renderer_blacklist'],
+                            self.state.opts['renderer_whitelist'],
                             saltenv=saltenv
                         )
                     )
                 else:
                     tops[saltenv].append({})
                     log.debug('No contents loaded for env: {0}'.format(saltenv))
-            else:
-                for saltenv in self._get_envs():
-                    contents = self.client.cache_file(
-                        self.opts['state_top'],
-                        saltenv
-                    )
-                    if contents:
-                        found = found + 1
-                        tops[saltenv].append(
-                            compile_template(
-                                contents,
-                                self.state.rend,
-                                self.state.opts['renderer'],
-                                saltenv=saltenv
-                            )
-                        )
-                    else:
-                        tops[saltenv].append({})
-                        log.debug('No contents loaded for env: {0}'.format(saltenv))
-            if found > 1:
+
+            if found > 1 and merging_strategy.startswith('merge'):
                 log.warning(
-                    'top_file_merging_strategy is set to \'merge\' and '
+                    'top_file_merging_strategy is set to \'%s\' and '
                     'multiple top files were found. Merging order is not '
                     'deterministic, it may be desirable to either set '
                     'top_file_merging_strategy to \'same\' or use the '
                     '\'env_order\' configuration parameter to specify the '
-                    'merging order.'
+                    'merging order.', merging_strategy
                 )
 
         if found == 0:
-            log.error('No contents found in top file')
+            log.error('No contents found in top file. Please verify '
+                'that the \'file_roots\' specified in \'etc/master\' are '
+                'accessible: {0}'.format(repr(self.state.opts['file_roots']))
+            )
 
         # Search initial top files for includes
         for saltenv, ctops in six.iteritems(tops):
@@ -2616,7 +2716,9 @@ class BaseHighState(object):
                                 ).get('dest', False),
                                 self.state.rend,
                                 self.state.opts['renderer'],
-                                saltenv=saltenv
+                                self.state.opts['renderer_blacklist'],
+                                self.state.opts['renderer_whitelist'],
+                                saltenv
                             )
                         )
                         done[saltenv].append(sls)
@@ -2629,6 +2731,150 @@ class BaseHighState(object):
         '''
         Cleanly merge the top files
         '''
+        merging_strategy = self.opts['top_file_merging_strategy']
+        try:
+            merge_attr = '_merge_tops_{0}'.format(merging_strategy)
+            merge_func = getattr(self, merge_attr)
+            if not hasattr(merge_func, '__call__'):
+                msg = '\'{0}\' is not callable'.format(merge_attr)
+                log.error(msg)
+                raise TypeError(msg)
+        except (AttributeError, TypeError):
+            log.warning(
+                'Invalid top_file_merging_strategy \'%s\', falling back to '
+                '\'merge\'', merging_strategy
+            )
+            merge_func = self._merge_tops_merge
+        return merge_func(tops)
+
+    def _merge_tops_merge(self, tops):
+        '''
+        The default merging strategy. The base env is authoritative, so it is
+        checked first, followed by the remaining environments. In top files
+        from environments other than "base", only the section matching the
+        environment from the top file will be considered, and it too will be
+        ignored if that environment was defined in the "base" top file.
+        '''
+        top = DefaultOrderedDict(OrderedDict)
+
+        # Check base env first as it is authoritative
+        base_tops = tops.pop('base', DefaultOrderedDict(OrderedDict))
+        for ctop in base_tops:
+            for saltenv, targets in six.iteritems(ctop):
+                if saltenv == 'include':
+                    continue
+                try:
+                    for tgt in targets:
+                        top[saltenv][tgt] = ctop[saltenv][tgt]
+                except TypeError:
+                    raise SaltRenderError('Unable to render top file. No targets found.')
+
+        for cenv, ctops in six.iteritems(tops):
+            for ctop in ctops:
+                for saltenv, targets in six.iteritems(ctop):
+                    if saltenv == 'include':
+                        continue
+                    elif saltenv != cenv:
+                        log.debug(
+                            'Section for saltenv \'%s\' in the \'%s\' '
+                            'saltenv\'s top file will be ignored, as the '
+                            'top_file_merging_strategy is set to \'merge\' '
+                            'and the saltenvs do not match',
+                            saltenv, cenv
+                        )
+                        continue
+                    elif saltenv in top:
+                        log.debug(
+                            'Section for saltenv \'%s\' in the \'%s\' '
+                            'saltenv\'s top file will be ignored, as this '
+                            'saltenv was already defined in the \'base\' top '
+                            'file', saltenv, cenv
+                        )
+                        continue
+                    try:
+                        for tgt in targets:
+                            top[saltenv][tgt] = ctop[saltenv][tgt]
+                    except TypeError:
+                        raise SaltRenderError('Unable to render top file. No targets found.')
+        return top
+
+    def _merge_tops_same(self, tops):
+        '''
+        For each saltenv, only consider the top file from that saltenv. All
+        sections matching a given saltenv, which appear in a different
+        saltenv's top file, will be ignored.
+        '''
+        top = DefaultOrderedDict(OrderedDict)
+        for cenv, ctops in six.iteritems(tops):
+            if all([x == {} for x in ctops]):
+                # No top file found in this env, check the default_top
+                default_top = self.opts['default_top']
+                fallback_tops = tops.get(default_top, [])
+                if all([x == {} for x in fallback_tops]):
+                    # Nothing in the fallback top file
+                    log.error(
+                        'The \'%s\' saltenv has no top file, and the fallback '
+                        'saltenv specified by default_top (%s) also has no '
+                        'top file', cenv, default_top
+                    )
+                    continue
+
+                for ctop in fallback_tops:
+                    for saltenv, targets in six.iteritems(ctop):
+                        if saltenv != cenv:
+                            continue
+                        log.debug(
+                            'The \'%s\' saltenv has no top file, using the '
+                            'default_top saltenv (%s)', cenv, default_top
+                        )
+                        for tgt in targets:
+                            top[saltenv][tgt] = ctop[saltenv][tgt]
+                        break
+                    else:
+                        log.error(
+                            'The \'%s\' saltenv has no top file, and no '
+                            'matches were found in the top file for the '
+                            'default_top saltenv (%s)', cenv, default_top
+                        )
+
+                continue
+
+            else:
+                for ctop in ctops:
+                    for saltenv, targets in six.iteritems(ctop):
+                        if saltenv == 'include':
+                            continue
+                        elif saltenv != cenv:
+                            log.debug(
+                                'Section for saltenv \'%s\' in the \'%s\' '
+                                'saltenv\'s top file will be ignored, as the '
+                                'top_file_merging_strategy is set to \'same\' '
+                                'and the saltenvs do not match',
+                                saltenv, cenv
+                            )
+                            continue
+
+                        try:
+                            for tgt in targets:
+                                top[saltenv][tgt] = ctop[saltenv][tgt]
+                        except TypeError:
+                            raise SaltRenderError('Unable to render top file. No targets found.')
+        return top
+
+    def _merge_tops_merge_all(self, tops):
+        '''
+        Merge the top files into a single dictionary
+        '''
+        def _read_tgt(tgt):
+            match_type = None
+            states = []
+            for item in tgt:
+                if isinstance(item, dict):
+                    match_type = item
+                if isinstance(item, six.string_types):
+                    states.append(item)
+            return match_type, states
+
         top = DefaultOrderedDict(OrderedDict)
         for ctops in six.itervalues(tops):
             for ctop in ctops:
@@ -2640,15 +2886,15 @@ class BaseHighState(object):
                             if tgt not in top[saltenv]:
                                 top[saltenv][tgt] = ctop[saltenv][tgt]
                                 continue
-                            matches = []
-                            states = set()
-                            for comp in top[saltenv][tgt]:
-                                if isinstance(comp, dict):
-                                    matches.append(comp)
-                                if isinstance(comp, six.string_types):
-                                    states.add(comp)
-                            top[saltenv][tgt] = matches
-                            top[saltenv][tgt].extend(list(states))
+                            m_type1, m_states1 = _read_tgt(top[saltenv][tgt])
+                            m_type2, m_states2 = _read_tgt(ctop[saltenv][tgt])
+                            merged = []
+                            match_type = m_type2 or m_type1
+                            if match_type is not None:
+                                merged.append(match_type)
+                            merged.extend(m_states1)
+                            merged.extend([x for x in m_states2 if x not in merged])
+                            top[saltenv][tgt] = merged
                     except TypeError:
                         raise SaltRenderError('Unable to render top file. No targets found.')
         return top
@@ -2795,10 +3041,15 @@ class BaseHighState(object):
             )
         state = None
         try:
-            state = compile_template(
-                fn_, self.state.rend, self.state.opts['renderer'], saltenv,
-                sls, rendered_sls=mods
-            )
+            state = compile_template(fn_,
+                                     self.state.rend,
+                                     self.state.opts['renderer'],
+                                     self.state.opts['renderer_blacklist'],
+                                     self.state.opts['renderer_whitelist'],
+                                     saltenv,
+                                     sls,
+                                     rendered_sls=mods
+                                     )
         except SaltRenderError as exc:
             msg = 'Rendering SLS \'{0}:{1}\' failed: {2}'.format(
                 saltenv, sls, exc
@@ -2859,8 +3110,16 @@ class BaseHighState(object):
                         continue
 
                     if inc_sls.startswith('.'):
-                        levels, include = \
-                            re.match(r'^(\.+)(.*)$', inc_sls).groups()
+                        match = re.match(r'^(\.+)(.*)$', inc_sls)
+                        if match:
+                            levels, include = match.groups()
+                        else:
+                            msg = ('Badly formatted include {0} found in include '
+                                    'in SLS \'{2}:{3}\''
+                                    .format(inc_sls, saltenv, sls))
+                            log.error(msg)
+                            errors.append(msg)
+                            continue
                         level_count = len(levels)
                         p_comps = sls.split('.')
                         if state_data.get('source', '').endswith('/init.sls'):
@@ -3003,7 +3262,7 @@ class BaseHighState(object):
                 )
                 continue
             skeys = set()
-            for key in state[name]:
+            for key in list(state[name]):
                 if key.startswith('_'):
                     continue
                 if not isinstance(state[name][key], list):
@@ -3195,7 +3454,7 @@ class BaseHighState(object):
         return ret_matches
 
     def call_highstate(self, exclude=None, cache=None, cache_name='highstate',
-                       force=False, whitelist=None):
+                       force=False, whitelist=None, orchestration_jid=None):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
@@ -3217,7 +3476,7 @@ class BaseHighState(object):
             if os.path.isfile(cfn):
                 with salt.utils.fopen(cfn, 'rb') as fp_:
                     high = self.serial.load(fp_)
-                    return self.state.call_high(high)
+                    return self.state.call_high(high, orchestration_jid)
         # File exists so continue
         err = []
         try:
@@ -3271,7 +3530,7 @@ class BaseHighState(object):
             log.error(msg.format(cfn))
 
         os.umask(cumask)
-        return self.state.call_high(high)
+        return self.state.call_high(high, orchestration_jid)
 
     def compile_highstate(self):
         '''
@@ -3315,6 +3574,44 @@ class BaseHighState(object):
         chunks = self.state.compile_high_data(high)
 
         return chunks
+
+    def compile_state_usage(self):
+        '''
+        Return all used and unused states for the minion based on the top match data
+        '''
+        err = []
+        top = self.get_top()
+        err += self.verify_tops(top)
+
+        if err:
+            return err
+
+        matches = self.top_matches(top)
+        state_usage = {}
+
+        for saltenv, states in self.avail.items():
+            env_usage = {
+                'used': [],
+                'unused': [],
+                'count_all': 0,
+                'count_used': 0,
+                'count_unused': 0
+            }
+
+            env_matches = matches.get(saltenv)
+
+            for state in states:
+                env_usage['count_all'] += 1
+                if state in env_matches:
+                    env_usage['count_used'] += 1
+                    env_usage['used'].append(state)
+                else:
+                    env_usage['count_unused'] += 1
+                    env_usage['unused'].append(state)
+
+            state_usage[saltenv] = env_usage
+
+        return state_usage
 
 
 class HighState(BaseHighState):
@@ -3412,17 +3709,7 @@ class MasterHighState(HighState):
     Execute highstate compilation from the master
     '''
     def __init__(self, master_opts, minion_opts, grains, id_,
-                 saltenv=None,
-                 env=None):
-        if isinstance(env, six.string_types):
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
+                 saltenv=None):
         # Force the fileclient to be local
         opts = copy.deepcopy(minion_opts)
         opts['file_client'] = 'local'

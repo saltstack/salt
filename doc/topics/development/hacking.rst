@@ -66,34 +66,8 @@ Install Salt (and dependencies) into the virtualenv:
 
 .. code-block:: bash
 
-    pip install M2Crypto    # Don't install on Debian/Ubuntu (see below)
     pip install pyzmq PyYAML pycrypto msgpack-python jinja2 psutil futures tornado
     pip install -e ./salt   # the path to the salt git clone from above
-
-.. note:: Installing M2Crypto
-
-    ``swig`` and ``libssl-dev`` are required to build M2Crypto. To fix
-    the error ``command 'swig' failed with exit status 1`` while installing M2Crypto,
-    try installing it with the following command:
-
-    .. code-block:: bash
-
-        env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl" pip install M2Crypto
-
-    Debian and Ubuntu systems have modified openssl libraries and mandate that
-    a patched version of M2Crypto be installed. This means that M2Crypto
-    needs to be installed via apt:
-
-    .. code-block:: bash
-
-        apt-get install python-m2crypto
-
-    This also means that pulling in the M2Crypto installed using apt requires using
-    ``--system-site-packages`` when creating the virtualenv.
-
-    If you're using a platform other than Debian or Ubuntu, and you are
-    installing M2Crypto via pip instead of a system package, then you will also
-    need the ``gcc`` compiler.
 
 .. note:: Installing psutil
 

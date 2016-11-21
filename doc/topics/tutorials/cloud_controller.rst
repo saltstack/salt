@@ -154,6 +154,9 @@ prone to errors.
 
 Virtual Machine generation applications are available for many platforms:
 
+kiwi: (openSUSE, SLES, RHEL, CentOS)
+  https://suse.github.io/kiwi/
+
 vm-builder:
   https://wiki.debian.org/VMBuilder
 
@@ -184,6 +187,18 @@ Fedora Linux
 
 Images for Fedora Linux can be found here:
 http://fedoraproject.org/en/get-fedora#clouds
+
+openSUSE
+~~~~~~~~
+
+http://download.opensuse.org/repositories/openSUSE:/Leap:/42.1:/Images/images
+
+(look for JeOS-for-kvm-and-xen variant)
+
+SUSE
+~~~~
+
+https://www.suse.com/products/server/jeos
 
 Ubuntu Linux
 ~~~~~~~~~~~~

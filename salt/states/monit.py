@@ -46,16 +46,20 @@ def monitor(name):
     try:
         for key, value in result.items():
             if 'Running' in value[name]:
-                ret['comment'] = ('{0} is being being monitored').format(name)
+                ret['comment'] = ('{0} is being being monitored.').format(name)
                 ret['result'] = True
             else:
+                if __opts__['test']:
+                    ret['comment'] = 'Service {0} is set to be monitored.'.format(name)
+                    ret['result'] = None
+                    return ret
                 __salt__['monit.monitor'](name)
-                ret['comment'] = ('{0} started to be monitored ').format(name)
+                ret['comment'] = ('{0} started to be monitored.').format(name)
                 ret['changes'][name] = 'Running'
                 ret['result'] = True
                 break
     except KeyError:
-        ret['comment'] = ('{0} not found in configuration').format(name)
+        ret['comment'] = ('{0} not found in configuration.').format(name)
         ret['result'] = False
 
     return ret
@@ -76,16 +80,20 @@ def unmonitor(name):
     try:
         for key, value in result.items():
             if 'Not monitored' in value[name]:
-                ret['comment'] = ('{0} is not being monitored').format(name)
+                ret['comment'] = ('{0} is not being monitored.').format(name)
                 ret['result'] = True
             else:
+                if __opts__['test']:
+                    ret['comment'] = 'Service {0} is set to be unmonitored.'.format(name)
+                    ret['result'] = None
+                    return ret
                 __salt__['monit.unmonitor'](name)
-                ret['comment'] = ('{0} stopped being monitored ').format(name)
+                ret['comment'] = ('{0} stopped being monitored.').format(name)
                 ret['changes'][name] = 'Not monitored'
                 ret['result'] = True
                 break
     except KeyError:
-        ret['comment'] = ('{0} not found in configuration').format(name)
+        ret['comment'] = ('{0} not found in configuration.').format(name)
         ret['result'] = False
 
     return ret

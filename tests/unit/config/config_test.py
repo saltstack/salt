@@ -13,7 +13,6 @@ import logging
 import os
 import shutil
 import tempfile
-from contextlib import contextmanager
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -66,39 +65,34 @@ def _unhandled_mock_read(filename):
     raise CommandExecutionError('Unhandled mock read for {0}'.format(filename))
 
 
-@contextmanager
-def _fopen_side_effect_etc_hostname(filename):
-    '''
-    Mock reading from /etc/hostname
-    '''
-    log.debug('Mock-reading {0}'.format(filename))
-    if filename == '/etc/hostname':
-        mock_open = MagicMock()
-        mock_open.read.return_value = MOCK_ETC_HOSTNAME
-        yield mock_open
-    elif filename == '/etc/hosts':
-        raise IOError(2, "No such file or directory: '{0}'".format(filename))
-    else:
-        _unhandled_mock_read(filename)
-
-
-@contextmanager
-def _fopen_side_effect_etc_hosts(filename):
-    '''
-    Mock /etc/hostname not existing, and falling back to reading /etc/hosts
-    '''
-    log.debug('Mock-reading {0}'.format(filename))
-    if filename == '/etc/hostname':
-        raise IOError(2, "No such file or directory: '{0}'".format(filename))
-    elif filename == '/etc/hosts':
-        mock_open = MagicMock()
-        mock_open.__iter__.return_value = MOCK_ETC_HOSTS.splitlines()
-        yield mock_open
-    else:
-        _unhandled_mock_read(filename)
-
-
 class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
+
+    def test_sha256_is_default_for_master(self):
+        fpath = tempfile.mktemp()
+        try:
+            salt.utils.fopen(fpath, 'w').write(
+                "root_dir: /\n"
+                "key_logfile: key\n"
+            )
+            config = sconfig.master_config(fpath)
+            self.assertEqual(config['hash_type'], 'sha256')
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
+
+    def test_sha256_is_default_for_minion(self):
+        fpath = tempfile.mktemp()
+        try:
+            salt.utils.fopen(fpath, 'w').write(
+                "root_dir: /\n"
+                "key_logfile: key\n"
+            )
+            config = sconfig.minion_config(fpath)
+            self.assertEqual(config['hash_type'], 'sha256')
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
+
     def test_proper_path_joining(self):
         fpath = tempfile.mktemp()
         try:
@@ -366,34 +360,12 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertEqual(syndic_opts['master'], 'localhost')
         self.assertEqual(syndic_opts['sock_dir'], os.path.join(root_dir, 'minion_sock'))
         self.assertEqual(syndic_opts['cachedir'], os.path.join(root_dir, 'cache'))
-        self.assertEqual(syndic_opts['log_file'], os.path.join(root_dir, 'osyndic.log'))
-        self.assertEqual(syndic_opts['pidfile'], os.path.join(root_dir, 'osyndic.pid'))
+        self.assertEqual(syndic_opts['log_file'], os.path.join(root_dir, 'syndic.log'))
+        self.assertEqual(syndic_opts['pidfile'], os.path.join(root_dir, 'syndic.pid'))
         # Show that the options of localclient that repub to local master
         # are not merged with syndic ones
         self.assertEqual(syndic_opts['_master_conf_file'], minion_conf_path)
         self.assertEqual(syndic_opts['_minion_conf_file'], syndic_conf_path)
-
-    @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
-    def test_get_id_etc_hostname(self):
-        '''
-        Test calling salt.config.get_id() and falling back to looking at
-        /etc/hostname.
-        '''
-        with patch('salt.utils.fopen', _fopen_side_effect_etc_hostname):
-            self.assertEqual(
-                    sconfig.get_id({'root_dir': None, 'minion_id_caching': False}), (MOCK_HOSTNAME, False)
-            )
-
-    @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
-    def test_get_id_etc_hosts(self):
-        '''
-        Test calling salt.config.get_id() and falling back all the way to
-        looking up data from /etc/hosts.
-        '''
-        with patch('salt.utils.fopen', _fopen_side_effect_etc_hosts):
-            self.assertEqual(
-                    sconfig.get_id({'root_dir': None, 'minion_id_caching': False}), (MOCK_HOSTNAME, False)
-            )
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
 

@@ -182,6 +182,7 @@ def query_instance(vm_=None, call=None):
         'event',
         'querying instance',
         'salt/cloud/{0}/querying'.format(vm_['name']),
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -195,8 +196,8 @@ def query_instance(vm_=None, call=None):
             return False
 
         if isinstance(data, dict) and 'error' in data:
-            log.warn(
-                'There was an error in the query. {0}'.format(data.get('error'))
+            log.warning(
+                'There was an error in the query {0}'.format(data.get('error'))
             )
             # Trigger a failure in the wait for IP function
             return False
@@ -204,7 +205,9 @@ def query_instance(vm_=None, call=None):
         log.debug('Returned query data: {0}'.format(data))
 
         if 'primaryIp' in data[1]:
-            return data[1]['primaryIp']
+            # Wait for SSH to be fully configured on the remote side
+            if data[1]['state'] == 'running':
+                return data[1]['primaryIp']
         return None
 
     try:
@@ -219,9 +222,8 @@ def query_instance(vm_=None, call=None):
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
-            # It might be already up, let's destroy it!
+            # destroy(vm_['name'])
             pass
-            #destroy(vm_['name'])
         except SaltCloudSystemExit:
             pass
         finally:
@@ -263,11 +265,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -295,22 +298,14 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': kwargs},
+        args={'kwargs': kwargs},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
-    try:
-        data = create_node(**kwargs)
-    except Exception as exc:
-        log.error(
-            'Error creating {0} on JOYENT\n\n'
-            'The following exception was thrown when trying to '
-            'run the initial deployment: \n{1}'.format(
-                vm_['name'], str(exc)
-            ),
-            # Show the traceback if the debug logging level is enabled
-            exc_info_on_loglevel=logging.DEBUG
-        )
+    data = create_node(**kwargs)
+    if data == {}:
+        log.error('Error creating {0} on JOYENT'.format(vm_['name']))
         return False
 
     query_instance(vm_)
@@ -325,11 +320,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -355,14 +351,13 @@ def create_node(**kwargs):
         create_data['networks'] = networks
     data = json.dumps(create_data)
 
-    try:
-        ret = query(command='/my/machines', data=data, method='POST',
-                     location=location)
-        if ret[0] in VALID_RESPONSE_CODES:
-            return ret[1]
-    except Exception as exc:
+    ret = query(command='/my/machines', data=data, method='POST',
+                location=location)
+    if ret[0] in VALID_RESPONSE_CODES:
+        return ret[1]
+    else:
         log.error(
-            'Failed to create node {0}: {1}'.format(name, exc)
+            'Failed to create node {0}: {1}'.format(name, ret[1])
         )
 
     return {}
@@ -394,19 +389,21 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
     node = get_node(name)
     ret = query(command='my/machines/{0}'.format(node['id']),
-                 location=node['location'], method='DELETE')
+                location=node['location'], method='DELETE')
 
     __utils__['cloud.fire_event'](
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -504,7 +501,7 @@ def take_action(name=None, call=None, command=None, data=None, method='GET',
     try:
 
         ret = query(command=command, data=data, method=method,
-                     location=location)
+                    location=location)
         log.info('Success {0} for node {1}'.format(caller, name))
     except Exception as exc:
         if 'InvalidState' in str(exc):
@@ -733,7 +730,7 @@ def list_nodes(full=False, call=None):
     if POLL_ALL_LOCATIONS:
         for location in JOYENT_LOCATIONS:
             result = query(command='my/machines', location=location,
-                            method='GET')
+                           method='GET')
             nodes = result[1]
             for node in nodes:
                 if 'name' in node:
@@ -742,7 +739,7 @@ def list_nodes(full=False, call=None):
 
     else:
         result = query(command='my/machines', location=DEFAULT_LOCATION,
-                        method='GET')
+                       method='GET')
         nodes = result[1]
         for node in nodes:
             if 'name' in node:
@@ -1095,6 +1092,9 @@ def query(action=None,
             result['status']
         )
     )
+    if 'headers' not in result:
+        return [result['status'], result['error']]
+
     if 'Content-Length' in result['headers']:
         content = result['text']
         return_content = yaml.safe_load(content)

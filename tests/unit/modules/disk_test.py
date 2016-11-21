@@ -131,6 +131,27 @@ class DiskTestCase(TestCase):
                     python_shell=False
                 )
 
+    @skipIf(not salt.utils.which('sync'), 'sync not found')
+    @skipIf(not salt.utils.which('mkfs'), 'mkfs not found')
+    def test_format(self):
+        '''
+        unit tests for disk.format
+        '''
+        device = '/dev/sdX1'
+        mock = MagicMock(return_value=0)
+        with patch.dict(disk.__salt__, {'cmd.retcode': mock}):
+            self.assertEqual(disk.format_(device), True)
+
+    def test_fstype(self):
+        '''
+        unit tests for disk.fstype
+        '''
+        device = '/dev/sdX1'
+        fs_type = 'ext4'
+        mock = MagicMock(return_value='FSTYPE\n{0}'.format(fs_type))
+        with patch.dict(disk.__salt__, {'cmd.run': mock}):
+            self.assertEqual(disk.fstype(device), fs_type)
+
     @skipIf(not salt.utils.which('resize2fs'), 'resize2fs not found')
     def test_resize2fs(self):
         '''

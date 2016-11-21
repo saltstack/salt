@@ -905,10 +905,7 @@ def trust_key(keyid=None,
 
     if not fingerprint:
         if keyid:
-            if user:
-                key = get_key(keyid, user=user)
-            else:
-                key = get_key(keyid)
+            key = get_key(keyid, user=user)
             if key:
                 if 'fingerprint' not in key:
                     ret['res'] = False
@@ -1003,7 +1000,7 @@ def sign(user=None,
 
         salt '*' gpg.sign filename='/path/to/important.file'
 
-        salt '*' gpg.sign filename='/path/to/important.file' use_pasphrase=True
+        salt '*' gpg.sign filename='/path/to/important.file' use_passphrase=True
 
     '''
     gpg = _create_gpg(user, gnupghome)
@@ -1065,7 +1062,7 @@ def verify(text=None,
 
         salt '*' gpg.verify filename='/path/to/important.file'
 
-        salt '*' gpg.verify filename='/path/to/important.file' use_pasphrase=True
+        salt '*' gpg.verify filename='/path/to/important.file' use_passphrase=True
 
     '''
     gpg = _create_gpg(user)
@@ -1143,7 +1140,7 @@ def encrypt(user=None,
 
         salt '*' gpg.encrypt filename='/path/to/important.file'
 
-        salt '*' gpg.encrypt filename='/path/to/important.file' use_pasphrase=True
+        salt '*' gpg.encrypt filename='/path/to/important.file' use_passphrase=True
 
     '''
     ret = {
@@ -1238,7 +1235,7 @@ def decrypt(user=None,
 
         salt '*' gpg.decrypt filename='/path/to/important.file.gpg'
 
-        salt '*' gpg.decrypt filename='/path/to/important.file.gpg' use_pasphrase=True
+        salt '*' gpg.decrypt filename='/path/to/important.file.gpg' use_passphrase=True
 
     '''
     ret = {

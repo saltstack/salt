@@ -345,11 +345,12 @@ Event Returners
 ===============
 
 For maximum visibility into the history of events across a Salt
-infrastructure, all events seen by a salt master may be logged to a returner.
+infrastructure, all events seen by a salt master may be logged to one or
+more returners.
 
 To enable event logging, set the ``event_return`` configuration option in the
-master config to returner which should be designated as the handler for event
-returns.
+master config to the returner(s) which should be designated as the handler 
+for event returns.
 
 .. note::
     Not all returners support event returns. Verify a returner has an

@@ -14,3 +14,4 @@ master tops modules
     ext_nodes
     mongo
     reclass_adapter
+    varstack

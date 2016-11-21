@@ -48,7 +48,7 @@ def fullversion():
 
     .. code-block:: bash
 
-        salt '*' dnsmasq.version
+        salt '*' dnsmasq.fullversion
     '''
     cmd = 'dnsmasq -v'
     out = __salt__['cmd.run'](cmd).splitlines()

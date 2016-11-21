@@ -97,6 +97,7 @@ class BotoIAMRoleTestCase(TestCase):
                          'boto_iam.build_policy': mock_policy,
                          'boto_iam.update_assume_role_policy': mock_bool,
                          'boto_iam.instance_profile_exists': mock_ipe,
+                         'boto_iam.list_attached_role_policies': mock_lst,
                          'boto_iam.create_instance_profile': mock_bool,
                          'boto_iam.profile_associated': mock_pa,
                          'boto_iam.associate_profile_to_role': mock_bool,
@@ -121,7 +122,7 @@ class BotoIAMRoleTestCase(TestCase):
                 ret.update({'comment': comt})
 
                 self.assertDictEqual(boto_iam_role.present(name), ret)
-                comt = (' myrole role present.   ')
+                comt = (' myrole role present.    ')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(boto_iam_role.present(name), ret)
 
@@ -142,12 +143,14 @@ class BotoIAMRoleTestCase(TestCase):
                                       False, False, True, False, False, False,
                                       True])
         mock_bool = MagicMock(return_value=False)
+        mock_lst = MagicMock(return_value=[])
         with patch.dict(boto_iam_role.__salt__,
                         {'boto_iam.list_role_policies': mock,
                          'boto_iam.delete_role_policy': mock_bool,
                          'boto_iam.profile_associated': mock,
                          'boto_iam.disassociate_profile_from_role': mock_bool,
                          'boto_iam.instance_profile_exists': mock,
+                         'boto_iam.list_attached_role_policies': mock_lst,
                          'boto_iam.delete_instance_profile': mock_bool,
                          'boto_iam.role_exists': mock,
                          'boto_iam.delete_role': mock_bool}):
@@ -158,17 +161,20 @@ class BotoIAMRoleTestCase(TestCase):
                                         'old': {'policies': ['mypolicy']}}})
                 self.assertDictEqual(boto_iam_role.absent(name), ret)
 
-                comt = (' No policies in role myrole. Failed to disassociate '
+                comt = (' No policies in role myrole.'
+                        ' No attached policies in role myrole. Failed to disassociate '
                         'myrole instance profile from myrole role.')
                 ret.update({'comment': comt, 'changes': {}})
                 self.assertDictEqual(boto_iam_role.absent(name), ret)
 
-                comt = (' No policies in role myrole.  '
-                        'Failed to delete myrole instance profile.')
+                comt = (' No policies in role myrole.'
+                        ' No attached policies in role myrole. '
+                        ' Failed to delete myrole instance profile.')
                 ret.update({'comment': comt, 'changes': {}})
                 self.assertDictEqual(boto_iam_role.absent(name), ret)
 
-                comt = (' No policies in role myrole.  myrole instance profile '
+                comt = (' No policies in role myrole.'
+                        ' No attached policies in role myrole.  myrole instance profile '
                         'does not exist. Failed to delete myrole iam role.')
                 ret.update({'comment': comt, 'changes': {}})
                 self.assertDictEqual(boto_iam_role.absent(name), ret)

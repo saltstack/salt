@@ -15,6 +15,7 @@ from contextlib import closing
 import salt.client.ssh.shell
 import salt.client.ssh
 import salt.utils
+import salt.utils.files
 import salt.utils.thin
 import salt.utils.url
 import salt.roster
@@ -128,7 +129,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
     data structure
     '''
     gendir = tempfile.mkdtemp()
-    trans_tar = salt.utils.mkstemp()
+    trans_tar = salt.utils.files.mkstemp()
     lowfn = os.path.join(gendir, 'lowstate.json')
     pillarfn = os.path.join(gendir, 'pillar.json')
     sync_refs = [

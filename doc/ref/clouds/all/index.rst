@@ -33,5 +33,5 @@ Full list of Salt Cloud modules
     scaleway
     softlayer
     softlayer_hw
+    virtualbox
     vmware
-    vsphere

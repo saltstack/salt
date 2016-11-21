@@ -51,6 +51,7 @@ import logging
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
@@ -78,14 +79,15 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto3_version = '1.2.1'
+    required_boto3_version = '1.2.5'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_cloudtrial module could not be loaded: boto libraries not found')
     elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return False
+        return (False, 'The boto_cloudtrial module could not be loaded: '
+                'boto version {0} or later must be installed.'.format(required_boto3_version))
     else:
         return True
 
@@ -127,7 +129,7 @@ def create(Name,
            S3BucketName, S3KeyPrefix=None,
            SnsTopicName=None,
            IncludeGlobalServiceEvents=None,
-           #IsMultiRegionTrail=None,
+           IsMultiRegionTrail=None,
            EnableLogFileValidation=None,
            CloudWatchLogsLogGroupArn=None,
            CloudWatchLogsRoleArn=None,
@@ -151,7 +153,7 @@ def create(Name,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         kwargs = {}
         for arg in ('S3KeyPrefix', 'SnsTopicName', 'IncludeGlobalServiceEvents',
-                    #'IsMultiRegionTrail',
+                    'IsMultiRegionTrail',
                     'EnableLogFileValidation', 'CloudWatchLogsLogGroupArn',
                     'CloudWatchLogsRoleArn', 'KmsKeyId'):
             if locals()[arg] is not None:
@@ -215,7 +217,7 @@ def describe(Name,
         if trails and len(trails.get('trailList', [])) > 0:
             keys = ('Name', 'S3BucketName', 'S3KeyPrefix',
                     'SnsTopicName', 'IncludeGlobalServiceEvents',
-                    #'IsMultiRegionTrail',
+                    'IsMultiRegionTrail',
                     'HomeRegion', 'TrailARN',
                     'LogFileValidationEnabled', 'CloudWatchLogsLogGroupArn',
                     'CloudWatchLogsRoleArn', 'KmsKeyId')
@@ -300,7 +302,7 @@ def update(Name,
            S3BucketName, S3KeyPrefix=None,
            SnsTopicName=None,
            IncludeGlobalServiceEvents=None,
-           #IsMultiRegionTrail=None,
+           IsMultiRegionTrail=None,
            EnableLogFileValidation=None,
            CloudWatchLogsLogGroupArn=None,
            CloudWatchLogsRoleArn=None,
@@ -324,7 +326,7 @@ def update(Name,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         kwargs = {}
         for arg in ('S3KeyPrefix', 'SnsTopicName', 'IncludeGlobalServiceEvents',
-                    #'IsMultiRegionTrail',
+                    'IsMultiRegionTrail',
                     'EnableLogFileValidation', 'CloudWatchLogsLogGroupArn',
                     'CloudWatchLogsRoleArn', 'KmsKeyId'):
             if locals()[arg] is not None:
@@ -424,7 +426,7 @@ def add_tags(Name,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             if str(k).startswith('__'):
                 continue
             tagslist.append({'Key': str(k), 'Value': str(v)})
@@ -455,7 +457,7 @@ def remove_tags(Name,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             if str(k).startswith('__'):
                 continue
             tagslist.append({'Key': str(k), 'Value': str(v)})

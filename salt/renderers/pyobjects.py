@@ -305,8 +305,8 @@ def load_states():
     # the loader expects to find pillar & grain data
     __opts__['grains'] = salt.loader.grains(__opts__)
     __opts__['pillar'] = __pillar__
-    lazy_funcs = salt.loader.minion_mods(__opts__)
     lazy_utils = salt.loader.utils(__opts__)
+    lazy_funcs = salt.loader.minion_mods(__opts__, utils=lazy_utils)
     lazy_serializers = salt.loader.serializers(__opts__)
     lazy_states = salt.loader.states(__opts__,
             lazy_funcs,
@@ -416,7 +416,9 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
 
                 state_file = client.cache_file(import_file, saltenv)
                 if not state_file:
-                    raise ImportError("Could not find the file {0!r}".format(import_file))
+                    raise ImportError(
+                        'Could not find the file \'{0}\''.format(import_file)
+                    )
 
                 state_locals = {}
                 with salt.utils.fopen(state_file) as state_fh:
@@ -439,10 +441,12 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
                             alias = matches.group(2).strip()
 
                         if name not in state_locals:
-                            raise ImportError("{0!r} was not found in {1!r}".format(
-                                name,
-                                import_file
-                            ))
+                            raise ImportError(
+                                '\'{0}\' was not found in \'{1}\''.format(
+                                    name,
+                                    import_file
+                                )
+                            )
                         state_globals[alias] = state_locals[name]
 
                 matched = True

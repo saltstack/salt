@@ -113,6 +113,8 @@ def present(
         name,
         image_id,
         key_name=None,
+        vpc_id=None,
+        vpc_name=None,
         security_groups=None,
         user_data=None,
         cloud_init=None,
@@ -143,6 +145,16 @@ def present(
         Name of the EC2 key pair to use for instances. Key must exist or
         creation of the launch configuration will fail.
 
+    vpc_id
+        The VPC id where the security groups are defined. Only necessary when
+        using named security groups that exist outside of the default VPC.
+        Mutually exclusive with vpc_name.
+
+    vpc_name
+        Name of the VPC where the security groups are defined. Only Necessary
+        when using named security groups that exist outside of the default VPC.
+        Mutually exclusive with vpc_id.
+
     security_groups
         List of Names or security group id’s of the security groups with which
         to associate the EC2 instances or VPC instances, respectively. Security
@@ -169,24 +181,27 @@ def present(
         with volume_type, delete_on_termination, iops, size, encrypted,
         snapshot_id.
 
-    volume_type
-        Indicates what volume type to use. Valid values are standard, io1, gp2.
-        Default is standard.
+        volume_type
+            Indicates what volume type to use. Valid values are standard, io1, gp2.
+            Default is standard.
 
-    delete_on_termination
-        Indicates whether to delete the volume on instance termination (true) or
-        not (false).
+        delete_on_termination
+            Indicates whether to delete the volume on instance termination (true) or
+            not (false).
 
-    iops
-        For Provisioned IOPS (SSD) volumes only. The number of I/O operations per
-        second (IOPS) to provision for the volume.
+        iops
+            For Provisioned IOPS (SSD) volumes only. The number of I/O operations per
+            second (IOPS) to provision for the volume.
 
-    encrypted
-        Indicates whether the volume should be encrypted. Encrypted EBS volumes must
-        be attached to instances that support Amazon EBS encryption. Volumes that are
-        created from encrypted snapshots are automatically encrypted. There is no way
-        to create an encrypted volume from an unencrypted snapshot or an unencrypted
-        volume from an encrypted snapshot.
+        size
+            Desired volume size (in GiB).
+
+        encrypted
+            Indicates whether the volume should be encrypted. Encrypted EBS volumes must
+            be attached to instances that support Amazon EBS encryption. Volumes that are
+            created from encrypted snapshots are automatically encrypted. There is no way
+            to create an encrypted volume from an unencrypted snapshot or an unencrypted
+            volume from an encrypted snapshot.
 
     instance_monitoring
         Whether instances in group are launched with detailed monitoring.
@@ -226,9 +241,11 @@ def present(
         raise SaltInvocationError('user_data and cloud_init are mutually'
                                   ' exclusive options.')
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    exists = __salt__['boto_asg.launch_configuration_exists'](name, region,
-                                                              key, keyid,
-                                                              profile)
+    exists = __salt__['boto_asg.launch_configuration_exists'](name,
+                                                              region=region,
+                                                              key=key,
+                                                              keyid=keyid,
+                                                              profile=profile)
     if not exists:
         if __opts__['test']:
             msg = 'Launch configuration set to be created.'
@@ -243,6 +260,8 @@ def present(
             name,
             image_id,
             key_name=key_name,
+            vpc_id=vpc_id,
+            vpc_name=vpc_name,
             security_groups=security_groups,
             user_data=user_data,
             instance_type=instance_type,
@@ -295,16 +314,22 @@ def absent(
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    exists = __salt__['boto_asg.launch_configuration_exists'](name, region,
-                                                              key, keyid,
-                                                              profile)
+    exists = __salt__['boto_asg.launch_configuration_exists'](name,
+                                                              region=region,
+                                                              key=key,
+                                                              keyid=keyid,
+                                                              profile=profile)
     if exists:
         if __opts__['test']:
             ret['comment'] = 'Launch configuration set to be deleted.'
             ret['result'] = None
             return ret
         deleted = __salt__['boto_asg.delete_launch_configuration'](
-            name, region, key, keyid, profile)
+                                                              name,
+                                                              region=region,
+                                                              key=key,
+                                                              keyid=keyid,
+                                                              profile=profile)
         if deleted:
             ret['changes']['old'] = name
             ret['changes']['new'] = None

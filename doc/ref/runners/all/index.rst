@@ -33,6 +33,7 @@ runner modules
     pkg
     queue
     reactor
+    salt
     saltutil
     sdb
     search

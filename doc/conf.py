@@ -68,6 +68,7 @@ MOCK_MODULES = [
     'yaml',
     'yaml.constructor',
     'yaml.nodes',
+    'yaml.parser',
     'yaml.scanner',
     'zmq',
     'zmq.eventloop',
@@ -137,8 +138,26 @@ MOCK_MODULES = [
     'salt.ext.six.moves.winreg',
     'win32security',
     'ntsecuritycon',
+    'napalm',
+    'dson',
+    'jnpr',
+    'json',
+    'lxml',
+    'lxml.etree',
+    'jnpr.junos',
+    'jnpr.junos.utils',
+    'jnpr.junos.utils.config',
+    'jnpr.junos.utils.sw',
+    'dns',
+    'dns.resolver',
+    'netaddr',
+    'netaddr.IPAddress',
+    'netaddr.core',
+    'netaddr.core.AddrFormatError',
     'pyroute2',
     'pyroute2.ipdb',
+    'avahi',
+    'dbus',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -216,8 +235,8 @@ version = salt.version.__version__
 latest_release = '2016.3.4'  # latest release
 previous_release = '2015.8.12'  # latest release from previous branch
 previous_release_dir = '2015.8'  # path on web server for previous branch
-next_release = ''  # next release
-next_release_dir = ''  # path on web server for next release branch
+next_release = '2016.11'  # next release
+next_release_dir = '2016.11'  # path on web server for next release branch
 
 today = ''
 copyright = ''
@@ -226,8 +245,8 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'latest'  # latest, previous, develop, next
-release = latest_release  # version, latest_release, previous_release
+build_type = 'develop'  # latest, previous, develop, next
+release = version  # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
@@ -258,6 +277,7 @@ exclude_patterns = ['_build', '_incl/*', 'ref/cli/_includes/*.rst']
 extensions = [
     'saltdomain', # Must come early
     'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
     'sphinx.ext.intersphinx',
@@ -417,10 +437,10 @@ linkcheck_ignore = [r'http://127.0.0.1',
                     r'http://logstash.net/docs/latest/inputs/udp',
                     r'http://logstash.net/docs/latest/inputs/zeromq',
                     r'http://www.youtube.com/saltstack',
-                    r'http://raven.readthedocs.org',
+                    r'https://raven.readthedocs.io',
                     r'https://getsentry.com',
-                    r'http://salt-cloud.readthedocs.org',
-                    r'http://salt.readthedocs.org',
+                    r'https://salt-cloud.readthedocs.io',
+                    r'https://salt.readthedocs.io',
                     r'http://www.pip-installer.org/',
                     r'http://www.windowsazure.com/',
                     r'https://github.com/watching',

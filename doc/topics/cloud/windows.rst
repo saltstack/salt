@@ -28,7 +28,7 @@ channels:
 
 .. __: http://rpm.pbone.net/index.php3?stat=3&search=winexe
 
-* `OpenSuse Build Service`__
+* `openSUSE Build Service`__
 
 .. __: http://software.opensuse.org/package/winexe
 

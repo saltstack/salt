@@ -23,7 +23,7 @@ import salt.ext.six as six
 #              ]
 
 
-def output(data):
+def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Format the data for printing stage information from the overstate system
     '''

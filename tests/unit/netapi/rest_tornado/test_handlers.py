@@ -87,9 +87,12 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
         return self.auth.mk_token(self.auth_creds_dict)
 
     def setUp(self):
+        # FIXME
+        # The try/except here and in tearDownis a temporary fix, pending the release of a
+        # new salt version, later than 08.22.16
         try:
             super(SaltnadoTestCase, self).setUp()
-        except NotImplementedError:
+        except (NotImplementedError, AttributeError):
             pass
         self.async_timeout_prev = os.environ.pop('ASYNC_TEST_TIMEOUT', None)
         os.environ['ASYNC_TEST_TIMEOUT'] = str(30)
@@ -276,6 +279,91 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                               method='POST',
                               body=json.dumps(valid_lowstate),
                               headers={'Content-Type': self.content_type_map['json-utf8']})
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
+
+    def test_get_lowstate(self):
+        '''
+        Test transformations low data of the function _get_lowstate
+        '''
+        valid_lowstate = [{
+                "client": "local",
+                "tgt": "*",
+                "fun": "test.fib",
+                "arg": ["10"]
+            }]
+
+        # Case 1. dictionary type of lowstate
+        request_lowstate = {
+                "client": "local",
+                "tgt": "*",
+                "fun": "test.fib",
+                "arg": ["10"]
+            }
+
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(request_lowstate),
+                              headers={'Content-Type': self.content_type_map['json']})
+
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
+
+        # Case 2. string type of arg
+        request_lowstate = [{
+                "client": "local",
+                "tgt": "*",
+                "fun": "test.fib",
+                "arg": "10"
+            }]
+
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(request_lowstate),
+                              headers={'Content-Type': self.content_type_map['json']})
+
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
+
+        # Case 3. Combine Case 1 and Case 2.
+        request_lowstate = {
+                "client": "local",
+                "tgt": "*",
+                "fun": "test.fib",
+                "arg": "10"
+            }
+
+        # send as json
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(request_lowstate),
+                              headers={'Content-Type': self.content_type_map['json']})
+
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
+
+        # send as yaml
+        response = self.fetch('/',
+                              method='POST',
+                              body=yaml.dump(request_lowstate),
+                              headers={'Content-Type': self.content_type_map['yaml']})
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
+
+        # send as plain text
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(request_lowstate),
+                              headers={'Content-Type': self.content_type_map['text']})
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
+
+        # send as form-urlencoded
+        request_form_lowstate = (
+            ('client', 'local'),
+            ('tgt', '*'),
+            ('fun', 'test.fib'),
+            ('arg', '10'),
+        )
+
+        response = self.fetch('/',
+                              method='POST',
+                              body=urlencode(request_form_lowstate),
+                              headers={'Content-Type': self.content_type_map['form']})
         self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
 
     def test_cors_origin_wildcard(self):

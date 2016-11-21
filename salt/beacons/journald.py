@@ -9,7 +9,6 @@ from __future__ import absolute_import
 # Import salt libs
 import salt.utils
 import salt.utils.locales
-import salt.utils.cloud
 import salt.ext.six
 
 # Import third party libs
@@ -44,7 +43,7 @@ def _get_journal():
     return __context__['systemd.journald']
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''
@@ -90,7 +89,7 @@ def beacon(config):
                         n_flag += 1
             if n_flag == len(config[name]):
                 # Match!
-                sub = salt.utils.cloud.simple_types_filter(cur)
+                sub = salt.utils.simple_types_filter(cur)
                 sub.update({'tag': name})
                 ret.append(sub)
     return ret

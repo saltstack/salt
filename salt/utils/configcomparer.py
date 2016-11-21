@@ -3,7 +3,12 @@
 Utilities for comparing and updating configurations while keeping track of
 changes in a way that can be easily reported in a state.
 """
+
+# Import Python libs
 from __future__ import absolute_import
+
+# Import Salt libs
+import salt.ext.six as six
 
 
 def compare_and_update_config(config, update_config, changes, namespace=''):
@@ -31,7 +36,7 @@ def compare_and_update_config(config, update_config, changes, namespace=''):
             # compare each key in the base config with the values in the
             # update_config, overwriting the values that are different but
             # keeping any that are not defined in config
-            for key, value in config.iteritems():
+            for key, value in six.iteritems(config):
                 _namespace = key
                 if namespace:
                     _namespace = '{0}.{1}'.format(namespace, _namespace)

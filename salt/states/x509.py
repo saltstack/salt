@@ -4,6 +4,8 @@ Manage X509 Certificates
 
 .. versionadded:: 2015.8.0
 
+:depends: M2Crypto
+
 This module can enable managing a complete PKI infrastructure including creating private keys, CA's,
 certificates and CRLs. It includes the ability to generate a private key on a server, and have the
 corresponding public key sent to a remote CA to create a CA signed certificate. This can be done in
@@ -203,7 +205,8 @@ def _revoked_to_list(revs):
 def private_key_managed(name,
                         bits=2048,
                         new=False,
-                        backup=False):
+                        backup=False,
+                        verbose=True,):
     '''
     Manage a private key's existence.
 
@@ -221,6 +224,12 @@ def private_key_managed(name,
     backup:
         When replacing an existing file, backup the old file on the minion.
         Default is False.
+
+    verbose:
+        Provide visual feedback on stdout, dots while key is generated.
+        Default is True.
+
+        .. versionadded:: 2016.11.0
 
     Example:
 
@@ -268,7 +277,8 @@ def private_key_managed(name,
         bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
         salt.utils.backup_minion(name, bkroot)
 
-    ret['comment'] = __salt__['x509.create_private_key'](path=name, bits=bits)
+    ret['comment'] = __salt__['x509.create_private_key'](
+        path=name, bits=bits, verbose=verbose)
     ret['result'] = True
 
     return ret

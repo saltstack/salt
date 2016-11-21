@@ -687,7 +687,22 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             pass
         fnd['rel'] = path
         fnd['path'] = dest
-        fnd['stat'] = list(os.stat(dest))
+        try:
+            # Converting the stat result to a list, the elements of the
+            # list correspond to the following stat_result params:
+            # 0 => st_mode=33188
+            # 1 => st_ino=10227377
+            # 2 => st_dev=65026
+            # 3 => st_nlink=1
+            # 4 => st_uid=1000
+            # 5 => st_gid=1000
+            # 6 => st_size=1056233
+            # 7 => st_atime=1468284229
+            # 8 => st_mtime=1456338235
+            # 9 => st_ctime=1456338235
+            fnd['stat'] = list(os.stat(dest))
+        except Exception:
+            pass
         repo['repo'].close()
         return fnd
     return fnd
@@ -699,11 +714,12 @@ def serve_file(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     ret = {'data': '',
            'dest': ''}
@@ -729,11 +745,12 @@ def file_hash(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     if not all(x in load for x in ('path', 'saltenv')):
         return ''
@@ -762,11 +779,12 @@ def _file_lists(load, form):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/hgfs')
     if not os.path.isdir(list_cachedir):
@@ -809,11 +827,12 @@ def _get_file_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     if 'saltenv' not in load or load['saltenv'] not in envs():
         return []
@@ -853,11 +872,12 @@ def _get_dir_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     if 'saltenv' not in load or load['saltenv'] not in envs():
         return []

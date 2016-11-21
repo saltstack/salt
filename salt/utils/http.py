@@ -14,7 +14,6 @@ import os.path
 import pprint
 import socket
 import urllib
-import inspect
 import yaml
 
 import ssl
@@ -38,6 +37,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.xmlutil as xml
+import salt.utils.args
 import salt.loader
 import salt.config
 import salt.version
@@ -52,6 +52,7 @@ import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
 from salt.ext.six.moves.urllib.error import URLError
+from salt.ext.six.moves.urllib.parse import splitquery
 # pylint: enable=import-error,no-name-in-module
 
 # Don't need a try/except block, since Salt depends on tornado
@@ -118,7 +119,7 @@ def query(url,
           node='minion',
           port=80,
           opts=None,
-          backend='tornado',
+          backend=None,
           requests_lib=None,
           ca_bundle=None,
           verify_ssl=None,
@@ -151,24 +152,29 @@ def query(url,
         else:
             opts = {}
 
-    if requests_lib is None:
-        requests_lib = opts.get('requests_lib', False)
+    if not backend:
+        if requests_lib is not None or 'requests_lib' in opts:
+            salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
+                                            'please change your config')
+            # beware the named arg above
+            if 'backend' in opts:
+                backend = opts['backend']
+            elif requests_lib or opts.get('requests_lib', False):
+                backend = 'requests'
+            else:
+                backend = 'tornado'
+        else:
+            backend = opts.get('backend', 'tornado')
 
-    if requests_lib is True:
-        log.warn('Please set "backend" to "requests" instead of setting '
-                 '"requests_lib" to "True"')
-
+    if backend == 'requests':
         if HAS_REQUESTS is False:
             ret['error'] = ('http.query has been set to use requests, but the '
                             'requests library does not seem to be installed')
             log.error(ret['error'])
             return ret
-
-        backend = 'requests'
-
-    else:
-        requests_log = logging.getLogger('requests')
-        requests_log.setLevel(logging.WARNING)
+        else:
+            requests_log = logging.getLogger('requests')
+            requests_log.setLevel(logging.WARNING)
 
     # Some libraries don't support separation of url and GET parameters
     # Don't need a try/except block, since Salt depends on tornado
@@ -296,7 +302,7 @@ def query(url,
             if isinstance(cert, six.string_types):
                 if os.path.exists(cert):
                     req_kwargs['cert'] = cert
-            elif isinstance(cert, tuple):
+            elif isinstance(cert, list):
                 if os.path.exists(cert[0]) and os.path.exists(cert[1]):
                     req_kwargs['cert'] = cert
             else:
@@ -340,11 +346,11 @@ def query(url,
             hostname = request.get_host()
             handlers[0] = urllib_request.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
-                log.warn(('match_hostname() not available, SSL hostname checking '
-                         'not available. THIS CONNECTION MAY NOT BE SECURE!'))
+                log.warning('match_hostname() not available, SSL hostname checking '
+                         'not available. THIS CONNECTION MAY NOT BE SECURE!')
             elif verify_ssl is False:
-                log.warn(('SSL certificate verification has been explicitly '
-                         'disabled. THIS CONNECTION MAY NOT BE SECURE!'))
+                log.warning('SSL certificate verification has been explicitly '
+                         'disabled. THIS CONNECTION MAY NOT BE SECURE!')
             else:
                 if ':' in hostname:
                     hostname, port = hostname.split(':')
@@ -374,7 +380,7 @@ def query(url,
                     if isinstance(cert, six.string_types):
                         if os.path.exists(cert):
                             cert_chain = (cert)
-                    elif isinstance(cert, tuple):
+                    elif isinstance(cert, list):
                         if os.path.exists(cert[0]) and os.path.exists(cert[1]):
                             cert_chain = cert
                     else:
@@ -423,7 +429,7 @@ def query(url,
             if isinstance(cert, six.string_types):
                 if os.path.exists(cert):
                     req_kwargs['client_cert'] = cert
-            elif isinstance(cert, tuple):
+            elif isinstance(cert, list):
                 if os.path.exists(cert[0]) and os.path.exists(cert[1]):
                     req_kwargs['client_cert'] = cert[0]
                     req_kwargs['client_key'] = cert[1]
@@ -456,9 +462,11 @@ def query(url,
                 return ret
 
             tornado.httpclient.AsyncHTTPClient.configure('tornado.curl_httpclient.CurlAsyncHTTPClient')
-            client_argspec = inspect.getargspec(tornado.curl_httpclient.CurlAsyncHTTPClient.initialize)
+            client_argspec = salt.utils.args.get_function_argspec(
+                    tornado.curl_httpclient.CurlAsyncHTTPClient.initialize)
         else:
-            client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+            client_argspec = salt.utils.args.get_function_argspec(
+                    tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
 
         supports_max_body_size = 'max_body_size' in client_argspec.args
 
@@ -638,7 +646,7 @@ def get_ca_bundle(opts=None):
         '/etc/pki/tls/certs/ca-bundle.trust.crt',
         # RedHat's link for Debian compatibility
         '/etc/ssl/certs/ca-bundle.crt',
-        # Suse has an unusual path
+        # SUSE has an unusual path
         '/var/lib/ca-certificates/ca-bundle.pem',
         # OpenBSD has an unusual path
         '/etc/ssl/cert.pem',
@@ -752,7 +760,9 @@ def _render(template, render, renderer, template_dict, opts):
         if not renderer:
             renderer = opts.get('renderer', 'yaml_jinja')
         rend = salt.loader.render(opts, {})
-        return compile_template(template, rend, renderer, **template_dict)
+        blacklist = opts.get('renderer_blacklist')
+        whitelist = opts.get('renderer_whitelist')
+        return compile_template(template, rend, renderer, blacklist, whitelist, **template_dict)
     with salt.utils.fopen(template, 'r') as fh_:
         return fh_.read()
 
@@ -858,7 +868,7 @@ def sanitize_url(url, hide_fields):
     Make sure no secret fields show up in logs
     '''
     if isinstance(hide_fields, list):
-        url_comps = urllib.splitquery(url)
+        url_comps = splitquery(url)
         log_url = url_comps[0]
         if len(url_comps) > 1:
             log_url += '?'

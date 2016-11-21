@@ -19,6 +19,13 @@ Module to provide Postgres compatibility to salt.
 
 :note: This module uses MD5 hashing which may not be compliant with certain
     security audits.
+
+:note: When installing postgres from the official postgres repos, on certain
+    linux distributions, either the psql or the initdb binary is *not*
+    automatically placed on the path. Add a configuration to the location
+    of the postgres bin's path to the relevant minion for this module::
+
+        postgres.pg_bin: '/usr/pgsql-9.5/bin/'
 '''
 
 # This pylint error is popping up where there are no colons?
@@ -42,6 +49,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.itertools
 from salt.exceptions import SaltInvocationError
 
@@ -89,6 +97,7 @@ _PRIVILEGES_OBJECTS = frozenset(
     'table',
     'group',
     'database',
+    'function',
     )
 )
 _PRIVILEGE_TYPE_MAP = {
@@ -98,18 +107,37 @@ _PRIVILEGE_TYPE_MAP = {
     'sequence': 'rwU',
     'schema': 'UC',
     'database': 'CTc',
+    'function': 'X',
 }
 
 
 def __virtual__():
     '''
-    Only load this module if the psql bin exists
+    Only load this module if the psql and initdb bin exist
     '''
-    if all((salt.utils.which('psql'), HAS_CSV)):
-        return True
-    return (False, 'The postgres execution module failed to load: '
-        'either the psql or initdb binary are not in the path or '
-        'the csv library is not available')
+    utils = ['psql', 'initdb']
+    if not HAS_CSV:
+        return False
+    for util in utils:
+        if not salt.utils.which(util):
+            if not _find_pg_binary(util):
+                return (False, '{0} was not found'.format(util))
+    return True
+
+
+def _find_pg_binary(util):
+    '''
+    ... versionadded::  2016.3.2
+
+    Helper function to locate various psql related binaries
+    '''
+    pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
+    util_bin = salt.utils.which(util)
+    if not util_bin:
+        if pg_bin_dir:
+            return os.path.join(pg_bin_dir, util)
+    else:
+        return util_bin
 
 
 def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
@@ -141,7 +169,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     if password is None:
         password = __salt__['config.option']('postgres.pass')
     if password is not None:
-        pgpassfile = salt.utils.mkstemp(text=True)
+        pgpassfile = salt.utils.files.mkstemp(text=True)
         with salt.utils.fopen(pgpassfile, 'w') as fp_:
             fp_.write('{0}:{1}:*:{2}:{3}'.format(
                 'localhost' if not host or host.startswith('/') else host,
@@ -182,9 +210,9 @@ def _run_initdb(name,
 
     if user is None:
         user = runas
-
+    _INITDB_BIN = _find_pg_binary('initdb')
     cmd = [
-        salt.utils.which('initdb'),
+        _INITDB_BIN,
         '--pgdata={0}'.format(name),
         '--username={0}'.format(user),
         '--auth={0}'.format(auth),
@@ -195,7 +223,7 @@ def _run_initdb(name,
         cmd.append('--locale={0}'.format(locale))
 
     if password is not None:
-        pgpassfile = salt.utils.mkstemp(text=True)
+        pgpassfile = salt.utils.files.mkstemp(text=True)
         with salt.utils.fopen(pgpassfile, 'w') as fp_:
             fp_.write('{0}'.format(password))
             __salt__['file.chown'](pgpassfile, runas, '')
@@ -302,8 +330,8 @@ def _psql_cmd(*args, **kwargs):
         kwargs.get('port'),
         kwargs.get('maintenance_db'),
         kwargs.get('password'))
-
-    cmd = [salt.utils.which('psql'),
+    _PSQL_BIN = _find_pg_binary('psql')
+    cmd = [_PSQL_BIN,
            '--no-align',
            '--no-readline',
            '--no-psqlrc',
@@ -457,6 +485,16 @@ def db_exists(name, user=None, host=None, port=None, maintenance_db=None,
     return name in databases
 
 
+# TODO properly implemented escaping
+def _quote_ddl_value(value, quote="'"):
+    if value is None:
+        return None
+    if quote in value:  # detect trivial sqli
+        raise SaltInvocationError(
+            'Unsupported character {0} in value: {1}'.format(quote, value))
+    return "{quote}{value}{quote}".format(quote=quote, value=value)
+
+
 def db_create(name,
               user=None,
               host=None,
@@ -487,16 +525,16 @@ def db_create(name,
     query = 'CREATE DATABASE "{0}"'.format(name)
 
     # "With"-options to create a database
-    with_args = salt.utils.odict.OrderedDict({
+    with_args = salt.utils.odict.OrderedDict([
+        ('TABLESPACE', _quote_ddl_value(tablespace, '"')),
         # owner needs to be enclosed in double quotes so postgres
         # doesn't get thrown by dashes in the name
-        'OWNER': owner and '"{0}"'.format(owner),
-        'TEMPLATE': template,
-        'ENCODING': encoding and '\'{0}\''.format(encoding),
-        'LC_COLLATE': lc_collate and '\'{0}\''.format(lc_collate),
-        'LC_CTYPE': lc_ctype and '\'{0}\''.format(lc_ctype),
-        'TABLESPACE': tablespace,
-    })
+        ('OWNER', _quote_ddl_value(owner, '"')),
+        ('TEMPLATE', template),
+        ('ENCODING', _quote_ddl_value(encoding)),
+        ('LC_COLLATE', _quote_ddl_value(lc_collate)),
+        ('LC_CTYPE', _quote_ddl_value(lc_ctype)),
+    ])
     with_chunks = []
     for key, value in with_args.items():
         if value is not None:
@@ -2367,16 +2405,16 @@ def _make_privileges_list_query(name, object_type, prepend):
             "WHERE nspname = '{0}'",
             'ORDER BY nspname',
         ])).format(name)
-    # elif object_type == 'function':
-    #     query = (' '.join([
-    #         'SELECT proacl AS name',
-    #         'FROM pg_catalog.pg_proc p',
-    #         'JOIN pg_catalog.pg_namespace n',
-    #         'ON n.oid = p.pronamespace',
-    #         "WHERE nspname = '{0}'",
-    #         "AND proname = '{1}'",
-    #         'ORDER BY proname, proargtypes',
-    #     ])).format(prepend, name)
+    elif object_type == 'function':
+        query = (' '.join([
+            'SELECT proacl AS name',
+            'FROM pg_catalog.pg_proc p',
+            'JOIN pg_catalog.pg_namespace n',
+            'ON n.oid = p.pronamespace',
+            "WHERE nspname = '{0}'",
+            "AND p.oid::regprocedure::text = '{1}'",
+            'ORDER BY proname, proargtypes',
+        ])).format(prepend, name)
     elif object_type == 'tablespace':
         query = (' '.join([
             'SELECT spcacl AS name',
@@ -2453,6 +2491,16 @@ def _get_object_owner(name,
             'ON n.nspowner = r.oid',
             "WHERE nspname = '{0}'",
         ])).format(name)
+    elif object_type == 'function':
+        query = (' '.join([
+            'SELECT rolname AS name',
+            'FROM pg_catalog.pg_proc p',
+            'JOIN pg_catalog.pg_namespace n',
+            'ON n.oid = p.pronamespace',
+            "WHERE nspname = '{0}'",
+            "AND p.oid::regprocedure::text = '{1}'",
+            'ORDER BY proname, proargtypes',
+        ])).format(prepend, name)
     elif object_type == 'tablespace':
         query = (' '.join([
             'SELECT rolname AS name',
@@ -2582,6 +2630,7 @@ def privileges_list(
        - language
        - database
        - group
+       - function
 
     prepend
         Table and Sequence object types live under a schema so this should be
@@ -2686,6 +2735,7 @@ def has_privileges(name,
        - language
        - database
        - group
+       - function
 
     privileges
        Comma separated list of privileges to check, from the list below:
@@ -2808,6 +2858,7 @@ def privileges_grant(name,
        - language
        - database
        - group
+       - function
 
     privileges
        Comma separated list of privileges to grant, from the list below:
@@ -2867,6 +2918,8 @@ def privileges_grant(name,
 
     if object_type in ['table', 'sequence']:
         on_part = '{0}."{1}"'.format(prepend, object_name)
+    elif object_type == 'function':
+        on_part = '{0}'.format(object_name)
     else:
         on_part = '"{0}"'.format(object_name)
 
@@ -2943,6 +2996,7 @@ def privileges_revoke(name,
        - language
        - database
        - group
+       - function
 
     privileges
        Comma separated list of privileges to revoke, from the list below:
@@ -3053,10 +3107,6 @@ def datadir_init(name,
     runas
         The system user the operation should be performed on behalf of
     '''
-    if salt.utils.which('initdb') is None:
-        log.error('initdb not found in path')
-        return False
-
     if datadir_exists(name):
         log.info('%s already exists', name)
         return False

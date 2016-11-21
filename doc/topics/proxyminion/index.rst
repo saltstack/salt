@@ -36,6 +36,16 @@ or more minions.
 See :doc:`Proxyminion Beacon </topics/proxyminion/beacon>` to help
 with easy configuration and management of ``salt-proxy`` processes.
 
+New in 2016.11.0
+----------------
+
+Proxy minions now support configuration files with names ending in '*.conf'
+and placed in /etc/salt/proxy.d.
+
+Proxy minions can now be configured in /etc/salt/proxy or /etc/salt/proxy.d
+instead of just pillar.  Configuration format is the same as it would be in pillar.
+
+
 New in 2016.3
 -------------
 
@@ -104,7 +114,7 @@ the rest of the proxy's grains.  Since older proxy-minions might have used other
 methods to call such a function and add its results to grains, this is config-gated
 by a new proxy configuration option called ``proxy_merge_grains_in_module``.  This
 defaults to ``False`` in this release.  It will default to True in the release after
-next.  The next release is codenamed **Carbon**, the following is **Nitrogen**.
+next.  The next release is 2016.11.0, the following is **Nitrogen**.
 
 
 
@@ -179,7 +189,8 @@ Configuration parameters
 
 Proxy minions require no configuration parameters in /etc/salt/master.
 
-Salt's Pillar system is ideally suited for configuring proxy-minions.  Proxies
+Salt's Pillar system is ideally suited for configuring proxy-minions
+(though they can be configured in /etc/salt/proxy as well).  Proxies
 can either be designated via a pillar file in pillar_roots, or through an
 external pillar.  External pillars afford the opportunity for interfacing with
 a configuration management system, database, or other knowledgeable system that
@@ -298,6 +309,9 @@ In the above example
 Because of the way pillar works, each of the salt-proxy processes that fork off the
 proxy minions will only see the keys specific to the proxies it will be
 handling.
+
+Proxies can be configured in /etc/salt/proxy or with files in /etc/salt/proxy.d as of
+Salt's 2016.11.0 release.
 
 Also, in general, proxy-minions are lightweight, so the machines that run them
 could conceivably control a large number of devices.  To run more than one proxy from

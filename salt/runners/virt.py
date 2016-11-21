@@ -56,22 +56,14 @@ def _find_vm(name, data, quiet=False):
     return {}
 
 
-def query(host=None, quiet=False, hyper=None):
+def query(host=None, quiet=False):
     '''
     Query the virtual machines. When called without options all hosts
     are detected and a full query is returned. A single host can be
     passed in to specify an individual host to query.
     '''
-    if hyper is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Please use "host" instead of "hyper". The "hyper" argument will '
-            'be removed in the Carbon release of Salt'
-        )
-        host = hyper
-
     if quiet:
-        log.warn('\'quiet\' is deprecated. Please migrate to --quiet')
+        log.warning("'quiet' is deprecated. Please migrate to --quiet")
     ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
@@ -108,16 +100,8 @@ def list(host=None, quiet=False, hyper=None):  # pylint: disable=redefined-built
     A single host can be passed in to specify an individual host
     to list.
     '''
-    if hyper is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Please use "host" instead of "hyper". The "hyper" argument will '
-            'be removed in the Carbon release of Salt'
-        )
-        host = hyper
-
     if quiet:
-        log.warn('\'quiet\' is deprecated. Please migrate to --quiet')
+        log.warning("'quiet' is deprecated. Please migrate to --quiet")
     ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
     for info in client.cmd_iter('virtual:physical',
@@ -162,20 +146,6 @@ def next_host():
     return host
 
 
-def next_hyper():
-    '''
-    Return the host to use for the next autodeployed VM. This queries
-    the available host and executes some math the determine the most
-    "available" next host.
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'Please use "host" instead of "hyper". The "hyper" argument will '
-        'be removed in the Carbon release of Salt'
-    )
-    return next_host()
-
-
 def host_info(host=None):
     '''
     Return information about the host connected to this master
@@ -188,24 +158,11 @@ def host_info(host=None):
     return data
 
 
-def hyper_info(hyper=None):
-    '''
-    Return information about the host connected to this master
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'Please use "host" instead of "hyper". The "hyper" argument will '
-        'be removed in the Carbon release of Salt'
-    )
-    return host_info(hyper)
-
-
 def init(
         name,
         cpu,
         mem,
         image,
-        hyper=None,
         hypervisor='kvm',
         host=None,
         seed=True,
@@ -260,14 +217,6 @@ def init(
     saltenv
         The Salt environment to use
     '''
-    if hyper is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Please use "host" instead of "hyper". The "hyper" argument will '
-            'be removed in the Carbon release of Salt'
-        )
-        host = hyper
-
     __jid_event__.fire_event({'message': 'Searching for hosts'}, 'progress')
     data = query(host, quiet=True)
     # Check if the name is already deployed

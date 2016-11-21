@@ -354,7 +354,8 @@ used, a single top file in the ``base`` environment is the most common way of
 configuring a :ref:`highstate <running-highstate>`.
 
 The following minion configuration options affect how top files are compiled
-when no environment is specified:
+when no environment is specified, it is recommended to follow the below four
+links to learn more about how these options work:
 
 - :conf_minion:`state_top_saltenv`
 - :conf_minion:`top_file_merging_strategy`
@@ -404,6 +405,7 @@ For the scenarios below, assume the following configuration:
         - dev2
     qa:
       '*':
+        - qa1
         - qa2
 
 .. note::
@@ -438,7 +440,7 @@ environment, no states from the ``qa`` environment would be applied.
 Scenario 3 - No Environment Specified, :conf_minion:`top_file_merging_strategy` is "same"
 -----------------------------------------------------------------------------------------
 
-.. versionchanged:: Carbon
+.. versionchanged:: 2016.11.0
     In prior versions, "same" did not quite work as described below (see
     here__). This has now been corrected. It was decided that changing
     something like top file handling in a point release had the potential to
@@ -453,5 +455,18 @@ minion2.
 
 If :conf_minion:`default_top` is unset (or set to ``base``, which happens to be
 the default), then ``qa1`` from the ``qa`` environment will be applied to all
-minions. If :conf_minion:`default_top` were set to ``dev``, then ``qa2`` from
-the ``qa`` environment would be applied to all minions.
+minions. If :conf_minion:`default_top` were set to ``dev``, then both ``qa1``
+and ``qa2`` from the ``qa`` environment would be applied to all minions.
+
+Scenario 4 - No Environment Specified, :conf_minion:`top_file_merging_strategy` is "merge_all"
+----------------------------------------------------------------------------------------------
+
+.. versionadded:: 2016.11.0
+
+In this scenario, all configured states in all top files are applied. From the
+``base`` environment, ``base1`` would be applied to all minions, with ``base2``
+being applied only to ``minion1``. From the ``dev`` environment, ``dev1`` would
+be applied to all minions, with ``dev2`` being applied only to ``minion2``.
+Finally, from the ``qa`` environment, both the ``qa1`` and ``qa2`` states will
+be applied to all minions. Note that the ``qa1`` states would not be applied
+twice, even though ``qa1`` appears twice.

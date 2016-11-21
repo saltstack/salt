@@ -6,7 +6,8 @@ The following fields can be set in the minion conf file. Fields are optional
 unless noted otherwise.
 
 * ``from`` (required) The name/address of the email sender.
-* ``to`` (required) The name/address of the email recipient.
+* ``to`` (required) The names/addresses of the email recipients;
+    comma-delimited. For example: ``you@example.com,someoneelse@example.com``.
 * ``host`` (required) The SMTP server hostname or address.
 * ``port`` The SMTP server port; defaults to ``25``.
 * ``username`` The username used to authenticate to the server. If specified a
@@ -44,13 +45,13 @@ the default location. For example:
     alternative.smtp.password: saltdev
     alternative.smtp.tls: True
 
-To use the SMTP returner, append '--return smtp' to the salt command.
+To use the SMTP returner, append '--return smtp' to the ``salt`` command.
 
 .. code-block:: bash
 
     salt '*' test.ping --return smtp
 
-To use the alternative configuration, append '--return_config alternative' to the salt command.
+To use the alternative configuration, append '--return_config alternative' to the ``salt`` command.
 
 .. versionadded:: 2015.5.0
 
@@ -58,7 +59,8 @@ To use the alternative configuration, append '--return_config alternative' to th
 
     salt '*' test.ping --return smtp --return_config alternative
 
-To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the
+``salt`` command.
 
 .. versionadded:: 2016.3.0
 
@@ -73,17 +75,45 @@ that prints any email it receives to the console.
 .. code-block:: python
 
     python -m smtpd -n -c DebuggingServer localhost:1025
+
+.. versionadded:: 2016.11.0
+
+It is possible to send emails with selected Salt events by configuring ``event_return`` option
+for Salt Master. For example:
+
+.. code-block:: yaml
+
+    event_return: smtp
+
+    event_return_whitelist:
+      - salt/key
+
+    smtp.from: me@example.net
+    smtp.to: you@example.com
+    smtp.host: localhost
+    smtp.subject: 'Salt Master {{act}}ed key from Minion ID: {{id}}'
+    smtp.template: /srv/salt/templates/email.j2
+
+Also you need to create additional file ``/srv/salt/templates/email.j2`` with email body template:
+
+.. code-block:: yaml
+
+    act: {{act}}
+    id: {{id}}
+    result: {{result}}
+
+This configuration enables Salt Master to send an email when accepting or rejecting minions keys.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import smtplib
-import StringIO
 from email.utils import formatdate
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.utils.jid
 import salt.returners
 import salt.loader
@@ -139,7 +169,7 @@ def returner(ret):
 
     _options = _get_options(ret)
     from_addr = _options.get('from')
-    to_addrs = _options.get('to')
+    to_addrs = _options.get('to').split(',')
     host = _options.get('host')
     port = _options.get('port')
     user = _options.get('username')
@@ -151,29 +181,43 @@ def returner(ret):
 
     renderer = _options.get('renderer') or 'jinja'
     rend = salt.loader.render(__opts__, {})
+    blacklist = __opts__.get('renderer_blacklist')
+    whitelist = __opts__.get('renderer_whitelist')
 
     if not port:
         port = 25
     log.debug('SMTP port has been set to {0}'.format(port))
+
     for field in fields:
         if field in ret:
             subject += ' {0}'.format(ret[field])
-    subject = compile_template(':string:', rend, renderer, input_data=subject, **ret)
-    if isinstance(subject, StringIO.StringIO):
+    subject = compile_template(':string:',
+                               rend,
+                               renderer,
+                               blacklist,
+                               whitelist,
+                               input_data=subject,
+                               **ret)
+    if isinstance(subject, six.moves.StringIO):
         subject = subject.read()
-
     log.debug("smtp_return: Subject is '{0}'".format(subject))
 
     template = _options.get('template')
     if template:
-        content = compile_template(template, rend, renderer, **ret)
+        content = compile_template(template, rend, renderer, blacklist, whitelist, **ret)
     else:
         template = ('id: {{id}}\r\n'
                     'function: {{fun}}\r\n'
                     'function args: {{fun_args}}\r\n'
                     'jid: {{jid}}\r\n'
                     'return: {{return}}\r\n')
-        content = compile_template(':string:', rend, renderer, input_data=template, **ret)
+        content = compile_template(':string:',
+                                   rend,
+                                   renderer,
+                                   blacklist,
+                                   whitelist,
+                                   input_data=template,
+                                   **ret)
 
     if HAS_GNUPG and gpgowner:
         gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
@@ -185,9 +229,9 @@ def returner(ret):
         else:
             log.error('smtp_return: Encryption failed, only an error message will be sent')
             content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
-                    encrypted_data.status, encrypted_data.stderr)
+                encrypted_data.status, encrypted_data.stderr)
 
-    if isinstance(content, StringIO.StringIO):
+    if isinstance(content, six.moves.StringIO):
         content = content.read()
 
     message = ('From: {0}\r\n'
@@ -196,20 +240,21 @@ def returner(ret):
                'Subject: {3}\r\n'
                '\r\n'
                '{4}').format(from_addr,
-                             to_addrs,
+                             ', '.join(to_addrs),
                              formatdate(localtime=True),
                              subject,
                              content)
 
     log.debug('smtp_return: Connecting to the server...')
     server = smtplib.SMTP(host, int(port))
-    server.set_debuglevel = 'debug'
     if smtp_tls is True:
         server.starttls()
         log.debug('smtp_return: TLS enabled')
     if user and passwd:
         server.login(user, passwd)
         log.debug('smtp_return: Authenticated')
+    # enable logging SMTP session after the login credentials were passed
+    server.set_debuglevel(1)
     server.sendmail(from_addr, to_addrs, message)
     log.debug('smtp_return: Message sent.')
     server.quit()
@@ -220,3 +265,15 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     Do any work necessary to prepare a JID, including sending a custom id
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+
+
+def event_return(events):
+    '''
+    Return event data via SMTP
+    '''
+
+    for event in events:
+        ret = event.get('data', False)
+
+        if ret:
+            returner(ret)

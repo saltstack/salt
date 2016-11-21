@@ -39,6 +39,15 @@ import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 
+def _size_convert(_re_size):
+    converted_size = int(_re_size.group('size_value'))
+    if _re_size.group('size_unit') == 'm':
+        converted_size = int(converted_size) * 1024
+    if _re_size.group('size_unit') == 'g':
+        converted_size = int(converted_size) * 1024 * 1024
+    return converted_size
+
+
 def mounted(name,
             device,
             fstype,
@@ -51,6 +60,7 @@ def mounted(name,
             mount=True,
             user=None,
             match_on='auto',
+            device_name_regex=None,
             extra_mount_invisible_options=None,
             extra_mount_invisible_keys=None,
             extra_mount_ignore_fs_keys=None,
@@ -68,7 +78,7 @@ def mounted(name,
 
     fstype
         The filesystem type, this will be ``xfs``, ``ext2/3/4`` in the case of classic
-        filesystems, and ``fuse`` in the case of fuse mounts
+        filesystems, ``fuse`` in the case of fuse mounts, and ``nfs`` in the case of nfs mounts
 
     mkmnt
         If the mount point is not present then the state will fail, set ``mkmnt: True``
@@ -93,7 +103,7 @@ def mounted(name,
         Set if the mount should be mounted immediately, Default is ``True``
 
     user
-        The user to own the mount; this defaults to the user salt is
+        The account used to execute the mount; this defaults to the user salt is
         running as on the minion
 
     match_on
@@ -101,6 +111,31 @@ def mounted(name,
         Default is ``auto``, a special value indicating to guess based on fstype.
         In general, ``auto`` matches on name for recognized special devices and
         device otherwise.
+
+    device_name_regex
+        A list of device exact names or regular expressions which should
+        not force a remount. For example, glusterfs may be mounted with a
+        comma-separated list of servers in fstab, but the /proc/self/mountinfo
+        will show only the first available server.
+
+        .. code-block:: jinja
+
+            {% set glusterfs_ip_list = ['10.0.0.1', '10.0.0.2', '10.0.0.3'] %}
+
+            mount glusterfs volume:
+              mount.mounted:
+                - name: /mnt/glusterfs_mount_point
+                - device: {{ glusterfs_ip_list|join(',') }}:/volume_name
+                - fstype: glusterfs
+                - opts: _netdev,rw,defaults,direct-io-mode=disable
+                - mkmnt: True
+                - persist: True
+                - dump: 0
+                - pass_num: 0
+                - device_name_regex:
+                  - ({{ glusterfs_ip_list|join('|') }}):/volume_name
+
+        .. versionadded:: 2016.11.0
 
     extra_mount_invisible_options
         A list of extra options that are not visible through the
@@ -150,6 +185,9 @@ def mounted(name,
            'changes': {},
            'result': True,
            'comment': ''}
+
+    if device_name_regex is None:
+        device_name_regex = []
 
     # Defaults is not a valid option on Mac OS
     if __grains__['os'] in ['MacOS', 'Darwin'] and opts == 'defaults':
@@ -326,11 +364,7 @@ def mounted(name,
 
                     size_match = re.match(r'size=(?P<size_value>[0-9]+)(?P<size_unit>k|m|g)', opt)
                     if size_match:
-                        converted_size = int(size_match.group('size_value'))
-                        if size_match.group('size_unit') == 'm':
-                            converted_size = int(size_match.group('size_value')) * 1024
-                        if size_match.group('size_unit') == 'g':
-                            converted_size = int(size_match.group('size_value')) * 1024 * 1024
+                        converted_size = _size_convert(size_match)
                         opt = "size={0}k".format(converted_size)
                     # make cifs option user synonym for option username which is reported by /proc/mounts
                     if fstype in ['cifs'] and opt.split('=')[0] == 'user':
@@ -349,8 +383,18 @@ def mounted(name,
                                 _id = _info[_param]
                         opt = _param + '=' + str(_id)
 
+                    _active_superopts = active[real_name].get('superopts', [])
+                    for _active_opt in _active_superopts:
+                        size_match = re.match(r'size=(?P<size_value>[0-9]+)(?P<size_unit>k|m|g)', _active_opt)
+                        if size_match:
+                            converted_size = _size_convert(size_match)
+                            opt = "size={0}k".format(converted_size)
+                            _active_superopts.remove(_active_opt)
+                            _active_opt = "size={0}k".format(converted_size)
+                            _active_superopts.append(_active_opt)
+
                     if opt not in active[real_name]['opts'] \
-                    and opt not in active[real_name].get('superopts', []) \
+                    and opt not in _active_superopts \
                     and opt not in mount_invisible_options \
                     and opt not in mount_ignore_fs_keys.get(fstype, []) \
                     and opt not in mount_invisible_keys:
@@ -383,11 +427,21 @@ def mounted(name,
                                     opts.remove('remount')
             if real_device not in device_list:
                 # name matches but device doesn't - need to umount
+                _device_mismatch_is_ignored = False
+                for regex in list(device_name_regex):
+                    for _device in device_list:
+                        if re.match(regex, _device):
+                            _device_mismatch_is_ignored = _device
                 if __opts__['test']:
                     ret['result'] = None
                     ret['comment'] = "An umount would have been forced " \
                                      + "because devices do not match.  Watched: " \
                                      + device
+                elif _device_mismatch_is_ignored is True:
+                    ret['result'] = None
+                    ret['comment'] = "An umount will not be forced " \
+                                     + "because device matched device_name_regex: " \
+                                     + _device_mismatch_is_ignored
                 else:
                     ret['changes']['umount'] = "Forced unmount because devices " \
                                                + "don't match. Wanted: " + device
@@ -410,17 +464,16 @@ def mounted(name,
                 ret['result'] = None
                 if os.path.exists(name):
                     ret['comment'] = '{0} would be mounted'.format(name)
+                elif mkmnt:
+                    ret['comment'] = '{0} would be created and mounted'.format(name)
                 else:
-                    ret['comment'] = '{0} will be created and mounted'.format(name)
+                    ret['comment'] = '{0} does not exist and would not be created'.format(name)
                 return ret
 
-            if not os.path.exists(name):
-                if mkmnt:
-                    __salt__['file.mkdir'](name, user=user)
-                else:
-                    ret['result'] = False
-                    ret['comment'] = 'Mount directory is not present'
-                    return ret
+            if not os.path.exists(name) and not mkmnt:
+                ret['result'] = False
+                ret['comment'] = 'Mount directory is not present'
+                return ret
 
             out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts, user=user)
             active = __salt__['mount.active'](extended=True)
@@ -433,8 +486,24 @@ def mounted(name,
                 # (Re)mount worked!
                 ret['comment'] = 'Target was successfully mounted'
                 ret['changes']['mount'] = True
+        elif not os.path.exists(name):
+            if __opts__['test']:
+                ret['result'] = None
+                if mkmnt:
+                    ret['comment'] = '{0} would be created, but not mounted'.format(name)
+                else:
+                    ret['comment'] = '{0} does not exist and would neither be created nor mounted'.format(name)
+            elif mkmnt:
+                __salt__['file.mkdir'](name, user=user)
+                ret['comment'] = '{0} was created, not mounted'.format(name)
+            else:
+                ret['comment'] = '{0} not present and not mounted'.format(name)
         else:
-            ret['comment'] = '{0} not mounted'.format(name)
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = '{0} would not be mounted'.format(name)
+            else:
+                ret['comment'] = '{0} not mounted'.format(name)
 
     if persist:
         # Override default for Mac OS
@@ -463,27 +532,31 @@ def mounted(name,
                 ret['result'] = None
                 if out == 'new':
                     if mount:
-                        ret['comment'] = ('{0} is mounted, but needs to be '
+                        comment = ('{0} is mounted, but needs to be '
                                           'written to the fstab in order to be '
-                                          'made persistent').format(name)
+                                          'made persistent.').format(name)
                     else:
-                        ret['comment'] = ('{0} needs to be '
+                        comment = ('{0} needs to be '
                                           'written to the fstab in order to be '
-                                          'made persistent').format(name)
+                                          'made persistent.').format(name)
                 elif out == 'change':
                     if mount:
-                        ret['comment'] = ('{0} is mounted, but its fstab entry '
-                                          'must be updated').format(name)
+                        comment = ('{0} is mounted, but its fstab entry '
+                                          'must be updated.').format(name)
                     else:
-                        ret['comment'] = ('The {0} fstab entry '
-                                          'must be updated').format(name)
+                        comment = ('The {0} fstab entry '
+                                          'must be updated.').format(name)
                 else:
                     ret['result'] = False
-                    ret['comment'] = ('Unable to detect fstab status for '
+                    comment = ('Unable to detect fstab status for '
                                       'mount point {0} due to unexpected '
                                       'output \'{1}\' from call to '
                                       'mount.set_fstab. This is most likely '
                                       'a bug.').format(name, out)
+                if 'comment' in ret:
+                    ret['comment'] = '{0}. {1}'.format(ret['comment'], comment)
+                else:
+                    ret['comment'] = comment
                 return ret
 
         else:

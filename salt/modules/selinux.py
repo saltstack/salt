@@ -14,6 +14,7 @@ Execute calls on selinux
 # Import python libs
 from __future__ import absolute_import
 import os
+import re
 
 # Import salt libs
 import salt.utils
@@ -37,7 +38,7 @@ def __virtual__():
         if not salt.utils.which(cmd):
             return (False, cmd + ' is not in the path')
     # SELinux only makes sense on Linux *obviously*
-    if __grains__['kernel'] == 'Linux' and selinux_fs_path():
+    if __grains__['kernel'] == 'Linux':
         return 'selinux'
     return (False, 'Module only works on Linux with selinux installed')
 
@@ -56,11 +57,15 @@ def selinux_fs_path():
     '''
     # systems running systemd (e.g. Fedora 15 and newer)
     # have the selinux filesystem in a different location
-    for directory in ('/sys/fs/selinux', '/selinux'):
-        if os.path.isdir(directory):
-            if os.path.isfile(os.path.join(directory, 'enforce')):
-                return directory
-    return None
+    try:
+        for directory in ('/sys/fs/selinux', '/selinux'):
+            if os.path.isdir(directory):
+                if os.path.isfile(os.path.join(directory, 'enforce')):
+                    return directory
+        return None
+    #If selinux is Disabled, the path does not exist.
+    except (AttributeError) as exc:
+        return None
 
 
 def getenforce():
@@ -81,8 +86,7 @@ def getenforce():
             else:
                 return 'Enforcing'
     except (IOError, OSError, AttributeError) as exc:
-        msg = 'Could not read SELinux enforce file: {0}'
-        raise CommandExecutionError(msg.format(str(exc)))
+        return 'Disabled'
 
 
 def setenforce(mode):
@@ -98,8 +102,12 @@ def setenforce(mode):
     if isinstance(mode, six.string_types):
         if mode.lower() == 'enforcing':
             mode = '1'
+            modestring = 'Enforcing'
         elif mode.lower() == 'permissive':
             mode = '0'
+            modestring = 'Permissive'
+        elif mode.lower() == 'disabled':
+            modestring = 'Disabled'
         else:
             return 'Invalid mode {0}'.format(mode)
     elif isinstance(mode, int):
@@ -109,13 +117,31 @@ def setenforce(mode):
             mode = '0'
     else:
         return 'Invalid mode {0}'.format(mode)
-    enforce = os.path.join(selinux_fs_path(), 'enforce')
+
+    if getenforce() != 'Disabled':  # enforce file does not exist if currently disabled.  Only for toggling enforcing/permissive
+        enforce = os.path.join(selinux_fs_path(), 'enforce')
+        try:
+            with salt.utils.fopen(enforce, 'w') as _fp:
+                _fp.write(mode)
+        except (IOError, OSError) as exc:
+            msg = 'Could not write SELinux enforce file: {0}'
+            raise CommandExecutionError(msg.format(str(exc)))
+
+    config = '/etc/selinux/config'
     try:
-        with salt.utils.fopen(enforce, 'w') as _fp:
-            _fp.write(mode)
+        with salt.utils.fopen(config, 'r') as _cf:
+            conf = _cf.read()
+        try:
+            with salt.utils.fopen(config, 'w') as _cf:
+                conf = re.sub(r"\nSELINUX.*\n", "\nSELINUX=" + modestring + "\n", conf)
+                _cf.write(conf)
+        except (IOError, OSError) as exc:
+            msg = 'Could not write SELinux config file: {0}'
+            raise CommandExecutionError(msg.format(str(exc)))
     except (IOError, OSError) as exc:
-        msg = 'Could not write SELinux enforce file: {0}'
+        msg = 'Could not read SELinux config file: {0}'
         raise CommandExecutionError(msg.format(str(exc)))
+
     return getenforce()
 
 

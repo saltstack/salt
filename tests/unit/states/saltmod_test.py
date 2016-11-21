@@ -23,7 +23,7 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.states import saltmod
 
-saltmod.__opts__ = {}
+saltmod.__opts__ = {'__role': 'master', 'file_client': 'remote'}
 saltmod.__salt__ = {'saltutil.cmd': MagicMock()}
 saltmod.__env__ = {}
 
@@ -173,9 +173,9 @@ class SaltmodTestCase(TestCase):
         ret = {'changes': True, 'name': 'state', 'result': True,
                'comment': 'Runner function \'state\' executed.',
                '__orchestration__': True}
+        runner_mock = MagicMock(return_value={'return': True})
 
-        with patch.dict(saltmod.__salt__, {'saltutil.runner':
-                                           MagicMock(return_value=True)}):
+        with patch.dict(saltmod.__salt__, {'saltutil.runner': runner_mock}):
             self.assertDictEqual(saltmod.runner(name), ret)
 
     # 'wheel' function tests: 1
@@ -189,9 +189,9 @@ class SaltmodTestCase(TestCase):
         ret = {'changes': True, 'name': 'state', 'result': True,
                'comment': 'Wheel function \'state\' executed.',
                '__orchestration__': True}
+        wheel_mock = MagicMock(return_value={'return': True})
 
-        with patch.dict(saltmod.__salt__, {'saltutil.wheel':
-                                           MagicMock(return_value=True)}):
+        with patch.dict(saltmod.__salt__, {'saltutil.wheel': wheel_mock}):
             self.assertDictEqual(saltmod.wheel(name), ret)
 
 

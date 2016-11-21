@@ -17,7 +17,7 @@ import threading
 import collections
 from contextlib import contextmanager
 
-import salt.ext.six
+import salt.ext.six as six
 
 
 @contextmanager
@@ -130,11 +130,16 @@ class ChildContextDict(collections.MutableMapping):
     def __init__(self, parent, overrides=None):
         self.parent = parent
         self._data = {} if overrides is None else overrides
+        self._old_data = None
 
         # merge self.global_data into self._data
-        for k, v in self.parent.global_data.iteritems():
+        for k, v in six.iteritems(self.parent.global_data):
             if k not in self._data:
-                self._data[k] = v
+                # A deepcopy is necessary to avoid using the same
+                # objects in globals as we do in thread local storage.
+                # Otherwise, changing one would automatically affect
+                # the other.
+                self._data[k] = copy.deepcopy(v)
 
     def __setitem__(self, key, val):
         self._data[key] = val
@@ -152,10 +157,13 @@ class ChildContextDict(collections.MutableMapping):
         return iter(self._data)
 
     def __enter__(self):
+        if hasattr(self.parent._state, 'data'):
+            # Save old data to support nested calls
+            self._old_data = self.parent._state.data
         self.parent._state.data = self._data
 
     def __exit__(self, *exc):
-        self.parent._state.data = None
+        self.parent._state.data = self._old_data
 
 
 class NamespacedDictWrapper(collections.MutableMapping, dict):
@@ -164,12 +172,16 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
 
     MUST inherit from dict to serialize through msgpack correctly
     '''
-    def __init__(self, d, pre_keys):  # pylint: disable=W0231
+
+    def __init__(self, d, pre_keys, override_name=None):  # pylint: disable=W0231
         self.__dict = d
-        if isinstance(pre_keys, salt.ext.six.string_types):
+        if isinstance(pre_keys, six.string_types):
             self.pre_keys = (pre_keys,)
         else:
             self.pre_keys = pre_keys
+        if override_name:
+            self.__class__.__module__ = 'salt'
+            self.__class__.__name__ = override_name
         super(NamespacedDictWrapper, self).__init__(self._dict())
 
     def _dict(self):
@@ -203,3 +215,6 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
     def __deepcopy__(self, memo):
         return type(self)(copy.deepcopy(self.__dict, memo),
                           copy.deepcopy(self.pre_keys, memo))
+
+    def __str__(self):
+        return self._dict().__str__()

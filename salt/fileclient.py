@@ -7,8 +7,8 @@ from __future__ import absolute_import
 # Import python libs
 import contextlib
 import logging
-import hashlib
 import os
+import string
 import shutil
 import ftplib
 from tornado.httputil import parse_response_start_line, HTTPInputError
@@ -29,6 +29,7 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.gzip_util
 import salt.utils.http
+import salt.ext.six as six
 from salt.utils.locales import sdecode
 from salt.utils.openstack.swift import SaltSwift
 
@@ -54,6 +55,26 @@ def get_file_client(opts, pillar=False):
         'local': FSClient,
         'pillar': LocalClient,
     }.get(client, RemoteClient)(opts)
+
+
+def decode_dict_keys_to_str(src):
+    '''
+    Convert top level keys from bytes to strings if possible.
+    This is necessary because Python 3 makes a distinction
+    between these types.
+    '''
+    if not six.PY3 or not isinstance(src, dict):
+        return src
+
+    output = {}
+    for key, val in six.iteritems(src):
+        if isinstance(key, bytes):
+            try:
+                key = key.decode()
+            except UnicodeError:
+                pass
+        output[key] = val
+    return output
 
 
 class Client(object):
@@ -106,20 +127,10 @@ class Client(object):
         return filelist
 
     @contextlib.contextmanager
-    def _cache_loc(self, path, saltenv='base', env=None, cachedir=None):
+    def _cache_loc(self, path, saltenv='base', cachedir=None):
         '''
         Return the local location to cache the file, cache dirs will be made
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         if cachedir is None:
             cachedir = self.opts['cachedir']
         elif not os.path.isabs(cachedir):
@@ -146,7 +157,6 @@ class Client(object):
                  makedirs=False,
                  saltenv='base',
                  gzip=None,
-                 env=None,
                  cachedir=None):
         '''
         Copies a file from the local files or master depending on
@@ -154,44 +164,24 @@ class Client(object):
         '''
         raise NotImplementedError
 
-    def file_list_emptydirs(self, saltenv='base', prefix='', env=None):
+    def file_list_emptydirs(self, saltenv='base', prefix=''):
         '''
         List the empty dirs
         '''
         raise NotImplementedError
 
-    def cache_file(self, path, saltenv='base', env=None, cachedir=None):
+    def cache_file(self, path, saltenv='base', cachedir=None):
         '''
         Pull a file down from the file server and store it in the minion
         file cache
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         return self.get_url(path, '', True, saltenv, cachedir=cachedir)
 
-    def cache_files(self, paths, saltenv='base', env=None, cachedir=None):
+    def cache_files(self, paths, saltenv='base', cachedir=None):
         '''
         Download a list of files stored on the master and put them in the
         minion file cache
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         ret = []
         if isinstance(paths, str):
             paths = paths.split(',')
@@ -199,20 +189,10 @@ class Client(object):
             ret.append(self.cache_file(path, saltenv, cachedir=cachedir))
         return ret
 
-    def cache_master(self, saltenv='base', env=None, cachedir=None):
+    def cache_master(self, saltenv='base', cachedir=None):
         '''
         Download and cache all files on a master in a specified environment
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         ret = []
         for path in self.file_list(saltenv):
             ret.append(
@@ -222,20 +202,10 @@ class Client(object):
         return ret
 
     def cache_dir(self, path, saltenv='base', include_empty=False,
-                  include_pat=None, exclude_pat=None, env=None, cachedir=None):
+                  include_pat=None, exclude_pat=None, cachedir=None):
         '''
         Download all of the files in a subdir of the master
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         ret = []
 
         path = self._check_proto(sdecode(path))
@@ -275,7 +245,7 @@ class Client(object):
             if cachedir is None:
                 cachedir = self.opts['cachedir']
             elif not os.path.isabs(cachedir):
-                cachedir = os.path.join(self.opts['cachdir'], cachedir)
+                cachedir = os.path.join(self.opts['cachedir'], cachedir)
 
             dest = salt.utils.path_join(cachedir, 'files', saltenv)
             for fn_ in self.file_list_emptydirs(saltenv):
@@ -301,20 +271,10 @@ class Client(object):
         shutil.copyfile(path, dest)
         return dest
 
-    def file_local_list(self, saltenv='base', env=None):
+    def file_local_list(self, saltenv='base'):
         '''
         List files in the local minion files and localfiles caches
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         filesdest = os.path.join(self.opts['cachedir'], 'files', saltenv)
         localfilesdest = os.path.join(self.opts['cachedir'], 'localfiles')
 
@@ -322,69 +282,29 @@ class Client(object):
         ldest = self._file_local_list(localfilesdest)
         return sorted(fdest.union(ldest))
 
-    def file_list(self, saltenv='base', prefix='', env=None):
+    def file_list(self, saltenv='base', prefix=''):
         '''
         This function must be overwritten
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         return []
 
-    def dir_list(self, saltenv='base', prefix='', env=None):
+    def dir_list(self, saltenv='base', prefix=''):
         '''
         This function must be overwritten
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         return []
 
-    def symlink_list(self, saltenv='base', prefix='', env=None):
+    def symlink_list(self, saltenv='base', prefix=''):
         '''
         This function must be overwritten
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         return {}
 
-    def is_cached(self, path, saltenv='base', env=None, cachedir=None):
+    def is_cached(self, path, saltenv='base', cachedir=None):
         '''
         Returns the full path to a file if it is cached locally on the minion
         otherwise returns a blank string
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         if path.startswith('salt://'):
             path, senv = salt.utils.url.parse(path)
             if senv:
@@ -477,21 +397,11 @@ class Client(object):
                 return {'source': path, 'dest': dest}
         return {}
 
-    def get_dir(self, path, dest='', saltenv='base', gzip=None, env=None,
+    def get_dir(self, path, dest='', saltenv='base', gzip=None,
                 cachedir=None):
         '''
         Get a directory recursively from the salt-master
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         ret = []
         # Strip trailing slash
         path = self._check_proto(path).rstrip('/')
@@ -499,7 +409,8 @@ class Client(object):
         # (the one being recursively copied) and the directories preceding it
         separated = path.rsplit('/', 1)
         if len(separated) != 2:
-            # No slashes in path. (This means all files in env will be copied)
+            # No slashes in path. (This means all files in saltenv will be
+            # copied)
             prefix = ''
         else:
             prefix = separated[0]
@@ -545,36 +456,33 @@ class Client(object):
         ret.sort()
         return ret
 
-    def get_url(self, url, dest, makedirs=False, saltenv='base', env=None,
+    def get_url(self, url, dest, makedirs=False, saltenv='base',
                 no_cache=False, cachedir=None):
         '''
         Get a single file from a URL.
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         url_data = urlparse(url)
+        url_scheme = url_data.scheme
+        url_path = os.path.join(
+                url_data.netloc, url_data.path).rstrip(os.sep)
 
-        if url_data.scheme in ('file', ''):
+        if url_scheme and url_scheme.lower() in string.ascii_lowercase:
+            url_path = ':'.join((url_scheme, url_path))
+            url_scheme = 'file'
+
+        if url_scheme in ('file', ''):
             # Local filesystem
-            if not os.path.isabs(url_data.path):
+            if not os.path.isabs(url_path):
                 raise CommandExecutionError(
-                    'Path \'{0}\' is not absolute'.format(url_data.path)
+                    'Path \'{0}\' is not absolute'.format(url_path)
                 )
             if dest is None:
                 with salt.utils.fopen(url_data.path, 'r') as fp_:
                     data = fp_.read()
                 return data
-            return url_data.path
+            return url_path
 
-        if url_data.scheme == 'salt':
+        if url_scheme == 'salt':
             result = self.get_file(url, dest, makedirs, saltenv, cachedir=cachedir)
             if result and dest is None:
                 with salt.utils.fopen(result, 'r') as fp_:
@@ -743,21 +651,19 @@ class Client(object):
             template='jinja',
             makedirs=False,
             saltenv='base',
-            env=None,
             cachedir=None,
             **kwargs):
         '''
         Cache a file then process it as a template
         '''
-        if env is not None:
+        if 'env' in kwargs:
             salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+                )
+            kwargs.pop('env')
 
         kwargs['saltenv'] = saltenv
         url_data = urlparse(url)
@@ -859,43 +765,40 @@ class LocalClient(Client):
                  makedirs=False,
                  saltenv='base',
                  gzip=None,
-                 env=None,
                  cachedir=None):
         '''
         Copies a file from the local files directory into :param:`dest`
         gzip compression settings are ignored for local files
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         path = self._check_proto(path)
         fnd = self._find_file(path, saltenv)
-        if not fnd['path']:
+        fnd_path = fnd.get('path')
+        if not fnd_path:
             return ''
-        return fnd['path']
 
-    def file_list(self, saltenv='base', prefix='', env=None):
+        try:
+            fnd_mode = fnd.get('stat', [])[0]
+        except (IndexError, TypeError):
+            fnd_mode = None
+
+        if not salt.utils.is_windows():
+            if fnd_mode is not None:
+                try:
+                    if os.stat(dest).st_mode != fnd_mode:
+                        try:
+                            os.chmod(dest, fnd_mode)
+                        except OSError as exc:
+                            log.warning('Failed to chmod %s: %s', dest, exc)
+                except Exception:
+                    pass
+
+        return fnd_path
+
+    def file_list(self, saltenv='base', prefix=''):
         '''
         Return a list of files in the given environment
         with optional relative prefix path to limit directory traversal
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         ret = []
         if saltenv not in self.opts['file_roots']:
             return ret
@@ -904,26 +807,18 @@ class LocalClient(Client):
             for root, dirs, files in os.walk(
                 os.path.join(path, prefix), followlinks=True
             ):
+                # Don't walk any directories that match file_ignore_regex or glob
+                dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 for fname in files:
                     relpath = os.path.relpath(os.path.join(root, fname), path)
                     ret.append(sdecode(relpath))
         return ret
 
-    def file_list_emptydirs(self, saltenv='base', prefix='', env=None):
+    def file_list_emptydirs(self, saltenv='base', prefix=''):
         '''
         List the empty dirs in the file_roots
         with optional relative prefix path to limit directory traversal
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         ret = []
         prefix = prefix.strip('/')
         if saltenv not in self.opts['file_roots']:
@@ -932,25 +827,17 @@ class LocalClient(Client):
             for root, dirs, files in os.walk(
                 os.path.join(path, prefix), followlinks=True
             ):
+                # Don't walk any directories that match file_ignore_regex or glob
+                dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 if len(dirs) == 0 and len(files) == 0:
                     ret.append(sdecode(os.path.relpath(root, path)))
         return ret
 
-    def dir_list(self, saltenv='base', prefix='', env=None):
+    def dir_list(self, saltenv='base', prefix=''):
         '''
         List the dirs in the file_roots
         with optional relative prefix path to limit directory traversal
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         ret = []
         if saltenv not in self.opts['file_roots']:
             return ret
@@ -962,59 +849,80 @@ class LocalClient(Client):
                 ret.append(sdecode(os.path.relpath(root, path)))
         return ret
 
-    def hash_file(self, path, saltenv='base', env=None):
+    def __get_file_path(self, path, saltenv='base'):
+        '''
+        Return either a file path or the result of a remote find_file call.
+        '''
+        try:
+            path = self._check_proto(path)
+        except MinionError as err:
+            # Local file path
+            if not os.path.isfile(path):
+                msg = 'specified file {0} is not present to generate hash: {1}'
+                log.warning(msg.format(path, err))
+                return None
+            else:
+                return path
+        return self._find_file(path, saltenv)
+
+    def hash_file(self, path, saltenv='base'):
         '''
         Return the hash of a file, to get the hash of a file in the file_roots
         prepend the path with salt://<file on server> otherwise, prepend the
         file with / for a local file.
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
+        ret = {}
+        fnd = self.__get_file_path(path, saltenv)
+        if fnd is None:
+            return ret
 
-        ret = {}
         try:
-            path = self._check_proto(path)
-        except MinionError:
-            if not os.path.isfile(path):
-                err = 'Specified file {0} is not present to generate hash'
-                log.warning(err.format(path))
-                return ret
-            else:
-                opts_hash_type = self.opts.get('hash_type', 'md5')
-                hash_type = getattr(hashlib, opts_hash_type)
-                ret['hsum'] = salt.utils.get_hash(
-                    path, form=hash_type)
-                ret['hash_type'] = opts_hash_type
-                return ret
-        path = self._find_file(path, saltenv)['path']
-        if not path:
-            return {}
-        ret = {}
-        ret['hsum'] = salt.utils.get_hash(path, self.opts['hash_type'])
-        ret['hash_type'] = self.opts['hash_type']
+            # Remote file path (self._find_file() invoked)
+            fnd_path = fnd['path']
+        except TypeError:
+            # Local file path
+            fnd_path = fnd
+
+        hash_type = self.opts.get('hash_type', 'md5')
+        ret['hsum'] = salt.utils.get_hash(fnd_path, form=hash_type)
+        ret['hash_type'] = hash_type
         return ret
 
-    def list_env(self, saltenv='base', env=None):
+    def hash_and_stat_file(self, path, saltenv='base'):
+        '''
+        Return the hash of a file, to get the hash of a file in the file_roots
+        prepend the path with salt://<file on server> otherwise, prepend the
+        file with / for a local file.
+
+        Additionally, return the stat result of the file, or None if no stat
+        results were found.
+        '''
+        ret = {}
+        fnd = self.__get_file_path(path, saltenv)
+        if fnd is None:
+            return ret, None
+
+        try:
+            # Remote file path (self._find_file() invoked)
+            fnd_path = fnd['path']
+            fnd_stat = fnd.get('stat')
+        except TypeError:
+            # Local file path
+            fnd_path = fnd
+            try:
+                fnd_stat = list(os.stat(fnd_path))
+            except Exception:
+                fnd_stat = None
+
+        hash_type = self.opts.get('hash_type', 'md5')
+        ret['hsum'] = salt.utils.get_hash(fnd_path, form=hash_type)
+        ret['hash_type'] = hash_type
+        return ret, fnd_stat
+
+    def list_env(self, saltenv='base'):
         '''
         Return a list of the files in the file server's specified environment
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         return self.file_list(saltenv)
 
     def master_opts(self):
@@ -1073,7 +981,6 @@ class RemoteClient(Client):
                  makedirs=False,
                  saltenv='base',
                  gzip=None,
-                 env=None,
                  cachedir=None):
         '''
         Get a single file from the salt-master
@@ -1085,26 +992,24 @@ class RemoteClient(Client):
         if senv:
             saltenv = senv
 
+        if not salt.utils.is_windows():
+            hash_server, stat_server = self.hash_and_stat_file(path, saltenv)
+            try:
+                mode_server = stat_server[0]
+            except (IndexError, TypeError):
+                mode_server = None
+        else:
+            hash_server = self.hash_file(path, saltenv)
+            mode_server = None
+
         # Check if file exists on server, before creating files and
         # directories
-        hash_server = self.hash_file(path, saltenv)
         if hash_server == '':
             log.debug(
-                'Could not find file from saltenv \'{0}\', \'{1}\''.format(
-                    saltenv, path
-                )
+                'Could not find file \'%s\' in saltenv \'%s\'',
+                path, saltenv
             )
             return False
-
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
 
         # Hash compare local copy with master and skip download
         # if no difference found.
@@ -1113,32 +1018,76 @@ class RemoteClient(Client):
             rel_path = self._check_proto(path)
 
             log.debug(
-                'In saltenv \'{0}\', looking at rel_path \'{1}\' to resolve '
-                '\'{2}\''.format(saltenv, rel_path, path)
+                'In saltenv \'%s\', looking at rel_path \'%s\' to resolve '
+                '\'%s\'', saltenv, rel_path, path
             )
             with self._cache_loc(
                     rel_path, saltenv, cachedir=cachedir) as cache_dest:
                 dest2check = cache_dest
 
         log.debug(
-            'In saltenv \'{0}\', ** considering ** path \'{1}\' to resolve '
-            '\'{2}\''.format(saltenv, dest2check, path)
+            'In saltenv \'%s\', ** considering ** path \'%s\' to resolve '
+            '\'%s\'', saltenv, dest2check, path
         )
 
         if dest2check and os.path.isfile(dest2check):
-            hash_local = self.hash_file(dest2check, saltenv)
+            if not salt.utils.is_windows():
+                hash_local, stat_local = \
+                    self.hash_and_stat_file(dest2check, saltenv)
+                try:
+                    mode_local = stat_local[0]
+                except (IndexError, TypeError):
+                    mode_local = None
+            else:
+                hash_local = self.hash_file(dest2check, saltenv)
+                mode_local = None
+
             if hash_local == hash_server:
-                log.info(
-                    'Fetching file from saltenv \'{0}\', ** skipped ** '
-                    'latest already in cache \'{1}\''.format(
-                        saltenv, path
+                if not salt.utils.is_windows():
+                    if mode_server is None:
+                        log.debug('No file mode available for \'%s\'', path)
+                    elif mode_local is None:
+                        log.debug(
+                            'No file mode available for \'%s\'',
+                            dest2check
+                        )
+                    else:
+                        if mode_server == mode_local:
+                            log.info(
+                                'Fetching file from saltenv \'%s\', '
+                                '** skipped ** latest already in cache '
+                                '\'%s\', mode up-to-date', saltenv, path
+                            )
+                        else:
+                            try:
+                                os.chmod(dest2check, mode_server)
+                                log.info(
+                                    'Fetching file from saltenv \'%s\', '
+                                    '** updated ** latest already in cache, '
+                                    '\'%s\', mode updated from %s to %s',
+                                    saltenv,
+                                    path,
+                                    salt.utils.st_mode_to_octal(mode_local),
+                                    salt.utils.st_mode_to_octal(mode_server)
+                                )
+                            except OSError as exc:
+                                log.warning(
+                                    'Failed to chmod %s: %s', dest2check, exc
+                                )
+                    # We may not have been able to check/set the mode, but we
+                    # don't want to re-download the file because of a failure
+                    # in mode checking. Return the cached path.
+                    return dest2check
+                else:
+                    log.info(
+                        'Fetching file from saltenv \'%s\', ** skipped ** '
+                        'latest already in cache \'%s\'', saltenv, path
                     )
-                )
-                return dest2check
+                    return dest2check
 
         log.debug(
-            'Fetching file from saltenv \'{0}\', ** attempting ** '
-            '\'{1}\''.format(saltenv, path)
+            'Fetching file from saltenv \'%s\', ** attempting ** \'%s\'',
+            saltenv, path
         )
         d_tries = 0
         transport_tries = 0
@@ -1162,14 +1111,21 @@ class RemoteClient(Client):
             # with clause:
             fn_ = salt.utils.fopen(dest, 'wb+')
         else:
-            log.debug('No dest file found {0}'.format(dest))
+            log.debug('No dest file found')
 
         while True:
             if not fn_:
                 load['loc'] = 0
             else:
                 load['loc'] = fn_.tell()
-            data = self.channel.send(load)
+            data = self.channel.send(load, raw=True)
+            if six.PY3:
+                # Sometimes the source is local (eg when using
+                # 'salt.filesystem.FSChan'), in which case the keys are
+                # already strings. Sometimes the source is remote, in which
+                # case the keys are bytes due to raw mode. Standardize on
+                # strings for the top-level keys to simplify things.
+                data = decode_dict_keys_to_str(data)
             try:
                 if not data['data']:
                     if not fn_ and data['dest']:
@@ -1185,10 +1141,12 @@ class RemoteClient(Client):
                         # Master has prompted a file verification, if the
                         # verification fails, re-download the file. Try 3 times
                         d_tries += 1
-                        hsum = salt.utils.get_hash(dest, data.get('hash_type', 'md5'))
+                        hsum = salt.utils.get_hash(dest, salt.utils.to_str(data.get('hash_type', b'md5')))
                         if hsum != data['hsum']:
-                            log.warn('Bad download of file {0}, attempt {1} '
-                                     'of 3'.format(path, d_tries))
+                            log.warning(
+                                'Bad download of file %s, attempt %d of 3',
+                                path, d_tries
+                            )
                             continue
                     break
                 if not fn_:
@@ -1206,95 +1164,90 @@ class RemoteClient(Client):
                     data = salt.utils.gzip_util.uncompress(data['data'])
                 else:
                     data = data['data']
+                if six.PY3 and isinstance(data, str):
+                    data = data.encode()
                 fn_.write(data)
-            except (TypeError, KeyError) as e:
+            except (TypeError, KeyError) as exc:
+                try:
+                    data_type = type(data).__name__
+                except AttributeError:
+                    # Shouldn't happen, but don't let this cause a traceback.
+                    data_type = str(type(data))
                 transport_tries += 1
-                log.warning('Data transport is broken, got: {0}, type: {1}, '
-                            'exception: {2}, attempt {3} of 3'.format(
-                                data, type(data), e, transport_tries)
-                            )
+                log.warning(
+                    'Data transport is broken, got: %s, type: %s, '
+                    'exception: %s, attempt %d of 3',
+                    data, data_type, exc, transport_tries
+                )
                 self._refresh_channel()
                 if transport_tries > 3:
-                    log.error('Data transport is broken, got: {0}, type: {1}, '
-                              'exception: {2}, '
-                              'Retry attempts exhausted'.format(
-                                data, type(data), e)
-                            )
+                    log.error(
+                        'Data transport is broken, got: %s, type: %s, '
+                        'exception: %s, retry attempts exhausted',
+                        data, data_type, exc
+                    )
                     break
 
         if fn_:
             fn_.close()
             log.info(
-                'Fetching file from saltenv \'{0}\', ** done ** '
-                '\'{1}\''.format(saltenv, path)
+                'Fetching file from saltenv \'%s\', ** done ** \'%s\'',
+                saltenv, path
             )
         else:
             log.debug(
-                'In saltenv \'{0}\', we are ** missing ** the file '
-                '\'{1}\''.format(saltenv, path)
+                'In saltenv \'%s\', we are ** missing ** the file \'%s\'',
+                saltenv, path
             )
 
+        if not salt.utils.is_windows():
+            if mode_server is not None:
+                try:
+                    if os.stat(dest).st_mode != mode_server:
+                        try:
+                            os.chmod(dest, mode_server)
+                            log.info(
+                                'Fetching file from saltenv \'%s\', '
+                                '** done ** \'%s\', mode set to %s',
+                                saltenv,
+                                path,
+                                salt.utils.st_mode_to_octal(mode_server)
+                            )
+                        except OSError:
+                            log.warning('Failed to chmod %s: %s', dest, exc)
+                except OSError:
+                    pass
         return dest
 
-    def file_list(self, saltenv='base', prefix='', env=None):
+    def file_list(self, saltenv='base', prefix=''):
         '''
         List the files on the master
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list'}
 
         return [sdecode(fn_) for fn_ in self.channel.send(load)]
 
-    def file_list_emptydirs(self, saltenv='base', prefix='', env=None):
+    def file_list_emptydirs(self, saltenv='base', prefix=''):
         '''
         List the empty dirs on the master
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
         self.channel.send(load)
 
-    def dir_list(self, saltenv='base', prefix='', env=None):
+    def dir_list(self, saltenv='base', prefix=''):
         '''
         List the dirs on the master
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_dir_list'}
         return self.channel.send(load)
 
-    def symlink_list(self, saltenv='base', prefix='', env=None):
+    def symlink_list(self, saltenv='base', prefix=''):
         '''
         List symlinked files and dirs on the master
         '''
@@ -1303,34 +1256,21 @@ class RemoteClient(Client):
                 'cmd': '_symlink_list'}
         return self.channel.send(load)
 
-    def hash_file(self, path, saltenv='base', env=None):
+    def __hash_and_stat_file(self, path, saltenv='base'):
         '''
-        Return the hash of a file, to get the hash of a file on the salt
-        master file server prepend the path with salt://<file on server>
-        otherwise, prepend the file with / for a local file.
+        Common code for hashing and stating files
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         try:
             path = self._check_proto(path)
-        except MinionError:
+        except MinionError as err:
             if not os.path.isfile(path):
-                err = 'Specified file {0} is not present to generate hash'
-                log.warning(err.format(path))
+                msg = 'specified file {0} is not present to generate hash: {1}'
+                log.warning(msg.format(path, err))
                 return {}
             else:
                 ret = {}
                 hash_type = self.opts.get('hash_type', 'md5')
-                ret['hsum'] = salt.utils.get_hash(
-                    path, form=hash_type)
+                ret['hsum'] = salt.utils.get_hash(path, form=hash_type)
                 ret['hash_type'] = hash_type
                 return ret
         load = {'path': path,
@@ -1338,20 +1278,44 @@ class RemoteClient(Client):
                 'cmd': '_file_hash'}
         return self.channel.send(load)
 
-    def list_env(self, saltenv='base', env=None):
+    def hash_file(self, path, saltenv='base'):
+        '''
+        Return the hash of a file, to get the hash of a file on the salt
+        master file server prepend the path with salt://<file on server>
+        otherwise, prepend the file with / for a local file.
+        '''
+        return self.__hash_and_stat_file(path, saltenv)
+
+    def hash_and_stat_file(self, path, saltenv='base'):
+        '''
+        The same as hash_file, but also return the file's mode, or None if no
+        mode data is present.
+        '''
+        hash_result = self.hash_file(path, saltenv)
+        try:
+            path = self._check_proto(path)
+        except MinionError as err:
+            if not os.path.isfile(path):
+                return hash_result, None
+            else:
+                try:
+                    return hash_result, list(os.stat(path))
+                except Exception:
+                    return hash_result, None
+        load = {'path': path,
+                'saltenv': saltenv,
+                'cmd': '_file_find'}
+        fnd = self.channel.send(load)
+        try:
+            stat_result = fnd.get('stat')
+        except AttributeError:
+            stat_result = None
+        return hash_result, stat_result
+
+    def list_env(self, saltenv='base'):
         '''
         Return a list of the files in the file server's specified environment
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
         return self.channel.send(load)

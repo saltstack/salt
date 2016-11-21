@@ -192,7 +192,7 @@ def _chkconfig_is_enabled(name, runlevel=None):
             if '{0}:on'.format(runlevel) in row:
                 if row.split()[0] == name:
                     return True
-            elif row.split() == [name + ':', 'on']:
+            elif row.split() == [name, 'on']:
                 return True
     return False
 

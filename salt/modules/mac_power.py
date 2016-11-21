@@ -446,6 +446,7 @@ def set_restart_freeze(enabled):
     return salt.utils.mac_utils.confirm_updated(
         state,
         get_restart_freeze,
+        True
     )
 
 
@@ -467,7 +468,7 @@ def get_sleep_on_power_button():
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -getallowpowerbuttontosleepcomputer')
     return salt.utils.mac_utils.validate_enabled(
-        salt.utils.mac_utils.parse_return(ret)) == 'on'
+            salt.utils.mac_utils.parse_return(ret)) == 'on'
 
 
 def set_sleep_on_power_button(enabled):

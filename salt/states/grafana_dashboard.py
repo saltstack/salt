@@ -38,14 +38,14 @@ they exist in dashboards. The module will not manage rows that are not defined,
 allowing users to manage their own custom rows.
 '''
 
+# Import Python libs
 from __future__ import absolute_import
-
 import copy
 import json
-
 import requests
 
-from salt.ext.six import string_types
+# Import Salt libs
+import salt.ext.six as six
 from salt.utils.dictdiffer import DictDiffer
 
 
@@ -94,7 +94,7 @@ def present(name,
     base_rows_from_pillar = base_rows_from_pillar or []
     dashboard = dashboard or {}
 
-    if isinstance(profile, string_types):
+    if isinstance(profile, six.string_types):
         profile = __salt__['config.option'](profile)
 
     # Add pillar keys for default configuration
@@ -200,7 +200,7 @@ def absent(name, profile='grafana'):
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    if isinstance(profile, string_types):
+    if isinstance(profile, six.string_types):
         profile = __salt__['config.option'](profile)
 
     url = 'db/{0}'.format(name)
@@ -538,7 +538,7 @@ def _dashboard_diff(_new_dashboard, _old_dashboard):
 def _stripped(d):
     '''Strip falsey entries.'''
     ret = {}
-    for k, v in d.iteritems():
+    for k, v in six.iteritems(d):
         if v:
             ret[k] = v
     return ret

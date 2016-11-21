@@ -5,6 +5,8 @@ Send a message to Hipchat
 
 This state is useful for sending messages to Hipchat during state runs.
 
+The property api_url is optional. By defaul will use the public HipChat API at https://api.hipchat.com
+
 .. versionadded:: 2015.5.0
 
 .. code-block:: yaml
@@ -14,6 +16,7 @@ This state is useful for sending messages to Hipchat during state runs.
         - room_id: 123456
         - from_name: SuperAdmin
         - message: 'This state was executed successfully.'
+        - api_url: https://hipchat.myteam.com
         - api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
         - api_version: v1
 
@@ -39,6 +42,7 @@ def send_message(name,
                  room_id,
                  from_name,
                  message,
+                 api_url=None,
                  api_key=None,
                  api_version=None,
                  message_color='yellow',
@@ -53,6 +57,7 @@ def send_message(name,
             - room_id: 123456
             - from_name: SuperAdmin
             - message: 'This state was executed successfully.'
+            - api_url: https://hipchat.myteam.com
             - api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
             - api_version: v1
             - color: green
@@ -74,6 +79,11 @@ def send_message(name,
         The message that is to be sent to the Hipchat room.
 
     The following parameters are optional:
+
+    api_url
+        The API URl to be used.
+        If not specified here or in the configuration options of master or minion,
+        will use the public HipChat API: https://api.hipchat.com
 
     api_key
         The api key for Hipchat to use for authentication,
@@ -116,6 +126,7 @@ def send_message(name,
         room_id=room_id,
         message=message,
         from_name=from_name,
+        api_url=api_url,
         api_key=api_key,
         api_version=api_version,
         color=message_color,
