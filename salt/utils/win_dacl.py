@@ -137,12 +137,14 @@ from salt.ext.six.moves import range
 import salt.ext.six as six
 
 # Import 3rd-party libs
+HAS_WIN32 = False
 try:
     import win32security
     import win32con
     import win32api
     import pywintypes
     import salt.utils.win_functions
+    HAS_WIN32 = True
 except ImportError:
     pass
 
