@@ -7,13 +7,17 @@ private cloud vms to be managed directly with Salt. This system is generally
 referred to as :strong:`Salt Virt`.
 
 The Salt Virt system already exists and is installed within Salt itself, this
-means that beside setting up Salt, no additional salt code needs to be
+means that besides setting up Salt, no additional salt code needs to be
 deployed.
 
+.. note::
+
+    The ``libvirt`` python module and the ``certtool`` binary are required.
+
 The main goal of Salt Virt is to facilitate a very fast and simple cloud. The
-cloud that can scale and fully featured. Salt Virt comes with the
+cloud that can scale and is fully featured. Salt Virt comes with the
 ability to set up and manage complex virtual machine networking, powerful
-image, and disk management, as well as virtual machine migration with and without
+image and disk management, as well as virtual machine migration with and without
 shared storage.
 
 This means that Salt Virt can be used to create a cloud from a blade center
