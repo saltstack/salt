@@ -1978,7 +1978,12 @@ def _hw_data(osdata):
     grains = {}
     # On SmartOS (possibly SunOS also) smbios only works in the global zone
     # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
-    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not salt.utils.is_smartos():
+    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not (
+            salt.utils.is_smartos() or
+            (  # SunOS on SPARC - 'smbios: failed to load SMBIOS: System does not export an SMBIOS table'
+                osdata['kernel'] == 'SunOS' and
+                osdata['cpuarch'].startswith('sparc')
+            )):
         grains = {
             'biosversion': __salt__['smbios.get']('bios-version'),
             'productname': __salt__['smbios.get']('system-product-name'),
@@ -2045,6 +2050,122 @@ def _hw_data(osdata):
             value = __salt__['cmd.run']('{0} -b {1}'.format(sysctl, oid))
             if not value.endswith(' is invalid'):
                 grains[key] = _clean_value(key, value)
+    elif osdata['kernel'] == 'SunOS' and osdata['cpuarch'].startswith('sparc'):
+        # Depending on the hardware model, commands can report different bits
+        # of information.  With that said, consolidate the output from various
+        # commands and attempt various lookups.
+        data = ""
+        for (cmd, args) in (('/usr/sbin/prtdiag', '-v'), ('/usr/sbin/prtconf', '-vp'), ('/usr/sbin/virtinfo', '-a')):
+            if salt.utils.which(cmd):  # Also verifies that cmd is executable
+                data += __salt__['cmd.run']('{0} {1}'.format(cmd, args))
+                data += '\n'
+
+        sn_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*Chassis\s+Serial\s+Number\n-+\n(\S+)',  # prtdiag
+                r'(?im)^\s*chassis-sn:\s*(\S+)',  # prtconf
+                r'(?im)^\s*Chassis\s+Serial#:\s*(\S+)',  # virtinfo
+            ]
+        ]
+
+        obp_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*System\s+PROM\s+revisions.*\nVersion\n-+\nOBP\s+(\S+)\s+(\S+)',  # prtdiag
+                r'(?im)^\s*version:\s*\'OBP\s+(\S+)\s+(\S+)',  # prtconf
+            ]
+        ]
+
+        fw_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*Sun\s+System\s+Firmware\s+(\S+)\s+(\S+)',  # prtdiag
+            ]
+        ]
+
+        uuid_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*Domain\s+UUID:\s*(\S+)',  # virtinfo
+            ]
+        ]
+
+        manufacture_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*System\s+Configuration:\s*(.*)(?=sun)',  # prtdiag
+            ]
+        ]
+
+        product_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*System\s+Configuration:\s*.*?sun\d\S+\s(.*)',  # prtdiag
+                r'(?im)^\s*banner-name:\s*(.*)',  # prtconf
+                r'(?im)^\s*product-name:\s*(.*)',  # prtconf
+            ]
+        ]
+
+        sn_regexes = [
+            re.compile(r) for r in [
+                r'(?im)Chassis\s+Serial\s+Number\n-+\n(\S+)',  # prtdiag
+                r'(?i)Chassis\s+Serial#:\s*(\S+)',  # virtinfo
+                r'(?i)chassis-sn:\s*(\S+)',  # prtconf
+            ]
+        ]
+
+        obp_regexes = [
+            re.compile(r) for r in [
+                r'(?im)System\s+PROM\s+revisions.*\nVersion\n-+\nOBP\s+(\S+)\s+(\S+)',  # prtdiag
+                r'(?im)version:\s*\'OBP\s+(\S+)\s+(\S+)',  # prtconf
+            ]
+        ]
+
+        fw_regexes = [
+            re.compile(r) for r in [
+                r'(?i)Sun\s+System\s+Firmware\s+(\S+)\s+(\S+)',  # prtdiag
+            ]
+        ]
+
+        uuid_regexes = [
+            re.compile(r) for r in [
+                r'(?i)Domain\s+UUID:\s+(\S+)',  # virtinfo
+            ]
+        ]
+
+        for regex in sn_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['serialnumber'] = res.group(1).strip().replace("'", "")
+                break
+
+        for regex in obp_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                obp_rev, obp_date = res.groups()[0:2]  # Limit the number in case we found the data in multiple places
+                grains['biosversion'] = obp_rev.strip().replace("'", "")
+                grains['biosreleasedate'] = obp_date.strip().replace("'", "")
+
+        for regex in fw_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                fw_rev, fw_date = res.groups()[0:2]
+                grains['systemfirmware'] = fw_rev.strip().replace("'", "")
+                grains['systemfirmwaredate'] = fw_date.strip().replace("'", "")
+                break
+
+        for regex in uuid_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['uuid'] = res.group(1).strip().replace("'", "")
+                break
+
+        for regex in manufacture_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['manufacture'] = res.group(1).strip().replace("'", "")
+                break
+
+        for regex in product_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['product'] = res.group(1).strip().replace("'", "")
+                break
 
     return grains
 
