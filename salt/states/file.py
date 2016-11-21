@@ -271,9 +271,10 @@ import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.templates
 import salt.utils.url
-import salt.utils.win_dacl
 from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError
+if salt.utils.is_windows():
+    import salt.utils.win_dacl
 
 # Import 3rd-party libs
 import salt.ext.six as six
