@@ -91,10 +91,18 @@ def user_present(name,
         The name of the user to manage
 
     password
-        The password to use for this user
+        The password to use for this user.
+
+        .. note::
+
+            If the user already exists and a different password was set for
+            the user than the one specified here, the password for the user
+            will be updated. Please set the ``password_reset`` option to
+            ``False`` if this is not the desired behavior.
 
     password_reset
-        Whether or not to reset password after initial set
+        Whether or not to reset password after initial set. Defaults to
+        ``True``.
 
     email
         The email address for this user
