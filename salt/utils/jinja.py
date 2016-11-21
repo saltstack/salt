@@ -27,7 +27,6 @@ import salt
 import salt.utils
 import salt.utils.url
 import salt.fileclient
-from salt.ext import six as six
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -379,7 +378,7 @@ def intersect(lst1, lst2):
     if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
         _intersect = set(lst1) & set(lst2)
     else:
-        _intersect = unique( unique([ele for ele in lst1 if ele in lst2]))
+        _intersect = unique([ele for ele in lst1 if ele in lst2])
     return _intersect
 
 
