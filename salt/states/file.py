@@ -103,7 +103,7 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
 
 The ``names`` parameter, which is part of the state compiler, can be used to
 expand the contents of a single state declaration into multiple, single state
-declarations. Each item in the ``names`` receives its own individual state
+declarations. Each item in the ``names`` list receives its own individual state
 ``name`` and is converted into its own low-data structure. This is a convenient
 way to manage several files with similar attributes.
 
