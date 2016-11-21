@@ -349,6 +349,12 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
     jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
     jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
+    jinja_env.filters['is_ip'] = salt.utils.network.is_ip  # check if valid IP address
+    jinja_env.filters['is_ipv4'] = salt.utils.network.is_ipv4  # check if valid IPv4 address
+    jinja_env.filters['is_ipv6'] = salt.utils.network.is_ipv6  # check if valid IPv6 address
+    jinja_env.filters['ipaddr'] = salt.utils.network.ipaddr  # filter IP addresses
+    jinja_env.filters['ipv4'] = salt.utils.network.ipv4  # filter IPv4-only addresses
+    jinja_env.filters['ipv6'] = salt.utils.network.ipv6  # filter IPv6-only addresses
 
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = salt.utils.jinja.show_full_context
