@@ -1767,6 +1767,32 @@ blocked. If `cmd_whitelist_glob` is NOT SET, then all shell commands are permitt
       - 'cat /etc/fstab'
 
 
+.. conf_master:: ssl
+
+``ssl``
+-------
+
+.. versionadded:: 2016.11.0
+
+Default: ``None``
+
+TLS/SSL connection options. This could be set to a dictionary containing
+arguments corresponding to python ``ssl.wrap_socket`` method. For details see
+`Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
+and `Python <http://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+documentation.
+
+Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
+constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23``.
+
+.. code-block:: yaml
+
+    ssl:
+        keyfile: <path_to_keyfile>
+        certfile: <path_to_certfile>
+        ssl_version: PROTOCOL_TLSv1_2
+
+
 Thread Settings
 ===============
 
