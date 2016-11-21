@@ -236,7 +236,7 @@ deployment1_ret = dict(createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                        description=(u'{\n'
                                     u'    "api_name": "unit test api",\n'
                                     u'    "swagger_file": "temp-swagger-sample.yaml",\n'
-                                    u'    "swagger_file_md5sum": "4fb17e43bab3a96e7f2410a1597cd0a5",\n'
+                                    u'    "swagger_file_md5sum": "99cd44f491f25a8e8bb468b0a8e23a0a",\n'
                                     u'    "swagger_info_object": {\n'
                                     u'        "description": "salt boto apigateway unit test service",\n'
                                     u'        "title": "salt boto apigateway unit test service",\n'
