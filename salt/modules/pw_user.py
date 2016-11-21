@@ -404,6 +404,8 @@ def chhomephone(name, homephone):
 def chloginclass(name, loginclass, root=None):
     '''
     Change the default login class of the user
+    
+    .. versionadded:: 2016.3.5
 
     CLI Example:
 
