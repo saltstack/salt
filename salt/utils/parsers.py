@@ -1588,7 +1588,7 @@ class MasterOptionParser(six.with_metaclass(OptionParserMeta,
                                             DaemonMixIn,
                                             SaltfileMixIn)):
 
-    description = 'The Salt Master, used to control the Salt Minions.'
+    description = 'The Salt Master, used to control the Salt Minions'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
@@ -1604,7 +1604,7 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta,
                                             MasterOptionParser)):  # pylint: disable=no-init
 
     description = (
-        'The Salt Minion, receives commands from a remote Salt Master.'
+        'The Salt Minion, receives commands from a remote Salt Master'
     )
 
     # ConfigDirMixIn config filename attribute
