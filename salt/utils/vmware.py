@@ -389,6 +389,22 @@ def get_service_instance_from_managed_object(mo_ref, name='<unnamed>'):
     return si
 
 
+def disconnect(service_instance):
+    '''
+    Function that disconnects from the vCenter server or ESXi host
+
+    service_instance
+        The Service Instance from which to obtain managed object references.
+    '''
+    log.trace('Disconnecting')
+    try:
+        Disconnect(service_instance)
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+
+
 def is_connection_to_a_vcenter(service_instance):
     '''
     Function that returns True if the connection is made to a vCenter Server and
