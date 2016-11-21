@@ -37,7 +37,6 @@ import salt.ext.six as six  # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-import salt.utils.win_dacl
 # pylint: enable=W0611
 
 # Import third party libs
@@ -68,6 +67,11 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
 
 from salt.utils import namespaced_function as _namespaced_function
 
+HAS_WIN_DACL = False
+if salt.utils.is_windows():
+    import salt.utils.win_dacl
+    HAS_WIN_DACL = salt.utils.win_dacl.HAS_WIN32
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -80,6 +84,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         if HAS_WINDOWS_MODULES:
+            # Load functions from file.py
             global get_managed, manage_file
             global source_list, __clean_tmp, file_exists
             global check_managed, check_managed_changes, check_file_meta
@@ -146,8 +151,13 @@ def __virtual__():
             _add_flags = _namespaced_function(_add_flags, globals())
             apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())
 
-            return __virtualname__
-    return (False, "Module win_file: module only works on Windows systems")
+        else:
+            return False, 'Module win_file: Missing Win32 modules'
+
+    if not HAS_WIN_DACL:
+        return False, 'Module win_file: Unable to load salt.utils.win_dacl'
+
+    return __virtualname__
 
 __outputter__ = {
     'touch': 'txt',
