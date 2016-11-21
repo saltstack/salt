@@ -21,7 +21,11 @@ from salt.exceptions import CommandExecutionError
 __proxyenabled__ = ['*']
 
 
-def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
+def get(key,
+        default=KeyError,
+        merge=False,
+        delimiter=DEFAULT_TARGET_DELIM,
+        saltenv=None):
     '''
     .. versionadded:: 0.14
 
@@ -54,6 +58,22 @@ def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
 
         .. versionadded:: 2014.7.0
 
+    saltenv
+        If specified, this function will query the master to generate fresh
+        pillar data on the fly, specifically from the requested pillar
+        environment. Note that this can produce different pillar data than
+        executing this function without an environment, as its normal behavior
+        is just to return a value from minion's pillar data in memory (which
+        can be sourced from more than one pillar environment).
+
+        Using this argument will not affect the pillar data in memory. It will
+        however be slightly slower and use more resources on the master due to
+        the need for the master to generate and send the minion fresh pillar
+        data. This tradeoff in performance however allows for the use case
+        where pillar data is desired only from a single environment.
+
+        .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
@@ -64,13 +84,15 @@ def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
         if default is KeyError:
             default = ''
     opt_merge_lists = __opts__.get('pillar_merge_lists', False)
+    pillar_dict = __pillar__ if saltenv is None else items(saltenv=saltenv)
+
     if merge:
-        ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delimiter)
+        ret = salt.utils.traverse_dict_and_list(pillar_dict, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
             return salt.utils.dictupdate.update(default, ret, merge_lists=opt_merge_lists)
 
-    ret = salt.utils.traverse_dict_and_list(__pillar__,
+    ret = salt.utils.traverse_dict_and_list(pillar_dict,
                                             key,
                                             default,
                                             delimiter)
@@ -88,13 +110,22 @@ def items(*args, **kwargs):
     Contrast with :py:func:`raw` which returns the pillar data that is
     currently loaded into the minion.
 
-    pillar : none
+    pillar
         if specified, allows for a dictionary of pillar data to be made
         available to pillar and ext_pillar rendering. these pillar variables
         will also override any variables of the same name in pillar or
         ext_pillar.
 
         .. versionadded:: 2015.5.0
+
+    saltenv
+        Pass a specific pillar environment from which to compile pillar data.
+        If unspecified, the minion's :conf_minion:`environment` option is used,
+        and if that also is not specified then all configured pillar
+        environments will be merged into a single pillar dictionary and
+        returned.
+
+        .. versionadded:: Nitrogen
 
     CLI Example:
 
@@ -110,7 +141,7 @@ def items(*args, **kwargs):
         __opts__,
         __grains__,
         __opts__['id'],
-        __opts__['environment'],
+        kwargs.get('saltenv') or __opts__['environment'],
         pillar=kwargs.get('pillar'))
 
     return pillar.compile_pillar()
@@ -191,7 +222,7 @@ def item(*args, **kwargs):
 
     Return one or more pillar entries
 
-    pillar : none
+    pillar
         if specified, allows for a dictionary of pillar data to be made
         available to pillar and ext_pillar rendering. these pillar variables
         will also override any variables of the same name in pillar or
