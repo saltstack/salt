@@ -523,6 +523,15 @@ def create(vm_):
     # If a password wasn't supplied in the profile or provider config, set it now.
     vm_['password'] = get_password(vm_)
 
+    # Send event that the instance has booted.
+    salt.utils.cloud.fire_event(
+        'event',
+        'waiting for ssh',
+        'salt/cloud/{0}/waiting_for_ssh'.format(name),
+        {'ip_address': vm_['ssh_host']},
+        transport=__opts__['transport']
+    )
+
     # Bootstrap!
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
