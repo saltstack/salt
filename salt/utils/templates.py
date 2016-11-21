@@ -355,6 +355,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.filters['ipaddr'] = salt.utils.network.ipaddr  # filter IP addresses
     jinja_env.filters['ipv4'] = salt.utils.network.ipv4  # filter IPv4-only addresses
     jinja_env.filters['ipv6'] = salt.utils.network.ipv6  # filter IPv6-only addresses
+    jinja_env.filters['ip_host'] = salt.utils.network.ip_host  # return the network interface IP
+    jinja_env.filters['network_hosts'] = salt.utils.network.network_hosts  # return the hosts within a network
+    jinja_env.filters['network_size'] = salt.utils.network.network_size  # return the network size
 
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = salt.utils.jinja.show_full_context
