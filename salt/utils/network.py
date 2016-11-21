@@ -208,7 +208,7 @@ def is_ip(ip, options=None):
 
 
 def _ip_options_global(ip_obj, version):
-    return ip_obj.is_global
+    return not ip_obj.is_private
 
 
 def _ip_options_multicast(ip_obj, version):
@@ -326,14 +326,14 @@ def _ipv_filter(value, version, options=None):
         return
 
     if isinstance(value, (six.string_types, six.text_type, six.binary_type)):
-        return fun(value, net=True, options=options)  # calls is_ipv4 or is_ipv6 for `value`
+        return fun(value, options=options)  # calls is_ipv4 or is_ipv6 for `value`
     elif isinstance(value, (list, tuple, types.GeneratorType)):
         # calls is_ipv4 or is_ipv6 for each element in the list
         # os it filters and returns only those elements having the desired IP version
         return [
-            fun(addr, net=True, options=options)
+            fun(addr, options=options)
             for addr in value
-            if fun(addr, net=True, options=options) is not None
+            if fun(addr, options=options) is not None
         ]
     return None
 
@@ -362,6 +362,64 @@ def ipaddr(value, options=None):
         return ipv4_obj or ipv6_obj  # one of them
     else:
         return ipv4_obj + ipv6_obj  # extend lists
+
+
+def _filter_ipaddr(value, options, version=None):
+    ipaddr_filter_out = None
+    if version:
+        if version == 4:
+            ipaddr_filter_out = ipv4(value, options)
+        elif version == 6:
+            ipaddr_filter_out = ipv6(value, options)
+    else:
+        ipaddr_filter_out = ipaddr(value, options)
+    if not ipaddr_filter_out:
+        return
+    if not isinstance(ipaddr_filter_out, (list, tuple, types.GeneratorType)):
+        ipaddr_filter_out = [ipaddr_filter_out]
+    return ipaddr_filter_out
+
+
+def ip_host(value, options=None, version=None):
+    ipaddr_filter_out = _filter_ipaddr(value, options=options, version=version)
+    if not ipaddr_filter_out:
+        return
+    return [ipaddress.ip_interface(ip_a) for ip_a in ipaddr_filter_out]
+
+
+def _network_hosts(ip_addr_entry):
+    return [
+        str(host)
+        for host in ipaddress.ip_network(ip_addr_entry, strict=False).hosts()
+    ]
+
+
+def network_hosts(value, options=None, version=None):
+    ipaddr_filter_out = _filter_ipaddr(value, options=options, version=version)
+    if not ipaddr_filter_out:
+        return
+    if not isinstance(value, (list, tuple, types.GeneratorType)):
+        return _network_hosts(ipaddr_filter_out[0])
+    return [
+        _network_hosts(ip_a)
+        for ip_a in ipaddr_filter_out
+    ]
+
+
+def _network_size(ip_addr_entry):
+    return ipaddress.ip_network(ip_addr_entry, strict=False).num_addresses
+
+
+def network_size(value, options=None, version=None):
+    ipaddr_filter_out = _filter_ipaddr(value, options=options, version=version)
+    if not ipaddr_filter_out:
+        return
+    if not isinstance(value, (list, tuple, types.GeneratorType)):
+        return _network_size(ipaddr_filter_out[0])
+    return [
+        _network_size(ip_a)
+        for ip_a in ipaddr_filter_out
+    ]
 
 
 def natural_ipv4_netmask(ip, fmt='prefixlen'):
