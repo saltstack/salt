@@ -27,6 +27,7 @@ import salt
 import salt.utils
 import salt.utils.url
 import salt.fileclient
+from salt.ext import six as six
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -182,7 +183,7 @@ def ensure_sequence_filter(data):
 
         ensure that parsed data is a sequence
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set my_string = "foo" %}
         {% set my_list = ["bar", ] %}
@@ -204,6 +205,248 @@ def ensure_sequence_filter(data):
     if not isinstance(data, (list, tuple, set, dict)):
         return [data]
     return data
+
+
+def default(var, value):
+    '''
+    Defaults to a specific value when the variable is not defined.
+
+    .. code-block:: jinja
+
+        {{ set my_value | default('stuff') }}
+
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        stuff
+    '''
+    if var is None:
+        return value
+    return var
+
+
+def unique(lst):
+    '''
+    Removes duplicates.
+
+    .. code-block:: jinja
+
+        {% my_list = ['a', 'b', 'c', 'a', 'b'] -%}
+        {{ set my_list | unique }}
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        ['a', 'b', 'c']
+    '''
+    if isinstance(lst, (list, tuple, set)):
+        _set = set(lst)
+        return list(_set)
+    return lst
+
+
+def lst_min(lst):
+    '''
+    Returns the min value of a list.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | min }}
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        1
+    '''
+
+    if isinstance(lst, (list, tuple, set)):
+        return min(lst)
+    elif isinstance(lst, (six.integer_types, float)):
+        return lst
+    return None
+
+
+def lst_max(lst):
+    '''
+    Returns the max value of a list.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | max }}
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        1
+    '''
+
+    if isinstance(lst, (list, tuple, set)):
+        return max(lst)
+    elif isinstance(lst, (six.integer_types, float)):
+        return lst
+    return None
+
+
+def lst_sum(lst):
+    '''
+    Returns the sum of a list.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | sum }}
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        10
+    '''
+
+    if isinstance(lst, (list, tuple, set)):
+        return sum(lst)
+    elif isinstance(lst, (six.integer_types, float)):
+        return lst
+    return None
+
+
+def lst_avg(lst):
+    '''
+    Returns the average value of a list.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | avg }}
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        2.5
+    '''
+    if isinstance(lst, (list, tuple, set)):
+        return float(sum(lst)/len(lst))
+    elif isinstance(lst, (six.integer_types, float)):
+        return float(lst)
+    return None
+
+
+def lst_avg(lst):
+    '''
+    Returns the average value of a list.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | avg }}
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        2.5
+    '''
+    if isinstance(lst, (list, tuple, set)):
+        return float(sum(lst)/len(lst))
+    elif isinstance(lst, (six.integer_types, float)):
+        return float(lst)
+    return None
+
+
+def union(lst1, lst2):
+    '''
+    Returns the union of two lists.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | union([2, 4, 6]) }}
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        [1, 2, 3, 4, 6]
+    '''
+    if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
+        _union = set(lst1) | set(lst2)
+    else:
+        _union = unique(lst1 + lst2)
+    return _union
+
+
+def intersect(lst1, lst2):
+    '''
+    Returns the intersection of two lists.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | intersect([2, 4, 6]) }}
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        [2, 4]
+    '''
+    if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
+        _intersect = set(lst1) & set(lst2)
+    else:
+        _intersect = unique( unique([ele for ele in lst1 if ele in lst2]))
+    return _intersect
+
+
+def difference(lst1, lst2):
+    '''
+    Returns the difference of two lists.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | difference([2, 4, 6]) }}
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        [1, 3, 6]
+    '''
+    if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
+        _diff = set(lst1) - set(lst2)
+    else:
+        _diff = unique([ele for ele in lst1 if ele not in lst2])
+    return _diff
+
+
+def symmetric_difference(lst1, lst2):
+    '''
+    Returns the symmetric difference of two lists.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | symmetric_difference([2, 4, 6]) }}
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        [1, 3]
+    '''
+    if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
+        _symdiff = set(lst1) ^ set(lst2)
+    else:
+        _symdiff = unique([ele for ele in union(lst1, lst2) if ele not in intersect(lst1, lst2)])
+    return _symdiff
 
 
 @jinja2.contextfunction
