@@ -339,28 +339,6 @@ def lst_avg(lst):
     return None
 
 
-def lst_avg(lst):
-    '''
-    Returns the average value of a list.
-
-    .. code-block:: jinja
-
-        {% my_list = [1,2,3,4] -%}
-        {{ set my_list | avg }}
-
-    will be rendered as:
-
-    .. code-block:: yaml
-
-        2.5
-    '''
-    if isinstance(lst, (list, tuple, set)):
-        return float(sum(lst)/len(lst))
-    elif isinstance(lst, (six.integer_types, float)):
-        return float(lst)
-    return None
-
-
 def union(lst1, lst2):
     '''
     Returns the union of two lists.

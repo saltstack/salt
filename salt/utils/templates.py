@@ -323,6 +323,16 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.filters['strftime'] = salt.utils.date_format
     jinja_env.filters['sequence'] = salt.utils.jinja.ensure_sequence_filter
+    jinja_env.filters['default'] = salt.utils.jinja.default
+    jinja_env.filters['unique'] = salt.utils.jinja.unique
+    jinja_env.filters['min'] = salt.utils.jinja.lst_min
+    jinja_env.filters['max'] = salt.utils.jinja.lst_max
+    jinja_env.filters['sum'] = salt.utils.jinja.lst_sum
+    jinja_env.filters['avg'] = salt.utils.jinja.lst_avg
+    jinja_env.filters['union'] = salt.utils.jinja.union
+    jinja_env.filters['intersect'] = salt.utils.jinja.intersect
+    jinja_env.filters['difference'] = salt.utils.jinja.difference
+    jinja_env.filters['symmetric_difference'] = salt.utils.jinja.symmetric_difference
     jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
     jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
     jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
