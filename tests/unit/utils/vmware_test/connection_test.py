@@ -22,7 +22,7 @@ import salt.exceptions as excs
 import salt.utils.vmware
 # Import Third Party Libs
 try:
-    from pyVmomi import vim
+    from pyVmomi import vim, vmodl
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -665,6 +665,40 @@ class GetServiceInstanceTestCase(TestCase):
                 self.assertEqual(mock_si_current_time.call_count, 1)
                 self.assertEqual(mock_disconnect.call_count, 1)
                 self.assertEqual(mock_get_si.call_count, 2)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class DisconnectTestCase(TestCase):
+    '''Tests for salt.utils.vmware.disconnect'''
+
+    def setUp(self):
+        self.mock_si = MagicMock()
+
+    def test_disconnect(self):
+        mock_disconnect = MagicMock()
+        with patch('salt.utils.vmware.Disconnect', mock_disconnect):
+            salt.utils.vmware.disconnect(
+                service_instance=self.mock_si)
+            mock_disconnect.assert_called_once_with(self.mock_si)
+
+    def test_disconnect_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        with patch('salt.utils.vmware.Disconnect', MagicMock(side_effect=exc)):
+            with self.assertRaises(excs.VMwareApiError) as excinfo:
+                salt.utils.vmware.disconnect(
+                    service_instance=self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_disconnect_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        with patch('salt.utils.vmware.Disconnect', MagicMock(side_effect=exc)):
+            with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+                salt.utils.vmware.disconnect(
+                    service_instance=self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
