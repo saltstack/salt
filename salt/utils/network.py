@@ -226,6 +226,7 @@ def _ip_options_link_local(ip_obj, version):
 def _ip_options_private(ip_obj, version):
     return ip_obj.is_private
 
+
 def _ip_options_reserved(ip_obj, version):
     return ip_obj.is_reserved
 
@@ -353,6 +354,9 @@ def ipv6(value, options=None):
 
 
 def ipaddr(value, options=None):
+    '''
+    Filters and returns only valid IP objects.
+    '''
     ipv4_obj = ipv4(value, options=options)
     ipv6_obj = ipv6(value, options=options)
     if ipv4_obj is None or ipv6_obj is None:
@@ -381,6 +385,9 @@ def _filter_ipaddr(value, options, version=None):
 
 
 def ip_host(value, options=None, version=None):
+    '''
+    Returns the interfaces IP address, e.g.: 192.168.0.1/28.
+    '''
     ipaddr_filter_out = _filter_ipaddr(value, options=options, version=version)
     if not ipaddr_filter_out:
         return
@@ -395,6 +402,9 @@ def _network_hosts(ip_addr_entry):
 
 
 def network_hosts(value, options=None, version=None):
+    '''
+    Return the list of hosts within a network.
+    '''
     ipaddr_filter_out = _filter_ipaddr(value, options=options, version=version)
     if not ipaddr_filter_out:
         return
@@ -411,6 +421,9 @@ def _network_size(ip_addr_entry):
 
 
 def network_size(value, options=None, version=None):
+    '''
+    Get the size of a network.
+    '''
     ipaddr_filter_out = _filter_ipaddr(value, options=options, version=version)
     if not ipaddr_filter_out:
         return
