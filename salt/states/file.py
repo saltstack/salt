@@ -1675,12 +1675,56 @@ def managed(name,
         .. versionadded:: 2016.3.0
 
     win_owner : None
+        The owner of the directory. If this is not passed, user will be used. If
+        user is not passed, the account under which Salt is running will be
+        used.
+        .. versionadded:: Nitrogen
 
     win_perms : None
+        A dictionary containing permissions to grant and their propagation. For
+        example: ``{'Administrators': {'perms': 'full_control'}}`` Can be a
+        single basic perm or a list of advanced perms. ``perms`` must be
+        specified. ``applies_to`` does not apply to file objects.
+        .. versionadded:: Nitrogen
 
     win_deny_perms : None
+        A dictionary containing permissions to deny and their propagation. For
+        example: ``{'Administrators': {'perms': 'full_control'}}`` Can be a
+        single basic perm or a list of advanced perms. ``perms`` must be
+        specified. ``applies_to`` does not apply to file objects.
+        .. versionadded:: Nitrogen
 
     win_inheritance : True
+        True to inherit permissions from the parent directory, False not to
+        inherit permission.
+        .. versionadded:: Nitrogen
+
+    Here's an example using the above ``win_*`` parameters:
+
+    .. code-block:: yaml
+
+        create_config_file:
+          file.managed:
+            - name: C:\config\settings.cfg
+            - source: salt://settings.cfg
+            - win_owner: Administrators
+            - win_perms:
+                # Basic Permissions
+                dev_ops:
+                  perms: full_control
+                # List of advanced permissions
+                appuser:
+                  perms:
+                    - read_attributes
+                    - read_ea
+                    - create_folders
+                    - read_permissions
+                joe_snuffy:
+                  perms: read
+            - win_deny_perms:
+                fred_snuffy:
+                  perms: full_control
+            - win_inheritance: False
     '''
     if 'env' in kwargs:
         salt.utils.warn_until(
