@@ -523,6 +523,10 @@ def create(vm_):
     # If a password wasn't supplied in the profile or provider config, set it now.
     vm_['password'] = get_password(vm_)
 
+    # Make public_ips and private_ips available to the bootstrap script.
+    vm_['public_ips'] = ips['public_ips']
+    vm_['private_ips'] = ips['private_ips']
+
     # Send event that the instance has booted.
     salt.utils.cloud.fire_event(
         'event',
