@@ -532,6 +532,7 @@ class MinionBase(object):
             # we need a list of master URIs to fire calls back to.
             for master in opts['local_masters']:
                 opts['master'] = master
+                opts.update(prep_ip_port(opts))
                 opts['master_uri_list'].append(resolve_dns(opts)['master_uri'])
 
             while True:
