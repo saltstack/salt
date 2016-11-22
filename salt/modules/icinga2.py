@@ -19,7 +19,7 @@ def __virtual__():
     '''
     Only load this module if the mysql libraries exist
     '''
-    '''TODO: icinga2 check should be os independent and maybe based on package, not binary.'''
+    # TODO: icinga2 check should be os independent and maybe based on package, not binary.
     if os.path.isfile('/usr/sbin/icinga2'):
         return True
     return (False, 'Icinga2 not installed.')
@@ -87,7 +87,7 @@ def save_cert(domain, master):
         salt '*' icinga2.save_cert domain.tld master.domain.tld
 
     '''
-    result = _execute(["icinga2", "pki", "save-cert", "--key", "/etc/icinga2/pki/{0}.key".format(domain), "--cert", "/etc/icinga2/pki/{0}.cert".format(domain), "--trustedcert", \
+    result = _execute(["icinga2", "pki", "save-cert", "--key", "/etc/icinga2/pki/{0}.key".format(domain), "--cert", "/etc/icinga2/pki/{0}.cert".format(domain), "--trustedcert",
                        "/etc/icinga2/pki/trusted-master.crt", "--host", master], ret_code=True)
     return result
 
@@ -107,7 +107,7 @@ def request_cert(domain, master, ticket, port):
         salt '*' icinga2.request_cert domain.tld master.domain.tld TICKET_ID
 
     '''
-    result = _execute(["icinga2", "pki", "request", "--host", master, "--port", port, "--ticket", ticket, "--key", "/etc/icinga2/pki/{0}.key".format(domain), "--cert", \
+    result = _execute(["icinga2", "pki", "request", "--host", master, "--port", port, "--ticket", ticket, "--key", "/etc/icinga2/pki/{0}.key".format(domain), "--cert",
                        "/etc/icinga2/pki/{0}.crt".format(domain), "--trustedcert", "/etc/icinga2/pki/trusted-master.crt", "--ca", "/etc/icinga2/pki/ca.crt"], ret_code=True)
     return result
 
@@ -127,6 +127,6 @@ def node_setup(domain, master, ticket):
         salt '*' icinga2.node_setup domain.tld master.domain.tld TICKET_ID
 
     '''
-    result = _execute(["icinga2", "node", "setup", "--ticket", ticket, "--endpoint", master, "--zone", domain, "--master_host", master, "--trustedcert", "/etc/icinga2/pki/trusted-master.crt"], \
+    result = _execute(["icinga2", "node", "setup", "--ticket", ticket, "--endpoint", master, "--zone", domain, "--master_host", master, "--trustedcert", "/etc/icinga2/pki/trusted-master.crt"],
                        ret_code=True)
     return result
