@@ -240,16 +240,16 @@ def list_semod():
 
     .. versionadded:: 2016.3.0
     '''
-    semodule_versioncheck = __salt__['cmd.run']('semodule -h').splitlines()
+    helptext = __salt__['cmd.run']('semodule -h').splitlines()
     semodule_version = ''
-    for line in versioncheck[1:]:
+    for line in helptext:
         if line.strip().startswith('full'):
             semodule_version = 'new'
 
     if semodule_version == 'new':
         mdata = __salt__['cmd.run']('semodule -lfull').splitlines()
         ret = {}
-        for line in mdata[0:]:
+        for line in mdata:
             if not line.strip():
                 continue
             comps = line.split()
@@ -262,7 +262,7 @@ def list_semod():
     else:
         mdata = __salt__['cmd.run']('semodule -l').splitlines()
         ret = {}
-        for line in mdata[0:]:
+        for line in mdata:
             if not line.strip():
                 continue
             comps = line.split()
