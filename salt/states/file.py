@@ -97,9 +97,19 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
 
 .. warning::
 
-        When using a mode that includes a leading zero you must wrap the
-        value in single quotes. If the value is not wrapped in quotes it
-        will be read by YAML as an integer and evaluated as an octal.
+    When using a mode that includes a leading zero you must wrap the
+    value in single quotes. If the value is not wrapped in quotes it
+    will be read by YAML as an integer and evaluated as an octal.
+
+The ``names`` parameter, which is part of the state compiler, can be used to
+expand the contents of a single state declaration into multiple, single state
+declarations. Each item in the ``names`` list receives its own individual state
+``name`` and is converted into its own low-data structure. This is a convenient
+way to manage several files with similar attributes.
+
+There is more documentation about this feature in the
+:ref:`Names declaration<names-declaration>` section of the
+ :ref:`Highstate docs<states-highstate>`.
 
 Special files can be managed via the ``mknod`` function. This function will
 create and enforce the permissions on a special file. The function supports the
