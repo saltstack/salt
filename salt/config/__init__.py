@@ -932,6 +932,14 @@ VALID_OPTS = {
     # Thin and minimal Salt extra modules
     'thin_extra_mods': str,
     'min_extra_mods': str,
+
+    # TLS/SSL connection options. This could be set to a dictionary containing arguments
+    # corresponding to python ssl.wrap_socket method. For details see:
+    # http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer
+    # http://docs.python.org/2/library/ssl.html#ssl.wrap_socket
+    # Note: to set enum arguments values like `cert_reqs` and `ssl_version` use constant names
+    # without ssl module prefix: `CERT_REQUIRED` or `PROTOCOL_SSLv23`.
+    'ssl': dict,
 }
 
 # default configurations
@@ -1176,6 +1184,7 @@ DEFAULT_MINION_OPTS = {
     'proxy_password': '',
     'proxy_port': 0,
     'minion_jid_queue_hwm': 100,
+    'ssl': None,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1448,6 +1457,7 @@ DEFAULT_MASTER_OPTS = {
     'cache': 'localfs',
     'thin_extra_mods': '',
     'min_extra_mods': '',
+    'ssl': None,
 }
 
 
@@ -3078,6 +3088,26 @@ def get_id(opts, cache_minion_id=False):
     return newid, is_ipv4
 
 
+def _update_ssl_config(opts):
+    '''
+    Resolves string names to integer constant in ssl configuration.
+    '''
+    if opts['ssl'] is None:
+        return
+    import ssl
+    for key, prefix in (('cert_reqs', 'CERT_'),
+                        ('ssl_version', 'PROTOCOL_')):
+        val = opts['ssl'].get(key)
+        if val is None:
+            continue
+        if not isinstance(val, string_types) or not val.startswith(prefix) or not hasattr(ssl, val):
+            message = 'SSL option \'{0}\' must be set to one of the following values: \'{1}\'.' \
+                    .format(key, '\', \''.join([val for val in dir(ssl) if val.startswith(prefix)]))
+            log.error(message)
+            raise salt.exceptions.SaltConfigurationError(message)
+        opts['ssl'][key] = getattr(ssl, val)
+
+
 def apply_minion_config(overrides=None,
                         defaults=None,
                         cache_minion_id=False,
@@ -3168,6 +3198,9 @@ def apply_minion_config(overrides=None,
 
     # Make sure hash_type is lowercase
     opts['hash_type'] = opts['hash_type'].lower()
+
+    # Check and update TLS/SSL configuration
+    _update_ssl_config(opts)
 
     return opts
 
@@ -3321,6 +3354,9 @@ def apply_master_config(overrides=None, defaults=None):
 
     # Make sure hash_type is lowercase
     opts['hash_type'] = opts['hash_type'].lower()
+
+    # Check and update TLS/SSL configuration
+    _update_ssl_config(opts)
 
     return opts
 
