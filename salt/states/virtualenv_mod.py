@@ -68,6 +68,9 @@ def managed(name,
     use_wheel: False
         Prefer wheel archives (requires pip >= 1.4).
 
+    python : None
+        Python executable used to build the virtualenv
+
     user: None
         The user under which to run virtualenv and pip.
 

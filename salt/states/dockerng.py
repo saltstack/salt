@@ -1453,6 +1453,14 @@ def running(name,
         .. note::
 
             This option requires Docker 1.2.0 or newer.
+    privileged
+        Give extended privileges to container.
+
+        .. code-block:: yaml
+            foo:
+              docker.running:
+                - image: bar/baz:lates
+                - privileged: True
 
     extra_hosts
         Additional hosts to add to the container's /etc/hosts file. Can be
