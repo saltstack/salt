@@ -742,6 +742,24 @@ class DisconnectTestCase(TestCase):
 class IsConnectionToAVCenterTestCase(TestCase):
     '''Tests for salt.utils.vmware.is_connection_to_a_vcenter'''
 
+    def test_api_type_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        mock_si = MagicMock()
+        type(mock_si.content.about).apiType = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_api_type_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        mock_si = MagicMock()
+        type(mock_si.content.about).apiType = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
     def test_connected_to_a_vcenter(self):
         mock_si = MagicMock()
         mock_si.content.about.apiType = 'VirtualCenter'
