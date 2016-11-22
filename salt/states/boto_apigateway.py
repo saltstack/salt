@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Apigateway Rest APIs
-=================
+===========================
 
 .. versionadded:: 2016.11.0
 
@@ -224,13 +224,13 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
             '#end\n'
             '  ]\n'
 
-        .. versionadded:: Carbon
+        .. versionadded:: Nitrogen
 
     response_template
         String value that defines the response template mapping applied in case of success (including OPTIONS method)
         If set to None, empty ({}) template is assumed, which will transfer response from the lambda function as is.
 
-        .. versionadded:: Carbon
+        .. versionadded:: Nitrogen
     '''
     ret = {'name': name,
            'result': True,
@@ -1670,6 +1670,8 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
     '''
     Ensure the spcifieda usage plan with the corresponding metrics is deployed
 
+    .. versionadded:: Nitrogen
+
     name
         name of the state
 
@@ -1700,19 +1702,18 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
             [Required] period to which quota applies. Must be DAY, WEEK or MONTH
 
     .. code-block:: yaml
-        UsagePlanPresent:
-            boto_apigateway.usage_plan_present:
-                - plan_name: my_usage_plan
-                - throttle:
-                    rateLimit: 70
-                    burstLimit: 100
-                - quota:
-                    limit: 1000
-                    offset: 0
-                    period: DAY
-                - profile: my_profile
 
-    .. versionadded:: Carbon
+        UsagePlanPresent:
+          boto_apigateway.usage_plan_present:
+            - plan_name: my_usage_plan
+            - throttle:
+                rateLimit: 70
+                burstLimit: 100
+            - quota:
+                limit: 1000
+                offset: 0
+                period: DAY
+            - profile: my_profile
 
     '''
     func_params = locals()
@@ -1809,6 +1810,8 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
     '''
     Ensures usage plan identified by name is no longer present
 
+    .. versionadded:: Nitrogen
+
     name
         name of the state
 
@@ -1816,12 +1819,11 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
         name of the plan to remove
 
     .. code-block:: yaml
-        usage plan absent:
-            boto_apigateway.usage_plan_absent:
-                - plan_name: my_usage_plan
-                - profile: my_profile
 
-    .. versionadded:: Carbon
+        usage plan absent:
+          boto_apigateway.usage_plan_absent:
+            - plan_name: my_usage_plan
+            - profile: my_profile
 
     '''
     ret = {'name': name,
@@ -1874,6 +1876,8 @@ def usage_plan_association_present(name, plan_name, api_stages, region=None, key
     '''
     Ensures usage plan identified by name is added to provided api_stages
 
+    .. versionadded:: Nitrogen
+
     name
         name of the state
 
@@ -1890,6 +1894,7 @@ def usage_plan_association_present(name, plan_name, api_stages, region=None, key
             stage name of the api to attach usage plan to
 
     .. code-block:: yaml
+
         UsagePlanAssociationPresent:
           boto_apigateway.usage_plan_association_present:
             - plan_name: my_plan
@@ -1899,8 +1904,6 @@ def usage_plan_association_present(name, plan_name, api_stages, region=None, key
               - apiId: l9v7o2aj90
                 stage: my_stage
             - profile: my_profile
-
-    .. versionadded:: Carbon
 
     '''
     ret = {'name': name,
@@ -1966,7 +1969,9 @@ def usage_plan_association_absent(name, plan_name, api_stages, region=None, key=
     '''
     Ensures usage plan identified by name is removed from provided api_stages
     If a plan is associated to stages not listed in api_stages parameter,
-    those associations remain intact
+    those associations remain intact.
+
+    .. versionadded:: Nitrogen
 
     name
         name of the state
@@ -1984,6 +1989,7 @@ def usage_plan_association_absent(name, plan_name, api_stages, region=None, key=
             stage name of the api to detach usage plan from
 
     .. code-block:: yaml
+
         UsagePlanAssociationAbsent:
           boto_apigateway.usage_plan_association_absent:
             - plan_name: my_plan
@@ -1993,8 +1999,6 @@ def usage_plan_association_absent(name, plan_name, api_stages, region=None, key=
               - apiId: l9v7o2aj90
                 stage: my_stage
             - profile: my_profile
-
-    .. versionadded:: Carbon
 
     '''
     ret = {'name': name,
