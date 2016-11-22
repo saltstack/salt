@@ -76,6 +76,26 @@ def _connect():
                            password=jenkins_password)
 
 
+def run(script):
+    '''
+    .. versionadded:: Carbon
+
+    Execute a groovy script on the jenkins master
+
+    :param script: The groovy script
+
+    CLI Example:
+
+    .. code-block::
+
+        salt '*' jenkins.run 'Jenkins.instance.doSafeRestart()'
+
+    '''
+
+    server = _connect()
+    return server.run_script(script)
+
+
 def get_version():
     '''
     Return version of Jenkins
