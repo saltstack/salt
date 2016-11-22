@@ -21,7 +21,6 @@ Its output may be stored in a file or in a grain.
 
 # Import python libs
 from __future__ import absolute_import
-import sys
 import os.path
 
 # Import Salt libs
@@ -62,7 +61,7 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
            'result': True,
            'comment': ''}
 
-    '''Checking if execution is needed.'''
+    # Checking if execution is needed.
     if output == 'grain':
         if grain and not key:
             if not overwrite and grain in __salt__['grains.ls']():
@@ -94,14 +93,14 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
             return ret
         elif __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Ticket generation would be executed, storing result in file: '.format(output)
+            ret['comment'] = 'Ticket generation would be executed, storing result in file: {0}'.format(output)
             return ret
     elif __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Ticket generation would be executed, not storing result'
         return ret
 
-    '''Executing the command.'''
+    # Executing the command.
     ticket = __salt__['icinga2.generate_ticket'](name).strip()
     if ticket:
         ret['comment'] = str(ticket)
@@ -121,7 +120,7 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
     elif output:
         ret['changes']['ticket'] = "Executed. Output into {0}".format(output)
         with salt.utils.fopen(output, 'w') as output_file:
-                output_file.write(str(ticket))
+            output_file.write(str(ticket))
     else:
         ret['changes']['ticket'] = "Executed"
 
@@ -142,7 +141,7 @@ def generate_cert(name):
     cert = "/etc/icinga2/pki/{0}.crt".format(name)
     key = "/etc/icinga2/pki/{0}.key".format(name)
 
-    '''Checking if execution is needed.'''
+    # Checking if execution is needed.
     if os.path.isfile(cert) and os.path.isfile(key):
         ret['comment'] = 'No execution needed. Cert: {0} and key: {1} already generated.'.format(cert, key)
         return ret
@@ -151,7 +150,7 @@ def generate_cert(name):
         ret['comment'] = 'Certificate and key generation would be executed'
         return ret
 
-    '''Executing the command.'''
+    # Executing the command.
     cert_save = __salt__['icinga2.generate_cert'](name)
     if not cert_save:
         ret['comment'] = "Certificate and key generated"
@@ -176,7 +175,7 @@ def save_cert(name, master):
            'comment': ''}
     cert = "/etc/icinga2/pki/trusted-master.crt"
 
-    '''Checking if execution is needed.'''
+    # Checking if execution is needed.
     if os.path.isfile(cert):
         ret['comment'] = 'No execution needed. Cert: {0} already saved.'.format(cert)
         return ret
@@ -185,7 +184,7 @@ def save_cert(name, master):
         ret['comment'] = 'Certificate save for icinga2 master would be executed'
         return ret
 
-    '''Executing the command.'''
+    # Executing the command.
     cert_save = __salt__['icinga2.save_cert'](name, master)
     if not cert_save:
         ret['comment'] = "Certificate for icinga2 master saved"
@@ -215,7 +214,7 @@ def request_cert(name, master, ticket, port="5665"):
            'comment': ''}
     cert = "/etc/icinga2/pki/ca.crt"
 
-    '''Checking if execution is needed.'''
+    # Checking if execution is needed.
     if os.path.isfile(cert):
         ret['comment'] = 'No execution needed. Cert: {0} already exists.'.format(cert)
         return ret
@@ -224,7 +223,7 @@ def request_cert(name, master, ticket, port="5665"):
         ret['comment'] = 'Certificate request from icinga2 master would be executed'
         return ret
 
-    '''Executing the command.'''
+    # Executing the command.
     cert_request = __salt__['icinga2.request_cert'](name, master, ticket, port)
     if not cert_request:
         ret['comment'] = "Certificate request from icinga2 master executed"
@@ -256,7 +255,7 @@ def node_setup(name, master, ticket):
     cert = "/etc/icinga2/pki/{0}.crt.orig".format(name)
     key = "/etc/icinga2/pki/{0}.key.orig".format(name)
 
-    '''Checking if execution is needed.'''
+    # Checking if execution is needed.
     if os.path.isfile(cert) and os.path.isfile(cert):
         ret['comment'] = 'No execution needed. Node already configured.'
         return ret
@@ -265,7 +264,7 @@ def node_setup(name, master, ticket):
         ret['comment'] = 'Node setup will be executed.'
         return ret
 
-    '''Executing the command.'''
+    # Executing the command.
     node_setup = __salt__['icinga2.node_setup'](name, master, ticket)
     if not node_setup:
         ret['comment'] = "Node setup executed."
