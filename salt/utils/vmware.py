@@ -366,6 +366,10 @@ def get_service_instance(host, username=None, password=None, protocol=None,
                                                  mechanism,
                                                  principal,
                                                  domain)
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
     return service_instance
 
