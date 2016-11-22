@@ -497,7 +497,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
         except KeyboardInterrupt:
             raise
         except Exception as exc:
-            if '-|RETRY|-' not in exc:
+            if '-|RETRY|-' not in str(exc):
                 raise SaltClientError('Unable to sign_in to master: {0}'.format(exc))  # TODO: better error message
 
     def on_recv(self, callback):
