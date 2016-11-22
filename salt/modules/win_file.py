@@ -1911,7 +1911,7 @@ def check_perms(path,
                     ret['result'] = False
                     ret['comment'].append(
                         'Failed to grant permissions for "{0}" to '
-                        '{0}'.format(user, changes[user]))
+                        '{1}'.format(user, changes[user]))
 
     # Check inheritance
     if inheritance is not None:
