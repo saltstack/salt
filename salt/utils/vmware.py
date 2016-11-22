@@ -417,7 +417,12 @@ def is_connection_to_a_vcenter(service_instance):
     service_instance
         The Service Instance from which to obtain managed object references.
     '''
-    api_type = service_instance.content.about.apiType
+    try:
+        api_type = service_instance.content.about.apiType
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
     log.trace('api_type = {0}'.format(api_type))
     if api_type == 'VirtualCenter':
         return True
