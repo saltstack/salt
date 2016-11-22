@@ -3359,7 +3359,8 @@ def replace(name,
     check_res, check_msg = _check_file(name)
     if not check_res:
         if ignore_if_missing and 'file not found' in check_msg:
-            pass
+            ret['comment'] = 'No changes needed to be made'
+            return ret
         else:
             return _error(ret, check_msg)
 
