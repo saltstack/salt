@@ -84,7 +84,7 @@ def _pshell(cmd, cwd=None, json_depth=2):
 
 def run_config(path,
                source=None,
-               config=None,
+               config_name=None,
                config_data=None,
                config_data_source=None,
                script_parameters=None,
@@ -109,23 +109,31 @@ def run_config(path,
             locally and then executed. If source is not passed, the config
             script located at ``path`` will be compiled. Optional.
 
-        config (str): The name of the Configuration within the script to apply.
-            the script contains multiple configurations within the file a config
-            must be specified. If the config is not specified, the name of the
-            file will be used as the config to run. Optional.
+        config_name (str): The name of the Configuration within the script to
+            apply. If the script contains multiple configurations within the
+            file a ``config_name`` must be specified. If the ``config_name`` is
+            not specified, the name of the file will be used as the
+            ``config_name`` to run. Optional.
 
         config_data (str): Configuration data in the form of a hash table that
             will be passed to the ``ConfigurationData`` parameter when the
-            configuration script is run. This can be the path to a ``.psd1``
-            file or the PowerShell code to create the hash table.
+            ``config_name`` is compiled. This can be the path to a ``.psd1``
+            file containing the proper hash table or the PowerShell code to
+            create the hash table.
+
+            .. versionadded:: Nitrogen
 
         config_data_source (str): The path to the ``.psd1`` file on
             ``file_roots`` to cache at the location specified by
             ``config_data``. If this is specified, ``config_data`` must be a
             local path instead of a hash table.
 
+            .. versionadded:: Nitrogen
+
         script_parameters (str): Any additional parameters expected by the
             configuration script. These must be defined in the script itself.
+
+            .. versionadded:: Nitrogen
 
         salt_env (str): The salt environment to use when copying the source.
             Default is 'base'
@@ -149,7 +157,7 @@ def run_config(path,
     '''
     ret = compile_config(path=path,
                          source=source,
-                         config=config,
+                         config_name=config_name,
                          config_data=config_data,
                          config_data_source=config_data_source,
                          script_parameters=script_parameters,
@@ -164,7 +172,7 @@ def run_config(path,
 
 def compile_config(path,
                    source=None,
-                   config=None,
+                   config_name=None,
                    config_data=None,
                    config_data_source=None,
                    script_parameters=None,
@@ -183,23 +191,31 @@ def compile_config(path,
             locally and then executed. If source is not passed, the config
             script located at ``path`` will be compiled. Optional.
 
-        config (str): The name of the Configuration within the script to apply.
-            If the script contains multiple configurations within the file a
-            config must be specified. If the config is not specified, the name
-            of the file will be used as the config to run. Optional.
+        config_name (str): The name of the Configuration within the script to
+            apply. If the script contains multiple configurations within the
+            file a ``config_name`` must be specified. If the ``config_name`` is
+            not specified, the name of the file will be used as the
+            ``config_name`` to run. Optional.
 
         config_data (str): Configuration data in the form of a hash table that
             will be passed to the ``ConfigurationData`` parameter when the
-            configuration script is run. This can be the path to a ``.psd1``
-            file or the PowerShell code to create the hash table.
+            ``config_name`` is compiled. This can be the path to a ``.psd1``
+            file containing the proper hash table or the PowerShell code to
+            create the hash table.
+
+            .. versionadded:: Nitrogen
 
         config_data_source (str): The path to the ``.psd1`` file on
             ``file_roots`` to cache at the location specified by
             ``config_data``. If this is specified, ``config_data`` must be a
             local path instead of a hash table.
 
+            .. versionadded:: Nitrogen
+
         script_parameters (str): Any additional parameters expected by the
             configuration script. These must be defined in the script itself.
+
+            .. versionadded:: Nitrogen
 
         salt_env (str): The salt environment to use when copying the source.
             Default is 'base'
@@ -249,9 +265,9 @@ def compile_config(path,
         log.error(error)
         raise CommandExecutionError(error)
 
-    if config is None:
+    if config_name is None:
         # If the name of the config isn't passed, make it the name of the .ps1
-        config = os.path.splitext(os.path.basename(path))[0]
+        config_name = os.path.splitext(os.path.basename(path))[0]
 
     cwd = os.path.dirname(path)
 
@@ -279,7 +295,7 @@ def compile_config(path,
     cmd = ['.', path]
     if script_parameters:
         cmd.append(script_parameters)
-    cmd.extend([';', config])
+    cmd.extend([';', config_name])
     if config_data:
         cmd.append(config_data)
     cmd.append('| Select-Object -Property FullName, Extension, Exists, '
@@ -308,6 +324,7 @@ def apply_config(path, source=None, salt_env='base'):
     folder can be cached from the salt master using the ``source`` option.
 
     Args:
+
         path (str): Local path to the directory that contains the .mof
             configuration file to apply. Required.
 
