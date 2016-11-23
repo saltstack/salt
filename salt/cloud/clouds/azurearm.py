@@ -964,6 +964,19 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     for volume in volumes:
         if isinstance(volume, six.string_types):
             volume = {'name': volume}
+
+        # Creating the name of the datadisk if missing in the configuration of the minion
+        # If the "name: name_of_my_disk" entry then we create it with the same logic than the os disk
+        volume.setdefault(
+            'name', volume.get(
+                'name', volume.get('name', '{0}-datadisk{1}'.format(
+                    vm_['name'],
+                    str(lun),
+                    ),
+                )
+            )
+        )
+
         # Use the size keyword to set a size, but you can use either the new
         # azure name (disk_size_gb) or the old (logical_disk_size_in_gb)
         # instead. If none are set, the disk has size 100GB.
