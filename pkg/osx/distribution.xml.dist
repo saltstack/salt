@@ -5,7 +5,7 @@
     <!-- Define minimum system requirements -->
     <volume-check>
         <allowed-os-versions>
-            <os-version min="10.11" />
+            <os-version min="10.9" />
         </allowed-os-versions>
     </volume-check>
     <options rootVolumeOnly="true"
