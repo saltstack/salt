@@ -34,7 +34,7 @@ stop_service_maverick() {
     echo "Using old (< 10.10) launchctl interface" >> /tmp/postinstall.txt
     if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
         echo "Stop service: Started..." >> /tmp/preinstall.txt
-        launchctl unload /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist
         echo "Stop service: Successful" >> /tmp/preinstall.txt
     fi
 }
