@@ -965,7 +965,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         if isinstance(volume, six.string_types):
             volume = {'name': volume}
 
-       # Creating the name of the datadisk if missing in the configuration of the minion
+        # Creating the name of the datadisk if missing in the configuration of the minion
         # If the "name: name_of_my_disk" entry then we create it with the same logic than the os disk
         volume.setdefault(
             'name', volume.get(
