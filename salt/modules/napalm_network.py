@@ -743,14 +743,17 @@ def load_config(filename=None,
                 debug=False,
                 replace=False):
     '''
-    Populates the candidate configuration. It can be loaded from a file or from a string. If you send both a
-    filename and a string containing the configuration, the file takes precedence.
+    Applies configuration changes on the device. It can be loaded from a file or from inline string.
+    If you send both a filename and a string containing the configuration, the file has higher precedence.
 
-    If you use this method the existing configuration will be merged with the candidate configuration once
-    you commit the changes.
-
-    Be aware that by default this method will commit the configuration. If there are no changes, it does not commit and
+    By default this function will commit the changes. If there are no changes, it does not commit and
     the flag ``already_configured`` will be set as ``True`` to point this out.
+
+    To avoid committing the configuration, set the argument ``test`` to ``True`` and will discard (dry run).
+
+    To keep the chnages but not commit, set ``commit`` to ``False``.
+
+    To replace the config, set ``replace`` to ``True``.
 
     filename
         Path to the file containing the desired configuration. By default is None.
@@ -783,7 +786,7 @@ def load_config(filename=None,
     :return: a dictionary having the following keys:
 
     * result (bool): if the config was applied successfully. It is ``False`` only in case of failure. In case \
-    there are no changes to be applied and successfully performs all operations it is still `True` and so will be \
+    there are no changes to be applied and successfully performs all operations it is still ``True`` and so will be \
     the ``already_configured`` flag (example below)
     * comment (str): a message for the user
     * already_configured (bool): flag to check if there were no changes applied
@@ -853,7 +856,14 @@ def load_template(template_name,
     '''
     Renders a configuration template (Jinja) and loads the result on the device.
 
-    By default will commit the changes. To force a dry run, set ``test=True``.
+    By default this function will commit the changes. If there are no changes, it does not commit and
+    the flag ``already_configured`` will be set as ``True`` to point this out.
+
+    To avoid committing the configuration, set the argument ``test`` to ``True`` and will discard (dry run).
+
+    To keep the chnages but not commit, set ``commit`` to ``False``.
+
+    To replace the config, set ``replace`` to ``True``.
 
     template_name
         Identifies the template name. If specifies the complete path, will render the template via
@@ -927,6 +937,8 @@ def load_template(template_name,
         Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` contaning the raw
         result after the template was rendered.
 
+        .. versionadded:: 2016.11.1
+
     replace: False
         Load and replace the configuration.
 
@@ -937,18 +949,17 @@ def load_template(template_name,
 
         .. versionadded:: 2016.11.1
 
-    template_vars
+    **template_vars
         Dictionary with the arguments/context to be used when the template is rendered.
 
     :return: a dictionary having the following keys:
 
     * result (bool): if the config was applied successfully. It is ``False`` only in case of failure. In case \
-    there are no changes to be applied and successfully performs all operations it is still `True` and so will be \
+    there are no changes to be applied and successfully performs all operations it is still ``True`` and so will be \
     the ``already_configured`` flag (example below)
     * comment (str): a message for the user
     * already_configured (bool): flag to check if there were no changes applied
-    * loaded_config (str): the configuration loaded on the device, after rendering the template. Requires ``debug`` \
-    to be set as ``True``
+    * loaded_config (str): the configuration loaded on the device. Requires ``debug`` to be set as ``True``
     * diff (str): returns the config changes applied
 
     The template can use variables from the ``grains``, ``pillar`` or ``opts``, for example:
@@ -957,6 +968,7 @@ def load_template(template_name,
 
         {% set router_model = grains.get('model') -%}
         {% set router_vendor = grains.get('vendor') -%}
+        {% set os_version = grains.get('version') -%}
         {% set hostname = pillar.get('proxy', {}).get('host') -%}
         {% if router_vendor|lower == 'juniper' %}
         system {
