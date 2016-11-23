@@ -790,8 +790,7 @@ def load_config(filename=None,
     the ``already_configured`` flag (example below)
     * comment (str): a message for the user
     * already_configured (bool): flag to check if there were no changes applied
-    * loaded_config (str): the configuration loaded on the device, after rendering the template. Requires ``debug`` \
-    to be set as ``True``
+    * loaded_config (str): the configuration loaded on the device. Requires ``debug`` to be set as ``True``
     * diff (str): returns the config changes applied
 
     CLI Example:
@@ -959,7 +958,8 @@ def load_template(template_name,
     the ``already_configured`` flag (example below)
     * comment (str): a message for the user
     * already_configured (bool): flag to check if there were no changes applied
-    * loaded_config (str): the configuration loaded on the device. Requires ``debug`` to be set as ``True``
+    * loaded_config (str): the configuration loaded on the device, after rendering the template. Requires ``debug`` \
+    to be set as ``True``
     * diff (str): returns the config changes applied
 
     The template can use variables from the ``grains``, ``pillar`` or ``opts``, for example:
