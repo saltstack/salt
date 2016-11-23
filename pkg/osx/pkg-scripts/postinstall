@@ -58,7 +58,7 @@ sh -c 'echo "/usr/local/sbin" >> /etc/paths.d/salt'
 setup_services_maverick() {
     echo "Using old (< 10.10) launchctl interface" >> /tmp/postinstall.txt
     if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
-        echo "Stop running service..a." >> /tmp/postinstall.txt
+        echo "Stop running service..." >> /tmp/postinstall.txt
         launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist
     fi;
     launchctl load -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist || return 1
