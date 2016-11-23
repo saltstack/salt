@@ -237,7 +237,7 @@ flag and look for a line containing the string, ``SALT_ARGV``. This contains the
 command that ``salt-ssh`` attempted to execute.
 
 It is recommended that one modify this command a bit by removing the ``-l quiet``,
-``--metadata`` and ``--output json`` to get a better idea of what's going on on the target system.
+``--metadata`` and ``--output json`` to get a better idea of what's going on the target system.
 
 .. toctree::
 
