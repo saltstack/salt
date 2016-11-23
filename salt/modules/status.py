@@ -1120,7 +1120,7 @@ def proxy_reconnect(proxy_name, opts=None):
     if not opts:
         opts = __opts__
 
-    if not 'proxy' in opts:
+    if 'proxy' not in opts:
         return False  # fail
 
     proxy_keepalive_fn = proxy_name+'.alive'
