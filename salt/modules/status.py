@@ -1106,16 +1106,33 @@ def ping_master(master):
     return result
 
 
-def proxy_reconnect(alive_fun, init_fun, shutdown_fun, opts):
+def proxy_reconnect(proxy_name, opts=None):
     '''
     Forces proxy minion reconnection when not alive.
+
+    proxy_name
+        The virtual name of the proxy module.
+
+    opts: None
+        Opts dictionary.
     '''
 
-    is_alive = alive_fun(opts)
+    if not opts:
+        opts = __opts__
 
+    if not 'proxy' in opts:
+        return False  # fail
+
+    proxy_keepalive_fn = proxy_name+'.alive'
+    if proxy_keepalive_fn not in __proxy__:
+        return False  # fail
+
+    is_alive = __proxy__[proxy_keepalive_fn](opts)
     if not is_alive:
-        shutdown_fun(opts)  # safely close connection
-        init_fun(opts)  # reopen connection
+        __proxy__[proxy_name+'.shutdown'](opts)  # safely close connection
+        __proxy__[proxy_name+'.init'](opts)  # reopen connection
+
+    return True  # success
 
 
 def time_(format='%A, %d. %B %Y %I:%M%p'):

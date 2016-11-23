@@ -3183,23 +3183,20 @@ class ProxyMinion(Minion):
             self.schedule.delete_job(master_event(type='failback'), persist=True)
 
         # proxy keepalive
-        proxy_alive_fn = self.proxy[fq_proxyname+'.alive']
-        proxy_shutdown_fn = self.proxy[fq_proxyname+'.shutdown']
-        if proxy_alive_fn and 'status.proxy_reconnect' in self.functions and 'proxy_keep_alive' not in self.opts or \
-           ('proxy_keep_alive' in self.opts and self.opts['proxy_keep_alive']):
+        proxy_alive_fn = fq_proxyname+'.alive'
+        if proxy_alive_fn in self.proxy and 'status.proxy_reconnect' in self.functions and \
+           ('proxy_keep_alive' not in self.opts or ('proxy_keep_alive' in self.opts and self.opts['proxy_keep_alive'])):
             # if `proxy_keep_alive` is either not specified, either set to False does not retry reconnecting
             self.schedule.add_job({
                 '__proxy_keepalive':
                 {
                     'function': 'status.proxy_reconnect',
-                    'minutes': self.opts.get('proxy_keep_alive_interval', 1),  # check once per minute
+                    'minutes': self.opts.get('proxy_keep_alive_interval', 1),  # by default, check once per minute
                     'jid_include': True,
                     'maxrunning': 1,
                     'return_job': False,
                     'kwargs': {
-                        'alive_fun': proxy_alive_fn,
-                        'init_fun': proxy_init_fn,
-                        'shutdown_fun': proxy_shutdown_fn,
+                        'proxy_name': fq_proxyname,
                         'opts': self.opts
                     }
                 }
