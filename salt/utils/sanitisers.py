@@ -55,5 +55,7 @@ class InputSanitizer(object):
         '''
         return re.sub(r'[^a-zA-Z0-9.-]', '', InputSanitizer.trim(value))
 
+    id = hostname
+
 
 clean = InputSanitizer()
