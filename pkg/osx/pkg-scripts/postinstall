@@ -15,12 +15,13 @@
 #     This script is run as a part of the OSX Salt Installation
 #
 ###############################################################################
-echo "Post install started on:" > /tmp/postinstall.txt
-date >> /tmp/postinstall.txt
+LOG_OUTPUT=/tmp/postinstall.txt
+echo "Post install started on:" > "${LOG_OUTPUT}"
+date >> "${LOG_OUTPUT}"
 trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
 
 quit_on_error() {
-    echo "$(basename $0) caught error on line : $1 command was: $2" >> /tmp/postinstall.txt
+    echo "$(basename $0) caught error on line : $1 command was: $2" >> "${LOG_OUTPUT}"
     exit -1
 }
 
@@ -28,15 +29,15 @@ quit_on_error() {
 # Check for existing minion config, copy if it doesn't exist
 ###############################################################################
 if [ ! -f /etc/salt/minion ]; then
-    echo "Config copy: Started..." >> /tmp/postinstall.txt
+    echo "Config copy: Started..." >> "${LOG_OUTPUT}"
     cp /etc/salt/minion.dist /etc/salt/minion
-    echo "Config copy: Successful" >> /tmp/postinstall.txt
+    echo "Config copy: Successful" >> "${LOG_OUTPUT}"
 fi
 
 ###############################################################################
 # Create symlink to salt-config.sh
 ###############################################################################
-# echo "Symlink: Creating symlink for salt-config..." >> /tmp/postinstall.txt
+# echo "Symlink: Creating symlink for salt-config..." >> "${LOG_OUTPUT}"
 if [ ! -d "/usr/local/sbin" ]; then
     mkdir /usr/local/sbin
 fi
@@ -45,7 +46,7 @@ ln -sf /opt/salt/bin/salt-config.sh /usr/local/sbin/salt-config
 ###############################################################################
 # Add salt to paths.d
 ###############################################################################
-# echo "Path: Adding salt to the path..." >> /tmp/postinstall.txt
+# echo "Path: Adding salt to the path..." >> "${LOG_OUTPUT}"
 if [ ! -d "/etc/paths.d" ]; then
     mkdir /etc/paths.d
 fi
@@ -56,16 +57,16 @@ sh -c 'echo "/usr/local/sbin" >> /etc/paths.d/salt'
 # Register Salt as a service
 ###############################################################################
 setup_services_maverick() {
-    echo "Using old (< 10.10) launchctl interface" >> /tmp/postinstall.txt
+    echo "Using old (< 10.10) launchctl interface" >> "${LOG_OUTPUT}"
     if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
-        echo "Stop running service..." >> /tmp/postinstall.txt
+        echo "Stop running service..." >> "${LOG_OUTPUT}"
         launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist
     fi;
     launchctl load -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist || return 1
 
-    echo "Service start: Successful" >> /tmp/postinstall.txt
+    echo "Service start: Successful" >> "${LOG_OUTPUT}"
 
-    echo "Service disable: Disabling Master, Syndic, and API" >> /tmp/postinstall.txt
+    echo "Service disable: Disabling Master, Syndic, and API" >> "${LOG_OUTPUT}"
 
     launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.api.plist
     launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.master.plist
@@ -75,21 +76,21 @@ setup_services_maverick() {
 }
 
 setup_services_yosemite_and_later() {
-    echo "Using new (>= 10.10) launchctl interface" >> /tmp/postinstall.txt
+    echo "Using new (>= 10.10) launchctl interface" >> "${LOG_OUTPUT}"
     launchctl enable system/com.saltstack.salt.minion
-    echo "Service start: Bootstrapping service..." >> /tmp/postinstall.txt
+    echo "Service start: Bootstrapping service..." >> "${LOG_OUTPUT}"
     launchctl bootstrap system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
 
     if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
-        echo "Service is running" >> /tmp/postinstall.txt
+        echo "Service is running" >> "${LOG_OUTPUT}"
     else
-        echo "Service start: Kickstarting service..." >> /tmp/postinstall.txt
+        echo "Service start: Kickstarting service..." >> "${LOG_OUTPUT}"
         launchctl kickstart -kp system/com.saltstack.salt.minion
     fi
 
-    echo "Service start: Successful" >> /tmp/postinstall.txt
+    echo "Service start: Successful" >> "${LOG_OUTPUT}"
 
-    echo "Service disable: Disabling Master, Syndic, and API" >> /tmp/postinstall.txt
+    echo "Service disable: Disabling Master, Syndic, and API" >> "${LOG_OUTPUT}"
 
     launchctl disable system/com.saltstack.salt.master
     launchctl disable system/com.saltstack.salt.syndic
@@ -99,7 +100,7 @@ setup_services_yosemite_and_later() {
 OSX_VERSION=$(sw_vers | grep ProductVersion | cut -f 2 -d: | tr -d '[:space:]')
 MINOR=$(echo ${OSX_VERSION} | cut -f 2 -d.)
 
-echo "Service start: Enabling service..." >> /tmp/postinstall.txt
+echo "Service start: Enabling service..." >> "${LOG_OUTPUT}"
 case $MINOR in
         9 )
                 setup_services_maverick;
@@ -109,6 +110,6 @@ case $MINOR in
                 ;;
 esac
 
-echo "Post install completed successfully" >> /tmp/postinstall.txt
+echo "Post install completed successfully" >> "${LOG_OUTPUT}"
 
 exit 0
