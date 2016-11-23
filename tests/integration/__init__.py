@@ -43,9 +43,16 @@ CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
 from salttesting import TestCase
 from salttesting.case import ShellTestCase
 from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
-from salttesting.parser import PNUM, print_header, SaltTestcaseParser
-from salttesting.helpers import requires_sshd_server
-from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
+from salttesting.parser import (
+    PNUM,
+    print_header,
+    SaltTestcaseParser
+)
+from salttesting.helpers import (
+    requires_sshd_server,
+    ensure_in_syspath,
+    terminate_process_pid
+)
 
 # Update sys.path
 ensure_in_syspath(CODE_DIR)
@@ -61,6 +68,7 @@ import salt.utils
 import salt.utils.process
 import salt.log.setup as salt_log_setup
 from salt.ext import six
+from salt.ext.six.moves import cStringIO
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt.utils.nb_popen import NonBlockingPopen
@@ -80,8 +88,6 @@ except ImportError:
 # Import 3rd-party libs
 import yaml
 import msgpack
-import salt.ext.six as six
-from salt.ext.six.moves import cStringIO
 
 try:
     import salt.ext.six.moves.socketserver as socketserver
@@ -94,110 +100,6 @@ if salt.utils.is_windows():
 from tornado import gen
 from tornado import ioloop
 
-try:
-    from salttesting.helpers import terminate_process_pid
-except ImportError:
-    # Once the latest salt-testing works against salt's develop branch
-    # uncomment the following 2 lines and delete the function defined
-    # in this except
-    #print('Please upgrade your version of salt-testing')
-    #sys.exit(1)
-
-    import psutil
-
-    def terminate_process_pid(pid, only_children=False):
-        children = []
-        process = None
-
-        # Let's begin the shutdown routines
-        if sys.platform.startswith('win'):
-            sigint = signal.CTRL_BREAK_EVENT  # pylint: disable=no-member
-            sigint_name = 'CTRL_BREAK_EVENT'
-        else:
-            sigint = signal.SIGINT
-            sigint_name = 'SIGINT'
-
-        try:
-            process = psutil.Process(pid)
-            if hasattr(process, 'children'):
-                children = process.children(recursive=True)
-        except psutil.NoSuchProcess:
-            log.info('No process with the PID %s was found running', pid)
-
-        if process and only_children is False:
-            try:
-                cmdline = process.cmdline()
-            except psutil.AccessDenied:
-                # OSX denies us access to the above information
-                cmdline = None
-            if not cmdline:
-                try:
-                    cmdline = process.as_dict()
-                except psutil.NoSuchProcess as exc:
-                    log.debug('No such process found. Stacktrace: {0}'.format(exc))
-            log.info('Sending %s to process: %s', sigint_name, cmdline)
-            process.send_signal(sigint)
-            try:
-                process.wait(timeout=10)
-            except psutil.TimeoutExpired:
-                pass
-
-            if psutil.pid_exists(pid):
-                log.info('Terminating process: %s', cmdline)
-                process.terminate()
-                try:
-                    process.wait(timeout=5)
-                except psutil.TimeoutExpired:
-                    pass
-
-            if psutil.pid_exists(pid):
-                log.warning('Killing process: %s', cmdline)
-                process.kill()
-
-            if psutil.pid_exists(pid):
-                log.warning('Process left behind which we were unable to kill: %s', cmdline)
-        if children:
-            # Lets log and kill any child processes which salt left behind
-            def kill_children(_children, terminate=False, kill=False):
-                for child in _children[:][::-1]:  # Iterate over a reversed copy of the list
-                    try:
-                        if not kill and child.status() == psutil.STATUS_ZOMBIE:
-                            # Zombie processes will exit once child processes also exit
-                            continue
-                        try:
-                            cmdline = child.cmdline()
-                        except psutil.AccessDenied as err:
-                            log.debug('Cannot obtain child process cmdline: %s', err)
-                            cmdline = ''
-                        if not cmdline:
-                            cmdline = child.as_dict()
-                        if kill:
-                            log.warning('Killing child process left behind: %s', cmdline)
-                            child.kill()
-                        elif terminate:
-                            log.warning('Terminating child process left behind: %s', cmdline)
-                            child.terminate()
-                        else:
-                            log.warning('Sending %s to child process left behind: %s', sigint_name, cmdline)
-                            child.send_signal(sigint)
-                        if not psutil.pid_exists(child.pid):
-                            _children.remove(child)
-                    except psutil.NoSuchProcess:
-                        _children.remove(child)
-
-            kill_children(children)
-
-            if children:
-                try:
-                    psutil.wait_procs(children, timeout=10, callback=lambda proc: kill_children(children, terminate=True))
-                except psutil.AccessDenied:
-                    kill_children(children, terminate=True)
-
-            if children:
-                try:
-                    psutil.wait_procs(children, timeout=5, callback=lambda proc: kill_children(children, kill=True))
-                except psutil.AccessDenied:
-                    kill_children(children, kill=True)
 
 SYS_TMP_DIR = os.path.realpath(
     # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
@@ -1830,370 +1732,26 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
                            '[/TEST SUITE ENFORCED]'.format(msg))
         return ret
 
+# TestCase prototypes. Member functions are defined by the SaltTesting module
+# https://github.com/saltstack/salt-testing
+
 
 class SyndicCase(TestCase, SaltClientTestCaseMixIn):
-    '''
-    Execute a syndic based execution test
-    '''
-    _salt_client_config_file_name_ = 'syndic_master'
-
-    def run_function(self, function, arg=()):
-        '''
-        Run a single salt function and condition the return down to match the
-        behavior of the raw function call
-        '''
-        orig = self.client.cmd('minion', function, arg, timeout=25)
-        if 'minion' not in orig:
-            self.skipTest(
-                'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
-                'from the minion. Command output: {0}'.format(orig)
-            )
-        return orig['minion']
+    pass
 
 
 class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixin):
-    '''
-    Execute a test for a shell command
-    '''
-
-    _code_dir_ = CODE_DIR
-    _script_dir_ = SCRIPT_DIR
-    _python_executable_ = PYEXEC
-
-    def chdir(self, dirname):
-        try:
-            os.chdir(dirname)
-        except OSError:
-            os.chdir(INTEGRATION_TEST_DIR)
-
-    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=30):  # pylint: disable=W0221
-        '''
-        Execute salt
-        '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout)
-
-    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False, timeout=25):  # pylint: disable=W0221
-        '''
-        Execute salt-ssh
-        '''
-        arg_str = '-ldebug -W -c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
-        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout, raw=True)
-
-    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
-        '''
-        Execute salt-run
-        '''
-        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(config_dir or self.get_config_dir(),
-                                                  arg_str,
-                                                  timeout=timeout,
-                                                  async_flag=' --async' if async else '')
-        return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
-
-    def run_run_plus(self, fun, *arg, **kwargs):
-        '''
-        Execute the runner function and return the return data and output in a dict
-        '''
-        ret = {'fun': fun}
-        from_scratch = bool(kwargs.pop('__reload_config', False))
-        # Have to create an empty dict and then update it, as the result from
-        # self.get_config() is an ImmutableDict which cannot be updated.
-        opts = {}
-        opts.update(self.get_config('client_config', from_scratch=from_scratch))
-        opts_arg = list(arg)
-        if kwargs:
-            opts_arg.append({'__kwarg__': True})
-            opts_arg[-1].update(kwargs)
-        opts.update({'doc': False, 'fun': fun, 'arg': opts_arg})
-        with RedirectStdStreams():
-            runner = salt.runner.Runner(opts)
-            ret['return'] = runner.run()
-            try:
-                ret['jid'] = runner.jid
-            except AttributeError:
-                ret['jid'] = None
-
-        # Compile output
-        # TODO: Support outputters other than nested
-        opts['color'] = False
-        opts['output_file'] = cStringIO()
-        try:
-            salt.output.display_output(ret['return'], opts=opts)
-            ret['out'] = opts['output_file'].getvalue().splitlines()
-        finally:
-            opts['output_file'].close()
-
-        return ret
-
-    def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
-        '''
-        Execute salt-key
-        '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script(
-            'salt-key',
-            arg_str,
-            catch_stderr=catch_stderr,
-            with_retcode=with_retcode,
-            timeout=30
-        )
-
-    def run_cp(self, arg_str, with_retcode=False, catch_stderr=False):
-        '''
-        Execute salt-cp
-        '''
-        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
-
-    def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
-        '''
-        Execute salt-call.
-        '''
-        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
-
-    def run_cloud(self, arg_str, catch_stderr=False, timeout=15):
-        '''
-        Execute salt-cloud
-        '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-cloud', arg_str, catch_stderr,
-                               timeout=timeout)
+    pass
 
 
 class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
-
-    _call_binary_expected_version_ = salt.version.__version__
-
-    def test_salt_with_git_version(self):
-        if getattr(self, '_call_binary_', None) is None:
-            self.skipTest('\'_call_binary_\' not defined.')
-        from salt.utils import which
-        from salt.version import __version_info__, SaltStackVersion
-        git = which('git')
-        if not git:
-            self.skipTest('The git binary is not available')
-
-        # Let's get the output of git describe
-        process = subprocess.Popen(
-            [git, 'describe', '--tags', '--first-parent', '--match', 'v[0-9]*'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            close_fds=True,
-            cwd=CODE_DIR
-        )
-        out, err = process.communicate()
-        if process.returncode != 0:
-            process = subprocess.Popen(
-                [git, 'describe', '--tags', '--match', 'v[0-9]*'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                close_fds=True,
-                cwd=CODE_DIR
-            )
-            out, err = process.communicate()
-        if not out:
-            self.skipTest(
-                'Failed to get the output of \'git describe\'. '
-                'Error: \'{0}\''.format(
-                    salt.utils.to_str(err)
-                )
-            )
-
-        parsed_version = SaltStackVersion.parse(out)
-
-        if parsed_version.info < __version_info__:
-            self.skipTest(
-                'We\'re likely about to release a new version. This test '
-                'would fail. Parsed(\'{0}\') < Expected(\'{1}\')'.format(
-                    parsed_version.info, __version_info__
-                )
-            )
-        elif parsed_version.info != __version_info__:
-            self.skipTest(
-                'In order to get the proper salt version with the '
-                'git hash you need to update salt\'s local git '
-                'tags. Something like: \'git fetch --tags\' or '
-                '\'git fetch --tags upstream\' if you followed '
-                'salt\'s contribute documentation. The version '
-                'string WILL NOT include the git hash.'
-            )
-        out = '\n'.join(self.run_script(self._call_binary_, '--version'))
-        self.assertIn(parsed_version.string, out)
+    pass
 
 
 @requires_sshd_server
 class SSHCase(ShellCase):
-    '''
-    Execute a command via salt-ssh
-    '''
-    def _arg_str(self, function, arg):
-        return '{0} {1}'.format(function, ' '.join(arg))
-
-    def run_function(self, function, arg=(), timeout=90, **kwargs):
-        '''
-        We use a 90s timeout here, which some slower systems do end up needing
-        '''
-        ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout)
-        try:
-            return json.loads(ret)['localhost']
-        except Exception:
-            return ret
+    pass
 
 
 class SaltReturnAssertsMixIn(object):
-
-    def assertReturnSaltType(self, ret):
-        try:
-            self.assertTrue(isinstance(ret, dict))
-        except AssertionError:
-            raise AssertionError(
-                '{0} is not dict. Salt returned: {1}'.format(
-                    type(ret).__name__, ret
-                )
-            )
-
-    def assertReturnNonEmptySaltType(self, ret):
-        self.assertReturnSaltType(ret)
-        try:
-            self.assertNotEqual(ret, {})
-        except AssertionError:
-            raise AssertionError(
-                '{} is equal to {}. Salt returned an empty dictionary.'
-            )
-
-    def __return_valid_keys(self, keys):
-        if isinstance(keys, tuple):
-            # If it's a tuple, turn it into a list
-            keys = list(keys)
-        elif isinstance(keys, six.string_types):
-            # If it's a string, make it a one item list
-            keys = [keys]
-        elif not isinstance(keys, list):
-            # If we've reached here, it's a bad type passed to keys
-            raise RuntimeError('The passed keys need to be a list')
-        return keys
-
-    def __getWithinSaltReturn(self, ret, keys):
-        self.assertReturnNonEmptySaltType(ret)
-        keys = self.__return_valid_keys(keys)
-        okeys = keys[:]
-        for part in six.itervalues(ret):
-            try:
-                ret_item = part[okeys.pop(0)]
-            except (KeyError, TypeError):
-                raise AssertionError(
-                    'Could not get ret{0} from salt\'s return: {1}'.format(
-                        ''.join(['[\'{0}\']'.format(k) for k in keys]), part
-                    )
-                )
-            while okeys:
-                try:
-                    ret_item = ret_item[okeys.pop(0)]
-                except (KeyError, TypeError):
-                    raise AssertionError(
-                        'Could not get ret{0} from salt\'s return: {1}'.format(
-                            ''.join(['[\'{0}\']'.format(k) for k in keys]), part
-                        )
-                    )
-            return ret_item
-
-    def assertSaltTrueReturn(self, ret):
-        try:
-            self.assertTrue(self.__getWithinSaltReturn(ret, 'result'))
-        except AssertionError:
-            log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
-            try:
-                raise AssertionError(
-                    '{result} is not True. Salt Comment:\n{comment}'.format(
-                        **(next(six.itervalues(ret)))
-                    )
-                )
-            except (AttributeError, IndexError):
-                raise AssertionError(
-                    'Failed to get result. Salt Returned:\n{0}'.format(
-                        pprint.pformat(ret)
-                    )
-                )
-
-    def assertSaltFalseReturn(self, ret):
-        try:
-            self.assertFalse(self.__getWithinSaltReturn(ret, 'result'))
-        except AssertionError:
-            log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
-            try:
-                raise AssertionError(
-                    '{result} is not False. Salt Comment:\n{comment}'.format(
-                        **(next(six.itervalues(ret)))
-                    )
-                )
-            except (AttributeError, IndexError):
-                raise AssertionError(
-                    'Failed to get result. Salt Returned: {0}'.format(ret)
-                )
-
-    def assertSaltNoneReturn(self, ret):
-        try:
-            self.assertIsNone(self.__getWithinSaltReturn(ret, 'result'))
-        except AssertionError:
-            log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
-            try:
-                raise AssertionError(
-                    '{result} is not None. Salt Comment:\n{comment}'.format(
-                        **(next(six.itervalues(ret)))
-                    )
-                )
-            except (AttributeError, IndexError):
-                raise AssertionError(
-                    'Failed to get result. Salt Returned: {0}'.format(ret)
-                )
-
-    def assertInSaltComment(self, in_comment, ret):
-        return self.assertIn(
-            in_comment, self.__getWithinSaltReturn(ret, 'comment')
-        )
-
-    def assertNotInSaltComment(self, not_in_comment, ret):
-        return self.assertNotIn(
-            not_in_comment, self.__getWithinSaltReturn(ret, 'comment')
-        )
-
-    def assertSaltCommentRegexpMatches(self, ret, pattern):
-        return self.assertInSaltReturnRegexpMatches(ret, pattern, 'comment')
-
-    def assertInSaltStateWarning(self, in_comment, ret):
-        return self.assertIn(
-            in_comment, self.__getWithinSaltReturn(ret, 'warnings')
-        )
-
-    def assertNotInSaltStateWarning(self, not_in_comment, ret):
-        return self.assertNotIn(
-            not_in_comment, self.__getWithinSaltReturn(ret, 'warnings')
-        )
-
-    def assertInSaltReturn(self, item_to_check, ret, keys):
-        return self.assertIn(
-            item_to_check, self.__getWithinSaltReturn(ret, keys)
-        )
-
-    def assertNotInSaltReturn(self, item_to_check, ret, keys):
-        return self.assertNotIn(
-            item_to_check, self.__getWithinSaltReturn(ret, keys)
-        )
-
-    def assertInSaltReturnRegexpMatches(self, ret, pattern, keys=()):
-        return self.assertRegexpMatches(
-            self.__getWithinSaltReturn(ret, keys), pattern
-        )
-
-    def assertSaltStateChangesEqual(self, ret, comparison, keys=()):
-        keys = ['changes'] + self.__return_valid_keys(keys)
-        return self.assertEqual(
-            self.__getWithinSaltReturn(ret, keys), comparison
-        )
-
-    def assertSaltStateChangesNotEqual(self, ret, comparison, keys=()):
-        keys = ['changes'] + self.__return_valid_keys(keys)
-        return self.assertNotEqual(
-            self.__getWithinSaltReturn(ret, keys), comparison
-        )
+    pass

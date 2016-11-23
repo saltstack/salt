@@ -11,6 +11,7 @@ import time
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mixins import SaltReturnAssertsMixIn
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -22,8 +23,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 import salt.ext.six as six
 
 
-class StateModuleTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixIn):
+class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixIn):
     '''
     Validate the state module
     '''
