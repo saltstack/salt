@@ -19,7 +19,7 @@ New Code Entry
 All new SaltStack code should be submitted against either the ``develop`` branch
 or a point release branch, depending on the nature of the submission. Please see
 the :ref:`Which Salt Branch? <which-salt-branch>` section of Salt's
-:ref:`Contributing <contributing>` documentation or the Release Branching section
+:ref:`Contributing <contributing>` documentation or the Release Branching
 section below for more information.
 
 Release Branching

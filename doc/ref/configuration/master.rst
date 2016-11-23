@@ -3037,7 +3037,7 @@ will have syndic servers(s) below it, set the "order_masters" setting to True.
 If this is a master that will be running a syndic daemon for passthrough the
 "syndic_master" setting needs to be set to the location of the master server.
 
-Do not not forget that, in other words, it means that it shares with the local minion
+Do not forget that, in other words, it means that it shares with the local minion
 its ID and PKI_DIR.
 
 .. conf_master:: order_masters

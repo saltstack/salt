@@ -77,7 +77,7 @@ For example, the MySQL returner requires:
 
 * A database created using provided schema (structure is available at
   :mod:`MySQL returner <salt.returners.mysql>`)
-* A user created with with privileges to the database
+* A user created with privileges to the database
 * Optional SSL configuration
 
 A simpler returner, such as Slack or HipChat, requires:

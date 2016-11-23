@@ -39,7 +39,7 @@ Default: ``salt``
 
     master: salt
 
-The option can can also be set to a list of masters, enabling
+The option can also be set to a list of masters, enabling
 :doc:`multi-master </topics/tutorials/multimaster>` mode.
 
 .. code-block:: yaml
@@ -2192,7 +2192,7 @@ List of git repositories to checkout and include in the winrepo
       - https://github.com/saltstack/salt-winrepo.git
 
 To specify a specific revision of the repository, prepend a commit ID to the
-URL of the the repository:
+URL of the repository:
 
 .. code-block:: yaml
 

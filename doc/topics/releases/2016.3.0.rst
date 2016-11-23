@@ -251,7 +251,7 @@ Module Changes
   previous behavior (:pull:`30275`). A ``bind`` function was also added that allows
   binding zones to interfaces and sources (:pull:`29497`).
 - :mod:`journald beacon module <salt.beacons.journald>`: The event string was updated
-  to include a tag. Note this this might impact existing reactors based on this beacon.
+  to include a tag. Note this might impact existing reactors based on this beacon.
   (:pull:`30116`).
 - :mod:`postgres_privileges state module <salt.states.postgres_privileges>`:
   The default value of the ``prepend`` argument was changed from ``None`` to
