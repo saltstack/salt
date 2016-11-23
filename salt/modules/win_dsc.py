@@ -297,22 +297,21 @@ def apply_config(path, source=None, salt_env='base'):
     Run an compiled DSC configuration (a folder containing a .mof file). The
     folder can be cached from the salt master using the ``source`` option.
 
-    :param str path: Local path to the directory that contains the .mof
-    configuration file to apply.
-    Required.
+    Args:
+        path (str): Local path to the directory that contains the .mof
+            configuration file to apply. Required.
 
-    :param str source: Path to the directory that contains the .mof file on the
-    ``file_roots``. The source directory will be copied to the path directory
-    and then executed. If the path and source directories differ, the source
-    directory will be applied. If source is not passed, the config located at
-    ``path`` will be applied.
-    Optional.
+        source (str): Path to the directory that contains the .mof file on the
+            ``file_roots``. The source directory will be copied to the path
+            directory and then executed. If the path and source directories
+            differ, the source directory will be applied. If source is not
+            passed, the config located at ``path`` will be applied. Optional.
 
-    :param str salt_env: The salt environment to use when copying your source.
-    Default is 'base'
+        salt_env (str): The salt environment to use when copying your source.
+            Default is 'base'
 
-    :return: True if successful, otherwise False
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -378,8 +377,8 @@ def get_config():
     '''
     Get the current DSC Configuration
 
-    :return: A dictionary representing the DSC Configuration on the machine
-    :rtype: dict
+    Returns:
+        dict: A dictionary representing the DSC Configuration on the machine
 
     CLI Example:
 
@@ -396,8 +395,8 @@ def test_config():
     '''
     Tests the current applied DSC Configuration
 
-    :return: True if successfully applied, otherwise False
-    :rtype: bool
+    Returns:
+        bool: True if successfully applied, otherwise False
 
     CLI Example:
 
@@ -414,9 +413,9 @@ def get_config_status():
     '''
     Get the status of the current DSC Configuration
 
-    :return: A dictionary representing the status of the current DSC
-    Configuration on the machine
-    :rtype: dict
+    Returns:
+        dict: A dictionary representing the status of the current DSC
+            Configuration on the machine
 
     CLI Example:
 
@@ -435,9 +434,9 @@ def get_lcm_config():
     '''
     Get the current Local Configuration Manager settings
 
-    :return: A dictionary representing the Local Configuration Manager settings
-     on the machine
-    :rtype: dict
+    Returns:
+        dict: A dictionary representing the Local Configuration Manager settings
+            on the machine
 
     CLI Example:
 
@@ -465,57 +464,63 @@ def set_lcm_config(config_mode=None,
                    debug_mode=False,
                    status_retention_days=None):
     '''
-
     For detailed descriptions of the parameters see:
     https://msdn.microsoft.com/en-us/PowerShell/DSC/metaConfig
 
-    :param str config_mode: How the LCM applies the configuration. Valid values
-    are:
-    - ApplyOnly
-    - ApplyAndMonitor
-    - ApplyAndAutoCorrect
+    Args:
 
-    :param int config_mode_freq: How often, in minutes, the current
-    configuration is checked and applied. Ignored if config_mode is set to
-    ApplyOnly. Default is 15.
+        config_mode (str): How the LCM applies the configuration. Valid values
+            are:
 
-    :param str refresh_mode: How the LCM gets configurations. Valid values are:
-    - Disabled
-    - Push
-    - Pull
+            - ApplyOnly
+            - ApplyAndMonitor
+            - ApplyAndAutoCorrect
 
-    :param int refresh_freq: How often, in minutes, the LCM checks for updated
-    configurations. (pull mode only) Default is 30.
+        config_mode_freq (int): How often, in minutes, the current configuration
+            is checked and applied. Ignored if config_mode is set to ApplyOnly.
+            Default is 15.
 
-    .. note:: Either `config_mode_freq` or `refresh_freq` needs to be a multiple
-    of the other. See documentation on MSDN for more details.
+        refresh_mode (str): How the LCM gets configurations. Valid values are:
 
-    :param bool reboot_if_needed: Reboot the machine if needed after a
-    configuration is applied. Default is False.
+            - Disabled
+            - Push
+            - Pull
 
-    :param str action_after_reboot: Action to take after reboot. Valid values
-    are:
-    - ContinueConfiguration
-    - StopConfiguration
+        refresh_freq (int): How often, in minutes, the LCM checks for updated
+            configurations. (pull mode only) Default is 30.
 
-    :param guid certificate_id: A GUID that specifies a certificate used to
-    access the configuration: (pull mode)
+        .. note:: Either `config_mode_freq` or `refresh_freq` needs to be a
+            multiple of the other. See documentation on MSDN for more details.
 
-    :param guid configuration_id: A GUID that identifies the config file to get
-    from a pull server. (pull mode)
+        reboot_if_needed (bool): Reboot the machine if needed after a
+            configuration is applied. Default is False.
 
-    :param bool allow_module_overwrite: New configs are allowed to overwrite old
-    ones on the target node.
+        action_after_reboot (str): Action to take after reboot. Valid values
+            are:
 
-    :param str debug_mode: Sets the debug level. Valid values are:
-    - None
-    - ForceModuleImport
-    - All
+            - ContinueConfiguration
+            - StopConfiguration
 
-    :param int status_retention_days: Number of days to keep status of the
-    current config.
+        certificate_id (guid): A GUID that specifies a certificate used to
+            access the configuration: (pull mode)
 
-    Returns (bool): True if successful, otherwise False
+        configuration_id (guid): A GUID that identifies the config file to get
+            from a pull server. (pull mode)
+
+        allow_module_overwrite (bool): New configs are allowed to overwrite old
+            ones on the target node.
+
+        debug_mode (str): Sets the debug level. Valid values are:
+
+            - None
+            - ForceModuleImport
+            - All
+
+        status_retention_days (int): Number of days to keep status of the
+            current config.
+
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
