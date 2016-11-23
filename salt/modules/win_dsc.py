@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
-Module for working with DSC (Alpha)
+This module is Alpha
+
+Module for working with Windows PowerShell DSC (Desired State Configuration)
+
+This module applies DSC Configurations in the form of PowerShell scripts or
+MOF (Managed Object Format) schema files.
+
+Use the ``psget`` module to manage PowerShell resources.
+
+The idea is to leverage Salt to push DSC configuration scripts or MOF files to
+the Minion.
 
 :depends:
     - PowerShell 5.0
@@ -35,18 +45,18 @@ def __virtual__():
     # Verify PowerShell 5.0
     powershell_info = __salt__['cmd.shell_info']('powershell')
     if not powershell_info['installed']:
-        return False, 'Module DSC: Powershell not available'
+        return False, 'Module DSC: PowerShell not available'
 
     if distutils.version.StrictVersion(powershell_info['version']) < \
             distutils.version.StrictVersion('5.0'):
-        return False, 'Module DSC: Requires Powershell 5 or later'
+        return False, 'Module DSC: Requires PowerShell 5 or later'
 
     return __virtualname__
 
 
 def _pshell(cmd, cwd=None, json_depth=2):
     '''
-    Execute the desired powershell command and ensure that it returns data
+    Execute the desired PowerShell command and ensure that it returns data
     in json format and load that into python
     '''
     if 'convertto-json' not in cmd.lower():
@@ -61,13 +71,13 @@ def _pshell(cmd, cwd=None, json_depth=2):
     if 'retcode' not in results or results['retcode'] != 0:
         # run_all logs an error to log.error, fail hard back to the user
         raise CommandExecutionError(
-            'Issue executing powershell {0}'.format(cmd), info=results)
+            'Issue executing PowerShell {0}'.format(cmd), info=results)
 
     try:
         ret = json.loads(results['stdout'], strict=False)
     except ValueError:
         raise CommandExecutionError(
-            'No JSON results from powershell', info=results)
+            'No JSON results from PowerShell', info=results)
 
     return ret
 
@@ -80,9 +90,9 @@ def run_config(path,
                script_parameters=None,
                salt_env='base'):
     r'''
-    Compile a DSC Configuration in the form of a powershell script (.ps1) and
-    apply it. The powershell script can be cached from the master using the
-    ``source`` option. If there is more than one config within the powershell
+    Compile a DSC Configuration in the form of a PowerShell script (.ps1) and
+    apply it. The PowerShell script can be cached from the master using the
+    ``source`` option. If there is more than one config within the PowerShell
     script, the desired configuration can be applied by passing the name in the
     ``config`` option.
 
@@ -91,7 +101,7 @@ def run_config(path,
 
     Args:
 
-        path (str): The local path to the powershell script that contains the
+        path (str): The local path to the PowerShell script that contains the
             DSC Configuration. Required.
 
         source (str): The path to the script on ``file_roots`` to cache at the
@@ -160,7 +170,7 @@ def compile_config(path,
                    script_parameters=None,
                    salt_env='base'):
     r'''
-    Compile a config from a powershell script (``.ps1``)
+    Compile a config from a PowerShell script (``.ps1``)
 
     Args:
 
