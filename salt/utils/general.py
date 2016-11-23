@@ -45,6 +45,15 @@ class InputSanitizer(object):
         '''
         return re.sub('[^a-zA-Z0-9.-_ ]', '', os.path.basename(InputSanitizer.trim(value)))
 
+    @staticmethod
+    def hostname(value):
+        '''
+        Clean value for RFC1123.
+
+        :param value:
+        :return:
+        '''
+        return re.sub(r'[^a-zA-Z0-9.-]', '', InputSanitizer.trim(value))
 
 
 clean = InputSanitizer()
