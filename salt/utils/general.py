@@ -35,6 +35,16 @@ class InputSanitizer(object):
 
         return text(value)
 
+    @staticmethod
+    def filename(value):
+        '''
+        Remove everything that would affect paths in the filename
+
+        :param value:
+        :return:
+        '''
+        return re.sub('[^a-zA-Z0-9.-_ ]', '', os.path.basename(InputSanitizer.trim(value)))
+
 
 
 clean = InputSanitizer()
