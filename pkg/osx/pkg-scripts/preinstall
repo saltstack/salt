@@ -31,7 +31,7 @@ MINOR=$(echo ${OSX_VERSION} | cut -f 2 -d.)
 # Stop the service
 ###############################################################################
 stop_service_maverick() {
-    echo "Using old (< 10.10) launchctl interface" >> /tmp/postinstall.txt
+    echo "Using old (< 10.10) launchctl interface" >> /tmp/preinstall.txt
     if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
         echo "Stop service: Started..." >> /tmp/preinstall.txt
         launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist
@@ -40,7 +40,7 @@ stop_service_maverick() {
 }
 
 stop_service_yosemite_and_later() {
-    echo "Using new (>= 10.10) launchctl interface" >> /tmp/postinstall.txt
+    echo "Using new (>= 10.10) launchctl interface" >> /tmp/preinstall.txt
     if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
         echo "Stop service: Started..." >> /tmp/preinstall.txt
         launchctl disable system/com.saltstack.salt.minion
