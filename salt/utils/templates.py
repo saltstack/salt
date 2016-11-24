@@ -27,6 +27,7 @@ from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
 import salt.utils.jinja
+import salt.utils.network
 from salt.utils.odict import OrderedDict
 from salt import __path__ as saltpath
 from salt.ext.six import string_types
