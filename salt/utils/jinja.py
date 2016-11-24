@@ -6,6 +6,7 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 # Import python libs
 from __future__ import absolute_import
 import collections
+import pipes
 import json
 import pprint
 import logging
@@ -36,6 +37,7 @@ __all__ = [
     'SerializerExtension'
 ]
 
+GLOBAL_UUID = '91633EBF-1C86-5E33-935A-28061F4B480E'
 
 # To dump OrderedDict objects as regular dicts. Used by the yaml
 # template filter.
@@ -206,18 +208,44 @@ def ensure_sequence_filter(data):
     return data
 
 
+def to_bool(val):
+    '''
+    Returns the logical value.
+
+    .. code-block:: jinja
+
+        {{ 'yes' | to_bool }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        True
+    '''
+    if val is None:
+        return False
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, (six.text_type, six.string_types)):
+        return val.lower() in ('yes', '1', 'true')
+    if isinstance(val, six.integer_types):
+        return val > 0
+    if not isinstance(val, collections.Hashable):
+        return len(val) > 0
+    return False
+
+
 def default(var, value):
     '''
     Defaults to a specific value when the variable is not defined.
 
     .. code-block:: jinja
 
-        {{ set my_value | default('stuff') }}
-
+        {{ not_defined_var | default('stuff') }}
 
     will be rendered as:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         stuff
     '''
@@ -226,24 +254,129 @@ def default(var, value):
     return var
 
 
-def unique(lst):
+def quote(txt):
     '''
-    Removes duplicates.
+    Wraps a text around quotes.
 
     .. code-block:: jinja
 
-        {% my_list = ['a', 'b', 'c', 'a', 'b'] -%}
-        {{ set my_list | unique }}
+        {% set my_text = 'my_text' %}
+        {{ my_text | quote }}
 
     will be rendered as:
 
-    .. code-block:: yaml
+    .. code-block:: text
+
+        'my_text'
+    '''
+    return pipes.quote(txt)
+
+
+def regex_escape(txt):
+    '''
+    Escape special characters.
+
+    .. code-block:: jinja
+
+        {% set my_text = 'my \ string is [ escaped ]' %}
+        {{ my_text | escape }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        my\ \\\ string\ is\ \[\ escaped\ \]
+    '''
+    return re.escape(txt)
+
+
+def regex_search(txt, rgx, ignorecase=False, multiline=False):
+    '''
+    Searches for a pattern in the text.
+
+    .. code-block:: jinja
+
+        {% set my_text = 'abcd' %}
+        {{ my_text | regex_findall('^(.*)BC(.*)$', ignorecase=True) }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        ('a', 'd')
+    '''
+    flag = 0
+    if ignorecase:
+        flag |= re.I
+    if multiline:
+        flag |= re.M
+    obj = re.search(rgx, txt, flag)
+    if not obj:
+        return
+    return obj.groups()
+
+
+def regex_replace(txt, rgx, val, ignorecase=False, multiline=False):
+    '''
+    Searches for a pattern and replaces with a sequence of characters.
+
+    .. code-block:: jinja
+
+        {% set my_text = 'lets replace spaces' %}
+        {{ my_text | regex_replace('\s+', '__') }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        lets__replace__spaces
+    '''
+    flag = 0
+    if ignorecase:
+        flag |= re.I
+    if multiline:
+        flag |= re.M
+    compiled_rgx = re.compile(rgx, flag)
+    return compiled_rgx.sub(val, txt)
+
+
+def uuid_(val):
+    '''
+    Returns a UUID corresponding to the value passed as argument.
+
+    .. code-block:: jinja
+
+        {{ 'example' | uuid }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        f4efeff8-c219-578a-bad7-3dc280612ec8
+    '''
+    return str(uuid.uuid5(GLOBAL_UUID, str(val)))
+
+
+### List-related filters
+
+
+def unique(lst):
+    '''
+    Removes duplicates from a list.
+
+    .. code-block:: jinja
+
+        {% set my_list = ['a', 'b', 'c', 'a', 'b'] -%}
+        {{ my_list | unique }}
+
+    will be rendered as:
+
+    .. code-block:: text
 
         ['a', 'b', 'c']
     '''
-    if isinstance(lst, (list, tuple, set)):
-        _set = set(lst)
-        return list(_set)
+    if not isinstance(lst, collections.Hashable):
+        return list(set(lst))
     return lst
 
 
@@ -253,21 +386,19 @@ def lst_min(lst):
 
     .. code-block:: jinja
 
-        {% my_list = [1,2,3,4] -%}
-        {{ set my_list | min }}
+        {% set my_list = [1,2,3,4] -%}
+        {{ my_list | min }}
 
     will be rendered as:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         1
     '''
 
-    if isinstance(lst, (list, tuple, set)):
-        return min(lst)
-    elif isinstance(lst, (six.integer_types, float)):
-        return lst
-    return None
+    if not isinstance(lst, collections.Hashable):
+        return float(min(lst))
+    return float(lst)
 
 
 def lst_max(lst):
@@ -281,16 +412,14 @@ def lst_max(lst):
 
     will be rendered as:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
-        1
+        4
     '''
 
-    if isinstance(lst, (list, tuple, set)):
-        return max(lst)
-    elif isinstance(lst, (six.integer_types, float)):
-        return lst
-    return None
+    if not isinstance(lst, collections.Hashable):
+        return float(max(lst))
+    return float(lst)
 
 
 def lst_sum(lst):
@@ -304,16 +433,14 @@ def lst_sum(lst):
 
     will be rendered as:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         10
     '''
 
-    if isinstance(lst, (list, tuple, set)):
-        return sum(lst)
-    elif isinstance(lst, (six.integer_types, float)):
-        return lst
-    return None
+    if not isinstance(lst, collections.Hashable):
+        return float(sum(lst))
+    return float(lst)
 
 
 def lst_avg(lst):
@@ -331,11 +458,9 @@ def lst_avg(lst):
 
         2.5
     '''
-    if isinstance(lst, (list, tuple, set)):
+    if not isinstance(lst, collections.Hashable):
         return float(sum(lst)/len(lst))
-    elif isinstance(lst, (six.integer_types, float)):
-        return float(lst)
-    return None
+    return float(lst)
 
 
 def union(lst1, lst2):
@@ -349,15 +474,13 @@ def union(lst1, lst2):
 
     will be rendered as:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         [1, 2, 3, 4, 6]
     '''
     if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
-        _union = set(lst1) | set(lst2)
-    else:
-        _union = unique(lst1 + lst2)
-    return _union
+        return set(lst1) | set(lst2)
+    return unique(lst1 + lst2)
 
 
 def intersect(lst1, lst2):
@@ -371,15 +494,13 @@ def intersect(lst1, lst2):
 
     will be rendered as:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         [2, 4]
     '''
     if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
-        _intersect = set(lst1) & set(lst2)
-    else:
-        _intersect = unique([ele for ele in lst1 if ele in lst2])
-    return _intersect
+        return set(lst1) & set(lst2)
+    return unique([ele for ele in lst1 if ele in lst2])
 
 
 def difference(lst1, lst2):
@@ -393,15 +514,13 @@ def difference(lst1, lst2):
 
     will be rendered as:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         [1, 3, 6]
     '''
     if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
-        _diff = set(lst1) - set(lst2)
-    else:
-        _diff = unique([ele for ele in lst1 if ele not in lst2])
-    return _diff
+        return set(lst1) - set(lst2)
+    return unique([ele for ele in lst1 if ele not in lst2])
 
 
 def symmetric_difference(lst1, lst2):
@@ -415,15 +534,33 @@ def symmetric_difference(lst1, lst2):
 
     will be rendered as:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         [1, 3]
     '''
     if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
-        _symdiff = set(lst1) ^ set(lst2)
-    else:
-        _symdiff = unique([ele for ele in union(lst1, lst2) if ele not in intersect(lst1, lst2)])
-    return _symdiff
+        return set(lst1) ^ set(lst2)
+    return unique([ele for ele in union(lst1, lst2) if ele not in intersect(lst1, lst2)])
+
+
+def join_(lst, separator=' '):
+    '''
+    Concatenates a list into a string given a separator.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | join('+') }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        1+2+3+4
+    '''
+    if not isinstance(lst, collections.Hashable):
+        return separator.join([str(ele) for ele in lst])
+    return str(lst)
 
 
 @jinja2.contextfunction
