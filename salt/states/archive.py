@@ -61,7 +61,8 @@ def extracted(name,
               tar_options=None,
               source_hash=None,
               if_missing=None,
-              keep=False):
+              keep=False,
+              overwrite=False):
     '''
     .. versionadded:: 2014.1.0
 
@@ -167,6 +168,10 @@ def extracted(name,
 
     keep
         Keep the archive in the minion's cache
+
+    overwrite
+        If archive was already extracted, then setting this to True will
+        extract it all over again.
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
@@ -188,6 +193,10 @@ def extracted(name,
     # like /tmp or /opt etc.
     if __salt__['file.directory_exists'](name):
         name = os.path.join(name, os.path.basename(source))
+        if __salt__['file.directory_exists'](name) and overwrite:
+            __salt__['file.remove'](name)
+            log.debug("Overwrite is requested. Removed '{0}'".format(name))
+
     if not name.endswith('/'):
         name += '/'
 
