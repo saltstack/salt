@@ -110,13 +110,6 @@ except ImportError:
         process = None
 
         # Let's begin the shutdown routines
-        if sys.platform.startswith('win'):
-            sigint = signal.CTRL_BREAK_EVENT  # pylint: disable=no-member
-            sigint_name = 'CTRL_BREAK_EVENT'
-        else:
-            sigint = signal.SIGINT
-            sigint_name = 'SIGINT'
-
         try:
             process = psutil.Process(pid)
             if hasattr(process, 'children'):
@@ -135,18 +128,12 @@ except ImportError:
                     cmdline = process.as_dict()
                 except psutil.NoSuchProcess as exc:
                     log.debug('No such process found. Stacktrace: {0}'.format(exc))
-            log.info('Sending %s to process: %s', sigint_name, cmdline)
-            process.send_signal(sigint)
-            try:
-                process.wait(timeout=10)
-            except psutil.TimeoutExpired:
-                pass
 
             if psutil.pid_exists(pid):
                 log.info('Terminating process: %s', cmdline)
                 process.terminate()
                 try:
-                    process.wait(timeout=5)
+                    process.wait(timeout=10)
                 except psutil.TimeoutExpired:
                     pass
 
@@ -158,7 +145,7 @@ except ImportError:
                 log.warning('Process left behind which we were unable to kill: %s', cmdline)
         if children:
             # Lets log and kill any child processes which salt left behind
-            def kill_children(_children, terminate=False, kill=False):
+            def kill_children(_children, kill=False):
                 for child in _children[:][::-1]:  # Iterate over a reversed copy of the list
                     try:
                         if not kill and child.status() == psutil.STATUS_ZOMBIE:
@@ -174,30 +161,26 @@ except ImportError:
                         if kill:
                             log.warning('Killing child process left behind: %s', cmdline)
                             child.kill()
-                        elif terminate:
+                        else:
                             log.warning('Terminating child process left behind: %s', cmdline)
                             child.terminate()
-                        else:
-                            log.warning('Sending %s to child process left behind: %s', sigint_name, cmdline)
-                            child.send_signal(sigint)
                         if not psutil.pid_exists(child.pid):
                             _children.remove(child)
                     except psutil.NoSuchProcess:
                         _children.remove(child)
-
-            kill_children(children)
-
-            if children:
-                try:
-                    psutil.wait_procs(children, timeout=10, callback=lambda proc: kill_children(children, terminate=True))
-                except psutil.AccessDenied:
-                    kill_children(children, terminate=True)
+            try:
+                kill_children([child for child in children if child.is_running()
+                               and not any(sys.argv[0] in cmd for cmd in child.cmdline())])
+            except psutil.AccessDenied:
+                # OSX denies us access to the above information
+                kill_children(children)
 
             if children:
-                try:
-                    psutil.wait_procs(children, timeout=5, callback=lambda proc: kill_children(children, kill=True))
-                except psutil.AccessDenied:
-                    kill_children(children, kill=True)
+                psutil.wait_procs(children, timeout=3, callback=lambda proc: kill_children(children, kill=True))
+
+            if children:
+                psutil.wait_procs(children, timeout=1, callback=lambda proc: kill_children(children, kill=True))
+
 
 SYS_TMP_DIR = os.path.realpath(
     # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
