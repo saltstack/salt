@@ -122,6 +122,7 @@ def present(
         kernel_id=None,
         ramdisk_id=None,
         block_device_mappings=None,
+        delete_on_termination=None,
         instance_monitoring=False,
         spot_price=None,
         instance_profile_name=None,
@@ -185,9 +186,10 @@ def present(
             Indicates what volume type to use. Valid values are standard, io1, gp2.
             Default is standard.
 
-        delete_on_termination
-            Indicates whether to delete the volume on instance termination (true) or
-            not (false).
+    delete_on_termination
+        Indicates whether to delete the volume on instance termination (true) or
+        not (false). Default is "None" which corresponds to not specified.
+        Amazon has different defaults for root and additional volumes.
 
         iops
             For Provisioned IOPS (SSD) volumes only. The number of I/O operations per
@@ -268,6 +270,7 @@ def present(
             kernel_id=kernel_id,
             ramdisk_id=ramdisk_id,
             block_device_mappings=block_device_mappings,
+            delete_on_termination=delete_on_termination,
             instance_monitoring=instance_monitoring,
             spot_price=spot_price,
             instance_profile_name=instance_profile_name,
