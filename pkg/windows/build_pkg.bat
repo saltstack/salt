@@ -9,13 +9,36 @@
 Set "CurrDir=%cd%"
 Set "BinDir=%cd%\buildenv\bin"
 Set "InsDir=%cd%\installer"
-Set "PyDir=C:\Python27"
+Set "PyDir27=C:\Python27"
+Set "PyDir35=C:\Program Files\Python35"
+Set "PyDir36=C:\Program Files\Python36"
 
 :: Get the version from git if not passed
 if [%1]==[] (
     for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
 ) else (
     set "Version=%~1"
+)
+
+If Exist "%PyDir36%\python.exe" (
+    Set "PyDir=%PyDir36%"
+    Set "PyVerMajor=3"
+    Set "PyVerMinor=6"
+) Else (
+    If Exist "%PyDir35%\python.exe" (
+        Set "PyDir=%PyDir35%"
+        Set "PyVerMajor=3"
+        Set "PyVerMinor=5"
+    ) Else (
+        If Exist "%PyDir27%\python.exe" (
+            Set "PyDir=%PyDir27%"
+            Set "PyVerMajor=2"
+            Set "PyVerMinor=7"
+        ) Else (
+            @echo Could not find Python on the system
+            exit /b 1
+        )
+    )
 )
 
 :: Find the NSIS Installer
@@ -27,12 +50,12 @@ If Exist "C:\Program Files\NSIS\" (
 Set "PATH=%NSIS%;%PATH%"
 @echo.
 
-@echo Copying C:\Python27 to bin...
+@echo Copying "%PyDir%" to bin...
 @echo ----------------------------------------------------------------------
 :: Check for existing bin directory and remove
 If Exist "%BinDir%\" rd /S /Q "%BinDir%"
 
-:: Copy the Python27 directory to bin
+:: Copy the Python directory to bin
 @echo xcopy /E /Q "%PyDir%" "%BinDir%\"
 xcopy /E /Q "%PyDir%" "%BinDir%\"
 @echo.
@@ -40,11 +63,11 @@ xcopy /E /Q "%PyDir%" "%BinDir%\"
 :: Remove the fixed path in .exe files
 @echo Removing fixed path from .exe files
 @echo ----------------------------------------------------------------------
-%PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
-%PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install-2.7.exe"
-%PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
-%PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip2.7.exe"
-%PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip2.exe"
+"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
+"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install-%PyVerMajor%.%PyVerMinor%.exe"
+"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
+"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.%PyVerMinor%.exe"
+"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.exe"
 @echo.
 
 @echo Cleaning up unused files and directories...

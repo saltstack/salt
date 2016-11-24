@@ -1,7 +1,10 @@
 #!/usr/bin/python
 from __future__ import print_function
 
-import sys, getopt
+import sys
+import os.path
+import getopt
+
 
 def display_help():
     print('####################################################################')
@@ -23,9 +26,16 @@ def display_help():
     print('####################################################################')
     sys.exit(2)
 
+
 def main(argv):
     target = ''
-    search = 'C:\Python27'
+    python_dir = 'Python{0}{1}'.format(sys.version_info[0], sys.version_info[1])
+    if sys.version_info >= (3, 5):
+        from win32com.shell import shellcon, shell
+        search = shell.SHGetFolderPath(0, shellcon.CSIDL_PROGRAM_FILES, 0, 0)
+        search = os.path.join(search, python_dir)
+    else:
+        search = os.path.join('C:\\', python_dir)
     replace = '..'
     try:
         opts, args = getopt.getopt(argv,"hf:s:r:",["file=","search=", "replace="])
@@ -42,10 +52,15 @@ def main(argv):
             replace = arg
     if target == '':
         display_help()
+
+    if sys.version_info >= (3, 0):
+        search = search.encode('utf-8')
+        replace = replace.encode('utf-8')
     f = open( target, 'rb' ).read()
     f = f.replace( search, replace )
     f = f.replace( search.lower(), replace )
     open( target, 'wb' ).write(f)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
