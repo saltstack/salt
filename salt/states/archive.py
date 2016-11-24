@@ -179,11 +179,7 @@ def extracted(name,
 
     # remove this whole block after formal deprecation.
     if archive_user is not None:
-        warn_until(
-          'Boron',
-          'Passing \'archive_user\' is deprecated.'
-          'Pass \'user\' instead.'
-        )
+        warn_until('Boron', "Passing 'archive_user' is deprecated. Pass 'user' instead.")
         if user is None:
             user = archive_user
 
@@ -192,10 +188,9 @@ def extracted(name,
 
     if if_missing is None:
         if_missing = name
-    if (
-        __salt__['file.directory_exists'](if_missing)
-        or __salt__['file.file_exists'](if_missing)
-    ):
+
+    if __salt__['file.directory_exists'](if_missing) \
+        or __salt__['file.file_exists'](if_missing):
         ret['result'] = True
         ret['comment'] = '{0} already exists'.format(if_missing)
         return ret
