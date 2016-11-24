@@ -198,7 +198,8 @@ def module(name, module_state='Enabled', version='any'):
         installed_version = modules[name]['Version']
         if not installed_version == version:
             ret['comment'] = 'Module version is {0} and does not match ' \
-                             'the desired version of {1}'.format(installed_version, version)
+                             'the desired version of {1} or you are ' \
+                             'using semodule >= 2.4'.format(installed_version, version)
             ret['result'] = False
             return ret
     current_module_state = _refine_module_state(modules[name]['Enabled'])
@@ -207,7 +208,7 @@ def module(name, module_state='Enabled', version='any'):
         return ret
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Module {0} is set to be togggled to {1}'.format(
+        ret['comment'] = 'Module {0} is set to be toggled to {1}'.format(
             name, module_state)
         return ret
 

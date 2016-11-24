@@ -240,16 +240,36 @@ def list_semod():
 
     .. versionadded:: 2016.3.0
     '''
-    mdata = __salt__['cmd.run']('semodule -l').splitlines()
-    ret = {}
-    for line in mdata[1:]:
-        if not line.strip():
-            continue
-        comps = line.split()
-        if len(comps) == 3:
-            ret[comps[0]] = {'Enabled': False,
-                             'Version': comps[1]}
-        else:
-            ret[comps[0]] = {'Enabled': True,
-                             'Version': comps[1]}
+    helptext = __salt__['cmd.run']('semodule -h').splitlines()
+    semodule_version = ''
+    for line in helptext:
+        if line.strip().startswith('full'):
+            semodule_version = 'new'
+
+    if semodule_version == 'new':
+        mdata = __salt__['cmd.run']('semodule -lfull').splitlines()
+        ret = {}
+        for line in mdata:
+            if not line.strip():
+                continue
+            comps = line.split()
+            if len(comps) == 4:
+                ret[comps[1]] = {'Enabled': False,
+                                 'Version': None}
+            else:
+                ret[comps[1]] = {'Enabled': True,
+                                 'Version': None}
+    else:
+        mdata = __salt__['cmd.run']('semodule -l').splitlines()
+        ret = {}
+        for line in mdata:
+            if not line.strip():
+                continue
+            comps = line.split()
+            if len(comps) == 3:
+                ret[comps[0]] = {'Enabled': False,
+                                 'Version': comps[1]}
+            else:
+                ret[comps[0]] = {'Enabled': True,
+                                 'Version': comps[1]}
     return ret
