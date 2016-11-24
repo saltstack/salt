@@ -309,7 +309,7 @@ def present(name,
            'changes': {}
            }
 
-    r = __salt__['boto_rds.exists'](name, region, key, keyid, profile)
+    r = __salt__['boto_rds.exists'](name, tags, region, key, keyid, profile)
 
     if not r.get('exists'):
         if __opts__['test']:
