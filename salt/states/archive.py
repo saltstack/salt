@@ -545,10 +545,9 @@ def extracted(name,
         ret['comment'] = '{0} is not an absolute path'.format(name)
         return ret
     else:
-        if name is None:
-            # Only way this happens is if some doofus specifies "- name: None"
-            # in their SLS file. Prevent tracebacks by failing gracefully.
-            ret['comment'] = 'None is not a valid directory path'
+        if not name:
+            # Empty name, like None, '' etc.
+            ret['comment'] = 'Name of the directory path needs to be specified'
             return ret
         # os.path.isfile() returns False when there is a trailing slash, hence
         # our need for first stripping the slash and then adding it back later.
