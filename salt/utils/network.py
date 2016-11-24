@@ -200,11 +200,38 @@ def ip_to_host(ip):
 # pylint: enable=C0103
 
 
-def is_ip(ip, options=None):
+def is_ip(ip):
     '''
     Returns a bool telling if the passed IP is a valid IPv4 or IPv6 address.
     '''
-    return is_ipv4(ip, options=options) or is_ipv6(ip, options=options)
+    return is_ipv4(ip) or is_ipv6(ip)
+
+
+def is_ipv4(ip):
+    '''
+    Returns a bool telling if the value passed to it was a valid IPv4 address
+    '''
+    try:
+        return ipaddress.ip_address(ip).version == 4
+    except ValueError:
+        return False
+
+
+def is_ipv6(ip):
+    '''
+    Returns a bool telling if the value passed to it was a valid IPv6 address
+    '''
+    try:
+        return ipaddress.ip_address(ip).version == 6
+    except ValueError:
+        return False
+
+
+def is_ip_filter(ip, options=None):
+    '''
+    Returns a bool telling if the passed IP is a valid IPv4 or IPv6 address.
+    '''
+    return is_ipv4_filter(ip, options=options) or is_ipv6_filter(ip, options=options)
 
 
 def _ip_options_global(ip_obj, version):
@@ -212,11 +239,11 @@ def _ip_options_global(ip_obj, version):
 
 
 def _ip_options_multicast(ip_obj, version):
-    return ip_obj.is_loopback
+    return ip_obj.is_multicast
 
 
 def _ip_options_loopback(ip_obj, version):
-    return ip_obj.is_multicast
+    return ip_obj.is_loopback
 
 
 def _ip_options_link_local(ip_obj, version):
@@ -302,16 +329,34 @@ def _is_ipv(ip, version, options=None):
     return _ip_options(ip_obj, version, options=options)
 
 
-def is_ipv4(ip, options=None):
+def is_ipv4_filter(ip, options=None):
     '''
     Returns a bool telling if the value passed to it was a valid IPv4 address.
+
+    ip
+        The IP address.
+
+    net: False
+        Consider IP addresses followed by netmask.
+
+    options
+        CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
     '''
     return _is_ipv(ip, 4, options=options)
 
 
-def is_ipv6(ip, options=None):
+def is_ipv6_filter(ip, options=None):
     '''
     Returns a bool telling if the value passed to it was a valid IPv6 address.
+
+    ip
+        The IP address.
+
+    net: False
+        Consider IP addresses followed by netmask.
+
+    options
+        CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
     '''
     return _is_ipv(ip, 6, options=options)
 
@@ -319,9 +364,9 @@ def is_ipv6(ip, options=None):
 def _ipv_filter(value, version, options=None):
     fun = None
     if version == 4:
-        fun = is_ipv4
+        fun = is_ipv4_filter
     elif version == 6:
-        fun = is_ipv6
+        fun = is_ipv6_filter
 
     if not fun:  # indeed, that's not fun...
         return
