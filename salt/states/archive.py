@@ -183,6 +183,11 @@ def extracted(name,
         if user is None:
             user = archive_user
 
+    # Adjust, if the destination directory already exists
+    # In this case admins usually are using general directory,
+    # like /tmp or /opt etc.
+    if __salt__['file.directory_exists'](name):
+        name = os.path.join(name, os.path.basename(source))
     if not name.endswith('/'):
         name += '/'
 
