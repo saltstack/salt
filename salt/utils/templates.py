@@ -20,6 +20,7 @@ import jinja2.ext
 
 # Import salt libs
 import salt.utils
+import salt.utils.http
 import salt.utils.files
 import salt.utils.yamlencoding
 import salt.utils.locales
@@ -323,6 +324,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.filters['strftime'] = salt.utils.date_format
     jinja_env.filters['sequence'] = salt.utils.jinja.ensure_sequence_filter
+    jinja_env.filters['http_query'] = salt.utils.http.query
     jinja_env.filters['to_bool'] = salt.utils.jinja.to_bool
     jinja_env.filters['default'] = salt.utils.jinja.default
     jinja_env.filters['quote'] = salt.utils.jinja.quote
