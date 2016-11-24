@@ -6,6 +6,7 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 # Import python libs
 from __future__ import absolute_import
 import collections
+import uuid
 import pipes
 import json
 import pprint
