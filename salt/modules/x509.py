@@ -911,7 +911,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
                 - x509.sign_remote_certificate
 
     subject properties:
-        Any of the values below can be incldued to set subject properties
+        Any of the values below can be included to set subject properties
         Any other subject properties supported by OpenSSL should also work.
 
         C:
