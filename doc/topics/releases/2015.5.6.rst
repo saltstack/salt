@@ -38,7 +38,7 @@ Changes:
 
 - **PR** `#27516`_: (*basepi*) [2015.5] Merge forward from 2014.7 to 2015.5
 
-- **PR** `#27472`_: (*cachedout*) Change recommeded schema for data field in mysql event table
+- **PR** `#27472`_: (*cachedout*) Change recommended schema for data field in mysql event table
 
 - **PR** `#27468`_: (*cachedout*) Fix 27351
 

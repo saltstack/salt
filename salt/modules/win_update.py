@@ -541,7 +541,7 @@ def list_updates(verbose=False, fields=None, skips=None, retries=5, categories=N
     fields
         Return a list of specific fields for each update. The optional
         values here are those at the root level of the verbose list. This
-        is superceded by the verbose option.
+        is superseded by the verbose option.
 
     retries
         Number of retries to make before giving up. This is total, not per

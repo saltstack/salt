@@ -459,7 +459,7 @@ Aliasing Functions
 
 Sometimes one wishes to use a function name that would shadow a python built-in.
 A common example would be ``set()``. To support this, append an underscore to
-the function defintion, ``def set_():``, and use the ``__func_alias__`` feature
+the function definition, ``def set_():``, and use the ``__func_alias__`` feature
 to provide an alias to the function.
 
 ``__func_alias__`` is a dictionary where each key is the name of a function in
