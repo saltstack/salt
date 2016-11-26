@@ -297,10 +297,10 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         tmpbackports = tempfile.mkdtemp(suffix='_backports_workaround', prefix='salt_')
         tmpbackports_symlink = os.path.join(tmpbackports, 'symlink')
         os.symlink('salt/ext', tmpbackports_symlink)
-        tftp_deref_old = tfp.dereference
+        tfp_deref_old = tfp.dereference
         tfp.dereference = False
         tfp.add(tmpbackports_symlink, arcname=os.path.join('py{0}'.format(py_ver), 'backports'))
-        tfp.dereference = tftp_deref_old
+        tfp.dereference = tfp_deref_old
         shutil.rmtree(tmpbackports)
         # workaround end
 
