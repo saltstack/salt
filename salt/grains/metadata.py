@@ -30,7 +30,7 @@ HOST = 'http://{0}/'.format(IP)
 
 
 def __virtual__():
-    if __salt__['config.get']('metadata_server_grains', False) is False:
+    if __opts__.get('metadata_server_grains', False) is False:
         return False
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(.1)
