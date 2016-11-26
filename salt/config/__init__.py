@@ -939,7 +939,7 @@ VALID_OPTS = {
     # http://docs.python.org/2/library/ssl.html#ssl.wrap_socket
     # Note: to set enum arguments values like `cert_reqs` and `ssl_version` use constant names
     # without ssl module prefix: `CERT_REQUIRED` or `PROTOCOL_SSLv23`.
-    'ssl': dict,
+    'ssl': (dict, None),
 }
 
 # default configurations
@@ -1614,6 +1614,17 @@ def _validate_opts(opts):
            'required for this value')
     for key, val in six.iteritems(opts):
         if key in VALID_OPTS:
+            if val is None:
+                if VALID_OPTS[key] is None:
+                    continue
+                else:
+                    try:
+                        if None in VALID_OPTS[key]:
+                            continue
+                    except TypeError:
+                        # VALID_OPTS[key] is not iterable and not None
+                        pass
+
             if isinstance(val, VALID_OPTS[key]):
                 continue
 
