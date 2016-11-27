@@ -666,6 +666,42 @@ class GetServiceInstanceTestCase(TestCase):
                 self.assertEqual(mock_disconnect.call_count, 1)
                 self.assertEqual(mock_get_si.call_count, 2)
 
+    def test_current_time_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        with patch('salt.utils.vmware._get_service_instance',
+                   MagicMock(return_value=MagicMock(
+                       CurrentTime=MagicMock(side_effect=exc)))):
+            with self.assertRaises(excs.VMwareApiError) as excinfo:
+                salt.utils.vmware.get_service_instance(
+                    host='fake_host',
+                    username='fake_username',
+                    password='fake_password',
+                    protocol='fake_protocol',
+                    port=1,
+                    mechanism='fake_mechanism',
+                    principal='fake_principal',
+                    domain='fake_domain')
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_current_time_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        with patch('salt.utils.vmware._get_service_instance',
+                   MagicMock(return_value=MagicMock(
+                       CurrentTime=MagicMock(side_effect=exc)))):
+            with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+                salt.utils.vmware.get_service_instance(
+                    host='fake_host',
+                    username='fake_username',
+                    password='fake_password',
+                    protocol='fake_protocol',
+                    port=1,
+                    mechanism='fake_mechanism',
+                    principal='fake_principal',
+                    domain='fake_domain')
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -705,6 +741,24 @@ class DisconnectTestCase(TestCase):
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class IsConnectionToAVCenterTestCase(TestCase):
     '''Tests for salt.utils.vmware.is_connection_to_a_vcenter'''
+
+    def test_api_type_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        mock_si = MagicMock()
+        type(mock_si.content.about).apiType = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_api_type_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        mock_si = MagicMock()
+        type(mock_si.content.about).apiType = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
     def test_connected_to_a_vcenter(self):
         mock_si = MagicMock()

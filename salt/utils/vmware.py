@@ -366,6 +366,10 @@ def get_service_instance(host, username=None, password=None, protocol=None,
                                                  mechanism,
                                                  principal,
                                                  domain)
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
     return service_instance
 
@@ -413,7 +417,12 @@ def is_connection_to_a_vcenter(service_instance):
     service_instance
         The Service Instance from which to obtain managed object references.
     '''
-    api_type = service_instance.content.about.apiType
+    try:
+        api_type = service_instance.content.about.apiType
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
     log.trace('api_type = {0}'.format(api_type))
     if api_type == 'VirtualCenter':
         return True
@@ -655,7 +664,7 @@ def get_content(service_instance, obj_type, property_list=None,
     '''
     # Start at the rootFolder if container starting point not specified
     if not container_ref:
-        container_ref = service_instance.content.rootFolder
+        container_ref = get_root_folder(service_instance)
 
     # By default, the object reference used as the starting poing for the filter
     # is the container_ref passed in the function
@@ -665,8 +674,14 @@ def get_content(service_instance, obj_type, property_list=None,
         local_traversal_spec = True
         # We don't have a specific traversal spec override so we are going to
         # get everything using a container view
-        obj_ref = service_instance.content.viewManager.CreateContainerView(
-            container_ref, [obj_type], True)
+        try:
+            obj_ref = service_instance.content.viewManager.CreateContainerView(
+                container_ref, [obj_type], True)
+        except vim.fault.VimFault as exc:
+            raise salt.exceptions.VMwareApiError(exc.msg)
+        except vmodl.RuntimeFault as exc:
+            raise salt.exceptions.VMwareRuntimeError(exc.msg)
+
         # Create 'Traverse All' traversal spec to determine the path for
         # collection
         traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
@@ -698,11 +713,21 @@ def get_content(service_instance, obj_type, property_list=None,
     )
 
     # Retrieve the contents
-    content = service_instance.content.propertyCollector.RetrieveContents([filter_spec])
+    try:
+        content = service_instance.content.propertyCollector.RetrieveContents([filter_spec])
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
     # Destroy the object view
     if local_traversal_spec:
-        obj_ref.Destroy()
+        try:
+            obj_ref.Destroy()
+        except vim.fault.VimFault as exc:
+            raise salt.exceptions.VMwareApiError(exc.msg)
+        except vmodl.RuntimeFault as exc:
+            raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
     return content
 

@@ -532,8 +532,8 @@ class GetContentTestCase(TestCase):
         self.si_mock = MagicMock()
         # RootFolder
         self.root_folder_mock = MagicMock()
-        self.root_folder_prop = PropertyMock(return_value=self.root_folder_mock)
-        type(self.si_mock.content).rootFolder = self.root_folder_prop
+        self.get_root_folder_mock = \
+                MagicMock(return_value=self.root_folder_mock)
         # CreateContainerView()
         self.container_view_mock = MagicMock()
         self.create_container_view_mock = \
@@ -565,28 +565,34 @@ class GetContentTestCase(TestCase):
                 MagicMock(return_value=self.filter_spec_ret_mock)
 
     def test_empty_container_ref(self):
-        ret = salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
-        self.assertEqual(self.root_folder_prop.call_count, 1)
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.get_root_folder_mock.assert_called_once_with(self.si_mock)
         self.create_container_view_mock.assert_called_once_with(
             self.root_folder_mock, [self.obj_type_mock], True)
 
     def test_defined_container_ref(self):
         container_ref_mock = MagicMock()
-        with patch(self.obj_spec_method_name, self.obj_type_mock):
-            ret = salt.utils.vmware.get_content(
-                self.si_mock, self.obj_type_mock,
-                container_ref=container_ref_mock)
-        self.assertEqual(self.root_folder_prop.call_count, 0)
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with patch(self.obj_spec_method_name, self.obj_type_mock):
+                salt.utils.vmware.get_content(
+                    self.si_mock, self.obj_type_mock,
+                    container_ref=container_ref_mock)
+        self.assertEqual(self.get_root_folder_mock.call_count, 0)
         self.create_container_view_mock.assert_called_once_with(
             container_ref_mock, [self.obj_type_mock], True)
 
     # Also checks destroy is called
     def test_local_traversal_spec(self):
-        with patch(self.traversal_spec_method_name, self.traversal_spec_mock):
-            with patch(self.obj_spec_method_name, self.obj_spec_mock):
-
-                ret = salt.utils.vmware.get_content(self.si_mock,
-                                                    self.obj_type_mock)
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with patch(self.traversal_spec_method_name,
+                       self.traversal_spec_mock):
+                with patch(self.obj_spec_method_name, self.obj_spec_mock):
+                    ret = salt.utils.vmware.get_content(self.si_mock,
+                                                        self.obj_type_mock)
         self.create_container_view_mock.assert_called_once_with(
             self.root_folder_mock, [self.obj_type_mock], True)
         self.traversal_spec_mock.assert_called_once_with(
@@ -599,15 +605,62 @@ class GetContentTestCase(TestCase):
         # check destroy is called
         self.assertEqual(self.destroy_mock.call_count, 1)
 
+    def test_create_container_view_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.si_mock.content.viewManager.CreateContainerView = \
+                MagicMock(side_effect=exc)
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with self.assertRaises(excs.VMwareApiError) as excinfo:
+                salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_create_container_view_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.si_mock.content.viewManager.CreateContainerView = \
+                MagicMock(side_effect=exc)
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+                salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_destroy_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.si_mock.content.viewManager.CreateContainerView = MagicMock(
+            return_value=MagicMock(Destroy=MagicMock(side_effect=exc)))
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with self.assertRaises(excs.VMwareApiError) as excinfo:
+                salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_destroy_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.si_mock.content.viewManager.CreateContainerView = MagicMock(
+            return_value=MagicMock(Destroy=MagicMock(side_effect=exc)))
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+                salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
     # Also checks destroy is not called
     def test_external_traversal_spec(self):
         traversal_spec_obj_mock = MagicMock()
-        with patch(self.traversal_spec_method_name, self.traversal_spec_mock):
-            with patch(self.obj_spec_method_name, self.obj_spec_mock):
-                ret = salt.utils.vmware.get_content(
-                    self.si_mock,
-                    self.obj_type_mock,
-                    traversal_spec=traversal_spec_obj_mock)
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with patch(self.traversal_spec_method_name,
+                       self.traversal_spec_mock):
+                with patch(self.obj_spec_method_name, self.obj_spec_mock):
+                    salt.utils.vmware.get_content(
+                        self.si_mock,
+                        self.obj_type_mock,
+                        traversal_spec=traversal_spec_obj_mock)
         self.obj_spec_mock.assert_called_once_with(
             obj=self.root_folder_mock,
             skip=True,
@@ -638,6 +691,24 @@ class GetContentTestCase(TestCase):
         self.retrieve_contents_mock.assert_called_once_with(
             [self.filter_spec_ret_mock])
         self.assertEqual(ret, self.result_mock)
+
+    def test_retrieve_contents_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.si_mock.content.propertyCollector.RetrieveContents = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_retrieve_contents_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.si_mock.content.propertyCollector.RetrieveContents = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
     def test_local_properties_set(self):
         container_ref_mock = MagicMock()
