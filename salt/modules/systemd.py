@@ -575,7 +575,7 @@ def missing(name):
     return not available(name)
 
 
-def unmask(name):
+def unmask(name, runtime=False):
     '''
     .. versionadded:: 2015.5.0
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -591,19 +591,31 @@ def unmask(name):
 
     Unmask the specified service with systemd
 
+    runtime : False
+        Set to ``True`` to unmask this service only until the next reboot
+
+        .. versionadded:: Nitrogen
+            In previous versions, this function would remove whichever mask was
+            identified by running ``systemctl is-enabled`` on the service.
+            However, since it is possible to both have both indefinite and
+            runtime masks on a service simultaneously, this function now
+            removes a runtime mask only when this argument is set to ``True``,
+            and otherwise removes an indefinite mask.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.unmask <service name>
+        salt '*' service.unmask foo
+        salt '*' service.unmask foo runtime=True
     '''
     _check_for_unit_changes(name)
-    mask_status = masked(name)
-    if not mask_status:
-        log.debug('Service \'%s\' is not masked', name)
+    if not masked(name, runtime):
+        log.debug('Service \'%s\' is not %smasked',
+                  name, 'runtime-' if runtime else '')
         return True
 
-    cmd = 'unmask --runtime' if 'runtime' in mask_status else 'unmask'
+    cmd = 'unmask --runtime' if runtime else 'unmask'
     out = __salt__['cmd.run_all'](_systemctl_cmd(cmd, name, systemd_scope=True),
                                   python_shell=False,
                                   redirect_stderr=True)
@@ -639,7 +651,8 @@ def mask(name, runtime=False):
 
     .. code-block:: bash
 
-        salt '*' service.mask <service name>
+        salt '*' service.mask foo
+        salt '*' service.mask foo runtime=True
     '''
     _check_for_unit_changes(name)
 
@@ -657,7 +670,7 @@ def mask(name, runtime=False):
     return True
 
 
-def masked(name):
+def masked(name, runtime=False):
     '''
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2015.8.5
@@ -666,22 +679,56 @@ def masked(name):
         is-enabled`` command (so that a persistent mask can be distinguished
         from a runtime mask). If the service is not masked, then ``False`` will
         be returned.
+    .. versionchanged:: Nitrogen
+        This function now returns a boolean telling the user whether a mask
+        specified by the new ``runtime`` argument is set. If ``runtime`` is
+        ``False``, this function will return ``True`` if an indefinite mask is
+        set for the named service (otherwise ``False`` will be returned). If
+        ``runtime`` is ``False``, this function will return ``True`` if a
+        runtime mask is set, otherwise ``False``.
 
     Check whether or not a service is masked
 
-    CLI Example:
+    runtime : False
+        Set to ``True`` to check for a runtime mask
+
+        .. versionadded:: Nitrogen
+            In previous versions, this function would simply return the output
+            of ``systemctl is-enabled`` when the service was found to be
+            masked. However, since it is possible to both have both indefinite
+            and runtime masks on a service simultaneously, this function now
+            only checks for runtime masks if this argument is set to ``True``.
+            Otherwise, it will check for an indefinite mask.
+
+    CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' service.masked <service name>
+        salt '*' service.masked foo
+        salt '*' service.masked foo runtime=True
     '''
     _check_for_unit_changes(name)
-    out = __salt__['cmd.run'](
-        _systemctl_cmd('is-enabled', name),
-        python_shell=False,
-        ignore_retcode=True,
-    )
-    return out if 'masked' in out else False
+    root_dir = '/run' if runtime else '/etc'
+    link_path = os.path.join(root_dir,
+                             'systemd',
+                             'system',
+                             _canonical_unit_name(name))
+    try:
+        return os.readlink(link_path) == '/dev/null'
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            log.trace(
+                'Path %s does not exist. This is normal if service \'%s\' is '
+                'not masked or does not exist.', link_path, name
+            )
+        elif exc.errno == errno.EINVAL:
+            log.error(
+                'Failed to check mask status for service %s. Path %s is a '
+                'file, not a symlink. This could be caused by changes in '
+                'systemd and is probably a bug in Salt. Please report this '
+                'to the developers.', name, link_path
+            )
+        return False
 
 
 def start(name):
