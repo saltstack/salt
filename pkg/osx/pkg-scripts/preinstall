@@ -24,17 +24,39 @@ quit_on_error() {
     exit -1
 }
 
+OSX_VERSION=$(sw_vers | grep ProductVersion | cut -f 2 -d: | tr -d '[:space:]')
+MINOR=$(echo ${OSX_VERSION} | cut -f 2 -d.)
+
 ###############################################################################
 # Stop the service
 ###############################################################################
-if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
-    echo "Stop service: Started..." >> /tmp/preinstall.txt
-#    /bin/launchctl unload "/Library/LaunchDaemons/com.saltstack.salt.minion.plist"
-    launchctl disable system/com.saltstack.salt.minion
-    launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
-    echo "Stop service: Successful" >> /tmp/preinstall.txt
-fi
+stop_service_maverick() {
+    echo "Using old (< 10.10) launchctl interface" >> /tmp/preinstall.txt
+    if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
+        echo "Stop service: Started..." >> /tmp/preinstall.txt
+        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+        echo "Stop service: Successful" >> /tmp/preinstall.txt
+    fi
+}
 
+stop_service_yosemite_and_later() {
+    echo "Using new (>= 10.10) launchctl interface" >> /tmp/preinstall.txt
+    if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
+        echo "Stop service: Started..." >> /tmp/preinstall.txt
+        launchctl disable system/com.saltstack.salt.minion
+        launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+        echo "Stop service: Successful" >> /tmp/preinstall.txt
+    fi
+}
+
+case $MINOR in
+        9 )
+                stop_service_maverick;
+                ;;
+        * )
+                stop_service_yosemite_and_later;
+                ;;
+esac
 echo "Preinstall Completed Successfully" >> /tmp/preinstall.txt
 
 exit 0

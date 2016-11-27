@@ -55,25 +55,59 @@ sh -c 'echo "/usr/local/sbin" >> /etc/paths.d/salt'
 ###############################################################################
 # Register Salt as a service
 ###############################################################################
+setup_services_maverick() {
+    echo "Using old (< 10.10) launchctl interface" >> /tmp/postinstall.txt
+    if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
+        echo "Stop running service..." >> /tmp/postinstall.txt
+        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+    fi;
+    launchctl load -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist || return 1
+
+    echo "Service start: Successful" >> /tmp/postinstall.txt
+
+    echo "Service disable: Disabling Master, Syndic, and API" >> /tmp/postinstall.txt
+
+    launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.api.plist
+    launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.master.plist
+    launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
+
+    return 0
+}
+
+setup_services_yosemite_and_later() {
+    echo "Using new (>= 10.10) launchctl interface" >> /tmp/postinstall.txt
+    launchctl enable system/com.saltstack.salt.minion
+    echo "Service start: Bootstrapping service..." >> /tmp/postinstall.txt
+    launchctl bootstrap system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+
+    if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
+        echo "Service is running" >> /tmp/postinstall.txt
+    else
+        echo "Service start: Kickstarting service..." >> /tmp/postinstall.txt
+        launchctl kickstart -kp system/com.saltstack.salt.minion
+    fi
+
+    echo "Service start: Successful" >> /tmp/postinstall.txt
+
+    echo "Service disable: Disabling Master, Syndic, and API" >> /tmp/postinstall.txt
+
+    launchctl disable system/com.saltstack.salt.master
+    launchctl disable system/com.saltstack.salt.syndic
+    launchctl disable system/com.saltstack.salt.api
+}
+
+OSX_VERSION=$(sw_vers | grep ProductVersion | cut -f 2 -d: | tr -d '[:space:]')
+MINOR=$(echo ${OSX_VERSION} | cut -f 2 -d.)
+
 echo "Service start: Enabling service..." >> /tmp/postinstall.txt
-launchctl enable system/com.saltstack.salt.minion
-echo "Service start: Bootstrapping service..." >> /tmp/postinstall.txt
-launchctl bootstrap system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
-
-if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
-    echo "Service is running" >> /tmp/postinstall.txt
-else
-    echo "Service start: Kickstarting service..." >> /tmp/postinstall.txt
-    launchctl kickstart -kp system/com.saltstack.salt.minion
-fi
-
-echo "Service start: Successful" >> /tmp/postinstall.txt
-
-echo "Service disable: Disabling Master, Syndic, and API" >> /tmp/postinstall.txt
-
-launchctl disable system/com.saltstack.salt.master
-launchctl disable system/com.saltstack.salt.syndic
-launchctl disable system/com.saltstack.salt.api
+case $MINOR in
+        9 )
+                setup_services_maverick;
+                ;;
+        * )
+                setup_services_yosemite_and_later;
+                ;;
+esac
 
 echo "Post install completed successfully" >> /tmp/postinstall.txt
 
