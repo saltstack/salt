@@ -682,6 +682,13 @@ class SMinion(MinionBase):
         '''
         Load all of the modules for the minion
         '''
+        # Ensure that a pillar key is set in the opts, otherwise the loader
+        # will pack a newly-generated empty dict as the __pillar__ dunder, and
+        # the fact that we compile the pillar below won't matter as it won't be
+        # packed into any of the modules/functions processed by the loader.
+        # Below, when pillar data is compiled, we will update this dict with
+        # the compiled pillar data.
+        self.opts['pillar'] = {}
 
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
@@ -699,16 +706,26 @@ class SMinion(MinionBase):
         self.functions['sys.reload_modules'] = self.gen_modules
         self.executors = salt.loader.executors(self.opts)
 
-        if self.opts.get('master_type') != 'disable':
-            self.opts['pillar'] = salt.pillar.get_pillar(
-                self.opts,
-                self.opts['grains'],
-                self.opts['id'],
-                self.opts['environment'],
-                pillarenv=self.opts.get('pillarenv'),
-                funcs=self.functions,
-                rend=self.rend,
-            ).compile_pillar()
+        compiled_pillar = salt.pillar.get_pillar(
+            self.opts,
+            self.opts['grains'],
+            self.opts['id'],
+            self.opts['environment'],
+            pillarenv=self.opts.get('pillarenv'),
+            funcs=self.functions,
+            rend=self.rend,
+        ).compile_pillar()
+
+        # Update the existing (empty) pillar dict with the compiled pillar
+        # data. This ensures that the __pillar__ dunder packed into all of the
+        # functions processed by the loader is not empty.
+        try:
+            self.opts['pillar'].update(compiled_pillar)
+        except TypeError:
+            log.warning(
+                'Compiled Pillar data %s is not a dictionary',
+                compiled_pillar
+            )
 
 
 class MasterMinion(object):
