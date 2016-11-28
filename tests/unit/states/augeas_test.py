@@ -84,7 +84,7 @@ class AugeasTestCase(TestCase):
         comt = ('Executing commands in file "/files/etc/services":\n'
                 'ins service-name after service-name[last()]'
                 '\nset service-name[last()] zabbix-agent')
-        self.ret.update({'comment': comt, 'result': None})
+        self.ret.update({'comment': comt, 'result': True})
 
         with patch.dict(augeas.__opts__, {'test': True}):
             self.assertDictEqual(
