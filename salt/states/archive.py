@@ -502,6 +502,7 @@ def extracted(name,
     overwrite
         If archive was already extracted, then setting this to True will
         extract it all over again.
+        **WARNING: This operation will flush clean all the previous content, if exists!**
 
     **Examples**
 
