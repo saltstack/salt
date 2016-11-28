@@ -556,6 +556,7 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
     except IndexError:
         return {'rds': None}
 
+
 def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
                  profile=None):
     '''
