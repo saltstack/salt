@@ -37,7 +37,7 @@ import logging
 from salt.key import get_key
 import salt.crypt
 import salt.utils
-from salt.utils.sanitisers import clean
+from salt.utils.sanitizers import clean
 
 
 __func_alias__ = {
