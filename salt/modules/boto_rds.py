@@ -256,7 +256,7 @@ def create(name, allocated_storage, db_instance_class, engine,
         raise SaltInvocationError('master_username is required')
     if not master_user_password:
         raise SaltInvocationError('master_user_password is required')
-    if availability_zone and MultiAZ:
+    if availability_zone and multi_az:
         raise SaltInvocationError('availability_zone and multi_az are mutually'
                                   ' exclusive arguments.')
     if wait_status:
@@ -529,6 +529,10 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
             return {'results': bool(conn)}
 
         rds = conn.describe_db_instances(DBInstanceIdentifier=name)
+        rds = [
+            i for i in rds.get('DBInstances', [])
+            if i.get('DBInstanceIdentifier') == name
+        ].pop(0)
 
         if rds:
             keys = ('DBInstanceIdentifier', 'DBInstanceClass', 'Engine',
@@ -549,6 +553,8 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
             return {'rds': None}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+    except IndexError:
+        return {'rds': None}
 
 
 def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
