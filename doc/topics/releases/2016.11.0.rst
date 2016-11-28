@@ -24,7 +24,7 @@ commands to be run inside docker containers as well. This makes
 container introspection simple and powerful. See the tutorial on using
 this new feature here:
 
-#TODO: Add link to docker sls tutorial
+See :ref:`Salt in Docker Containers <docker-sls>`.
 
 Advanced Ceph Control
 ---------------------
