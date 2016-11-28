@@ -264,7 +264,7 @@ documentation, but in short:
   <salt.wheel.key>` exposes similar functionality as the ``salt-key`` CLI
   command.
 
-Most clients have variants like synchronous or asyncronous execution as well as
+Most clients have variants like synchronous or asynchronous execution as well as
 others like batch execution. See the :ref:`full list of client interfaces
 <netapi-clients>`.
 
