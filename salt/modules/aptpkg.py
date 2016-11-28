@@ -343,7 +343,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db(cache_valid_time=0, fail_on_error=False):
+def refresh_db(cache_valid_time=0, failhard=False):
     '''
     Updates the APT database to latest packages based upon repositories
 
@@ -361,12 +361,12 @@ def refresh_db(cache_valid_time=0, fail_on_error=False):
         Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
-    fail_on_error
+    failhard
 
         If False, return results of Err lines as ``False`` for the package database that
         encountered the error.
-        If True, raises CommandExecutionError with a list of the package databases that
-        encountered errors.
+        If True, raise an error with a list of the package databases that encountered
+        errors.
 
     CLI Example:
 
@@ -422,7 +422,7 @@ def refresh_db(cache_valid_time=0, fail_on_error=False):
             ret[ident] = False
             error_repos.append(ident)
 
-    if fail_on_error and error_repos:
+    if failhard and error_repos:
         raise CommandExecutionError('Error getting repos: {0}'.format(', '.join(error_repos)))
 
     return ret
