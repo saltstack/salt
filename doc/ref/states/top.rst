@@ -438,7 +438,7 @@ environment, no states from the ``qa`` environment would be applied.
 Scenario 3 - No Environment Specified, :conf_minion:`top_file_merging_strategy` is "same"
 -----------------------------------------------------------------------------------------
 
-.. versionchanged:: Carbon
+.. versionchanged:: 2016.11.0
     In prior versions, "same" did not quite work as described below (see
     here__). This has now been corrected. It was decided that changing
     something like top file handling in a point release had the potential to
