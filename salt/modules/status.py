@@ -26,7 +26,6 @@ import salt.utils
 import salt.utils.event
 from salt.utils.minion import connected_masters as _connected_masters
 from salt.utils.network import host_to_ips as _host_to_ips
-from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
 from salt.exceptions import CommandExecutionError
 
