@@ -16,7 +16,8 @@
 
 import re
 import os.path
-from builtins import str as text
+from salt.ext.six import text_type as text
+
 
 from salt.exceptions import CommandExecutionError
 
