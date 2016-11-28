@@ -1,14 +1,6 @@
-:orphan:
-
 ==============================================
 Salt 2016.11.0 Release Notes - Codename Carbon
 ==============================================
-
-Release Candidate
-=================
-
-See :ref:`Installing/Testing a Salt Release Candidate <release-candidate>` for instructions to install the
-latest release candidate.
 
 New Features
 ============
