@@ -555,6 +555,158 @@ def disabled(name, **kwargs):
     return ret
 
 
+def masked(name, runtime=False):
+    '''
+    .. versionadded:: Nitrogen
+
+    .. note::
+        This state is only available on minions which use systemd_.
+
+    Ensures that the named service is masked (i.e. prevented from being
+    started).
+
+    name
+        Name of the service to mask
+
+    runtime : False
+        By default, this state will manage an indefinite mask for the named
+        service. Set this argument to ``True`` to runtime mask the service.
+
+    .. note::
+        It is possible for a service to have both indefinite and runtime masks
+        set for it. Therefore, this state will manage a runtime or indefinite
+        mask independently of each other. This means that if the service is
+        already indefinitely masked, running this state with ``runtime`` set to
+        ``True`` will _not_ remove the indefinite mask before setting a runtime
+        mask. In these cases, if it is desirable to ensure that the service is
+        runtime masked and not indefinitely masked, pair this state with a
+        :py:func:`service.unmasked <salt.states.service.unmasked>` state, like
+        so:
+
+        .. code-block:: yaml
+
+            mask_runtime_foo:
+              service.masked:
+                - name: foo
+                - runtime: True
+
+            unmask_indefinite_foo:
+              service.unmasked:
+                - name: foo
+                - runtime: False
+
+    .. _systemd: https://freedesktop.org/wiki/Software/systemd/
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    if 'service.masked' not in __salt__:
+        ret['comment'] = 'Service masking not available on this minion'
+        ret['result'] = False
+        return ret
+
+    mask_type = 'runtime masked' if runtime else 'masked'
+    expected_changes = {mask_type: {'old': False, 'new': True}}
+
+    try:
+        if __salt__['service.masked'](name, runtime):
+            ret['comment'] = 'Service {0} is already {1}'.format(
+                name,
+                mask_type,
+            )
+            return ret
+
+        if __opts__['test']:
+            ret['result'] = None
+            ret['changes'] = expected_changes
+            ret['comment'] = 'Service {0} would be {1}'.format(name, mask_type)
+            return ret
+
+        __salt__['service.mask'](name, runtime)
+
+        if __salt__['service.masked'](name, runtime):
+            ret['changes'] = expected_changes
+            ret['comment'] = 'Service {0} was {1}'.format(name, mask_type)
+        else:
+            ret['comment'] = 'Failed to mask service {0}'.format(name)
+        return ret
+
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
+        return ret
+
+
+def unmasked(name, runtime=False):
+    '''
+    .. versionadded:: Nitrogen
+
+    .. note::
+        This state is only available on minions which use systemd_.
+
+    Ensures that the named service is unmasked
+
+    name
+        Name of the service to unmask
+
+    runtime : False
+        By default, this state will manage an indefinite mask for the named
+        service. Set this argument to ``True`` to ensure that the service is
+        runtime masked.
+
+    .. note::
+        It is possible for a service to have both indefinite and runtime masks
+        set for it. Therefore, this state will manage a runtime or indefinite
+        mask independently of each other. This means that if the service is
+        indefinitely masked, running this state with ``runtime`` set to
+        ``True`` will _not_ remove the indefinite mask.
+
+    .. _systemd: https://freedesktop.org/wiki/Software/systemd/
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    if 'service.masked' not in __salt__:
+        ret['comment'] = 'Service masking not available on this minion'
+        ret['result'] = False
+        return ret
+
+    mask_type = 'runtime masked' if runtime else 'masked'
+    action = 'runtime unmasked' if runtime else 'unmasked'
+    expected_changes = {mask_type: {'old': True, 'new': False}}
+
+    try:
+        if not __salt__['service.masked'](name, runtime):
+            ret['comment'] = 'Service {0} was already {1}'.format(name, action)
+            return ret
+
+        if __opts__['test']:
+            ret['result'] = None
+            ret['changes'] = expected_changes
+            ret['comment'] = 'Service {0} would be {1}'.format(name, action)
+            return ret
+
+        __salt__['service.unmask'](name, runtime)
+
+        if not __salt__['service.masked'](name, runtime):
+            ret['changes'] = expected_changes
+            ret['comment'] = 'Service {0} was {1}'.format(name, action)
+        else:
+            ret['comment'] = 'Failed to unmask service {0}'.format(name)
+        return ret
+
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
+        return ret
+
+
 def mod_watch(name,
               sfun=None,
               sig=None,
