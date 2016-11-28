@@ -1517,5 +1517,5 @@ def iphexval(ip):
     a = ip.split('.')
     hexval = ""
     for val in a:
-        hexval = hexval.join(hex(int(val))[2:])
+        hexval = ''.join([hexval, hex(int(val))[2:].zfill(2)])
     return hexval.upper()
