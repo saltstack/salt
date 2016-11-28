@@ -60,6 +60,7 @@ The configuration schema is as follows:
         email: <email_address>
         password: <password>
         username: <username>
+        reauth: <boolean>
 
 For example:
 
@@ -70,6 +71,22 @@ For example:
         email: foo@foo.com
         password: s3cr3t
         username: foo
+
+Reauth is an optional parameter that forces the docker login to reauthorize using
+the credentials passed in the pillar data. Defaults to false.
+
+.. versionadded:: 2016.3.5,2016.11.1
+
+For example:
+
+.. code-block:: yaml
+
+    docker-registries:
+      https://index.docker.io/v1/:
+        email: foo@foo.com
+        password: s3cr3t
+        username: foo
+        reauth: True
 
 Mulitiple registries can be configured. This can be done in one of two ways.
 The first way is to configure each registry under the ``docker-registries``
@@ -1037,7 +1054,8 @@ def _image_wrapper(attr, *args, **kwargs):
                     creds['username'],
                     password=creds['password'],
                     email=creds.get('email'),
-                    registry=registry)
+                    registry=registry,
+                    reauth=creds.get('reauth', False))
         except KeyError:
             raise SaltInvocationError(
                 err.format('Incomplete', ' for registry {0}'.format(registry))
