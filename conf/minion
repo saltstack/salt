@@ -633,6 +633,15 @@
 # "salt-key -f master.pub" on the Salt master.
 #master_finger: ''
 
+# Use TLS/SSL encrypted connection between master and minion.
+# Can be set to a dictionary containing keyword arguments corresponding to Python's
+# 'ssl.wrap_socket' method.
+# Default is None.
+#ssl:
+#    keyfile: <path_to_keyfile>
+#    certfile: <path_to_certfile>
+#    ssl_version: PROTOCOL_TLSv1_2
+
 
 ######         Thread settings        #####
 ###########################################

@@ -107,12 +107,13 @@ to manage the minion's master setting from an execution module. By simply
 changing the algorithm in the module to return a new master ip/fqdn, restart
 the minion and it will connect to the new master.
 
+As of version 2016.11.0 this option can be set to ``disable`` and the minion
+will never attempt to talk to the master. This is useful for running a
+masterless minion daemon.
+
 .. code-block:: yaml
 
     master_type: disable
-
-If you just want to run a masterless minion, this can be set and the minion
-will never attempt to talk to the master.
 
 .. conf_minion:: max_event_size
 
