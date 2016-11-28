@@ -1659,8 +1659,8 @@ class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
                                             SaltfileMixIn)):
 
     description = (
-        'A seamless master of Salt Masters. Scale Salt to thousands of hosts or\n'
-        'across many different networks.'
+        'The Salt Syndic daemon, a special Minion that passes through commands from a\n'
+        'higher Master. Scale Salt to thousands of hosts or across many different networks.'
     )
 
     # ConfigDirMixIn config filename attribute
