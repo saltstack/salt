@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import itertools
 import os
 import re
+import types
 import socket
 import logging
 import platform
@@ -224,6 +225,259 @@ def is_ipv6(ip):
         return ipaddress.ip_address(ip).version == 6
     except ValueError:
         return False
+
+
+def is_ip_filter(ip, options=None):
+    '''
+    Returns a bool telling if the passed IP is a valid IPv4 or IPv6 address.
+    '''
+    return is_ipv4_filter(ip, options=options) or is_ipv6_filter(ip, options=options)
+
+
+def _ip_options_global(ip_obj, version):
+    return not ip_obj.is_private
+
+
+def _ip_options_multicast(ip_obj, version):
+    return ip_obj.is_multicast
+
+
+def _ip_options_loopback(ip_obj, version):
+    return ip_obj.is_loopback
+
+
+def _ip_options_link_local(ip_obj, version):
+    return ip_obj.is_link_local
+
+
+def _ip_options_private(ip_obj, version):
+    return ip_obj.is_private
+
+
+def _ip_options_reserved(ip_obj, version):
+    return ip_obj.is_reserved
+
+
+def _ip_options_site_local(ip_obj, version):
+    if version == 6:
+        return ip_obj.is_site_local
+    return False
+
+
+def _ip_options_unspecified(ip_obj, version):
+    return ip_obj.is_unspecified
+
+
+def _ip_options(ip_obj, version, options=None):
+
+    # will process and IP options
+    options_fun_map = {
+        'global': _ip_options_global,
+        'link-local': _ip_options_link_local,
+        'linklocal': _ip_options_link_local,
+        'll': _ip_options_link_local,
+        'link_local': _ip_options_link_local,
+        'loopback': _ip_options_loopback,
+        'lo': _ip_options_loopback,
+        'multicast': _ip_options_multicast,
+        'private': _ip_options_private,
+        'public': _ip_options_global,
+        'reserved': _ip_options_reserved,
+        'site-local': _ip_options_site_local,
+        'sl': _ip_options_site_local,
+        'site_local': _ip_options_site_local,
+        'unspecified': _ip_options_unspecified
+    }
+
+    if not options:
+        return str(ip_obj)  # IP version already checked
+
+    options_list = [option.strip() for option in options.split(',')]
+
+    for option, fun in options_fun_map.items():
+        if option in options_list:
+            fun_res = fun(ip_obj, version)
+            if not fun_res:
+                return None
+                # stop at first failed test
+            # else continue
+    return str(ip_obj)
+
+
+def _is_ipv(ip, version, options=None):
+
+    if not version:
+        version = 4
+
+    if version not in (4, 6):
+        return None
+
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+    except ValueError:
+        # maybe it is an IP network
+        try:
+            ip_obj = ipaddress.ip_interface(ip)
+        except ValueError:
+            # nope, still not :(
+            return None
+
+    if not ip_obj.version == version:
+        return None
+
+    # has the right version, let's move on
+    return _ip_options(ip_obj, version, options=options)
+
+
+def is_ipv4_filter(ip, options=None):
+    '''
+    Returns a bool telling if the value passed to it was a valid IPv4 address.
+
+    ip
+        The IP address.
+
+    net: False
+        Consider IP addresses followed by netmask.
+
+    options
+        CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
+    '''
+    return _is_ipv(ip, 4, options=options)
+
+
+def is_ipv6_filter(ip, options=None):
+    '''
+    Returns a bool telling if the value passed to it was a valid IPv6 address.
+
+    ip
+        The IP address.
+
+    net: False
+        Consider IP addresses followed by netmask.
+
+    options
+        CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
+    '''
+    return _is_ipv(ip, 6, options=options)
+
+
+def _ipv_filter(value, version, options=None):
+    fun = None
+    if version == 4:
+        fun = is_ipv4_filter
+    elif version == 6:
+        fun = is_ipv6_filter
+
+    if not fun:  # indeed, that's not fun...
+        return
+
+    if isinstance(value, (six.string_types, six.text_type, six.binary_type)):
+        return fun(value, options=options)  # calls is_ipv4 or is_ipv6 for `value`
+    elif isinstance(value, (list, tuple, types.GeneratorType)):
+        # calls is_ipv4 or is_ipv6 for each element in the list
+        # os it filters and returns only those elements having the desired IP version
+        return [
+            fun(addr, options=options)
+            for addr in value
+            if fun(addr, options=options) is not None
+        ]
+    return None
+
+
+def ipv4(value, options=None):
+    '''
+    Filters a list and returns IPv4 values only.
+    '''
+    return _ipv_filter(value, 4, options=options)
+
+
+def ipv6(value, options=None):
+    '''
+    Filters a list and returns IPv6 values only.
+    '''
+    return _ipv_filter(value, 6, options=options)
+
+
+def ipaddr(value, options=None):
+    '''
+    Filters and returns only valid IP objects.
+    '''
+    ipv4_obj = ipv4(value, options=options)
+    ipv6_obj = ipv6(value, options=options)
+    if ipv4_obj is None or ipv6_obj is None:
+        # an IP address can be either IPv4 either IPv6
+        # therefofe if the value passed as arg is not a list, at least one of the calls above will return None
+        # if one of them is none, means that we should return only one of them
+        return ipv4_obj or ipv6_obj  # one of them
+    else:
+        return ipv4_obj + ipv6_obj  # extend lists
+
+
+def _filter_ipaddr(value, options, version=None):
+    ipaddr_filter_out = None
+    if version:
+        if version == 4:
+            ipaddr_filter_out = ipv4(value, options)
+        elif version == 6:
+            ipaddr_filter_out = ipv6(value, options)
+    else:
+        ipaddr_filter_out = ipaddr(value, options)
+    if not ipaddr_filter_out:
+        return
+    if not isinstance(ipaddr_filter_out, (list, tuple, types.GeneratorType)):
+        ipaddr_filter_out = [ipaddr_filter_out]
+    return ipaddr_filter_out
+
+
+def ip_host(value, options=None, version=None):
+    '''
+    Returns the interfaces IP address, e.g.: 192.168.0.1/28.
+    '''
+    ipaddr_filter_out = _filter_ipaddr(value, options=options, version=version)
+    if not ipaddr_filter_out:
+        return
+    return [ipaddress.ip_interface(ip_a) for ip_a in ipaddr_filter_out]
+
+
+def _network_hosts(ip_addr_entry):
+    return [
+        str(host)
+        for host in ipaddress.ip_network(ip_addr_entry, strict=False).hosts()
+    ]
+
+
+def network_hosts(value, options=None, version=None):
+    '''
+    Return the list of hosts within a network.
+    '''
+    ipaddr_filter_out = _filter_ipaddr(value, options=options, version=version)
+    if not ipaddr_filter_out:
+        return
+    if not isinstance(value, (list, tuple, types.GeneratorType)):
+        return _network_hosts(ipaddr_filter_out[0])
+    return [
+        _network_hosts(ip_a)
+        for ip_a in ipaddr_filter_out
+    ]
+
+
+def _network_size(ip_addr_entry):
+    return ipaddress.ip_network(ip_addr_entry, strict=False).num_addresses
+
+
+def network_size(value, options=None, version=None):
+    '''
+    Get the size of a network.
+    '''
+    ipaddr_filter_out = _filter_ipaddr(value, options=options, version=version)
+    if not ipaddr_filter_out:
+        return
+    if not isinstance(value, (list, tuple, types.GeneratorType)):
+        return _network_size(ipaddr_filter_out[0])
+    return [
+        _network_size(ip_a)
+        for ip_a in ipaddr_filter_out
+    ]
 
 
 def natural_ipv4_netmask(ip, fmt='prefixlen'):
