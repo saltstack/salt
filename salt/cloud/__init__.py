@@ -223,14 +223,15 @@ class CloudClient(object):
         profile = opts.get('profile', None)
         # filter other profiles if one is specified
         if profile:
-            for _profile in [a for a in opts.get('profiles', {})]:
+            tmp_profiles = opts.get('profiles', {}).copy()
+            for _profile in [a for a in tmp_profiles]:
                 if not _profile == profile:
-                    opts['profiles'].pop(_profile)
+                    tmp_profiles.pop(_profile)
             # if profile is specified and we have enough info about providers
             # also filter them to speedup methods like
             # __filter_non_working_providers
             providers = [a.get('provider', '').split(':')[0]
-                         for a in six.itervalues(opts['profiles'])
+                         for a in six.itervalues(tmp_profiles)
                          if a.get('provider', '')]
             if providers:
                 _providers = opts.get('providers', {})
