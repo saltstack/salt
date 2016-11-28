@@ -179,8 +179,8 @@ def _get_virtual():
         if HAS_APT:
             try:
                 apt_cache = apt.cache.Cache()
-            except SystemError as se:
-                msg = 'Failed to get virtual package information ({0})'.format(se)
+            except SystemError as syserr:
+                msg = 'Failed to get virtual package information ({0})'.format(syserr)
                 log.error(msg)
                 raise CommandExecutionError(msg)
             pkgs = getattr(apt_cache._cache, 'packages', [])
@@ -343,7 +343,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db(cache_valid_time=0):
+def refresh_db(cache_valid_time=0, failhard=False):
     '''
     Updates the APT database to latest packages based upon repositories
 
@@ -361,6 +361,13 @@ def refresh_db(cache_valid_time=0):
         Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
+    failhard
+
+        If False, return results of Err lines as ``False`` for the package database that
+        encountered the error.
+        If True, raise an error with a list of the package databases that encountered
+        errors.
+
     CLI Example:
 
     .. code-block:: bash
@@ -369,6 +376,8 @@ def refresh_db(cache_valid_time=0):
     '''
     APT_LISTS_PATH = "/var/lib/apt/lists"
     ret = {}
+    error_repos = list()
+
     if cache_valid_time:
         try:
             latest_update = os.stat(APT_LISTS_PATH).st_mtime
@@ -409,6 +418,13 @@ def refresh_db(cache_valid_time=0):
             ret[ident] = False
         elif 'Hit' in cols[0]:
             ret[ident] = None
+        elif 'Err' in cols[0]:
+            ret[ident] = False
+            error_repos.append(ident)
+
+    if failhard and error_repos:
+        raise CommandExecutionError('Error getting repos: {0}'.format(', '.join(error_repos)))
+
     return ret
 
 

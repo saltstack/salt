@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import copy
 
 # Import Salt Libs
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules import aptpkg
 
 # Import Salt Testing Libs
@@ -100,6 +100,19 @@ Get:4 http://security.ubuntu.com trusty-security/main i386 Packages [507 kB]
 Hit http://security.ubuntu.com trusty-security/main Translation-en
 Fetched 1240 kB in 10s (124 kB/s)
 Reading package lists...
+'''
+
+APT_Q_UPDATE_ERROR = '''
+Err http://security.ubuntu.com trusty InRelease
+
+Err http://security.ubuntu.com trusty Release.gpg
+Unable to connect to security.ubuntu.com:http:
+Reading package lists...
+W: Failed to fetch http://security.ubuntu.com/ubuntu/dists/trusty/InRelease
+
+W: Failed to fetch http://security.ubuntu.com/ubuntu/dists/trusty/Release.gpg  Unable to connect to security.ubuntu.com:http:
+
+W: Some index files failed to download. They have been ignored, or old ones used instead.
 '''
 
 
@@ -240,6 +253,18 @@ class AptPkgTestCase(TestCase):
         })
         with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
             self.assertEqual(aptpkg.refresh_db(), refresh_db)
+
+    def test_refresh_db_failed(self):
+        '''
+        Test - Attempt to update the APT database using unreachable repositories.
+        '''
+        kwargs = {'failhard': True}
+        mock = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': APT_Q_UPDATE_ERROR
+        })
+        with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(CommandExecutionError, aptpkg.refresh_db, **kwargs)
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error
