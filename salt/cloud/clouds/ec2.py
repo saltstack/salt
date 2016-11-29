@@ -1916,7 +1916,7 @@ def request_instance(vm_=None, call=None):
             params[termination_key] = str(set_del_root_vol_on_destroy).lower()
 
             # Use default volume type if not specified
-            if 'Ebs.VolumeType' not in ex_blockdevicemappings[dev_index]:
+            if ex_blockdevicemappings and 'Ebs.VolumeType' not in ex_blockdevicemappings[dev_index]:
                 type_key = '{0}BlockDeviceMapping.{1}.Ebs.VolumeType'.format(spot_prefix, dev_index)
                 params[type_key] = rd_type
 
