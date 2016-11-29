@@ -136,9 +136,11 @@ def _find_pg_binary(util):
     if not pg_bin_dir:  # Fallback to incorrectly-documented setting
         pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
         if pg_bin_dir:
-            log.warning(
-                'Using postgres.bins_dir is not supported. '
-                'Replace this with postgres.pg_bin')
+            salt.utils.warn_until(
+                'Oxygen',
+                'Using \'postgres.bins_dir\' is not officially supported and '
+                'only exists as a workaround. Please replace this in your '
+                'configuration with \'postgres.pg_bin\'.')
 
     util_bin = salt.utils.which(util)
     if not util_bin:
