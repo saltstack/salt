@@ -25,12 +25,11 @@
 # processname: /usr/bin/salt-minion
 
 # Allow these to be overridden for tests
-: ${SALTMINION_BINDIR:=/usr/bin}
-: ${SALTMINION_SYSCONFDIR:=/etc}
-: ${SALTMINION_PYTHON:=python}    # Python must be 2.6 or newer
+: "${SALTMINION_BINDIR:=/usr/bin}"
+: "${SALTMINION_SYSCONFDIR:=/etc}"
 
 # Default values (can be overridden in settings file)
-: ${USER:=$(id -nu)}
+: "${USER:=$(id -nu)}"
 SALTMINION="${SALTMINION_BINDIR}/salt-minion"
 SALTCALL="${SALTMINION_BINDIR}/salt-call"
 # SALTMINION_CONFIGS are newline-separated entries of: MINION_USER CONFIG_DIR
@@ -42,7 +41,6 @@ SALTMINION_TIMEOUT=30
 SALTMINION_TICK=1
 
 SERVICE="salt-minion"
-PROCESS="salt-minion"
 
 # Read in settings file
 if [ -f "${SALTMINION_SYSCONFDIR}/default/salt" ]; then
@@ -82,7 +80,7 @@ _is_running() {
 _get_salt_config_value() {
     _su_cmd \
         "$MINION_USER" \
-        "\"$SALTMINION_PYTHON\" \
+        "\
             \"$SALTCALL\" \
             -c \"$CONFIG_DIR\" \
             --no-color \
@@ -127,7 +125,7 @@ start() {
 
     _su_cmd \
         "$MINION_USER" \
-        "\"$SALTMINION_PYTHON\" \
+        "\
             \"$SALTMINION\" \
             -c \"$CONFIG_DIR\" \
             -d $SALTMINION_ARGS \
