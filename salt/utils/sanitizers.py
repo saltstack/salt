@@ -14,11 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Import Python libs
+from __future__ import absolute_import
 import re
 import os.path
+
+# Import Salt libs
 from salt.ext.six import text_type as text
-
-
 from salt.exceptions import CommandExecutionError
 
 
