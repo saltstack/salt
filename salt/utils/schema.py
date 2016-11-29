@@ -1548,17 +1548,28 @@ class DefinitionsSchema(Schema):
     def serialize(cls, id_=None):
         # Get the initial serialization
         serialized = super(DefinitionsSchema, cls).serialize(id_)
-
+        complex_items = []
         # Augment the serializations with the definitions of all complex items
-        complex_items = [config for config in six.itervalues(cls._items)
-                         if isinstance(config, ComplexSchemaItem)]
-        aux_items = complex_items[:]
+        aux_items = cls._items.values()
         while aux_items:
             item = aux_items.pop(0)
-            # Recursively add complex attributes
-            new_items = item.get_complex_attrs()
-            complex_items.extend(new_items)
-            aux_items.extend(new_items)
+            # Add complex attributes
+            if isinstance(item, ComplexSchemaItem):
+                complex_items.append(item)
+                aux_items.extend(item.get_complex_attrs())
+
+            # Handle container items
+            if isinstance(item, OneOfItem):
+                aux_items.extend(item.items)
+            elif isinstance(item, ArrayItem):
+                aux_items.append(item.items)
+            elif isinstance(item, DictItem):
+                if item.properties:
+                    aux_items.extend(item.properties.values())
+                if item.additional_properties and \
+                   isinstance(item.additional_properties, SchemaItem):
+
+                    aux_items.append(item.additional_properties)
 
         definitions = OrderedDict()
         for config in complex_items:
