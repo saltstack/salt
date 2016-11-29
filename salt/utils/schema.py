@@ -1457,32 +1457,38 @@ class ComplexSchemaItem(BaseSchemaItem):
     .. versionadded:: 2016.11.0
 
     Complex Schema Item
-
-    This item can contain other schema items as attributes; the names of all
-    attributes need to be included in the _``_complex_attributes`` attribute
     '''
 
     # This attribute is populated by the metaclass, but pylint fails to see it
     # and assumes it's not an iterable
     _attributes = []
-    _complex_attributes = []
     _definition_name = None
 
-    def __init__(self, definition_name=None):
-        super(ComplexSchemaItem, self).__init__()
+    def __init__(self, definition_name=None, required=None):
+        super(ComplexSchemaItem, self).__init__(required=required)
         self.__type__ = 'object'
         self._definition_name = definition_name if definition_name else \
                 self.__class__.__name__
-        if self._complex_attributes:
-            for complex_attr in self._complex_attributes:
-                if complex_attr not in self._attributes:
-                    self._attributes.append(complex_attr)
+        # Schema attributes might have been added as class attributes so we
+        # and they must be added to the _attributes attr
+        self._add_missing_schema_attributes()
+
+    def _add_missing_schema_attributes(self):
+        '''
+        Adds any missed schema attributes to the _attributes list
+
+        The attributes can be class attributes and they won't be
+        included in the _attributes list automatically
+        '''
+        for attr in [attr for attr in dir(self) if not attr.startswith('__')]:
+            attr_val = getattr(self, attr)
+            if isinstance(getattr(self, attr), SchemaItem) and \
+               attr not in self._attributes:
+
+                self._attributes.append(attr)
 
     @property
     def definition_name(self):
-        '''
-        Definition name property
-        '''
         return self._definition_name
 
     def serialize(self):
