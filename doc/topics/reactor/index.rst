@@ -376,6 +376,13 @@ Use the ``expr_form`` argument to specify a matcher:
         - arg:
           - rm -rf /tmp/*
 
+.. note::
+    An easy mistake to make here is to use ``tgt_type`` instead of
+    ``expr_form``, since the job cache and events all refer to the targeting
+    method as ``tgt_type``. As of the Nitrogen release of Salt, ``expr_form``
+    will be deprecated in favor of using ``tgt_type``, to help with this
+    confusion.
+
 Any other parameters in the :py:meth:`LocalClient().cmd()
 <salt.client.LocalClient.cmd>` method can be specified as well.
 
