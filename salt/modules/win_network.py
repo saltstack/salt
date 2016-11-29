@@ -15,8 +15,8 @@ import salt.utils.network
 import salt.utils.validate.net
 from salt.modules.network import (wol, get_hostname, interface, interface_ip,
                                   subnets6, ip_in_subnet, convert_cidr,
-                                  calc_net, get_fqdn, is_private, is_loopback,
-                                  reverse_ip, ifacestartswith, iphexval)
+                                  calc_net, get_fqdn, ifacestartswith,
+                                  iphexval)
 from salt.utils import namespaced_function as _namespaced_function
 
 try:
@@ -26,7 +26,7 @@ except ImportError:
     HAS_DEPENDENCIES = False
 
 # Import 3rd party libraries
-import salt.ext.six as six  # pylint: disable=import-error,no-name-in-module
+import salt.ext.six as six  # pylint: disable=W0611
 try:
     import wmi  # pylint: disable=W0611
 except ImportError:
@@ -47,14 +47,14 @@ def __virtual__():
         return False, "Module win_network: Missing dependencies"
 
     global wol, get_hostname, interface, interface_ip, subnets6, ip_in_subnet
-    global convert_cidr, calc_net, get_fqdn, is_private, is_loopback
-    global reverse_ip, ifacestartswith, iphexval
+    global convert_cidr, calc_net, get_fqdn, reverse_ip, ifacestartswith
+    global iphexval
     wol = _namespaced_function(wol, globals())
     get_hostname = _namespaced_function(get_hostname, globals())
     interface = _namespaced_function(interface, globals())
     interface_ip = _namespaced_function(interface_ip, globals())
     subnets6 = _namespaced_function(subnets6, globals())
-    ip_in_subnet= _namespaced_function(ip_in_subnet, globals())
+    ip_in_subnet = _namespaced_function(ip_in_subnet, globals())
     convert_cidr = _namespaced_function(convert_cidr, globals())
     calc_net = _namespaced_function(calc_net, globals())
     get_fqdn = _namespaced_function(get_fqdn, globals())
