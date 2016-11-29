@@ -783,7 +783,7 @@ this one, include a ``mod_run_check_cmd`` in the states file for the state.
 Retrying States
 ===============
 
-.. versionadded:: Carbon
+.. versionadded:: Nitrogen
 
 The retry option in a state allows it to be executed multiple times until a desired
 result is obtained or the maximum number of attempts have been made.
