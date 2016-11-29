@@ -37,6 +37,8 @@ import logging
 from salt.key import get_key
 import salt.crypt
 import salt.utils
+from salt.utils.sanitizers import clean
+
 
 __func_alias__ = {
     'list_': 'list',
@@ -318,6 +320,8 @@ def gen(id_=None, keysize=2048):
     '''
     if id_ is None:
         id_ = hashlib.sha512(os.urandom(32)).hexdigest()
+    else:
+        id_ = clean.filename(id_)
     ret = {'priv': '',
            'pub': ''}
     priv = salt.crypt.gen_keys(__opts__['pki_dir'], id_, keysize)
@@ -371,6 +375,7 @@ def gen_accept(id_, keysize=2048, force=False):
         >>> wheel.cmd('key.list', ['accepted'])
         {'minions': ['foo', 'minion1', 'minion2', 'minion3']}
     '''
+    id_ = clean.id(id_)
     ret = gen(id_, keysize)
     acc_path = os.path.join(__opts__['pki_dir'], 'minions', id_)
     if os.path.isfile(acc_path) and not force:
