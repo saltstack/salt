@@ -53,16 +53,18 @@ the :doc:`salt.modules.nxos</ref/modules/all/salt.modules.nxos>` execution modul
     `multiprocessing: False`
 
 '''
+
+# Import Python libs
 from __future__ import absolute_import
+import logging
 import multiprocessing
 import re
 
-import salt.utils
+# Import Salt libs
 from salt.utils.pycrypto import gen_hash, secure_password
 from salt.utils.vt_helper import SSHConnection
 from salt.utils.vt import TerminalException
 
-import logging
 log = logging.getLogger(__file__)
 
 __proxyenabled__ = ['nxos']
