@@ -245,6 +245,8 @@ def dump(device, args=None):
             elif line.startswith('Group') and not line.startswith('Group descriptor size'):
                 mode = 'blocks'
             else:
+                if len(comps) < 2:
+                    continue
                 ret['attributes'][comps[0]] = comps[1].strip()
 
         if mode == 'blocks':
