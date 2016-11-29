@@ -298,8 +298,13 @@ class AptPkgTestCase(TestCase):
         '''
         Test - Remove packages not required by another package.
         '''
-        mock = MagicMock(return_value=AUTOREMOVE)
-        with patch.dict(aptpkg.__salt__, {'cmd.run': mock}):
+        patch_kwargs = {
+            '__salt__': {
+                'config.get': MagicMock(return_value=True),
+                'cmd.run': MagicMock(return_value=AUTOREMOVE)
+            }
+        }
+        with patch.multiple(aptpkg, **patch_kwargs):
             self.assertEqual(aptpkg.autoremove(), dict())
             self.assertEqual(aptpkg.autoremove(purge=True), dict())
             self.assertEqual(aptpkg.autoremove(list_only=True), list())
@@ -327,11 +332,17 @@ class AptPkgTestCase(TestCase):
         '''
         Test - Upgrades all packages.
         '''
-        mock = MagicMock(return_value={
+        mock_cmd = MagicMock(return_value={
             'retcode': 0,
             'stdout': UPGRADE
         })
-        with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
+        patch_kwargs = {
+            '__salt__': {
+                'config.get': MagicMock(return_value=True),
+                'cmd.run_all': mock_cmd
+            }
+        }
+        with patch.multiple(aptpkg, **patch_kwargs):
             self.assertEqual(aptpkg.upgrade(), dict())
 
 
