@@ -236,25 +236,6 @@ def to_bool(val):
     return False
 
 
-def default(var, value):
-    '''
-    Defaults to a specific value when the variable is not defined.
-
-    .. code-block:: jinja
-
-        {{ not_defined_var | default('stuff') }}
-
-    will be rendered as:
-
-    .. code-block:: text
-
-        stuff
-    '''
-    if var is None:
-        return value
-    return var
-
-
 def quote(txt):
     '''
     Wraps a text around quotes.
@@ -271,24 +252,6 @@ def quote(txt):
         'my_text'
     '''
     return pipes.quote(txt)
-
-
-def regex_escape(txt):
-    '''
-    Escape special characters.
-
-    .. code-block:: jinja
-
-        {% set my_text = 'my \ string is [ escaped ]' %}
-        {{ my_text | escape }}
-
-    will be rendered as:
-
-    .. code-block:: text
-
-        my\ \\\ string\ is\ \[\ escaped\ \]
-    '''
-    return re.escape(txt)
 
 
 def regex_search(txt, rgx, ignorecase=False, multiline=False):
@@ -423,27 +386,6 @@ def lst_max(lst):
     return float(lst)
 
 
-def lst_sum(lst):
-    '''
-    Returns the sum of a list.
-
-    .. code-block:: jinja
-
-        {% my_list = [1,2,3,4] -%}
-        {{ set my_list | sum }}
-
-    will be rendered as:
-
-    .. code-block:: text
-
-        10
-    '''
-
-    if not isinstance(lst, collections.Hashable):
-        return float(sum(lst))
-    return float(lst)
-
-
 def lst_avg(lst):
     '''
     Returns the average value of a list.
@@ -542,26 +484,6 @@ def symmetric_difference(lst1, lst2):
     if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
         return set(lst1) ^ set(lst2)
     return unique([ele for ele in union(lst1, lst2) if ele not in intersect(lst1, lst2)])
-
-
-def join_(lst, separator=' '):
-    '''
-    Concatenates a list into a string given a separator.
-
-    .. code-block:: jinja
-
-        {% my_list = [1,2,3,4] -%}
-        {{ set my_list | join('+') }}
-
-    will be rendered as:
-
-    .. code-block:: text
-
-        1+2+3+4
-    '''
-    if not isinstance(lst, collections.Hashable):
-        return separator.join([str(ele) for ele in lst])
-    return str(lst)
 
 
 @jinja2.contextfunction

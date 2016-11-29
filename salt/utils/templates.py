@@ -326,22 +326,23 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.filters['sequence'] = salt.utils.jinja.ensure_sequence_filter
     jinja_env.filters['http_query'] = salt.utils.http.query
     jinja_env.filters['to_bool'] = salt.utils.jinja.to_bool
-    jinja_env.filters['default'] = salt.utils.jinja.default
     jinja_env.filters['quote'] = salt.utils.jinja.quote
-    jinja_env.filters['escape'] = salt.utils.jinja.regex_escape
     jinja_env.filters['regex_search'] = salt.utils.jinja.regex_search
     jinja_env.filters['regex_replace'] = salt.utils.jinja.regex_replace
     jinja_env.filters['uuid'] = salt.utils.jinja.uuid_
-    jinja_env.filters['unique'] = salt.utils.jinja.unique
     jinja_env.filters['min'] = salt.utils.jinja.lst_min
     jinja_env.filters['max'] = salt.utils.jinja.lst_max
-    jinja_env.filters['sum'] = salt.utils.jinja.lst_sum
     jinja_env.filters['avg'] = salt.utils.jinja.lst_avg
     jinja_env.filters['union'] = salt.utils.jinja.union
     jinja_env.filters['intersect'] = salt.utils.jinja.intersect
     jinja_env.filters['difference'] = salt.utils.jinja.difference
     jinja_env.filters['symmetric_difference'] = salt.utils.jinja.symmetric_difference
-    jinja_env.filters['join'] = salt.utils.jinja.join_
+    jinja_env.filters['md5'] = salt.utils.hashutils.md5_digest
+    jinja_env.filters['sha256'] = salt.utils.hashutils.sha256_digest
+    jinja_env.filters['sha512'] = salt.utils.hashutils.sha512_digest
+    jinja_env.filters['hmac'] = salt.utils.hashutils.hmac_signature
+    jinja_env.filters['base64_encode'] = salt.utils.hashutils.base64_b64encode
+    jinja_env.filters['base64_decode'] = salt.utils.hashutils.base64_b64decode
     jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
     jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
     jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
@@ -355,6 +356,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.filters['network_hosts'] = salt.utils.network.network_hosts  # return the hosts within a network
     jinja_env.filters['network_size'] = salt.utils.network.network_size  # return the network size
 
+    # globals
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = salt.utils.jinja.show_full_context
 
