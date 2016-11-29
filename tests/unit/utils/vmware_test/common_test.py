@@ -181,6 +181,40 @@ class WaitForTaskTestCase(TestCase):
                                             'task_type')
         self.assertEqual(excinfo.exception.strerror, 'SystemError msg')
 
+    def test_info_error_invalid_argument_no_fault_message(self):
+        exc = vmodl.fault.InvalidArgument()
+        exc.faultMessage = None
+        exc.msg = 'InvalidArgumentFault msg'
+        mock_task = MagicMock()
+        prop_mock_state = PropertyMock(return_value='error')
+        prop_mock_error = PropertyMock(side_effect=exc)
+        type(mock_task.info).state = prop_mock_state
+        type(mock_task.info).error = prop_mock_error
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror,
+                         'InvalidArgumentFault msg')
+
+    def test_info_error_invalid_argument_with_fault_message(self):
+        exc = vmodl.fault.InvalidArgument()
+        fault_message = vim.LocalizableMessage()
+        fault_message.message = 'LocalFault msg'
+        exc.faultMessage = [fault_message]
+        exc.msg = 'InvalidArgumentFault msg'
+        mock_task = MagicMock()
+        prop_mock_state = PropertyMock(return_value='error')
+        prop_mock_error = PropertyMock(side_effect=exc)
+        type(mock_task.info).state = prop_mock_state
+        type(mock_task.info).error = prop_mock_error
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror,
+                         'InvalidArgumentFault msg (LocalFault msg)')
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
