@@ -115,7 +115,7 @@ def __virtual__():
     '''
     Only load this module if the psql and initdb bin exist
     '''
-    utils = ['psql']
+    utils = ['psql', 'initdb']
     if not HAS_CSV:
         return False
     for util in utils:
