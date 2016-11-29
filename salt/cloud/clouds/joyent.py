@@ -363,7 +363,7 @@ def create_node(**kwargs):
 
     if tag is not None:
         for key, value in tag.iteritems():
-          create_data['tag.{0}'.format(key)] = value
+            create_data['tag.{0}'.format(key)] = value
 
     if firewall_enabled is not None:
         create_data['firewall_enabled'] = firewall_enabled
@@ -1029,6 +1029,9 @@ def query(action=None,
         'user', get_configured_provider(), __opts__, search_global=False
     )
 
+    if not user:
+        log.error('username is required for Joyent API requests. Please set one in your provider configuration')
+
     password = config.get_cloud_config_value(
         'password', get_configured_provider(), __opts__,
         search_global=False
@@ -1044,10 +1047,16 @@ def query(action=None,
         search_global=False, default=True
     )
 
+    if not ssh_keyfile:
+        log.error('ssh_keyfile is required for Joyent API requests.  Please set one in your provider configuration')
+
     ssh_keyname = config.get_cloud_config_value(
         'keyname', get_configured_provider(), __opts__,
         search_global=False, default=True
     )
+
+    if not ssh_keyname:
+        log.error('ssh_keyname is required for Joyent API requests.  Please set one in your provider configuration')
 
     if not location:
         location = get_location()
@@ -1066,6 +1075,9 @@ def query(action=None,
         path += '/{0}'.format(command)
 
     log.debug('User: \'{0}\' on PATH: {1}'.format(user, path))
+
+    if (not user) or (not ssh_keyfile) or (not ssh_kename) or (not location):
+        return None
 
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%a, %d %b %Y %H:%M:%S %Z').strip()
@@ -1123,24 +1135,4 @@ def query(action=None,
 
     return [result['status'], return_content]
 
-
-def list_networks(call=None):
-    '''
-    List avaiable Joyent Networks
-    '''
-    if call == 'function':
-        # Technically this function may be called other ways too, but it
-        # definitely cannot be called with --function.
-        raise SaltCloudSystemExit(
-            'The query_instance action must be called with -a or --action.'
-        )
-
-    try:
-        ret = query(command='/my/networks', method='GET')
-        if ret[0] in VALID_RESPONSE_CODES:
-            return ret[1]
-        else:
-            log.error('Invalid response when listing Joyent networks: {0}'.format(string(ret)))
-    except Exception as exc:
-        log.error('Exception when listing Joyent networks: {0}'.format(exc))
 
