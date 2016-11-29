@@ -174,7 +174,7 @@ to add them to the pool of load balanced servers.
 
     <...file contents snipped...>
 
-    {% for server, addrs in salt['mine.get']('roles:web', 'network.ip_addrs', expr_form='grain') | dictsort() %}
+    {% for server, addrs in salt['mine.get']('roles:web', 'network.ip_addrs', tgt_type='grain') | dictsort() %}
     server {{ server }} {{ addrs[0] }}:80 check
     {% endfor %}
 

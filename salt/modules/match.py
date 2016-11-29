@@ -306,7 +306,10 @@ def glob(tgt, minion_id=None):
         return False
 
 
-def filter_by(lookup, expr_form='compound', minion_id=None):
+def filter_by(lookup,
+              tgt_type='compound',
+              minion_id=None,
+              expr_form=None):
     '''
     Return the first match in a dictionary of target patterns
 
@@ -331,12 +334,23 @@ def filter_by(lookup, expr_form='compound', minion_id=None):
         # Make the filtered data available to Pillar:
         roles: {{ roles | yaml() }}
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
     expr_funcs = dict(inspect.getmembers(sys.modules[__name__],
         predicate=inspect.isfunction))
 
     for key in lookup:
         params = (key, minion_id) if minion_id else (key, )
-        if expr_funcs[expr_form](*params):
+        if expr_funcs[tgt_type](*params):
             return lookup[key]
 
     return None

@@ -60,11 +60,10 @@ def _fire_args(tag_data):
         )
 
 
-def state(
-        name,
+def state(name,
         tgt,
         ssh=False,
-        tgt_type=None,
+        tgt_type='glob',
         expr_form=None,
         ret='',
         highstate=None,
@@ -95,8 +94,12 @@ def state(
         Masterless support: When running on a masterless minion, the ``tgt``
         is ignored and will always be the local minion.
 
-    tgt_type | expr_form
-        The target type to resolve, defaults to glob
+    tgt_type
+        The target type to resolve, defaults to ``glob``
+
+    expr_form
+        .. deprecated:: Nitrogen
+            Use tgt_type instead
 
     ret
         Optionally set a single or a list of returners to use
@@ -195,18 +198,18 @@ def state(
         state_ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
         return state_ret
 
-    if expr_form and tgt_type:
-        state_ret.setdefault('warnings', []).append(
-            'Please only use \'tgt_type\' or \'expr_form\' not both. '
-            'Preferring \'tgt_type\' over \'expr_form\''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
         )
-        expr_form = None
-    elif expr_form and not tgt_type:
         tgt_type = expr_form
-    elif not tgt_type and not expr_form:
-        tgt_type = 'glob'
 
-    cmd_kw['expr_form'] = tgt_type
+    cmd_kw['tgt_type'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
     if highstate:
@@ -351,7 +354,7 @@ def function(
         name,
         tgt,
         ssh=False,
-        tgt_type=None,
+        tgt_type='glob',
         expr_form=None,
         ret='',
         expect_minions=False,
@@ -370,8 +373,12 @@ def function(
     tgt
         The target specification, aka '*' for all minions
 
-    tgt_type | expr_form
-        The target type, defaults to glob
+    tgt_type
+        The target type, defaults to ``glob``
+
+    expr_form
+        .. deprecated:: Nitrogen
+            Use tgt_type instead
 
     arg
         The list of arguments to pass into the function
@@ -409,21 +416,21 @@ def function(
 
     cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
 
-    if expr_form and tgt_type:
-        func_ret['warnings'] = [
-            'Please only use \'tgt_type\' or \'expr_form\' not both. '
-            'Preferring \'tgt_type\' over \'expr_form\''
-        ]
-        expr_form = None
-    elif expr_form and not tgt_type:
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
         tgt_type = expr_form
-    elif not tgt_type and not expr_form:
-        tgt_type = 'glob'
 
     if batch is not None:
         cmd_kw['batch'] = str(batch)
 
-    cmd_kw['expr_form'] = tgt_type
+    cmd_kw['tgt_type'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
     cmd_kw['_cmd_meta'] = True

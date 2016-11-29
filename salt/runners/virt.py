@@ -68,7 +68,7 @@ def query(host=None, quiet=False):
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
         for info in client.cmd_iter('virtual:physical',
-                                    'virt.full_info', expr_form='grain'):
+                                    'virt.full_info', tgt_type='grain'):
             if not info:
                 continue
             if not isinstance(info, dict):
@@ -105,7 +105,7 @@ def list(host=None, quiet=False, hyper=None):  # pylint: disable=redefined-built
     ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
     for info in client.cmd_iter('virtual:physical',
-                                'virt.vm_info', expr_form='grain'):
+                                'virt.vm_info', tgt_type='grain'):
         if not info:
             continue
         if not isinstance(info, dict):

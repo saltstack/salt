@@ -939,7 +939,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         # let the upper level deal with this one
         ping_ret = yield self._disbatch_local({'tgt': chunk['tgt'],
                                                'fun': 'test.ping',
-                                               'expr_form': f_call['kwargs']['expr_form']})
+                                               'tgt_type': f_call['kwargs']['tgt_type']})
 
         chunk_ret = {}
 
@@ -950,8 +950,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
         inflight_futures = []
 
-        # override the expr_form
-        f_call['kwargs']['expr_form'] = 'list'
+        # override the tgt_type
+        f_call['kwargs']['tgt_type'] = 'list'
         # do this batch
         while len(minions) > 0 or len(inflight_futures) > 0:
             # if you have more to go, lets disbatch jobs
@@ -959,7 +959,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
                 minion_id = minions.pop(0)
                 batch_chunk = dict(chunk)
                 batch_chunk['tgt'] = [minion_id]
-                batch_chunk['expr_form'] = 'list'
+                batch_chunk['tgt_type'] = 'list'
                 future = self._disbatch_local(batch_chunk)
                 inflight_futures.append(future)
 
@@ -1006,7 +1006,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
 
         job_not_running = self.job_not_running(pub_data['jid'],
                                                chunk['tgt'],
-                                               f_call['kwargs']['expr_form'],
+                                               f_call['kwargs']['tgt_type'],
                                                minions_remaining=minions_remaining
                                                )
 
@@ -1072,7 +1072,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         ping_pub_data = self.saltclients['local'](tgt,
                                                   'saltutil.find_job',
                                                   [jid],
-                                                  expr_form=tgt_type)
+                                                  tgt_type=tgt_type)
         ping_tag = tagify([ping_pub_data['jid'], 'ret'], 'job')
 
         minion_running = False
@@ -1089,7 +1089,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
                     ping_pub_data = self.saltclients['local'](tgt,
                                                               'saltutil.find_job',
                                                               [jid],
-                                                              expr_form=tgt_type)
+                                                              tgt_type=tgt_type)
                     ping_tag = tagify([ping_pub_data['jid'], 'ret'], 'job')
                     minion_running = False
                     continue
