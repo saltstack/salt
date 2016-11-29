@@ -1376,10 +1376,10 @@ class OneOfItem(SchemaItem):
 
     items = None
 
-    def __init__(self, items=None):
+    def __init__(self, items=None, required=None):
         if items is not None:
             self.items = items
-        super(OneOfItem, self).__init__()
+        super(OneOfItem, self).__init__(required=required)
 
     def __validate_attributes__(self):
         if not self.items:
