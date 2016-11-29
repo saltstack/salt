@@ -268,6 +268,32 @@ Pillar Changes
   location on the Master so that they are available in execution modules called
   from Pillar SLS files.
 
+Network Automation: NAPALM
+==========================
+
+Beginning with 2016.11.0, network automation is inclued by default in the core
+of Salt. It is based on a the `NAPALM <https://github.com/napalm-automation/napalm>`_
+library and provides facilities to manage the configuration and retrieve data
+from network devices running widely used operating systems such: JunOS, IOS-XR,
+eOS, IOS, NX-OS etc.
+- see `the complete list of supported devices <http://napalm.readthedocs.io/en/latest/support/index.html#supported-devices>`_.
+
+The connection is established via the :mod:`NAPALM proxy <salt.proxy.napalm>`.
+
+In the current release, the following modules were included:
+
+- :mod:`NAPALM grains <salt.grains.napalm>` - Select network devices based on their characteristics
+- :mod:`NET execution module <salt.modules.napalm_network>` - Networking basic features
+- :mod:`NTP execution module <salt.modules.napalm_ntp>`
+- :mod:`BGP execution module <salt.modules.napalm_bgp>`
+- :mod:`Routes execution module <salt.modules.napalm_route>`
+- :mod:`SNMP execution module <salt.modules.napalm_snmp>`
+- :mod:`Users execution module <salt.modules.napalm_users>`
+- :mod:`Probes execution module <salt.modules.napalm_probes>`
+- :mod:`NTP peers management state <salt.states.netntp>`
+- :mod:`SNMP configuration management state <salt.states.netsnmp>`
+- :mod:`Users management state <salt.states.netusers>`
+
 Junos Module Changes
 ===================
 
