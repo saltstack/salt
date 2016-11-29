@@ -73,7 +73,11 @@ For example:
         username: foo
 
 Reauth is an optional parameter that forces the docker login to reauthorize using
-the credentials passed in the pillar data. Defaults to false. For example:
+the credentials passed in the pillar data. Defaults to false.
+
+.. versionadded:: 2016.3.5,2016.11.1
+
+For example:
 
 .. code-block:: yaml
 
