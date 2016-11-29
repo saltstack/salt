@@ -1469,7 +1469,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
-    'proxy_merge_grains_in_module': False,
+    'proxy_merge_grains_in_module': True,
     'append_minionid_config_dirs': ['cachedir', 'pidfile'],
     'default_include': 'proxy.d/*.conf',
 }

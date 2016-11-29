@@ -28,8 +28,8 @@
 # dictionary.  Otherwise it is assumed that the module calls the grains
 # function in a custom way and returns the data elsewhere
 #
-# Default to False for 2016.3 and 2016.11.  Switch to True for Nitrogen.
-# proxy_merge_grains_in_module: False
+# Default to False for 2016.3 and 2016.11. Switch to True for Nitrogen.
+# proxy_merge_grains_in_module: True
 
 # If multiple masters are specified in the 'master' setting, the default behavior
 # is to always try to connect to them in the order they are listed. If random_master is

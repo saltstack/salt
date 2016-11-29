@@ -741,7 +741,7 @@ def grains(opts, force_refresh=False, proxy=None):
         else:
             grains_data.update(ret)
 
-    if opts.get('proxy_merge_grains_in_module', False) and proxy:
+    if opts.get('proxy_merge_grains_in_module', True) and proxy:
         try:
             proxytype = proxy.opts['proxy']['proxytype']
             if proxytype+'.grains' in proxy:
