@@ -435,6 +435,7 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
     init_delay
         Add a sleep command (in seconds) before the check to make sure service
         is killed.
+        .. versionadded:: Nitrogen
     '''
     ret = {'name': name,
            'changes': {},
