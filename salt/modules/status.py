@@ -29,6 +29,9 @@ from salt.utils.network import host_to_ips as _host_to_ips
 from salt.ext.six.moves import zip
 from salt.exceptions import CommandExecutionError
 
+import logging
+log = logging.getLogger(__name__)
+
 __virtualname__ = 'status'
 __opts__ = {}
 
@@ -1129,8 +1132,19 @@ def proxy_reconnect(proxy_name, opts=None):
 
     is_alive = __proxy__[proxy_keepalive_fn](opts)
     if not is_alive:
+        minion_id = opts.get('proxyid', '') or opts.get('id', '')
+        log.info('{minion_id} ({proxy_name} proxy) is down. Restarting.'.format(
+                minion_id=minion_id,
+                proxy_name=proxy_name
+            )
+        )
         __proxy__[proxy_name+'.shutdown'](opts)  # safely close connection
         __proxy__[proxy_name+'.init'](opts)  # reopen connection
+        log.debug('Restarted {minion_id} ({proxy_name} proxy)!'.format(
+                minion_id=minion_id,
+                proxy_name=proxy_name
+            )
+        )
 
     return True  # success
 
