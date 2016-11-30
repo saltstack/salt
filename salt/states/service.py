@@ -417,7 +417,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     return ret
 
 
-def dead(name, enable=None, sig=None, **kwargs):
+def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
     '''
     Ensure that the named service is dead by stopping the service if it is running
 
@@ -431,6 +431,11 @@ def dead(name, enable=None, sig=None, **kwargs):
 
     sig
         The string to search for when looking for the service process with ps
+
+    init_delay
+        Add a sleep command (in seconds) before the check to make sure service
+        is killed.
+        .. versionadded:: Nitrogen
     '''
     ret = {'name': name,
            'changes': {},
@@ -489,6 +494,9 @@ def dead(name, enable=None, sig=None, **kwargs):
         elif enable is False:
             ret.update(_disable(name, True, result=False, **kwargs))
         return ret
+
+    if init_delay:
+        time.sleep(init_delay)
 
     # only force a change state if we have explicitly detected them
     after_toggle_status = __salt__['service.status'](name)
