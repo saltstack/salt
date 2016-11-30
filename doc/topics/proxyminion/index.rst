@@ -113,9 +113,7 @@ will be executed on proxy-minion startup and its contents will be merged with
 the rest of the proxy's grains.  Since older proxy-minions might have used other
 methods to call such a function and add its results to grains, this is config-gated
 by a new proxy configuration option called ``proxy_merge_grains_in_module``.  This
-defaults to ``False`` in this release.  It will default to True in the release after
-next.  The next release is 2016.11.0, the following is **Nitrogen**.
-
+defaults to ``True`` in the **Nitrogen** release.
 
 
 New in 2015.8.2
@@ -357,8 +355,7 @@ controlled device and make sure it is really available.
 the standard install directories for grains, grains can be computed and
 returned by this function.  This function will be called automatically
 if ``proxy_merge_grains_in_module`` is set to ``True`` in /etc/salt/proxy.
-This variable defaults to ``False`` in 2016.3 but will default to ``True`` in
-the release code-named *Nitrogen*.
+This variable defaults to ``True`` in the release code-named *Nitrogen*.
 
 Pre 2015.8 the proxymodule also must have an ``id()`` function.  2015.8 and following don't use
 this function because the proxy's id is required on the command line.
@@ -588,7 +585,7 @@ the proxy and grains directories.
 
 This function will only be called automatically if the configuration variable ``proxy_merge_grains_in_module``
 is set to True in the proxy configuration file (default ``/etc/salt/proxy``).  This
-variable will default to True in the release code-named *Nitrogen*.
+variable defaults to ``True`` in the release code-named *Nitrogen*.
 
 
 .. code: python::
