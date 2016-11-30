@@ -127,7 +127,7 @@ class GemModuleTest(integration.ModuleCase):
 
         self.run_function('gem.update', [OLD_GEM])
         gem_list = self.run_function('gem.list', [OLD_GEM])
-        self.assertEqual({'thor': ['0.19.1', '0.17.0']}, gem_list)
+        self.assertEqual({'thor': ['0.19.4', '0.17.0']}, gem_list)
 
         self.run_function('gem.uninstall', [OLD_GEM])
         self.assertFalse(self.run_function('gem.list', [OLD_GEM]))
