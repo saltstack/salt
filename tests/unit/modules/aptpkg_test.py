@@ -28,6 +28,7 @@ ensure_in_syspath('../../')
 
 # Globals
 aptpkg.__salt__ = {}
+aptpkg.__context__ = {}
 
 APT_KEY_LIST = r'''
 pub:-:1024:17:46181433FBB75451:1104433784:::-:::scSC:
@@ -48,6 +49,10 @@ REPO_KEYS = {
         'uid_hash': 'B4D41942D4B35FF44182C7F9D00C99AF27B93AD0',
         'validity': '-'
     }
+}
+
+PACKAGES = {
+    'wget': '1.15-1ubuntu1.14.04.2'
 }
 
 LOWPKG_FILES = {
@@ -114,6 +119,27 @@ W: Failed to fetch http://security.ubuntu.com/ubuntu/dists/trusty/Release.gpg  U
 
 W: Some index files failed to download. They have been ignored, or old ones used instead.
 '''
+
+AUTOREMOVE = '''
+Reading package lists... Done
+Building dependency tree
+Reading state information... Done
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+'''
+
+UPGRADE = '''
+Reading package lists...
+Building dependency tree...
+Reading state information...
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+'''
+
+UNINSTALL = {
+    'tmux': {
+        'new': str(),
+        'old': '1.8-5'
+    }
+}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -256,7 +282,7 @@ class AptPkgTestCase(TestCase):
 
     def test_refresh_db_failed(self):
         '''
-        Test - Attempt to update the APT database using unreachable repositories.
+        Test - Update the APT database using unreachable repositories.
         '''
         kwargs = {'failhard': True}
         mock = MagicMock(return_value={
@@ -265,6 +291,60 @@ class AptPkgTestCase(TestCase):
         })
         with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(CommandExecutionError, aptpkg.refresh_db, **kwargs)
+
+    @patch('salt.modules.aptpkg.list_pkgs',
+           MagicMock(return_value=PACKAGES))
+    def test_autoremove(self):
+        '''
+        Test - Remove packages not required by another package.
+        '''
+        patch_kwargs = {
+            '__salt__': {
+                'config.get': MagicMock(return_value=True),
+                'cmd.run': MagicMock(return_value=AUTOREMOVE)
+            }
+        }
+        with patch.multiple(aptpkg, **patch_kwargs):
+            self.assertEqual(aptpkg.autoremove(), dict())
+            self.assertEqual(aptpkg.autoremove(purge=True), dict())
+            self.assertEqual(aptpkg.autoremove(list_only=True), list())
+            self.assertEqual(aptpkg.autoremove(list_only=True, purge=True), list())
+
+    @patch('salt.modules.aptpkg._uninstall',
+           MagicMock(return_value=UNINSTALL))
+    def test_remove(self):
+        '''
+        Test - Remove packages.
+        '''
+        self.assertEqual(aptpkg.remove(name='tmux'), UNINSTALL)
+
+    @patch('salt.modules.aptpkg._uninstall',
+           MagicMock(return_value=UNINSTALL))
+    def test_purge(self):
+        '''
+        Test - Remove packages along with all configuration files.
+        '''
+        self.assertEqual(aptpkg.purge(name='tmux'), UNINSTALL)
+
+    @patch('salt.modules.aptpkg.list_pkgs',
+           MagicMock(return_value=PACKAGES))
+    def test_upgrade(self):
+        '''
+        Test - Upgrades all packages.
+        '''
+        mock_cmd = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': UPGRADE
+        })
+        patch_kwargs = {
+            '__salt__': {
+                'config.get': MagicMock(return_value=True),
+                'cmd.run_all': mock_cmd
+            }
+        }
+        with patch.multiple(aptpkg, **patch_kwargs):
+            self.assertEqual(aptpkg.upgrade(), dict())
+
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error
