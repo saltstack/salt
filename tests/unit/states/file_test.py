@@ -581,7 +581,7 @@ class FileTestCase(TestCase):
                          'file.copy': mock_cp,
                          'file.manage_file': mock_ex,
                          'cmd.run_all': mock_cmd_fail}):
-            comt = ('Must provide name to file.exists')
+            comt = ('Must provide name to file.managed')
             ret.update({'comment': comt, 'name': '', 'pchanges': {}})
             self.assertDictEqual(filestate.managed(''), ret)
 

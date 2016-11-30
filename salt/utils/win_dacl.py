@@ -129,20 +129,26 @@ should match what you see when you look at the properties for an object.
 '''
 # Import Python libs
 from __future__ import absolute_import
+import logging
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six.moves import range
 import salt.ext.six as six
 
-
 # Import 3rd-party libs
+HAS_WIN32 = False
 try:
     import win32security
+    import win32con
+    import win32api
     import pywintypes
     import salt.utils.win_functions
+    HAS_WIN32 = True
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 
 class Flags(object):
@@ -412,7 +418,13 @@ class Dacl(Flags):
             # Load the DACL of the named object
             dacl = Dacl(obj_name, obj_type)
         '''
+        # Validate obj_type
+        if obj_type.lower() not in self.obj_type:
+            raise SaltInvocationError(
+                'Invalid "obj_type" passed: {0}'.format(obj_type))
+
         self.dacl_type = obj_type.lower()
+
         if obj_name is None:
             self.dacl = win32security.ACL()
         else:
@@ -494,7 +506,7 @@ class Dacl(Flags):
 
         return r'\\'.join(reg)
 
-    def add_ace(self, principal, access_mode, permission, applies_to):
+    def add_ace(self, principal, access_mode, permissions, applies_to):
         '''
         Add an ACE to the DACL
 
@@ -505,7 +517,9 @@ class Dacl(Flags):
             access_mode (str): Determines the type of ACE to add. Must be either
             ``grant`` or ``deny``.
 
-            permission (str): The type of permissions to grant/deny the user.
+            permissions (str, list): The type of permissions to grant/deny the
+            user. Can be one of the basic permissions, or a list of advanced
+            permissions.
 
             applies_to (str): The objects to which these permissions will apply.
             Not all these options apply to all object types.
@@ -527,6 +541,14 @@ class Dacl(Flags):
             raise SaltInvocationError(
                 'You must load the DACL before adding an ACE')
 
+        # Get the permission flag
+        perm_flag = 0
+        if isinstance(permissions, six.string_types):
+            perm_flag = self.ace_perms[self.dacl_type]['basic'][permissions]
+        else:
+            for perm in permissions:
+                perm_flag |= self.ace_perms[self.dacl_type]['advanced'][perm]
+
         # Add ACE to the DACL
         # Grant or Deny
         try:
@@ -534,13 +556,13 @@ class Dacl(Flags):
                 self.dacl.AddAccessAllowedAceEx(
                     win32security.ACL_REVISION_DS,
                     self.ace_prop[self.dacl_type][applies_to],
-                    self.ace_perms[self.dacl_type]['basic'][permission],
+                    perm_flag,
                     sid)
             elif access_mode.lower() == 'deny':
                 self.dacl.AddAccessDeniedAceEx(
                     win32security.ACL_REVISION_DS,
                     self.ace_prop[self.dacl_type][applies_to],
-                    self.ace_perms[self.dacl_type]['basic'][permission],
+                    perm_flag,
                     sid)
             else:
                 raise SaltInvocationError(
@@ -549,6 +571,145 @@ class Dacl(Flags):
             return False, 'Error: {0}'.format(str(exc))
 
         return True
+
+    def order_acl(self):
+        '''
+        Put the ACEs in the ACL in the proper order. This is necessary because
+        the add_ace function puts ACEs at the end of the list without regard for
+        order. This will cause the following Windows Security dialog to appear
+        when viewing the security for the object:
+
+        ``The permissions on Directory are incorrectly ordered, which may cause
+        some entries to be ineffective.``
+
+        .. note:: Run this function after adding all your ACEs.
+
+        Proper Orders is as follows:
+
+            1. Implicit Deny
+            2. Inherited Deny
+            3. Implicit Deny Object
+            4. Inherited Deny Object
+            5. Implicit Allow
+            6. Inherited Allow
+            7. Implicit Allow Object
+            8. Inherited Allow Object
+
+        Usage:
+
+        .. code-block:: python
+
+            dacl = Dacl(obj_type=obj_type)
+            dacl.add_ace(sid, access_mode, applies_to, permission)
+            dacl.order_acl()
+            dacl.save(obj_name, protected)
+        '''
+        new_dacl = Dacl()
+        deny_dacl = Dacl()
+        deny_obj_dacl = Dacl()
+        allow_dacl = Dacl()
+        allow_obj_dacl = Dacl()
+
+        # Load Non-Inherited ACEs first
+        for i in range(0, self.dacl.GetAceCount()):
+            ace = self.dacl.GetAce(i)
+            if ace[0][1] & win32security.INHERITED_ACE == 0:
+                if ace[0][0] == win32security.ACCESS_DENIED_ACE_TYPE:
+                    deny_dacl.dacl.AddAccessDeniedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace[0][1],
+                        ace[1],
+                        ace[2])
+                elif ace[0][0] == win32security.ACCESS_DENIED_OBJECT_ACE_TYPE:
+                    deny_obj_dacl.dacl.AddAccessDeniedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace[0][1],
+                        ace[1],
+                        ace[2])
+                elif ace[0][0] == win32security.ACCESS_ALLOWED_ACE_TYPE:
+                    allow_dacl.dacl.AddAccessAllowedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace[0][1],
+                        ace[1],
+                        ace[2])
+                elif ace[0][0] == win32security.ACCESS_ALLOWED_OBJECT_ACE_TYPE:
+                    allow_obj_dacl.dacl.AddAccessAllowedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace[0][1],
+                        ace[1],
+                        ace[2])
+
+        # Load Inherited ACEs last
+        for i in range(0, self.dacl.GetAceCount()):
+            ace = self.dacl.GetAce(i)
+            if ace[0][1] & win32security.INHERITED_ACE == \
+                    win32security.INHERITED_ACE:
+                ace_prop = ace[0][1] ^ win32security.INHERITED_ACE
+                if ace[0][0] == win32security.ACCESS_DENIED_ACE_TYPE:
+                    deny_dacl.dacl.AddAccessDeniedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace_prop,
+                        ace[1],
+                        ace[2])
+                elif ace[0][0] == win32security.ACCESS_DENIED_OBJECT_ACE_TYPE:
+                    deny_obj_dacl.dacl.AddAccessDeniedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace_prop,
+                        ace[1],
+                        ace[2])
+                elif ace[0][0] == win32security.ACCESS_ALLOWED_ACE_TYPE:
+                    allow_dacl.dacl.AddAccessAllowedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace_prop,
+                        ace[1],
+                        ace[2])
+                elif ace[0][0] == win32security.ACCESS_ALLOWED_OBJECT_ACE_TYPE:
+                    allow_obj_dacl.dacl.AddAccessAllowedAceEx(
+                        win32security.ACL_REVISION_DS,
+                        ace_prop,
+                        ace[1],
+                        ace[2])
+
+        # Combine ACEs in the proper order
+        # Deny, Deny Object, Allow, Allow Object
+        # Deny
+        for i in range(0, deny_dacl.dacl.GetAceCount()):
+            ace = deny_dacl.dacl.GetAce(i)
+            new_dacl.dacl.AddAccessDeniedAceEx(
+                win32security.ACL_REVISION_DS,
+                ace[0][1],
+                ace[1],
+                ace[2])
+
+        # Deny Object
+        for i in range(0, deny_obj_dacl.dacl.GetAceCount()):
+            ace = deny_obj_dacl.dacl.GetAce(i)
+            new_dacl.dacl.AddAccessDeniedAceEx(
+                win32security.ACL_REVISION_DS,
+                ace[0][1] ^ win32security.INHERITED_ACE,
+                ace[1],
+                ace[2])
+
+        # Allow
+        for i in range(0, allow_dacl.dacl.GetAceCount()):
+            ace = allow_dacl.dacl.GetAce(i)
+            new_dacl.dacl.AddAccessAllowedAceEx(
+                win32security.ACL_REVISION_DS,
+                ace[0][1],
+                ace[1],
+                ace[2])
+
+        # Allow Object
+        for i in range(0, allow_obj_dacl.dacl.GetAceCount()):
+            ace = allow_obj_dacl.dacl.GetAce(i)
+            new_dacl.dacl.AddAccessAllowedAceEx(
+                win32security.ACL_REVISION_DS,
+                ace[0][1] ^ win32security.INHERITED_ACE,
+                ace[1],
+                ace[2])
+
+        # Set the new dacl
+        self.dacl = new_dacl.dacl
 
     def get_ace(self, principal, return_obj=False):
         '''
@@ -889,30 +1050,44 @@ def get_sid_string(principal):
         raise CommandExecutionError('Invalid principal {0}'.format(principal))
 
 
-def get_name(sid):
+def get_name(principal):
     '''
-    Gets the name from the specified SID. Opposite of get_sid
+    Gets the name from the specified principal.
 
     Args:
-        sid (str): The SID for which to find the name
+        principal (str): Find the Normalized name based on this. Can be a PySID
+        object, a SID string, or a user name in any capitalization.
 
     Returns:
-        str: The name that corresponds to the passed SID
+        str: The name that corresponds to the passed principal
 
     Usage:
 
     .. code-block:: python
 
         salt.utils.win_dacl.get_name('S-1-5-32-544')
+        salt.utils.win_dacl.get_name('adminisTrators')
     '''
-    try:
-        sid_obj = win32security.ConvertStringSidToSid(sid)
-        name = win32security.LookupAccountSid(None, sid_obj)[0]
-    except pywintypes.error as exc:
-        raise CommandExecutionError(
-            'User {0} found: {1}'.format(sid, exc[2]))
+    # Assume PySID object
+    sid_obj = principal
 
-    return name
+    # Name
+    try:
+        sid_obj = win32security.LookupAccountName(None, principal)[0]
+    except (pywintypes.error, TypeError):
+        pass
+
+    # String SID
+    try:
+        sid_obj = win32security.ConvertStringSidToSid(principal)
+    except (pywintypes.error, TypeError):
+        pass
+
+    try:
+        return win32security.LookupAccountSid(None, sid_obj)[0]
+    except TypeError:
+        raise CommandExecutionError(
+            'Could not find User for {0}'.format(principal))
 
 
 def get_owner(obj_name):
@@ -970,6 +1145,25 @@ def set_owner(obj_name, principal, obj_type='file'):
 
     flags = Flags()
 
+    # To set the owner to something other than the logged in user requires
+    # SE_TAKE_OWNERSHIP_NAME and SE_RESTORE_NAME privileges
+    # Enable them for the logged in user
+    # Setup the privilege set
+    new_privs = set()
+    luid = win32security.LookupPrivilegeValue('', 'SeTakeOwnershipPrivilege')
+    new_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+    luid = win32security.LookupPrivilegeValue('', 'SeRestorePrivilege')
+    new_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+
+    # Get the current token
+    p_handle = win32api.GetCurrentProcess()
+    t_handle = win32security.OpenProcessToken(
+        p_handle,
+        win32security.TOKEN_ALL_ACCESS | win32con.TOKEN_ADJUST_PRIVILEGES)
+
+    # Enable the privileges
+    win32security.AdjustTokenPrivileges(t_handle, 0, new_privs)
+
     # Set the user
     try:
         win32security.SetNamedSecurityInfo(
@@ -979,6 +1173,7 @@ def set_owner(obj_name, principal, obj_type='file'):
             sid,
             None, None, None)
     except pywintypes.error as exc:
+        log.debug('Failed to make {0} the owner: {1}'.format(principal, exc[2]))
         raise CommandExecutionError(
             'Failed to set owner: {0}'.format(exc[2]))
 
@@ -987,12 +1182,12 @@ def set_owner(obj_name, principal, obj_type='file'):
 
 def set_permissions(obj_name,
                     principal,
-                    permission,
+                    permissions,
                     access_mode='grant',
-                    reset_perms=False,
+                    applies_to='this_folder_subfolders_files',
                     obj_type='file',
-                    protected=None,
-                    applies_to='this_folder_subfolders_files'):
+                    reset_perms=False,
+                    protected=None):
     '''
     Set the permissions of an object. This can be a file, folder, registry key,
     printer, service, etc...
@@ -1005,13 +1200,12 @@ def set_permissions(obj_name,
 
         https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
 
-        obj_type (Optional[str]): The type of object for which to set
-        permissions.
 
         principal (str): The name of the user or group for which to set
         permissions. Can also pass a SID.
 
-        permission (str): The type of permissions to grant/deny the user.
+        permissions (str, list): The type of permissions to grant/deny the user.
+        Can be one of the basic permissions, or a list of advanced permissions.
 
         access_mode (Optional[str]): Whether to grant or deny user the access.
         Valid options are:
@@ -1019,15 +1213,19 @@ def set_permissions(obj_name,
             - grant (default): Grants the user access
             - deny: Denies the user access
 
+        applies_to (Optional[str]): The objects to which these permissions will
+        apply. Not all these options apply to all object types. Defaults to
+        'this_folder_subfolders_files'
+
+        obj_type (Optional[str]): The type of object for which to set
+        permissions. Default is 'file'
+
         reset_perms (Optional[bool]): True will overwrite the permissions on the
         specified object. False will append the permissions. Default is False
 
         protected (Optional[bool]): True will disable inheritance for the
         object. False will enable inheritance. None will make no change. Default
         is None.
-
-        applies_to (Optional[str]): The objects to which these permissions will
-        apply. Not all these options apply to all object types. Valid options:
 
     Returns:
         bool: True if successful, raises an error otherwise
@@ -1037,7 +1235,7 @@ def set_permissions(obj_name,
     .. code-block:: python
 
         salt.utils.win_dacl.set_permissions(
-            'C:\\Temp', 'file', 'jsnuffy', 'full_control')
+            'C:\\Temp', 'jsnuffy', 'full_control', 'grant')
     '''
     # If you don't pass `obj_name` it will create a blank DACL
     # Otherwise, it will grab the existing DACL and add to it
@@ -1047,7 +1245,10 @@ def set_permissions(obj_name,
         dacl = Dacl(obj_name, obj_type)
         dacl.rm_ace(principal, access_mode)
 
-    dacl.add_ace(principal, access_mode, permission, applies_to)
+    dacl.add_ace(principal, access_mode, permissions, applies_to)
+
+    dacl.order_acl()
+
     dacl.save(obj_name, protected)
 
     return True
@@ -1074,9 +1275,10 @@ def rm_permissions(obj_name,
 
         ace_type(Optional[str]): The type of ace to remove. There are two types
         of ACEs, 'grant' and 'deny'. 'all' will remove all ACEs for the user.
+        Default is 'all'
 
         obj_type (Optional[str]): The type of object for which to set
-        permissions.
+        permissions. Default is 'file'
 
     Returns:
         bool: True if successful, raises an error otherwise
@@ -1086,8 +1288,7 @@ def rm_permissions(obj_name,
     .. code-block:: python
 
         # Remove jsnuffy's grant ACE from C:\Temp
-        salt.utils.win_dacl.rm_permissions(
-            'C:\\Temp', 'jsnuffy', 'grant', 'file')
+        salt.utils.win_dacl.rm_permissions('C:\\Temp', 'jsnuffy', 'grant')
 
         # Remove all ACEs for jsnuffy from C:\Temp
         salt.utils.win_dacl.rm_permissions('C:\\Temp', 'jsnuffy')
@@ -1108,10 +1309,12 @@ def get_permissions(obj_name, principal=None, obj_type='file'):
 
         obj_name (str): The name of or path to the object.
 
-        obj_type (str): The type of object for which to get permissions.
+        principal (Optional[str]): The name of the user or group for which to
+        get permissions. Can also pass a SID. If None, all ACEs defined on the
+        object will be returned. Default is None
 
-        principal (str): The name of the user or group for which to get
-        permissions. Can also pass a SID.
+        obj_type (Optional[str]): The type of object for which to get
+        permissions.
 
     Returns:
         dict: A dictionary representing the object permissions
@@ -1131,10 +1334,10 @@ def get_permissions(obj_name, principal=None, obj_type='file'):
 
 
 def has_permission(obj_name,
-                   obj_type,
                    principal,
                    permission,
                    access_mode='grant',
+                   obj_type='file',
                    exact=True):
     r'''
     Check if the object has a permission
@@ -1142,8 +1345,6 @@ def has_permission(obj_name,
     Args:
 
         obj_name (str): The name of or path to the object.
-
-        obj_type (str): The type of object for which to check permissions.
 
         principal (str): The name of the user or group for which to get
         permissions. Can also pass a SID.
@@ -1157,8 +1358,11 @@ def has_permission(obj_name,
             - grant
             - deny
 
-        exact (bool): True for an exact match, otherwise check to see if the
-        permission is included in the ACE
+        obj_type (Optional[str]): The type of object for which to check
+        permissions. Default is 'file'
+
+        exact (Optional[bool]): True for an exact match, otherwise check to see
+        if the permission is included in the ACE. Default is True
 
     Returns:
         bool: True if the object has the permission, otherwise False
@@ -1168,19 +1372,13 @@ def has_permission(obj_name,
     .. code-block:: python
 
         # Does Joe have read permissions to C:\Temp
-        salt.utils.win_dacl.has_permission('C:\\Temp', 'file', 'joe', 'read', 'grant', False)
+        salt.utils.win_dacl.has_permission(
+            'C:\\Temp', 'joe', 'read', 'grant', False)
 
         # Does Joe have Full Control of C:\Temp
-        salt.utils.win_dacl.has_permission('C:\\Temp', 'file', 'joe', 'full_control', 'grant')
+        salt.utils.win_dacl.has_permission(
+            'C:\\Temp', 'joe', 'full_control', 'grant')
     '''
-    # Validate obj_type
-    if obj_type.lower() not in ['file', 'service', 'printer', 'registry',
-                                'registry32', 'share']:
-        raise SaltInvocationError(
-            'Invalid "obj_type" passed: {0}'.format(obj_type))
-    obj_type = obj_type.lower()
-
-    # Validate inherited
     # Validate access_mode
     if access_mode.lower() not in ['grant', 'deny']:
         raise SaltInvocationError(
@@ -1189,6 +1387,8 @@ def has_permission(obj_name,
 
     # Get the DACL
     dacl = Dacl(obj_name, obj_type)
+
+    obj_type = obj_type.lower()
 
     # Get a PySID object
     sid = get_sid(principal)
@@ -1238,7 +1438,7 @@ def set_inheritance(obj_name, enabled, obj_type='file', clear=False):
             - registry32 (for WOW64)
 
         clear (Optional[bool]): True to clear existing ACEs, False to keep
-        existing ACEs
+        existing ACEs. Default is False
 
     Returns:
         bool: True if successful, otherwise an Error
@@ -1263,7 +1463,7 @@ def set_inheritance(obj_name, enabled, obj_type='file', clear=False):
 
 def get_inheritance(obj_name, obj_type='file'):
     '''
-    Get an objects inheritance.
+    Get an object's inheritance.
 
     Args:
 
