@@ -1218,3 +1218,9 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='de
             raise salt.exceptions.VMwareApiError(exc.msg)
         except vmodl.fault.SystemError as exc:
             raise salt.exceptions.VMwareSystemError(exc.msg)
+        except vmodl.fault.InvalidArgument as exc:
+            exc_message = exc.msg
+            if exc.faultMessage:
+                exc_message = '{0} ({1})'.format(exc_message,
+                                                 exc.faultMessage[0].message)
+            raise salt.exceptions.VMwareApiError(exc_message)
