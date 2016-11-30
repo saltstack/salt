@@ -18,6 +18,7 @@ Mandatory Settings:
 - The modjk load balancer must be configured as stated in the :strong:`modjk`
   execution module :mod:`documentation <salt.modules.modjk>`
 '''
+from __future__ import absolute_import
 import salt.utils
 
 
