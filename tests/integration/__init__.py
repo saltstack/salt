@@ -215,7 +215,7 @@ SCRIPT_TEMPLATES = {
         'import salt.cli\n',
         'def main():\n',
         '    sapi = salt.cli.SaltAPI()',
-        '    sapi.run()\n',
+        '    sapi.start()\n',
         'if __name__ == \'__main__\':',
         '    main()'
     ],
