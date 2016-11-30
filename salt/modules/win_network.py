@@ -47,8 +47,8 @@ def __virtual__():
         return False, "Module win_network: Missing dependencies"
 
     global wol, get_hostname, interface, interface_ip, subnets6, ip_in_subnet
-    global convert_cidr, calc_net, get_fqdn, reverse_ip, ifacestartswith
-    global iphexval
+    global convert_cidr, calc_net, get_fqdn, ifacestartswith, iphexval
+
     wol = _namespaced_function(wol, globals())
     get_hostname = _namespaced_function(get_hostname, globals())
     interface = _namespaced_function(interface, globals())
