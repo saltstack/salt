@@ -1076,7 +1076,7 @@ def query(action=None,
 
     log.debug('User: \'{0}\' on PATH: {1}'.format(user, path))
 
-    if (not user) or (not ssh_keyfile) or (not ssh_kename) or (not location):
+    if (not user) or (not ssh_keyfile) or (not ssh_keyname) or (not location):
         return None
 
     timenow = datetime.datetime.utcnow()
