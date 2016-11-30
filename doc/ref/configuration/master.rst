@@ -41,7 +41,7 @@ The local interface to bind to.
 Default: ``False``
 
 Whether the master should listen for IPv6 connections. If this is set to True,
-the interface option must be adjusted too (for example: "interface: '::'")
+the interface option must be adjusted too (for example: ``interface: '::'``)
 
 .. code-block:: yaml
 
@@ -1558,7 +1558,6 @@ directories above the one specified will be ignored and the relative path will
     gitfs_root: somefolder/otherfolder
 
 .. versionchanged:: 2014.7.0
-
    Ability to specify gitfs roots on a per-remote basis was added. See
    :ref:`here <gitfs-per-remote-config>` for more info.
 
@@ -2888,7 +2887,11 @@ value must be set to True
 ``syndic_master``
 -----------------
 
-Default: ``''``
+.. versionchanged:: 2016.3.5,2016.11.1
+
+    Set default higher level master address.
+
+Default: ``masterofmasters``
 
 If this master will be running the ``salt-syndic`` to connect to a higher level
 master, specify the higher level master with this configuration value.
