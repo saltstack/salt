@@ -67,6 +67,8 @@ except ImportError:
     HAS_SOFTWAREPROPERTIES = False
 # pylint: enable=import-error
 
+APT_LISTS_PATH = "/var/lib/apt/lists"
+
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
 LP_PVT_SRC_FORMAT = 'deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu' \
@@ -374,7 +376,7 @@ def refresh_db(cache_valid_time=0, failhard=False):
 
         salt '*' pkg.refresh_db
     '''
-    APT_LISTS_PATH = "/var/lib/apt/lists"
+    failhard = salt.utils.is_true(failhard)
     ret = {}
     error_repos = list()
 
