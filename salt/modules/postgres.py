@@ -53,7 +53,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -113,9 +113,10 @@ _PRIVILEGE_TYPE_MAP = {
 
 def __virtual__():
     '''
-    Only load this module if the psql and initdb bin exist
+    Only load this module if the psql bin exist.
+    initdb bin might also be used, but its presence will be detected on runtime.
     '''
-    utils = ['psql', 'initdb']
+    utils = ['psql']
     if not HAS_CSV:
         return False
     for util in utils:
@@ -145,7 +146,7 @@ def _find_pg_binary(util):
     util_bin = salt.utils.which(util)
     if not util_bin:
         if pg_bin_dir:
-            return os.path.join(pg_bin_dir, util)
+            return salt.utils.which(os.path.join(pg_bin_dir, util))
     else:
         return util_bin
 
@@ -221,6 +222,8 @@ def _run_initdb(name,
     if user is None:
         user = runas
     _INITDB_BIN = _find_pg_binary('initdb')
+    if not _INITDB_BIN:
+        raise CommandExecutionError('initdb executable not found.')
     cmd = [
         _INITDB_BIN,
         '--pgdata={0}'.format(name),
