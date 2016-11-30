@@ -2060,7 +2060,7 @@ class TestArrayComplexDefinitionsSchema(schema.DefinitionsSchema):
 class TestDictComplexDefinitionsSchema(schema.DefinitionsSchema):
     title = 'Test Dict Complex Definitions Schema'
     dict_item = schema.DictItem(
-        properties = {'complex_obj': TestComplexSchemaItem(required=True)},
+        properties={'complex_obj': TestComplexSchemaItem(required=True)},
         additional_properties=TestComplexSchemaItem())
 
 
