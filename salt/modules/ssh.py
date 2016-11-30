@@ -1165,7 +1165,7 @@ def hash_known_hosts(user=None, config=None):
     origmode = os.stat(full).st_mode
     cmd = ['ssh-keygen', '-H', '-f', full]
     cmd_result = __salt__['cmd.run'](cmd, python_shell=False)
-    os.stat(full, origmode)
+    os.chmod(full, origmode)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0 and user:
         uinfo = __salt__['user.info'](user)
