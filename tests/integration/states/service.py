@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Tests for the archive state
+Tests for the service state
 '''
 # Import python libs
 from __future__ import absolute_import
