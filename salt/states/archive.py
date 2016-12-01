@@ -941,29 +941,12 @@ def extracted(name,
 
     extraction_needed = overwrite
 
-    if extraction_needed and (contents.get('top_level_dirs', []) or contents.get('top_level_files', [])):
-        # Remove directories, if any
-        for top_level_dir in contents.get('top_level_dirs', []):
-            top_level_dir = os.path.join(name, top_level_dir)
-            if os.path.exists(top_level_dir):
-                try:
-                    shutil.rmtree(top_level_dir)
-                except OSError as err:
-                    ret['comment'] = 'Error removing destination directory ' \
-                                     '"{0}": {1}'.format(top_level_dir, err)
-                    ret['result'] = False
-                    return ret
-        # Remove top level files, if any
-        for top_level_file in contents.get('top_level_files'[]):
-            top_level_file = os.path.join(name, top_level_file)
-            if os.path.exists(top_level_file):
-                try:
-                    os.unlink(top_level_file)
-                except OSError as err:
-                    ret['comment'] = 'Error removing destination file ' \
-                                     '"{0}": {1}'.format(top_level_file, err)
-                    ret['result'] = False
-                    return ret
+    if (extraction_needed
+        and (contents.get('top_level_dirs', []) or contents.get('top_level_files', []))
+        and not _remove_destination(contents.get('top_level_dirs', []) +
+                                    contents.get('top_level_files', []),
+                                    root=name, ret=ret, fail=True)):
+            return ret
 
     try:
         if_missing_path_exists = os.path.exists(if_missing)
