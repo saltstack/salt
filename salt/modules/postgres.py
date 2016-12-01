@@ -25,7 +25,7 @@ Module to provide Postgres compatibility to salt.
     automatically placed on the path. Add a configuration to the location
     of the postgres bin's path to the relevant minion for this module::
 
-        postgres.pg_bin: '/usr/pgsql-9.5/bin/'
+        postgres.bins_dir: '/usr/pgsql-9.5/bin/'
 '''
 
 # This pylint error is popping up where there are no colons?
