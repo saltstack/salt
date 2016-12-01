@@ -123,7 +123,7 @@ def _cleanup_destdir(name):
 
 def _remove_destination(names, root=None, ret=None, fail=False):
     '''
-    Remove the specified directory.
+    Remove the specified directory or file.
 
     :param names: List of destinations (directories or files)
     :param root: General root for all desinations
