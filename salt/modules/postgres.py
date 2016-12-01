@@ -26,6 +26,9 @@ Module to provide Postgres compatibility to salt.
     of the postgres bin's path to the relevant minion for this module::
 
         postgres.pg_bin: '/usr/pgsql-9.5/bin/'
+
+:note: Older versions of Salt had a bug where postgres.bins_dir was used
+    instead of postgres.pg_bin. You should upgrade this as soon as possible.
 '''
 
 # This pylint error is popping up where there are no colons?
@@ -51,7 +54,7 @@ except ImportError:
 import salt.utils
 import salt.utils.files
 import salt.utils.itertools
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -113,9 +116,10 @@ _PRIVILEGE_TYPE_MAP = {
 
 def __virtual__():
     '''
-    Only load this module if the psql and initdb bin exist
+    Only load this module if the psql bin exist.
+    initdb bin might also be used, but its presence will be detected on runtime.
     '''
-    utils = ['psql', 'initdb']
+    utils = ['psql']
     if not HAS_CSV:
         return False
     for util in utils:
@@ -131,11 +135,21 @@ def _find_pg_binary(util):
 
     Helper function to locate various psql related binaries
     '''
-    pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
+    pg_bin_dir = __salt__['config.option']('postgres.pg_bin')
+
+    if not pg_bin_dir:  # Fallback to incorrectly-documented setting
+        pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
+        if pg_bin_dir:
+            salt.utils.warn_until(
+                'Oxygen',
+                'Using \'postgres.bins_dir\' is not officially supported and '
+                'only exists as a workaround. Please replace this in your '
+                'configuration with \'postgres.pg_bin\'.')
+
     util_bin = salt.utils.which(util)
     if not util_bin:
         if pg_bin_dir:
-            return os.path.join(pg_bin_dir, util)
+            return salt.utils.which(os.path.join(pg_bin_dir, util))
     else:
         return util_bin
 
@@ -211,6 +225,8 @@ def _run_initdb(name,
     if user is None:
         user = runas
     _INITDB_BIN = _find_pg_binary('initdb')
+    if not _INITDB_BIN:
+        raise CommandExecutionError('initdb executable not found.')
     cmd = [
         _INITDB_BIN,
         '--pgdata={0}'.format(name),
