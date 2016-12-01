@@ -907,16 +907,17 @@ def extracted(name,
 
     extraction_needed = overwrite
 
-    if extraction_needed:
-        destination = os.path.join(name, contents['top_level_dirs'][0])
-        if os.path.exists(destination):
-            try:
-                shutil.rmtree(destination)
-            except OSError as err:
-                ret['comment'] = 'Error removing destination directory ' \
-                                 '"{0}": {1}'.format(destination, err)
-                ret['result'] = False
-                return ret
+    if extraction_needed and contents['top_level_dirs']:
+        for top_level_dir in contents['top_level_dirs']:
+            destination = os.path.join(name, top_level_dir)
+            if os.path.exists(destination):
+                try:
+                    shutil.rmtree(destination)
+                except OSError as err:
+                    ret['comment'] = 'Error removing destination directory ' \
+                                     '"{0}": {1}'.format(destination, err)
+                    ret['result'] = False
+                    return ret
 
     try:
         if_missing_path_exists = os.path.exists(if_missing)
