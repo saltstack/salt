@@ -271,7 +271,7 @@ Pillar Changes
 Network Automation: NAPALM
 ==========================
 
-Beginning with Carbon, network automation is inclued by default in the core
+Beginning with 2016.11.0, network automation is inclued by default in the core
 of Salt. It is based on a the `NAPALM <https://github.com/napalm-automation/napalm>`_
 library and provides facilities to manage the configuration and retrieve data
 from network devices running widely used operating systems such: JunOS, IOS-XR,
