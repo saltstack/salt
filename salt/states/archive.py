@@ -125,6 +125,7 @@ def _remove_destination(names, root=None, ret=None, fail=False):
 
     for name in names:
         name = root and os.path.join(root, name) or name
+        log.debug('Attempt to remove path: {}'.format(name))
         if os.path.exists(name):
             if os.path.isdir(name):
                 remove, obj_name = shutil.rmtree, 'directory'
@@ -133,15 +134,18 @@ def _remove_destination(names, root=None, ret=None, fail=False):
 
             try:
                 remove(name)
+                log.debug("Path '{}' has been removed".format(name))
             except OSError as err:
+                error_msg = 'Error removing destination {obj} "{name}": {error}'.format(
+                    obj=obj_name, name=name, error=err)
+                log.error(error_msg)
+
                 if ret:
-                    ret['comment'] = 'Error removing destination ' \
-                                     '{obj} "{name}": {error}'.format(
-                        obj=obj_name, name=name, error=err)
+                    ret['comment'] = error_msg
                     ret['result'] = False
+
                 if fail:
                     return False
-
     return True
 
 
