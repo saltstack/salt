@@ -58,20 +58,20 @@ class LocalClientTestCase(TestCase,
             self.client.cmd_subset('*', 'first.func', sub=1, cli=True)
             try:
                 cmd_cli_mock.assert_called_with(['minion2'], 'first.func', (), progress=False,
-                                                kwarg=None, expr_form='list',
+                                                kwarg=None, tgt_type='list',
                                                 ret='')
             except AssertionError:
                 cmd_cli_mock.assert_called_with(['minion1'], 'first.func', (), progress=False,
-                                                kwarg=None, expr_form='list',
+                                                kwarg=None, tgt_type='list',
                                                 ret='')
             self.client.cmd_subset('*', 'first.func', sub=10, cli=True)
             try:
                 cmd_cli_mock.assert_called_with(['minion2', 'minion1'], 'first.func', (), progress=False,
-                                                kwarg=None, expr_form='list',
+                                                kwarg=None, tgt_type='list',
                                                 ret='')
             except AssertionError:
                 cmd_cli_mock.assert_called_with(['minion1', 'minion2'], 'first.func', (), progress=False,
-                                                kwarg=None, expr_form='list',
+                                                kwarg=None, tgt_type='list',
                                                 ret='')
 
     @skipIf(NOT_ZMQ, 'This test only works with ZeroMQ')
@@ -88,7 +88,7 @@ class LocalClientTestCase(TestCase,
                 # Do we raise an exception if the nodegroup can't be matched?
                 self.assertRaises(SaltInvocationError,
                                   self.client.pub,
-                                  'non_existent_group', 'test.ping', expr_form='nodegroup')
+                                  'non_existent_group', 'test.ping', tgt_type='nodegroup')
 
 
 if __name__ == '__main__':
