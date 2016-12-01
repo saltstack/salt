@@ -8,8 +8,6 @@ Module to provide icinga2 compatibility to salt.
 # Import python libs
 from __future__ import absolute_import
 import logging
-import os
-import subprocess
 
 # Import Salt libs
 import salt.utils
@@ -120,6 +118,5 @@ def node_setup(domain, master, ticket):
         salt '*' icinga2.node_setup domain.tld master.domain.tld TICKET_ID
 
     '''
-    result = __salt__['cmd.run']("icinga2 node setup --ticket {0} --endpoint {1} --zone {2} --master_host {1} --trustedcert /etc/icinga2/pki/trusted-master.crt".format(ticket,  master, domain))
+    result = __salt__['cmd.run']("icinga2 node setup --ticket {0} --endpoint {1} --zone {2} --master_host {1} --trustedcert /etc/icinga2/pki/trusted-master.crt".format(ticket, master, domain))
     return result
-
