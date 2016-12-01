@@ -24,6 +24,7 @@ import salt.utils.http
 import salt.utils.files
 import salt.utils.yamlencoding
 import salt.utils.locales
+import salt.utils.hashutils
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
