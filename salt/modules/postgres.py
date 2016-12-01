@@ -26,9 +26,6 @@ Module to provide Postgres compatibility to salt.
     of the postgres bin's path to the relevant minion for this module::
 
         postgres.pg_bin: '/usr/pgsql-9.5/bin/'
-
-:note: Older versions of Salt had a bug where postgres.bins_dir was used
-    instead of postgres.pg_bin. You should upgrade this as soon as possible.
 '''
 
 # This pylint error is popping up where there are no colons?
@@ -116,7 +113,7 @@ def __virtual__():
     Only load this module if the psql bin exist.
     initdb bin might also be used, but its presence will be detected on runtime.
     '''
-    utils = ['psql']
+    utils = ['psql', 'initdb']
     if not HAS_CSV:
         return False
     for util in utils:
@@ -132,17 +129,7 @@ def _find_pg_binary(util):
 
     Helper function to locate various psql related binaries
     '''
-    pg_bin_dir = __salt__['config.option']('postgres.pg_bin')
-
-    if not pg_bin_dir:  # Fallback to incorrectly-documented setting
-        pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
-        if pg_bin_dir:
-            salt.utils.warn_until(
-                'Oxygen',
-                'Using \'postgres.bins_dir\' is not officially supported and '
-                'only exists as a workaround. Please replace this in your '
-                'configuration with \'postgres.pg_bin\'.')
-
+    pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
     util_bin = salt.utils.which(util)
     if not util_bin:
         if pg_bin_dir:
