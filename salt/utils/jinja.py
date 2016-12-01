@@ -38,7 +38,7 @@ __all__ = [
     'SerializerExtension'
 ]
 
-GLOBAL_UUID = '91633EBF-1C86-5E33-935A-28061F4B480E'
+GLOBAL_UUID = uuid.UUID('91633EBF-1C86-5E33-935A-28061F4B480E')
 
 # To dump OrderedDict objects as regular dicts. Used by the yaml
 # template filter.
