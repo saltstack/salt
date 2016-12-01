@@ -121,6 +121,40 @@ def _cleanup_destdir(name):
         pass
 
 
+def _remove_destination(names, root=None, ret=None, fail=False):
+    '''
+    Remove the specified directory.
+
+    :param names: List of destinations (directories or files)
+    :param root: General root for all desinations
+    :param ret: Passed return hash.
+    :param fail: Exit early on first fail, otherwise be quiet
+
+    :return:
+    '''
+
+    for name in names:
+        name = root and os.path.join(root, name) or name
+        if os.path.exists(name):
+            if os.path.isdir(name):
+                remove, obj_name = shutil.rmtree, 'directory'
+            else:
+                remove, obj_name = os.unlink, 'file'
+
+            try:
+                remove(name)
+            except OSError as err:
+                if ret:
+                    ret['comment'] = 'Error removing destination ' \
+                                     '{obj} "{name}": {error}'.format(
+                        obj=obj_name, name=name, error=err)
+                    ret['result'] = False
+                if fail:
+                    return False
+
+    return True
+
+
 def extracted(name,
               source,
               source_hash=None,
