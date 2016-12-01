@@ -261,7 +261,7 @@ def regex_search(txt, rgx, ignorecase=False, multiline=False):
     .. code-block:: jinja
 
         {% set my_text = 'abcd' %}
-        {{ my_text | regex_findall('^(.*)BC(.*)$', ignorecase=True) }}
+        {{ my_text | regex_search('^(.*)BC(.*)$', ignorecase=True) }}
 
     will be rendered as:
 
@@ -275,6 +275,32 @@ def regex_search(txt, rgx, ignorecase=False, multiline=False):
     if multiline:
         flag |= re.M
     obj = re.search(rgx, txt, flag)
+    if not obj:
+        return
+    return obj.groups()
+
+
+def regex_match(txt, rgx, ignorecase=False, multiline=False):
+    '''
+    Searches for a pattern in the text.
+
+    .. code-block:: jinja
+
+        {% set my_text = 'abcd' %}
+        {{ my_text | regex_match('^(.*)BC(.*)$', ignorecase=True) }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        ('a', 'd')
+    '''
+    flag = 0
+    if ignorecase:
+        flag |= re.I
+    if multiline:
+        flag |= re.M
+    obj = re.match(rgx, txt, flag)
     if not obj:
         return
     return obj.groups()

@@ -329,6 +329,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.filters['to_bool'] = salt.utils.jinja.to_bool
     jinja_env.filters['quote'] = salt.utils.jinja.quote
     jinja_env.filters['regex_search'] = salt.utils.jinja.regex_search
+    jinja_env.filters['regex_match'] = salt.utils.jinja.regex_match
     jinja_env.filters['regex_replace'] = salt.utils.jinja.regex_replace
     jinja_env.filters['uuid'] = salt.utils.jinja.uuid_
     jinja_env.filters['min'] = salt.utils.jinja.lst_min

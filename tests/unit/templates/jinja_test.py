@@ -920,13 +920,19 @@ class TestCustomExtensions(TestCase):
 
     def test_regex_search(self):
         '''Test the `regex_search` Jinja filter.'''
-        rendered = render_jinja_tmpl("{{ 'abcd' | regex_search('^(.*)BC(.*)$', ignorecase=True) | join(', ') }}",
+        rendered = render_jinja_tmpl("{{ 'abcdefabcdef' | regex_search('BC(.*)', ignorecase=True) }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u"a, d")
+        self.assertEqual(rendered, u"('defabcdef',)")  # because search looks only at the beginning
+
+    def test_regex_match(self):
+        '''Test the `regex_match` Jinja filter.'''
+        rendered = render_jinja_tmpl("{{ 'abcdefabcdef' | regex_match('BC(.*)', ignorecase=True)}}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, u"None")
 
     def test_regex_replace(self):
         '''Test the `regex_replace` Jinja filter.'''
-        rendered = render_jinja_tmpl("{{ 'lets replace spaces' | regex_replace(r'\s+', '__') }}",
+        rendered = render_jinja_tmpl("{{ 'lets replace spaces' | regex_replace('\s+', '__') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, u'lets__replace__spaces')
 
@@ -934,7 +940,7 @@ class TestCustomExtensions(TestCase):
         '''Test the `uuid` Jinja filter.'''
         rendered = render_jinja_tmpl("{{ 'random' | uuid }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertIsInstance(rendered, six.text_type)
+        self.assertEqual(rendered, u'3652b285-26ad-588e-a5dc-c2ee65edc804')
 
     def test_min(self):
         '''Test the `min` Jinja filter.'''
