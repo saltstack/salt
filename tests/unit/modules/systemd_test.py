@@ -389,24 +389,31 @@ class SystemdScopeTestCase(TestCase):
         Common code for mask/unmask tests
         '''
         # We want the traceback if the function name can't be found in the
-        # systemd execution module.
+        # systemd execution module, so don't provide a fallback value for the
+        # call to getattr() here.
         func = getattr(systemd, action)
         systemctl_command = ['systemctl', action]
         if runtime:
             systemctl_command.append('--runtime')
         systemctl_command.append(self.unit_name + '.service')
 
-        args = [self.unit_name]
-        if action != 'unmask':
-            # We don't need to pass a runtime arg if we're testing unmask(),
-            # because unmask() automagically figures out whether or not we're
-            # unmasking a runtime-masked service.
-            args.append(runtime)
+        args = [self.unit_name, runtime]
 
-        masked_mock = MagicMock(
-            return_value='masked-runtime' if runtime else 'masked')
+        masked_mock = self.mock_true if action == 'unmask' else self.mock_false
 
         with patch.object(systemd, '_check_for_unit_changes', self.mock_none):
+            if action == 'unmask':
+                mock_not_run = MagicMock(return_value={'retcode': 0,
+                                                       'stdout': '',
+                                                       'stderr': '',
+                                                       'pid': 12345})
+                with patch.dict(systemd.__salt__, {'cmd.run_all': mock_not_run}):
+                    with patch.object(systemd, 'masked', self.mock_false):
+                        # Test not masked (should take no action and return True)
+                        self.assertTrue(systemd.unmask(self.unit_name))
+                        # Also should not have called cmd.run_all
+                        mock_not_run.assert_not_called()
+
             with patch.object(systemd, 'masked', masked_mock):
 
                 # Has scopes available
@@ -521,16 +528,9 @@ class SystemdScopeTestCase(TestCase):
         self._mask_unmask('mask', True)
 
     def test_unmask(self):
-        # Test already masked
         self._mask_unmask('unmask', False)
-        # Test not masked (should take no action and return True). We don't
-        # need to repeat this in test_unmask_runtime.
-        with patch.object(systemd, '_check_for_unit_changes', self.mock_none):
-            with patch.object(systemd, 'masked', self.mock_false):
-                self.assertTrue(systemd.unmask(self.unit_name))
 
     def test_unmask_runtime(self):
-        # Test already masked
         self._mask_unmask('unmask', True)
 
 
