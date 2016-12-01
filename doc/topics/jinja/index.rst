@@ -231,8 +231,290 @@ yaml_squote
    ``yaml_squote`` is not nearly as useful (viz. you likely want to
    use ``yaml_encode`` or ``yaml_dquote``).
 
+to_bool
+  Returns the logical value of an element. Example:
+
+  .. code-block:: jinja
+
+      {{ 'yes' | to_bool }}
+      {{ 'true' | to_bool }}
+      {{ 1 | to_bool }}
+      {{ 'no' | to_bool }}
+
+  Will be rendered as:
+
+  .. code-block:: python
+
+    True
+    True
+    True
+    False
+
+quote
+  Wraps a text around quoutes.
+
+regex_search
+  Scan through string looking for a location where this regular expression
+  produces a match. Returns ``None`` in case there were no matches found
+
+  Example:
+
+  .. code-block:: jinja
+
+    {{ 'abcdefabcdef' | regex_search('BC(.*)', ignorecase=True) }}
+
+  Returns:
+
+  .. code-block:: python
+
+    ('defabcdef',)
+
+regex_match
+  If zero or more characters at the beginning of string match this regular
+  expression, otherwise returns ``None``.
+
+  Example:
+
+  .. code-block:: jinja
+
+    {{ 'abcdefabcdef' | regex_match('BC(.*)', ignorecase=True) }}
+
+  Returns:
+
+  .. code-block:: python
+
+    None
+
+uuid
+  Return a UUID.
+
+  Example:
+
+  .. code-block:: jinja
+
+    {{ 'random' | uuid }}
+
+  Returns:
+
+  .. code-block:: python
+
+    3652b285-26ad-588e-a5dc-c2ee65edc804
+
+min
+  Return the minim value from a list.
+
+max
+  Returns the maximum value from a list.
+
+avg
+  Returns the average value of the elements of a list
+
+union
+  Return the union of two lists. Example:
+
+  .. code-block:: jinja
+
+    {{ 1, 2, 3] | union([2, 3, 4]) | join(', ') }}
+
+intersect
+  Return the intersection of two lists. Example:
+
+  .. code-block:: jinja
+
+    {{ [1, 2, 3] | intersect([2, 3, 4]) }}
+
+difference
+  Return the difference of two lists. Example:
+
+  .. code-block:: jinja
+
+    {%- my_list = [1, 2, 3] -%}
+    {{ my_list | difference([2, 3, 4]) }}
+
+symmetric_difference
+  Return the symmetric difference of two lists. Example:
+
+  .. code-block:: jinja
+
+    {%- my_list = [1, 2, 3] -%}
+    {{ my_list | symmetric_difference([2, 3, 4]) }}
+
+md5
+  Return the md5 digest of a string.
+
+  .. code-block:: jinja
+
+    {{ 'random' | md5 }}
+
+sha256
+  Return the sha256 digest of a string.
+
+  .. code-block:: jinja
+
+    {{ 'random' | sha256 }}
+
+sha512
+  Return the sha512 digest of a string.
+
+  .. code-block:: jinja
+
+    {{ 'random' | sha512 }}
+
+base64_encode
+  Encode a string as base64.
+
+  .. code-block:: jinja
+
+    {{ 'random' | base64_encode }}
+
+base64_decode
+  Decode a base64-encoded string.
+
+  .. code-block:: jinja
+
+    {{ 'random' | base64_decode }}
+
+hmac
+  Verify a challenging hmac signature against a string / shared-secret. Returns
+  a boolean value.
+
+  .. code-block:: jinja
+
+    {{ 'random' | hmac('secret', 'eBWf9bstXg+NiP5AMPzEM9W5YMm/AmQ=') }}
+
+http_query
+  Return the HTTP reply object from a URL.
+
+  .. code-block:: jinja
+
+    {{ 'http://www.google.com' | http_query }}
+
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
+
+Networking Filters
+==================
+
+The following networking-related filters are supported:
+
+is_ip
+  Return if a string is a valid IP Address.
+
+  .. code-block:: jinja
+
+    {{ '192.168.0.1' | is_ip }}
+
+  Additionally accepts the following options:
+
+  - global
+  - link-local
+  - loopback
+  - multicast
+  - private
+  - public
+  - reserved
+  - site-local
+  - unspecified
+
+  Example - test if a string is a valid loopback IP address.
+
+  .. code-block:: jinja
+
+    {{ '192.168.0.1' | is_ip(options='loopback') }}
+
+is_ipv4
+  Returns if a string is a valid IPv4 address. Supports the same options
+  as ``is_ip``.
+
+  .. code-block:: jinja
+
+    {{ '192.168.0.1' | is_ipv4 }}
+
+is_ip6
+  Returns if a string is a valid IPv6 address. Supports the same options
+  as ``is_ip``.
+
+  .. code-block:: jinja
+
+    {{ 'fe80::' | is_ipv6 }}
+
+ipaddr
+  From a list, returns only valid IP entries. Supports the same options
+  as ``is_ip``. The list can contains also IP interfaces/networks.
+
+  Example:
+
+  .. code-block:: jinja
+
+    {{ ['192.168.0.1', 'foo', 'bar', 'fe80::'] | ipaddr }}
+
+  Returns:
+
+  .. code-block:: python
+
+    ['192.168.0.1', 'fe80::']
+
+ipv4
+  From a list, returns only valid IPv4 entries. Supports the same options
+  as ``is_ip``. The list can contains also IP interfaces/networks.
+
+  Example:
+
+  .. code-block:: jinja
+
+    {{ ['192.168.0.1', 'foo', 'bar', 'fe80::'] | ipv4 }}
+
+  Returns:
+
+  .. code-block:: python
+
+    ['192.168.0.1']
+
+ipv6
+  From a list, returns only valid IPv6 entries. Supports the same options
+  as ``is_ip``. The list can contains also IP interfaces/networks.
+
+  Example:
+
+  .. code-block:: jinja
+
+    {{ ['192.168.0.1', 'foo', 'bar', 'fe80::'] | ipv4 }}
+
+  Returns:
+
+  .. code-block:: python
+
+    ['fe80::']
+
+network_hosts
+  Return the list of hosts within a networks.
+
+  Example:
+
+  .. code-block:: jinja
+
+    {{ '192.168.0.1/30' | network_hosts }}
+
+  Returns:
+
+  .. code-block:: python
+
+    ['192.168.0.1', '192.168.0.2']
+
+network_size
+  Return the size of the network.
+
+  Example:
+
+  .. code-block:: jinja
+
+    {{ '192.168.0.1/8' | network_size }}
+
+  Returns:
+
+  .. code-block:: python
+
+    16777216
 
 Jinja in Files
 ==============
