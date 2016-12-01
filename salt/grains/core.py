@@ -439,36 +439,45 @@ def _windows_virtual(osdata):
     if osdata['kernel'] != 'Windows':
         return grains
 
-    if 'QEMU' in osdata.get('manufacturer', ''):
+    # It is possible that the 'manufacturer' and/or 'productname' grains
+    # exist but have a value of None.
+    manufacturer = osdata.get('manufacturer', '')
+    if manufacturer is None:
+        manufacturer = ''
+    productname = osdata.get('productname', '')
+    if productname is None:
+        productname = ''
+
+    if 'QEMU' in manufacturer:
         # FIXME: Make this detect between kvm or qemu
         grains['virtual'] = 'kvm'
-    if 'Bochs' in osdata.get('manufacturer', ''):
+    if 'Bochs' in manufacturer:
         grains['virtual'] = 'kvm'
     # Product Name: (oVirt) www.ovirt.org
     # Red Hat Community virtualization Project based on kvm
-    elif 'oVirt' in osdata.get('productname', ''):
+    elif 'oVirt' in productname:
         grains['virtual'] = 'kvm'
         grains['virtual_subtype'] = 'oVirt'
     # Red Hat Enterprise Virtualization
-    elif 'RHEV Hypervisor' in osdata.get('productname', ''):
+    elif 'RHEV Hypervisor' in productname:
         grains['virtual'] = 'kvm'
         grains['virtual_subtype'] = 'rhev'
     # Product Name: VirtualBox
-    elif 'VirtualBox' in osdata.get('productname', ''):
+    elif 'VirtualBox' in productname:
         grains['virtual'] = 'VirtualBox'
     # Product Name: VMware Virtual Platform
-    elif 'VMware Virtual Platform' in osdata.get('productname', ''):
+    elif 'VMware Virtual Platform' in productname:
         grains['virtual'] = 'VMware'
     # Manufacturer: Microsoft Corporation
     # Product Name: Virtual Machine
-    elif 'Microsoft' in osdata.get('manufacturer', '') and \
-         'Virtual Machine' in osdata.get('productname', ''):
+    elif 'Microsoft' in manufacturer and \
+         'Virtual Machine' in productname:
         grains['virtual'] = 'VirtualPC'
     # Manufacturer: Parallels Software International Inc.
-    elif 'Parallels Software' in osdata.get('manufacturer'):
+    elif 'Parallels Software' in manufacturer:
         grains['virtual'] = 'Parallels'
     # Apache CloudStack
-    elif 'CloudStack KVM Hypervisor' in osdata.get('productname', ''):
+    elif 'CloudStack KVM Hypervisor' in productname:
         grains['virtual'] = 'kvm'
         grains['virtual_subtype'] = 'cloudstack'
     return grains
