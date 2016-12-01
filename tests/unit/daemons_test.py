@@ -87,7 +87,7 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
                 '''
                 obj = daemons.Master()
                 obj.config = {'user': 'dummy', 'hash_type': alg}
-                for attr in ['start_log_info', 'prepare', 'shutdown']:
+                for attr in ['start_log_info', 'prepare', 'shutdown', 'master']:
                     setattr(obj, attr, MagicMock())
 
                 return obj
