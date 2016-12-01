@@ -907,15 +907,27 @@ def extracted(name,
 
     extraction_needed = overwrite
 
-    if extraction_needed and contents['top_level_dirs']:
-        for top_level_dir in contents['top_level_dirs']:
-            destination = os.path.join(name, top_level_dir)
-            if os.path.exists(destination):
+    if extraction_needed and (contents.get('top_level_dirs', []) or contents.get('top_level_files', [])):
+        # Remove directories, if any
+        for top_level_dir in contents.get('top_level_dirs', []):
+            top_level_dir = os.path.join(name, top_level_dir)
+            if os.path.exists(top_level_dir):
                 try:
-                    shutil.rmtree(destination)
+                    shutil.rmtree(top_level_dir)
                 except OSError as err:
                     ret['comment'] = 'Error removing destination directory ' \
-                                     '"{0}": {1}'.format(destination, err)
+                                     '"{0}": {1}'.format(top_level_dir, err)
+                    ret['result'] = False
+                    return ret
+        # Remove top level files, if any
+        for top_level_file in contents.get('top_level_files'[]):
+            top_level_file = os.path.join(name, top_level_file)
+            if os.path.exists(top_level_file):
+                try:
+                    os.unlink(top_level_file)
+                except OSError as err:
+                    ret['comment'] = 'Error removing destination file ' \
+                                     '"{0}": {1}'.format(top_level_file, err)
                     ret['result'] = False
                     return ret
 
