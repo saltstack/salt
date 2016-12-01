@@ -342,7 +342,8 @@ def is_ipv4_filter(ip, options=None):
     options
         CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
     '''
-    return _is_ipv(ip, 4, options=options)
+    _is_ipv4 = _is_ipv(ip, 4, options=options)
+    return isinstance(_is_ipv4, six.string_types)
 
 
 def is_ipv6_filter(ip, options=None):
@@ -358,28 +359,24 @@ def is_ipv6_filter(ip, options=None):
     options
         CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
     '''
-    return _is_ipv(ip, 6, options=options)
+    _is_ipv6 = _is_ipv(ip, 6, options=options)
+    return isinstance(_is_ipv6, six.string_types)
 
 
 def _ipv_filter(value, version, options=None):
-    fun = None
-    if version == 4:
-        fun = is_ipv4_filter
-    elif version == 6:
-        fun = is_ipv6_filter
 
-    if not fun:  # indeed, that's not fun...
+    if version not in (4, 6):
         return
 
     if isinstance(value, (six.string_types, six.text_type, six.binary_type)):
-        return fun(value, options=options)  # calls is_ipv4 or is_ipv6 for `value`
+        return _is_ipv(value, version, options=options)  # calls is_ipv4 or is_ipv6 for `value`
     elif isinstance(value, (list, tuple, types.GeneratorType)):
         # calls is_ipv4 or is_ipv6 for each element in the list
         # os it filters and returns only those elements having the desired IP version
         return [
-            fun(addr, options=options)
+            _is_ipv(addr, version, options=options)
             for addr in value
-            if fun(addr, options=options) is not None
+            if _is_ipv(addr, version, options=options) is not None
         ]
     return None
 
@@ -436,7 +433,9 @@ def ip_host(value, options=None, version=None):
     ipaddr_filter_out = _filter_ipaddr(value, options=options, version=version)
     if not ipaddr_filter_out:
         return
-    return [ipaddress.ip_interface(ip_a) for ip_a in ipaddr_filter_out]
+    if not isinstance(value, (list, tuple, types.GeneratorType)):
+        return str(ipaddress.ip_interface(ipaddr_filter_out[0]))
+    return [str(ipaddress.ip_interface(ip_a)) for ip_a in ipaddr_filter_out]
 
 
 def _network_hosts(ip_addr_entry):
