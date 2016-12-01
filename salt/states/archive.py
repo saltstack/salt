@@ -111,16 +111,6 @@ def _is_bsdtar():
                                            python_shell=False)
 
 
-def _cleanup_destdir(name):
-    '''
-    Attempt to remove the specified directory
-    '''
-    try:
-        os.rmdir(name)
-    except OSError:
-        pass
-
-
 def _remove_destination(names, root=None, ret=None, fail=False):
     '''
     Remove the specified directory or file.
@@ -1087,7 +1077,7 @@ def extracted(name,
                                     python_shell=True)
                                 if results['retcode'] != 0:
                                     if created_destdir:
-                                        _cleanup_destdir(name)
+                                        _remove_destination([name])
                                     ret['result'] = False
                                     ret['changes'] = results
                                     return ret
@@ -1099,7 +1089,7 @@ def extracted(name,
                                 # Failed to open tar archive and it is not
                                 # XZ-compressed, gracefully fail the state
                                 if created_destdir:
-                                    _cleanup_destdir(name)
+                                    _remove_destination([name])
                                 ret['result'] = False
                                 ret['comment'] = (
                                     'Failed to read from tar archive using '
@@ -1113,7 +1103,7 @@ def extracted(name,
                                 return ret
                         else:
                             if created_destdir:
-                                _cleanup_destdir(name)
+                                _remove_destination([name])
                             ret['result'] = False
                             ret['comment'] = (
                                 'Failed to read from tar archive. If it is '
