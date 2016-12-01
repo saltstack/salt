@@ -12,6 +12,7 @@ import logging
 import os
 import re
 import shlex
+import shutil
 import stat
 import tarfile
 from contextlib import closing
@@ -140,6 +141,7 @@ def extracted(name,
               enforce_toplevel=True,
               enforce_ownership_on=None,
               archive_format=None,
+              overwrite=False,
               **kwargs):
     '''
     .. versionadded:: 2014.1.0
@@ -497,6 +499,11 @@ def extracted(name,
     .. _zipfile: https://docs.python.org/2/library/zipfile.html
     .. _xz-utils: http://tukaani.org/xz/
 
+    overwrite
+        If archive was already extracted, then setting this to True will
+        extract it all over again.
+        **WARNING: This operation will flush clean all the previous content, if exists!**
+
     **Examples**
 
     1. tar with lmza (i.e. xz) compression:
@@ -545,10 +552,9 @@ def extracted(name,
         ret['comment'] = '{0} is not an absolute path'.format(name)
         return ret
     else:
-        if name is None:
-            # Only way this happens is if some doofus specifies "- name: None"
-            # in their SLS file. Prevent tracebacks by failing gracefully.
-            ret['comment'] = 'None is not a valid directory path'
+        if not name:
+            # Empty name, like None, '' etc.
+            ret['comment'] = 'Name of the directory path needs to be specified'
             return ret
         # os.path.isfile() returns False when there is a trailing slash, hence
         # our need for first stripping the slash and then adding it back later.
@@ -898,7 +904,20 @@ def extracted(name,
     # already need to catch an OSError to cover edge cases where the minion is
     # running as a non-privileged user and is trying to check for the existence
     # of a path to which it does not have permission.
-    extraction_needed = False
+
+    extraction_needed = overwrite
+
+    if extraction_needed:
+        destination = os.path.join(name, contents['top_level_dirs'][0])
+        if os.path.exists(destination):
+            try:
+                shutil.rmtree(destination)
+            except OSError as err:
+                ret['comment'] = 'Error removing destination directory ' \
+                                 '"{0}": {1}'.format(destination, err)
+                ret['result'] = False
+                return ret
+
     try:
         if_missing_path_exists = os.path.exists(if_missing)
     except TypeError:

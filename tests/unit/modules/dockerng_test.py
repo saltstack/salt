@@ -670,7 +670,7 @@ class DockerngTestCase(TestCase):
                 mods='foo',
             )
         docker_create_mock.assert_called_once_with(
-            cmd='/usr/bin/sleep infinity',
+            cmd='sleep infinity',
             image='opensuse/python', interactive=True, name='foo', tty=True)
         docker_start_mock.assert_called_once_with('ID')
         docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
