@@ -104,6 +104,9 @@ Additional Features
 
 - The ``junos`` state module is now available. It has all the functions
   that are present in the ``junos`` execution module.
+- The minion data cache is a pluggable data store now. It's configurable with
+  :conf_master:`cache` option. Default is ``localfs``.
+- User names in :conf_master:`client_acl` support glob matching now.
 
 New Top File Merging Strategy for States
 ========================================
@@ -245,7 +248,7 @@ Beacons Changes
 ===============
 
 - The ``loadavg`` beacon now outputs averages as integers instead of strings.
-  (Via :issuse:`31124`.)
+  (Via :issue:`31124`.)
 
 Runner Changes
 ==============
@@ -271,7 +274,7 @@ Pillar Changes
 Network Automation: NAPALM
 ==========================
 
-Beginning with Carbon, network automation is inclued by default in the core
+Beginning with 2016.11.0, network automation is inclued by default in the core
 of Salt. It is based on a the `NAPALM <https://github.com/napalm-automation/napalm>`_
 library and provides facilities to manage the configuration and retrieve data
 from network devices running widely used operating systems such: JunOS, IOS-XR,
@@ -295,7 +298,7 @@ In the current release, the following modules were included:
 - :mod:`Users management state <salt.states.netusers>`
 
 Junos Module Changes
-===================
+====================
 
 - The following new functionalities were added to the junos module
 
@@ -312,6 +315,36 @@ Returner Changes
 - Any returner which implements a `save_load` function is now required to
   accept a `minions` keyword argument. All returners which ship with Salt
   have been modified to do so.
+
+Renderer Changes
+================
+
+Added the ability to restrict allowed renderers. Two new config parameters,
+:conf_master:`renderer_whitelist` and :conf_master:`renderer_blacklist` are
+introduced for this purpose.
+
+eAuth Changes
+=============
+
+- External auth modules' ``auth`` method can return an ACL list for the given
+  username instead of ``True``. This list should be in the same format as
+  described in the :doc:`eAuth documentation </topics/eauth/index>`. It will be
+  used for the user instead of one set in master config.
+
+  Example of the ``auth`` method return that allows a user to execute functions
+  in the ``test`` and ``network`` modules on the minions that match the ``web*``
+  target and allow access to ``wheel`` and ``runner`` modules:
+
+  .. code-block:: python
+
+      [{'web*': ['test.*',
+                 'network.*']},
+       '@wheel',
+       '@runner']
+
+- External auth is supported by :doc:`salt-run </ref/cli/salt-run>` and
+  :doc:`salt-key </ref/cli/salt-key>` now. Note that master must be started to
+  use them with eAuth.
 
 External Module Packaging
 =========================
@@ -516,7 +549,7 @@ General Deprecations
 - Deprecations in ``minion.py``:
 
   - The ``salt.minion.parse_args_and_kwargs`` function has been removed. Please
-  use the ``salt.minion.load_args_and_kwargs`` function instead.
+    use the ``salt.minion.load_args_and_kwargs`` function instead.
 
 Cloud Deprecations
 ------------------
