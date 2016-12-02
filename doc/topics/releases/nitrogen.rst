@@ -56,3 +56,18 @@ Execution Module Changes
   <salt.modules.systemd>` module have changed. These changes are described
   above alongside the information on the new states which have been added to
   manage masking of systemd units.
+
+Python API Changes
+==================
+
+The :ref:`LocalClient <local-client>`'s ``expr_form`` argument has been
+deprecated and renamed to ``tgt_type``. This change was made due to numerous
+reports of confusion among community members, since the targeting method is
+published to minions as ``tgt_type``, and appears as ``tgt_type`` in the job
+cache as well.
+
+While ``expr_form`` will continue to be supported until the **Fluorine**
+release cycle (two major releases after this one), those who are using the
+:ref:`LocalClient <local-client>` (either directly, or implictly via a
+:ref:`netapi module <all-netapi-modules>`) are encouraged to update their code
+to use ``tgt_type``.

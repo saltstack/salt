@@ -588,7 +588,7 @@ class RemoteFuncs(object):
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
-        match_type = load.get('expr_form', 'glob')
+        match_type = load.get('tgt_type', 'glob')
         if match_type.lower() == 'pillar':
             match_type = 'pillar_exact'
         if match_type.lower() == 'compound':
@@ -895,7 +895,7 @@ class RemoteFuncs(object):
         pub_load = {
             'fun': load['fun'],
             'arg': load['arg'],
-            'expr_form': load.get('tgt_type', 'glob'),
+            'tgt_type': load.get('tgt_type', 'glob'),
             'tgt': load['tgt'],
             'ret': load['ret'],
             'id': load['id'],
@@ -904,17 +904,16 @@ class RemoteFuncs(object):
             if load['tgt_type'].startswith('node'):
                 if load['tgt'] in self.opts['nodegroups']:
                     pub_load['tgt'] = self.opts['nodegroups'][load['tgt']]
-                    pub_load['expr_form_type'] = 'compound'
-                    pub_load['expr_form'] = load['tgt_type']
+                    pub_load['tgt_type'] = 'compound'
                 else:
                     return {}
             else:
-                pub_load['expr_form'] = load['tgt_type']
+                pub_load['tgt_type'] = load['tgt_type']
         ret = {}
         ret['jid'] = self.local.cmd_async(**pub_load)
         ret['minions'] = self.ckminions.check_minions(
                 load['tgt'],
-                pub_load['expr_form'])
+                pub_load['tgt_type'])
         auth_cache = os.path.join(
                 self.opts['cachedir'],
                 'publish_auth')
@@ -949,7 +948,7 @@ class RemoteFuncs(object):
         pub_load = {
             'fun': load['fun'],
             'arg': load['arg'],
-            'expr_form': load.get('tgt_type', 'glob'),
+            'tgt_type': load.get('tgt_type', 'glob'),
             'tgt': load['tgt'],
             'ret': load['ret'],
             'id': load['id'],
@@ -974,11 +973,11 @@ class RemoteFuncs(object):
             if load['tgt_type'].startswith('node'):
                 if load['tgt'] in self.opts['nodegroups']:
                     pub_load['tgt'] = self.opts['nodegroups'][load['tgt']]
-                    pub_load['expr_form_type'] = 'compound'
+                    pub_load['tgt_type'] = 'compound'
                 else:
                     return {}
             else:
-                pub_load['expr_form'] = load['tgt_type']
+                pub_load['tgt_type'] = load['tgt_type']
         pub_load['raw'] = True
         ret = {}
         for minion in self.local.cmd_iter(**pub_load):

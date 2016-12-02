@@ -2276,7 +2276,7 @@ class Map(Cloud):
                     client = salt.client.get_local_client()
                     out.update(client.cmd(
                         ','.join(group), self.opts['start_action'],
-                        timeout=self.opts['timeout'] * 60, expr_form='list'
+                        timeout=self.opts['timeout'] * 60, tgt_type='list'
                     ))
                 for obj in output_multip:
                     next(six.itervalues(obj))['ret'] = out[next(six.iterkeys(obj))]

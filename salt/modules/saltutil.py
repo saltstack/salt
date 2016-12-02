@@ -1022,13 +1022,22 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
     return client
 
 
-def _exec(client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
+def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
+    if 'expr_form' in kwargs:
+        salt.utils.warn_until(
+            'Fluorine',
+            'The target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = kwargs.pop('expr_form')
+
     fcn_ret = {}
     seen = 0
     if 'batch' in kwargs:
         _cmd = client.cmd_batch
         cmd_kwargs = {
-            'tgt': tgt, 'fun': fun, 'arg': arg, 'expr_form': expr_form,
+            'tgt': tgt, 'fun': fun, 'arg': arg, 'tgt_type': tgt_type,
             'ret': ret, 'kwarg': kwarg, 'batch': kwargs['batch'],
         }
         del kwargs['batch']
@@ -1036,14 +1045,14 @@ def _exec(client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
         _cmd = client.cmd_iter
         cmd_kwargs = {
             'tgt': tgt, 'fun': fun, 'arg': arg, 'timeout': timeout,
-            'expr_form': expr_form, 'ret': ret, 'kwarg': kwarg,
+            'tgt_type': tgt_type, 'ret': ret, 'kwarg': kwarg,
         }
     cmd_kwargs.update(kwargs)
     for ret_comp in _cmd(**cmd_kwargs):
         fcn_ret.update(ret_comp)
         seen += 1
         # fcn_ret can be empty, so we cannot len the whole return dict
-        if expr_form == 'list' and len(tgt) == seen:
+        if tgt_type == 'list' and len(tgt) == seen:
             # do not wait for timeout when explicit list matching
             # and all results are there
             break
@@ -1054,12 +1063,16 @@ def cmd(tgt,
         fun,
         arg=(),
         timeout=None,
-        expr_form='glob',
+        tgt_type='glob',
         ret='',
         kwarg=None,
         ssh=False,
         **kwargs):
     '''
+    .. versionchanged:: Nitrogen
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Assuming this minion is a master, execute a salt command
 
     CLI Example:
@@ -1071,7 +1084,7 @@ def cmd(tgt,
     cfgfile = __opts__['conf_file']
     client = _get_ssh_or_api_client(cfgfile, ssh)
     fcn_ret = _exec(
-        client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs)
+        client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs)
     # if return is empty, we may have not used the right conf,
     # try with the 'minion relative master configuration counter part
     # if available
@@ -1083,7 +1096,7 @@ def cmd(tgt,
     ):
         client = _get_ssh_or_api_client(master_cfgfile, ssh)
         fcn_ret = _exec(
-            client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs)
+            client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs)
 
     if 'batch' in kwargs:
         old_ret, fcn_ret = fcn_ret, {}
@@ -1100,12 +1113,16 @@ def cmd_iter(tgt,
              fun,
              arg=(),
              timeout=None,
-             expr_form='glob',
+             tgt_type='glob',
              ret='',
              kwarg=None,
              ssh=False,
              **kwargs):
     '''
+    .. versionchanged:: Nitrogen
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Assuming this minion is a master, execute a salt command
 
     CLI Example:
@@ -1123,7 +1140,7 @@ def cmd_iter(tgt,
             fun,
             arg,
             timeout,
-            expr_form,
+            tgt_type,
             ret,
             kwarg,
             **kwargs):

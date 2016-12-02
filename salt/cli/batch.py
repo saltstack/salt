@@ -50,7 +50,7 @@ class Batch(object):
         if selected_target_option is not None:
             args.append(selected_target_option)
         else:
-            args.append(self.opts.get('expr_form', 'glob'))
+            args.append(self.opts.get('tgt_type', 'glob'))
 
         self.pub_kwargs['yield_pub_data'] = True
         ping_gen = self.local.cmd_iter(*args, **self.pub_kwargs)

@@ -830,8 +830,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         if self.opts['zmq_filtering'] and load['tgt_type'] in match_targets:
             # Fetch a list of minions that match
             match_ids = self.ckminions.check_minions(load['tgt'],
-                                                     expr_form=load['tgt_type']
-                                                     )
+                                                     tgt_type=load['tgt_type'])
 
             log.debug("Publish Side Match: {0}".format(match_ids))
             # Send list of miions thru so zmq can target them
