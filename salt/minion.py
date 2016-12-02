@@ -2517,7 +2517,7 @@ class SyndicManager(MinionBase):
             try:
                 getattr(syndic_future.result(), func)(*args, **kwargs)
                 success = True
-                if self.opts['syndic_forward_events'] == 'all':
+                if self.opts['syndic_forward_all_events']:
                     continue
                 return
             except SaltClientError:
@@ -2558,7 +2558,7 @@ class SyndicManager(MinionBase):
             future = getattr(syndic_future.result(), func)(values)
             self.pub_futures[master] = (future, values)
             success = True
-            if self.opts['syndic_forward_events'] == 'all':
+            if self.opts['syndic_forward_all_events']:
                 continue
             break
         # Loop done and didn't exit: wasn't sent, try again later
