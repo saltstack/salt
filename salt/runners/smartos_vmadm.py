@@ -45,7 +45,7 @@ def _action(action='get', search=None, one=True, force=False):
             vmadm_args['search'] = search
         for cn in client.cmd_iter('G@virtual:physical and G@os:smartos',
                                     'vmadm.list', kwarg=vmadm_args,
-                                    expr_form='compound'):
+                                    tgt_type='compound'):
             if not cn:
                 continue
             node = next(cn.iterkeys())
@@ -150,7 +150,7 @@ def nodes(verbose=False):
     ## get list of nodes
     try:
         for cn in client.cmd_iter('G@virtual:physical and G@os:smartos',
-                                    'grains.items', expr_form='compound'):
+                                    'grains.items', tgt_type='compound'):
             if not cn:
                 continue
             node = next(cn.iterkeys())
@@ -209,7 +209,7 @@ def list_vms(search=None, verbose=False):
             vmadm_args['search'] = search
         for cn in client.cmd_iter('G@virtual:physical and G@os:smartos',
                                     'vmadm.list', kwarg=vmadm_args,
-                                    expr_form='compound'):
+                                    tgt_type='compound'):
             if not cn:
                 continue
             node = next(cn.iterkeys())

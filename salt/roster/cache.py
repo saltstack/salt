@@ -35,7 +35,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         'public', 'private', 'local'
     ))
 
-    cached_data = __runner__['cache.grains'](tgt=tgt, expr_form=tgt_type)
+    cached_data = __runner__['cache.grains'](tgt=tgt, tgt_type=tgt_type)
     ret = {}
     for server, grains in cached_data.items():
         ret[server] = __opts__.get('roster_defaults', {}).copy()
