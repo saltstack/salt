@@ -2573,7 +2573,7 @@ class SyndicManager(MinionBase):
         '''
         Wrapper to call the '_return_pub_multi' a syndic, best effort to get the one you asked for
         '''
-        success = True
+        success = False
         func = '_return_pub_multi'
         for master, syndic_future in self.iter_master_options(master_id):
             if not syndic_future.done() or syndic_future.exception():
@@ -2603,7 +2603,6 @@ class SyndicManager(MinionBase):
             if self.opts['syndic_forward_all_events']:
                 continue
             break
-        # Loop done and didn't exit: wasn't sent, try again later
         return success
 
     def iter_master_options(self, master_id=None):
