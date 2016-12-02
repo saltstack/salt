@@ -375,6 +375,8 @@ Functionality Changes
   specifies the number of times a minion should attempt to contact a master to
   attempt a connection.  This allows better handling of occasional master
   downtime in a multi-master topology.
+- The default hash_type is now sha256 instead of md5. You will need to make sure both
+  your master and minion share the same hash_type.
 - Nodegroups consisting of a simple list of minion IDs can now also be declared
   as a yaml list. The below two examples are equivalent:
 
