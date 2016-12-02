@@ -85,7 +85,7 @@ def _check_and_install_python(ret, python, default=False, user=None):
     '''
     ret = _python_installed(ret, python, user=user)
     if not ret['result']:
-        if __salt__['pyenv.install_python'](python, runas=user) != False:
+        if __salt__['pyenv.install_python'](python, runas=user) is not False:
             ret['result'] = True
             ret['changes'][python] = 'Installed'
             ret['comment'] = 'Successfully installed python'
