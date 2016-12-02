@@ -69,7 +69,9 @@ def __virtual__():
 
 
 def _default_ret(name):
-
+    '''
+    Return the default dict of the state output.
+    '''
     ret = {
         'name': name,
         'changes': {},
@@ -98,6 +100,11 @@ def _update_config(template_name,
                    debug=False,
                    replace=False,
                    **template_vars):
+    '''
+    Call the necessary functions in order to execute the state.
+    For the moment this only calls the ``net.load_template`` function from the
+    :mod:`Network-related basic features execution module <salt.modules.napalm_network>`, but this may change in time.
+    '''
 
     return __salt__['net.load_template'](template_name,
                                          template_source=template_source,
@@ -144,22 +151,39 @@ def managed(name,
     '''
     Manages the configuration on network devices.
 
-    By default this function will commit the changes. If there are no changes, it does not commit and
-    the flag ``already_configured`` will be set as ``True`` to point this out.
+    By default this state will commit the changes on the device. If there are no changes required, it does not commit
+    and the field ``already_configured`` from the output dictionary will be set as ``True`` to notify that.
+
     To avoid committing the configuration, set the argument ``test`` to ``True`` (or via the CLI argument ``test=True``)
     and will discard (dry run).
-    To keep the chnages but not commit, set ``commit`` to ``False``. However, this is not recommeded to be used withinn
-    the state as it can lead to preserving the configuration DB locked and a unused candidate buffer.
-    To replace the config, set ``replace`` to ``True``.
+
+    To preserve the chnages, set ``commit`` to ``False`` (either as CLI argument, either as state parameter).
+    However, this is recommended to be used only in exceptional cases when there are applied few consecutive states
+    and/or configuration changes. Otherwise the user might forget that the config DB is locked and the candidate config
+    buffer is not cleared/merged in the running config.
+
+    To replace the config, set ``replace`` to ``True``. This option is recommended to be used with caution!
 
     template_name
-        Identifies the template name. If specifies the complete path, will render the template via
+        Identifies path to the template source. The template can be either stored on the local machine,
+        either remotely. When locally, the absolute path must be provided. Otherwise, the source can be retrieved via
+        ``http``, ``https`` or ``ftp``. Examples:
+
+        - ``/absolute/path/to/my_template.jinja``
+        - ``http://example.com/template.cheetah``
+        - ``https:/example.com/template.mako``
+        - ``ftp://example.com/template.py``
+
+        The file extension is not mandatory, but the content must correspond to the ``template_engine``
+        specified (default: ``Jinja``).
 
     template_source: None
         Inline config template to be rendered and loaded on the device.
 
     template_path: None
-        Specifies the absolute path to a the template directory.
+        Required only in case the argument ``template_name`` provides only the file basename.
+        E.g.: if ``template_name`` is specified as ``my_template.jinja``, in order to find the
+        template, this argument must be provided: ``template_path: /absolute/path/to/``.
 
     template_hash: None
         Hash of the template file. Format: ``{hash_type: 'md5', 'hsum': <md5sum>}``
@@ -178,7 +202,7 @@ def managed(name,
 
     saltenv: base
         Specifies the template environment. This will influence the relative imports inside the templates.
-        .. versionadded:: 2016.11.1
+
     template_engine: jinja
         The following templates engines are supported:
 
@@ -195,27 +219,26 @@ def managed(name,
 
     test: False
         Dry run? If set to ``True``, will apply the config, discard and return the changes. Default: ``False``
-        and will commit the changes on the device.
+        (will commit the changes on the device).
 
     commit: True
-        Commit? (default: ``True``) Sometimes it is not needed to commit the config immediately
-        after loading the changes. E.g.: a state loads a couple of parts (add / remove / update)
-        and would not be optimal to commit after each operation.
-        Also, from the CLI when the user needs to apply the similar changes before committing,
-        can specify ``commit=False`` and will not discard the config.
+        Commit? Default: ``True``.
 
     debug: False
         Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` contaning the raw
         result after the template was rendered.
 
     replace: False
-        Load and replace the configuration.
+        Load and replace the configuration. Default: ``False`` (will apply load merge).
 
     defaults: None
         Default variables/context passed to the template.
 
     **template_vars
-        Dictionary with the arguments/context to be used when the template is rendered.
+        Dictionary with the arguments/context to be used when the template is rendered. Do not explicitely specify this
+        argument. This represents any other variable that will be sent to the template rendering system. Please
+        see an example below! In both ``ntp_peers_example_using_pillar`` and ``ntp_peers_example``, ``peers`` is sent as
+        template variable.
 
     SLS Example (e.g.: under salt://router/config.sls) :
 
@@ -232,24 +255,22 @@ def managed(name,
                 - template_engine: mako
         prefix_lists_example:
             netconfig.managed:
-                - template_name: prefix_lists.jinja
+                - template_name: prefix_lists.cheetah
                 - template_path: /absolute/path/to/
                 - debug: True
+                - template_engine: cheetah
         ntp_peers_example:
             netconfig.managed:
                 - template_name: http://bit.ly/2gKOj20
                 - skip_verify: False
                 - debug: True
-                - template_vars:
-                    peers:
-                        - 192.168.0.1
-                        - 192.168.0.1
+                - peers:
+                    - 192.168.0.1
+                    - 192.168.0.1
         ntp_peers_example_using_pillar:
             netconfig.managed:
                 - template_name: http://bit.ly/2gKOj20
-                - debug: True
-                - template_vars:
-                    peers: {{ pillar.get('ntp.peers', []) }}
+                - peers: {{ pillar.get('ntp.peers', []) }}
 
     Usage examples:
 
@@ -262,17 +283,6 @@ def managed(name,
     ``router.config`` depends on the location of the SLS file (see above). Running this command, will be executed all
     five steps from above. These examples above are not meant to be used in a production environment, their sole purpose
     is to provide usage examples.
-
-    :return: a dictionary having the following keys:
-
-    * result (bool): if the config was applied successfully. It is ``False`` only in case of failure. In case \
-    there are no changes to be applied and successfully performs all operations it is still ``True`` and so will be \
-    the ``already_configured`` flag (example below)
-    * comment (str): a message for the user
-    * already_configured (bool): flag to check if there were no changes applied
-    * loaded_config (str): the configuration loaded on the device, after rendering the template. Requires ``debug`` \
-    to be set as ``True``
-    * diff (str): returns the config changes applied
 
     Output example:
 
@@ -307,7 +317,7 @@ def managed(name,
 
     .. code-block:: python
 
-        $ sudo salt --out=pprint 'juniper.device' state.sls router.config test=True
+        $ sudo salt --out=pprint 'juniper.device' state.sls router.config test=True debug=True
         {
             'juniper.device': {
                 'netconfig_|-ntp_peers_example_using_pillar_|-ntp_peers_example_using_pillar_|-managed': {
@@ -315,8 +325,7 @@ def managed(name,
                     '__run_num__': 0,
                     'already_configured': False,
                     'changes': {
-                    'diff':
-                        '[edit system ntp]     peer 192.168.0.1 { ... }+    peer 172.17.17.1;+    peer 172.17.17.3;'
+                        'diff': '[edit system ntp]   peer 192.168.0.1 { ... }+   peer 172.17.17.1;+   peer 172.17.17.3;'
                     },
                     'comment': 'Testing mode: Configuration discarded.',
                     'duration': 7400.759,
