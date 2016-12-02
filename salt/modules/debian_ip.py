@@ -555,6 +555,8 @@ def _parse_interfaces(interface_files=None):
 
     for interface_file in interface_files:
         with salt.utils.fopen(interface_file) as interfaces:
+            # This ensures iface_dict exists, but does not ensure we're not reading a new interface.
+            iface_dict = {}
             for line in interfaces:
                 # Identify the clauses by the first word of each line.
                 # Go to the next line if the current line is a comment
