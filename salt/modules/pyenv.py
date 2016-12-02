@@ -176,9 +176,9 @@ def install_python(python, runas=None):
 
     ret = {}
     ret = _pyenv_exec('install', python, env=env, runas=runas, ret=ret)
-    if ret['retcode'] == 0:
+    if ret != False:
         rehash(runas=runas)
-        return ret['stderr']
+        return ret['stdout']
     else:
         # Cleanup the failed installation so it doesn't list as installed
         uninstall_python(python, runas=runas)
