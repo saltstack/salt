@@ -232,6 +232,8 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
             child_pipe.send(ret)
             child_pipe.close()
 
+        self._multiproc_exec_test(exec_test)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(DaemonsStarterTestCase, needs_daemon=False)
