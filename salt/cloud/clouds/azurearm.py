@@ -872,7 +872,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
             resource_group_name=kwargs['resource_group'],
             network_security_group_name=kwargs['security_group'],
         )
-        
+
     iface_params = NetworkInterface(
         location=kwargs['location'],
         network_security_group=network_security_group,
