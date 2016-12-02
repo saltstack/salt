@@ -176,7 +176,7 @@ def install_python(python, runas=None):
 
     ret = {}
     ret = _pyenv_exec('install', python, env=env, runas=runas, ret=ret)
-    if ret != False:
+    if ret is not False:
         rehash(runas=runas)
         return ret['stdout']
     else:
