@@ -25,6 +25,7 @@ import salt.minion
 
 log = logging.getLogger(__name__)
 
+
 class SSHState(salt.state.State):
     '''
     Create a State object which wraps the SSH functions for state operations
@@ -75,7 +76,6 @@ class SSHHighState(salt.state.BaseHighState):
         Stub out load_dynamic
         '''
         return
-
 
     def _ext_nodes(self):
         '''
