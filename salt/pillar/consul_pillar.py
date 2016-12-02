@@ -164,7 +164,7 @@ def ext_pillar(minion_id,
     match = target_re.search(temp)
     if match:
     	opts['target'] = match.group(1)
-    	temp = temp.strip(match.group(0))
+    	temp = temp.replace(match.group(0), '')
         checker = salt.utils.minions.CkMinions(__opts__)
         minions = checker.check_minions(opts['target'], 'compound')
         if minion_id not in minions:
@@ -174,7 +174,7 @@ def ext_pillar(minion_id,
     match = root_re.search(temp)
     if match:
     	opts['root'] = match.group(1)
-    	temp = temp.strip(match.group(0))
+    	temp = temp.replace(match.group(0), '')
     else:
     	opts['root'] = ""
 
@@ -182,7 +182,7 @@ def ext_pillar(minion_id,
     match = profile_re.search(temp)
     if match:
     	opts['profile'] = match.group(1)
-    	temp = temp.strip(match.group(0))
+    	temp = temp.replace(match.group(0), '')
     else:
     	opts['profile'] = None
 		
