@@ -989,7 +989,6 @@ class FileTestCase(TestCase):
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
-        mock = MagicMock(side_effect=[False, True, False, False])
         with patch.object(os.path, 'isabs', mock_f):
             comt = ('Specified file {0} is not an absolute path'.format(name))
             ret.update({'comment': comt, 'name': name})
@@ -997,8 +996,7 @@ class FileTestCase(TestCase):
 
         with patch.object(os.path, 'isabs', mock_t):
             with patch.dict(filestate.__salt__,
-                            {'file.contains_regex_multiline': mock,
-                             'file.search': mock}):
+                            {'file.search': MagicMock(side_effect=[True, True, True, False, False])}):
                 comt = ('Pattern already commented')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(filestate.comment(name, regex), ret)
@@ -1008,8 +1006,7 @@ class FileTestCase(TestCase):
                 self.assertDictEqual(filestate.comment(name, regex), ret)
 
             with patch.dict(filestate.__salt__,
-                            {'file.contains_regex_multiline': mock_t,
-                             'file.search': mock_t,
+                            {'file.search': MagicMock(side_effect=[False, True, False, True, True]),
                              'file.comment': mock_t,
                              'file.comment_line': mock_t}):
                 with patch.dict(filestate.__opts__, {'test': True}):
