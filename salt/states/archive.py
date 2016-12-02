@@ -606,7 +606,7 @@ def extracted(name,
 
         if user:
             uid = __salt__['file.user_to_uid'](user)
-            if not uid:
+            if uid == '':
                 ret['comment'] = 'User {0} does not exist'.format(user)
                 return ret
         else:
@@ -614,7 +614,7 @@ def extracted(name,
 
         if group:
             gid = __salt__['file.group_to_gid'](group)
-            if not gid:
+            if gid == '':
                 ret['comment'] = 'Group {0} does not exist'.format(group)
                 return ret
         else:
