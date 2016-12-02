@@ -164,7 +164,7 @@ class DebianIpTestCase(TestCase):
             self.assertListEqual(debian_ip.get_interface('lo'),
                                  [u'auto lo\n',
                                   u'iface lo inet loopback\n',
-                                  u'\n']
+                                  u'\n'])
 
             mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound
                              ('error'))
