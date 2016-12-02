@@ -658,6 +658,13 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                            self._default_logging_level_
                            )
 
+        logfile = getattr(self.options,
+                          # From the options setting
+                          self._logfile_config_setting_name_,
+                          # From the default setting
+                          self._default_logging_logfile_
+                          )
+
         cli_log_path = 'cli_{0}_log_file'.format(
             self.get_prog_name().replace('-', '_')
         )
@@ -669,15 +676,6 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 self.config.get(self._logfile_config_setting_name_):
             # Remove it from config so it inherits from log_file
             self.config.pop(self._logfile_config_setting_name_)
-
-        logfile = self.config.get(
-            # First from the config cli setting
-            cli_log_path,
-            self.config.get(
-                # From the config setting
-                self._logfile_config_setting_name_
-            )
-        )
 
         if self.config['verify_env']:
             # Verify the logfile if it was explicitly set but do not try to
