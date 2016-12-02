@@ -850,8 +850,12 @@ class SaltCloudParserTestCase(LogSettingsParserTests):
         # Set mandatory CLI options
         self.args = ['-p', 'foo', 'bar']
 
-        # Set defaults
-        self.default_config = salt.config.DEFAULT_CLOUD_OPTS
+        # Set default configs
+        # Cloud configs are merged with master configs in
+        # config/__init__.py, so we'll do that here as well
+        # As we need the 'user' key later on.
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
+        self.default_config.update(salt.config.DEFAULT_CLOUD_OPTS)
 
         # Log file
         self.log_file = '/tmp/salt_cloud_parser_test'
