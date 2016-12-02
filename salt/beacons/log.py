@@ -1,20 +1,3 @@
-# -*- coding: utf-8 -*-
-# DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER
-#
-# Copyright 2016 Juniper Networks, Inc.
-# All rights reserved.
-#
-# Licensed under the Juniper Networks Script Software License (the "License").
-# You may not use this script file except in compliance with the License, which is located at
-# http://www.juniper.net/support/legal/scriptlicense/
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# Please make sure to run this file as a root user
-
 '''
 Beacon to fire events at specific log messages. 
 
@@ -78,12 +61,12 @@ def beacon(config):
         beacons:
             log:
               file: <path>
-	      <tag>:
-		regex: <pattern>	
+              <tag>:
+                regex: <pattern>        
     '''
     ret = []
 
-    if 'file' not in config:	
+    if 'file' not in config:        
        event = {'tag': tag, 'match': 'no', 'raw': '', 'error': 'file not defined in config'}
        ret.append(event)
        return ret
@@ -95,7 +78,7 @@ def beacon(config):
             fp_.seek(0, 2)
             __context__[LOC_KEY] = fp_.tell()
             return ret
-	
+        
         fp_.seek(0, 2)
         __context__[LOC_KEY] = fp_.tell()
         fp_.seek(loc)
@@ -104,11 +87,11 @@ def beacon(config):
 
         d = {}
         for tag in config:
-	    if 'regex' not in config[tag]:
-		continue
-	    if len(config[tag]['regex']) < 1:
-		continue
-	    try:  
+            if 'regex' not in config[tag]:
+                continue
+            if len(config[tag]['regex']) < 1:
+                continue
+            try:  
                d[tag] = re.compile(r'{0}'.format(config[tag]['regex']))
             except:
                event = {'tag': tag, 'match': 'no', 'raw': '', 'error': 'bad regex'}
@@ -120,8 +103,8 @@ def beacon(config):
                   m = reg.match(line)
                   if m:
                       event = {'tag': tag, 'match': 'yes', 'raw': line, 'error': ''}
-	              ret.append(event)
-	       except:	  
+                      ret.append(event)
+               except:          
                   event = {'tag': tag, 'match': 'no', 'raw':'', 'error': 'bad match'}
-	          ret.append(event)
+                  ret.append(event)
     return ret
