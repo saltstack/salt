@@ -441,6 +441,8 @@ def latest_version(*names, **kwargs):
     if refresh:
         refresh_db(**kwargs)
 
+    cur_pkgs = list_pkgs(versions_as_list=True)
+
     # Get available versions for specified package(s)
     cmd = [_yum(), '--quiet']
     cmd.extend(repo_arg)
@@ -455,7 +457,6 @@ def latest_version(*names, **kwargs):
         if out['stderr']:
             # Check first if this is just a matter of the packages being
             # up-to-date.
-            cur_pkgs = list_pkgs()
             if not all([x in cur_pkgs for x in names]):
                 log.error(
                     'Problem encountered getting latest version for the '
@@ -472,13 +473,30 @@ def latest_version(*names, **kwargs):
             reverse=True
         )
 
+    def _check_cur(pkg):
+        if pkg.name in cur_pkgs:
+            for installed_version in cur_pkgs[pkg.name]:
+                # If any installed version is greater than the one found by
+                # yum/dnf list available, then it is not an upgrade.
+                if salt.utils.compare_versions(ver1=installed_version,
+                                               oper='>',
+                                               ver2=pkg.version,
+                                               cmp_func=version_cmp):
+                    return False
+            # pkg.version is greater than all installed versions
+            return True
+        else:
+            # Package is not installed
+            return True
+
     for name in names:
         for pkg in (x for x in updates if x.name == name):
             if pkg.arch == 'noarch' or pkg.arch == namearch_map[name] \
                     or salt.utils.pkg.rpm.check_32(pkg.arch):
-                ret[name] = pkg.version
-                # no need to check another match, if there was one
-                break
+                if _check_cur(pkg):
+                    ret[name] = pkg.version
+                    # no need to check another match, if there was one
+                    break
         else:
             ret[name] = ''
 
