@@ -171,6 +171,98 @@ class DebianIpTestCase(TestCase):
             with patch.object(jinja2.Environment, 'get_template', mock):
                 self.assertEqual(debian_ip.get_interface('lo'), '')
 
+    # 'get_multiple_interfaces' function tests: 1
+
+    def test_get_multiple_interfaces(self):
+        '''
+        Test if it return the contents of an interface script
+        when a collection of interfaces is present.
+        '''
+        with patch.object(debian_ip, '_parse_interfaces',
+                          MagicMock(return_value={})):
+            self.assertListEqual(debian_ip.get_interface('eth0'), [])
+
+        mock_ret = {
+                'lo': {
+                    'enabled': True,
+                    'data': {
+                        'inet': {
+                            'addrfam': 'inet',
+                            'proto': 'loopback'}}}
+                'eth2': {
+                    'enabled': True,
+                    'hotplug': True,
+                    'data': {
+                        'inet': {
+                            'addrfam': 'inet',
+                            'proto': 'static',
+                            'address': '192.168.80.4',
+                            'netmask': '255.255.255.0',
+                            'gateway': '192.168.80.1'}
+                        'inet6': {
+                            'addrfam': 'inet6',
+                            '2001:db8:dead:80::4',
+                            'netmask': '64',
+                            'gateway': '2001:db8:dead:80::1'}}}
+                'bond0': {
+                    'enabled': True,
+                    'data': {
+                        'inet': {
+                            'addrfam': 'inet',
+                            'proto': 'manual',
+                            'bonding': {
+                                'miimon': '100',
+                                'mode': '802.3ad',
+                                'xmit_hash_policy': 'layer3+4'},
+                            'bonding_keys': ['miimon', 'mode', 'xmit_hash_policy']}}}
+                'vmbr0': {
+                    'enabled': True,
+                    'data': {
+                        'inet': {
+                            'addrfam': 'inet',
+                            'proto': 'static',
+                            'address': '192.168.55.4',
+                            'netmask': '255.255.255.0',
+                            'gateway': '192.168.55.1',
+                            'bridging': {
+                                'fd': '0',
+                                'ports': 'bond0',
+                                'stp': 'off'},
+                            'bonding': {
+                                'master': 'bond0'},
+                            'bonding_keys': ['master'],
+                            'bridging_keys': ['fd', 'ports', 'stp']}}}}
+        with patch.object(debian_ip, '_parse_interfaces',
+                          MagicMock(return_value=mock_ret)):
+            self.assertListEqual(debian_ip.get_interface('lo'),
+                                 [u'auto lo\n',
+                                  u'iface lo inet loopback\n',
+                                  u'auto eth2\n',
+                                  u'iface eth2 inet static\n',
+                                  u'        address 192.168.80.4\n',
+                                  u'        netmask 255.255.255.0\n',
+                                  u'        gateway 10.41.80.1\n',
+                                  u'auto bond0\n',
+                                  u'iface bond0 inet manual\n',
+                                  u'        slaves eth0 eth1\n',
+                                  u'        bond_miimon 100\n',
+                                  u'        bond_mode 802.3ad\n',
+                                  u'        bond_xmit_hash_policy layer3+4\n',
+                                  u'auto vmbr0\n',
+                                  u'iface vmbr0 inet static\n',
+                                  u'        address 10.41.55.4\n',
+                                  u'        netmask 255.255.255.0\n',
+                                  u'        gateway 10.41.55.1\n',
+                                  u'        bridge_ports bond0\n',
+                                  u'        bridge_stp off\n',
+                                  u'        bridge_fd 0\n',
+                                  u'\n'])
+
+            mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound
+                             ('error'))
+            with patch.object(jinja2.Environment, 'get_template', mock):
+                self.assertEqual(debian_ip.get_interface('lo'), '')
+
     # 'up' function tests: 1
 
     def test_up(self):
