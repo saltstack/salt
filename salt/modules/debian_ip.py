@@ -451,6 +451,8 @@ IPV4_ATTR_MAP = {
     'dstaddr':  __ipv4_quad,
     'local':  __ipv4_quad,
     'ttl':  __int,
+    # bond
+    'slaves': __anything,
     # ppp
     'provider': __anything,
     'unit':  __int,
@@ -488,6 +490,8 @@ IPV6_ATTR_MAP = {
     'preferred-lifetime':  __int,
     'dad-attempts': __int,  # 0 to disable
     'dad-interval': __float,
+    # bond
+    'slaves': __anything,
 }
 
 
