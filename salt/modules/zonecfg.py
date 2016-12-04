@@ -74,7 +74,7 @@ def __virtual__():
     )
 
 
-def create(zone, brand, zonepath):
+def create(zone, brand, zonepath, force=False):
     '''
     Create an in-memory configuration for the specified zone.
 
@@ -84,9 +84,8 @@ def create(zone, brand, zonepath):
         brand name
     zonepath : string
         path of zone
-
-    .. warning::
-        existing configuration will be overwritten!
+    force : boolean
+        overwrite configuration
 
     CLI Example:
 
@@ -99,7 +98,7 @@ def create(zone, brand, zonepath):
     ## write config
     cfg_file = salt.utils.files.mkstemp()
     with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
-        fp_.write("create -F -b\n")
+        fp_.write("create -b -F\n" if force else "create -b\n")
         fp_.write("set brand={0}\n".format(brand))
         fp_.write("set zonepath={0}\n".format(zonepath))
 
@@ -132,7 +131,7 @@ def create_from_template(zone, template):
         name of template
 
     .. warning::
-        existing configuration will be overwritten!
+        existing config will be overwritten!
 
     CLI Example:
 
