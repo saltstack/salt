@@ -1,6 +1,6 @@
 {% if data.enabled %}auto {{name}}{# Enabled #}
 {%endif%}{% if data.hotplug %}allow-hotplug {{name}}{# Hotplug #}
-{%endif%}{%- if data.data['inet'] -%}{# IPv4 #}
+{%endif%}{%- if data.data['inet'] and data.data['inet'].addrfam == 'inet' -%}{# IPv4 #}
 {%- set interface = data.data['inet'] -%}
 {% if interface.proto and interface.addrfam == 'inet' %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
 {%endif%}{% if interface.hwaddress          %}    hwaddress {{interface.hwaddress}}
@@ -61,7 +61,7 @@
 {%endif%}{% if interface.post_down_cmds     %}{% for cmd in interface.post_down_cmds %}    post-down {{ cmd }}
 {%endfor-%}{%endif%}
 {%- endif%}
-{%- if data.data['inet6'] -%}{# IPv6 #}
+{%- if data.data['inet6'] and data.data['inet6'].addrfam == 'inet6' -%}{# IPv6 #}
 {%- set interface = data.data['inet6'] -%}
 {% if interface.proto and interface.addrfam == 'inet6' %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
 {%endif%}{% if interface.hwaddress          %}    hwaddress {{interface.hwaddress}}
