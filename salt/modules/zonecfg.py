@@ -10,9 +10,6 @@ Module for Solaris 10's zonecfg
 .. versionadded:: nitrogen
 
 .. TODO:
-    - create
-    - import
-    - export
     - info (parsed)
     - set_property
     - add_resource
@@ -35,6 +32,11 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'zonecfg'
+
+# Function aliases
+__func_alias__ = {
+    'import_': 'import'
+}
 
 
 @salt.utils.decorators.memoize
@@ -181,5 +183,67 @@ def delete(zone):
 
     return ret
 
+
+def export(zone, path=None):
+    '''
+    Export the configuration from memory to stable storage.
+
+    zone : string
+        name of zone
+    path : string
+        path of file to export to
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zonecfg.export epyon
+        salt '*' zonecfg.export epyon /zones/epyon.cfg
+    '''
+    ret = {'status': True}
+
+    ## export zone
+    res = __salt__['cmd.run_all']('zonecfg -z {zone} export{path}'.format(
+        zone=zone,
+        path=' -f {0}'.format(path) if path else '',
+    ))
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zonecfg: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
+
+
+def import_(zone, path):
+    '''
+    Import the configuration to memory from stable storage.
+
+    zone : string
+        name of zone
+    path : string
+        path of file to export to
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zonecfg.import epyon /zones/epyon.cfg
+    '''
+    ret = {'status': True}
+
+    ## create from file
+    res = __salt__['cmd.run_all']('zonecfg -z {zone} -f {path}'.format(
+        zone=zone,
+        path=path,
+    ))
+    ret['status'] = res['retcode'] == 0
+    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+    ret['message'] = ret['message'].replace('zonecfg: ', '')
+    if ret['message'] == '':
+        del ret['message']
+
+    return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
