@@ -227,10 +227,12 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
                     for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
                         _create_syndic().start()
                         ret = ret and _logger.last_type is None \
-                                and _logger.last_message
+                                and not _logger.last_message
 
             child_pipe.send(ret)
             child_pipe.close()
+
+        self._multiproc_exec_test(exec_test)
 
 if __name__ == '__main__':
     from integration import run_tests
