@@ -2,7 +2,7 @@
 {%endif%}{% if data.hotplug %}allow-hotplug {{name}}{# Hotplug #}
 {%endif%}{%- if data.data['inet'] -%}{# IPv4 #}
 {%- set interface = data.data['inet'] -%}
-{% if interface.proto and interface.addrfam %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
+{% if interface.proto and interface.addrfam == 'inet' %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
 {%endif%}{% if interface.hwaddress          %}    hwaddress {{interface.hwaddress}}
 {%endif%}{% if interface.vlan_raw_device    %}    vlan-raw-device {{interface.vlan_raw_device}}
 {%endif%}{% if interface.address            %}    address {{interface.address}}
@@ -63,7 +63,7 @@
 {%- endif%}
 {%- if data.data['inet6'] -%}{# IPv6 #}
 {%- set interface = data.data['inet6'] -%}
-{% if interface.proto and interface.addrfam %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
+{% if interface.proto and interface.addrfam == 'inet6' %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
 {%endif%}{% if interface.hwaddress          %}    hwaddress {{interface.hwaddress}}
 {%endif%}{% if interface.address            %}    address {{interface.address}}
 {%endif%}{% if interface.netmask            %}    netmask {{interface.netmask}}
