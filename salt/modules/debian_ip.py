@@ -1214,6 +1214,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     adapters[iface]['data'] = salt.utils.odict.OrderedDict()
     iface_data = adapters[iface]['data']
     iface_data['inet'] = salt.utils.odict.OrderedDict()
+    iface_data['inet6'] = salt.utils.odict.OrderedDict()
 
     if enabled:
         adapters[iface]['enabled'] = True
@@ -1221,7 +1222,27 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if opts.get('hotplug', False):
         adapters[iface]['hotplug'] = True
 
-    iface_data['inet']['addrfam'] = 'inet'
+    def_addrfam = 'inet'
+    dual_stack = False
+
+    if 'enable_ipv6' in opts and opts['enable_ipv6']:
+        # If enable_ipv6=True, then *YES* inet6 will be there
+        iface_data['inet6']['addrfam'] = 'inet6'
+        iface_data['inet6']['netmask'] = '64'  # defaults to 64
+        def_addrfam = 'inet6'
+
+        if 'iface_type' in opts and opts['iface_type'] == 'vlan':
+            iface_data['inet6']['vlan_raw_device'] = (
+                re.sub(r'\.\d*', '', iface))
+
+    if 'ipaddr' in opts or 'netmask' in opts or 'ipv6ipaddr' not in opts:
+        # At this point, we can be reasonably sure either ipv4-only or dual stack.
+        # If dual stack, then prefer the use of inet.
+        iface_data['inet']['addrfam'] = 'inet'
+        def_addrfam = 'inet'
+
+        if 'enable_ipv6' in opts and opts['enable_ipv6'] or 'ipv6addr' in opts:
+            dual_stack = True
 
     if iface_type not in ['bridge']:
         tmp_ethtool = _parse_ethtool_opts(opts, iface)
@@ -1230,58 +1251,54 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             for item in tmp_ethtool:
                 ethtool[_ETHTOOL_CONFIG_OPTS[item]] = tmp_ethtool[item]
 
-            iface_data['inet']['ethtool'] = ethtool
+            iface_data[def_addrfam]['ethtool'] = ethtool
             # return a list of sorted keys to ensure consistent order
-            iface_data['inet']['ethtool_keys'] = sorted(ethtool)
+            iface_data[def_addrfam]['ethtool_keys'] = sorted(ethtool)
 
     if iface_type == 'bridge':
         bridging = _parse_bridge_opts(opts, iface)
         if bridging:
             opts.pop('mode', None)
-            iface_data['inet']['bridging'] = bridging
-            iface_data['inet']['bridging_keys'] = sorted(bridging)
+            iface_data[def_addrfam]['bridging'] = bridging
+            iface_data[def_addrfam]['bridging_keys'] = sorted(bridging)
+            iface_data[def_addrfam]['addrfam'] = def_addrfam
 
     elif iface_type == 'bond':
         bonding = _parse_settings_bond(opts, iface)
         if bonding:
             opts.pop('mode', None)
-            iface_data['inet']['bonding'] = bonding
-            iface_data['inet']['bonding']['slaves'] = opts['slaves']
-            iface_data['inet']['bonding_keys'] = sorted(bonding)
+            iface_data[def_addrfam]['bonding'] = bonding
+            iface_data[def_addrfam]['bonding']['slaves'] = opts['slaves']
+            iface_data[def_addrfam]['bonding_keys'] = sorted(bonding)
+            iface_data[def_addrfam]['addrfam'] = def_addrfam
 
     elif iface_type == 'slave':
         adapters[iface]['master'] = opts['master']
 
         opts['proto'] = 'manual'
-        iface_data['inet']['addrfam'] = 'inet'
-        iface_data['inet']['master'] = adapters[iface]['master']
+        iface_data[def_addrfam]['master'] = adapters[iface]['master']
+        iface_data[def_addrfam]['addrfam'] = def_addrfam
 
     elif iface_type == 'vlan':
-        iface_data['inet']['vlan_raw_device'] = re.sub(r'\.\d*', '', iface)
+        iface_data[def_addrfam]['vlan_raw_device'] = re.sub(r'\.\d*', '', iface)
+        iface_data[def_addrfam]['addrfam'] = def_addrfam
 
     elif iface_type == 'pppoe':
         tmp_ethtool = _parse_ethtool_pppoe_opts(opts, iface)
         if tmp_ethtool:
             for item in tmp_ethtool:
-                adapters[iface]['data']['inet'][_DEB_CONFIG_PPPOE_OPTS[item]] = tmp_ethtool[item]
+                adapters[iface]['data'][def_addrfam][_DEB_CONFIG_PPPOE_OPTS[item]] = tmp_ethtool[item]
+        iface_data[def_addrfam]['addrfam'] = def_addrfam
 
-    if 'enable_ipv6' in opts and opts['enable_ipv6']:  # TODO: check yes/no
-        # iface_data.append({})
-        iface_data['inet6'] = {}
-        iface_data['inet6']['addrfam'] = 'inet6'
-        iface_data['inet6']['netmask'] = '64'  # defaults to 64
-
-        if 'iface_type' in opts and opts['iface_type'] == 'vlan':
-            iface_data['inet6']['vlan_raw_device'] = (
-                re.sub(r'\.\d*', '', iface))
 
     for opt in opts:
+        # trim leading "ipv6" from option
         if opt.startswith('ipv6'):
             optname = opt[4:]  # trim off the ipv6
-            addrfam = 'inet6'
+            v6only = True
         else:
             optname = opt
-            addrfam = 'inet'
+            v6only = False
 
         _optname = SALT_ATTR_TO_DEBIAN_ATTR_MAP.get(optname, optname)
         if _attrmaps_contain_attr(_optname):
@@ -1291,24 +1308,71 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             if optname == 'proto' and valuestr == 'none':
                 valuestr = 'static'
 
-            (valid, value, errmsg) = _validate_interface_option(
-                _optname, valuestr, addrfam=addrfam)
+            # If option is v6-only, don't validate against inet and always set value
+            if v6only:
+                (valid, value, errmsg) = _validate_interface_option(
+                   _optname, valuestr, addrfam='inet6')
 
-            if not valid:
-                _raise_error_iface(
-                    iface,
-                    '\'{0}\' \'{1}\''.format(opt, valuestr),
-                    [errmsg]
-                )
+                if not valid:
+                    _raise_error_iface(iface, '\'{0}\' \'{1}\''.format(opt, valuestr), [errmsg])
 
-            # replace dashes with underscores for jinja
-            _optname = _optname.replace('-', '_')
-            iface_data[addrfam][_optname] = value
+                # replace dashes with underscores for jinja
+                _optname = _optname.replace('-', '_')
+                iface_data['inet6'][_optname] = value
+
+            # Else, if it's a dual stack, the option may belong in both; apply v4 opt as v6 default
+            elif dual_stack:
+                valid_once = False
+                errmsg = None
+                for addrfam in ['inet', 'inet6']:
+                    (valid, value, errmsg) = _validate_interface_option(
+                       _optname, valuestr, addrfam=addrfam)
+
+                    if valid:
+                        valid_once = True
+                        # replace dashes with underscores for jinja
+                        _optname = _optname.replace('-', '_')
+                        # if a v6-only version of this option was set; don't override
+                        # otherwise, if dual stack, use the v4 version as a default value for v6
+                        # allows overriding with =None
+                        if addrfam == 'inet' or _optname not in iface_data['inet6']:
+                            iface_data[addrfam][_optname] = value
+
+                if not valid_once:
+                    _raise_error_iface(
+                        iface,
+                        '\'{0}\' \'{1}\''.format(opt, valuestr),
+                        [errmsg]
+                    )
+
+            # Else, it goes in the default(only) addrfam
+            # Not assuming v4 allows a v6 block to be created without lots of "ipv6" prefixes
+            else:
+                (valid, value, errmsg) = _validate_interface_option(
+                   _optname, valuestr, addrfam=def_addrfam)
+
+                if not valid:
+                    _raise_error_iface(
+                        iface,
+                        '\'{0}\' \'{1}\''.format(opt, valuestr),
+                        [errmsg]
+                    )
+
+                # replace dashes with underscores for jinja
+                _optname = _optname.replace('-', '_')
+                iface_data[def_addrfam][_optname] = value
+
 
     for opt in ['up_cmds', 'pre_up_cmds', 'post_up_cmds',
                 'down_cmds', 'pre_down_cmds', 'post_down_cmds']:
         if opt in opts:
             iface_data['inet'][opt] = opts[opt]
+
+    for addrfam in ['inet', 'inet6']:
+        if 'addrfam' in iface_data[addrfam] and iface_data[addrfam]['addrfam'] == addrfam:
+            pass
+        else:
+            iface_data.pop(addrfam)
 
     return adapters
 
