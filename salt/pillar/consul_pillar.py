@@ -163,29 +163,29 @@ def ext_pillar(minion_id,
     target_re = re.compile('target="(.*?)"')
     match = target_re.search(temp)
     if match:
-    	opts['target'] = match.group(1)
-    	temp = temp.replace(match.group(0), '')
+        opts['target'] = match.group(1)
+        temp = temp.replace(match.group(0), '')
         checker = salt.utils.minions.CkMinions(__opts__)
         minions = checker.check_minions(opts['target'], 'compound')
         if minion_id not in minions:
-		return {}
+            return {}
 
     root_re = re.compile('root=(\S*)')
     match = root_re.search(temp)
     if match:
-    	opts['root'] = match.group(1)
-    	temp = temp.replace(match.group(0), '')
+        opts['root'] = match.group(1)
+        temp = temp.replace(match.group(0), '')
     else:
-    	opts['root'] = ""
+        opts['root'] = ""
 
     profile_re = re.compile('(?:profile=)?(\S+)')
     match = profile_re.search(temp)
     if match:
-    	opts['profile'] = match.group(1)
-    	temp = temp.replace(match.group(0), '')
+        opts['profile'] = match.group(1)
+        temp = temp.replace(match.group(0), '')
     else:
-    	opts['profile'] = None
-		
+        opts['profile'] = None
+
     client = get_conn(__opts__, opts['profile'])
 
     role = __salt__['grains.get']('role')
