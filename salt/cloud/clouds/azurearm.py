@@ -866,8 +866,16 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
             )
         ]
 
+    network_security_group = None
+    if kwargs.get('security_group') is not None:
+        network_security_group = netconn.network_security_groups.get(
+            resource_group_name=kwargs['resource_group'],
+            network_security_group_name=kwargs['security_group'],
+        )
+
     iface_params = NetworkInterface(
         location=kwargs['location'],
+        network_security_group=network_security_group,
         ip_configurations=ip_configurations,
     )
 
