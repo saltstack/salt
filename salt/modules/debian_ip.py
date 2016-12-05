@@ -457,7 +457,7 @@ IPV4_ATTR_MAP = {
     'provider': __anything,
     'unit':  __int,
     'options': __anything,
-    #
+    # resolvconf
     'dns-nameservers': __space_delimited_list,
     'dns-search': __space_delimited_list,
     #
@@ -474,12 +474,15 @@ IPV6_VALID_PROTO = ['auto', 'loopback', 'static', 'manual',
                     'dhcp', 'v4tunnel', '6to4']
 
 IPV6_ATTR_MAP = {
+    'proto': __within(IPV6_VALID_PROTO),
+    # ipv6 static & manual
     'address': __ipv6,
     'netmask': __ipv6_netmask,
     'broadcast': __ipv6,
     'gateway': __ipv6,  # supports a colon-delimited list
+    'hwaddress':  __mac,
+    'mtu':  __int,
     'scope': __within(['global', 'site', 'link', 'host'], dtype=str),
-    'proto': __within(IPV6_VALID_PROTO),
     # inet6 auto
     'privext': __within([0, 1, 2], dtype=int),
     'dhcp':  __within([0, 1], dtype=int),
@@ -492,6 +495,19 @@ IPV6_ATTR_MAP = {
     'dad-interval': __float,
     # bond
     'slaves': __anything,
+    # tunnel
+    'mode':  __within(['gre', 'GRE', 'ipip', 'IPIP', '802.3ad'], dtype=str),
+    'endpoint': __ipv4_quad,
+    'local':  __ipv4_quad,
+    'ttl':  __int,
+    # resolvconf
+    'dns-nameservers': __space_delimited_list,
+    'dns-search': __space_delimited_list,
+    #
+    'vlan-raw-device': __anything,
+
+    'test': __anything,  # TODO
+    'enable_ipv6': __anything,  # TODO
 }
 
 
@@ -512,7 +528,7 @@ WIRELESS_ATTR_MAP = {
 
 ATTRMAPS = {
     'inet': [IPV4_ATTR_MAP, WIRELESS_ATTR_MAP],
-    'inet6': [IPV6_ATTR_MAP, IPV4_ATTR_MAP, WIRELESS_ATTR_MAP]
+    'inet6': [IPV6_ATTR_MAP, WIRELESS_ATTR_MAP]
 }
 
 
@@ -1226,7 +1242,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     def_addrfam = 'inet'
     dual_stack = False
 
-    # If enable_ipv6=True, then we definitely expect an IPv6 block.
+    # If enable_ipv6=True, then expet either IPv6-only or dual stack.
     if 'enable_ipv6' in opts and opts['enable_ipv6']:
         iface_data['inet6']['addrfam'] = 'inet6'
         iface_data['inet6']['netmask'] = '64'  # defaults to 64
@@ -1236,13 +1252,16 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             iface_data['inet6']['vlan_raw_device'] = (
                 re.sub(r'\.\d*', '', iface))
 
-    # If we have both IPv4 and IPv6 addresses provided, we definitely have a dual stack.
-    if 'ipaddr' in opts and 'ipv6addr' in opts:
-        # Not setting 'inet6' because 'enable_ipv6=True' should be required. (handled above)
-        iface_data['inet']['addrfam'] = 'inet'
-        def_addrfam = 'inet'
-        dual_stack = True
+        if 'ipaddr' in opts and 'ipv6ipaddr' in opts:
+            # If both 'ipaddr' and 'ipv6ipaddr' are present; expect dual stack
+            iface_data['inet']['addrfam'] = 'inet'
+            def_addrfam = 'inet'
+            dual_stack = True
 
+    else:
+        # If enable_ipv6=False|None, IPv6 settings should not be set.
+        iface_data['inet']['addrfam'] = 'inet'
+    
     if iface_type not in ['bridge']:
         tmp_ethtool = _parse_ethtool_opts(opts, iface)
         if tmp_ethtool:
