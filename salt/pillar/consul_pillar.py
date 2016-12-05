@@ -170,7 +170,7 @@ def ext_pillar(minion_id,
         if minion_id not in minions:
             return {}
 
-    root_re = re.compile('root=(\S*)')
+    root_re = re.compile('root=(\S*)')  # pylint: disable=W1401
     match = root_re.search(temp)
     if match:
         opts['root'] = match.group(1)
@@ -178,7 +178,7 @@ def ext_pillar(minion_id,
     else:
         opts['root'] = ""
 
-    profile_re = re.compile('(?:profile=)?(\S+)')
+    profile_re = re.compile('(?:profile=)?(\S+)')  # pylint: disable=W1401
     match = profile_re.search(temp)
     if match:
         opts['profile'] = match.group(1)
