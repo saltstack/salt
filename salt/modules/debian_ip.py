@@ -1261,7 +1261,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     else:
         # If enable_ipv6=False|None, IPv6 settings should not be set.
         iface_data['inet']['addrfam'] = 'inet'
-    
+
     if iface_type not in ['bridge']:
         tmp_ethtool = _parse_ethtool_opts(opts, iface)
         if tmp_ethtool:
