@@ -106,6 +106,7 @@ def beacon(config):
     '''
     log.debug(config)
     ctime = datetime.datetime.utcnow().isoformat()
+    ret = {}
 
     if len(config) < 1:
         config = {
@@ -116,9 +117,11 @@ def beacon(config):
             'time': 'all',
         }
 
-    ret = {}
     for func in config:
-        data = __salt__['status.{0}'.format(func)]()
+        try:
+            data = __salt__['status.{0}'.format(func)]()
+        except (KeyError, AttributeError):
+            continue
         ret[func] = {}
         for item in config[func]:
             if item == 'all':
@@ -129,7 +132,7 @@ def beacon(config):
                         ret[func][item] = data[item]
                     except TypeError:
                         ret[func][item] = data[int(item)]
-                except KeyError as exc:
+                except (KeyError, AttributeError) as exc:
                     ret[func] = 'Status beacon is incorrectly configured: {0}'.format(exc)
 
     return [{
