@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import os
 import locale
 import logging
+import re
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import third party libs
@@ -27,7 +28,7 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-from salt.exceptions import SaltRenderError
+from salt.exceptions import SaltRenderError, CommandExecutionError
 import salt.utils
 import salt.syspaths
 from salt.exceptions import MinionError
@@ -361,10 +362,36 @@ def refresh_db(saltenv='base'):
         winrepo_source_dir = __opts__['winrepo_source_dir']
 
     # Clear minion repo-ng cache
-    repo_path = '{0}\\files\\{1}\\win\\repo-ng\\salt-winrepo-ng'\
-        .format(__opts__['cachedir'], saltenv)
-    if not __salt__['file.remove'](repo_path):
-        log.error('pkg.refresh_db: failed to clear existing cache')
+    repo_path = _get_local_repo_dir(saltenv=saltenv)
+
+    # Do some safety checks on the repo_path before removing its contents
+    for pathchecks in [
+        '[a-z]\\:\\\\$',
+        '\\\\',
+        re.escape(os.environ.get('SystemRoot', 'C:\\Windows')),
+    ]:
+        if re.match(pathchecks, repo_path, flags=re.IGNORECASE) is not None:
+            log.error(
+                'Local cache dir seems a bad choice "%s"',
+                repo_path
+            )
+            raise CommandExecutionError(
+                'Error local cache dir seems a bad choice',
+                info=repo_path
+            )
+    # Clear minion repo-ng cache see #35342 discussion
+    log.info('Removing all *.sls files of "%s" tree', repo_path)
+    for root, _, files in os.walk(repo_path):
+        for name in files:
+            if name.endswith('.sls'):
+                full_filename = os.path.join(root, name)
+                try:
+                    os.remove(full_filename)
+                except (OSError, IOError) as exc:
+                    raise CommandExecutionError(
+                        'Could not remove \'{0}\': {1}'.
+                            format(full_filename, exc)
+                    )
 
     # Cache repo-ng locally
     cached_files = __salt__['cp.cache_dir'](
