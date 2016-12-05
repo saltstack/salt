@@ -2112,11 +2112,15 @@ def managed(name,
                 ret.update(cret)
                 if os.path.isfile(tmp_filename):
                     os.remove(tmp_filename)
+                if sfn and os.path.isfile(sfn):
+                    os.remove(sfn)
                 return ret
             # Since we generated a new tempfile and we are not returning here
             # lets change the original sfn to the new tempfile or else we will
             # get file not found
-            sfn = tmp_filename
+            if sfn and os.path.isfile(sfn):
+                os.remove(sfn)
+                sfn = tmp_filename
         else:
             ret = {'changes': {},
                    'comment': '',
@@ -2158,6 +2162,8 @@ def managed(name,
         finally:
             if tmp_filename and os.path.isfile(tmp_filename):
                 os.remove(tmp_filename)
+            if sfn and os.path.isfile(sfn):
+                os.remove(sfn)
 
 
 _RECURSE_TYPES = ['user', 'group', 'mode', 'ignore_files', 'ignore_dirs']
