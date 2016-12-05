@@ -2977,7 +2977,9 @@ def to_str(s, encoding=None):
         return s
     if six.PY3:
         if isinstance(s, (bytes, bytearray)):
-            return s.decode(encoding or __salt_system_encoding__)
+            # https://docs.python.org/3/howto/unicode.html#the-unicode-type
+            # replace error with U+FFFD, REPLACEMENT CHARACTER
+            return s.decode(encoding or __salt_system_encoding__, "replace")
         raise TypeError('expected str, bytes, or bytearray')
     else:
         if isinstance(s, bytearray):
