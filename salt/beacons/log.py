@@ -102,7 +102,7 @@ def beacon(config):
                 d[tag] = re.compile(r'{0}'.format(config[tag]['regex']))
             except Exception:
                 event = SKEL.copy
-                event['tag'] = tag
+                event['tag'] = str(tag)
                 event['error'] = 'bad regex'
                 ret.append(event)
 
@@ -112,13 +112,13 @@ def beacon(config):
                     m = reg.match(line)
                     if m:
                         event = SKEL.copy
-                        event['tag'] = tag
-                        event['raw'] = line
+                        event['tag'] = str(tag)
+                        event['raw'] = str(line)
                         event['match'] = 'yes'
                         ret.append(event)
                 except Exception:
                     event = SKEL.copy
-                    event['tag'] = tag
+                    event['tag'] = str(tag)
                     event['error'] = 'bad match'
                     ret.append(event)
     return ret
