@@ -1222,11 +1222,12 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if opts.get('hotplug', False):
         adapters[iface]['hotplug'] = True
 
+    # Defaults assume IPv4 (inet) interfaces unless enable_ipv6=True
     def_addrfam = 'inet'
     dual_stack = False
 
+    # If enable_ipv6=True, then we definitely expect an IPv6 block.
     if 'enable_ipv6' in opts and opts['enable_ipv6']:
-        # If enable_ipv6=True, then *YES* inet6 will be there
         iface_data['inet6']['addrfam'] = 'inet6'
         iface_data['inet6']['netmask'] = '64'  # defaults to 64
         def_addrfam = 'inet6'
@@ -1235,14 +1236,12 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             iface_data['inet6']['vlan_raw_device'] = (
                 re.sub(r'\.\d*', '', iface))
 
-    if 'ipaddr' in opts or 'netmask' in opts or 'ipv6ipaddr' not in opts:
-        # At this point, we can be reasonably sure either ipv4-only or dual stack.
-        # If dual stack, then prefer the use of inet.
+    # If we have both IPv4 and IPv6 addresses provided, we definitely have a dual stack.
+    if 'ipaddr' in opts and 'ipv6addr' in opts:
+        # Not setting 'inet6' because 'enable_ipv6=True' should be required. (handled above)
         iface_data['inet']['addrfam'] = 'inet'
         def_addrfam = 'inet'
-
-        if 'enable_ipv6' in opts and opts['enable_ipv6'] or 'ipv6addr' in opts:
-            dual_stack = True
+        dual_stack = True
 
     if iface_type not in ['bridge']:
         tmp_ethtool = _parse_ethtool_opts(opts, iface)
@@ -1289,7 +1288,6 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             for item in tmp_ethtool:
                 adapters[iface]['data'][def_addrfam][_DEB_CONFIG_PPPOE_OPTS[item]] = tmp_ethtool[item]
         iface_data[def_addrfam]['addrfam'] = def_addrfam
-
 
     for opt in opts:
         # trim leading "ipv6" from option
@@ -1361,7 +1359,6 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 # replace dashes with underscores for jinja
                 _optname = _optname.replace('-', '_')
                 iface_data[def_addrfam][_optname] = value
-
 
     for opt in ['up_cmds', 'pre_up_cmds', 'post_up_cmds',
                 'down_cmds', 'pre_down_cmds', 'post_down_cmds']:
