@@ -915,6 +915,30 @@ def list_datacenters(service_instance):
     return list_objects(service_instance, vim.Datacenter)
 
 
+def get_datacenters(service_instance, datacenter_names=None,
+                    get_all_datacenters=False):
+    '''
+    Returns all datacenters in a vCenter.
+
+    service_instance
+        The Service Instance Object from which to obtain cluster.
+
+    datacenter_names
+        List of datacenter names to filter by. Default value is None.
+
+    get_all_datacenters
+        Flag specifying whether to retrieve all datacenters.
+        Default value is None.
+    '''
+    items = [i['object'] for i in
+             get_mors_with_properties(service_instance,
+                                      vim.Datacenter,
+                                      property_list=['name'])
+             if get_all_datacenters or
+             (datacenter_names and i['name'] in datacenter_names)]
+    return items
+
+
 def get_datacenter(service_instance, datacenter_name):
     '''
     Returns a vim.Datacenter managed object.
