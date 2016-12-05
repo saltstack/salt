@@ -71,3 +71,30 @@ release cycle (two major releases after this one), those who are using the
 :ref:`LocalClient <local-client>` (either directly, or implictly via a
 :ref:`netapi module <all-netapi-modules>`) are encouraged to update their code
 to use ``tgt_type``.
+
+
+Deprecations
+============
+
+General Deprecations
+--------------------
+
+- Beacon configurations should be lists instead of dictionaries.
+
+Proxy Minion Deprecations
+-------------------------
+
+- The ``proxy_merge_grains_in_module`` default has been switched from
+  ``False`` to ``True``.
+
+Salt-API Deprecations
+---------------------
+
+- The ``SaltAPI.run()`` function has been removed. Please use the
+  ``SaltAPI.start()`` function instead.
+
+Salt-SSH Deprecations
+---------------------
+
+- The ``wipe_ssh`` option for ``salt-ssh`` has been removed. Please use the
+  ``ssh_wipe`` option instead.
