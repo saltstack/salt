@@ -99,6 +99,24 @@ class StateModuleTest(integration.ModuleCase,
             for field in running_dict_fields:
                 self.assertIn(field, ret)
 
+    def test_running_dictionary_key_sls(self):
+        '''
+        Ensure the __sls__ key is either null or a string
+        '''
+        sls1 = self.run_function('state.single',
+                fun='test.succeed_with_changes',
+                name='gndn')
+
+        sls2 = self.run_function('state.sls', mods='gndn')
+
+        for state, ret in sls1.items():
+            key_type = type(ret['__sls__'])
+            self.assertTrue(key_type is str or key_type is type(None))
+
+        for state, ret in sls2.items():
+            key_type = type(ret['__sls__'])
+            self.assertTrue(key_type is str or key_type is type(None))
+
     def _remove_request_cache_file(self):
         '''
         remove minion state request file
