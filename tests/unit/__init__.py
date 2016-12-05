@@ -35,7 +35,10 @@ def hasDependency(module, fake_module=None):
     :type  module: ``str``
 
     :param fake_module: The module to inject into sys.modules
-        if not provided, a mock will be injected
+        if not provided, a mock will be injected. If ``False``
+        is passed explicitly, the module injection does not
+        occur.
+
     :type  fake_module: ``object``
 
     ..
@@ -45,7 +48,9 @@ def hasDependency(module, fake_module=None):
     import sys
     if fake_module is None:
         fake_module = mock.MagicMock()
-    sys.modules[module] = fake_module
+
+    if fake_module:
+        sys.modules[module] = fake_module
 
 
 class MockLoader(object):
