@@ -3196,8 +3196,7 @@ class ProxyMinion(Minion):
                     'maxrunning': 1,
                     'return_job': False,
                     'kwargs': {
-                        'proxy_name': fq_proxyname,
-                        'opts': self.opts
+                        'proxy_name': fq_proxyname
                     }
                 }
             }, persist=True)
