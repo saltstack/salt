@@ -949,11 +949,8 @@ def get_datacenter(service_instance, datacenter_name):
     datacenter_name
         The datacenter name
     '''
-    items = [i['object'] for i in
-             get_mors_with_properties(service_instance,
-                                      vim.Datacenter,
-                                      property_list=['name'])
-            if i['name'] == datacenter_name]
+    items = get_datacenters(service_instance,
+                            datacenter_names=[datacenter_name])
     if not items:
         raise salt.exceptions.VMwareObjectRetrievalError(
             'Datacenter \'{0}\' was not found'.format(datacenter_name))
