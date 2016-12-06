@@ -87,6 +87,7 @@ markers for specific list items:
 from __future__ import absolute_import
 import logging
 import datetime
+import salt.exceptions
 
 log = logging.getLogger(__name__)
 
@@ -99,6 +100,12 @@ def __validate__(config):
         return False, ('Configuration for status beacon must be a dictionary.')
     return True, 'Valid beacon configuration'
 
+def __virtual__():
+    # TODO Find a way to check the existence of the module itself, not just a single func
+    if 'status.w' not in __salt__:
+        return (False, 'The \'status\' execution module is not available on this system')
+    else:
+        return True
 
 def beacon(config):
     '''
@@ -118,7 +125,12 @@ def beacon(config):
 
     ret = {}
     for func in config:
-        data = __salt__['status.{0}'.format(func)]()
+        try:
+            data = __salt__['status.{0}'.format(func)]()
+        except salt.exceptions.NotImplemented as exc:
+            log.error('Status beacon attempted to process function {0} \
+                    but encountered error: {1}'.format(func, exc))
+            continue
         ret[func] = {}
         for item in config[func]:
             if item == 'all':

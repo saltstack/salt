@@ -27,7 +27,7 @@ import salt.utils.event
 from salt.utils.network import host_to_ips as _host_to_ips
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, NotImplemented
 
 __virtualname__ = 'status'
 __opts__ = {}
@@ -210,8 +210,14 @@ def loadavg():
     .. code-block:: bash
 
         salt '*' status.loadavg
+
+        :raises NotImpelemnted: If the system cannot report loadaverages to Python
     '''
-    load_avg = os.getloadavg()
+    try:
+        load_avg = os.getloadavg()
+    except AttributeError:
+        # Some UNIX-based operating systems do not have os.getloadavg()
+        raise salt.exceptions.CommandExecutionError('status.loadavag is not available on your platform')
     return {'1-min': load_avg[0],
             '5-min': load_avg[1],
             '15-min': load_avg[2]}
