@@ -2548,6 +2548,7 @@ class SyndicManager(MinionBase):
         '''
         Wrapper to call a given func on a syndic, best effort to get the one you asked for
         '''
+        success = False
         if kwargs is None:
             kwargs = {}
         for master, syndic_future in self.iter_master_options(master_id):
@@ -2557,17 +2558,22 @@ class SyndicManager(MinionBase):
 
             try:
                 getattr(syndic_future.result(), func)(*args, **kwargs)
+                success = True
+                if self.opts['syndic_forward_all_events']:
+                    continue
                 return
             except SaltClientError:
                 log.error('Unable to call {0} on {1}, trying another...'.format(func, master))
                 self._mark_master_dead(master)
                 continue
-        log.critical('Unable to call {0} on any masters!'.format(func))
+        if not success:
+            log.critical('Unable to call {0} on any masters!'.format(func))
 
     def _return_pub_syndic(self, values, master_id=None):
         '''
         Wrapper to call the '_return_pub_multi' a syndic, best effort to get the one you asked for
         '''
+        success = False
         func = '_return_pub_multi'
         for master, syndic_future in self.iter_master_options(master_id):
             if not syndic_future.done() or syndic_future.exception():
@@ -2593,9 +2599,11 @@ class SyndicManager(MinionBase):
                     continue
             future = getattr(syndic_future.result(), func)(values)
             self.pub_futures[master] = (future, values)
-            return True
-        # Loop done and didn't exit: wasn't sent, try again later
-        return False
+            success = True
+            if self.opts['syndic_forward_all_events']:
+                continue
+            break
+        return success
 
     def iter_master_options(self, master_id=None):
         '''

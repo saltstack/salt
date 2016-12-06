@@ -637,6 +637,7 @@ VALID_OPTS = {
     # specify 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random
     # order if 'ordered' the configured order will be used.
     'syndic_failover': str,
+    'syndic_forward_all_events': bool,
     'runner_dirs': list,
     'client_acl': dict,
     'client_acl_verify': bool,
@@ -1290,6 +1291,7 @@ DEFAULT_MASTER_OPTS = {
     'preserve_minion_cache': False,
     'syndic_master': '',
     'syndic_failover': 'random',
+    'syndic_forward_all_events': False,
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'runner_dirs': [],
