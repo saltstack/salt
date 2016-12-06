@@ -684,7 +684,7 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
         parser = self.parser()
         mock_err = ErrorMock()
 
-        with patch('optparse.OptionParser.error', mock_err.error):
+        with patch('salt.utils.parsers.OptionParser.error', mock_err.error):
             parser.parse_args(args)
 
         # Check error msg
@@ -715,6 +715,7 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
             parser.parse_args(args)
 
         with patch('salt.utils.parsers.is_writeable', MagicMock(return_value=True)):
+            parser.parse_args(args)
             parser.setup_logfile_logger()
 
         # Check config name absence in options
