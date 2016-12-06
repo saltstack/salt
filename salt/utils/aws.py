@@ -87,7 +87,7 @@ def creds(provider):
                 proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
             )
             result.raise_for_status()
-            role = result.text
+            role = result.text.encode(result.encoding)
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
             return provider['id'], provider['key'], ''
 
@@ -460,7 +460,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
             )
             LOG.trace(
                 'AWS Response Text: {0}'.format(
-                    result.text
+                    result.text.encode(result.encoding)
                 )
             )
             result.raise_for_status()
@@ -501,7 +501,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
             return {'error': data}, requesturl
         return {'error': data}
 
-    response = result.text
+    response = result.text.encode(result.encoding)
 
     root = ET.fromstring(response)
     items = root[1]
