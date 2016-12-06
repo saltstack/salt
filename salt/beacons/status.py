@@ -100,12 +100,14 @@ def __validate__(config):
         return False, ('Configuration for status beacon must be a dictionary.')
     return True, 'Valid beacon configuration'
 
+
 def __virtual__():
     # TODO Find a way to check the existence of the module itself, not just a single func
     if 'status.w' not in __salt__:
         return (False, 'The \'status\' execution module is not available on this system')
     else:
         return True
+
 
 def beacon(config):
     '''
