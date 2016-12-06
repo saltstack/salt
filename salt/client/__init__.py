@@ -351,7 +351,7 @@ class LocalClient(object):
             tgt,
             fun,
             arg=(),
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             timeout=None,
             jid='',
@@ -373,6 +373,15 @@ class LocalClient(object):
             >>> local.run_job_async('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         arg = salt.utils.args.condition_input(arg, kwarg)
 
         try:
@@ -380,7 +389,7 @@ class LocalClient(object):
                   tgt,
                   fun,
                   arg,
-                  expr_form,
+                  tgt_type,
                   ret,
                   jid=jid,
                   timeout=self._get_timeout(timeout),
