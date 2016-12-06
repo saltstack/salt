@@ -39,8 +39,7 @@ import logging
 import os
 import re
 import time
-# pylint: disable=import-error,no-name-in-module
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import third party libs
 import salt.ext.six as six
