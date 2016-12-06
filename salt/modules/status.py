@@ -27,7 +27,7 @@ import salt.utils.event
 from salt.utils.network import host_to_ips as _host_to_ips
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
-from salt.exceptions import CommandExecutionError, NotImplemented
+from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'status'
 __opts__ = {}
