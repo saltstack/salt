@@ -25,21 +25,9 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: dis
 # Import salt libs
 import salt.utils
 import salt.utils.files
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 log = logging.getLogger(__name__)
-
-__virtualname__ = 'archive'
-
-
-def __virtual__():
-    '''
-    Only load if the archive module is available in __salt__
-    '''
-    if 'archive.unzip' in __salt__ and 'archive.unrar' in __salt__:
-        return __virtualname__
-    else:
-        return False
 
 
 def _path_is_abs(path):
@@ -572,7 +560,7 @@ def extracted(name,
         # Add back the slash so that file.makedirs properly creates the
         # destdir if it needs to be created. file.makedirs expects a trailing
         # slash in the directory path.
-        name += '/'
+        name += os.sep
     if not _path_is_abs(if_missing):
         ret['comment'] = 'Value for \'if_missing\' is not an absolute path'
         return ret
@@ -606,7 +594,7 @@ def extracted(name,
 
         if user:
             uid = __salt__['file.user_to_uid'](user)
-            if not uid:
+            if uid == '':
                 ret['comment'] = 'User {0} does not exist'.format(user)
                 return ret
         else:
@@ -614,7 +602,7 @@ def extracted(name,
 
         if group:
             gid = __salt__['file.group_to_gid'](group)
-            if not gid:
+            if gid == '':
                 ret['comment'] = 'Group {0} does not exist'.format(group)
                 return ret
         else:
@@ -699,6 +687,13 @@ def extracted(name,
                     'Either remove \'use_cmd_unzip\', or set it to True.'
                 )
                 return ret
+            if use_cmd_unzip:
+                if 'archive.cmd_unzip' not in __salt__:
+                    ret['comment'] = (
+                        'archive.cmd_unzip function not available, unzip might '
+                        'not be installed on minion'
+                    )
+                    return ret
         if password:
             if use_cmd_unzip is None:
                 log.info(
@@ -718,6 +713,14 @@ def extracted(name,
         if password:
             ret['comment'] = \
                 'The \'password\' argument is only supported for zip archives'
+            return ret
+
+    if archive_format == 'rar':
+        if 'archive.unrar' not in __salt__:
+            ret['comment'] = (
+                'archive.unrar function not available, rar/unrar might '
+                'not be installed on minion'
+            )
             return ret
 
     supports_options = ('tar', 'zip')
@@ -1009,12 +1012,17 @@ def extracted(name,
         try:
             if archive_format == 'zip':
                 if use_cmd_unzip:
-                    files = __salt__['archive.cmd_unzip'](cached_source,
-                                                          name,
-                                                          options=options,
-                                                          trim_output=trim_output,
-                                                          password=password,
-                                                          **kwargs)
+                    try:
+                        files = __salt__['archive.cmd_unzip'](
+                            cached_source,
+                            name,
+                            options=options,
+                            trim_output=trim_output,
+                            password=password,
+                            **kwargs)
+                    except (CommandExecutionError, CommandNotFoundError) as exc:
+                        ret['comment'] = exc.strerror
+                        return ret
                 else:
                     files = __salt__['archive.unzip'](cached_source,
                                                       name,
@@ -1023,10 +1031,14 @@ def extracted(name,
                                                       password=password,
                                                       **kwargs)
             elif archive_format == 'rar':
-                files = __salt__['archive.unrar'](cached_source,
-                                                  name,
-                                                  trim_output=trim_output,
-                                                  **kwargs)
+                try:
+                    files = __salt__['archive.unrar'](cached_source,
+                                                      name,
+                                                      trim_output=trim_output,
+                                                      **kwargs)
+                except (CommandExecutionError, CommandNotFoundError) as exc:
+                    ret['comment'] = exc.strerror
+                    return ret
             else:
                 if options is None:
                     try:
@@ -1092,6 +1104,13 @@ def extracted(name,
                             )
                             return ret
                 else:
+                    if not salt.utils.which('tar'):
+                        ret['comment'] = (
+                            'tar command not available, it might not be '
+                            'installed on minion'
+                        )
+                        return ret
+
                     try:
                         tar_opts = shlex.split(options)
                     except AttributeError:

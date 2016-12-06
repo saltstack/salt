@@ -2222,7 +2222,6 @@ class GitBase(object):
                             conf['ref'], []).append(key)
 
                 self.remotes.append(repo_obj)
-        repo_obj.mountpoint('frap')
 
         # Don't allow collisions in cachedir naming
         cachedir_map = {}

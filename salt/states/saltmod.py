@@ -655,6 +655,7 @@ def runner(name, **kwargs):
     out = __salt__['saltutil.runner'](name,
                                       __orchestration_jid__=jid,
                                       __env__=__env__,
+                                      full_return=True,
                                       **kwargs)
 
     runner_return = out.get('return')

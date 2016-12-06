@@ -560,6 +560,10 @@ def make_repo(repodir,
         salt '*' pkgbuild.make_repo /var/www/html
 
     '''
+    res = {'retcode': 1,
+            'stdout': '',
+            'stderr': 'initialization value'}
+
     SIGN_PROMPT_RE = re.compile(r'Enter passphrase: ', re.M)
     REPREPRO_SIGN_PROMPT_RE = re.compile(r'Passphrase: ', re.M)
 
@@ -692,6 +696,9 @@ def make_repo(repodir,
                     except salt.utils.vt.TerminalException as err:
                         trace = traceback.format_exc()
                         log.error(error_msg, err, trace)
+                        res = {'retcode': 1,
+                                'stdout': '',
+                                'stderr': trace}
                     finally:
                         proc.close(terminate=True, kill=True)
 
@@ -753,13 +760,18 @@ def make_repo(repodir,
                 except salt.utils.vt.TerminalException as err:
                     trace = traceback.format_exc()
                     log.error(error_msg, err, trace)
+                    res = {'retcode': 1,
+                            'stdout': '',
+                            'stderr': trace}
                 finally:
                     proc.close(terminate=True, kill=True)
 
         if debfile.endswith('.deb'):
             cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedeb {0} {1}'.format(codename, abs_file)
-            __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
+            res = __salt__['cmd.run_all'](cmd, cwd=repodir, use_vt=True)
 
     if use_passphrase and local_keyid is not None:
         cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --forget {0}'.format(local_fingerprint)
-        __salt__['cmd.run'](cmd, runas=runas)
+        res = __salt__['cmd.run_all'](cmd, runas=runas)
+
+    return res

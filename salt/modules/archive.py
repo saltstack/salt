@@ -37,14 +37,6 @@ __func_alias__ = {
 log = logging.getLogger(__name__)
 
 
-def __virtual__():
-    commands = ('tar', 'gzip', 'gunzip', 'zip', 'unzip', 'rar', 'unrar')
-    # If none of the above commands are in $PATH this module is a no-go
-    if not any(salt.utils.which(cmd) for cmd in commands):
-        return (False, 'Unable to find commands {0}'.format(','.join(commands)))
-    return True
-
-
 def list_(name,
           archive_format=None,
           options=None,
@@ -187,6 +179,10 @@ def list_(name,
         '''
         List the contents of a rar archive.
         '''
+        if not salt.utils.which('rar'):
+            raise CommandExecutionError(
+                'rar command not available, is it installed?'
+            )
         output = __salt__['cmd.run'](
             ['rar', 'lt', path],
             python_shell=False,
@@ -195,7 +191,7 @@ def list_(name,
         ret = [x + '/' if y == 'Directory' else x for x, y in matches]
         if not ret:
             raise CommandExecutionError(
-                'Failed to decompress {0}'.format(name),
+                'Failed to list {0}, is it a rar file?'.format(name),
                 info={'error': output}
             )
         return ret
