@@ -2,7 +2,10 @@
 '''
 Module for viewing and modifying sysctl parameters
 '''
+
+# Import Python libs
 from __future__ import absolute_import
+import logging
 
 # Import salt libs
 import salt.utils
@@ -10,6 +13,9 @@ from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
 __virtualname__ = 'sysctl'
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -79,7 +85,7 @@ def show(config_file=False):
             elif comps[0]:
                 ret[comps[0]] += '{0}\n'.format(line)
             else:
-                 continue
+                continue
         return ret
 
 
