@@ -399,6 +399,7 @@ New Modules
 Beacons
 -------
 
+- :mod:`salt.beacons.avahi_announce <salt.beacons.avahi_announce>`
 - :mod:`salt.beacons.bonjour_announce <salt.beacons.bonjour_announce>`
 - :mod:`salt.beacons.haproxy <salt.beacons.haproxy>`
 - :mod:`salt.beacons.status <salt.beacons.status>`

@@ -3540,7 +3540,8 @@ def replace(name,
     .. versionadded:: 0.17.0
 
     name
-        Filesystem path to the file to be edited.
+        Filesystem path to the file to be edited. If a symlink is specified, it
+        will be resolved to its target.
 
     pattern
         A regular expression, to be matched using Python's
@@ -4053,9 +4054,16 @@ def comment(name, regex, char='#', backup='.bak'):
         return _error(ret, check_msg)
 
     unanchor_regex = regex.lstrip('^').rstrip('$')
+    comment_regex = char + unanchor_regex
+
+    # Check if the line is already commented
+    if __salt__['file.search'](name, comment_regex, multiline=True):
+        commented = True
+    else:
+        commented = False
 
     # Make sure the pattern appears in the file before continuing
-    if not __salt__['file.search'](name, regex, multiline=True):
+    if commented or not __salt__['file.search'](name, regex, multiline=True):
         if __salt__['file.search'](name, unanchor_regex, multiline=True):
             ret['comment'] = 'Pattern already commented'
             ret['result'] = True

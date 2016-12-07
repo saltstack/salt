@@ -12,6 +12,7 @@ import os
 import re
 import time
 import stat
+import msgpack
 
 # Import salt libs
 import salt.crypt
@@ -146,7 +147,12 @@ def clean_expired_tokens(opts):
         for token in filenames:
             token_path = os.path.join(dirpath, token)
             with salt.utils.fopen(token_path) as token_file:
-                token_data = serializer.loads(token_file.read())
+                try:
+                    token_data = serializer.loads(token_file.read())
+                except msgpack.UnpackValueError:
+                    # Bad token file or empty. Remove.
+                    os.remove(token_path)
+                    return
                 if 'expire' not in token_data or token_data.get('expire', 0) < time.time():
                     try:
                         os.remove(token_path)

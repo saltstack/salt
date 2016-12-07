@@ -77,7 +77,7 @@ class MockDnsModule(object):
        MagicMock(return_value=MockDNSDriver()))
 class LibcloudDnsModuleTestCase(ModuleTestCase):
     def setUp(self):
-        hasDependency('libcloud')
+        hasDependency('libcloud', fake_module=False)
 
         def get_config(service):
             if service == SERVICE_NAME:
