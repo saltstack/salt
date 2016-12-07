@@ -109,11 +109,11 @@ def beacon(config):
 
     if len(config) < 1:
         config = {
-            'loadavg': 'all',
-            'cpustats': 'all',
-            'meminfo': 'all',
-            'vmstats': 'all',
-            'time': 'all',
+            'loadavg': ['all'],
+            'cpustats': ['all'],
+            'meminfo': ['all'],
+            'vmstats': ['all'],
+            'time': ['all'],
         }
 
     ret = {}
