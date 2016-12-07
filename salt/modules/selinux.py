@@ -107,6 +107,7 @@ def setenforce(mode):
             mode = '0'
             modestring = 'Permissive'
         elif mode.lower() == 'disabled':
+            mode = '0'
             modestring = 'Disabled'
         else:
             return 'Invalid mode {0}'.format(mode)
