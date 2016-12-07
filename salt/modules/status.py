@@ -211,7 +211,7 @@ def loadavg():
 
         salt '*' status.loadavg
 
-        :raises NotImpelemnted: If the system cannot report loadaverages to Python
+        :raises CommandExecutionError: If the system cannot report loadaverages to Python
     '''
     try:
         load_avg = os.getloadavg()
