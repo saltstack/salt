@@ -144,6 +144,47 @@ so either of the following versions for "Extract server package" works:
           - file: /usr/local/share/myapp.tar.xz
 
 
+Requisite overview
+~~~~~~~~~~~~~~~~~~
+
+
++------------+-------------------+---------------+-----------+--------------------+
+| requisite  | state is only     | state is only | Order:    | comment            |
+|            | executed if       | executed if   |           |                    |
+|            | target execution  | target        | 1. target |                    |
+|            |                   | has changes   | 2. state  |                    |
++============+===================+===============+===========+====================+
+| require    | ok                | no            | yes       | state will always  |
+|            |                   |               |           | exececute unless   |
+|            |                   |               |           | target fails       |
++------------+-------------------+---------------+-----------+--------------------+
+| watch      | ok                | no            | yes       | “If mod_watch is   |
+|            |                   |               |           | absent from the    |
+|            |                   |               |           | watching state     |
+|            |                   |               |           | module, the watch  |
+|            |                   |               |           | requisite behaves  |
+|            |                   |               |           | exactly like a     |
+|            |                   |               |           | require requisite.“|
++------------+-------------------+---------------+-----------+--------------------+
+| prereq     | ok                | yes           | switched  | like onchanges,    |
+|            |                   |               |           | except order       |
++------------+-------------------+---------------+-----------+--------------------+
+| onchanges  | ok                | yes           | yes       | execute state if   |
+|            |                   |               |           | target ok and has  |
+|            |                   |               |           | changes            |
++------------+-------------------+---------------+-----------+--------------------+
+| onfail     | fails             | no            | yes       | Only requisite     |
+|            |                   |               |           | where state exec.  |
+|            |                   |               |           | if target fails    |
++------------+-------------------+---------------+-----------+--------------------+
+
+In this table, the following short form of terms is used:
+
+* **state** (= dependent state): state containing requisite 
+* **target** (= state target) : state referenced by requisite
+
+
+
 Direct Requisite and Requisite_in types
 ---------------------------------------
 
