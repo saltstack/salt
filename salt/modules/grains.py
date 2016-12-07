@@ -558,6 +558,8 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
     # Iterate over the list of grain values to match against patterns in the lookup_dict keys
     for each in val if isinstance(val, list) else [val]:
         for key in sorted(lookup_dict):
+            if key not in six.string_types:
+                key = str(key)
             if fnmatch.fnmatchcase(each, key):
                 ret = lookup_dict[key]
                 break
