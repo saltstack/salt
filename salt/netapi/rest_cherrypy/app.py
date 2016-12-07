@@ -1679,9 +1679,13 @@ class Login(LowDataAdapter):
                     'Could not authenticate using provided credentials')
 
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
+        cherrypy.session.delete()
+        cherrypy.session.id = token['token']
+        cherrypy.session.acquire_lock()
         cherrypy.session['token'] = token['token']
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
         cherrypy.session['user'] = token['name']
+
         if 'groups' in token:
             cherrypy.session['groups'] = token['groups']
 
@@ -1709,7 +1713,7 @@ class Login(LowDataAdapter):
             perms = None
 
         return {'return': [{
-            'token': cherrypy.session.id,
+            'token': token['token'],
             'expire': token['expire'],
             'start': token['start'],
             'user': token['name'],
