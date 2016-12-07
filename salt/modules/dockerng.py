@@ -3799,7 +3799,7 @@ def dangling(prune=False, force=False):
     '''
     all_images = images(all=True)
     dangling_images = [x[:12] for x in _get_top_level_images(all_images)
-                       if '<none>:<none>' in all_images[x]['RepoTags']]
+                       if all_images[x]['RepoTags'] is None]
     if not prune:
         return dangling_images
 
