@@ -3218,7 +3218,8 @@ def replace(name,
     .. versionadded:: 0.17.0
 
     name
-        Filesystem path to the file to be edited.
+        Filesystem path to the file to be edited. If a symlink is specified, it
+        will be resolved to its target.
 
     pattern
         A regular expression, to be matched using Python's
