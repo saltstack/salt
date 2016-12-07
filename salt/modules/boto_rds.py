@@ -277,9 +277,9 @@ def create(name, allocated_storage, db_instance_class, engine,
             val = locals()[key]
             if val is not None:
                 mapped = boto3_param_map[key]
+                if key == 'tags':
+                    val = _tag_doc(val)
                 kwargs[mapped[0]] = mapped[1](val)
-
-        taglist = _tag_doc(tags)
 
         # Validation doesn't want parameters that are None
         # https://github.com/boto/boto3/issues/400
