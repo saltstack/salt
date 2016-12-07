@@ -130,7 +130,7 @@ def beacon(config):
         try:
             data = __salt__['status.{0}'.format(func)]()
         except salt.exceptions.CommandExecutionError as exc:
-            log.error('Status beacon attempted to process function {0} \
+            log.debug('Status beacon attempted to process function {0} \
                     but encountered error: {1}'.format(func, exc))
             continue
         ret[func] = {}
