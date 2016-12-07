@@ -151,31 +151,32 @@ Requisite overview
 +------------+-------------------+---------------+-----------+--------------------+
 | requisite  | state is only     | state is only | Order:    | comment            |
 |            | executed if       | executed if   |           |                    |
-|            | target execution  | target        | 1. target |                    |
-|            |                   | has changes   | 2. state  |                    |
+|            | target execution  | target        |           |                    |
+|            | result is         |               |           |                    |
 +============+===================+===============+===========+====================+
-| require    | ok                | no            | yes       | state will always  |
-|            |                   |               |           | exececute unless   |
-|            |                   |               |           | target fails       |
+| require    | success           |               | default:  | state will always  |
+|            |                   |               | 1. target | exececute unless   |
+|            |                   |               | 2. state  | target fails       |
 +------------+-------------------+---------------+-----------+--------------------+
-| watch      | ok                | no            | yes       | “If mod_watch is   |
-|            |                   |               |           | absent from the    |
-|            |                   |               |           | watching state     |
+| watch      | success           |               | default:  | “If mod_watch is   |
+|            |                   |               | 1. target | absent from the    |
+|            |                   |               | 2. state  | watching state     |
 |            |                   |               |           | module, the watch  |
 |            |                   |               |           | requisite behaves  |
 |            |                   |               |           | exactly like a     |
 |            |                   |               |           | require requisite.“|
 +------------+-------------------+---------------+-----------+--------------------+
-| prereq     | ok                | yes           | switched  | like onchanges,    |
-|            |                   |               |           | except order       |
+| prereq     | success           | has changes   | switched: | like onchanges,    |
+|            |                   |               | 1. state  | except order       |
+|            |                   |               | 2. target |                    |
 +------------+-------------------+---------------+-----------+--------------------+
-| onchanges  | ok                | yes           | yes       | execute state if   |
-|            |                   |               |           | target ok and has  |
-|            |                   |               |           | changes            |
+| onchanges  | success           | has changes   | default:  | execute state if   |
+|            |                   |               | 1. target | target ok and has  |
+|            |                   |               | 2. state  | changes            |
 +------------+-------------------+---------------+-----------+--------------------+
-| onfail     | fails             | no            | yes       | Only requisite     |
-|            |                   |               |           | where state exec.  |
-|            |                   |               |           | if target fails    |
+| onfail     | failed            |               | default   | Only requisite     |
+|            |                   |               | 1. target | where state exec.  |
+|            |                   |               | 2. state  | if target fails    |
 +------------+-------------------+---------------+-----------+--------------------+
 
 In this table, the following short form of terms is used:
