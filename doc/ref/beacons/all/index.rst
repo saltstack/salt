@@ -11,6 +11,7 @@ beacon modules
     :template: autosummary.rst.tmpl
 
     adb
+    avahi_announce
     bonjour_announce
     btmp
     diskusage
