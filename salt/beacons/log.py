@@ -73,7 +73,7 @@ def beacon(config):
     ret = []
 
     if 'file' not in config:
-        event = SKEL.copy
+        event = SKEL.copy()
         event['tag'] = 'global'
         event['error'] = 'file not defined in config'
         ret.append(event)
@@ -101,8 +101,8 @@ def beacon(config):
             try:
                 d[tag] = re.compile(r'{0}'.format(config[tag]['regex']))
             except Exception:
-                event = SKEL.copy
-                event['tag'] = str(tag)
+                event = SKEL.copy()
+                event['tag'] = tag
                 event['error'] = 'bad regex'
                 ret.append(event)
 
@@ -111,14 +111,14 @@ def beacon(config):
                 try:
                     m = reg.match(line)
                     if m:
-                        event = SKEL.copy
-                        event['tag'] = str(tag)
-                        event['raw'] = str(line)
+                        event = SKEL.copy()
+                        event['tag'] = tag
+                        event['raw'] = line
                         event['match'] = 'yes'
                         ret.append(event)
                 except Exception:
-                    event = SKEL.copy
-                    event['tag'] = str(tag)
+                    event = SKEL.copy()
+                    event['tag'] = tag
                     event['error'] = 'bad match'
                     ret.append(event)
     return ret
