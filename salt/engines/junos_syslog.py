@@ -127,3 +127,4 @@ def start(port=516):
     log.info('Starting junos syslog engine (port {0})'.format(port))
     reactor.listenUDP(port, Echo())
     reactor.run()
+
