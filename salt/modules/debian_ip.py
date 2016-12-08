@@ -1134,7 +1134,7 @@ def _parse_bridge_opts(opts, iface):
 
     if 'ports' in opts:
         if isinstance(opts['ports'], list):
-            opts['ports'] = ','.join(opts['ports'])
+            opts['ports'] = ' '.join(opts['ports'])
         config.update({'ports': opts['ports']})
 
     for opt in ['ageing', 'fd', 'gcint', 'hello', 'maxage']:
