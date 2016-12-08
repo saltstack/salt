@@ -178,7 +178,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                     log.error('identity {0} does not exist.'.format(_id_file))
                     continue
                 else:
-                    __salt__['file.set_mode'](id_file,'0600')
+                    __salt__['file.set_mode'](id_file, '0600')
             else:
                 if not __salt__['file.file_exists'](id_file):
                     missing_keys.append(id_file)
