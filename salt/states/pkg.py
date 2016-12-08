@@ -150,42 +150,11 @@ def __virtual__():
     return 'pkg.install' in __salt__
 
 
-def _refresh_tag_file(**kwargs):
+def __gen_rtag():
     '''
-    Internal use only in this module
-
-    :param str create:
-        Create Tag to indicate a refresh is required. Called in mod_init()
-    :param str refresh:
-        None - Determine action. i.e. if tag file exists refresh
-        True - refresh is required
-        False - No future refresh required, even if tag file exists
-    :return: New refresh state
-    :rtype: bool
-
-    :codeauthor: Damon Atkins <https://github.com/damon-atkins>
+    Return the location of the refresh tag
     '''
-    rtag = os.path.join(__opts__['cachedir'], 'pkg_refresh')
-    if salt.utils.is_true(kwargs.get('create', False)):
-        if not os.path.exists(rtag):
-            with salt.utils.fopen(rtag, 'w+'):
-                pass
-        return True
-
-    refresh = kwargs.get('refresh', None)
-    if refresh is not None:
-        refresh = salt.utils.is_true(refresh)  # considers None False
-
-    refresh = bool(
-        salt.utils.is_true(refresh) or
-        (os.path.isfile(rtag) and refresh is not False)
-        )
-
-    if refresh is False:
-        if os.path.isfile(rtag):
-            os.remove(rtag)
-
-    return refresh
+    return os.path.join(__opts__['cachedir'], 'pkg_refresh')
 
 
 def _get_comparison_spec(pkgver):
@@ -1249,9 +1218,11 @@ def installed(
                 'comment': 'No packages to install provided'}
 
     kwargs['saltenv'] = __env__
-
-    refresh = _refresh_tag_file(refresh=refresh)
-
+    rtag = __gen_rtag()
+    refresh = bool(
+        salt.utils.is_true(refresh) or
+        (os.path.isfile(rtag) and refresh is not False)
+    )
     if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
     if (pkg_verify or isinstance(pkg_verify, list)) \
@@ -1264,13 +1235,14 @@ def installed(
     if not isinstance(version, six.string_types) and version is not None:
         version = str(version)
 
+    was_refreshed = False
+
     if version is not None and version == 'latest':
         try:
             version = __salt__['pkg.latest_version'](name,
                                                      fromrepo=fromrepo,
                                                      refresh=refresh)
         except CommandExecutionError as exc:
-            refresh = _refresh_tag_file(refresh=False)  # del tag
             return {'name': name,
                     'changes': {},
                     'result': False,
@@ -1278,7 +1250,8 @@ def installed(
                                'newest available version of package(s): {0}'
                                .format(exc)}
 
-        refresh = _refresh_tag_file(refresh=False)  # del tag
+        was_refreshed = refresh
+        refresh = False
 
         # If version is empty, it means the latest version is installed
         # so we grab that version to avoid passing an empty string
@@ -1293,6 +1266,12 @@ def installed(
 
     kwargs['allow_updates'] = allow_updates
 
+    # if windows and a refresh
+    # is required, we will have to do a refresh when _find_install_targets
+    # calls pkg.list_pkgs
+    if salt.utils.is_windows():
+        kwargs['refresh'] = refresh
+
     result = _find_install_targets(name, version, pkgs, sources,
                                    fromrepo=fromrepo,
                                    skip_suggestions=skip_suggestions,
@@ -1300,10 +1279,12 @@ def installed(
                                    normalize=normalize,
                                    ignore_epoch=ignore_epoch,
                                    reinstall=reinstall,
-                                   refresh=refresh,
                                    **kwargs)
-    # _find_install_targets calls list_pkgs which calls refresh_db so del Tag
-    refresh = _refresh_tag_file(refresh=False)  # del tag
+
+    if salt.utils.is_windows():
+        was_refreshed = was_refreshed or refresh
+        kwargs.pop('refresh')
+        refresh = False
 
     try:
         (desired, targets, to_unpurge,
@@ -1469,6 +1450,8 @@ def installed(
                 ret['comment'] += '\n\n' + '. '.join(warnings) + '.'
             return ret
 
+        was_refreshed = was_refreshed or refresh
+
         if isinstance(pkg_ret, dict):
             changes['installed'].update(pkg_ret)
         elif isinstance(pkg_ret, six.string_types):
@@ -1520,6 +1503,9 @@ def installed(
                         failed_hold = [hold_ret[x] for x in hold_ret
                                        if not hold_ret[x]['result']]
 
+    if os.path.isfile(rtag) and was_refreshed:
+        os.remove(rtag)
+
     if to_unpurge:
         changes['purge_desired'] = __salt__['lowpkg.unpurge'](*to_unpurge)
 
@@ -1533,7 +1519,7 @@ def installed(
     else:
         if __grains__['os'] == 'FreeBSD':
             kwargs['with_origin'] = True
-        new_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, refresh=refresh, **kwargs)
+        new_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
         ok, failed = _verify_install(desired, new_pkgs,
                                      ignore_epoch=ignore_epoch)
         modified = [x for x in ok if x in targets]
@@ -1842,6 +1828,11 @@ def latest(
                - report_reboot_exit_codes: False
 
     '''
+    rtag = __gen_rtag()
+    refresh = bool(
+        salt.utils.is_true(refresh) or
+        (os.path.isfile(rtag) and refresh is not False)
+    )
 
     if kwargs.get('sources'):
         return {'name': name,
@@ -1869,7 +1860,6 @@ def latest(
             desired_pkgs = [name]
 
     kwargs['saltenv'] = __env__
-    refresh = _refresh_tag_file(refresh=refresh)
 
     try:
         avail = __salt__['pkg.latest_version'](*desired_pkgs,
@@ -1877,7 +1867,6 @@ def latest(
                                                refresh=refresh,
                                                **kwargs)
     except CommandExecutionError as exc:
-        refresh = _refresh_tag_file(refresh=False)  # del tag
         return {'name': name,
                 'changes': {},
                 'result': False,
@@ -1893,7 +1882,10 @@ def latest(
                 'result': False,
                 'comment': exc.strerror}
 
-    refresh = _refresh_tag_file(refresh=False)  # del tag
+    # Remove the rtag if it exists, ensuring only one refresh per salt run
+    # (unless overridden with refresh=True)
+    if os.path.isfile(rtag) and refresh:
+        os.remove(rtag)
 
     # Repack the cur/avail data if only a single package is being checked
     if isinstance(cur, six.string_types):
@@ -2619,7 +2611,10 @@ def mod_init(low):
         ret = __salt__['pkg.ex_mod_init'](low)
 
     if low['fun'] == 'installed' or low['fun'] == 'latest':
-        _refresh_tag_file(create=True)
+        rtag = __gen_rtag()
+        if not os.path.exists(rtag):
+            with salt.utils.fopen(rtag, 'w+'):
+                pass
         return ret
     return False
 

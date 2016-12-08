@@ -11,9 +11,12 @@ beacon modules
     :template: autosummary.rst.tmpl
 
     adb
+    avahi_announce
+    bonjour_announce
     btmp
     diskusage
     glxinfo
+    haproxy
     inotify
     journald
     load
@@ -27,5 +30,6 @@ beacon modules
     sensehat
     service
     sh
+    status
     twilio_txt_msg
     wtmp

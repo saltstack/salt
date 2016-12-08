@@ -1368,7 +1368,9 @@ def os_data():
                     key
                 )
                 grains[lsb_param] = value
-        except ImportError:
+        # Catch a NameError to workaround possible breakage in lsb_release
+        # See https://github.com/saltstack/salt/issues/37867
+        except (ImportError, NameError):
             # if the python library isn't available, default to regex
             if os.path.isfile('/etc/lsb-release'):
                 # Matches any possible format:

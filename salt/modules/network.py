@@ -1486,6 +1486,8 @@ def ifacestartswith(cidr):
     '''
     Retrieve the interface name from a specific CIDR
 
+    .. versionadded:: 2016.11.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -1507,6 +1509,8 @@ def ifacestartswith(cidr):
 def iphexval(ip):
     '''
     Retrieve the interface name from a specific CIDR
+
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
