@@ -99,14 +99,42 @@ def _is_bsdtar():
                                            python_shell=False)
 
 
-def _cleanup_destdir(name):
+def _remove_destination(names, root=None, ret=None, fail=False):
     '''
-    Attempt to remove the specified directory
+    Remove the specified directory or file.
+
+    :param names: List of destinations (directories or files)
+    :param root: General root for all desinations
+    :param ret: Passed return hash.
+    :param fail: Exit early on first fail, otherwise be quiet
+
+    :return:
     '''
-    try:
-        os.rmdir(name)
-    except OSError:
-        pass
+
+    for name in names:
+        name = root and os.path.join(root, name) or name
+        log.debug('Attempt to remove path: {}'.format(name))
+        if os.path.exists(name):
+            if os.path.isdir(name):
+                remove, obj_name = shutil.rmtree, 'directory'
+            else:
+                remove, obj_name = os.unlink, 'file'
+
+            try:
+                remove(name)
+                log.debug("Path '{}' has been removed".format(name))
+            except OSError as err:
+                error_msg = 'Error removing destination {obj} "{name}": {error}'.format(
+                    obj=obj_name, name=name, error=err)
+                log.error(error_msg)
+
+                if ret:
+                    ret['comment'] = error_msg
+                    ret['result'] = False
+
+                if fail:
+                    return False
+    return True
 
 
 def extracted(name,
@@ -910,16 +938,12 @@ def extracted(name,
 
     extraction_needed = overwrite
 
-    if extraction_needed:
-        destination = os.path.join(name, contents['top_level_dirs'][0])
-        if os.path.exists(destination):
-            try:
-                shutil.rmtree(destination)
-            except OSError as err:
-                ret['comment'] = 'Error removing destination directory ' \
-                                 '"{0}": {1}'.format(destination, err)
-                ret['result'] = False
-                return ret
+    if (extraction_needed
+        and (contents.get('top_level_dirs', []) or contents.get('top_level_files', []))
+        and not _remove_destination(contents.get('top_level_dirs', []) +
+                                    contents.get('top_level_files', []),
+                                    root=name, ret=ret, fail=True)):
+            return ret
 
     try:
         if_missing_path_exists = os.path.exists(if_missing)
@@ -1069,7 +1093,7 @@ def extracted(name,
                                     python_shell=True)
                                 if results['retcode'] != 0:
                                     if created_destdir:
-                                        _cleanup_destdir(name)
+                                        _remove_destination([name])
                                     ret['result'] = False
                                     ret['changes'] = results
                                     return ret
@@ -1081,7 +1105,7 @@ def extracted(name,
                                 # Failed to open tar archive and it is not
                                 # XZ-compressed, gracefully fail the state
                                 if created_destdir:
-                                    _cleanup_destdir(name)
+                                    _remove_destination([name])
                                 ret['result'] = False
                                 ret['comment'] = (
                                     'Failed to read from tar archive using '
@@ -1095,7 +1119,7 @@ def extracted(name,
                                 return ret
                         else:
                             if created_destdir:
-                                _cleanup_destdir(name)
+                                _remove_destination([name])
                             ret['result'] = False
                             ret['comment'] = (
                                 'Failed to read from tar archive. If it is '
