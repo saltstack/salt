@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 from __future__ import absolute_import
+import sys
+sys.modules['pkg_resources'] = None
+
 
 from salt.utils import parsers
 from salt.utils.verify import check_user, verify_log

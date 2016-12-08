@@ -9,6 +9,8 @@ Salt-cp can be used to distribute configuration files
 # Import python libs
 from __future__ import print_function
 from __future__ import absolute_import
+import sys
+sys.modules['pkg_resources'] = None
 import os
 import sys
 
