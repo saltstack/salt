@@ -19,17 +19,20 @@ from contextlib import contextmanager
 from salttesting import TestCase
 from salttesting.mock import MagicMock, patch
 from salttesting.helpers import ensure_in_syspath
-from salt.exceptions import CommandExecutionError
 
 ensure_in_syspath('../')
 
-# Import salt libs
+# Import Salt libs
 import salt.minion
 import salt.utils
 import salt.utils.network
 import integration
 from salt import config as sconfig
-from salt.exceptions import SaltCloudConfigError
+from salt.exceptions import (
+    CommandExecutionError,
+    SaltConfigurationError,
+    SaltCloudConfigError
+)
 
 # Import Third-Party Libs
 import yaml
@@ -64,6 +67,13 @@ def _unhandled_mock_read(filename):
     Raise an error because we should not be calling salt.utils.fopen()
     '''
     raise CommandExecutionError('Unhandled mock read for {0}'.format(filename))
+
+
+def _salt_configuration_error(filename):
+    '''
+    Raise an error to indicate error in the Salt configuration file
+    '''
+    raise SaltConfigurationError('Configuration error in {0}'.format(filename))
 
 
 @contextmanager
@@ -932,6 +942,50 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertIn('ec2-test', config['profiles'])
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
+
+    def test_include_config_without_errors(self):
+        '''
+        Tests that include_config function returns valid configuration
+        '''
+        include_file = 'minion.d/my.conf'
+        config_path = '/etc/salt/minion'
+        config_opts = {'id': 'myminion.example.com'}
+
+        with patch('glob.glob', MagicMock(return_value=include_file)):
+            with patch('salt.config._read_conf_file', MagicMock(return_value=config_opts)):
+                configuration = sconfig.include_config(include_file, config_path, verbose=False)
+
+        self.assertEqual(config_opts, configuration)
+
+    def test_include_config_with_errors(self):
+        '''
+        Tests that include_config function returns valid configuration even on errors
+        '''
+        include_file = 'minion.d/my.conf'
+        config_path = '/etc/salt/minion'
+        config_opts = {}
+
+        with patch('glob.glob', MagicMock(return_value=include_file)):
+            with patch('salt.config._read_conf_file', _salt_configuration_error):
+                configuration = sconfig.include_config(include_file, config_path, verbose=False)
+
+        self.assertEqual(config_opts, configuration)
+
+    def test_include_config_with_errors_exit(self):
+        '''
+        Tests that include_config exits on errors
+        '''
+        include_file = 'minion.d/my.conf'
+        config_path = '/etc/salt/minion'
+
+        with patch('glob.glob', MagicMock(return_value=include_file)):
+            with patch('salt.config._read_conf_file', _salt_configuration_error):
+                with self.assertRaises(SystemExit):
+                    sconfig.include_config(include_file,
+                                           config_path,
+                                           verbose=False,
+                                           exit_on_config_errors=True)
+
 
 if __name__ == '__main__':
     from integration import run_tests
