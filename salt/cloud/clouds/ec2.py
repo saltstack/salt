@@ -1192,7 +1192,7 @@ def securitygroupid(vm_):
     )
     if securitygroupid_list:
         if isinstance(securitygroupid_list, list):
-            securitygroupid_set = securitygroupid_set.union(securitygroupid_list)
+            securitygroupid_set.update(securitygroupid_list)
         else:
             securitygroupid_set.add(securitygroupid_list)
 
