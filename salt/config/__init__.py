@@ -946,6 +946,14 @@ VALID_OPTS = {
     # Note: to set enum arguments values like `cert_reqs` and `ssl_version` use constant names
     # without ssl module prefix: `CERT_REQUIRED` or `PROTOCOL_SSLv23`.
     'ssl': (dict, None),
+
+    # Controls how a multi-function job returns its data. If this is False,
+    # it will return its data using a dictionary with the function name as
+    # the key. This is compatible with legacy systems. If this is True, it
+    # will return its data using an array in the same order as the input
+    # array of functions to execute. This allows for calling the same
+    # function multiple times in the same multi-function job.
+    'multifunc_ordered': bool,
 }
 
 # default configurations
@@ -1191,6 +1199,7 @@ DEFAULT_MINION_OPTS = {
     'proxy_port': 0,
     'minion_jid_queue_hwm': 100,
     'ssl': None,
+    'multifunc_ordered': False,
 }
 
 DEFAULT_MASTER_OPTS = {
