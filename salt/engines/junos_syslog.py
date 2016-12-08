@@ -9,7 +9,7 @@ extract event information and generate message on SaltStack bus.
 :configuration:
   Example configuration
     engines:
-      - junos:
+      - junos_syslog:
           port: 516
 
 '''
