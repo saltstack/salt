@@ -334,8 +334,8 @@ def extracted(name,
         .. versionchanged:: 2015.8.11,2016.3.2
             XZ-compressed tar archives no longer require ``J`` to manually be
             set in the ``options``, they are now detected automatically and
-            decompressed using xz-utils_ and extracted using ``tar xvf``. This
-            is a more platform-independent solution, as not all tar
+            decompressed using the xz_ CLI command and extracted using ``tar
+            xvf``. This is a more platform-independent solution, as not all tar
             implementations support the ``J`` argument for extracting archives.
 
         .. note::
@@ -358,9 +358,9 @@ def extracted(name,
         the archive has already been extracted. For the vast majority of tar
         archives, :py:func:`archive.list <salt.modules.archive.list_>` "just
         works". Archives compressed using gzip, bzip2, and xz/lzma (with the
-        help of xz-utils_) are supported automatically. However, for archives
-        compressed using other compression types, CLI options must be passed to
-        :py:func:`archive.list <salt.modules.archive.list_>`.
+        help of the xz_ CLI command) are supported automatically. However, for
+        archives compressed using other compression types, CLI options must be
+        passed to :py:func:`archive.list <salt.modules.archive.list_>`.
 
         This argument will be passed through to :py:func:`archive.list
         <salt.modules.archive.list_>` as its ``options`` argument, to allow it
@@ -485,7 +485,7 @@ def extracted(name,
 
     .. _tarfile: https://docs.python.org/2/library/tarfile.html
     .. _zipfile: https://docs.python.org/2/library/zipfile.html
-    .. _xz-utils: http://tukaani.org/xz/
+    .. _xz: http://tukaani.org/xz/
 
     overwrite
         If archive was already extracted, then setting this to True will
@@ -1054,7 +1054,7 @@ def extracted(name,
                                 # XZ-compressed data
                                 log.debug(
                                     'Tar file is XZ-compressed, attempting '
-                                    'decompression and extraction using xz-utils '
+                                    'decompression and extraction using XZ Utils '
                                     'and the tar command'
                                 )
                                 # Must use python_shell=True here because not
