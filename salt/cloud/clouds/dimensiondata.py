@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Dimension Data Cloud Module
+Dimension Data Cloud Module 
 ===========================
 
 This is a cloud module for the Dimension Data Cloud,
@@ -317,7 +317,7 @@ def create(vm_):
     vm_['ssh_host'] = ip_address
     vm_['password'] = vm_['auth']
 
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     ret.update(data.__dict__)
 
