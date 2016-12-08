@@ -87,6 +87,17 @@ General Deprecations
 
 - Beacon configurations should be lists instead of dictionaries.
 
+Configuration Option Deprecations
+---------------------------------
+
+- The ``win_gitrepos`` configuration option has been removed. Please use
+  the ``winrepo_remotes`` option instead.
+- The ``win_repo`` configuration option has been removed. Please use
+  ``winrepo_dir`` instead.
+- The ``win_repo_mastercachefile`` configuration option has been removed.
+  Please use the ``winrepo_cachefile`` option instead.
+
+
 Module Deprecations
 -------------------
 
