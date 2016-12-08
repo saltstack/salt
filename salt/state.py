@@ -1791,6 +1791,7 @@ class State(object):
             low['__prereq__'] = False
             return ret
 
+        ret['__sls__'] = low.get('__sls__')
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)

@@ -74,6 +74,47 @@ class StateModuleTest(integration.ModuleCase,
         sls = self.run_function('state.show_sls', mods='recurse_ok_two')
         self.assertIn('/etc/nagios/nrpe.cfg', sls)
 
+    def test_running_dictionary_consistency(self):
+        '''
+        Test the structure of the running dictionary so we don't change it
+        without deprecating/documenting the change
+        '''
+        running_dict_fields = [
+            '__id__',
+            '__run_num__',
+            '__sls__',
+            'changes',
+            'comment',
+            'duration',
+            'name',
+            'result',
+            'start_time',
+        ]
+
+        sls = self.run_function('state.single',
+                fun='test.succeed_with_changes',
+                name='gndn')
+
+        for state, ret in sls.items():
+            for field in running_dict_fields:
+                self.assertIn(field, ret)
+
+    def test_running_dictionary_key_sls(self):
+        '''
+        Ensure the __sls__ key is either null or a string
+        '''
+        sls1 = self.run_function('state.single',
+                fun='test.succeed_with_changes',
+                name='gndn')
+
+        sls2 = self.run_function('state.sls', mods='gndn')
+
+        for state, ret in sls1.items():
+            self.assertTrue(isinstance(ret['__sls__'], type(None)))
+
+        for state, ret in sls2.items():
+            self.assertTrue(isinstance(ret['__sls__'], str))
+
     def _remove_request_cache_file(self):
         '''
         remove minion state request file
