@@ -110,12 +110,10 @@ class StateModuleTest(integration.ModuleCase,
         sls2 = self.run_function('state.sls', mods='gndn')
 
         for state, ret in sls1.items():
-            key_type = type(ret['__sls__'])
-            self.assertTrue(key_type is str or key_type is type(None))
+            self.assertTrue(isinstance(ret['__sls__'], type(None)))
 
         for state, ret in sls2.items():
-            key_type = type(ret['__sls__'])
-            self.assertTrue(key_type is str or key_type is type(None))
+            self.assertTrue(isinstance(ret['__sls__'], str))
 
     def _remove_request_cache_file(self):
         '''
