@@ -76,7 +76,7 @@ def psversion():
 
     This has been deprecated and has been replaced by ``cmd.shell_info`` Note
     the minimum version return is 5 as ``dsc`` is not available for version
-    less than 5.  This function will be removed in 'Nitrogen' release.
+    less than 5.  This function will be removed in 'Oxygen' release.
 
     CLI Example:
 
@@ -84,7 +84,7 @@ def psversion():
 
         salt 'win01' dsc.psversion
     '''
-    salt.utils.warn_until('Nitrogen',
+    salt.utils.warn_until('Oxygen',
         'The \'psversion\' has been deprecated and has been '
         'replaced by \'cmd.shell_info\'.'
     )
