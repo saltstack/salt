@@ -183,13 +183,7 @@ class CloudClient(object):
 
         if pillars:
             for name, provider in six.iteritems(pillars.pop('providers', {})):
-                # Since using "provider: <provider-engine>" is deprecated, alias provider
-                # to use driver: "driver: <provider-engine>"
-                if 'provider' in provider:
-                    driver = provider.pop('provider')
-                else:
-                    driver = provider['driver']
-
+                driver = provider['driver']
                 provider['profiles'] = {}
                 self.opts['providers'].update({name: {driver: provider}})
             for name, profile in six.iteritems(pillars.pop('profiles', {})):
@@ -396,12 +390,6 @@ class CloudClient(object):
         ret = {}
         for name in names:
             vm_ = kwargs.copy()
-
-            # Since using "provider: <provider-engine>" is deprecated, alias provider
-            # to use driver: "driver: <provider-engine>"
-            if 'provider' in vm_:
-                vm_['driver'] = vm_.pop('provider')
-
             vm_['name'] = name
             vm_['driver'] = provider
             vm_['profile'] = None
@@ -1182,11 +1170,6 @@ class Cloud(object):
         minion_dict = salt.config.get_cloud_config_value(
             'minion', vm_, self.opts, default={}
         )
-
-        # Since using "provider: <provider-engine>" is deprecated, alias provider
-        # to use driver: "driver: <provider-engine>"
-        if 'provider' in vm_:
-            vm_['driver'] = vm_.pop('provider')
 
         alias, driver = vm_['driver'].split(':')
         fun = '{0}.create'.format(driver)

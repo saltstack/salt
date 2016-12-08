@@ -93,6 +93,13 @@ Salt-API Deprecations
 - The ``SaltAPI.run()`` function has been removed. Please use the
   ``SaltAPI.start()`` function instead.
 
+Salt-Cloud Deprecations
+-----------------------
+
+- Support for using the keyword ``provider`` in salt-cloud provider config
+  files has been removed. Please use ``driver`` instead. The ``provider``
+  keyword should now only be used in cloud profile config files.
+
 Salt-SSH Deprecations
 ---------------------
 

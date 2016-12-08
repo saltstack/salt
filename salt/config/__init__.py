@@ -2290,28 +2290,15 @@ def apply_cloud_config(overrides, defaults=None):
         for alias, details in six.iteritems(providers):
             if isinstance(details, list):
                 for detail in details:
-                    if 'provider' not in detail and 'driver' not in detail:
+                    if 'driver' not in detail:
                         raise salt.exceptions.SaltCloudConfigError(
                             'The cloud provider alias \'{0}\' has an entry '
-                            'missing the required setting of either '
-                            '\'provider\' or \'driver\'. Note that '
-                            '\'provider\' has been deprecated, so the '
-                            '\'driver\' notation should be used.'.format(
+                            'missing the required setting of \'driver\'.'.format(
                                 alias
                             )
                         )
-                    elif 'provider' in detail:
-                        salt.utils.warn_until(
-                            'Nitrogen',
-                            'The term \'provider\' is being deprecated in '
-                            'favor of \'driver\'. Support for \'provider\' '
-                            'will be removed in Salt Nitrogen. Please convert '
-                            'your cloud provider configuration files to use '
-                            '\'driver\'.'
-                        )
-                        driver = detail['provider']
-                    elif 'driver' in detail:
-                        driver = detail['driver']
+
+                    driver = detail['driver']
 
                     if ':' in driver:
                         # Weird, but...
@@ -2323,23 +2310,16 @@ def apply_cloud_config(overrides, defaults=None):
                     detail['provider'] = '{0}:{1}'.format(alias, driver)
                     config['providers'][alias][driver] = detail
             elif isinstance(details, dict):
-                if 'provider' not in details and 'driver' not in details:
+                if 'driver' not in details:
                     raise salt.exceptions.SaltCloudConfigError(
                         'The cloud provider alias \'{0}\' has an entry '
-                        'missing the required setting of either '
-                        '\'provider\' or \'driver\''.format(alias)
+                        'missing the required setting of \'driver\''.format(
+                            alias
+                        )
                     )
-                elif 'provider' in details:
-                    salt.utils.warn_until(
-                        'Nitrogen',
-                        'The term \'provider\' is being deprecated in favor '
-                        'of \'driver\' and support for \'provider\' will be '
-                        'removed in Salt Nitrogen. Please convert your cloud '
-                        'provider  configuration files to use \'driver\'.'
-                    )
-                    driver = details['provider']
-                elif 'driver' in details:
-                    driver = details['driver']
+
+                driver = details['driver']
+
                 if ':' in driver:
                     # Weird, but...
                     alias, driver = driver.split(':')
@@ -2382,11 +2362,6 @@ def old_to_new(opts):
 
         lprovider = provider.lower()
         if provider_config:
-            # Since using "provider: <provider-engine>" is deprecated, alias provider
-            # to use driver: "driver: <provider-engine>"
-            if 'provider' in provider_config:
-                provider_config['driver'] = provider_config.pop('provider')
-
             provider_config['provider'] = lprovider
             opts.setdefault('providers', {})
             # provider alias
@@ -2606,19 +2581,14 @@ def apply_cloud_providers_config(overrides, defaults=None):
             # we won't be able to properly reference it.
             handled_providers = set()
             for details in val:
-                if 'provider' not in details and 'driver' not in details:
+                if 'driver' not in details:
                     if 'extends' not in details:
                         log.error(
                             'Please check your cloud providers configuration. '
-                            "There's no 'driver', 'provider', nor 'extends' "
-                            'definition referenced.'
+                            'There\'s no \'driver\' nor \'extends\' definition '
+                            'referenced.'
                         )
                     continue
-
-                # Since using "provider: <provider-engine>" is deprecated,
-                # alias provider to use driver: "driver: <provider-engine>"
-                if 'provider' in details:
-                    details['driver'] = details.pop('provider')
 
                 if details['driver'] in handled_providers:
                     log.error(
@@ -2635,17 +2605,6 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 handled_providers.add(details['driver'])
 
         for entry in val:
-            # Since using "provider: <provider-engine>" is deprecated, alias provider
-            # to use driver: "driver: <provider-engine>"
-            if 'provider' in entry:
-                salt.utils.warn_until(
-                    'Nitrogen',
-                    'The term \'provider\' is being deprecated in favor of '
-                    '\'driver\'. Support for \'provider\' will be removed in '
-                    'Salt Nitrogen. Please convert your cloud provider '
-                    'configuration files to use \'driver\'.'
-                )
-                entry['driver'] = entry.pop('provider')
 
             if 'driver' not in entry:
                 entry['driver'] = '-only-extendable-{0}'.format(ext_count)
@@ -2663,11 +2622,6 @@ def apply_cloud_providers_config(overrides, defaults=None):
         keep_looping = False
         for provider_alias, entries in six.iteritems(providers.copy()):
             for driver, details in six.iteritems(entries):
-                # Since using "provider: <provider-engine>" is deprecated,
-                # alias provider to use driver: "driver: <provider-engine>"
-                if 'provider' in details:
-                    details['driver'] = details.pop('provider')
-
                 # Set a holder for the defined profiles
                 providers[provider_alias][driver]['profiles'] = {}
 
@@ -2821,11 +2775,6 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
                     value.update(opts['profiles'][vm_['profile']][name].copy())
                 else:
                     value = deepcopy(opts['profiles'][vm_['profile']][name])
-
-        # Since using "provider: <provider-engine>" is deprecated, alias provider
-        # to use driver: "driver: <provider-engine>"
-        if 'provider' in vm_:
-            vm_['driver'] = vm_.pop('provider')
 
         # Let's get the value from the provider, if present.
         if ':' in vm_['driver']:
