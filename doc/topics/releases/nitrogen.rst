@@ -87,6 +87,12 @@ General Deprecations
 
 - Beacon configurations should be lists instead of dictionaries.
 
+Module Deprecations
+-------------------
+
+- The ``win_repo_source_dir`` option has been removed from the ``win_repo``
+  module. Please use ``winrepo_source_dir`` instead.
+
 Pillar Deprecations
 -------------------
 

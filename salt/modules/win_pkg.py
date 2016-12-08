@@ -541,16 +541,7 @@ def _get_repo_details(saltenv):
     if contextkey in __context__:
         (winrepo_source_dir, local_dest, winrepo_file) = __context__[contextkey]
     else:
-        if 'win_repo_source_dir' in __opts__:
-            salt.utils.warn_until(
-                'Nitrogen',
-                'The \'win_repo_source_dir\' config option is deprecated, '
-                'please use \'winrepo_source_dir\' instead.'
-            )
-            winrepo_source_dir = __opts__['win_repo_source_dir']
-        else:
-            winrepo_source_dir = __opts__['winrepo_source_dir']
-
+        winrepo_source_dir = __opts__['winrepo_source_dir']
         dirs = [__opts__['cachedir'], 'files', saltenv]
         url_parts = _urlparse(winrepo_source_dir)
         dirs.append(url_parts.netloc)
