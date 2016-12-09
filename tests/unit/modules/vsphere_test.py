@@ -31,6 +31,8 @@ USER = 'root'
 PASSWORD = 'SuperSecret!'
 ERROR = 'Some Testing Error Message'
 
+# Inject empty dunders do they can be patched
+vsphere.__pillar__ = {}
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
@@ -551,3 +553,15 @@ class VsphereTestCase(TestCase):
         config = 'logdir'
         self.assertEqual({config: {'success': True}},
                          vsphere._set_syslog_config_helper(HOST, USER, PASSWORD, config, 'foo'))
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
+class GetProxyTypeTestCase(TestCase):
+    '''Tests for salt.modules.vsphere.get_proxy_type'''
+
+    def test_output(self):
+        with patch.dict(vsphere.__pillar__,
+                        {'proxy': {'proxytype': 'fake_proxy_type'}}):
+            ret = vsphere.get_proxy_type()
+        self.assertEqual('fake_proxy_type', ret)
