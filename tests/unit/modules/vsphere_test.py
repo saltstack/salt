@@ -807,7 +807,6 @@ class GetsServiceInstanceViaProxyTestCase(TestCase):
 # Decorator mocks
 @patch('salt.modules.vsphere.get_proxy_type',MagicMock(return_value='esxi'))
 @patch('salt.modules.vsphere._get_proxy_connection_details', MagicMock())
-@patch('salt.modules.vsphere._get_proxy_target', MagicMock())
 @patch('salt.utils.vmware.get_service_instance',
        MagicMock(return_value=mock_si))
 @patch('salt.utils.vmware.disconnect', MagicMock())
