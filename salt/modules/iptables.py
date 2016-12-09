@@ -1,6 +1,30 @@
 # -*- coding: utf-8 -*-
 '''
 Support for iptables
+
+Configuration Options
+---------------------
+
+The following options can be set in the :ref:`minion config
+<configuration-salt-minion>`, :ref:`minion grains<configuration-minion-grains>`
+, :ref:`minion pillar<configuration-minion-pillar>`, or
+`master config<configuration-salt-master>`.
+
+- ``iptables.save_filters``: List of REGEX strings to FILTER OUT matching lines
+
+    This is useful for filtering out chains, rules, etc that you do not
+    wish to persist, such as ephemeral Docker rules.
+
+    The default is to not filter out anything.
+
+    .. code-block:: yaml
+
+        iptables.save_filters:
+           - "-j CATTLE_PREROUTING"
+           - "-j DOCKER"
+           - "-A POSTROUTING"
+           - "-A CATTLE_POSTROUTING"
+           - "-A FORWARD"
 '''
 from __future__ import absolute_import
 
@@ -87,6 +111,56 @@ def _conf(family='ipv4'):
         raise SaltException('Saving iptables to file is not' +
                             ' supported on {0}.'.format(__grains__['os']) +
                             ' Please file an issue with SaltStack')
+
+
+def _conf_save_filters():
+    '''
+    Return array of strings from `save_filters` in config.
+
+    This array will be pulled from minion config, minion grains,
+    minion pillar, or master config.  The default value returned is [].
+
+    .. code-block:: python
+
+        _conf_save_filters()
+    '''
+    config = __salt__['config.option']('iptables.save_filters', [])
+    return config
+
+
+def _regex_iptables_save(cmd_output, filters=None):
+    '''
+    Return string with `save_filter` regex entries removed.  For example:
+
+    If `filters` is not provided, it will be pulled from minion config,
+    minion grains, minion pillar, or master config. Default return value
+    if no filters found is the original cmd_output string.
+
+    .. code-block:: python
+
+        _regex_iptables_save(cmd_output, ['-A DOCKER*'])
+    '''
+    # grab RE compiled filters from context for performance
+    if 'iptables.save_filters' not in __context__:
+        __context__['iptables.save_filters'] = []
+        for pattern in filters or _conf_save_filters():
+            try:
+                __context__['iptables.save_filters']\
+                    .append(re.compile(pattern))
+            except re.error as e:
+                log.warning('Skipping regex rule: \'{0}\': {1}'
+                            .format(pattern, e))
+                continue
+
+    if len(__context__['iptables.save_filters']) > 0:
+        # line by line get rid of any regex matches
+        _filtered_cmd_output = \
+            [line for line in cmd_output.splitlines(True)
+             if not any(reg.search(line) for reg
+                        in __context__['iptables.save_filters'])]
+        return ''.join(_filtered_cmd_output)
+
+    return cmd_output
 
 
 def version(family='ipv4'):
@@ -575,6 +649,11 @@ def save(filename=None, family='ipv4'):
         os.makedirs(parent_dir)
     cmd = '{0}-save'.format(_iptables_cmd(family))
     ipt = __salt__['cmd.run'](cmd)
+
+    # regex out the output if configured with filters
+    if len(_conf_save_filters()) > 0:
+        ipt = _regex_iptables_save(ipt)
+
     out = __salt__['file.write'](filename, ipt)
     return out
 

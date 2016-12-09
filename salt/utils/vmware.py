@@ -915,6 +915,30 @@ def list_datacenters(service_instance):
     return list_objects(service_instance, vim.Datacenter)
 
 
+def get_datacenters(service_instance, datacenter_names=None,
+                    get_all_datacenters=False):
+    '''
+    Returns all datacenters in a vCenter.
+
+    service_instance
+        The Service Instance Object from which to obtain cluster.
+
+    datacenter_names
+        List of datacenter names to filter by. Default value is None.
+
+    get_all_datacenters
+        Flag specifying whether to retrieve all datacenters.
+        Default value is None.
+    '''
+    items = [i['object'] for i in
+             get_mors_with_properties(service_instance,
+                                      vim.Datacenter,
+                                      property_list=['name'])
+             if get_all_datacenters or
+             (datacenter_names and i['name'] in datacenter_names)]
+    return items
+
+
 def get_datacenter(service_instance, datacenter_name):
     '''
     Returns a vim.Datacenter managed object.
@@ -925,11 +949,8 @@ def get_datacenter(service_instance, datacenter_name):
     datacenter_name
         The datacenter name
     '''
-    items = [i['object'] for i in
-             get_mors_with_properties(service_instance,
-                                      vim.Datacenter,
-                                      property_list=['name'])
-            if i['name'] == datacenter_name]
+    items = get_datacenters(service_instance,
+                            datacenter_names=[datacenter_name])
     if not items:
         raise salt.exceptions.VMwareObjectRetrievalError(
             'Datacenter \'{0}\' was not found'.format(datacenter_name))

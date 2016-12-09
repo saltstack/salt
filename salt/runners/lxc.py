@@ -315,7 +315,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
             saved_kwargs = kw
             kw = client.cmd(
                 host, 'lxc.cloud_init_interface', args + [kw],
-                expr_form='list', timeout=600).get(host, {})
+                tgt_type='list', timeout=600).get(host, {})
             kw.update(saved_kwargs)
         name = kw.pop('name', name)
         # be sure not to seed an already seeded host

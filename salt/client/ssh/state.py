@@ -4,6 +4,7 @@ Create ssh executor system
 '''
 from __future__ import absolute_import
 # Import python libs
+import logging
 import os
 import tarfile
 import tempfile
@@ -22,6 +23,8 @@ import salt.roster
 import salt.state
 import salt.loader
 import salt.minion
+
+log = logging.getLogger(__name__)
 
 
 class SSHState(salt.state.State):
@@ -67,12 +70,44 @@ class SSHHighState(salt.state.BaseHighState):
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(opts, pillar, wrapper)
         self.matcher = salt.minion.Matcher(self.opts)
+        self.tops = salt.loader.tops(self.opts)
 
     def load_dynamic(self, matches):
         '''
         Stub out load_dynamic
         '''
         return
+
+    def _ext_nodes(self):
+        '''
+        Evaluate master_tops locally
+        '''
+        if 'id' not in self.opts:
+            log.error('Received call for external nodes without an id')
+            return {}
+        if not salt.utils.verify.valid_id(self.opts, self.opts['id']):
+            return {}
+        # Evaluate all configured master_tops interfaces
+
+        grains = {}
+        ret = {}
+
+        if 'grains' in self.opts:
+            grains = self.opts['grains']
+        for fun in self.tops:
+            if fun not in self.opts.get('master_tops', {}):
+                continue
+            try:
+                ret.update(self.tops[fun](opts=self.opts, grains=grains))
+            except Exception as exc:
+                # If anything happens in the top generation, log it and move on
+                log.error(
+                    'Top function {0} failed with error {1} for minion '
+                    '{2}'.format(
+                        fun, exc, self.opts['id']
+                    )
+                )
+        return ret
 
 
 def lowstate_file_refs(chunks, extras=''):

@@ -2112,11 +2112,15 @@ def managed(name,
                 ret.update(cret)
                 if os.path.isfile(tmp_filename):
                     os.remove(tmp_filename)
+                if sfn and os.path.isfile(sfn):
+                    os.remove(sfn)
                 return ret
             # Since we generated a new tempfile and we are not returning here
             # lets change the original sfn to the new tempfile or else we will
             # get file not found
-            sfn = tmp_filename
+            if sfn and os.path.isfile(sfn):
+                os.remove(sfn)
+                sfn = tmp_filename
         else:
             ret = {'changes': {},
                    'comment': '',
@@ -2158,6 +2162,8 @@ def managed(name,
         finally:
             if tmp_filename and os.path.isfile(tmp_filename):
                 os.remove(tmp_filename)
+            if sfn and os.path.isfile(sfn):
+                os.remove(sfn)
 
 
 _RECURSE_TYPES = ['user', 'group', 'mode', 'ignore_files', 'ignore_dirs']
@@ -3534,7 +3540,8 @@ def replace(name,
     .. versionadded:: 0.17.0
 
     name
-        Filesystem path to the file to be edited.
+        Filesystem path to the file to be edited. If a symlink is specified, it
+        will be resolved to its target.
 
     pattern
         A regular expression, to be matched using Python's
@@ -4047,9 +4054,16 @@ def comment(name, regex, char='#', backup='.bak'):
         return _error(ret, check_msg)
 
     unanchor_regex = regex.lstrip('^').rstrip('$')
+    comment_regex = char + unanchor_regex
+
+    # Check if the line is already commented
+    if __salt__['file.search'](name, comment_regex, multiline=True):
+        commented = True
+    else:
+        commented = False
 
     # Make sure the pattern appears in the file before continuing
-    if not __salt__['file.search'](name, regex, multiline=True):
+    if commented or not __salt__['file.search'](name, regex, multiline=True):
         if __salt__['file.search'](name, unanchor_regex, multiline=True):
             ret['comment'] = 'Pattern already commented'
             ret['result'] = True

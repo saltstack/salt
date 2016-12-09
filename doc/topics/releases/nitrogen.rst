@@ -62,3 +62,45 @@ Master Configuration Additions
 
 - ``syndic_forward_all_events``: Option on multi-syndic or single when connected
   to multiple masters to be able to send events to all connected masters.
+
+Python API Changes
+==================
+
+The :ref:`LocalClient <local-client>`'s ``expr_form`` argument has been
+deprecated and renamed to ``tgt_type``. This change was made due to numerous
+reports of confusion among community members, since the targeting method is
+published to minions as ``tgt_type``, and appears as ``tgt_type`` in the job
+cache as well.
+
+While ``expr_form`` will continue to be supported until the **Fluorine**
+release cycle (two major releases after this one), those who are using the
+:ref:`LocalClient <local-client>` (either directly, or implictly via a
+:ref:`netapi module <all-netapi-modules>`) are encouraged to update their code
+to use ``tgt_type``.
+
+
+Deprecations
+============
+
+General Deprecations
+--------------------
+
+- Beacon configurations should be lists instead of dictionaries.
+
+Proxy Minion Deprecations
+-------------------------
+
+- The ``proxy_merge_grains_in_module`` default has been switched from
+  ``False`` to ``True``.
+
+Salt-API Deprecations
+---------------------
+
+- The ``SaltAPI.run()`` function has been removed. Please use the
+  ``SaltAPI.start()`` function instead.
+
+Salt-SSH Deprecations
+---------------------
+
+- The ``wipe_ssh`` option for ``salt-ssh`` has been removed. Please use the
+  ``ssh_wipe`` option instead.

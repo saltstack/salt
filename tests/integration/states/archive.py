@@ -119,6 +119,24 @@ class ArchiveTest(integration.ModuleCase,
 
         self._check_ext_remove(ARCHIVE_DIR, UNTAR_FILE)
 
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_archive_extracted_with_root_user_and_group(self):
+        '''
+        test archive.extracted without skip_verify
+        only external resources work to check to
+        ensure source_hash is verified correctly
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=ARCHIVE_TAR_SOURCE, archive_format='tar',
+                             source_hash=ARCHIVE_TAR_HASH,
+                             user='root', group='root')
+        if 'Timeout' in ret:
+            self.skipTest('Timeout talking to local tornado server.')
+
+        self.assertSaltTrueReturn(ret)
+
+        self._check_ext_remove(ARCHIVE_DIR, UNTAR_FILE)
+
 
 if __name__ == '__main__':
     from integration import run_tests

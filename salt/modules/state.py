@@ -1243,6 +1243,12 @@ def sls_id(
 
     The state ID comes *before* the module ID(s) on the command line.
 
+    id
+        ID to call
+
+    mods
+        Comma-delimited list of modules to search for given id and its requisites
+
     .. versionadded:: 2014.7.0
 
     CLI Example:
@@ -1250,6 +1256,8 @@ def sls_id(
     .. code-block:: bash
 
         salt '*' state.sls_id my_state my_module
+
+        salt '*' state.sls_id my_state my_module,a_common_module
     '''
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:

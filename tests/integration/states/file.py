@@ -1463,6 +1463,11 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # write a line to file
             with salt.utils.fopen(name, 'w+') as fp_:
                 fp_.write('comment_me')
+
+            # Look for changes with test=True: return should be "None" at the first run
+            ret = self.run_state('file.comment', test=True, name=name, regex='^comment')
+            self.assertSaltNoneReturn(ret)
+
             # comment once
             ret = self.run_state('file.comment', name=name, regex='^comment')
             # result is positive
@@ -1479,6 +1484,11 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # line is still commented
             with salt.utils.fopen(name, 'r') as fp_:
                 self.assertTrue(fp_.read().startswith('#comment'))
+
+            # Test previously commented file returns "True" now and not "None" with test=True
+            ret = self.run_state('file.comment', test=True, name=name, regex='^comment')
+            self.assertSaltTrueReturn(ret)
+
         finally:
             os.remove(name)
 

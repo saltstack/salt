@@ -1404,7 +1404,7 @@ class TestDaemon(object):
 
     def __client_job_running(self, targets, jid):
         running = self.client.cmd(
-            list(targets), 'saltutil.running', expr_form='list'
+            list(targets), 'saltutil.running', tgt_type='list'
         )
         return [
             k for (k, v) in six.iteritems(running) if v and v[0]['jid'] == jid
@@ -1443,7 +1443,7 @@ class TestDaemon(object):
 
             try:
                 responses = self.client.cmd(
-                    list(expected_connections), 'test.ping', expr_form='list',
+                    list(expected_connections), 'test.ping', tgt_type='list',
                 )
             # we'll get this exception if the master process hasn't finished starting yet
             except SaltClientError:
@@ -1503,7 +1503,7 @@ class TestDaemon(object):
         syncing = set(targets)
         jid_info = self.client.run_job(
             list(targets), 'saltutil.sync_{0}'.format(modules_kind),
-            expr_form='list',
+            tgt_type='list',
             timeout=999999999999999,
         )
 

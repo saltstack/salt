@@ -256,23 +256,27 @@ class PkgModuleTest(integration.ModuleCase,
         if os_family == 'Suse':
             # pkg.latest version returns empty if the latest version is already installed
             vim_version_dict = self.run_function('pkg.latest_version', ['vim'])
+            vim_info = self.run_function('pkg.info_available', ['vim'])['vim']
             if vim_version_dict == {}:
                 # Latest version is installed, get its version and construct
                 # a version selector so the immediately previous version is selected
-                vim_version_dict = self.run_function('pkg.info', ['vim'])
-                vim_version = 'version=<'+vim_version_dict['vim']['version']
+                vim_version = 'version=<'+vim_info['version']
             else:
                 # Vim was not installed, so pkg.latest_version returns the latest one.
                 # Construct a version selector so immediately previous version is selected
                 vim_version = 'version=<'+vim_version_dict
 
-            # Install a version of vim that should need upgrading
-            ret = self.run_function('pkg.install', ['vim', vim_version])
-            if not isinstance(ret, dict):
-                if ret.startswith('ERROR'):
-                    self.skipTest('Could not install earlier vim to complete test.')
-            else:
-                self.assertNotEqual(ret, {})
+            # Only install a new version of vim if vim is up-to-date, otherwise we don't
+            # need this check. (And the test will fail when we check for the empty dict
+            # since vim gets upgraded in the install step.)
+            if 'out-of-date' not in vim_info['status']:
+                # Install a version of vim that should need upgrading
+                ret = self.run_function('pkg.install', ['vim', vim_version])
+                if not isinstance(ret, dict):
+                    if ret.startswith('ERROR'):
+                        self.skipTest('Could not install earlier vim to complete test.')
+                else:
+                    self.assertNotEqual(ret, {})
 
             # Run a system upgrade, which should catch the fact that Vim needs upgrading, and upgrade it.
             ret = self.run_function(func)

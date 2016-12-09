@@ -250,10 +250,10 @@ class SaltClientsMixIn(object):
             local_client = salt.client.get_local_client(mopts=self.application.opts)
             # TODO: refreshing clients using cachedict
             SaltClientsMixIn.__saltclients = {
-                'local': local_client.run_job,
+                'local': local_client.run_job_async,
                 # not the actual client we'll use.. but its what we'll use to get args
                 'local_batch': local_client.cmd_batch,
-                'local_async': local_client.run_job,
+                'local_async': local_client.run_job_async,
                 'runner': salt.runner.RunnerClient(opts=self.application.opts).cmd_async,
                 'runner_async': None,  # empty, since we use the same client as `runner`
                 }
@@ -939,7 +939,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         # let the upper level deal with this one
         ping_ret = yield self._disbatch_local({'tgt': chunk['tgt'],
                                                'fun': 'test.ping',
-                                               'expr_form': f_call['kwargs']['expr_form']})
+                                               'tgt_type': f_call['kwargs']['tgt_type']})
 
         chunk_ret = {}
 
@@ -950,8 +950,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
         inflight_futures = []
 
-        # override the expr_form
-        f_call['kwargs']['expr_form'] = 'list'
+        # override the tgt_type
+        f_call['kwargs']['tgt_type'] = 'list'
         # do this batch
         while len(minions) > 0 or len(inflight_futures) > 0:
             # if you have more to go, lets disbatch jobs
@@ -959,7 +959,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
                 minion_id = minions.pop(0)
                 batch_chunk = dict(chunk)
                 batch_chunk['tgt'] = [minion_id]
-                batch_chunk['expr_form'] = 'list'
+                batch_chunk['tgt_type'] = 'list'
                 future = self._disbatch_local(batch_chunk)
                 inflight_futures.append(future)
 
@@ -985,10 +985,10 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         '''
         chunk_ret = {}
 
-        f_call = salt.utils.format_call(self.saltclients['local'], chunk)
+        f_call = self._format_call_run_job_async(chunk)
         # fire a job off
         try:
-            pub_data = self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            pub_data = yield self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
         except EauthAuthenticationError:
             raise tornado.gen.Return('Not authorized to run this job')
 
@@ -1006,7 +1006,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
 
         job_not_running = self.job_not_running(pub_data['jid'],
                                                chunk['tgt'],
-                                               f_call['kwargs']['expr_form'],
+                                               f_call['kwargs']['tgt_type'],
                                                minions_remaining=minions_remaining
                                                )
 
@@ -1069,10 +1069,10 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         if minions_remaining is None:
             minions_remaining = []
 
-        ping_pub_data = self.saltclients['local'](tgt,
-                                                  'saltutil.find_job',
-                                                  [jid],
-                                                  expr_form=tgt_type)
+        ping_pub_data = yield self.saltclients['local'](tgt,
+                                                        'saltutil.find_job',
+                                                        [jid],
+                                                        tgt_type=tgt_type)
         ping_tag = tagify([ping_pub_data['jid'], 'ret'], 'job')
 
         minion_running = False
@@ -1086,10 +1086,10 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
                 if not minion_running:
                     raise tornado.gen.Return(True)
                 else:
-                    ping_pub_data = self.saltclients['local'](tgt,
-                                                              'saltutil.find_job',
-                                                              [jid],
-                                                              expr_form=tgt_type)
+                    ping_pub_data = yield self.saltclients['local'](tgt,
+                                                                    'saltutil.find_job',
+                                                                    [jid],
+                                                                    tgt_type=tgt_type)
                     ping_tag = tagify([ping_pub_data['jid'], 'ret'], 'job')
                     minion_running = False
                     continue
@@ -1106,9 +1106,9 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         '''
         Disbatch local client_async commands
         '''
-        f_call = salt.utils.format_call(self.saltclients['local_async'], chunk)
+        f_call = self._format_call_run_job_async(chunk)
         # fire a job off
-        pub_data = self.saltclients['local_async'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        pub_data = yield self.saltclients['local_async'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
         raise tornado.gen.Return(pub_data)
 
@@ -1134,6 +1134,12 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         '''
         pub_data = self.saltclients['runner'](chunk)
         raise tornado.gen.Return(pub_data)
+
+    # salt.utils.format_call doesn't work for functions having the annotation tornado.gen.coroutine
+    def _format_call_run_job_async(self, chunk):
+        f_call = salt.utils.format_call(salt.client.LocalClient.run_job, chunk)
+        f_call.get('kwargs', {})['io_loop'] = tornado.ioloop.IOLoop.current()
+        return f_call
 
 
 class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223

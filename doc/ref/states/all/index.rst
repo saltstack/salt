@@ -140,6 +140,7 @@ state modules
     mysql_grants
     mysql_query
     mysql_user
+    netconfig
     netntp
     netsnmp
     netusers

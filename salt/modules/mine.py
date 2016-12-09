@@ -203,20 +203,24 @@ def send(func, *args, **kwargs):
     return _mine_send(load, __opts__)
 
 
-def get(tgt, fun, expr_form='glob', exclude_minion=False):
+def get(tgt,
+        fun,
+        tgt_type='glob',
+        exclude_minion=False,
+        expr_form=None):
     '''
-    Get data from the mine based on the target, function and expr_form
+    Get data from the mine based on the target, function and tgt_type
 
     Targets can be matched based on any standard matching system that can be
-    matched on the master via these keywords::
+    matched on the master via these keywords:
 
-        glob
-        pcre
-        grain
-        grain_pcre
-        compound
-        pillar
-        pillar_pcre
+    - glob
+    - pcre
+    - grain
+    - grain_pcre
+    - compound
+    - pillar
+    - pillar_pcre
 
     Note that all pillar matches, whether using the compound matching system or
     the pillar matching system, will be exact matches, with globbing disabled.
@@ -248,6 +252,17 @@ def get(tgt, fun, expr_form='glob', exclude_minion=False):
                 fun='network.ip_addrs',
                 tgt_type='glob') %}
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
     if __opts__['file_client'] == 'local':
         ret = {}
         is_target = {'glob': __salt__['match.glob'],
@@ -259,7 +274,7 @@ def get(tgt, fun, expr_form='glob', exclude_minion=False):
                      'compound': __salt__['match.compound'],
                      'pillar': __salt__['match.pillar'],
                      'pillar_pcre': __salt__['match.pillar_pcre'],
-                     }[expr_form](tgt)
+                     }[tgt_type](tgt)
         if is_target:
             data = __salt__['data.get']('mine_cache')
             if isinstance(data, dict) and fun in data:
@@ -270,7 +285,7 @@ def get(tgt, fun, expr_form='glob', exclude_minion=False):
             'id': __opts__['id'],
             'tgt': tgt,
             'fun': fun,
-            'expr_form': expr_form,
+            'tgt_type': tgt_type,
     }
     ret = _mine_get(load, __opts__)
     if exclude_minion:
