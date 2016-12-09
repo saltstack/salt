@@ -174,7 +174,7 @@ import salt.utils
 import salt.utils.vmware
 import salt.utils.http
 from salt.utils import dictupdate
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, VMwareSaltError
 from salt.utils import clean_kwargs
 
 # Import Third Party Libs
@@ -1768,6 +1768,24 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
             ret.update({host_name: {'Eligible': disks}})
 
     return ret
+
+
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def test_vcenter_connection(service_instance=None):
+    '''
+    Checks if a connection is to a vCenter
+
+    .. code-block:: bash
+
+        salt '*' vsphere.test_vcenter_connection
+    '''
+    try:
+        if salt.utils.vmware.is_connection_to_a_vcenter(service_instance):
+            return True
+    except VMwareSaltError:
+        return False
+    return False
 
 
 def system_info(host, username, password, protocol=None, port=None):
