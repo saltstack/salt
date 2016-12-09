@@ -33,6 +33,7 @@ ERROR = 'Some Testing Error Message'
 
 # Inject empty dunders do they can be patched
 vsphere.__pillar__ = {}
+vsphere.__salt__ = {}
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
@@ -565,3 +566,58 @@ class GetProxyTypeTestCase(TestCase):
                         {'proxy': {'proxytype': 'fake_proxy_type'}}):
             ret = vsphere.get_proxy_type()
         self.assertEqual('fake_proxy_type', ret)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
+class _GetProxyConnectionDetailsTestCase(TestCase):
+    '''Tests for salt.modules.vsphere._get_proxy_connection_details'''
+
+    def setUp(self):
+        self.esxi_host_details = {'host': 'fake_host',
+                                  'username': 'fake_username',
+                                  'password': 'fake_password',
+                                  'protocol': 'fake_protocol',
+                                  'port': 'fake_port',
+                                  'mechanism': 'fake_mechanism',
+                                  'principal': 'fake_principal',
+                                  'domain': 'fake_domain'}
+        self.esxi_vcenter_details = {'vcenter': 'fake_vcenter',
+                                     'username': 'fake_username',
+                                     'password': 'fake_password',
+                                     'protocol': 'fake_protocol',
+                                     'port': 'fake_port',
+                                     'mechanism': 'fake_mechanism',
+                                     'principal': 'fake_principal',
+                                     'domain': 'fake_domain'}
+
+    def test_esxi_proxy_host_details(self):
+        with patch('salt.modules.vsphere.get_proxy_type',
+                   MagicMock(return_value='esxi')):
+            with patch.dict(vsphere.__salt__,
+                            {'esxi.get_details':
+                             MagicMock(return_value=self.esxi_host_details)}):
+                ret = vsphere._get_proxy_connection_details()
+        self.assertEqual(('fake_host', 'fake_username', 'fake_password',
+                          'fake_protocol', 'fake_port', 'fake_mechanism',
+                          'fake_principal', 'fake_domain'), ret)
+
+    def test_esxi_proxy_vcenter_details(self):
+        with patch('salt.modules.vsphere.get_proxy_type',
+                   MagicMock(return_value='esxi')):
+            with patch.dict(vsphere.__salt__,
+                            {'esxi.get_details':
+                             MagicMock(
+                                 return_value=self.esxi_vcenter_details)}):
+                ret = vsphere._get_proxy_connection_details()
+        self.assertEqual(('fake_vcenter', 'fake_username', 'fake_password',
+                          'fake_protocol', 'fake_port', 'fake_mechanism',
+                          'fake_principal', 'fake_domain'), ret)
+
+    def test_unsupported_proxy_details(self):
+        with patch('salt.modules.vsphere.get_proxy_type',
+                   MagicMock(return_value='unsupported')):
+            with self.assertRaises(CommandExecutionError) as excinfo:
+                ret = vsphere._get_proxy_connection_details()
+        self.assertEqual('\'unsupported\' proxy is not supported',
+                         excinfo.exception.strerror)
