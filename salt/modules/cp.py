@@ -688,7 +688,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     load_path_split_drive = os.path.splitdrive(load_path_normal)[1]
 
     # Finally, split the remaining path into a list for delivery to the master
-    load_path_list = os.path.split(load_path_split_drive)
+    load_path_list = load_path_split_drive.split(os.sep)
 
     load = {'cmd': '_file_recv',
             'id': __opts__['id'],
