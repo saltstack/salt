@@ -1119,7 +1119,7 @@ def get_hosts(service_instance, datacenter_name=None, host_names=None,
     '''
     properties = ['name']
     if not host_names:
-        host_names=[]
+        host_names = []
     if cluster_name:
         properties.append('parent')
     if datacenter_name:
@@ -1139,18 +1139,19 @@ def get_hosts(service_instance, datacenter_name=None, host_names=None,
                                      property_list=properties)
     filtered_hosts = []
     for h in hosts:
-            # Complex conditions checking if a host should be added to the
-            # filtered list (either due to its name and/or cluster membership)
-            name_condition = get_all_hosts or (h['name'] in host_names)
-            # the datacenter_name needs to be set in order for the cluster
-            # condition membership to be checked, otherwise the condition is
-            # ignored
-            cluster_condition = (not datacenter_name or not cluster_name or \
-                    (isinstance(h['parent'], vim.ClusterComputeResource) and \
-                     h['parent'].name == cluster_name))
+        # Complex conditions checking if a host should be added to the
+        # filtered list (either due to its name and/or cluster membership)
+        name_condition = get_all_hosts or (h['name'] in host_names)
+        # the datacenter_name needs to be set in order for the cluster
+        # condition membership to be checked, otherwise the condition is
+        # ignored
+        cluster_condition = \
+                (not datacenter_name or not cluster_name or
+                 (isinstance(h['parent'], vim.ClusterComputeResource) and 
+                  h['parent'].name == cluster_name))
 
-            if name_condition  and cluster_condition:
-                filtered_hosts.append(h['object'])
+        if name_condition and cluster_condition:
+            filtered_hosts.append(h['object'])
 
     return filtered_hosts
 
