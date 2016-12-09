@@ -159,7 +159,7 @@ class GrainsModuleTestCase(TestCase):
         self.assertEqual(res, 'B')
         # Test with non-strings in lookup_dict keys
         # Issue #38094
-        dict1 = {1: 2, 3: {4, 5, 6}, '*OS': 'B'}
+        dict1 = {1: 2, 3: {4: 5}, '*OS': 'B'}
         res = grainsmod.filter_by(dict1)
         self.assertEqual(res, 'B')
         # Test with sequence pattern with roles
