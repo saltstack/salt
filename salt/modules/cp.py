@@ -331,7 +331,8 @@ def get_url(path, dest='', saltenv='base', makedirs=False):
 
 def get_file_str(path, saltenv='base'):
     '''
-    Return the contents of a file from a URL
+    Download a file from a URL to the Minion cache directory and return the
+    contents of that file
 
     Returns ``False`` if Salt was unable to cache a file from a URL.
 
@@ -351,8 +352,9 @@ def get_file_str(path, saltenv='base'):
 
 def cache_file(path, saltenv='base'):
     '''
-    Used to cache a single file on the salt-minion
-    Returns the location of the new cached file on the minion
+    Used to cache a single file on the Minion
+
+    Returns the location of the new cached file on the Minion.
 
     CLI Example:
 
@@ -413,9 +415,9 @@ def cache_file(path, saltenv='base'):
 
 def cache_files(paths, saltenv='base'):
     '''
-    Used to gather many files from the master, the gathered files will be
+    Used to gather many files from the Master, the gathered files will be
     saved in the minion cachedir reflective to the paths retrieved from the
-    master.
+    Master
 
     CLI Example:
 
