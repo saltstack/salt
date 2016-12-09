@@ -104,8 +104,8 @@ class GetHostsTestCase(TestCase):
             with patch('salt.utils.vmware.get_mors_with_properties',
                        MagicMock(return_value=self.mock_prop_hosts)):
                 res = salt.utils.vmware.get_hosts(self.mock_si, get_all_hosts=True)
-        self.assertEqual(res,[self.mock_host1, self.mock_host2,
-                              self.mock_host3])
+        self.assertEqual(res, [self.mock_host1, self.mock_host2,
+                               self.mock_host3])
 
     def test_filter_hostname(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
@@ -113,13 +113,13 @@ class GetHostsTestCase(TestCase):
             res = salt.utils.vmware.get_hosts(self.mock_si,
                                               host_names=['fake_hostname1',
                                                           'fake_hostname2'])
-        self.assertEqual(res,[self.mock_host1, self.mock_host2])
+        self.assertEqual(res, [self.mock_host1, self.mock_host2])
 
     def test_get_all_host_flag_not_set_and_no_host_names(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=self.mock_prop_hosts)):
             res = salt.utils.vmware.get_hosts(self.mock_si)
-        self.assertEqual(res,[])
+        self.assertEqual(res, [])
 
     def test_filter_cluster(self):
         cluster1 = vim.ClusterComputeResource('fake_good_cluster')
@@ -138,22 +138,21 @@ class GetHostsTestCase(TestCase):
                                               datacenter_name='fake_datacenter',
                                               cluster_name='fake_good_cluster',
                                               get_all_hosts=True)
-        self.assertEqual(res,[self.mock_host2, self.mock_host3])
+        self.assertEqual(res, [self.mock_host2, self.mock_host3])
 
     def test_no_hosts(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=[])):
             res = salt.utils.vmware.get_hosts(self.mock_si, get_all_hosts=True)
-        self.assertEqual(res,[])
+        self.assertEqual(res, [])
 
     def test_one_host_returned(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=[self.mock_prop_host1])):
             res = salt.utils.vmware.get_hosts(self.mock_si, get_all_hosts=True)
-        self.assertEqual(res,[self.mock_host1])
+        self.assertEqual(res, [self.mock_host1])
 
 
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(GetHostsTestCase, needs_daemon=False)
-
