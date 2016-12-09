@@ -4,6 +4,8 @@ Manage VMware vCenter servers and ESXi hosts.
 
 .. versionadded:: 2015.8.4
 
+:codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstaley.com>`
+
 Dependencies
 ============
 
