@@ -2481,7 +2481,10 @@ class _policy_info(object):
             if val.lower() == 'not defined':
                 return True
             else:
-                return False
+                try:
+                    val = int(val)
+                except ValueError:
+                    return False
         if 'min' in kwargs:
             minimum = kwargs['min']
         if 'max' in kwargs:
