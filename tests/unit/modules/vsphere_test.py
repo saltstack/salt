@@ -11,7 +11,7 @@ from __future__ import absolute_import
 
 # Import Salt Libs
 from salt.modules import vsphere
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, VMwareSaltError
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -30,6 +30,7 @@ HOST = '1.2.3.4'
 USER = 'root'
 PASSWORD = 'SuperSecret!'
 ERROR = 'Some Testing Error Message'
+mock_si = MagicMock()
 
 # Inject empty dunders do they can be patched
 vsphere.__pillar__ = {}
@@ -799,3 +800,67 @@ class GetsServiceInstanceViaProxyTestCase(TestCase):
         self.assertEqual(mock_get_service_instance.call_count, 0)
         self.assertEqual(mock_disconnect.call_count, 0)
         self.assertEqual(ret, self.mock_si)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
+# Decorator mocks
+@patch('salt.modules.vsphere.get_proxy_type',MagicMock(return_value='esxi'))
+@patch('salt.modules.vsphere._get_proxy_connection_details', MagicMock())
+@patch('salt.modules.vsphere._get_proxy_target', MagicMock())
+@patch('salt.utils.vmware.get_service_instance',
+       MagicMock(return_value=mock_si))
+@patch('salt.utils.vmware.disconnect', MagicMock())
+# Function mocks
+@patch('salt.utils.vmware.is_connection_to_a_vcenter', MagicMock())
+class TestVcenterConnectionTestCase(TestCase):
+    '''Tests for salt.modules.vsphere.test_vcenter_connection'''
+
+    def test_supported_proxes(self):
+        supported_proxies = ['esxi']
+        for proxy_type in supported_proxies:
+            with patch('salt.modules.vsphere.get_proxy_type',
+                       MagicMock(return_value=proxy_type)):
+                vsphere.test_vcenter_connection()
+
+    def test_is_connection_to_a_vcenter_call_default_service_instance(self):
+        mock_is_connection_to_a_vcenter = MagicMock()
+        with patch('salt.utils.vmware.is_connection_to_a_vcenter',
+                    mock_is_connection_to_a_vcenter):
+            vsphere.test_vcenter_connection()
+        mock_is_connection_to_a_vcenter.assert_called_once_with(mock_si)
+
+    def test_is_connection_to_a_vcenter_call_explicit_service_instance(self):
+        expl_mock_si = MagicMock()
+        mock_is_connection_to_a_vcenter = MagicMock()
+        with patch('salt.utils.vmware.is_connection_to_a_vcenter',
+                    mock_is_connection_to_a_vcenter):
+            vsphere.test_vcenter_connection(expl_mock_si)
+        mock_is_connection_to_a_vcenter.assert_called_once_with(expl_mock_si)
+
+    def test_is_connection_to_a_vcenter_raises_vmware_salt_error(self):
+        exc = VMwareSaltError('VMwareSaltError')
+        with patch('salt.utils.vmware.is_connection_to_a_vcenter',
+                    MagicMock(side_effect=exc)):
+            res = vsphere.test_vcenter_connection()
+        self.assertEqual(res, False)
+
+    def test_is_connection_to_a_vcenter_raises_non_vmware_salt_error(self):
+        exc = Exception('NonVMwareSaltError')
+        with patch('salt.utils.vmware.is_connection_to_a_vcenter',
+                    MagicMock(side_effect=exc)):
+            with self.assertRaises(Exception) as excinfo:
+                res = vsphere.test_vcenter_connection()
+        self.assertEqual('NonVMwareSaltError', excinfo.exception.message)
+
+    def test_output_true(self):
+        with patch('salt.utils.vmware.is_connection_to_a_vcenter',
+                    MagicMock(return_value=True)):
+            res = vsphere.test_vcenter_connection()
+        self.assertEqual(res, True)
+
+    def test_output_false(self):
+        with patch('salt.utils.vmware.is_connection_to_a_vcenter',
+                    MagicMock(return_value=False)):
+            res = vsphere.test_vcenter_connection()
+        self.assertEqual(res, False)
