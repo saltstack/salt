@@ -197,6 +197,10 @@ def __virtual__():
     return __virtualname__
 
 
+def get_proxy_type():
+    return __pillar__['proxy']['proxytype']
+
+
 def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, port=None, esxi_hosts=None):
     '''
     Run an ESXCLI command directly on the host or list of hosts.
