@@ -1127,8 +1127,7 @@ def get_hosts(service_instance, datacenter_name=None, host_names=None,
         if cluster_name:
             # Retrieval to test if cluster exists. Cluster existence only makes
             # sense if the cluster has been specified
-            cluster = get_cluster(service_instance, datacenter_name,
-                                  cluster_name)
+            cluster = get_cluster(start_point, cluster_name)
     else:
         # Assume the root folder is the starting point
         start_point = get_root_folder(service_instance)
