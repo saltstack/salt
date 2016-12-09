@@ -157,6 +157,11 @@ class GrainsModuleTestCase(TestCase):
         dict1 = {'*OS': 'B', 'C': {'D': {'E': 'F', 'G': 'H'}}}
         res = grainsmod.filter_by(dict1)
         self.assertEqual(res, 'B')
+        # Test with non-strings in lookup_dict keys
+        # Issue #38094
+        dict1 = {1: 2, 3: {4: 5}, '*OS': 'B'}
+        res = grainsmod.filter_by(dict1)
+        self.assertEqual(res, 'B')
         # Test with sequence pattern with roles
         dict1 = {'Z': 'B', '[BC]': {'D': {'E': 'F', 'G': 'H'}}}
         res = grainsmod.filter_by(dict1, grain='roles', default='Z')
