@@ -570,6 +570,35 @@ class GetProxyTypeTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
+class SupportsProxiesTestCase(TestCase):
+    '''Tests for salt.modules.vsphere.supports_proxies decorator'''
+
+    def test_supported_proxy(self):
+        @vsphere.supports_proxies('supported')
+        def mock_function():
+            return 'fake_function'
+
+        with patch('salt.modules.vsphere.get_proxy_type',
+                   MagicMock(return_value='supported')):
+            ret = mock_function()
+        self.assertEqual('fake_function', ret)
+
+    def test_unsupported_proxy(self):
+        @vsphere.supports_proxies('supported')
+        def mock_function():
+            return 'fake_function'
+
+        with patch('salt.modules.vsphere.get_proxy_type',
+                   MagicMock(return_value='unsupported')):
+            with self.assertRaises(CommandExecutionError) as excinfo:
+                mock_function()
+        self.assertEqual('\'unsupported\' proxy is not supported by '
+                         'function mock_function',
+                         excinfo.exception.strerror)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
 class _GetProxyConnectionDetailsTestCase(TestCase):
     '''Tests for salt.modules.vsphere._get_proxy_connection_details'''
 
