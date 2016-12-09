@@ -201,6 +201,25 @@ def get_proxy_type():
     return __pillar__['proxy']['proxytype']
 
 
+def _get_proxy_connection_details():
+    '''
+    Returns the connection details of the following proxies: esxi
+    '''
+    proxytype = get_proxy_type()
+    elif proxytype == 'esxi':
+        details = __salt__['esxi.get_details']()
+    else:
+        raise CommandExecutionError('\'{0}\' proxy is not supported'
+                                    ''.format(proxytype))
+    return \
+            details.get('vcenter') if 'vcenter' in details \
+            else details.get('host'), \
+            details.get('username'), \
+            details.get('password'), details.get('protocol'), \
+            details.get('port'), details.get('mechanism'), \
+            details.get('principal'), details.get('domain')
+
+
 def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, port=None, esxi_hosts=None):
     '''
     Run an ESXCLI command directly on the host or list of hosts.
