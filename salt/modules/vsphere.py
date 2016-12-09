@@ -164,6 +164,9 @@ connection credentials are used instead of vCenter credentials, the ``host_names
 from __future__ import absolute_import
 import datetime
 import logging
+import sys
+import inspect
+from functools import wraps
 
 # Import Salt Libs
 import salt.ext.six as six
@@ -172,6 +175,7 @@ import salt.utils.vmware
 import salt.utils.http
 from salt.utils import dictupdate
 from salt.exceptions import CommandExecutionError
+from salt.utils import clean_kwargs
 
 # Import Third Party Libs
 try:
@@ -237,6 +241,89 @@ def supports_proxies(*proxy_types):
             return fn(*args, **clean_kwargs(**kwargs))
         return __supports_proxies
     return _supports_proxies
+
+
+def gets_service_instance_via_proxy(fn):
+    '''
+    Decorator that connects to a target system (vCenter or ESXi host) using the
+    proxy details and passes the connection (vim.ServiceInstance) to
+    the decorated function.
+
+    Notes:
+        1. The decorated function must have a ``serviec_instance`` parameter
+        or a ``**kwarg`` type argument (name of argument is not important);
+        2. If the ``service_instance`` parameter is already defined, the value
+        is passed through to the decorated function;
+        3. If the ``service_instance`` parameter in not defined, the
+        connection is created using the proxy details and the service instance
+        is returned.
+    '''
+    fn_name = fn.__name__
+    arg_names, args_name, kwargs_name, default_values = \
+            inspect.getargspec(fn)
+    default_values = default_values if default_values is not None else []
+
+    @wraps(fn)
+    def _gets_service_instance_via_proxy(*args, **kwargs):
+        if not 'service_instance' in arg_names and not kwargs_name:
+            raise CommandExecutionError(
+                'Function {0} must have either a \'service_instance\', or a '
+                '\'**kwargs\' type parameter'.format(fn_name))
+        connection_details = _get_proxy_connection_details()
+        # Figure out how to pass in the connection value
+        local_service_instance = None
+        if 'service_instance' in arg_names:
+            idx = arg_names.index('service_instance')
+            if idx >= len(arg_names) - len(default_values):
+                # 'service_instance' has a default value:
+                #     we check if we need to instantiate it or
+                #     pass it through
+                #
+                # NOTE: if 'service_instance' doesn't have a default value
+                # it must be explicitly set in the function call so we pass it
+                # through
+
+                # There are two cases:
+                #   1. service_instance was passed in as a positional parameter
+                #   2. service_instance was passed in as a named paramter
+                if len(args) > idx:
+                    # case 1: The call was made with enough positional
+                    # parameters to include 'service_instance'
+                    if not args[idx]:
+                        local_service_instance = \
+                                salt.utils.vmware.get_service_instance(
+                                    *connection_details)
+                        args[idx] = local_service_instance
+                else:
+                    # case 2: Not enough positional parameters so
+                    # 'service_instance' must be a named parameter
+                    if not kwargs.get('service_instance'):
+                        local_service_instance = \
+                                salt.utils.vmware.get_service_instance(
+                                    *connection_details)
+                        kwargs['service_instance'] = local_service_instance
+        else:
+            # 'service_instance' is not a paremter in the function definition
+            # but it will be caught by the **kwargs parameter
+            if not kwargs.get('service_instance'):
+                local_service_instance = \
+                        salt.utils.vmware.get_service_instance(
+                            *connection_details)
+                kwargs['service_instance'] = local_service_instance
+        try:
+            ret = fn(*args, **clean_kwargs(**kwargs))
+            # Disconnect if connected in the decorator
+            if local_service_instance:
+                salt.utils.vmware.disconnect(local_service_instance)
+            return ret
+        except Exception as e:
+            # Disconnect if connected in the decorator
+            if local_service_instance:
+                salt.utils.vmware.disconnect(local_service_instance)
+            # raise original exception and traceback
+            exc_info = sys.exc_info()
+            raise exc_info[0], exc_info[1], exc_info[2]
+    return _gets_service_instance_via_proxy
 
 
 def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, port=None, esxi_hosts=None):
