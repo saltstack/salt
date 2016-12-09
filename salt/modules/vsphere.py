@@ -220,6 +220,25 @@ def _get_proxy_connection_details():
             details.get('principal'), details.get('domain')
 
 
+def supports_proxies(*proxy_types):
+    '''
+    Decorator to specify which proxy types are supported by a function
+
+    proxy_types:
+        Arbitrary list of strings with the supported types of proxies
+    '''
+    def _supports_proxies(fn):
+        def __supports_proxies(*args, **kwargs):
+            proxy_type = get_proxy_type()
+            if proxy_type not in proxy_types:
+                raise CommandExecutionError(
+                    '\'{0}\' proxy is not supported by function {1}'
+                    ''.format(proxy_type, fn.__name__))
+            return fn(*args, **clean_kwargs(**kwargs))
+        return __supports_proxies
+    return _supports_proxies
+
+
 def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, port=None, esxi_hosts=None):
     '''
     Run an ESXCLI command directly on the host or list of hosts.
