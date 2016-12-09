@@ -210,7 +210,7 @@ def _get_proxy_connection_details():
     Returns the connection details of the following proxies: esxi
     '''
     proxytype = get_proxy_type()
-    elif proxytype == 'esxi':
+    if proxytype == 'esxi':
         details = __salt__['esxi.get_details']()
     else:
         raise CommandExecutionError('\'{0}\' proxy is not supported'
