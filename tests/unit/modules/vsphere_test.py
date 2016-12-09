@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstanley.com>`
+
+    Tests for functions in salt.modules.vsphere
 '''
 
 # Import Python Libs
