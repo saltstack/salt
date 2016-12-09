@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 from __future__ import absolute_import
-import sys
-sys.modules['pkg_resources'] = None
 import os
 
 from salt.utils import parsers
