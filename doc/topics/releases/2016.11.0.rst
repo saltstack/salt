@@ -393,6 +393,14 @@ Functionality Changes
           - host2
           - host3
 
+New Azure ARM Cloud Driver
+==========================
+A new cloud driver has been added for Azure ARM, aka, the Azure Resource
+Manager. The older Azure driver is still required to work with the older Azure
+API. This new driver works with the newer ARM API, which is managed via the
+newer Azure Portal website.
+
+
 New Modules
 ===========
 
@@ -403,6 +411,11 @@ Beacons
 - :mod:`salt.beacons.bonjour_announce <salt.beacons.bonjour_announce>`
 - :mod:`salt.beacons.haproxy <salt.beacons.haproxy>`
 - :mod:`salt.beacons.status <salt.beacons.status>`
+
+Clouds
+------
+
+- :mod:`salt.cloud.clouds.azurearm <salt.cloud.clouds.azurearm>`
 
 Engines
 -------
