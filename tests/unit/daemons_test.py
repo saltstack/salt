@@ -5,7 +5,6 @@
 
 # Import python libs
 from __future__ import absolute_import
-import sys
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
@@ -18,10 +17,6 @@ ensure_in_syspath('../')
 import integration
 import multiprocessing
 from salt.cli import daemons
-
-PY26 = False
-if sys.version_info[1] < 7:
-    PY26 = True
 
 
 class LoggerMock(object):
@@ -77,7 +72,6 @@ class LoggerMock(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(PY26, 'These tests don\'t run on Python 2.6. Skipping.')
 class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
     '''
     Unit test for the daemons starter classes.

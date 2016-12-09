@@ -40,6 +40,10 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             msg = 'error resolving {0}, possible network issue?'
             self.skipTest(msg.format(self.__domain))
 
+    def tearDown(self):
+        # Reset the dns timeout after the test is over
+        socket.setdefaulttimeout(None)
+
     def test_latest(self):
         '''
         git.latest
