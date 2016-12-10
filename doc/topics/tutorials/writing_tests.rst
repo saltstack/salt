@@ -42,6 +42,28 @@ depending on your relevant version of Python:
     pip install -r requirements/dev_python26.txt
     pip install -r requirements/dev_python27.txt
 
+To be able to run integration tests which utilizes ZeroMQ transport, you also
+need to install additional requirements for it. Make sure you have installed
+the C compiler and development libraries and header files needed for your
+Python version.
+
+This is an example for RedHat-based operating systems:
+
+.. code-block:: bash
+
+    yum install gcc python-devel
+    pip install -r requirements/zeromq.txt
+
+On Debian, Ubuntu or their derivatives run the following commands:
+
+.. code-block:: bash
+
+    apt-get install build-essential python-dev
+    pip install -r requirements/zeromq.txt
+
+This will install the latest ``pycrypto`` and ``pyzmq`` (with bundled
+``libzmq``) Python modules required for running integration tests suite.
+
 
 Test Directory Structure
 ========================
