@@ -10,7 +10,6 @@ Module for Solaris 10's zonecfg
 .. versionadded:: nitrogen
 
 .. TODO:
-    - info (parsed)
     - set_property
     - add_resource
     - delete_resource
@@ -37,6 +36,22 @@ __virtualname__ = 'zonecfg'
 __func_alias__ = {
     'import_': 'import'
 }
+
+# Global data
+_zonecfg_info_resources = [
+    'rctl',
+    'net',
+    'fs',
+    'device',
+    'dedicated-cpu',
+    'dataset',
+    'attr',
+]
+
+_zonecfg_info_resources_calculated = [
+    'capped-cpu',
+    'capped-memory',
+]
 
 
 @salt.utils.decorators.memoize
@@ -242,6 +257,99 @@ def import_(zone, path):
     ret['message'] = ret['message'].replace('zonecfg: ', '')
     if ret['message'] == '':
         del ret['message']
+
+    return ret
+
+
+def info(zone, show_all=False):
+    '''
+    Display the configuration from memory
+
+    zone : string
+        name of zone
+    show_all : boolean
+        also include calculated values like capped-cpu, cpu-shares, ...
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zonecfg.info tallgeese
+    '''
+    ret = {}
+
+    ## internal helpers
+    def _parse_value(value):
+        value = value.strip()
+        if value.startswith('[') and value.endswith(']'):
+            return value[1:-1].split(',')
+        elif value.startswith('(') and value.endswith(')'):
+            rval = {}
+            for pair in value[1:-1].split(','):
+                kv = pair.split('=')
+                rval[kv[0].strip()] = kv[1].strip()
+            return rval
+        else:
+            return value
+
+    ## dump zone
+    res = __salt__['cmd.run_all']('zonecfg -z {zone} info'.format(
+        zone=zone,
+    ))
+    if res['retcode'] == 0:
+        # parse output
+        resname = None
+        resdata = {}
+        for line in res['stdout'].split("\n"):
+            # ship calculated values (if requested)
+            if line.startswith('['):
+                if not show_all:
+                    continue
+                line = line.rstrip()[1:-1]
+
+            # extract key
+            key = line.strip().split(':')[0]
+            if '[' in key:
+                key = key[1:]
+
+            # parse calculated resource (if requested)
+            if key in _zonecfg_info_resources_calculated:
+                if resname:
+                    ret[resname].append(resdata)
+                if show_all:
+                    resname = key
+                    resdata = {}
+                    if key not in ret:
+                        ret[key] = []
+                else:
+                    resname = None
+                    resdata = {}
+            # parse resources
+            elif key in _zonecfg_info_resources:
+                if resname:
+                    ret[resname].append(resdata)
+                resname = key
+                resdata = {}
+                if key not in ret:
+                    ret[key] = []
+            # store resource property
+            elif line.startswith("\t"):
+                # ship calculated values (if requested)
+                if line.strip().startswith('['):
+                    if not show_all:
+                        continue
+                    line = line.strip()[1:-1]
+                resdata[key] = _parse_value(line.strip().split(':')[1])
+            # store property
+            else:
+                if resname:
+                    ret[resname].append(resdata)
+                resname = None
+                resdata = {}
+                ret[key] = _parse_value(line.strip().split(':')[1])
+        # store hanging resource
+        if resname:
+            ret[resname].append(resdata)
 
     return ret
 
