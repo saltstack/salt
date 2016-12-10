@@ -21,6 +21,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+import re
 
 # Import Salt libs
 import salt.utils
@@ -280,17 +281,37 @@ def info(zone, show_all=False):
 
     ## internal helpers
     def _parse_value(value):
+        listparser = re.compile(r'''((?:[^,"']|"[^"]*"|'[^']*')+)''')
+
         value = value.strip()
         if value.startswith('[') and value.endswith(']'):
-            return value[1:-1].split(',')
+            return listparser.split(value[1:-1])[1::2]
         elif value.startswith('(') and value.endswith(')'):
             rval = {}
-            for pair in value[1:-1].split(','):
-                kv = pair.split('=')
-                rval[kv[0].strip()] = kv[1].strip()
+            for pair in listparser.split(value[1:-1])[1::2]:
+                pair = pair.split('=')
+                if '"' in pair[1]:
+                    pair[1] = pair[1].replace('"', '')
+                if pair[1].isdigit():
+                    rval[pair[0]] = int(pair[1])
+                elif pair[1] == 'true':
+                    rval[pair[0]] = True
+                elif pair[1] == 'false':
+                    rval[pair[0]] = False
+                else:
+                    rval[pair[0]] = pair[1]
             return rval
         else:
-            return value
+            if '"' in value:
+                value = value.replace('"', '')
+            if value.isdigit():
+                return int(value)
+            elif value == 'true':
+                return True
+            elif value == 'false':
+                return False
+            else:
+                return value
 
     ## dump zone
     res = __salt__['cmd.run_all']('zonecfg -z {zone} info'.format(
@@ -301,7 +322,11 @@ def info(zone, show_all=False):
         resname = None
         resdata = {}
         for line in res['stdout'].split("\n"):
-            # ship calculated values (if requested)
+            # skip some bad data
+            if ':' not in line:
+                continue
+
+            # skip calculated values (if requested)
             if line.startswith('['):
                 if not show_all:
                     continue
@@ -339,14 +364,32 @@ def info(zone, show_all=False):
                     if not show_all:
                         continue
                     line = line.strip()[1:-1]
-                resdata[key] = _parse_value(line.strip().split(':')[1])
+                if key == 'property':  # handle special 'property' keys
+                    if 'property' not in resdata:
+                        resdata[key] = {}
+                    kv = _parse_value(line.strip()[line.strip().index(':')+1:])
+                    if 'name' in kv and 'value' in kv:
+                        resdata[key][kv['name']] = kv['value']
+                    else:
+                        log.warning('zonecfg.info - not sure how to deal with: {0}'.format(kv))
+                else:
+                    resdata[key] = _parse_value(line.strip()[line.strip().index(':')+1:])
             # store property
             else:
                 if resname:
                     ret[resname].append(resdata)
                 resname = None
                 resdata = {}
-                ret[key] = _parse_value(line.strip().split(':')[1])
+                if key == 'property':  # handle special 'property' keys
+                    if 'property' not in ret:
+                        ret[key] = {}
+                    kv = _parse_value(line.strip()[line.strip().index(':')+1:])
+                    if 'name' in kv and 'value' in kv:
+                        res[key][kv['name']] = kv['value']
+                    else:
+                        log.warning('zonecfg.info - not sure how to deal with: {0}'.format(kv))
+                else:
+                    ret[key] = _parse_value(line.strip()[line.strip().index(':')+1:])
         # store hanging resource
         if resname:
             ret[resname].append(resdata)
