@@ -3151,6 +3151,22 @@ order will be used.
 
     syndic_failover: random
 
+.. conf_master:: syndic_forward_all_events
+
+``syndic_forward_all_events``
+-------------------
+
+.. versionadded:: Nitrogen
+
+Default: ``False``
+
+Option on multi-syndic or single when connected to multiple masters to be able to
+send events to all connected masters.
+
+.. code-block:: yaml
+
+    syndic_forward_all_events: False
+
 
 Peer Publish Settings
 =====================

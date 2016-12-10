@@ -57,6 +57,12 @@ Execution Module Changes
   above alongside the information on the new states which have been added to
   manage masking of systemd units.
 
+Master Configuration Additions
+==============================
+
+- ``syndic_forward_all_events``: Option on multi-syndic or single when connected
+  to multiple masters to be able to send events to all connected masters.
+
 Python API Changes
 ==================
 
