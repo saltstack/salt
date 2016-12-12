@@ -75,6 +75,7 @@ state module
 
 # Import python libs
 from __future__ import absolute_import
+import errno
 import logging
 import os
 import re
@@ -1283,6 +1284,15 @@ def installed(
 
     if salt.utils.is_windows():
         was_refreshed = was_refreshed or refresh
+        if was_refreshed:
+            try:
+                os.remove(rtag)
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    log.error(
+                        'Failed to remove refresh tag %s: %s',
+                        rtag, exc.__str__()
+                    )
         kwargs.pop('refresh')
         refresh = False
 
@@ -1504,7 +1514,14 @@ def installed(
                                        if not hold_ret[x]['result']]
 
     if os.path.isfile(rtag) and was_refreshed:
-        os.remove(rtag)
+        try:
+            os.remove(rtag)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                log.error(
+                    'Failed to remove refresh tag %s: %s',
+                    rtag, exc.__str__()
+                )
 
     if to_unpurge:
         changes['purge_desired'] = __salt__['lowpkg.unpurge'](*to_unpurge)

@@ -12,7 +12,6 @@ import logging
 import os
 import re
 import shlex
-import shutil
 import stat
 import tarfile
 from contextlib import closing
@@ -119,6 +118,8 @@ def extracted(name,
               options=None,
               list_options=None,
               force=False,
+              overwrite=False,
+              clean=False,
               user=None,
               group=None,
               if_missing=None,
@@ -129,7 +130,6 @@ def extracted(name,
               enforce_toplevel=True,
               enforce_ownership_on=None,
               archive_format=None,
-              overwrite=False,
               **kwargs):
     '''
     .. versionadded:: 2014.1.0
@@ -334,8 +334,8 @@ def extracted(name,
         .. versionchanged:: 2015.8.11,2016.3.2
             XZ-compressed tar archives no longer require ``J`` to manually be
             set in the ``options``, they are now detected automatically and
-            decompressed using xz-utils_ and extracted using ``tar xvf``. This
-            is a more platform-independent solution, as not all tar
+            decompressed using the xz_ CLI command and extracted using ``tar
+            xvf``. This is a more platform-independent solution, as not all tar
             implementations support the ``J`` argument for extracting archives.
 
         .. note::
@@ -358,9 +358,9 @@ def extracted(name,
         the archive has already been extracted. For the vast majority of tar
         archives, :py:func:`archive.list <salt.modules.archive.list_>` "just
         works". Archives compressed using gzip, bzip2, and xz/lzma (with the
-        help of xz-utils_) are supported automatically. However, for archives
-        compressed using other compression types, CLI options must be passed to
-        :py:func:`archive.list <salt.modules.archive.list_>`.
+        help of the xz_ CLI command) are supported automatically. However, for
+        archives compressed using other compression types, CLI options must be
+        passed to :py:func:`archive.list <salt.modules.archive.list_>`.
 
         This argument will be passed through to :py:func:`archive.list
         <salt.modules.archive.list_>` as its ``options`` argument, to allow it
@@ -381,6 +381,24 @@ def extracted(name,
             Use this option *very* carefully.
 
         .. versionadded:: 2016.11.0
+
+    overwrite : False
+        Set this to ``True`` to force the archive to be extracted. This is
+        useful for cases where the filenames/directories have not changed, but
+        the content of the files have.
+
+        .. versionadded:: 2016.11.1
+
+    clean : False
+        Set this to ``True`` to remove any top-level files and recursively
+        remove any top-level directory paths before extracting.
+
+        .. note::
+            Files will only be cleaned first if extracting the archive is
+            deemed necessary, either by paths missing on the minion, or if
+            ``overwrite`` is set to ``True``.
+
+        .. versionadded:: 2016.11.1
 
     user
         The user to own each extracted file. Not available on Windows.
@@ -485,12 +503,7 @@ def extracted(name,
 
     .. _tarfile: https://docs.python.org/2/library/tarfile.html
     .. _zipfile: https://docs.python.org/2/library/zipfile.html
-    .. _xz-utils: http://tukaani.org/xz/
-
-    overwrite
-        If archive was already extracted, then setting this to True will
-        extract it all over again.
-        **WARNING: This operation will flush clean all the previous content, if exists!**
+    .. _xz: http://tukaani.org/xz/
 
     **Examples**
 
@@ -907,19 +920,7 @@ def extracted(name,
     # already need to catch an OSError to cover edge cases where the minion is
     # running as a non-privileged user and is trying to check for the existence
     # of a path to which it does not have permission.
-
     extraction_needed = overwrite
-
-    if extraction_needed:
-        destination = os.path.join(name, contents['top_level_dirs'][0])
-        if os.path.exists(destination):
-            try:
-                shutil.rmtree(destination)
-            except OSError as err:
-                ret['comment'] = 'Error removing destination directory ' \
-                                 '"{0}": {1}'.format(destination, err)
-                ret['result'] = False
-                return ret
 
     try:
         if_missing_path_exists = os.path.exists(if_missing)
@@ -942,55 +943,77 @@ def extracted(name,
                     return ret
         else:
             incorrect_type = []
-            extraction_needed = False
             for path_list, func in ((contents['dirs'], stat.S_ISDIR),
                                     (contents['files'], stat.S_ISREG)):
                 for path in path_list:
                     full_path = os.path.join(name, path)
                     try:
-                        path_mode = os.stat(full_path).st_mode
+                        path_mode = os.stat(full_path.rstrip(os.sep)).st_mode
                         if not func(path_mode):
                             incorrect_type.append(path)
                     except OSError as exc:
                         if exc.errno == errno.ENOENT:
                             extraction_needed = True
-                        else:
+                        elif exc.errno != errno.ENOTDIR:
+                            # In cases where a directory path was occupied by a
+                            # file instead, all os.stat() calls to files within
+                            # that dir will raise an ENOTDIR OSError. So we
+                            # expect these and will only abort here if the
+                            # error code is something else.
                             ret['comment'] = exc.__str__()
                             return ret
 
             if incorrect_type:
-                if not force:
-                    msg = (
-                        'The below paths (relative to {0}) exist, but are the '
-                        'incorrect type (i.e. file instead of directory or '
-                        'vice-versa). To proceed with extraction, set '
-                        '\'force\' to True.\n'.format(name)
-                    )
-                    for path in incorrect_type:
-                        msg += '\n- {0}'.format(path)
-                    ret['comment'] = msg
-                else:
-                    errors = []
-                    for path in incorrect_type:
-                        full_path = os.path.join(name, path)
-                        try:
-                            salt.utils.rm_rf(full_path)
-                            ret['changes'].setdefault(
-                                'removed', []).append(full_path)
-                        except OSError as exc:
-                            if exc.errno != errno.ENOENT:
-                                errors.append(exc.__str__())
-                    if errors:
-                        msg = (
-                            'One or more paths existed by were the incorrect '
-                            'type (i.e. file instead of directory or '
-                            'vice-versa), but could not be removed. The '
-                            'following errors were observed:\n'
+                incorrect_paths = '\n\n' + '\n'.join(
+                    ['- {0}'.format(x) for x in incorrect_type]
+                )
+                ret['comment'] = (
+                    'The below paths (relative to {0}) exist, but are the '
+                    'incorrect type (i.e. file instead of directory or '
+                    'vice-versa).'.format(name)
+                )
+                if __opts__['test'] and clean and contents is not None:
+                    ret['result'] = None
+                    ret['comment'] += (
+                        ' Since the \'clean\' option is enabled, the '
+                        'destination paths would be cleared and the '
+                        'archive would be extracted.{0}'.format(
+                            incorrect_paths
                         )
-                        for error in errors:
-                            msg += '\n- {0}'.format(error)
-                        ret['comment'] = msg
+                    )
+                    return ret
+
+                # Skip notices of incorrect types if we're cleaning
+                if not (clean and contents is not None):
+                    if not force:
+                        ret['comment'] += (
+                            'To proceed with extraction, set \'force\' to '
+                            'True. Note that this will remove these paths '
+                            'before extracting.{0}'.format(incorrect_paths)
+                        )
                         return ret
+                    else:
+                        errors = []
+                        for path in incorrect_type:
+                            full_path = os.path.join(name, path)
+                            try:
+                                salt.utils.rm_rf(full_path.rstrip(os.sep))
+                                ret['changes'].setdefault(
+                                    'removed', []).append(full_path)
+                            except OSError as exc:
+                                if exc.errno != errno.ENOENT:
+                                    errors.append(exc.__str__())
+                        if errors:
+                            msg = (
+                                'One or more paths existed by were the incorrect '
+                                'type (i.e. file instead of directory or '
+                                'vice-versa), but could not be removed. The '
+                                'following errors were observed:\n'
+                            )
+                            for error in errors:
+                                msg += '\n- {0}'.format(error)
+                            ret['comment'] = msg
+                            return ret
 
     created_destdir = False
 
@@ -1002,7 +1025,33 @@ def extracted(name,
                     source_match,
                     name
                 )
+            if clean and contents is not None:
+                ret['comment'] += ', after cleaning destination path(s)'
             return ret
+
+        if clean and contents is not None:
+            errors = []
+            log.debug('Cleaning archive paths from within %s', name)
+            for path in contents['top_level_dirs'] + contents['top_level_files']:
+                full_path = os.path.join(name, path)
+                try:
+                    log.debug('Removing %s', full_path)
+                    salt.utils.rm_rf(full_path.rstrip(os.sep))
+                    ret['changes'].setdefault(
+                        'removed', []).append(full_path)
+                except OSError as exc:
+                    if exc.errno != errno.ENOENT:
+                        errors.append(exc.__str__())
+
+            if errors:
+                msg = (
+                    'One or more paths could not be cleaned. The following '
+                    'errors were observed:\n'
+                )
+                for error in errors:
+                    msg += '\n- {0}'.format(error)
+                ret['comment'] = msg
+                return ret
 
         if not os.path.isdir(name):
             __salt__['file.makedirs'](name, user=user)
@@ -1054,7 +1103,7 @@ def extracted(name,
                                 # XZ-compressed data
                                 log.debug(
                                     'Tar file is XZ-compressed, attempting '
-                                    'decompression and extraction using xz-utils '
+                                    'decompression and extraction using XZ Utils '
                                     'and the tar command'
                                 )
                                 # Must use python_shell=True here because not

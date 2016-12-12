@@ -1767,7 +1767,7 @@ def _absolute_path(path, relative_to=None):
     return path
 
 
-def load_config(path, env_var, default_path=None):
+def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
     '''
     Returns configuration dict from parsing either the file described by
     ``path`` or the environment variable described by ``env_var`` as YAML.
@@ -1815,17 +1815,20 @@ def load_config(path, env_var, default_path=None):
                     ifile.readline()  # skip first line
                     out.write(ifile.read())
 
+    opts = {}
+
     if salt.utils.validate.path.is_readable(path):
         try:
             opts = _read_conf_file(path)
             opts['conf_file'] = path
-            return opts
         except salt.exceptions.SaltConfigurationError as error:
             log.error(error)
-            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+            if exit_on_config_errors:
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+    else:
+        log.debug('Missing configuration file: {0}'.format(path))
 
-    log.debug('Missing configuration file: {0}'.format(path))
-    return {}
+    return opts
 
 
 def include_config(include, orig_path, verbose, exit_on_config_errors=False):
@@ -1870,6 +1873,9 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
                 log.error(error)
                 if exit_on_config_errors:
                     sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+                else:
+                    # Initialize default config if we wish to skip config errors
+                    opts = {}
 
             include = opts.get('include', [])
             if include:
@@ -3261,8 +3267,10 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
                                     defaults['default_include'])
     include = overrides.get('include', [])
 
-    overrides.update(include_config(default_include, path, verbose=False), exit_on_config_errors=exit_on_config_errors)
-    overrides.update(include_config(include, path, verbose=True), exit_on_config_errors=exit_on_config_errors)
+    overrides.update(include_config(default_include, path, verbose=False),
+                     exit_on_config_errors=exit_on_config_errors)
+    overrides.update(include_config(include, path, verbose=True),
+                     exit_on_config_errors=exit_on_config_errors)
     opts = apply_master_config(overrides, defaults)
     _validate_opts(opts)
     # If 'nodegroups:' is uncommented in the master config file, and there are

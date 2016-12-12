@@ -132,17 +132,6 @@ class NetapiClient(object):
         ssh_client = salt.client.ssh.client.SSHClient(mopts=self.opts)
         return ssh_client.cmd_sync(kwargs)
 
-    def ssh_async(self, fun, timeout=None, **kwargs):
-        '''
-        Run salt-ssh commands asynchronously
-
-        Wraps :py:meth:`salt.client.ssh.client.SSHClient.cmd_async`.
-
-        :return: Returns the JID to check for results on
-        '''
-        kwargs['fun'] = fun
-        return salt.client.ssh.client.cmd_async(kwargs)
-
     def runner(self, fun, timeout=None, **kwargs):
         '''
         Run `runner modules <all-salt.runners>` synchronously
