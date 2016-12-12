@@ -234,6 +234,9 @@
 # Set the ZeroMQ high water marks
 # http://api.zeromq.org/3-2:zmq-setsockopt
 
+# The listen queue size / backlog
+#zmq_backlog: 1000
+
 # The publisher interface ZeroMQPubServerChannel
 #pub_hwm: 1000
 
