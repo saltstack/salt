@@ -267,6 +267,7 @@ def _get_service_instance(host, username, password, protocol,
     atexit.register(Disconnect, service_instance)
     return service_instance
 
+
 def get_customizationspec_ref(si, customization_spec_name):
     '''
     Get a reference to a VMware customization spec for the purposes of customizing a clone
