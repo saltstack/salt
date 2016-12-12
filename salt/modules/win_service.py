@@ -953,7 +953,7 @@ def create(name,
     # Deprecations
     if 'binpath' in kwargs:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             'The \'binpath\' argument to service.create is deprecated, and '
             'will be removed in Salt {version}. Please use \'bin_path\' '
             'instead.'
@@ -963,7 +963,7 @@ def create(name,
 
     if 'DisplayName' in kwargs:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             'The \'DisplayName\' argument to service.create is deprecated, and '
             'will be removed in Salt {version}. Please use \'display_name\' '
             'instead.'
@@ -973,7 +973,7 @@ def create(name,
 
     if 'type' in kwargs:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             'The \'type\' argument to service.create is deprecated, and '
             'will be removed in Salt {version}. Please use \'service_type\' '
             'instead.'
@@ -983,7 +983,7 @@ def create(name,
 
     if 'start' in kwargs:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             'The \'start\' argument to service.create is deprecated, and '
             'will be removed in Salt {version}. Please use \'start_type\' '
             'instead.'
@@ -993,7 +993,7 @@ def create(name,
 
     if 'error' in kwargs:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             'The \'error\' argument to service.create is deprecated, and '
             'will be removed in Salt {version}. Please use \'error_control\' '
             'instead.'
@@ -1003,7 +1003,7 @@ def create(name,
 
     if 'group' in kwargs:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             'The \'group\' argument to service.create is deprecated, and '
             'will be removed in Salt {version}. Please use '
             '\'load_order_group\' instead.'
@@ -1013,7 +1013,7 @@ def create(name,
 
     if 'depend' in kwargs:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             'The \'depend\' argument to service.create is deprecated, and '
             'will be removed in Salt {version}. Please use \'dependencies\' '
             'instead.'
@@ -1023,7 +1023,7 @@ def create(name,
 
     if 'obj' in kwargs:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             'The \'obj\' argument to service.create is deprecated, and '
             'will be removed in Salt {version}. Please use \'account_name\' '
             'instead.'
@@ -1033,7 +1033,7 @@ def create(name,
 
     if 'password' in kwargs:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             'The \'password\' argument to service.create is deprecated, and '
             'will be removed in Salt {version}. Please use '
             '\'account_password\' instead.'
