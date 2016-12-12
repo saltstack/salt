@@ -268,6 +268,21 @@ def _get_service_instance(host, username, password, protocol,
     return service_instance
 
 
+def get_customizationspec_ref(si, customization_spec_name):
+    '''
+    Get a reference to a VMware customization spec for the purposes of customizing a clone
+
+    si
+        ServiceInstance for the vSphere or ESXi server (see get_service_instance)
+
+    customization_spec_name
+        Name of the customization spec
+
+    '''
+    customization_spec_name = si.content.customizationSpecManager.GetCustomizationSpec(name=customization_spec_name)
+    return customization_spec_name
+
+
 def get_datastore_ref(si, datastore_name):
     '''
     Get a reference to a VMware datastore for the purposes of adding/removing disks
