@@ -50,8 +50,20 @@ def list_(name,
 
     .. note::
         This function will only provide results for XZ-compressed archives if
-        xz-utils_ is installed, as Python does not at this time natively
-        support XZ compression in its tarfile_ module.
+        the xz_ CLI command is available, as Python does not at this time
+        natively support XZ compression in its tarfile_ module. Keep in mind
+        however that most Linux distros ship with xz_ already installed.
+
+        To check if a given minion has xz_, the following Salt command can be
+        run:
+
+        .. code-block:: bash
+
+            salt minion_id cmd.which xz
+
+        If ``None`` is returned, then xz_ is not present and must be installed.
+        It is widely available and should be packaged as either ``xz`` or
+        ``xz-utils``.
 
     name
         Path/URL of archive
@@ -101,7 +113,7 @@ def list_(name,
         the ``salt://`` fileserver.
 
     .. _tarfile: https://docs.python.org/2/library/tarfile.html
-    .. _xz-utils: http://tukaani.org/xz/
+    .. _xz: http://tukaani.org/xz/
 
     CLI Examples:
 
@@ -157,7 +169,7 @@ def list_(name,
 
         raise CommandExecutionError(
             'Unable to list contents of {0}. If this is an XZ-compressed tar '
-            'archive, install xz-utils to enable listing its contents. If it '
+            'archive, install XZ Utils to enable listing its contents. If it '
             'is compressed using something other than XZ, it may be necessary '
             'to specify CLI options to decompress the archive. See the '
             'documentation for details.'.format(name)

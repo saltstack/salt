@@ -149,6 +149,8 @@ class CPModuleTest(integration.ModuleCase):
         self.assertIn('empty', os.listdir(os.path.join(tgt, 'grail')))
         self.assertIn('scene', os.listdir(os.path.join(tgt, 'grail', '36')))
 
+    # cp.get_url tests
+
     def test_get_url(self):
         '''
         cp.get_url with salt:// source given
@@ -304,6 +306,62 @@ class CPModuleTest(integration.ModuleCase):
             ])
         self.assertIn('KNIGHT:  They\'re nervous, sire.', ret)
         self.assertNotIn('bacon', ret)
+
+    # cp.get_file_str tests
+
+    def test_get_file_str_salt(self):
+        '''
+        cp.get_file_str with salt:// source given
+        '''
+        src = 'salt://grail/scene33'
+        ret = self.run_function(
+            'cp.get_file_str',
+            [
+                src,
+            ])
+        self.assertIn('KNIGHT:  They\'re nervous, sire.', ret)
+
+    def test_get_file_str_nonexistent_source(self):
+        '''
+        cp.get_file_str with nonexistent salt:// source given
+        '''
+        src = 'salt://grail/nonexistent_scene'
+        ret = self.run_function(
+            'cp.get_file_str',
+            [
+                src,
+            ])
+        self.assertEqual(ret, False)
+
+    def test_get_file_str_https(self):
+        '''
+        cp.get_file_str with https:// source given
+        '''
+        src = 'https://repo.saltstack.com/index.html'
+        ret = self.run_function(
+            'cp.get_file_str',
+            [
+                src,
+            ])
+        self.assertIn('Bootstrap', ret)
+        self.assertIn('Debian', ret)
+        self.assertIn('Windows', ret)
+        self.assertNotIn('AYBABTU', ret)
+
+    def test_get_file_str_local(self):
+        '''
+        cp.get_file_str with file:// source given
+        '''
+        src = os.path.join('file://', integration.FILES, 'file/base/file.big')
+        ret = self.run_function(
+            'cp.get_file_str',
+            [
+                src,
+            ])
+        self.assertIn('KNIGHT:  They\'re nervous, sire.', ret)
+        self.assertNotIn('bacon', ret)
+
+    # caching tests
 
     def test_cache_file(self):
         '''
