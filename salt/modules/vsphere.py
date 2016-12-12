@@ -265,7 +265,7 @@ def gets_service_instance_via_proxy(fn):
 
     @wraps(fn)
     def _gets_service_instance_via_proxy(*args, **kwargs):
-        if not 'service_instance' in arg_names and not kwargs_name:
+        if 'service_instance' not in arg_names and not kwargs_name:
             raise CommandExecutionError(
                 'Function {0} must have either a \'service_instance\', or a '
                 '\'**kwargs\' type parameter'.format(fn_name))
