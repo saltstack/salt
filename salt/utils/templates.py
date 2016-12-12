@@ -42,18 +42,6 @@ TEMPLATE_DIRNAME = os.path.join(saltpath[0], 'templates')
 SLS_ENCODING = 'utf-8'  # this one has no BOM.
 SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
 
-ALIAS_WARN = (
-        'Starting in 2015.5, cmd.run uses python_shell=False by default, '
-        'which doesn\'t support shellisms (pipes, env variables, etc). '
-        'cmd.run is currently aliased to cmd.shell to prevent breakage. '
-        'Please switch to cmd.shell or set python_shell=True to avoid '
-        'breakage in the future, when this aliasing is removed.'
-)
-ALIASES = {
-        'cmd.run': 'cmd.shell',
-        'cmd': {'run': 'shell'},
-}
-
 
 class AliasedLoader(object):
     '''
@@ -71,18 +59,10 @@ class AliasedLoader(object):
         self.wrapped = wrapped
 
     def __getitem__(self, name):
-        if name in ALIASES:
-            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
-            return self.wrapped[ALIASES[name]]
-        else:
-            return self.wrapped[name]
+        return self.wrapped[name]
 
     def __getattr__(self, name):
-        if name in ALIASES:
-            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
-            return AliasedModule(getattr(self.wrapped, name), ALIASES[name])
-        else:
-            return getattr(self.wrapped, name)
+        return getattr(self.wrapped, name)
 
 
 class AliasedModule(object):
@@ -98,11 +78,7 @@ class AliasedModule(object):
         self.wrapped = wrapped
 
     def __getattr__(self, name):
-        if name in self.aliases:
-            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
-            return getattr(self.wrapped, self.aliases[name])
-        else:
-            return getattr(self.wrapped, name)
+        return getattr(self.wrapped, name)
 
 
 def wrap_tmpl_func(render_str):

@@ -99,6 +99,7 @@ Deprecations
 General Deprecations
 --------------------
 
+- Removed support for aliasing ``cmd.run`` to ``cmd.shell``.
 - Beacon configurations should be lists instead of dictionaries.
 - The ``PidfileMixin`` has been removed. Please use ``DaemonMixIn`` instead.
 - The ``use_pending`` argument was removed from the ``salt.utils.event.get_event``
