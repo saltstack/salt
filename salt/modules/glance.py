@@ -39,15 +39,10 @@ Module for handling openstack glance calls.
 from __future__ import absolute_import
 import re
 
-# Import third party libs
-#import salt.ext.six as six
-
 # Import salt libs
 from salt.exceptions import (
-    #CommandExecutionError,
     SaltInvocationError
     )
-from salt.utils import warn_until
 
 from salt.version import (
     __version__,
