@@ -1147,7 +1147,7 @@ def get_hosts(service_instance, datacenter_name=None, host_names=None,
         # ignored
         cluster_condition = \
                 (not datacenter_name or not cluster_name or
-                 (isinstance(h['parent'], vim.ClusterComputeResource) and 
+                 (isinstance(h['parent'], vim.ClusterComputeResource) and
                   h['parent'].name == cluster_name))
 
         if name_condition and cluster_condition:
