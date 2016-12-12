@@ -5305,11 +5305,8 @@ def serialize(name,
         .. versionadded:: 2015.8.0
 
     formatter
-        Write the data as this format. Supported output formats:
-
-        * JSON
-        * YAML
-        * Python (via pprint.pformat)
+        Write the data as this format. See the list of :py:mod:`serializer
+        modules <salt.serializers>` for supported output formats.
 
     user
         The user to own the directory, this defaults to the user salt is
