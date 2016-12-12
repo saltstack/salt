@@ -1094,6 +1094,68 @@ def list_datastores(service_instance):
     return list_objects(service_instance, vim.Datastore)
 
 
+def get_hosts(service_instance, datacenter_name=None, host_names=None,
+              cluster_name=None, get_all_hosts=False):
+    '''
+    Returns a list of vim.HostSystem objects representing ESXi hosts
+    in a vcenter filtered by their names and/or datacenter, cluster membership.
+
+    service_instance
+        The Service Instance Object from which to obtain the hosts.
+
+    datacenter_name
+        The datacenter name. Default is None.
+
+    host_names
+        The host_names to be retrieved. Default is None.
+
+    cluster_name
+        The cluster name - used to restrict the hosts retrieved. Only used if
+        the datacenter is set.  This argument is optional.
+
+    get_all_hosts
+        Specifies whether to retrieve all hosts in the container.
+        Default value is False.
+    '''
+    properties = ['name']
+    if not host_names:
+        host_names = []
+    if cluster_name:
+        properties.append('parent')
+    if datacenter_name:
+        start_point = get_datacenter(service_instance, datacenter_name)
+        if cluster_name:
+            # Retrieval to test if cluster exists. Cluster existence only makes
+            # sense if the cluster has been specified
+            cluster = get_cluster(start_point, cluster_name)
+    else:
+        # Assume the root folder is the starting point
+        start_point = get_root_folder(service_instance)
+
+    # Search for the objects
+    hosts = get_mors_with_properties(service_instance,
+                                     vim.HostSystem,
+                                     container_ref=start_point,
+                                     property_list=properties)
+    filtered_hosts = []
+    for h in hosts:
+        # Complex conditions checking if a host should be added to the
+        # filtered list (either due to its name and/or cluster membership)
+        name_condition = get_all_hosts or (h['name'] in host_names)
+        # the datacenter_name needs to be set in order for the cluster
+        # condition membership to be checked, otherwise the condition is
+        # ignored
+        cluster_condition = \
+                (not datacenter_name or not cluster_name or
+                 (isinstance(h['parent'], vim.ClusterComputeResource) and
+                  h['parent'].name == cluster_name))
+
+        if name_condition and cluster_condition:
+            filtered_hosts.append(h['object'])
+
+    return filtered_hosts
+
+
 def list_hosts(service_instance):
     '''
     Returns a list of hosts associated with a given service instance.
