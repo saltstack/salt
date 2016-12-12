@@ -34,7 +34,21 @@ def update(branch=None, repo=None):
         values will be ``True`` only if new commits were fetched, and ``False``
         if there were errors or no new commits were fetched.
 
-    Update one or all configured git_pillar remotes.
+    Fetch one or all configured git_pillar remotes.
+
+    .. note::
+        This will *not* fast-forward the git_pillar cachedir on the master. All
+        it does is perform a ``git fetch``. If this runner is executed with
+        ``-l debug``, you may see a log message that says that the repo is
+        up-to-date. Keep in mind that Salt automatically fetches git_pillar
+        repos roughly every 60 seconds (or whatever
+        :conf_master:`loop_interval` is set to). So, it is possible that the
+        repo was fetched automatically in the time between when changes were
+        pushed to the repo, and when this runner was executed. When in doubt,
+        simply refresh pillar data using :py:func:`saltutil.refresh_pillar
+        <salt.modules.saltutil.refresh_pillar>` and then use
+        :py:func:`pillar.item <salt.modules.pillar.item>` to check if the
+        pillar data has changed as expected.
 
     CLI Example:
 
