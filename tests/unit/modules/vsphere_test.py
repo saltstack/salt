@@ -36,6 +36,7 @@ mock_si = MagicMock()
 vsphere.__pillar__ = {}
 vsphere.__salt__ = {}
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
 class VsphereTestCase(TestCase):
@@ -682,6 +683,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase):
 
     def test___get_proxy_connection_details_call(self):
         mock__get_proxy_connection_details = MagicMock()
+
         @vsphere.gets_service_instance_via_proxy
         def mock_function(service_instance=None):
             return service_instance
@@ -694,6 +696,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase):
     def test_service_instance_named_parameter_no_value(self):
         mock_get_service_instance = MagicMock(return_value=self.mock_si)
         mock_disconnect = MagicMock()
+
         @vsphere.gets_service_instance_via_proxy
         def mock_function(service_instance=None):
             return service_instance
@@ -713,6 +716,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase):
     def test_service_instance_kwargs_parameter_no_value(self):
         mock_get_service_instance = MagicMock(return_value=self.mock_si)
         mock_disconnect = MagicMock()
+
         @vsphere.gets_service_instance_via_proxy
         def mock_function(**kwargs):
             return kwargs['service_instance']
@@ -732,6 +736,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase):
     def test_service_instance_positional_parameter_no_default_value(self):
         mock_get_service_instance = MagicMock()
         mock_disconnect = MagicMock()
+
         @vsphere.gets_service_instance_via_proxy
         def mock_function(service_instance):
             return service_instance
@@ -750,6 +755,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase):
     def test_service_instance_positional_parameter_with_default_value(self):
         mock_get_service_instance = MagicMock()
         mock_disconnect = MagicMock()
+
         @vsphere.gets_service_instance_via_proxy
         def mock_function(service_instance=None):
             return service_instance
@@ -768,6 +774,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase):
     def test_service_instance_named_parameter_with_default_value(self):
         mock_get_service_instance = MagicMock()
         mock_disconnect = MagicMock()
+
         @vsphere.gets_service_instance_via_proxy
         def mock_function(service_instance=None):
             return service_instance
@@ -786,6 +793,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase):
     def test_service_instance_kwargs_parameter_passthrough(self):
         mock_get_service_instance = MagicMock()
         mock_disconnect = MagicMock()
+
         @vsphere.gets_service_instance_via_proxy
         def mock_function(**kwargs):
             return kwargs['service_instance']
@@ -805,7 +813,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
 # Decorator mocks
-@patch('salt.modules.vsphere.get_proxy_type',MagicMock(return_value='esxi'))
+@patch('salt.modules.vsphere.get_proxy_type', MagicMock(return_value='esxi'))
 @patch('salt.modules.vsphere._get_proxy_connection_details', MagicMock())
 @patch('salt.utils.vmware.get_service_instance',
        MagicMock(return_value=mock_si))
