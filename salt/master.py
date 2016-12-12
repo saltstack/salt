@@ -1269,9 +1269,12 @@ class AESFuncs(object):
             return {}
         load.pop('tok')
 
+        # Join path
+        sep_path = os.sep.join(load['path'])
+
         # Path normalization should have been done by the sending
         # minion but we can't guarantee it. Re-do it here.
-        normpath = os.path.normpath(os.path.join(*load['path']))
+        normpath = os.path.normpath(sep_path)
 
         # Ensure that this safety check is done after the path
         # have been normalized.
