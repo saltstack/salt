@@ -97,7 +97,6 @@ Configuration Option Deprecations
 - The ``win_repo_mastercachefile`` configuration option has been removed.
   Please use the ``winrepo_cachefile`` option instead.
 
-
 Module Deprecations
 -------------------
 
@@ -129,3 +128,11 @@ Salt-SSH Deprecations
 
 - The ``wipe_ssh`` option for ``salt-ssh`` has been removed. Please use the
   ``ssh_wipe`` option instead.
+
+State Deprecations
+------------------
+
+- The ``chocolatey`` state had the following functions removed:
+
+  - ``install``: Please use ``installed`` instead.
+  - ``uninstall``: Please use ``uninstalled`` instead.

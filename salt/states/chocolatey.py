@@ -19,18 +19,6 @@ def __virtual__():
     return 'chocolatey' if 'chocolatey.install' in __salt__ else False
 
 
-def install(*args, **kwargs):
-    '''
-    Deprecated, please use 'installed'. This function will be removed in Salt
-    Nitrogen.
-    '''
-    salt.utils.warn_until('Nitrogen',
-                          'Please use chocolatey.installed. '
-                          'chocolatey.install will be removed in '
-                          'Salt Nitrogen.')
-    installed(*args, **kwargs)
-
-
 def installed(name, version=None, source=None, force=False, pre_versions=False,
               install_args=None, override_args=False, force_x86=False,
               package_args=None):
@@ -127,18 +115,6 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
         ret['comment'] = 'Failed to install the package {0}'.format(name)
 
     return ret
-
-
-def uninstall(*args, **kwargs):
-    '''
-    Deprecated, please use 'uninstalled'. This function will be removed in Salt
-    Nitrogen.
-    '''
-    salt.utils.warn_until('Nitrogen',
-                          'Please use chocolatey.uninstalled. '
-                          'chocolatey.uninstall will be removed in '
-                          'Salt Nitrogen.')
-    uninstalled(*args, **kwargs)
 
 
 def uninstalled(name, version=None, uninstall_args=None, override_args=False):
