@@ -144,7 +144,7 @@ def __init__(opts):
         __utils__['boto3.assign_funcs'](__name__, 'rds')
 
 
-def exists(name, tags=None, region=None, key=None, keyid=None, profile=None):
+def exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if an RDS exists.
 
