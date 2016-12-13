@@ -920,12 +920,12 @@ cherrypy.tools.html_override = cherrypy.Tool('on_start_resource',
         html_override_tool, priority=53)
 cherrypy.tools.salt_token = cherrypy.Tool('on_start_resource',
         salt_token_tool, priority=55)
+cherrypy.tools.cors_tool = cherrypy.Tool('before_request_body',
+        cors_tool, priority=50)
 cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
         salt_auth_tool, priority=60)
 cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
         hypermedia_in)
-cherrypy.tools.cors_tool = cherrypy.Tool('before_request_body',
-        cors_tool, priority=30)
 cherrypy.tools.lowdata_fmt = cherrypy.Tool('before_handler',
         lowdata_fmt, priority=40)
 cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler',
