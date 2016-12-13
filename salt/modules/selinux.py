@@ -134,7 +134,7 @@ def setenforce(mode):
             conf = _cf.read()
         try:
             with salt.utils.fopen(config, 'w') as _cf:
-                conf = re.sub(r"\nSELINUX.*\n", "\nSELINUX=" + modestring + "\n", conf)
+                conf = re.sub(r"\nSELINUX=.*\n", "\nSELINUX=" + modestring + "\n", conf)
                 _cf.write(conf)
         except (IOError, OSError) as exc:
             msg = 'Could not write SELinux config file: {0}'

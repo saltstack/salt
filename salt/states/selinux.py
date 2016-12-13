@@ -104,12 +104,16 @@ def mode(name):
         ret['comment'] = 'SELinux mode is set to be changed to {0}'.format(
                 tmode)
         ret['result'] = None
+        ret['changes'] = {'old': mode,
+                          'new': tmode}
         return ret
 
-    mode = __salt__['selinux.setenforce'](tmode)
+    oldmode, mode = mode, __salt__['selinux.setenforce'](tmode)
     if mode == tmode:
         ret['result'] = True
         ret['comment'] = 'SELinux has been set to {0} mode'.format(tmode)
+        ret['changes'] = {'old': oldmode,
+                          'new': mode}
         return ret
     ret['comment'] = 'Failed to set SELinux to {0} mode'.format(tmode)
     return ret
