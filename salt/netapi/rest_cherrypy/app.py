@@ -982,6 +982,7 @@ class LowDataAdapter(object):
     exposed = True
 
     _cp_config = {
+        'tools.salt_token.on': True,
         'tools.sessions.on': True,
         'tools.sessions.timeout': 60 * 10,  # 10 hours
 
@@ -1149,7 +1150,6 @@ class Minions(LowDataAdapter):
     Convenience URLs for working with minions
     '''
     _cp_config = dict(LowDataAdapter._cp_config, **{
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
     })
 
@@ -1269,7 +1269,6 @@ class Minions(LowDataAdapter):
 
 class Jobs(LowDataAdapter):
     _cp_config = dict(LowDataAdapter._cp_config, **{
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
     })
 
@@ -1394,7 +1393,6 @@ class Keys(LowDataAdapter):
     module <salt.wheel.key>` functions.
     '''
 
-    @cherrypy.config(**{'tools.salt_token.on': True})
     def GET(self, mid=None):
         '''
         Show the list of minion keys or detail on a specific key
@@ -1763,7 +1761,6 @@ class Logout(LowDataAdapter):
     Class to remove or invalidate sessions
     '''
     _cp_config = dict(LowDataAdapter._cp_config, **{
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
 
         'tools.lowdata_fmt.on': False,
@@ -1941,7 +1938,6 @@ class Events(object):
         'tools.encode.encoding': 'utf-8',
 
         # Auth handled manually below
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': False,
 
         'tools.hypermedia_in.on': False,
@@ -2158,7 +2154,6 @@ class WebsocketEndpoint(object):
         'tools.encode.encoding': 'utf-8',
 
         # Auth handled manually below
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': False,
 
         'tools.hypermedia_in.on': False,
@@ -2386,7 +2381,6 @@ class Webhook(object):
         'tools.lowdata_fmt.on': True,
 
         # Auth can be overridden in __init__().
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
     })
 
@@ -2400,7 +2394,6 @@ class Webhook(object):
                 listen=False)
 
         if cherrypy.config['apiopts'].get('webhook_disable_auth'):
-            self._cp_config['tools.salt_token.on'] = False
             self._cp_config['tools.salt_auth.on'] = False
 
     def POST(self, *args, **kwargs):
@@ -2509,7 +2502,6 @@ class Stats(object):
     exposed = True
 
     _cp_config = dict(LowDataAdapter._cp_config, **{
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
     })
 
