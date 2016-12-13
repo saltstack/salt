@@ -283,6 +283,11 @@ def get_conn():
 
     if 'password' in vm_:
         kwargs['password'] = vm_['password']
+    
+    if 'verify' in vm_ and vm_['use_keystoneauth'] == True:
+        kwargs['verify'] = vm_['verify']
+    elif 'verify' in vm_ and vm_['use_keystoneauth'] == False:
+        log.warning('SSL Certificate verification variable is specified but keystoneauth is not used')
 
     conn = nova.SaltNova(**kwargs)
 
@@ -591,7 +596,7 @@ def request_instance(vm_=None, call=None):
         'security_groups', vm_, __opts__, search_global=False
     )
     if security_groups is not None:
-        vm_groups = security_groups.split(',')
+        vm_groups = security_groups
         avail_groups = conn.secgroup_list()
         group_list = []
 
@@ -683,47 +688,8 @@ def request_instance(vm_=None, call=None):
                 break
         if floating_ip is None:
             floating_ip = conn.floating_ip_create(pool)['ip']
-
-        def __query_node_data(vm_):
-            try:
-                node = show_instance(vm_['name'], 'action')
-                log.debug(
-                    'Loaded node data for {0}:\n{1}'.format(
-                        vm_['name'],
-                        pprint.pformat(node)
-                    )
-                )
-            except Exception as err:
-                log.error(
-                    'Failed to get nodes list: {0}'.format(
-                        err
-                    ),
-                    # Show the traceback if the debug logging level is enabled
-                    exc_info_on_loglevel=logging.DEBUG
-                )
-                # Trigger a failure in the wait for IP function
-                return False
-            return node['state'] == 'ACTIVE' or None
-
-        # if we associate the floating ip here,then we will fail.
-        # As if we attempt to associate a floating IP before the Nova instance has completed building,
-        # it will fail.So we should associate it after the Nova instance has completed building.
         try:
-            salt.utils.cloud.wait_for_ip(
-                __query_node_data,
-                update_args=(vm_,)
-            )
-        except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
-            try:
-                # It might be already up, let's destroy it!
-                destroy(vm_['name'])
-            except SaltCloudSystemExit:
-                pass
-            finally:
-                raise SaltCloudSystemExit(str(exc))
-
-        try:
-            conn.floating_ip_associate(vm_['name'], floating_ip)
+            conn.floating_ip_associate(kwargs['name'], floating_ip)
             vm_['floating_ip'] = floating_ip
         except Exception as exc:
             raise SaltCloudSystemExit(
@@ -734,8 +700,7 @@ def request_instance(vm_=None, call=None):
                 )
             )
 
-    if not vm_.get('password', None):
-        vm_['password'] = data.extra.get('password', '')
+    vm_['password'] = data.extra.get('password', '')
 
     return data, vm_
 
