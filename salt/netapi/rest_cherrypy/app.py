@@ -126,6 +126,16 @@ A REST API for Salt
     app : ``index.html``
         A filesystem path to an HTML file that will be served as a static file.
         This is useful for bootstrapping a single-page JavaScript app.
+
+        Warning! If you set this option to a custom web application, anything
+        that uses cookie-based authentcation is vulnerable to XSRF attacks.
+        Send the custom ``X-Auth-Token`` header instead and consider disabling
+        the ``enable_sessions`` setting.
+
+        .. versionchanged:: Nitrogen
+
+            Add a proof-of-concept JavaScript single-page app.
+
     app_path : ``/app``
         The URL prefix to use for serving the HTML file specified in the ``app``
         setting. This should be a simple name containing no slashes.
