@@ -406,8 +406,7 @@ def add(connect_spec, dn, attributes):
         repr(dn), repr(attributes)))
 
     if 'unicodePwd' in attributes:
-        attributes['unicodePwd'] = map(_format_unicode_password,
-            attributes['unicodePwd'])
+        attributes['unicodePwd'] = [_format_unicode_password(x) for x in attributes['unicodePwd']]
 
     modlist = ldap.modlist.addModlist(attributes)
     try:
@@ -507,7 +506,7 @@ def modify(connect_spec, dn, directives):
     for idx, mod in enumerate(modlist):
         if mod[1] == 'unicodePwd':
             modlist[idx] = (mod[0], mod[1],
-                map(_format_unicode_password, mod[2]))
+                [_format_unicode_password(x) for x in mod[2]])
 
     try:
         l.c.modify_s(dn, modlist)
@@ -573,8 +572,7 @@ def change(connect_spec, dn, before, after):
                   for attr, vals in six.iteritems(after)))
 
     if 'unicodePwd' in after:
-        after['unicodePwd'] = map(_format_unicode_password,
-            after['unicodePwd'])
+        after['unicodePwd'] = [_format_unicode_password(x) for x in after['unicodePwd']]
 
     modlist = ldap.modlist.modifyModlist(before, after)
     try:
