@@ -110,23 +110,8 @@ On Debian, Ubuntu or their derivatives run the following commands:
 This will install the latest ``pycrypto`` and ``pyzmq`` (with bundled
 ``libzmq``) Python modules required for running integration tests suite.
 
-.. note::
-
-    In Salt 0.17, testing libraries were migrated into their own repo. To install them:
-
-    .. code-block:: bash
-
-        pip install git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
-
-
-    Failure to install SaltTesting will result in import errors similar to the following:
-
-    .. code-block:: bash
-
-        ImportError: No module named salttesting
-
-Once all requirements are installed, use ``tests/runtests.py`` to
-run all of the tests included in Salt's test suite:
+Once all requirements are installed, use ``runtests.py`` script to run all of
+the tests included in Salt's test suite:
 
 .. code-block:: bash
 
