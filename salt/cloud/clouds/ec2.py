@@ -1231,7 +1231,7 @@ def get_provider(vm_=None):
     if vm_ is None:
         provider = __active_provider_name__ or 'ec2'
     else:
-        provider = vm_.get('driver', 'ec2')
+        provider = vm_.get('provider', 'ec2')
 
     if ':' in provider:
         prov_comps = provider.split(':')
