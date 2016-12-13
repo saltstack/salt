@@ -1449,6 +1449,20 @@ class Minion(MinionBase):
             ret,
             timeout=minion_instance._return_retry_timer()
         )
+
+        # Add default returners from minion config
+        if isinstance(opts.get('return'), six.string_types):
+            if data['ret']:
+                data['ret'] = ','.join((data['ret'], opts['return']))
+            else:
+                data['ret'] = opts['return']
+        if isinstance(opts.get('return'), list):
+            if data['ret']:
+                for item in opts['return']:
+                    data['ret'] = ','.join((data['ret'], item))
+            else:
+                data['ret'] = ','.join(opts['return'])
+
         # TODO: make a list? Seems odd to split it this late :/
         if data['ret'] and isinstance(data['ret'], six.string_types):
             if 'ret_config' in data:
