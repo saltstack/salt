@@ -47,6 +47,7 @@ Example Provider Configuration
 
 # Import python libs
 from __future__ import absolute_import
+import copy
 import os
 import re
 import pprint
@@ -281,7 +282,12 @@ def show_instance(vm_name, call=None):
         )
     conn = get_conn()
     node = _expand_node(conn.ex_get_node(vm_name))
-    __utils__['cloud.cache_node'](node, __active_provider_name__, __opts__)
+    prunednode = node.copy()
+    prunednode['extra'] = node['extra'].copy()
+    prunednode['extra']['zone'] = node['extra']['zone'].copy()
+    del prunednode['driver']
+    del prunednode['extra']['zone']['driver']
+    __utils__['cloud.cache_node'](prunednode, __active_provider_name__, __opts__)
     return node
 
 
