@@ -424,7 +424,9 @@ import itertools
 import functools
 import logging
 import json
+import os
 import StringIO
+import signal
 import tarfile
 import time
 from multiprocessing import Process, Pipe
@@ -2182,6 +2184,12 @@ class WebsocketEndpoint(object):
                     listen=True)
             stream = event.iter_events(full=True, auto_reconnect=True)
             SaltInfo = event_processor.SaltInfo(handler)
+
+            def signal_handler(signal, frame):
+                os._exit(0)
+
+            signal.signal(signal.SIGTERM, signal_handler)
+
             while True:
                 data = next(stream)
                 if data:
