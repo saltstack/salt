@@ -134,7 +134,7 @@ can specify the "name" argument to avoid conflicting IDs:
           - /path/to/file
           - /tmp/copy_of_file
         - kwarg:
-          - remove_existing: true
+            remove_existing: true
 
 State
 ^^^^^

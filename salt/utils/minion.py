@@ -12,6 +12,7 @@ import threading
 # Import Salt Libs
 import salt.utils
 import salt.payload
+from salt.utils.network import remote_port_tcp as _remote_port_tcp
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +53,22 @@ def cache_jobs(opts, jid, ret):
         os.makedirs(jdir)
     with salt.utils.fopen(fn_, 'w+b') as fp_:
         fp_.write(serial.dumps(ret))
+
+
+def connected_masters():
+    '''
+    Return current connected masters
+    '''
+    # default port
+    port = 4505
+
+    config_port = __salt__['config.get']('publish_port')
+    if config_port:
+        port = config_port
+
+    connected_masters_ips = _remote_port_tcp(port)
+
+    return connected_masters_ips
 
 
 def _read_proc_file(path, opts):

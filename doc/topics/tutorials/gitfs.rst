@@ -546,7 +546,7 @@ of the Salt fileserver.
 Before the addition of this feature, if a file being served up via gitfs was
 deeply nested within the root directory (for example,
 ``salt://webapps/foo/files/foo.conf``, it would be necessary to ensure that the
-file was properly located in the remote repository, and that all of the the
+file was properly located in the remote repository, and that all of the
 parent directories were present (for example, the directories
 ``webapps/foo/files/`` would need to exist at the root of the repository).
 

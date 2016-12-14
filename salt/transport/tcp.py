@@ -497,7 +497,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
         except KeyboardInterrupt:
             raise
         except Exception as exc:
-            if '-|RETRY|-' not in exc:
+            if '-|RETRY|-' not in str(exc):
                 raise SaltClientError('Unable to sign_in to master: {0}'.format(exc))  # TODO: better error message
 
     def on_recv(self, callback):
@@ -576,17 +576,11 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         self.payload_handler = payload_handler
         self.io_loop = io_loop
         self.serial = salt.payload.Serial(self.opts)
-        if 'ssl_cert' in self.opts and 'ssl_key' in self.opts:
-            ssl_options = {
-                    'certfile': self.opts['ssl_cert'],
-                    'keyfile': self.opts['ssl_key'],
-                    }
-        else:
-            ssl_options = None
         if USE_LOAD_BALANCER:
-            self.req_server = LoadBalancerWorker(
-                self.socket_queue, self.handle_message, io_loop=self.io_loop, ssl_options=ssl_options
-            )
+            self.req_server = LoadBalancerWorker(self.socket_queue,
+                                                 self.handle_message,
+                                                 io_loop=self.io_loop,
+                                                 ssl_options=self.opts.get('ssl'))
         else:
             if salt.utils.is_windows():
                 self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -596,7 +590,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                 self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
             self.req_server = SaltMessageServer(self.handle_message,
                                                 io_loop=self.io_loop,
-                                                ssl_options=ssl_options)
+                                                ssl_options=self.opts.get('ssl'))
             self.req_server.add_socket(self._socket)
             self._socket.listen(self.backlog)
         salt.transport.mixins.auth.AESReqServerMixin.post_fork(self, payload_handler, io_loop)
@@ -837,20 +831,13 @@ class SaltMessageClient(object):
         '''
         Try to connect for the rest of time!
         '''
-        if 'ssl_cert' in self.opts and 'ssl_key' in self.opts:
-            ssl_options = {
-                    'certfile': self.opts['ssl_cert'],
-                    'keyfile': self.opts['ssl_key'],
-                    }
-        else:
-            ssl_options = None
         while True:
             if self._closing:
                 break
             try:
                 self._stream = yield self._tcp_client.connect(self.host,
                                                               self.port,
-                                                              ssl_options=ssl_options)
+                                                              ssl_options=self.opts.get('ssl'))
                 self._connecting_future.set_result(True)
                 break
             except Exception as e:
@@ -1050,14 +1037,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
     TCP publisher
     '''
     def __init__(self, opts, io_loop=None):
-        if 'ssl_cert' in opts and 'ssl_key' in opts:
-            ssl_options = {
-                    'certfile': opts['ssl_cert'],
-                    'keyfile': opts['ssl_key'],
-                    }
-        else:
-            ssl_options = None
-        super(PubServer, self).__init__(io_loop=io_loop, ssl_options=ssl_options)
+        super(PubServer, self).__init__(io_loop=io_loop, ssl_options=opts.get('ssl'))
         self.opts = opts
         self._closing = False
         self.clients = set()

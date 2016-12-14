@@ -88,23 +88,30 @@ the lines below, depending on the relevant Python version:
     pip install -r requirements/dev_python26.txt
     pip install -r requirements/dev_python27.txt
 
-.. note::
+To be able to run integration tests which utilizes ZeroMQ transport, you also
+need to install additional requirements for it. Make sure you have installed
+the C compiler and development libraries and header files needed for your
+Python version.
 
-    In Salt 0.17, testing libraries were migrated into their own repo. To install them:
+This is an example for RedHat-based operating systems:
 
-    .. code-block:: bash
+.. code-block:: bash
 
-        pip install git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
+    yum install gcc python-devel
+    pip install -r requirements/zeromq.txt
 
+On Debian, Ubuntu or their derivatives run the following commands:
 
-    Failure to install SaltTesting will result in import errors similar to the following:
+.. code-block:: bash
 
-    .. code-block:: bash
+    apt-get install build-essential python-dev
+    pip install -r requirements/zeromq.txt
 
-        ImportError: No module named salttesting
+This will install the latest ``pycrypto`` and ``pyzmq`` (with bundled
+``libzmq``) Python modules required for running integration tests suite.
 
-Once all requirements are installed, use ``tests/runtests.py`` to
-run all of the tests included in Salt's test suite:
+Once all requirements are installed, use ``runtests.py`` script to run all of
+the tests included in Salt's test suite:
 
 .. code-block:: bash
 

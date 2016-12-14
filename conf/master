@@ -382,11 +382,23 @@
 # will cause minion to throw an exception and drop the message.
 # sign_pub_messages: False
 
+# Use TLS/SSL encrypted connection between master and minion.
+# Can be set to a dictionary containing keyword arguments corresponding to Python's
+# 'ssl.wrap_socket' method.
+# Default is None.
+#ssl:
+#    keyfile: <path_to_keyfile>
+#    certfile: <path_to_certfile>
+#    ssl_version: PROTOCOL_TLSv1_2
+
 #####     Salt-SSH Configuration     #####
 ##########################################
 
 # Pass in an alternative location for the salt-ssh roster file
 #roster_file: /etc/salt/roster
+
+# The log file of the salt-ssh command:
+#ssh_log_file: /var/log/salt/ssh
 
 # Pass in minion option overrides that will be inserted into the SHIM for
 # salt-ssh calls. The local minion config is not used for salt-ssh. Can be
@@ -823,7 +835,7 @@
 
 # If this master will be running a salt syndic daemon, syndic_master tells
 # this master where to receive commands from.
-#syndic_master: masterofmaster
+#syndic_master: masterofmasters
 
 # This is the 'ret_port' of the MasterOfMaster:
 #syndic_master_port: 4506
@@ -831,8 +843,8 @@
 # PID file of the syndic daemon:
 #syndic_pidfile: /var/run/salt-syndic.pid
 
-# LOG file of the syndic daemon:
-#syndic_log_file: syndic.log
+# The log file of the salt-syndic daemon:
+#syndic_log_file: /var/log/salt/syndic
 
 # The behaviour of the multi-syndic when connection to a master of masters failed.
 # Can specify ``random`` (default) or ``ordered``. If set to ``random``, masters

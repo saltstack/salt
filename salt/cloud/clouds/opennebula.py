@@ -8,7 +8,7 @@ The OpenNebula cloud module is used to control access to an OpenNebula cloud.
 .. versionadded:: 2014.7.0
 
 :depends: lxml
-:depends: OpenNebula installation running version ``4.14``.
+:depends: OpenNebula installation running version ``4.14`` or later.
 
 Use of this module requires the ``xml_rpc``, ``user``, and ``password``
 parameters to be set.
@@ -86,6 +86,7 @@ try:
 except ImportError:
     HAS_XML_LIBS = False
 
+
 # Get Logging Started
 log = logging.getLogger(__name__)
 
@@ -147,7 +148,8 @@ def avail_images(call=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    image_pool = server.one.imagepool.info(auth, -1, -1, -1)[1]
+
+    image_pool = server.one.imagepool.info(auth, -2, -1, -1)[1]
 
     images = {}
     for image in _get_xml(image_pool):
@@ -358,7 +360,7 @@ def list_security_groups(call=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    secgroup_pool = server.one.secgrouppool.info(auth, -1, -1, -1)[1]
+    secgroup_pool = server.one.secgrouppool.info(auth, -2, -1, -1)[1]
 
     groups = {}
     for group in _get_xml(secgroup_pool):
@@ -386,7 +388,7 @@ def list_templates(call=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    template_pool = server.one.templatepool.info(auth, -1, -1, -1)[1]
+    template_pool = server.one.templatepool.info(auth, -2, -1, -1)[1]
 
     templates = {}
     for template in _get_xml(template_pool):
@@ -414,7 +416,7 @@ def list_vns(call=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    vn_pool = server.one.vnpool.info(auth, -1, -1, -1)[1]
+    vn_pool = server.one.vnpool.info(auth, -2, -1, -1)[1]
 
     vns = {}
     for v_network in _get_xml(vn_pool):
@@ -496,6 +498,33 @@ def stop(name, call=None):
     log.info('Stopping node {0}'.format(name))
 
     return vm_action(name, kwargs={'action': 'stop'}, call=call)
+
+
+def get_one_version(kwargs=None, call=None):
+    '''
+    Returns the OpenNebula version.
+
+    .. versionadded:: 2016.3.5
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f get_one_version one_provider_name
+    '''
+
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The get_cluster_id function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    return server.one.system.version(auth)[1]
 
 
 def get_cluster_id(kwargs=None, call=None):
@@ -4421,7 +4450,7 @@ def _list_nodes(full=False):
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
 
-    vm_pool = server.one.vmpool.info(auth, -1, -1, -1, -1)[1]
+    vm_pool = server.one.vmpool.info(auth, -2, -1, -1, -1)[1]
 
     vms = {}
     for vm in _get_xml(vm_pool):

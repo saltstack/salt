@@ -12,6 +12,7 @@ engine modules
 
     docker_events
     http_logstash
+    ircbot
     logentries
     logstash
     reactor

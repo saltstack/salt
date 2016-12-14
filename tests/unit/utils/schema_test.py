@@ -2046,6 +2046,24 @@ class TestComplexDefinitionsSchema(schema.DefinitionsSchema):
     complex_item = TestComplexSchemaItem()
 
 
+class TestOneOfComplexDefinitionsSchema(schema.DefinitionsSchema):
+    title = 'Test OneOf Complex Definitions Schema'
+    one_of_item = schema.OneOfItem(
+        items=[TestComplexSchemaItem(), schema.StringItem()])
+
+
+class TestArrayComplexDefinitionsSchema(schema.DefinitionsSchema):
+    title = 'Test Array Complex Definitions Schema'
+    array_item = schema.ArrayItem(items=TestComplexSchemaItem())
+
+
+class TestDictComplexDefinitionsSchema(schema.DefinitionsSchema):
+    title = 'Test Dict Complex Definitions Schema'
+    dict_item = schema.DictItem(
+        properties={'complex_obj': TestComplexSchemaItem(required=True)},
+        additional_properties=TestComplexSchemaItem())
+
+
 class TestComplexComplexDefinitionsSchema(schema.DefinitionsSchema):
     title = 'Test Complex Complex Definition Schema'
     complex_complex_item = TestComplexComplexSchemaItem()
@@ -2056,7 +2074,10 @@ class ComplexSchemaTestCase(TestCase):
 
     obj = TestComplexSchemaItem()
     complex_obj = TestComplexComplexSchemaItem()
-    schema = TestComplexDefinitionsSchema
+    schema = TestComplexDefinitionsSchema()
+    one_of_schema = TestOneOfComplexDefinitionsSchema()
+    array_schema = TestArrayComplexDefinitionsSchema()
+    dict_schema = TestDictComplexDefinitionsSchema()
     complex_schema = TestComplexComplexDefinitionsSchema()
 
     def test_complex_schema_item_serialize(self):
@@ -2115,8 +2136,85 @@ class ComplexSchemaTestCase(TestCase):
                             'description': 'Are you thirsty?'}}}}}
         self.assertDictEqual(serialized, expected)
 
+    def test_one_of_complex_definition_schema(self):
+        serialized = yaml.safe_load(json.dumps(self.one_of_schema.serialize()))
+        expected = {
+            '$schema': 'http://json-schema.org/draft-04/schema#',
+            'title': 'Test OneOf Complex Definitions Schema',
+            'type': 'object',
+            'properties': {
+                'one_of_item': {
+                    'oneOf': [{'$ref': '#/definitions/TestComplexSchemaItem'},
+                              {'type': 'string'}]}},
+            'x-ordering': ['one_of_item'],
+            'additionalProperties': False,
+            'definitions': {
+                'TestComplexSchemaItem': {
+                    'type': 'object',
+                    'title': 'TestComplexSchemaItem',
+                    'properties':  {
+                        'thirsty': {
+                            'type': 'boolean',
+                            'title': 'Thirsty',
+                            'description': 'Are you thirsty?'}}}}}
+        self.assertDictEqual(serialized, expected)
+
+    def test_array_complex_definition_schema(self):
+        serialized = yaml.safe_load(json.dumps(self.array_schema.serialize()))
+        expected = {
+            '$schema': 'http://json-schema.org/draft-04/schema#',
+            'title': 'Test Array Complex Definitions Schema',
+            'type': 'object',
+            'properties': {
+                'array_item': {
+                    'type': 'array',
+                    'title': 'array_item',
+                    'items': {'$ref': '#/definitions/TestComplexSchemaItem'}}},
+            'x-ordering': ['array_item'],
+            'additionalProperties': False,
+            'definitions': {
+                'TestComplexSchemaItem': {
+                    'type': 'object',
+                    'title': 'TestComplexSchemaItem',
+                    'properties':  {
+                        'thirsty': {
+                            'type': 'boolean',
+                            'title': 'Thirsty',
+                            'description': 'Are you thirsty?'}}}}}
+        self.assertDictEqual(serialized, expected)
+
+    def test_dict_complex_definition_schema(self):
+        serialized = yaml.safe_load(json.dumps(self.dict_schema.serialize()))
+        expected = {
+            '$schema': 'http://json-schema.org/draft-04/schema#',
+            'title': 'Test Dict Complex Definitions Schema',
+            'type': 'object',
+            'properties': {
+                'dict_item': {
+                    'type': 'object',
+                    'title': 'dict_item',
+                    'required': ['complex_obj'],
+                    'properties':
+                        {'complex_obj':
+                            {'$ref': '#/definitions/TestComplexSchemaItem'}},
+                    'additionalProperties':
+                        {'$ref': '#/definitions/TestComplexSchemaItem'}}},
+            'x-ordering': ['dict_item'],
+            'additionalProperties': False,
+            'definitions': {
+                'TestComplexSchemaItem': {
+                    'type': 'object',
+                    'title': 'TestComplexSchemaItem',
+                    'properties':  {
+                        'thirsty': {
+                            'type': 'boolean',
+                            'title': 'Thirsty',
+                            'description': 'Are you thirsty?'}}}}}
+        self.assertDictEqual(serialized, expected)
+
     def test_complex_complex_definition_schema(self):
-        serialized = yaml.safe_load(json.dumps(self.complex_schema.serialize()))
+        serialized = yaml.safe_load(json.dumps(
+            self.complex_schema.serialize()))
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
             'title': 'Test Complex Complex Definition Schema',
@@ -2229,3 +2327,4 @@ class ComplexSchemaTestCase(TestCase):
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ConfigTestCase, needs_daemon=False)
+    run_tests(ComplexSchemaTestCase, needs_daemon=False)

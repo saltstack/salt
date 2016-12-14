@@ -34,9 +34,9 @@ FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 log = logging.getLogger(__name__)
 
 
-def _ping(tgt, expr_form, timeout):
+def _ping(tgt, tgt_type, timeout):
     client = salt.client.get_local_client(__opts__['conf_file'])
-    pub_data = client.run_job(tgt, 'test.ping', (), expr_form, '', timeout, '')
+    pub_data = client.run_job(tgt, 'test.ping', (), tgt_type, '', timeout, '')
 
     if not pub_data:
         return pub_data
@@ -47,7 +47,7 @@ def _ping(tgt, expr_form, timeout):
             pub_data['minions'],
             client._get_timeout(timeout),
             tgt,
-            expr_form):
+            tgt_type):
 
         if fn_ret:
             for mid, _ in six.iteritems(fn_ret):
@@ -58,8 +58,12 @@ def _ping(tgt, expr_form, timeout):
     return list(returned), list(not_returned)
 
 
-def status(output=True, tgt='*', expr_form='glob'):
+def status(output=True, tgt='*', tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: Nitrogen
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Print the status of all known salt minions
 
     CLI Example:
@@ -67,10 +71,21 @@ def status(output=True, tgt='*', expr_form='glob'):
     .. code-block:: bash
 
         salt-run manage.status
-        salt-run manage.status tgt="webservers" expr_form="nodegroup"
+        salt-run manage.status tgt="webservers" tgt_type="nodegroup"
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
     ret = {}
-    ret['up'], ret['down'] = _ping(tgt, expr_form, __opts__['timeout'])
+    ret['up'], ret['down'] = _ping(tgt, tgt_type, __opts__['timeout'])
     return ret
 
 
@@ -126,8 +141,12 @@ def key_regen():
     return msg
 
 
-def down(removekeys=False, tgt='*', expr_form='glob'):
+def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: Nitrogen
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Print a list of all the down or unresponsive salt minions
     Optionally remove keys of down minions
 
@@ -137,10 +156,10 @@ def down(removekeys=False, tgt='*', expr_form='glob'):
 
         salt-run manage.down
         salt-run manage.down removekeys=True
-        salt-run manage.down tgt="webservers" expr_form="nodegroup"
+        salt-run manage.down tgt="webservers" tgt_type="nodegroup"
 
     '''
-    ret = status(output=False, tgt=tgt, expr_form=expr_form).get('down', [])
+    ret = status(output=False, tgt=tgt, tgt_type=tgt_type).get('down', [])
     for minion in ret:
         if removekeys:
             wheel = salt.wheel.Wheel(__opts__)
@@ -148,8 +167,12 @@ def down(removekeys=False, tgt='*', expr_form='glob'):
     return ret
 
 
-def up(tgt='*', expr_form='glob'):  # pylint: disable=C0103
+def up(tgt='*', tgt_type='glob', expr_form=None):  # pylint: disable=C0103
     '''
+    .. versionchanged:: Nitrogen
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Print a list of all of the minions that are up
 
     CLI Example:
@@ -157,9 +180,9 @@ def up(tgt='*', expr_form='glob'):  # pylint: disable=C0103
     .. code-block:: bash
 
         salt-run manage.up
-        salt-run manage.up tgt="webservers" expr_form="nodegroup"
+        salt-run manage.up tgt="webservers" tgt_type="nodegroup"
     '''
-    ret = status(output=False, tgt=tgt, expr_form=expr_form).get('up', [])
+    ret = status(output=False, tgt=tgt, tgt_type=tgt_type).get('up', [])
     return ret
 
 
@@ -532,8 +555,12 @@ def lane_stats(estate=None):
     return get_stats(estate=estate, stack='lane')
 
 
-def safe_accept(target, expr_form='glob'):
+def safe_accept(target, tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: Nitrogen
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Accept a minion's public key after checking the fingerprint over salt-ssh
 
     CLI Example:
@@ -541,12 +568,12 @@ def safe_accept(target, expr_form='glob'):
     .. code-block:: bash
 
         salt-run manage.safe_accept my_minion
-        salt-run manage.safe_accept minion1,minion2 expr_form=list
+        salt-run manage.safe_accept minion1,minion2 tgt_type=list
     '''
     salt_key = salt.key.Key(__opts__)
     ssh_client = salt.client.ssh.client.SSHClient()
 
-    ret = ssh_client.cmd(target, 'key.finger', expr_form=expr_form)
+    ret = ssh_client.cmd(target, 'key.finger', tgt_type=tgt_type)
 
     failures = {}
     for minion, finger in six.iteritems(ret):

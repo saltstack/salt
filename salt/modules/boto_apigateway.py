@@ -1408,17 +1408,15 @@ def describe_usage_plans(name=None, plan_id=None, region=None, key=None, keyid=N
     '''
     Returns a list of existing usage plans, optionally filtered to match a given plan name
 
+    .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_apigateway.describe_usage_plans
-
         salt myminion boto_apigateway.describe_usage_plans name='usage plan name'
-
         salt myminion boto_apigateway.describe_usage_plans plan_id='usage plan id'
-
-    .. versionadded:: Carbon
 
     '''
     try:
@@ -1462,6 +1460,8 @@ def create_usage_plan(name, description=None, throttle=None, quota=None, region=
     '''
     Creates a new usage plan with throttling and quotas optionally applied
 
+    .. versionadded:: Nitrogen
+
     name
         Name of the usage plan
 
@@ -1492,8 +1492,6 @@ def create_usage_plan(name, description=None, throttle=None, quota=None, region=
 
         salt myminion boto_apigateway.create_usage_plan name='usage plan name' throttle='{"rateLimit": 10.0, "burstLimit": 10}'
 
-    .. versionadded:: Carbon
-
     '''
     try:
         _validate_throttle(throttle)
@@ -1519,6 +1517,8 @@ def create_usage_plan(name, description=None, throttle=None, quota=None, region=
 def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
     '''
     Updates an existing usage plan with throttling and quotas
+
+    .. versionadded:: Nitrogen
 
     plan_id
         Id of the created usage plan
@@ -1549,8 +1549,6 @@ def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None,
     .. code-block:: bash
 
         salt myminion boto_apigateway.update_usage_plan plan_id='usage plan id' throttle='{"rateLimit": 10.0, "burstLimit": 10}'
-
-    .. versionadded:: Carbon
 
     '''
     try:
@@ -1594,13 +1592,13 @@ def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):
     '''
     Deletes usage plan identified by plan_id
 
+    .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_apigateway.delete_usage_plan plan_id='usage plan id'
-
-    .. versionadded:: Carbon
 
     '''
     try:
@@ -1657,6 +1655,8 @@ def attach_usage_plan_to_apis(plan_id, apis, region=None, key=None, keyid=None, 
     '''
     Attaches given usage plan to each of the apis provided in a list of apiId and stage values
 
+    .. versionadded:: Nitrogen
+
     apis
         a list of dictionaries, where each dictionary contains the following:
 
@@ -1672,8 +1672,6 @@ def attach_usage_plan_to_apis(plan_id, apis, region=None, key=None, keyid=None, 
 
         salt myminion boto_apigateway.attach_usage_plan_to_apis plan_id='usage plan id' apis='[{"apiId": "some id 1", "stage": "some stage 1"}]'
 
-    .. versionadded:: Carbon
-
     '''
     return _update_usage_plan_apis(plan_id, apis, 'add', region=region, key=key, keyid=keyid, profile=profile)
 
@@ -1681,6 +1679,8 @@ def attach_usage_plan_to_apis(plan_id, apis, region=None, key=None, keyid=None, 
 def detach_usage_plan_from_apis(plan_id, apis, region=None, key=None, keyid=None, profile=None):
     '''
     Detaches given usage plan from each of the apis provided in a list of apiId and stage value
+
+    .. versionadded:: Nitrogen
 
     apis
         a list of dictionaries, where each dictionary contains the following:
@@ -1696,8 +1696,6 @@ def detach_usage_plan_from_apis(plan_id, apis, region=None, key=None, keyid=None
     .. code-block:: bash
 
         salt myminion boto_apigateway.detach_usage_plan_to_apis plan_id='usage plan id' apis='[{"apiId": "some id 1", "stage": "some stage 1"}]'
-
-    .. versionadded:: Carbon
 
     '''
     return _update_usage_plan_apis(plan_id, apis, 'remove', region=region, key=key, keyid=keyid, profile=profile)

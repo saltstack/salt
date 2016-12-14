@@ -209,7 +209,7 @@ ssh_public_key
 
 ssh_interface
     This option will use the private LAN IP for node connections (such as
-    as bootstrapping the node) instead of the public LAN IP. The value accepts
+    bootstrapping the node) instead of the public LAN IP. The value accepts
     'private_lan'.
 
 cpu_family

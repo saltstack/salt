@@ -273,7 +273,21 @@ class TLSAddTestCase(TestCase):
                 del source['extensions']
         with patch('salt.utils.fopen',
                    mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
-            result = ignore_extensions(tls.cert_info(certp))
+            try:
+                result = ignore_extensions(tls.cert_info(certp))
+            except AttributeError as err:
+                # PyOpenSSL version 16.0.0 has an upstream bug in it where a call is made
+                # in OpenSSL/crypto.py in the get_signature_algorithm function referencing
+                # the cert_info attribute, which doesn't exist. This was fixed in subsequent
+                # releases of PyOpenSSL with https://github.com/pyca/pyopenssl/pull/476
+                if '\'_cffi_backend.CDataGCP\' object has no attribute \'cert_info\'' == str(err):
+                    self.skipTest(
+                        'Encountered an upstream error with PyOpenSSL: {0}'.format(
+                            err
+                        )
+                    )
+                result = {}
+
         remove_not_in_result(ret, result)
         self.assertEqual(result, ret)
 

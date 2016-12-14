@@ -32,12 +32,11 @@ log = logging.getLogger(__name__)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @patch('salt.utils.vmware.get_mors_with_properties',
        MagicMock(return_value=[{'name': 'fake_dc', 'object': MagicMock()}]))
-class GetDatacenterTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_datacenter'''
+class GetDatacentersTestCase(TestCase):
+    '''Tests for salt.utils.vmware.get_datacenters'''
 
     def setUp(self):
         self.mock_si = MagicMock()
-        self.mock_properties = [MagicMock()]
         self.mock_dc1 = MagicMock()
         self.mock_dc2 = MagicMock()
         self.mock_entries = [{'name': 'fake_dc1',
@@ -50,31 +49,77 @@ class GetDatacenterTestCase(TestCase):
             return_value=[{'name': 'fake_dc', 'object': MagicMock()}])
         with patch('salt.utils.vmware.get_mors_with_properties',
                    mock_get_mors_with_properties):
-            vmware.get_datacenter(self.mock_si, 'fake_dc')
+            vmware.get_datacenters(self.mock_si, datacenter_names=['fake_dc1'])
         mock_get_mors_with_properties.assert_called_once_with(
             self.mock_si, vim.Datacenter, property_list=['name'])
 
     def test_get_mors_with_properties_returns_empty_array(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=[])):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
-                vmware.get_datacenter(self.mock_si, 'fake_dc')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Datacenter \'fake_dc\' was not found')
+            res = vmware.get_datacenters(self.mock_si,
+                                         datacenter_names=['fake_dc1'])
+        self.assertEqual(res, [])
+
+    def test_no_parameters(self):
+        with patch('salt.utils.vmware.get_mors_with_properties',
+                   MagicMock(return_value=self.mock_entries)):
+            res = vmware.get_datacenters(self.mock_si)
+        self.assertEqual(res, [])
 
     def test_datastore_not_found(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=self.mock_entries)):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
-                vmware.get_datacenter(self.mock_si, 'fake_dc')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Datacenter \'fake_dc\' was not found')
+            res = vmware.get_datacenters(self.mock_si,
+                                         datacenter_names=['fake_dc'])
+        self.assertEqual(res, [])
 
     def test_datastore_found(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=self.mock_entries)):
-            res = vmware.get_datacenter(self.mock_si, 'fake_dc2')
-        self.assertEqual(res, self.mock_dc2)
+            res = vmware.get_datacenters(
+                self.mock_si, datacenter_names=['fake_dc2'])
+        self.assertEqual(res, [self.mock_dc2])
+
+    def test_get_all_datastores(self):
+        with patch('salt.utils.vmware.get_mors_with_properties',
+                   MagicMock(return_value=self.mock_entries)):
+            res = vmware.get_datacenters(
+                self.mock_si, get_all_datacenters=True)
+        self.assertEqual(res, [self.mock_dc1, self.mock_dc2])
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@patch('salt.utils.vmware.get_datacenters',
+       MagicMock(return_value=[MagicMock()]))
+class GetDatacenterTestCase(TestCase):
+    '''Tests for salt.utils.vmware.get_datacenter'''
+
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.mock_dc = MagicMock()
+
+    def test_get_datacenters_call(self):
+        mock_get_datacenters = MagicMock(return_value=[MagicMock()])
+        with patch('salt.utils.vmware.get_datacenters',
+                   mock_get_datacenters):
+            vmware.get_datacenter(self.mock_si, 'fake_dc1')
+        mock_get_datacenters.assert_called_once_with(
+            self.mock_si, datacenter_names=['fake_dc1'])
+
+    def test_no_datacenters_returned(self):
+        with patch('salt.utils.vmware.get_datacenters',
+                   MagicMock(return_value=[])):
+            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+                vmware.get_datacenter(self.mock_si, 'fake_dc1')
+        self.assertEqual('Datacenter \'fake_dc1\' was not found',
+                         excinfo.exception.strerror)
+
+    def test_get_datacenter_return(self):
+        with patch('salt.utils.vmware.get_datacenters',
+                   MagicMock(return_value=[self.mock_dc])):
+            res = vmware.get_datacenter(self.mock_si, 'fake_dc1')
+        self.assertEqual(res, self.mock_dc)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

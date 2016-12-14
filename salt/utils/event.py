@@ -61,6 +61,7 @@ import logging
 import datetime
 from collections import MutableMapping
 from multiprocessing.util import Finalize
+from salt.ext.six.moves import range
 
 # Import third party libs
 import salt.ext.six as six
@@ -780,19 +781,30 @@ class SaltEvent(object):
         if self._run_io_loop_sync and not self.keep_loop:
             self.io_loop.close()
 
-    def _fire_ret_load_specific_fun(self, load, fun):
+    def _fire_ret_load_specific_fun(self, load, fun_index=0):
         '''
         Helper function for fire_ret_load
         '''
         if isinstance(load['fun'], list):
             # Multi-function job
-            ret = load.get('return', {})
-            ret = ret.get(fun, {})
-            # This was already validated to exist and be non-zero in the
-            # caller.
-            retcode = load['retcode'][fun]
+            fun = load['fun'][fun_index]
+            # 'retcode' was already validated to exist and be non-zero
+            # for the given function in the caller.
+            if isinstance(load['retcode'], list):
+                # Multi-function ordered
+                ret = load.get('return')
+                if isinstance(ret, list) and len(ret) > fun_index:
+                    ret = ret[fun_index]
+                else:
+                    ret = {}
+                retcode = load['retcode'][fun_index]
+            else:
+                ret = load.get('return', {})
+                ret = ret.get(fun, {})
+                retcode = load['retcode'][fun]
         else:
             # Single-function job
+            fun = load['fun']
             ret = load.get('return', {})
             retcode = load['retcode']
 
@@ -830,15 +842,28 @@ class SaltEvent(object):
         if load.get('retcode') and load.get('fun'):
             if isinstance(load['fun'], list):
                 # Multi-function job
-                for fun in load['fun']:
-                    if load['retcode'].get(fun, 0) and fun in SUB_EVENT:
-                        # Minion fired a bad retcode, fire an event
-                        self._fire_ret_load_specific_fun(load, fun)
+                if isinstance(load['retcode'], list):
+                    multifunc_ordered = True
+                else:
+                    multifunc_ordered = False
+
+                for fun_index in range(0, len(load['fun'])):
+                    fun = load['fun'][fun_index]
+                    if multifunc_ordered:
+                        if (len(load['retcode']) > fun_index and
+                                load['retcode'][fun_index] and
+                                fun in SUB_EVENT):
+                            # Minion fired a bad retcode, fire an event
+                            self._fire_ret_load_specific_fun(load, fun_index)
+                    else:
+                        if load['retcode'].get(fun, 0) and fun in SUB_EVENT:
+                            # Minion fired a bad retcode, fire an event
+                            self._fire_ret_load_specific_fun(load, fun_index)
             else:
                 # Single-function job
                 if load['fun'] in SUB_EVENT:
                     # Minion fired a bad retcode, fire an event
-                    self._fire_ret_load_specific_fun(load, load['fun'])
+                    self._fire_ret_load_specific_fun(load)
 
     def set_event_handler(self, event_handler):
         '''

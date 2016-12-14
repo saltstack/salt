@@ -274,7 +274,7 @@ external template file.
 Escaping Jinja
 ==============
 
-Occasionally, it may be necessary to escape Jinja syntax. There are two ways to
+Occasionally, it may be necessary to escape Jinja syntax. There are two ways
 to do this in Jinja. One is escaping individual variables or strings and the
 other is to escape entire blocks.
 

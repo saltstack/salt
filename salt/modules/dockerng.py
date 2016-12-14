@@ -73,7 +73,11 @@ For example:
         username: foo
 
 Reauth is an optional parameter that forces the docker login to reauthorize using
-the credentials passed in the pillar data. Defaults to false. For example:
+the credentials passed in the pillar data. Defaults to false.
+
+.. versionadded:: 2016.3.5,2016.11.1
+
+For example:
 
 .. code-block:: yaml
 
@@ -3795,7 +3799,7 @@ def dangling(prune=False, force=False):
     '''
     all_images = images(all=True)
     dangling_images = [x[:12] for x in _get_top_level_images(all_images)
-                       if '<none>:<none>' in all_images[x]['RepoTags']]
+                       if all_images[x]['RepoTags'] is None]
     if not prune:
         return dangling_images
 
@@ -5672,8 +5676,9 @@ def _prepare_trans_tar(name, mods=None, saltenv='base', pillar=None):
     refs = salt.client.ssh.state.lowstate_file_refs(chunks)
     _mk_fileclient()
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+        __opts__,
         __context__['cp.fileclient'],
-        chunks, refs, pillar=pillar, id_=name)
+        chunks, refs, pillar, name)
     return trans_tar
 
 
@@ -5885,7 +5890,7 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
     # start a new container
     ret = __salt__['dockerng.create'](image=base,
                                       name=name,
-                                      cmd='/usr/bin/sleep infinity',
+                                      cmd='sleep infinity',
                                       interactive=True, tty=True)
     id_ = ret['Id']
     try:

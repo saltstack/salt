@@ -1791,6 +1791,7 @@ class State(object):
             low['__prereq__'] = False
             return ret
 
+        ret['__sls__'] = low.get('__sls__')
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)
@@ -2994,7 +2995,7 @@ class BaseHighState(object):
                             if isinstance(item, six.string_types):
                                 matches[saltenv].append(item)
                 _filter_matches(match, data, self.opts['nodegroups'])
-        ext_matches = self.client.ext_nodes()
+        ext_matches = self._ext_nodes()
         for saltenv in ext_matches:
             if saltenv in matches:
                 matches[saltenv] = list(
@@ -3003,6 +3004,14 @@ class BaseHighState(object):
                 matches[saltenv] = ext_matches[saltenv]
         # pylint: enable=cell-var-from-loop
         return matches
+
+    def _ext_nodes(self):
+        '''
+        Get results from an external node classifier.
+        Override it if the execution of the external node clasifier
+        needs customization.
+        '''
+        return self.client.ext_nodes()
 
     def load_dynamic(self, matches):
         '''

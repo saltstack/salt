@@ -51,7 +51,7 @@ There are two types of profiles:
 Container Profiles
 ------------------
 
-LXC container profiles are defined defined underneath the
+LXC container profiles are defined underneath the
 ``lxc.container_profile`` config option:
 
 .. code-block:: yaml

@@ -27,6 +27,7 @@ from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
 import salt.utils.jinja
+import salt.utils.network
 from salt.utils.odict import OrderedDict
 from salt import __path__ as saltpath
 from salt.ext.six import string_types
@@ -349,6 +350,15 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
     jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
     jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
+    jinja_env.filters['is_ip'] = salt.utils.network.is_ip_filter  # check if valid IP address
+    jinja_env.filters['is_ipv4'] = salt.utils.network.is_ipv4_filter  # check if valid IPv4 address
+    jinja_env.filters['is_ipv6'] = salt.utils.network.is_ipv6_filter  # check if valid IPv6 address
+    jinja_env.filters['ipaddr'] = salt.utils.network.ipaddr  # filter IP addresses
+    jinja_env.filters['ipv4'] = salt.utils.network.ipv4  # filter IPv4-only addresses
+    jinja_env.filters['ipv6'] = salt.utils.network.ipv6  # filter IPv6-only addresses
+    jinja_env.filters['ip_host'] = salt.utils.network.ip_host  # return the network interface IP
+    jinja_env.filters['network_hosts'] = salt.utils.network.network_hosts  # return the hosts within a network
+    jinja_env.filters['network_size'] = salt.utils.network.network_size  # return the network size
 
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = salt.utils.jinja.show_full_context

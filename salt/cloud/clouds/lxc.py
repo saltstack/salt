@@ -156,8 +156,8 @@ def _salt(fun, *args, **kw):
         runner = _runner()
         rkwargs = kwargs.copy()
         rkwargs['timeout'] = timeout
-        rkwargs.setdefault('expr_form', 'list')
-        kwargs.setdefault('expr_form', 'list')
+        rkwargs.setdefault('tgt_type', 'list')
+        kwargs.setdefault('tgt_type', 'list')
         ping_retries = 0
         # the target(s) have environ one minute to respond
         # we call 60 ping request, this prevent us

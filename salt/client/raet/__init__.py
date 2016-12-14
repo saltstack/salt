@@ -36,7 +36,7 @@ class LocalClient(salt.client.LocalClient):
             tgt,
             fun,
             arg=(),
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             jid='',
             timeout=5,
@@ -44,11 +44,20 @@ class LocalClient(salt.client.LocalClient):
         '''
         Publish the command!
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         payload_kwargs = self._prep_pub(
                 tgt,
                 fun,
                 arg=arg,
-                expr_form=expr_form,
+                tgt_type=tgt_type,
                 ret=ret,
                 jid=jid,
                 timeout=timeout,

@@ -24,8 +24,8 @@ import salt.config
 import salt.minion
 import salt.utils
 import salt.utils.event
+from salt.utils.minion import connected_masters as _connected_masters
 from salt.utils.network import host_to_ips as _host_to_ips
-from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
 from salt.exceptions import CommandExecutionError
 
@@ -210,8 +210,14 @@ def loadavg():
     .. code-block:: bash
 
         salt '*' status.loadavg
+
+        :raises CommandExecutionError: If the system cannot report loadaverages to Python
     '''
-    load_avg = os.getloadavg()
+    try:
+        load_avg = os.getloadavg()
+    except AttributeError:
+        # Some UNIX-based operating systems do not have os.getloadavg()
+        raise salt.exceptions.CommandExecutionError('status.loadavag is not available on your platform')
     return {'1-min': load_avg[0],
             '5-min': load_avg[1],
             '15-min': load_avg[2]}
@@ -1034,28 +1040,24 @@ def master(master=None, connected=True):
 
         salt '*' status.master
     '''
-
-    # the default publishing port
-    port = 4505
     master_ips = None
 
-    if __salt__['config.get']('publish_port') != '':
-        port = int(__salt__['config.get']('publish_port'))
-
-    # Check if we have FQDN/hostname defined as master
-    # address and try resolving it first. _remote_port_tcp
-    # only works with IP-addresses.
-    if master is not None:
+    if master:
         master_ips = _host_to_ips(master)
 
-    master_connection_status = False
-    if master_ips:
-        ips = _remote_port_tcp(port)
-        for master_ip in master_ips:
-            if master_ip in ips:
-                master_connection_status = True
-                break
+    if not master_ips:
+        return
 
+    master_connection_status = False
+    connected_ips = _connected_masters()
+
+    # Get connection status for master
+    for master_ip in master_ips:
+        if master_ip in connected_ips:
+            master_connection_status = True
+            break
+
+    # Connection to master is not as expected
     if master_connection_status is not connected:
         event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
         if master_connection_status:

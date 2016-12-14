@@ -1145,6 +1145,26 @@ def list_nodes_full(call=None, **kwargs):
     return ret
 
 
+def list_nodes_min(call=None, **kwargs):
+    '''
+    Return a list of the VMs that in this location
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            (
+                'The list_nodes_min function must be called with'
+                ' -f or --function.'
+            )
+        )
+
+    conn = get_conn()
+    server_list = conn.server_list_min()
+
+    if not server_list:
+        return {}
+    return server_list
+
+
 def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields

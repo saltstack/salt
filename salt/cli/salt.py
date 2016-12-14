@@ -79,9 +79,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         kwargs['delimiter'] = self.options.delimiter
 
         if self.selected_target_option:
-            kwargs['expr_form'] = self.selected_target_option
+            kwargs['tgt_type'] = self.selected_target_option
         else:
-            kwargs['expr_form'] = 'glob'
+            kwargs['tgt_type'] = 'glob'
 
         if getattr(self.options, 'return'):
             kwargs['ret'] = getattr(self.options, 'return')

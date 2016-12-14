@@ -41,19 +41,28 @@ class SSHClient(object):
             fun,
             arg=(),
             timeout=None,
-            expr_form='glob',
+            tgt_type='glob',
             kwarg=None,
             **kwargs):
         '''
         Prepare the arguments
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         opts = copy.deepcopy(self.opts)
         opts.update(kwargs)
         if timeout:
             opts['timeout'] = timeout
         arg = salt.utils.args.condition_input(arg, kwarg)
         opts['argv'] = [fun] + arg
-        opts['selected_target_option'] = expr_form
+        opts['selected_target_option'] = tgt_type
         opts['tgt'] = tgt
         opts['arg'] = arg
         return salt.client.ssh.SSH(opts)
@@ -64,7 +73,7 @@ class SSHClient(object):
             fun,
             arg=(),
             timeout=None,
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             kwarg=None,
             **kwargs):
@@ -74,24 +83,32 @@ class SSHClient(object):
 
         .. versionadded:: 2015.5.0
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         ssh = self._prep_ssh(
                 tgt,
                 fun,
                 arg,
                 timeout,
-                expr_form,
+                tgt_type,
                 kwarg,
                 **kwargs)
         for ret in ssh.run_iter(jid=kwargs.get('jid', None)):
             yield ret
 
-    def cmd(
-            self,
+    def cmd(self,
             tgt,
             fun,
             arg=(),
             timeout=None,
-            expr_form='glob',
+            tgt_type='glob',
             kwarg=None,
             **kwargs):
         '''
@@ -100,12 +117,21 @@ class SSHClient(object):
 
         .. versionadded:: 2015.5.0
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         ssh = self._prep_ssh(
                 tgt,
                 fun,
                 arg,
                 timeout,
-                expr_form,
+                tgt_type,
                 kwarg,
                 **kwargs)
         final = {}
@@ -127,7 +153,7 @@ class SSHClient(object):
                 'tgt': 'silver',
                 'fun': 'test.ping',
                 'arg': (),
-                'expr_form'='glob',
+                'tgt_type'='glob',
                 'kwarg'={}
                 })
             {'silver': {'fun_args': [], 'jid': '20141202152721523072', 'return': True, 'retcode': 0, 'success': True, 'fun': 'test.ping', 'id': 'silver'}}
@@ -135,7 +161,7 @@ class SSHClient(object):
 
         kwargs = copy.deepcopy(low)
 
-        for ignore in ['tgt', 'fun', 'arg', 'timeout', 'expr_form', 'kwarg']:
+        for ignore in ['tgt', 'fun', 'arg', 'timeout', 'tgt_type', 'kwarg']:
             if ignore in kwargs:
                 del kwargs[ignore]
 
@@ -143,7 +169,7 @@ class SSHClient(object):
                         low['fun'],
                         low.get('arg', []),
                         low.get('timeout'),
-                        low.get('expr_form'),
+                        low.get('tgt_type'),
                         low.get('kwarg'),
                         **kwargs)
 
@@ -159,7 +185,7 @@ class SSHClient(object):
                 'tgt': 'silver',
                 'fun': 'test.ping',
                 'arg': (),
-                'expr_form'='glob',
+                'tgt_type'='glob',
                 'kwarg'={}
                 })
             {'silver': {'fun_args': [], 'jid': '20141202152721523072', 'return': True, 'retcode': 0, 'success': True, 'fun': 'test.ping', 'id': 'silver'}}

@@ -165,7 +165,12 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', timeout=5,
         salt ns1 ddns.update example.com host1 60 A 10.0.0.1
     '''
     name = str(name)
-    fqdn = '{0}.{1}'.format(name, zone)
+
+    if name[-1:] == '.':
+        fqdn = name
+    else:
+        fqdn = '{0}.{1}'.format(name, zone)
+
     request = dns.message.make_query(fqdn, rdtype)
     answer = dns.query.udp(request, nameserver, timeout, port)
 
@@ -211,9 +216,13 @@ def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1',
         salt ns1 ddns.delete example.com host1 A
     '''
     name = str(name)
-    fqdn = '{0}.{1}'.format(name, zone)
-    request = dns.message.make_query(fqdn, (rdtype or 'ANY'))
 
+    if name[-1:] == '.':
+        fqdn = name
+    else:
+        fqdn = '{0}.{1}'.format(name, zone)
+
+    request = dns.message.make_query(fqdn, (rdtype or 'ANY'))
     answer = dns.query.udp(request, nameserver, timeout, port)
     if not answer.answer:
         return None

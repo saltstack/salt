@@ -532,6 +532,7 @@ class MinionBase(object):
             # we need a list of master URIs to fire calls back to.
             for master in opts['local_masters']:
                 opts['master'] = master
+                opts.update(prep_ip_port(opts))
                 opts['master_uri_list'].append(resolve_dns(opts)['master_uri'])
 
             while True:
@@ -681,6 +682,13 @@ class SMinion(MinionBase):
         '''
         Load all of the modules for the minion
         '''
+        # Ensure that a pillar key is set in the opts, otherwise the loader
+        # will pack a newly-generated empty dict as the __pillar__ dunder, and
+        # the fact that we compile the pillar below won't matter as it won't be
+        # packed into any of the modules/functions processed by the loader.
+        # Below, when pillar data is compiled, we will update this dict with
+        # the compiled pillar data.
+        self.opts['pillar'] = {}
 
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
@@ -698,16 +706,26 @@ class SMinion(MinionBase):
         self.functions['sys.reload_modules'] = self.gen_modules
         self.executors = salt.loader.executors(self.opts)
 
-        if self.opts.get('master_type') != 'disable':
-            self.opts['pillar'] = salt.pillar.get_pillar(
-                self.opts,
-                self.opts['grains'],
-                self.opts['id'],
-                self.opts['environment'],
-                pillarenv=self.opts.get('pillarenv'),
-                funcs=self.functions,
-                rend=self.rend,
-            ).compile_pillar()
+        compiled_pillar = salt.pillar.get_pillar(
+            self.opts,
+            self.opts['grains'],
+            self.opts['id'],
+            self.opts['environment'],
+            pillarenv=self.opts.get('pillarenv'),
+            funcs=self.functions,
+            rend=self.rend,
+        ).compile_pillar()
+
+        # Update the existing (empty) pillar dict with the compiled pillar
+        # data. This ensures that the __pillar__ dunder packed into all of the
+        # functions processed by the loader is not empty.
+        try:
+            self.opts['pillar'].update(compiled_pillar)
+        except TypeError:
+            log.warning(
+                'Compiled Pillar data %s is not a dictionary',
+                compiled_pillar
+            )
 
 
 class MasterMinion(object):
@@ -1555,13 +1573,24 @@ class Minion(MinionBase):
         minion side execution.
         '''
         salt.utils.appendproctitle('{0}._thread_multi_return {1}'.format(cls.__name__, data['jid']))
-        ret = {
-            'return': {},
-            'retcode': {},
-            'success': {}
-        }
-        for ind in range(0, len(data['fun'])):
-            ret['success'][data['fun'][ind]] = False
+        multifunc_ordered = opts.get('multifunc_ordered', False)
+        num_funcs = len(data['fun'])
+        if multifunc_ordered:
+            ret = {
+                'return': [None] * num_funcs,
+                'retcode': [None] * num_funcs,
+                'success': [False] * num_funcs
+            }
+        else:
+            ret = {
+                'return': {},
+                'retcode': {},
+                'success': {}
+            }
+
+        for ind in range(0, num_funcs):
+            if not multifunc_ordered:
+                ret['success'][data['fun'][ind]] = False
             try:
                 if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar
@@ -1576,12 +1605,20 @@ class Minion(MinionBase):
                     data['arg'][ind],
                     data)
                 minion_instance.functions.pack['__context__']['retcode'] = 0
-                ret['return'][data['fun'][ind]] = func(*args, **kwargs)
-                ret['retcode'][data['fun'][ind]] = minion_instance.functions.pack['__context__'].get(
-                    'retcode',
-                    0
-                )
-                ret['success'][data['fun'][ind]] = True
+                if multifunc_ordered:
+                    ret['return'][ind] = func(*args, **kwargs)
+                    ret['retcode'][ind] = minion_instance.functions.pack['__context__'].get(
+                        'retcode',
+                        0
+                    )
+                    ret['success'][ind] = True
+                else:
+                    ret['return'][data['fun'][ind]] = func(*args, **kwargs)
+                    ret['retcode'][data['fun'][ind]] = minion_instance.functions.pack['__context__'].get(
+                        'retcode',
+                        0
+                    )
+                    ret['success'][data['fun'][ind]] = True
             except Exception as exc:
                 trb = traceback.format_exc()
                 log.warning(
@@ -1589,7 +1626,10 @@ class Minion(MinionBase):
                         exc
                     )
                 )
-                ret['return'][data['fun'][ind]] = trb
+                if multifunc_ordered:
+                    ret['return'][ind] = trb
+                else:
+                    ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
             ret['fun'] = data['fun']
             ret['fun_args'] = data['arg']
@@ -2530,6 +2570,7 @@ class SyndicManager(MinionBase):
         '''
         Wrapper to call a given func on a syndic, best effort to get the one you asked for
         '''
+        success = False
         if kwargs is None:
             kwargs = {}
         for master, syndic_future in self.iter_master_options(master_id):
@@ -2539,17 +2580,22 @@ class SyndicManager(MinionBase):
 
             try:
                 getattr(syndic_future.result(), func)(*args, **kwargs)
+                success = True
+                if self.opts['syndic_forward_all_events']:
+                    continue
                 return
             except SaltClientError:
                 log.error('Unable to call {0} on {1}, trying another...'.format(func, master))
                 self._mark_master_dead(master)
                 continue
-        log.critical('Unable to call {0} on any masters!'.format(func))
+        if not success:
+            log.critical('Unable to call {0} on any masters!'.format(func))
 
     def _return_pub_syndic(self, values, master_id=None):
         '''
         Wrapper to call the '_return_pub_multi' a syndic, best effort to get the one you asked for
         '''
+        success = False
         func = '_return_pub_multi'
         for master, syndic_future in self.iter_master_options(master_id):
             if not syndic_future.done() or syndic_future.exception():
@@ -2575,9 +2621,11 @@ class SyndicManager(MinionBase):
                     continue
             future = getattr(syndic_future.result(), func)(values)
             self.pub_futures[master] = (future, values)
-            return True
-        # Loop done and didn't exit: wasn't sent, try again later
-        return False
+            success = True
+            if self.opts['syndic_forward_all_events']:
+                continue
+            break
+        return success
 
     def iter_master_options(self, master_id=None):
         '''

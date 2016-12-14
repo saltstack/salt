@@ -8,7 +8,7 @@ Windows Software Repository
     In 2015.8.0 and later, the Windows Software Repository cache is compiled on
     the Salt Minion, which enables pillar, grains and other things to be
     available during compilation time. To support this new functionality,
-    a next-generation (ng) package repository was created. See See the
+    a next-generation (ng) package repository was created. See the
     :ref:`Changes in Version 2015.8.0 <2015-8-0-winrepo-changes>` for details.
 
 The SaltStack Windows Software Repository provides a package manager and software

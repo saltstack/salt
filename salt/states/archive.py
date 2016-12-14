@@ -24,21 +24,9 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: dis
 # Import salt libs
 import salt.utils
 import salt.utils.files
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 log = logging.getLogger(__name__)
-
-__virtualname__ = 'archive'
-
-
-def __virtual__():
-    '''
-    Only load if the archive module is available in __salt__
-    '''
-    if 'archive.unzip' in __salt__ and 'archive.unrar' in __salt__:
-        return __virtualname__
-    else:
-        return False
 
 
 def _path_is_abs(path):
@@ -130,6 +118,8 @@ def extracted(name,
               options=None,
               list_options=None,
               force=False,
+              overwrite=False,
+              clean=False,
               user=None,
               group=None,
               if_missing=None,
@@ -344,8 +334,8 @@ def extracted(name,
         .. versionchanged:: 2015.8.11,2016.3.2
             XZ-compressed tar archives no longer require ``J`` to manually be
             set in the ``options``, they are now detected automatically and
-            decompressed using xz-utils_ and extracted using ``tar xvf``. This
-            is a more platform-independent solution, as not all tar
+            decompressed using the xz_ CLI command and extracted using ``tar
+            xvf``. This is a more platform-independent solution, as not all tar
             implementations support the ``J`` argument for extracting archives.
 
         .. note::
@@ -368,9 +358,9 @@ def extracted(name,
         the archive has already been extracted. For the vast majority of tar
         archives, :py:func:`archive.list <salt.modules.archive.list_>` "just
         works". Archives compressed using gzip, bzip2, and xz/lzma (with the
-        help of xz-utils_) are supported automatically. However, for archives
-        compressed using other compression types, CLI options must be passed to
-        :py:func:`archive.list <salt.modules.archive.list_>`.
+        help of the xz_ CLI command) are supported automatically. However, for
+        archives compressed using other compression types, CLI options must be
+        passed to :py:func:`archive.list <salt.modules.archive.list_>`.
 
         This argument will be passed through to :py:func:`archive.list
         <salt.modules.archive.list_>` as its ``options`` argument, to allow it
@@ -391,6 +381,24 @@ def extracted(name,
             Use this option *very* carefully.
 
         .. versionadded:: 2016.11.0
+
+    overwrite : False
+        Set this to ``True`` to force the archive to be extracted. This is
+        useful for cases where the filenames/directories have not changed, but
+        the content of the files have.
+
+        .. versionadded:: 2016.11.1
+
+    clean : False
+        Set this to ``True`` to remove any top-level files and recursively
+        remove any top-level directory paths before extracting.
+
+        .. note::
+            Files will only be cleaned first if extracting the archive is
+            deemed necessary, either by paths missing on the minion, or if
+            ``overwrite`` is set to ``True``.
+
+        .. versionadded:: 2016.11.1
 
     user
         The user to own each extracted file. Not available on Windows.
@@ -495,7 +503,7 @@ def extracted(name,
 
     .. _tarfile: https://docs.python.org/2/library/tarfile.html
     .. _zipfile: https://docs.python.org/2/library/zipfile.html
-    .. _xz-utils: http://tukaani.org/xz/
+    .. _xz: http://tukaani.org/xz/
 
     **Examples**
 
@@ -545,10 +553,9 @@ def extracted(name,
         ret['comment'] = '{0} is not an absolute path'.format(name)
         return ret
     else:
-        if name is None:
-            # Only way this happens is if some doofus specifies "- name: None"
-            # in their SLS file. Prevent tracebacks by failing gracefully.
-            ret['comment'] = 'None is not a valid directory path'
+        if not name:
+            # Empty name, like None, '' etc.
+            ret['comment'] = 'Name of the directory path needs to be specified'
             return ret
         # os.path.isfile() returns False when there is a trailing slash, hence
         # our need for first stripping the slash and then adding it back later.
@@ -566,7 +573,7 @@ def extracted(name,
         # Add back the slash so that file.makedirs properly creates the
         # destdir if it needs to be created. file.makedirs expects a trailing
         # slash in the directory path.
-        name += '/'
+        name += os.sep
     if not _path_is_abs(if_missing):
         ret['comment'] = 'Value for \'if_missing\' is not an absolute path'
         return ret
@@ -600,7 +607,7 @@ def extracted(name,
 
         if user:
             uid = __salt__['file.user_to_uid'](user)
-            if not uid:
+            if uid == '':
                 ret['comment'] = 'User {0} does not exist'.format(user)
                 return ret
         else:
@@ -608,7 +615,7 @@ def extracted(name,
 
         if group:
             gid = __salt__['file.group_to_gid'](group)
-            if not gid:
+            if gid == '':
                 ret['comment'] = 'Group {0} does not exist'.format(group)
                 return ret
         else:
@@ -693,6 +700,13 @@ def extracted(name,
                     'Either remove \'use_cmd_unzip\', or set it to True.'
                 )
                 return ret
+            if use_cmd_unzip:
+                if 'archive.cmd_unzip' not in __salt__:
+                    ret['comment'] = (
+                        'archive.cmd_unzip function not available, unzip might '
+                        'not be installed on minion'
+                    )
+                    return ret
         if password:
             if use_cmd_unzip is None:
                 log.info(
@@ -712,6 +726,14 @@ def extracted(name,
         if password:
             ret['comment'] = \
                 'The \'password\' argument is only supported for zip archives'
+            return ret
+
+    if archive_format == 'rar':
+        if 'archive.unrar' not in __salt__:
+            ret['comment'] = (
+                'archive.unrar function not available, rar/unrar might '
+                'not be installed on minion'
+            )
             return ret
 
     supports_options = ('tar', 'zip')
@@ -898,7 +920,8 @@ def extracted(name,
     # already need to catch an OSError to cover edge cases where the minion is
     # running as a non-privileged user and is trying to check for the existence
     # of a path to which it does not have permission.
-    extraction_needed = False
+    extraction_needed = overwrite
+
     try:
         if_missing_path_exists = os.path.exists(if_missing)
     except TypeError:
@@ -920,55 +943,77 @@ def extracted(name,
                     return ret
         else:
             incorrect_type = []
-            extraction_needed = False
             for path_list, func in ((contents['dirs'], stat.S_ISDIR),
                                     (contents['files'], stat.S_ISREG)):
                 for path in path_list:
                     full_path = os.path.join(name, path)
                     try:
-                        path_mode = os.stat(full_path).st_mode
+                        path_mode = os.stat(full_path.rstrip(os.sep)).st_mode
                         if not func(path_mode):
                             incorrect_type.append(path)
                     except OSError as exc:
                         if exc.errno == errno.ENOENT:
                             extraction_needed = True
-                        else:
+                        elif exc.errno != errno.ENOTDIR:
+                            # In cases where a directory path was occupied by a
+                            # file instead, all os.stat() calls to files within
+                            # that dir will raise an ENOTDIR OSError. So we
+                            # expect these and will only abort here if the
+                            # error code is something else.
                             ret['comment'] = exc.__str__()
                             return ret
 
             if incorrect_type:
-                if not force:
-                    msg = (
-                        'The below paths (relative to {0}) exist, but are the '
-                        'incorrect type (i.e. file instead of directory or '
-                        'vice-versa). To proceed with extraction, set '
-                        '\'force\' to True.\n'.format(name)
-                    )
-                    for path in incorrect_type:
-                        msg += '\n- {0}'.format(path)
-                    ret['comment'] = msg
-                else:
-                    errors = []
-                    for path in incorrect_type:
-                        full_path = os.path.join(name, path)
-                        try:
-                            salt.utils.rm_rf(full_path)
-                            ret['changes'].setdefault(
-                                'removed', []).append(full_path)
-                        except OSError as exc:
-                            if exc.errno != errno.ENOENT:
-                                errors.append(exc.__str__())
-                    if errors:
-                        msg = (
-                            'One or more paths existed by were the incorrect '
-                            'type (i.e. file instead of directory or '
-                            'vice-versa), but could not be removed. The '
-                            'following errors were observed:\n'
+                incorrect_paths = '\n\n' + '\n'.join(
+                    ['- {0}'.format(x) for x in incorrect_type]
+                )
+                ret['comment'] = (
+                    'The below paths (relative to {0}) exist, but are the '
+                    'incorrect type (i.e. file instead of directory or '
+                    'vice-versa).'.format(name)
+                )
+                if __opts__['test'] and clean and contents is not None:
+                    ret['result'] = None
+                    ret['comment'] += (
+                        ' Since the \'clean\' option is enabled, the '
+                        'destination paths would be cleared and the '
+                        'archive would be extracted.{0}'.format(
+                            incorrect_paths
                         )
-                        for error in errors:
-                            msg += '\n- {0}'.format(error)
-                        ret['comment'] = msg
+                    )
+                    return ret
+
+                # Skip notices of incorrect types if we're cleaning
+                if not (clean and contents is not None):
+                    if not force:
+                        ret['comment'] += (
+                            'To proceed with extraction, set \'force\' to '
+                            'True. Note that this will remove these paths '
+                            'before extracting.{0}'.format(incorrect_paths)
+                        )
                         return ret
+                    else:
+                        errors = []
+                        for path in incorrect_type:
+                            full_path = os.path.join(name, path)
+                            try:
+                                salt.utils.rm_rf(full_path.rstrip(os.sep))
+                                ret['changes'].setdefault(
+                                    'removed', []).append(full_path)
+                            except OSError as exc:
+                                if exc.errno != errno.ENOENT:
+                                    errors.append(exc.__str__())
+                        if errors:
+                            msg = (
+                                'One or more paths existed by were the incorrect '
+                                'type (i.e. file instead of directory or '
+                                'vice-versa), but could not be removed. The '
+                                'following errors were observed:\n'
+                            )
+                            for error in errors:
+                                msg += '\n- {0}'.format(error)
+                            ret['comment'] = msg
+                            return ret
 
     created_destdir = False
 
@@ -980,7 +1025,33 @@ def extracted(name,
                     source_match,
                     name
                 )
+            if clean and contents is not None:
+                ret['comment'] += ', after cleaning destination path(s)'
             return ret
+
+        if clean and contents is not None:
+            errors = []
+            log.debug('Cleaning archive paths from within %s', name)
+            for path in contents['top_level_dirs'] + contents['top_level_files']:
+                full_path = os.path.join(name, path)
+                try:
+                    log.debug('Removing %s', full_path)
+                    salt.utils.rm_rf(full_path.rstrip(os.sep))
+                    ret['changes'].setdefault(
+                        'removed', []).append(full_path)
+                except OSError as exc:
+                    if exc.errno != errno.ENOENT:
+                        errors.append(exc.__str__())
+
+            if errors:
+                msg = (
+                    'One or more paths could not be cleaned. The following '
+                    'errors were observed:\n'
+                )
+                for error in errors:
+                    msg += '\n- {0}'.format(error)
+                ret['comment'] = msg
+                return ret
 
         if not os.path.isdir(name):
             __salt__['file.makedirs'](name, user=user)
@@ -990,12 +1061,17 @@ def extracted(name,
         try:
             if archive_format == 'zip':
                 if use_cmd_unzip:
-                    files = __salt__['archive.cmd_unzip'](cached_source,
-                                                          name,
-                                                          options=options,
-                                                          trim_output=trim_output,
-                                                          password=password,
-                                                          **kwargs)
+                    try:
+                        files = __salt__['archive.cmd_unzip'](
+                            cached_source,
+                            name,
+                            options=options,
+                            trim_output=trim_output,
+                            password=password,
+                            **kwargs)
+                    except (CommandExecutionError, CommandNotFoundError) as exc:
+                        ret['comment'] = exc.strerror
+                        return ret
                 else:
                     files = __salt__['archive.unzip'](cached_source,
                                                       name,
@@ -1004,10 +1080,14 @@ def extracted(name,
                                                       password=password,
                                                       **kwargs)
             elif archive_format == 'rar':
-                files = __salt__['archive.unrar'](cached_source,
-                                                  name,
-                                                  trim_output=trim_output,
-                                                  **kwargs)
+                try:
+                    files = __salt__['archive.unrar'](cached_source,
+                                                      name,
+                                                      trim_output=trim_output,
+                                                      **kwargs)
+                except (CommandExecutionError, CommandNotFoundError) as exc:
+                    ret['comment'] = exc.strerror
+                    return ret
             else:
                 if options is None:
                     try:
@@ -1023,7 +1103,7 @@ def extracted(name,
                                 # XZ-compressed data
                                 log.debug(
                                     'Tar file is XZ-compressed, attempting '
-                                    'decompression and extraction using xz-utils '
+                                    'decompression and extraction using XZ Utils '
                                     'and the tar command'
                                 )
                                 # Must use python_shell=True here because not
@@ -1073,6 +1153,13 @@ def extracted(name,
                             )
                             return ret
                 else:
+                    if not salt.utils.which('tar'):
+                        ret['comment'] = (
+                            'tar command not available, it might not be '
+                            'installed on minion'
+                        )
+                        return ret
+
                     try:
                         tar_opts = shlex.split(options)
                     except AttributeError:

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: Carbon
+Pillar data from vCenter or an ESXi host
+
+.. versionadded:: Nitrogen
 
 :depends: - pyVmomi
-
-Pillar data from vCenter or an ESXi host
 
 This external pillar can pull attributes from objects in vCenter or an ESXi host and provide those attributes
 as pillar data to minions.  This can allow for pillar based targeting of minions on ESXi host, Datastore, VM
