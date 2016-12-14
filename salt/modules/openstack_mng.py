@@ -37,7 +37,7 @@ def __virtual__():
 
 def start_service(service_name):
     '''
-    Start OpenStack service immiedately
+    Start OpenStack service immediately
 
     CLI Example:
 
@@ -52,7 +52,7 @@ def start_service(service_name):
 
 def stop_service(service_name):
     '''
-    Stop OpenStack service immiedately
+    Stop OpenStack service immediately
 
     CLI Example:
 
@@ -67,7 +67,7 @@ def stop_service(service_name):
 
 def restart_service(service_name, minimum_running_time=None):
     '''
-    Restart OpenStack service immiedately, or only if it's running longer than
+    Restart OpenStack service immediately, or only if it's running longer than
     specified value
 
     CLI Example:

@@ -265,7 +265,7 @@ def change(name, context=None, changes=None, lens=None,
         filename = re.sub('^/files|/$', '', context)
 
     if __opts__['test']:
-        ret['result'] = None
+        ret['result'] = True
         ret['comment'] = 'Executing commands'
         if context:
             ret['comment'] += ' in file "{0}":\n'.format(context)

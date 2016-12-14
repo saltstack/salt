@@ -309,7 +309,7 @@ def present(name,
            'changes': {}
            }
 
-    r = __salt__['boto_rds.exists'](name, region, key, keyid, profile)
+    r = __salt__['boto_rds.exists'](name, tags, region, key, keyid, profile)
 
     if not r.get('exists'):
         if __opts__['test']:
@@ -350,7 +350,7 @@ def present(name,
             ret['comment'] = 'Failed to create RDS instance {0}.'.format(r['error']['message'])
             return ret
 
-        _describe = __salt__['boto_rds.describe'](name, region, key, keyid, profile)
+        _describe = __salt__['boto_rds.describe'](name, tags, region, key, keyid, profile)
         ret['changes']['old'] = {'instance': None}
         ret['changes']['new'] = _describe
         ret['comment'] = 'RDS instance {0} created.'.format(name)
@@ -488,36 +488,33 @@ def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
                 return ret
             subnet_ids.append(r['id'])
 
-    for i in subnet_ids:
-        r = __salt__['boto_rds.create_subnet_group'](name=name,
+    exists = __salt__['boto_rds.subnet_group_exists'](name=name, tags=tags, region=region, key=key,
+                                                      keyid=keyid, profile=profile)
+    if not exists:
+        if __opts__['test']:
+            ret['comment'] = 'Subnet group {0} is set to be created.'.format(name)
+            ret['result'] = None
+            return ret
+        if not r.get('created'):
+            ret['result'] = False
+            ret['comment'] = 'Failed to create {0} subnet group.'.format(r['error']['message'])
+            return ret
+        created = __salt__['boto_rds.create_subnet_group'](name=name,
                                                      description=description,
                                                      subnet_ids=subnet_ids,
                                                      tags=tags, region=region,
                                                      key=key, keyid=keyid,
                                                      profile=profile)
 
-        if not r.get('exists'):
-            if __opts__['test']:
-                ret['comment'] = 'Subnet group {0} is set to be created.'.format(name)
-                ret['result'] = None
-                return ret
-            if not r.get('created'):
-                ret['result'] = False
-                ret['comment'] = 'Failed to create {0} subnet group.'.format(r['error']['message'])
-                return ret
-
-            _describe = __salt__['boto_rds.describe']('subnet',
-                                                      name=i,
-                                                      region=region,
-                                                      key=key,
-                                                      keyid=keyid,
-                                                      profile=profile)
-
-            ret['changes']['old'] = None
-            ret['changes']['new'] = _describe
-            ret['comment'] = 'Subnet {0} created.'.format(name)
-        else:
-            ret['comment'] = 'Subnet {0} present.'.format(name)
+        if not created:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create {0} subnet group.'.format(name)
+            return ret
+        ret['changes']['old'] = None
+        ret['changes']['new'] = name
+        ret['comment'] = 'Subnet {0} created.'.format(name)
+    else:
+        ret['comment'] = 'Subnet {0} present.'.format(name)
 
         return ret
 

@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if not __opts__['minion_data_cache']:
+    if not __opts__.get('minion_data_cache'):
         return (False, 'stalekey engine requires minion_data_cache to be enabled')
 
 

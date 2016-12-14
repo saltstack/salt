@@ -256,7 +256,7 @@ def create(name, allocated_storage, db_instance_class, engine,
         raise SaltInvocationError('master_username is required')
     if not master_user_password:
         raise SaltInvocationError('master_user_password is required')
-    if availability_zone and MultiAZ:
+    if availability_zone and multi_az:
         raise SaltInvocationError('availability_zone and multi_az are mutually'
                                   ' exclusive arguments.')
     if wait_status:
@@ -277,9 +277,9 @@ def create(name, allocated_storage, db_instance_class, engine,
             val = locals()[key]
             if val is not None:
                 mapped = boto3_param_map[key]
+                if key == 'tags':
+                    val = _tag_doc(val)
                 kwargs[mapped[0]] = mapped[1](val)
-
-        taglist = _tag_doc(tags)
 
         # Validation doesn't want parameters that are None
         # https://github.com/boto/boto3/issues/400
@@ -529,6 +529,10 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
             return {'results': bool(conn)}
 
         rds = conn.describe_db_instances(DBInstanceIdentifier=name)
+        rds = [
+            i for i in rds.get('DBInstances', [])
+            if i.get('DBInstanceIdentifier') == name
+        ].pop(0)
 
         if rds:
             keys = ('DBInstanceIdentifier', 'DBInstanceClass', 'Engine',
@@ -549,6 +553,8 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
             return {'rds': None}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+    except IndexError:
+        return {'rds': None}
 
 
 def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
