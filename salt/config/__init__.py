@@ -3493,6 +3493,10 @@ def api_config(path):
         'pidfile': opts.get('api_pidfile', DEFAULT_API_OPTS['api_pidfile']),
     })
     opts.update(api_opts)
+    prepend_root_dir(opts, [
+        'api_pidfile',
+        'api_logfile',
+    ])
     return opts
 
 
