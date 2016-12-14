@@ -7,6 +7,7 @@ After=network.target
 LimitNOFILE=16384
 Type=simple
 ExecStart=/usr/bin/salt-master
+TasksMax=infinity
 
 [Install]
 WantedBy=multi-user.target
