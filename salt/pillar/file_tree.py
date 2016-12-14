@@ -253,21 +253,12 @@ def ext_pillar(minion_id,
                root_dir=None,
                follow_dir_links=False,
                debug=False,
-               raw_data=None,
                keep_newline=False):
     '''
     Compile pillar data for the specified minion ID
     '''
     # Not used
     del pillar
-
-    if raw_data is not None:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'raw_data\' argument for the file_tree ext_pillar has been '
-            'deprecated, please use \'keep_newline\' instead'
-        )
-        keep_newline = raw_data
 
     if not root_dir:
         log.error('file_tree: no root_dir specified')
