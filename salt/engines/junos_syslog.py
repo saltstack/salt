@@ -18,7 +18,7 @@ This can be done via following configuration:
 Here is a sample syslog event which is received from the junos device:
 	' <30>May 29 05:18:12 bng-ui-vm-92 mspd[1492]: No chassis configuration found '
 
-The code for parsing the syslog messages is taken from:
+The source for parsing the syslog messages is taken from:
 	https://gist.github.com/leandrosilva/3651640#file-xlog-py
 '''
 
