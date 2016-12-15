@@ -37,10 +37,9 @@ Basic auth setup
         - is_default: true
 '''
 from __future__ import absolute_import
-from copy import deepcopy
-from collections import Mapping
 
 from salt.ext.six import string_types
+from salt.utils.dictdiffer import deep_diff
 
 
 def __virtual__():
@@ -153,7 +152,7 @@ def present(name,
     __salt__['grafana4.update_datasource'](
         datasource['id'], profile=profile, **data)
     ret['result'] = True
-    ret['changes'] = _deep_diff(datasource, data, ignore=['id', 'orgId'])
+    ret['changes'] = deep_diff(datasource, data, ignore=['id', 'orgId'])
     ret['comment'] = 'Data source {0} updated'.format(name)
     return ret
 
@@ -195,35 +194,3 @@ def _get_json_data(defaults=None, **kwargs):
         if v is None:
             kwargs[k] = defaults.get(k)
     return kwargs
-
-
-def _deep_diff(old, new, ignore=[]):
-    res = {}
-    old = deepcopy(old)
-    new = deepcopy(new)
-    stack = [(old, new, False)]
-
-    while len(stack) > 0:
-        tmps = []
-        tmp_old, tmp_new, reentrant = stack.pop()
-        for key in set(tmp_old.keys() + tmp_new.keys()):
-            if key in tmp_old and key in tmp_new \
-                    and tmp_old[key] == tmp_new[key]:
-                del tmp_old[key]
-                del tmp_new[key]
-                continue
-            if not reentrant:
-                if key in tmp_old and key in ignore:
-                    del tmp_old[key]
-                if key in tmp_new and key in ignore:
-                    del tmp_new[key]
-                if isinstance(tmp_old.get(key), Mapping) \
-                        and isinstance(tmp_new.get(key), Mapping):
-                    tmps.append((tmp_old[key], tmp_new[key], False))
-        if tmps:
-            stack.extend([(tmp_old, tmp_new, True)] + tmps)
-    if old:
-        res['old'] = old
-    if new:
-        res['new'] = new
-    return res
