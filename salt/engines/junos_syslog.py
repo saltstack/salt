@@ -11,6 +11,10 @@ extract event information and generate message on SaltStack bus.
       - junos_syslog:
           port: 516
 
+For junos_syslog engine to receive events syslog must be set on junos device, to forward events.
+This can be done via following configuration:
+	set system syslog host <ip-of-the-salt-device> any any
+
 Here is a sample syslog event which is received from the junos device:
 	' <30>May 29 05:18:12 bng-ui-vm-92 mspd[1492]: No chassis configuration found '
 
