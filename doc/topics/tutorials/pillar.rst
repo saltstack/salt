@@ -1,3 +1,5 @@
+.. _pillar-walk-through:
+
 ==================
 Pillar Walkthrough
 ==================

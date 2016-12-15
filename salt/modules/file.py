@@ -5166,8 +5166,8 @@ def list_backups(path, limit=None):
     '''
     .. versionadded:: 0.17.0
 
-    Lists the previous versions of a file backed up using Salt's :doc:`file
-    state backup </ref/states/backup_mode>` system.
+    Lists the previous versions of a file backed up using Salt's :ref:`file
+    state backup <file-state-backups>` system.
 
     path
         The path on the minion to check for backups
@@ -5237,8 +5237,8 @@ list_backup = salt.utils.alias_function(list_backups, 'list_backup')
 
 def list_backups_dir(path, limit=None):
     '''
-    Lists the previous versions of a directory backed up using Salt's :doc:`file
-    state backup </ref/states/backup_mode>` system.
+    Lists the previous versions of a directory backed up using Salt's :ref:`file
+    state backup <file-state-backups>` system.
 
     path
         The directory on the minion to check for backups
@@ -5301,7 +5301,7 @@ def restore_backup(path, backup_id):
     .. versionadded:: 0.17.0
 
     Restore a previous version of a file that was backed up using Salt's
-    :doc:`file state backup </ref/states/backup_mode>` system.
+    :ref:`file state backup <file-state-backups>` system.
 
     path
         The path on the minion to check for backups
@@ -5363,7 +5363,7 @@ def delete_backup(path, backup_id):
     .. versionadded:: 0.17.0
 
     Delete a previous version of a file that was backed up using Salt's
-    :doc:`file state backup </ref/states/backup_mode>` system.
+    :ref:`file state backup <file-state-backups>` system.
 
     path
         The path on the minion to check for backups

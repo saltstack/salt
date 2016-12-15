@@ -1,3 +1,5 @@
+.. _yaml-idiosyncrasies:
+
 ===================
 YAML Idiosyncrasies
 ===================

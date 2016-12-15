@@ -1,3 +1,5 @@
+.. _macos-installation:
+
 ====
 OS X
 ====

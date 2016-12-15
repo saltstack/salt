@@ -341,6 +341,8 @@ expects to deploy fresh code via the file.recurse call. The site-code
 deployment will only be executed if the graceful-down run completes
 successfully.
 
+.. _requisites-onfail:
+
 onfail
 ~~~~~~
 
@@ -368,6 +370,8 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
         - fstype: nfs
         - onfail:
           - mount: primary_mount
+
+.. _requisites-onchanges:
 
 onchanges
 ~~~~~~~~~

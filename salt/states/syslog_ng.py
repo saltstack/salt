@@ -22,7 +22,7 @@ If the service module is available on the computers, users should use that.
 
 Users can generate syslog-ng configuration with
 :mod:`syslog_ng.config <salt.states.syslog_ng.config>` function.
-For more information see :doc:`syslog-ng state usage </topics/tutorials/syslog_ng-state-usage>`.
+For more information see :ref:`syslog-ng state usage <syslog-ng-sate-usage>`.
 
 Syslog-ng configuration file format
 -----------------------------------

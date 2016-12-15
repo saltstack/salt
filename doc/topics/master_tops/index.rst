@@ -1,3 +1,5 @@
+.. _master-tops-system:
+
 ==================
 Master Tops System
 ==================
