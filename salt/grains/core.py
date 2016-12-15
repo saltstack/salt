@@ -877,10 +877,8 @@ def _ps(osdata):
             '/proc/[0-9]*/status | sed -e \"s=/proc/\\([0-9]*\\)/.*=\\1=\")  '
             '| awk \'{ $7=\"\"; print }\''
         )
-    elif osdata['os_family'] == 'Debian':
-        grains['ps'] = 'ps -efHww'
     else:
-        grains['ps'] = 'ps -efH'
+        grains['ps'] = 'ps -efHww'
     return grains
 
 
