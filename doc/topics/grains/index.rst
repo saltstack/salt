@@ -169,8 +169,8 @@ When to Use a Custom Grain
 Before adding new grains, consider what the data is and remember that grains
 should (for the most part) be static data.
 
-If the data is something that is likely to change, consider using :doc:`Pillar
-<../pillar/index>` or an execution module instead. If it's a simple set of
+If the data is something that is likely to change, consider using :ref:`Pillar
+<pillar>` or an execution module instead. If it's a simple set of
 key/value pairs, pillar is a good match. If compiling the information requires
 that system commands be run, then putting this information in an execution
 module is likely a better idea.

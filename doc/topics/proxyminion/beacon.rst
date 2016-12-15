@@ -1,3 +1,5 @@
+.. _proxy-minion-beacon:
+
 .. versionadded:: 2015.8.3
 
 ===================
