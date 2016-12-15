@@ -86,7 +86,7 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
            'comment': ''}
 
     # Determine if the package is installed
-    if name not in __salt__['cmd.run']('choco list --local-only'):
+    if name not in __salt__['cmd.run']('choco list --local-only --limit-output'):
         ret['changes'] = {'name': '{0} will be installed'.format(name)}
     elif force:
         ret['changes'] = {'name': '{0} is already installed but will reinstall'
@@ -166,7 +166,7 @@ def uninstalled(name, version=None, uninstall_args=None, override_args=False):
            'comment': ''}
 
     # Determine if package is installed
-    if name in __salt__['cmd.run']('choco list --local-only'):
+    if name in __salt__['cmd.run']('choco list --local-only --limit-output'):
         ret['changes'] = {'name': '{0} will be removed'.format(name)}
     else:
         ret['comment'] = 'The package {0} is not installed'.format(name)
