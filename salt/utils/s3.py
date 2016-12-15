@@ -30,7 +30,8 @@ def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
           path='', return_bin=False, action=None, local_file=None,
           verify_ssl=True, full_headers=False, kms_keyid=None,
-          location=None, role_arn=None, chunk_size=16384):
+          location=None, role_arn=None, chunk_size=16384, path_style=False,
+	  https_enable=True):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -53,6 +54,16 @@ def query(key, keyid, method='GET', params=None, headers=None,
 
     The service_url will form the basis for the final endpoint that is used to
     query the service.
+
+    Path style can be enabled:
+
+	s3.path_style: True
+
+    This can be useful if you need to use salt with a proxy for an s3 compatible storage
+
+    You can use either https protocol or http protocol:
+	
+	s3.https_enable: True
 
     SSL verification may also be turned off in the configuration:
 
@@ -81,11 +92,14 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not service_url:
         service_url = 's3.amazonaws.com'
 
-    if bucket:
-        endpoint = '{0}.{1}'.format(bucket, service_url)
+    if (not bucket or path_style):
+	endpoint = service_url
     else:
-        endpoint = service_url
-
+	endpoint = '{0}.{1}'.format(bucket, service_url)
+    
+    if(path_style and bucket):
+	path = '{0}/{1}'.format(bucket, path)
+    
     # Try grabbing the credentials from the EC2 instance IAM metadata if available
     if not key:
         key = salt.utils.aws.IROLE_CODE
@@ -110,7 +124,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         path = ''
 
     if not requesturl:
-        requesturl = 'https://{0}/{1}'.format(endpoint, path)
+        requesturl = (('https' if https_enable else 'http')+'://{0}/{1}').format(endpoint, path)
         headers, requesturl = salt.utils.aws.sig4(
             method,
             endpoint,
