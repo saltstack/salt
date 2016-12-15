@@ -1746,7 +1746,7 @@ def managed(name,
             )
         kwargs.pop('env')
 
-    name = os.path.expanduser(name)
+    name = os.path.expanduser(sdecode(name))
 
     ret = {'changes': {},
            'pchanges': {},
