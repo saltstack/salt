@@ -1,8 +1,46 @@
+# -*- coding: utf-8 -*-
+'''
+Module for working with the Grafana v4 API
+
+:depends: requests
+
+:configuration: This module can be used by specifying the name of a
+    configuration profile in the minion config, minion pillar, or master
+    config.
+
+    For example:
+
+    .. code-block:: yaml
+
+        grafana:
+            grafana_url: http://grafana.localhost
+            grafana_user: admin
+            grafana_password: admin
+            grafana_timeout: 3
+'''
 from __future__ import absolute_import
 
-import requests
+try:
+    import requests
+    HAS_LIBS = True
+except ImportError:
+    HAS_LIBS = False
 
 from salt.ext.six import string_types
+
+
+__virtualname__ = 'grafana4'
+
+
+def __virtual__():
+    '''
+    Only load if requests is installed
+    '''
+    if HAS_LIBS:
+        return __virtualname__
+    else:
+        return False, 'The "{0}" module could not be loaded: ' \
+                      '"requests" is not installed.'.format(__virtualname__)
 
 
 def _get_headers(profile):

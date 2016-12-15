@@ -47,8 +47,8 @@ from requests.exceptions import HTTPError
 
 
 def __virtual__():
-    '''Only load if grafana v3.0 is configured.'''
-    return __salt__['config.get']('grafana_version', 1) == 4
+    '''Only load if grafana4 module is available'''
+    return 'grafana4.get_org' in __salt__
 
 
 def present(name,
