@@ -244,7 +244,7 @@ class KeyCLI(object):
                 if not ret:
                     self._print_no_match(cmd, self.opts['match'])
                     return
-                print('The following keys are going to be {0}ed:'.format(cmd))
+                print('The following keys are going to be {0}ed:'.format(cmd.rstrip('e')))
                 salt.output.display_output(ret, 'key', opts=self.opts)
 
                 if not self.opts.get('yes', False):
