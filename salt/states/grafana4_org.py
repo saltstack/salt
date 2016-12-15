@@ -39,11 +39,10 @@ Basic auth setup
         - country: ""
 '''
 from __future__ import absolute_import
-from collections import Mapping
-from copy import deepcopy
 
 from salt.ext.six import string_types
 from salt.utils import dictupdate
+from salt.utils.dictdiffer import deep_diff
 from requests.exceptions import HTTPError
 
 
@@ -112,7 +111,7 @@ def present(name,
         if create:
             dictupdate.update(ret['changes']['address'], data)
         else:
-            dictupdate.update(ret['changes'], _deep_diff(org['address'], data))
+            dictupdate.update(ret['changes'], deep_diff(org['address'], data))
 
     prefs = __salt__['grafana4.get_org_prefs'](name, profile=profile)
     data = _get_json_data(theme=theme, homeDashboardId=home_dashboard_id,
@@ -122,7 +121,7 @@ def present(name,
         if create:
             dictupdate.update(ret['changes'], data)
         else:
-            dictupdate.update(ret['changes'], _deep_diff(prefs, data))
+            dictupdate.update(ret['changes'], deep_diff(prefs, data))
 
     if users:
         db_users = {}
@@ -153,7 +152,7 @@ def present(name,
         if create:
             dictupdate.update(ret['changes'], new_db_users)
         else:
-            dictupdate.update(ret['changes'], _deep_diff(db_users, new_db_users))
+            dictupdate.update(ret['changes'], deep_diff(db_users, new_db_users))
 
     ret['result'] = True
     if not create:
@@ -200,35 +199,3 @@ def _get_json_data(defaults=None, **kwargs):
         if v is None:
             kwargs[k] = defaults.get(k)
     return kwargs
-
-
-def _deep_diff(old, new, ignore=[]):
-    res = {}
-    old = deepcopy(old)
-    new = deepcopy(new)
-    stack = [(old, new, False)]
-
-    while len(stack) > 0:
-        tmps = []
-        tmp_old, tmp_new, reentrant = stack.pop()
-        for key in set(tmp_old.keys() + tmp_new.keys()):
-            if key in tmp_old and key in tmp_new \
-                    and tmp_old[key] == tmp_new[key]:
-                del tmp_old[key]
-                del tmp_new[key]
-                continue
-            if not reentrant:
-                if key in tmp_old and key in ignore:
-                    del tmp_old[key]
-                if key in tmp_new and key in ignore:
-                    del tmp_new[key]
-                if isinstance(tmp_old.get(key), Mapping) \
-                        and isinstance(tmp_new.get(key), Mapping):
-                    tmps.append((tmp_old[key], tmp_new[key], False))
-        if tmps:
-            stack.extend([(tmp_old, tmp_new, True)] + tmps)
-    if old:
-        res['old'] = old
-    if new:
-        res['new'] = new
-    return res
