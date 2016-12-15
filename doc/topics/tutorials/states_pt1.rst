@@ -6,7 +6,7 @@ States tutorial, part 1 - Basic Usage
 
 The purpose of this tutorial is to demonstrate how quickly you can configure a
 system to be managed by Salt States. For detailed information about the state
-system please refer to the full :doc:`states reference </ref/states/index>`.
+system please refer to the full :ref:`states reference <state-system-reference>`.
 
 This tutorial will walk you through using Salt to configure a minion to run the
 Apache HTTP server and to ensure the server is running.
@@ -64,8 +64,8 @@ collection of minion matches is defined; for now simply specify all hosts
 .. admonition:: Targeting minions
 
     The expressions can use any of the targeting mechanisms used by Salt —
-    minions can be matched by glob, PCRE regular expression, or by :doc:`grains
-    </topics/targeting/grains>`. For example:
+    minions can be matched by glob, PCRE regular expression, or by :ref:`grains
+    <targeting-grains>`. For example:
 
     .. code-block:: yaml
 
@@ -109,8 +109,8 @@ in the :mod:`pkg state <salt.states.pkg>` module to call.
     is built. Templating languages and `DSLs`_ are a dime-a-dozen and everyone
     has a favorite.
 
-    Building the expected data structure is the job of Salt :doc:`renderers
-    </ref/renderers/index>` and they are dead-simple to write.
+    Building the expected data structure is the job of Salt :ref:`renderers`
+    and they are dead-simple to write.
 
     In this tutorial we will be using YAML in Jinja2 templates, which is the
     default format. The default can be changed by editing
@@ -230,5 +230,5 @@ Next steps
 ==========
 
 This tutorial focused on getting a simple Salt States configuration working.
-:doc:`Part 2 <states_pt2>` will build on this example to cover more advanced
+:ref:`Part 2 <tutorial-states-part-2>` will build on this example to cover more advanced
 ``sls`` syntax and will explore more of the states that ship with Salt.

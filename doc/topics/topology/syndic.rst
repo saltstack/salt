@@ -76,7 +76,7 @@ Syndic with Multimaster lets you connect a syndic to multiple masters to provide
 an additional layer of redundancy in a syndic configuration.
 
 Higher level masters should first be configured in a multimaster configuration.
-See :doc:`Multimaster Tutorial </topics/tutorials/multimaster>`.
+See :ref:`Multimaster Tutorial <tutorial-multi-master>`.
 
 On the syndic, the :conf_master:`syndic_master` option is populated with
 a list of the higher level masters.
