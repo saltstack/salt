@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 
 
 class Parser(object):
+
     def __init__(self):
         ints = Word(nums)
         word = Word(alphas)
@@ -48,7 +49,12 @@ class Parser(object):
         blankline = SOL + LineEnd()
 
         # ip address of device
-        ipAddress = Optional(delimitedList(ints, ".", combine=True) + Suppress(":"))
+        ipAddress = Optional(
+            delimitedList(
+                ints,
+                ".",
+                combine=True) + Suppress(
+            ":"))
 
         # Received message
         rec_msg = Suppress(OneOrMore(word)) + Suppress(Literal("'"))
@@ -67,15 +73,18 @@ class Parser(object):
         hostname = Word(alphas + nums + "_" + "-" + ".")
 
         # appname
-        appname = Word(alphas + "/" + "-" + "_" + ".") + Optional(Suppress("[") + ints + Suppress("]")) + Suppress(":")
+        appname = Word(alphas + "/" + "-" + "_" + ".") + Optional(
+            Suppress("[") + ints + Suppress("]")) + Suppress(":")
 
         # message
         message = Regex(".*")
 
         # pattern build
-        self.__pattern = ipAddress + priority + timestamp + hostname + appname + message + StringEnd() | EOL
+        self.__pattern = ipAddress + priority + timestamp + \
+            hostname + appname + message + StringEnd() | EOL
 
-        self.__pattern_without_appname  = ipAddress + priority + timestamp + hostname + message + StringEnd() | EOL
+        self.__pattern_without_appname  = ipAddress + priority + \
+            timestamp + hostname + message + StringEnd() | EOL
 
     def parse(self, line):
         try:
@@ -94,7 +103,7 @@ class Parser(object):
             payload["hostname"] = parsed[4]
             payload["message"] = parsed[5]
             payload["event"] = 'system_event'
-	    return payload
+            return payload
         elif len(parsed) == 7:
             payload = {}
             payload["priority"] = int(parsed[0])
@@ -106,8 +115,7 @@ class Parser(object):
             payload["message"] = parsed[6]
             payload["event"] = 'system_event'
             obj = re.match('(\w+): (.*)', payload["message"])
-            if obj is not None:
-                #payload["event"] = obj.group(1)
+            if obj:
                 payload["message"] = obj.group(2)
             payload["raw"] = line
             return payload
@@ -122,7 +130,7 @@ class Parser(object):
             payload["pid"] = parsed[6]
             payload["message"] = parsed[7]
             payload["event"] = 'system_event'
-	    obj = re.match('(\w+): (.*)', payload["message"])
+            obj = re.match('(\w+): (.*)', payload["message"])
             if obj:
                 payload["event"] = obj.group(1)
                 payload["message"] = obj.group(2)
@@ -151,22 +159,23 @@ obj = Parser()
 
 
 class Echo(DatagramProtocol):
-    def datagramReceived(self, data, (host, port)):
-	data = obj.parse(data)
+
+    def datagramReceived(self, data, xxx_todo_changeme):
+        (host, port) = xxx_todo_changeme
+        data = obj.parse(data)
         log.debug("Junos Syslog - received %r from %s:%d" % (data, host, port))
 
-        if data is not  None and data['event']:
-            topic = 'jnpr/event/{0}/{1}'.format(data['hostname'], data['event'])
+        if data is not None and data['event']:
+            topic = 'jnpr/event/{0}/{1}'.format(
+                data['hostname'], data['event'])
             fire_master = salt.utils.event.get_master_event(
                 __opts__,
                 __opts__['sock_dir']).fire_event({'data': data, 'host': data['hostname'], 'ip': host, 'port': port},
                                                  topic)
-
-            ## Do nothing if the syslog do not contain events
+            # Do nothing if the syslog do not contain events
 
 
 def start(port=516):
     log.info('Starting junos syslog engine (port {0})'.format(port))
     reactor.listenUDP(port, Echo())
     reactor.run()
-
