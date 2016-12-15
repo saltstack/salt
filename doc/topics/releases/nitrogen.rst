@@ -87,6 +87,14 @@ General Deprecations
 
 - Beacon configurations should be lists instead of dictionaries.
 
+Pillar Deprecations
+-------------------
+
+- Support for the ``raw_data`` argument for the file_tree ext_pillar has been
+  removed. Please use ``keep_newline`` instead.
+- SQLite3 database connection configuration previously had keys under
+  pillar. This legacy compatibility has been removed.
+
 Proxy Minion Deprecations
 -------------------------
 
