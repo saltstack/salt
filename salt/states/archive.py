@@ -291,6 +291,14 @@ def extracted(name,
     urlparsed_source = _urlparse(source_match)
     source_hash_name = urlparsed_source.path or urlparsed_source.netloc
 
+    source_is_local = urlparsed_source.scheme in ('', 'file')
+    if source_is_local:
+        # Get rid of "file://" from start of source_match
+        source_match = urlparsed_source.path
+        if not os.path.isfile(source_match):
+            ret['comment'] = 'Source file \'{0}\' does not exist'.format(source_match)
+            return ret
+
     if if_missing is None:
         if_missing = name
     if source_hash and source_hash_update:
@@ -326,13 +334,16 @@ def extracted(name,
         return ret
 
     log.debug('Input seem valid so far')
-    filename = os.path.join(__opts__['cachedir'],
-                            'files',
-                            __env__,
-                            '{0}.{1}'.format(re.sub('[:/\\\\]', '_', if_missing),
-                                             archive_format))
+    if source_is_local:
+        filename = source_match
+    else:
+        filename = os.path.join(
+            __opts__['cachedir'],
+            'files',
+            __env__,
+            '{0}.{1}'.format(re.sub('[:/\\\\]', '_', if_missing), archive_format))
 
-    if not os.path.exists(filename):
+    if not source_is_local and not os.path.isfile(filename):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = \
@@ -527,7 +538,7 @@ def extracted(name,
         ret['changes']['directories_created'] = [name]
         ret['changes']['extracted_files'] = files
         ret['comment'] = '{0} extracted to {1}'.format(source_match, name)
-        if not keep:
+        if not source_is_local and not keep:
             os.unlink(filename)
         if source_hash and source_hash_update:
             _update_checksum(hash_fname, name, hash[1])
