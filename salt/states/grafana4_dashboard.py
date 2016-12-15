@@ -47,8 +47,8 @@ from salt.utils.dictdiffer import DictDiffer
 
 
 def __virtual__():
-    '''Only load if grafana v4.0 is configured.'''
-    return __salt__['config.get']('grafana_version', 1) == 4
+    '''Only load if grafana4 module is available'''
+    return 'grafana4.get_dashboard' in __salt__
 
 
 _DEFAULT_DASHBOARD_PILLAR = 'grafana_dashboards:default'
