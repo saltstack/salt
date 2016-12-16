@@ -34,14 +34,14 @@ Connection module for Amazon S3
 
     Path style can be enabled:
 
-	s3.path_style: True
+        s3.path_style: True
 
     This can be useful if you need to use salt with a proxy for an s3 compatible storage
 
     You can use either https protocol or http protocol:
-	
-	s3.https_enable: True
-	
+
+        s3.https_enable: True
+
     SSL verification may also be turned off in the configuration:
 
         s3.verify_ssl: False
@@ -99,7 +99,7 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
         location,
         role_arn,
         path_style,
-	https_enable,
+        https_enable,
     )
 
     return __utils__['s3.query'](method='DELETE',
@@ -113,14 +113,14 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
                                  verify_ssl=verify_ssl,
                                  location=location,
                                  role_arn=role_arn,
-				 path_style=path_style,
-				 https_enable=https_enable)
+                                 path_style=path_style,
+                                 https_enable=https_enable)
 
 
 def get(bucket=None, path=None, return_bin=False, action=None,
         local_file=None, key=None, keyid=None, service_url=None,
         verify_ssl=None, kms_keyid=None, location=None, role_arn=None, 
-	path_style=None, https_enable=None):
+        path_style=None, https_enable=None):
     '''
     List the contents of a bucket, or return an object from a bucket. Set
     return_bin to True in order to retrieve an object wholesale. Otherwise,
@@ -181,7 +181,7 @@ def get(bucket=None, path=None, return_bin=False, action=None,
         location,
         role_arn,
         path_style,
-	https_enable,
+        https_enable,
     )
 
     return __utils__['s3.query'](method='GET',
@@ -197,13 +197,13 @@ def get(bucket=None, path=None, return_bin=False, action=None,
                                  verify_ssl=verify_ssl,
                                  location=location,
                                  role_arn=role_arn,
-				 path_style=path_style,
-				 https_enable=https_enable)
+                                 path_style=path_style,
+                                 https_enable=https_enable)
 
 
 def head(bucket, path=None, key=None, keyid=None, service_url=None,
          verify_ssl=None, kms_keyid=None, location=None, role_arn=None, 
-	 path_style=None, https_enable=None):
+         path_style=None, https_enable=None):
     '''
     Return the metadata for a bucket, or an object in a bucket.
 
@@ -223,7 +223,7 @@ def head(bucket, path=None, key=None, keyid=None, service_url=None,
         location,
         role_arn,
         path_style,
-	https_enable,
+        https_enable,
     )
 
     return __utils__['s3.query'](method='HEAD',
@@ -237,8 +237,8 @@ def head(bucket, path=None, key=None, keyid=None, service_url=None,
                                  location=location,
                                  full_headers=True,
                                  role_arn=role_arn,
-				 path_style=path_style,
-				 https_enable=https_enable)
+                                 path_style=path_style,
+                                 https_enable=https_enable)
 
 
 def put(bucket, path=None, return_bin=False, action=None, local_file=None,
@@ -269,7 +269,7 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
         location,
         role_arn,
         path_style,
-	https_enable,
+        https_enable,
     )
 
     return __utils__['s3.query'](method='PUT',
@@ -285,8 +285,8 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
                                  verify_ssl=verify_ssl,
                                  location=location,
                                  role_arn=role_arn,
-				 path_style=path_style,
-				 https_enable=https_enable)
+                                 path_style=path_style,
+                                 https_enable=https_enable)
 
 
 def _get_key(key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable):

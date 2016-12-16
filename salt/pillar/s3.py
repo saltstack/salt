@@ -122,7 +122,7 @@ class S3Credentials(object):
         self.verify_ssl = verify_ssl
         self.location = location
         self.path_style = path_style
-	self.https_enable = https_enable
+        self.https_enable = https_enable
 
 
 def ext_pillar(minion_id,
@@ -140,7 +140,7 @@ def ext_pillar(minion_id,
                s3_cache_expire=30,  # cache for 30 seconds
                s3_sync_on_update=True,  # sync cache on update rather than jit
                path_style=False,
-	       https_enable=True):
+               https_enable=True):
 
     '''
     Execute a command and read the output as YAML
@@ -279,7 +279,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
             return_bin=False,
             params={'prefix': prefix},
             path_style=creds.path_style,
-	    https_enable=creds.https_enable)
+            https_enable=creds.https_enable)
 
     # grab only the files/dirs in the bucket
     def __get_pillar_files_from_s3_meta(s3_meta):
@@ -422,6 +422,6 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         local_file=cached_file_path,
         verify_ssl=creds.verify_ssl,
         location=creds.location,
-	path_style=creds.path_style,
-	https_enable=creds.https_enable
+        path_style=creds.path_style,
+        https_enable=creds.https_enable
     )
