@@ -9,9 +9,6 @@ Module for Solaris 10's zonecfg
 
 .. versionadded:: nitrogen
 
-.. TODO:
-    - update_resource ( pass dict of props )
-
 .. warning::
     Oracle Solaris 11's zonecfg is not supported by this module!
 '''
@@ -369,31 +366,45 @@ def clear_property(zone, key):
     )
 
 
-def add_resource(zone, resource_type, **kwargs):
+def _resource(methode, zone, resource_type, resource_selector, **kwargs):
     '''
-    Remove a resource
+    internal resource hanlder
 
+    methode : string
+        add or update
     zone : string
         name of zone
     resource_type : string
         type of resource
+    resource_selector : string
+        unique resource identifier
     **kwargs : string|int|...
         resource properties
 
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' zonecfg.add_resource tallgeese rctl name=zone.max-locked-memory value='(priv=privileged,limit=33554432,action=deny)'
     '''
     ret = {'status': True}
 
-    # generate update script
+    # parse kwargs
     kwargs = salt.utils.clean_kwargs(**kwargs)
+    if methode not in ['add', 'update']:
+        ret['status'] = False
+        ret['message'] = 'unknown methode {0}'.format(methode)
+        return ret
+    if methode in ['update'] and resource_selector not in kwargs:
+        ret['status'] = False
+        ret['message'] = 'resource selctor {0} not found in parameters'.format(resource_selector)
+        return ret
+
+    # generate update script
     cfg_file = salt.utils.files.mkstemp()
     with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
-        fp_.write("add {0}\n".format(resource_type))
+        if methode in ['add']:
+            fp_.write("add {0}\n".format(resource_type))
+        elif methode in ['update']:
+            fp_.write("select {0} {1}={2}\n".format(resource_type, resource_selector, kwargs[resource_selector]))
         for k, v in six.iteritems(kwargs):
+            if methode in ['update'] and k == resource_selector:
+                continue
             if k in _zonecfg_resource_setters[resource_type]:
                 fp_.write("set {0}={1}\n".format(k, v))
             else:
@@ -416,6 +427,48 @@ def add_resource(zone, resource_type, **kwargs):
         __salt__['file.remove'](cfg_file)
 
     return ret
+
+
+def add_resource(zone, resource_type, **kwargs):
+    '''
+    Add a resource
+
+    zone : string
+        name of zone
+    resource_type : string
+        type of resource
+    **kwargs : string|int|...
+        resource properties
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zonecfg.add_resource tallgeese rctl name=zone.max-locked-memory value='(priv=privileged,limit=33554432,action=deny)'
+    '''
+    return _resource('add', zone, resource_type, None, **kwargs)
+
+
+def update_resource(zone, resource_type, resource_selector, **kwargs):
+    '''
+    Add a resource
+
+    zone : string
+        name of zone
+    resource_type : string
+        type of resource
+    resource_selector : string
+        unique resource identifier
+    **kwargs : string|int|...
+        resource properties
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zonecfg.update_resource tallgeese rctl name name=zone.max-locked-memory value='(priv=privileged,limit=33554432,action=deny)'
+    '''
+    return _resource('update', zone, resource_type, resource_selector, **kwargs)
 
 
 def remove_resource(zone, resource_type, resource_key, resource_value):
