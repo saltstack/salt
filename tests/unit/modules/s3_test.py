@@ -36,10 +36,10 @@ class S3TestCase(TestCase):
             self.assertEqual(None, key)
             self.assertEqual(None, keyid)
             self.assertEqual('s3.amazonaws.com', service_url)
-            self.assertTrue(verify_ssl)
-            self.assertEqual(None, location)
-            self.assertFalse(path_style)
-            self.assertTrue(https_enable)
+            self.assertEqual('', verify_ssl)
+            self.assertEqual('', location)
+            self.assertEqual('', path_style)
+            self.assertEqual('', https_enable)
 
     def test_delete(self):
         '''
