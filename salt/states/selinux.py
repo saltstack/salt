@@ -226,3 +226,147 @@ def module(name, module_state='Enabled', version='any'):
     ret['result'] = False
     ret['comment'] = 'Failed to set the Module {0} to {1}'.format(name, module_state)
     return ret
+
+
+def fcontext_policy_present(name, se_type, filetype='a', se_user=None, se_level=None, test=False):
+    '''
+    Makes sure a SELinux policy for a given filespec (name),
+    filetype and SELinux context type is present.
+
+    name: filespec of the file or directory. Regex syntax is allowed.
+    se_type: SELinux context type. There are many.
+    filetype: The SELinux filetype specification.
+              Use one of [a, f, d, c, b, s, l, p].
+              See also `man semanage-fcontext`.
+              Defaults to 'a' (all files)
+    se_user: The SELinux user.
+    se_level: The SELinux MLS range
+
+    .. versionadded:: 2016.3.4
+    '''
+    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+    new_state = {}
+    old_state = {}
+    filetype_str = __salt__['selinux.filetype_id_to_string'](filetype)
+    current_state = __salt__['selinux.fcontext_get_policy'](
+            name=name,
+            filetype=filetype,
+            se_type=se_type,
+            se_user=se_user,
+            se_level=se_level)
+    if not current_state:
+        new_state = {name: {'filetype': filetype_str, 'se_type': se_type}}
+        if test:
+            ret.update({'result': None})
+        else:
+            add_ret = __salt__['selinux.fcontext_add_or_delete_policy'](
+                    action='add',
+                    name=name,
+                    filetype=filetype,
+                    se_type=se_type,
+                    se_user=se_user,
+                    se_level=se_level)
+            if add_ret['retcode'] != 0:
+                ret.update({'comment': 'Error adding new rule: {0}'.format(add_ret)})
+            else:
+                ret.update({'result': True})
+    else:
+        if current_state['selinux_type'] != se_type:
+            old_state.update({name: {'se_type': current_state['selinux_type']}})
+            new_state.update({name: {'se_type': se_type}})
+        else:
+            ret.update({'result': True,
+                        'comment': 'Filespec already present with specified ' +
+                                   'filetype "{0}" and se_type "{1}"'.format(filetype_str, se_type)})
+            return ret
+
+        # Removal of current rule is not neccesary, since adding a new rule for the same
+        # filespec and the same filetype automatically overwrites
+        if test:
+            ret.update({'result': None})
+        else:
+            change_ret = __salt__['selinux.fcontext_add_or_delete_policy'](
+                    action='add',
+                    name=name,
+                    filetype=filetype,
+                    se_type=se_type,
+                    se_user=se_user,
+                    se_level=se_level)
+            if change_ret['retcode'] != 0:
+                ret.update({'comment': 'Error adding new rule: {0}'.format(change_ret)})
+            else:
+                ret.update({'result': True})
+    if new_state or old_state:
+        ret['changes'].update({'old': old_state, 'new': new_state})
+    return ret
+
+
+def fcontext_policy_absent(name, filetype='a', se_type=None, se_user=None, se_level=None, test=False):
+    '''
+    Makes sure an SELinux file context policy for a given filespec (name),
+    filetype and SELinux context type is absent.
+
+    name: filespec of the file or directory. Regex syntax is allowed.
+    filetype: The SELinux filetype specification.
+              Use one of [a, f, d, c, b, s, l, p].
+              See also `man semanage-fcontext`.
+              Defaults to 'a' (all files).
+    setype: The SELinux context type. There are many.
+
+    .. versionadded:: 2016.3.4
+    '''
+    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+    new_state = {}
+    old_state = {}
+    current_state = __salt__['selinux.fcontext_get_policy'](
+            name=name,
+            filetype=filetype,
+            se_type=se_type,
+            se_user=se_user,
+            se_level=se_level)
+    if not current_state:
+        ret.update({'result': True, 'comment': 'Filespec not present'})
+        return ret
+    else:
+        old_state.update({name: current_state})
+    ret['changes'].update({'old': old_state, 'new': new_state})
+    if test:
+        ret.update({'result': None})
+    else:
+        remove_ret = __salt__['selinux.fcontext_add_or_delete_policy'](
+                action='delete',
+                name=name,
+                filetype=filetype,
+                se_type=se_type or current_state['selinux_type'],
+                se_user=se_user,
+                se_level=se_level)
+        if remove_ret['retcode'] != 0:
+            ret.update({'comment': 'Error removing policy: {0}'.format(remove_ret)})
+        else:
+            ret.update({'result': True})
+    return ret
+
+
+def fcontext_policy_applied(name, recursive=False, test=False):
+    '''
+    Checks and makes sure the SELinux policies for a given filespec are applied.
+
+    .. versionadded:: 2016.3.4
+    '''
+    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+
+    changes_text = __salt__['selinux.fcontext_policy_is_applied'](name)
+    if changes_text == '':
+        ret.update({'result': True,
+                    'comment': 'SElinux policies are already applied for filespec "{0}"'.format(name)})
+        return ret
+    if test:
+        ret.update({'result': None})
+    else:
+        apply_ret = __salt__['selinux.fcontext_apply_policy'](name, recursive)
+        if apply_ret['retcode'] != 0:
+            ret.update({'comment': apply_ret})
+        else:
+            ret.update({'result': True})
+            ret.update({'changes': apply_ret['changes']})
+    return ret
