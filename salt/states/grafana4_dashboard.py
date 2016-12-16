@@ -86,7 +86,8 @@ def present(name,
         Name of the organization in which the dashboard should be present.
 
     profile
-        A pillar key or dict that contains grafana information
+        Configuration profile used to connect to the Grafana instance.
+        Default is 'grafana'.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     dashboard = dashboard or {}
@@ -199,7 +200,8 @@ def absent(name, orgname=None, profile='grafana'):
         Name of the organization in which the dashboard should be present.
 
     profile
-        A pillar key or dict that contains grafana information
+        Configuration profile used to connect to the Grafana instance.
+        Default is 'grafana'.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
