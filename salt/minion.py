@@ -3023,7 +3023,7 @@ class ProxyMinion(Minion):
             pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
 
-        if 'proxy' not in self.opts['pillar'] and 'proxy' not in self.opts::
+        if 'proxy' not in self.opts['pillar'] and 'proxy' not in self.opts:
             errmsg = 'No proxy key found in pillar or config for id '+self.opts['id']+'. '+\
                      'Check your pillar/opts configuration and contents.  Salt-proxy aborted.'
             log.error(errmsg)
