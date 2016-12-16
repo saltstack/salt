@@ -357,6 +357,50 @@ def clear_property(zone, key):
     )
 
 
+def remove_resource(zone, resource_type, resource_key, resource_value):
+    '''
+    Remove a resource
+
+    zone : string
+        name of zone
+    resource_type : string
+        type of resource
+    resource_key : string
+        key for resource selection
+    resource_value : string
+        value for resource selection
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zonecfg.remove_resource tallgeese rctl name zone.max-locked-memory
+    '''
+    ret = {'status': True}
+
+    # generate update script
+    cfg_file = salt.utils.files.mkstemp()
+    with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
+        fp_.write("remove {0} {1}={2}\n".format(resource_type, resource_key, resource_value))
+
+    ## update property
+    if cfg_file:
+        res = __salt__['cmd.run_all']('zonecfg -z {zone} -f {path}'.format(
+            zone=zone,
+            path=cfg_file,
+        ))
+        ret['status'] = res['retcode'] == 0
+        ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+        ret['message'] = ret['message'].replace('zonecfg: ', '')
+        if ret['message'] == '':
+            del ret['message']
+
+        ## cleanup config file
+        __salt__['file.remove'](cfg_file)
+
+    return ret
+
+
 def info(zone, show_all=False):
     '''
     Display the configuration from memory
