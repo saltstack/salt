@@ -119,7 +119,7 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
 
 def get(bucket=None, path=None, return_bin=False, action=None,
         local_file=None, key=None, keyid=None, service_url=None,
-        verify_ssl=None, kms_keyid=None, location=None, role_arn=None, 
+        verify_ssl=None, kms_keyid=None, location=None, role_arn=None,
         path_style=None, https_enable=None):
     '''
     List the contents of a bucket, or return an object from a bucket. Set
@@ -202,7 +202,7 @@ def get(bucket=None, path=None, return_bin=False, action=None,
 
 
 def head(bucket, path=None, key=None, keyid=None, service_url=None,
-         verify_ssl=None, kms_keyid=None, location=None, role_arn=None, 
+         verify_ssl=None, kms_keyid=None, location=None, role_arn=None,
          path_style=None, https_enable=None):
     '''
     Return the metadata for a bucket, or an object in a bucket.
@@ -243,7 +243,7 @@ def head(bucket, path=None, key=None, keyid=None, service_url=None,
 
 def put(bucket, path=None, return_bin=False, action=None, local_file=None,
         key=None, keyid=None, service_url=None, verify_ssl=None,
-        kms_keyid=None, location=None, role_arn=None, path_style=None, 
+        kms_keyid=None, location=None, role_arn=None, path_style=None,
         https_enable=None):
     '''
     Create a new bucket, or upload an object to a bucket.
@@ -319,13 +319,13 @@ def _get_key(key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn,
 
     if role_arn is None and __salt__['config.option']('s3.role_arn'):
         role_arn = __salt__['config.option']('s3.role_arn')
-        
+
     if path_style is None and __salt__['config.option']('s3.path_style') is not None:
         path_style = __salt__['config.option']('s3.path_style')
-        
+
     if path_style is None:
         path_style = False
-        
+
     if https_enable is None and __salt__['config.option']('s3.https_enable') is not None:
         https_enable = __salt__['config.option']('s3.https_enable')
 
