@@ -2994,6 +2994,13 @@ class BaseHighState(object):
                                     _filter_matches(match, data, _opts)
                             if isinstance(item, six.string_types):
                                 matches[saltenv].append(item)
+                            elif isinstance(item, dict):
+                                env_key, inc_sls = item.popitem()
+                                if env_key not in self.avail:
+                                    continue
+                                if env_key not in matches:
+                                    matches[env_key] = []
+                                matches[env_key].append(inc_sls)
                 _filter_matches(match, data, self.opts['nodegroups'])
         ext_matches = self._ext_nodes()
         for saltenv in ext_matches:
