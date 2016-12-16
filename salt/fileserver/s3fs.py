@@ -333,7 +333,7 @@ def _get_s3_key():
     https_enable = __opts__['s3.https_enable'] \
         if 's3.https_enable' in __opts__ \
         else None
-      
+
     return key, keyid, service_url, verify_ssl, kms_keyid, location, path_style, https_enable
 
 

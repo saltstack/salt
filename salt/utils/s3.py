@@ -92,14 +92,14 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not service_url:
         service_url = 's3.amazonaws.com'
 
-    if (not bucket or path_style):
+    if not bucket or path_style:
         endpoint = service_url
     else:
         endpoint = '{0}.{1}'.format(bucket, service_url)
-    
-    if(path_style and bucket):
+
+    if path_style and bucket:
         path = '{0}/{1}'.format(bucket, path)
-    
+
     # Try grabbing the credentials from the EC2 instance IAM metadata if available
     if not key:
         key = salt.utils.aws.IROLE_CODE
