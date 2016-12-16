@@ -125,7 +125,7 @@ def present(name,
             ret['comment'] = 'Dashboard {0} is set to be created.'.format(name)
             return ret
 
-        response =  __salt__['grafana4.create_update_dashboard'](
+        response = __salt__['grafana4.create_update_dashboard'](
             dashboard=new_dashboard, overwrite=True, profile=profile)
         if response.get('status') == 'success':
             ret['comment'] = 'Dashboard {0} created.'.format(name)
@@ -168,7 +168,7 @@ def present(name,
                                   ))
             return ret
 
-        response =  __salt__['grafana4.create_update_dashboard'](
+        response = __salt__['grafana4.create_update_dashboard'](
             dashboard=new_dashboard, overwrite=True, profile=profile)
         if response.get('status') == 'success':
             updated_dashboard = __salt__['grafana4.get_dashboard'](

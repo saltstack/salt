@@ -9,6 +9,7 @@
   Originally posted at http://stackoverflow.com/questions/1165352/fast-comparison-between-two-python-dictionary/1165552#1165552
   Available at repository: https://github.com/hughdbrown/dictdiffer
 '''
+from __future__ import absolute_import
 from copy import deepcopy
 from collections import Mapping
 
@@ -45,7 +46,8 @@ class DictDiffer(object):
         return set(o for o in self.intersect if self.past_dict[o] == self.current_dict[o])
 
 
-def deep_diff(old, new, ignore=[]):
+def deep_diff(old, new, ignore=None):
+    ignore = ignore or []
     res = {}
     old = deepcopy(old)
     new = deepcopy(new)

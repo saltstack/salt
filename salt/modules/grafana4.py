@@ -473,8 +473,9 @@ def update_datasource(datasourceid, orgname=None, profile='grafana', **kwargs):
     )
     if response.status_code >= 400:
         response.raise_for_status()
-    return {}  # temporary fix for https://github.com/grafana/grafana/issues/6869
-    return response.json()
+    # temporary fix for https://github.com/grafana/grafana/issues/6869
+    #return response.json()
+    return {}
 
 
 def delete_datasource(datasourceid, orgname=None, profile='grafana'):
@@ -506,7 +507,6 @@ def get_dashboard(slug, orgname=None, profile='grafana'):
     if response.status_code == 404:
         return None
     if response.status_code >= 400:
-        import pdb; pdb.set_trace()
         response.raise_for_status()
     return data.get('dashboard')
 

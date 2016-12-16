@@ -80,13 +80,13 @@ def present(name,
         The URL to the data source API.
 
     user
-        Optional - user to authenticate with the data source
+        Optional - user to authenticate with the data source.
 
     password
-        Optional - password to authenticate with the data source
+        Optional - password to authenticate with the data source.
 
     database
-        Optional - database to use with the data source
+        Optional - database to use with the data source.
 
     basic_auth
         Optional - set to True to use HTTP basic auth to authenticate with the
@@ -99,16 +99,17 @@ def present(name,
         Optional - HTTP basic auth password.
 
     json_data
-        Optional - 
+        Optional - additional json data to post (eg. "timeInterval").
 
     is_default
-        Optional - Set data source as default.
+        Optional - set data source as default.
 
     with_credentials
-        Optional - 
+        Optional - Whether credentials such as cookies or auth headers should
+        be sent with cross-site requests.
 
     type_logo_url
-        Optional - 
+        Optional - Logo to use for this datasource.
 
     orgname
         Name of the organization in which the data source should be present.

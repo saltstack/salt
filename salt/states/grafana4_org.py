@@ -52,7 +52,7 @@ def __virtual__():
 
 
 def present(name,
-            users={},
+            users=None,
             theme=None,
             home_dashboard_id=None,
             timezone=None,
@@ -73,14 +73,14 @@ def present(name,
         Optional - Dict of user/role associated with the org. Example:
         users:
           foo: Viewer
-          bar: Editor 
+          bar: Editor
 
     theme
         Optional - Selected theme for the org.
 
     home_dashboard_id
         Optional - Home dashboard for the org.
-    
+
     timezone
         Optional - Timezone for the org (one of: "browser", "utc", or "").
     '''
@@ -132,14 +132,14 @@ def present(name,
                 }
         for username, role in users.items():
             if username in db_users:
-                if role == False:
+                if role is False:
                     __salt__['grafana4.delete_org_users'](
                         db_users[username]['userId'], profile=profile)
                 elif role != db_users[username]['role']:
                     __salt__['grafana4.update_org_users'](
                         db_users[username]['userId'], loginOrEmail=username,
                         role=role, profile=profile)
-            elif role != False:
+            elif role:
                 __salt__['grafana4.create_org_users'](
                     loginOrEmail=username, role=role, profile=profile)
 
