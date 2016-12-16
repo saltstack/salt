@@ -527,7 +527,7 @@ def extracted(name,
                - name: /opt/
                - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.gz
                - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
-               - tar_options: v
+               - options: v
                - user: foo
                - group: foo
 
@@ -683,6 +683,21 @@ def extracted(name,
         salt.utils.warn_until('Oxygen', msg)
         ret.setdefault('warnings', []).append(msg)
         options = zip_options
+
+    if options is not None and not isinstance(options, six.string_types):
+        options = str(options)
+
+    strip_components = None
+    if options and archive_format == 'tar':
+        try:
+            strip_components = int(
+                re.search(
+                    r'''--strip(?:-components)?(?:\s+|=)["']?(\d+)["']?''',
+                    options
+                ).group(1)
+            )
+        except (AttributeError, ValueError):
+            pass
 
     if archive_format == 'zip':
         if options:
@@ -859,6 +874,7 @@ def extracted(name,
         contents = __salt__['archive.list'](cached_source,
                                             archive_format=archive_format,
                                             options=list_options,
+                                            strip_components=strip_components,
                                             clean=False,
                                             verbose=True)
     except CommandExecutionError as exc:
@@ -1160,10 +1176,7 @@ def extracted(name,
                         )
                         return ret
 
-                    try:
-                        tar_opts = shlex.split(options)
-                    except AttributeError:
-                        tar_opts = shlex.split(str(options))
+                    tar_opts = shlex.split(options)
 
                     tar_cmd = ['tar']
                     tar_shortopts = 'x'
