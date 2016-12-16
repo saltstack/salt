@@ -83,6 +83,28 @@ def present(name,
 
     timezone
         Optional - Timezone for the org (one of: "browser", "utc", or "").
+
+    address1
+        Optional - address1 of the org.
+
+    address2
+        Optional - address2 of the org.
+
+    city
+        Optional - city of the org.
+
+    zip_code
+        Optional - zip_code of the org.
+
+    address_state
+        Optional - state of the org.
+
+    country
+        Optional - country of the org.
+
+    profile
+        Configuration profile used to connect to the Grafana instance.
+        Default is 'grafana'.
     '''
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)
@@ -133,14 +155,14 @@ def present(name,
         for username, role in users.items():
             if username in db_users:
                 if role is False:
-                    __salt__['grafana4.delete_org_users'](
+                    __salt__['grafana4.delete_org_user'](
                         db_users[username]['userId'], profile=profile)
                 elif role != db_users[username]['role']:
-                    __salt__['grafana4.update_org_users'](
+                    __salt__['grafana4.update_org_user'](
                         db_users[username]['userId'], loginOrEmail=username,
                         role=role, profile=profile)
             elif role:
-                __salt__['grafana4.create_org_users'](
+                __salt__['grafana4.create_org_user'](
                     loginOrEmail=username, role=role, profile=profile)
 
         new_db_users = {}
@@ -171,6 +193,10 @@ def absent(name, profile='grafana'):
 
     name
         Name of the org to remove.
+
+    profile
+        Configuration profile used to connect to the Grafana instance.
+        Default is 'grafana'.
     '''
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)

@@ -72,6 +72,10 @@ def present(name,
 
     theme
         Optional - Selected theme of the user.
+
+    profile
+        Configuration profile used to connect to the Grafana instance.
+        Default is 'grafana'.
     '''
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)
@@ -126,6 +130,10 @@ def absent(name, profile='grafana'):
 
     name
         Name of the user to remove.
+
+    profile
+        Configuration profile used to connect to the Grafana instance.
+        Default is 'grafana'.
     '''
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)

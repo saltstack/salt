@@ -71,7 +71,7 @@ def present(name,
         Name of the data source.
 
     type
-        Which type of data source it is ('graphite', 'influxdb' etc.).
+        Type of the datasource ('graphite', 'influxdb' etc.).
 
     access
         Use proxy or direct. Default: proxy
@@ -113,6 +113,10 @@ def present(name,
 
     orgname
         Name of the organization in which the data source should be present.
+
+    profile
+        Configuration profile used to connect to the Grafana instance.
+        Default is 'grafana'.
     '''
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)
@@ -167,6 +171,10 @@ def absent(name, orgname=None, profile='grafana'):
 
     orgname
         Name of the organization from which the data source should be absent.
+
+    profile
+        Configuration profile used to connect to the Grafana instance.
+        Default is 'grafana'.
     '''
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)
