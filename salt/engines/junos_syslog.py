@@ -47,7 +47,7 @@ __virtualname__ = 'junos_syslog'
 
 def __virtual__():
     '''
-    Only load if docker libs are present
+    Load only if twisted and pyparsing libs are present.
     '''
     if not HAS_TWISTED_AND_PYPARSING:
         return (False, 'junos_syslog could not be loaded. \
