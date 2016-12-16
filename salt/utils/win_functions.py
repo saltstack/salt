@@ -146,11 +146,9 @@ def get_current_user():
             # Make the system account easier to identify.
             # Fetch sid so as to handle other language than english
             test_user = win32api.GetUserName()
-            sid, d, t = win32security.LookupAccountName('', test_user)
-            real_sid = user = win32security.ConvertSidToStringSid(sid)
             if test_user == 'SYSTEM':
                 user_name = 'SYSTEM'
-            elif real_sid == 'S-1-5-18':
+            elif get_sid_from_name(test_user) == 'S-1-5-18':
                 user_name = 'SYSTEM'
     except pywintypes.error as exc:
         raise CommandExecutionError(
