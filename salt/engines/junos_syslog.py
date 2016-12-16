@@ -23,19 +23,36 @@ The source for parsing the syslog messages is taken from:
 '''
 __author__ = "Nitin Kumar, Rajvi Dhimar"
 
-from twisted.internet.protocol import DatagramProtocol
-from twisted.internet import reactor
+
 import re
+from time import strftime
+import logging
+
 import salt
 
-from time import strftime
-from pyparsing import Word, alphas, Suppress, Combine, nums, string, Optional, \
-    Regex, Literal, OneOrMore, LineEnd, LineStart, StringEnd, delimitedList
-
-import logging
+try:
+    from twisted.internet.protocol import DatagramProtocol
+    from twisted.internet import reactor
+    from pyparsing import Word, alphas, Suppress, Combine, nums, string, Optional, \
+        Regex, Literal, OneOrMore, LineEnd, LineStart, StringEnd, delimitedList
+    HAS_TWISTED_AND_PYPARSING = True
+except ImportError:
+    HAS_TWISTED_AND_PYPARSING = False
 
 # logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'junos_syslog'
+
+
+def __virtual__():
+    '''
+    Only load if docker libs are present
+    '''
+    if not HAS_TWISTED_AND_PYPARSING:
+        return (False, 'junos_syslog could not be loaded. \
+            Make sure you have twisted and pyparsing python libraries.')
+    return True
 
 
 class Parser(object):
