@@ -418,8 +418,8 @@ def _refresh_buckets_cache_file(cache_file):
                 verify_ssl=verify_ssl,
                 location=location,
                 return_bin=False,
-		path_style=path_style,
-		https_enable=https_enable)
+                path_style=path_style,
+                https_enable=https_enable)
 
     if _is_env_per_bucket():
         # Single environment per bucket
@@ -658,7 +658,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         local_file=cached_file_path,
                         full_headers=True,
                         path_style=path_style,
-			https_enable=https_enable
+                        https_enable=https_enable
                     )
                     if ret is not None:
                         for header_name, header_value in ret['headers'].items():
@@ -689,7 +689,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
         path=_quote(path),
         local_file=cached_file_path,
         path_style=path_style,
-	https_enable=https_enable,
+        https_enable=https_enable,
     )
 
 
