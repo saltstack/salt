@@ -320,8 +320,14 @@ def _get_key(key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn,
     if role_arn is None and __salt__['config.option']('s3.role_arn'):
         role_arn = __salt__['config.option']('s3.role_arn')
         
+    if path_style is None and __salt__['config.option']('s3.path_style') is not None:
+        path_style = __salt__['config.option']('s3.path_style')
+        
     if path_style is None:
         path_style = False
+        
+    if https_enable is None and __salt__['config.option']('s3.https_enable') is not None:
+        https_enable = __salt__['config.option']('s3.https_enable')
 
     if https_enable is None:
         https_enable = True
