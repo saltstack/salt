@@ -122,7 +122,7 @@ class CloudUtilsTestCase(TestCase):
         with self.assertRaises(Exception) as context:
             cloud.sftp_file("/tmp/test", "ТЕСТ test content")
         # we successful pass the place with os.write(tmpfd, ...
-        self.assertEqual("'hostname'", str(context.exception))
+        self.assertNotEqual("a bytes-like object is required, not 'str'", str(context.exception))
 
 if __name__ == '__main__':
     from integration import run_tests
