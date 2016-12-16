@@ -377,7 +377,7 @@ def replica_present(name, source, db_instance_class=None,
            }
     replica_exists = __salt__['boto_rds.exists'](name, tags, region, key,
                                                  keyid, profile)
-    if not replica.get('exists'):
+    if not replica_exists.get('exists'):
         if __opts__['test']:
             ret['comment'] = 'RDS read replica {0} is set to be created '.format(name)
             ret['result'] = None
