@@ -332,7 +332,7 @@ class Pillar(object):
         if not opts.get('environment'):
             opts['environment'] = saltenv
         opts['id'] = self.minion_id
-        if 'pillarenv' not in opts:
+        if not opts.get('pillarenv'):
             opts['pillarenv'] = pillarenv
         if opts['state_top'].startswith('salt://'):
             opts['state_top'] = opts['state_top']

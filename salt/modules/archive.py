@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 def list_(name,
           archive_format=None,
           options=None,
+          strip_components=None,
           clean=False,
           verbose=False,
           saltenv='base'):
@@ -92,6 +93,14 @@ def list_(name,
             It is not necessary to manually specify options for gzip'ed
             archives, as gzip compression is natively supported by tarfile_.
 
+    strip_components
+        This argument specifies a number of top-level directories to strip from
+        the results. This is similar to the paths that would be extracted if
+        ``--strip-components`` (or ``--strip``) were used when extracting tar
+        archives.
+
+        .. versionadded:: 2016.11.2
+
     clean : False
         Set this value to ``True`` to delete the path referred to by ``name``
         once the contents have been listed. This option should be used with
@@ -120,6 +129,7 @@ def list_(name,
     .. code-block:: bash
 
             salt '*' archive.list /path/to/myfile.tar.gz
+            salt '*' archive.list /path/to/myfile.tar.gz strip_components=1
             salt '*' archive.list salt://foo.tar.gz
             salt '*' archive.list https://domain.tld/myfile.zip
             salt '*' archive.list ftp://10.1.2.3/foo.rar
@@ -213,6 +223,17 @@ def list_(name,
         raise CommandExecutionError('Failed to cache {0}'.format(name))
 
     try:
+        if strip_components:
+            try:
+                int(strip_components)
+            except ValueError:
+                strip_components = -1
+
+            if strip_components <= 0:
+                raise CommandExecutionError(
+                    '\'strip_components\' must be a positive integer'
+                )
+
         parsed = _urlparse(name)
         path = parsed.path or parsed.netloc
 
@@ -266,6 +287,24 @@ def list_(name,
                         'Failed to clean cached archive %s: %s',
                         cached, exc.__str__()
                     )
+
+        if strip_components:
+            stripped_ret = []
+            for item in ret:
+                try:
+                    # Strip off the specified number of directory boundaries,
+                    # and grab what comes after the last stripped path
+                    # separator.
+                    stripped_item = item.split(
+                            os.sep, strip_components)[strip_components]
+                    if stripped_item:
+                        stripped_ret.append(stripped_item)
+                except IndexError:
+                    # Path is excluded by strip_components because it is not
+                    # deep enough.
+                    pass
+            ret = stripped_ret
+
         if verbose:
             verbose_ret = {'dirs': [],
                            'files': [],
