@@ -10,9 +10,7 @@ Module for Solaris 10's zonecfg
 .. versionadded:: nitrogen
 
 .. TODO:
-    - add_resource ( pass dict of props )
     - update_resource ( pass dict of props )
-    - remove_resource
 
 .. warning::
     Oracle Solaris 11's zonecfg is not supported by this module!
@@ -24,6 +22,7 @@ import logging
 import re
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.utils
 import salt.utils.files
 import salt.utils.decorators
@@ -53,6 +52,19 @@ _zonecfg_info_resources_calculated = [
     'capped-cpu',
     'capped-memory',
 ]
+
+_zonecfg_resource_setters = {
+    'fs': ['dir', 'special', 'raw', 'type', 'options'],
+    'net': ['address', 'allowed-address', 'global-nic', 'mac-addr', 'physical', 'property', 'vlan-id defrouter'],
+    'device': ['match', 'property'],
+    'rctl': ['name', 'value'],
+    'attr': ['name', 'type', 'value'],
+    'dataset': ['name'],
+    'dedicated-cpu': ['ncpus', 'importance'],
+    'capped-cpu': ['ncpus'],
+    'capped-memory': ['physical', 'swap', 'locked'],
+    'admin': ['user', 'auths'],
+}
 
 
 @salt.utils.decorators.memoize
@@ -355,6 +367,55 @@ def clear_property(zone, key):
         key,
         None,
     )
+
+
+def add_resource(zone, resource_type, **kwargs):
+    '''
+    Remove a resource
+
+    zone : string
+        name of zone
+    resource_type : string
+        type of resource
+    **kwargs : string|int|...
+        resource properties
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zonecfg.add_resource tallgeese rctl name=zone.max-locked-memory value='(priv=privileged,limit=33554432,action=deny)'
+    '''
+    ret = {'status': True}
+
+    # generate update script
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    cfg_file = salt.utils.files.mkstemp()
+    with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
+        fp_.write("add {0}\n".format(resource_type))
+        for k, v in six.iteritems(kwargs):
+            if k in _zonecfg_resource_setters[resource_type]:
+                fp_.write("set {0}={1}\n".format(k, v))
+            else:
+                fp_.write("add {0} {1}\n".format(k, v))
+        fp_.write("end\n")
+
+    ## update property
+    if cfg_file:
+        res = __salt__['cmd.run_all']('zonecfg -z {zone} -f {path}'.format(
+            zone=zone,
+            path=cfg_file,
+        ))
+        ret['status'] = res['retcode'] == 0
+        ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+        ret['message'] = ret['message'].replace('zonecfg: ', '')
+        if ret['message'] == '':
+            del ret['message']
+
+        ## cleanup config file
+        __salt__['file.remove'](cfg_file)
+
+    return ret
 
 
 def remove_resource(zone, resource_type, resource_key, resource_value):
