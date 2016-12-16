@@ -3143,6 +3143,20 @@ order will be used.
 
     syndic_failover: random
 
+.. conf_master:: syndic_wait
+
+``syndic_wait``
+---------------
+
+Default: ``5``
+
+The number of seconds for the salt client to wait for additional syndics to
+check in with their lists of expected minions before giving up.
+
+.. code-block:: yaml
+
+    syndic_wait: 5
+
 
 Peer Publish Settings
 =====================

@@ -852,6 +852,10 @@
 # order will be used.
 #syndic_failover: random
 
+# The number of seconds for the salt client to wait for additional syndics to
+# check in with their lists of expected minions before giving up.
+#syndic_wait: 5
+
 
 #####      Peer Publish settings     #####
 ##########################################
