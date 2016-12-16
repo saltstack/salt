@@ -11,7 +11,7 @@ extract event information and generate message on SaltStack bus.
       - junos_syslog:
           port: 516
 
-For junos_syslog engine to receive events syslog must be set on junos device, to forward events.
+For junos_syslog engine to receive events syslog must be set on junos device.
 This can be done via following configuration:
 	set system syslog host <ip-of-the-salt-device> any any
 
@@ -21,7 +21,6 @@ Here is a sample syslog event which is received from the junos device:
 The source for parsing the syslog messages is taken from:
 	https://gist.github.com/leandrosilva/3651640#file-xlog-py
 '''
-
 __author__ = "Nitin Kumar, Rajvi Dhimar"
 
 from twisted.internet.protocol import DatagramProtocol
@@ -83,7 +82,7 @@ class Parser(object):
         self.__pattern = ipAddress + priority + timestamp + \
             hostname + appname + message + StringEnd() | EOL
 
-        self.__pattern_without_appname  = ipAddress + priority + \
+        self.__pattern_without_appname = ipAddress + priority + \
             timestamp + hostname + message + StringEnd() | EOL
 
     def parse(self, line):
@@ -114,7 +113,7 @@ class Parser(object):
             payload["appname"] = parsed[5]
             payload["message"] = parsed[6]
             payload["event"] = 'system_event'
-            obj = re.match('(\w+): (.*)', payload["message"])
+            obj = re.match(r'(\w+): (.*)', payload["message"])
             if obj:
                 payload["message"] = obj.group(2)
             payload["raw"] = line
@@ -130,7 +129,7 @@ class Parser(object):
             payload["pid"] = parsed[6]
             payload["message"] = parsed[7]
             payload["event"] = 'system_event'
-            obj = re.match('(\w+): (.*)', payload["message"])
+            obj = re.match(r'(\w+): (.*)', payload["message"])
             if obj:
                 payload["event"] = obj.group(1)
                 payload["message"] = obj.group(2)
@@ -148,7 +147,7 @@ class Parser(object):
             payload["pid"] = parsed[7]
             payload["message"] = parsed[8]
             payload["event"] = 'system_event'
-            obj = re.match('(\w+): (.*)', payload["message"])
+            obj = re.match(r'(\w+): (.*)', payload["message"])
             if obj:
                 payload["event"] = obj.group(1)
                 payload["message"] = obj.group(2)
