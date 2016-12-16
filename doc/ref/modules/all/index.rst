@@ -427,5 +427,6 @@ execution modules
     zk_concurrency
     znc
     zoneadm
+    zonecfg
     zpool
     zypper
