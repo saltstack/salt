@@ -1093,7 +1093,7 @@ class Pygit2(GitProvider):
                             )
                             return None
 
-                    if head_sha != target_sha:
+                    if head_sha != tag_sha:
                         if not _perform_checkout(local_ref, branch=False):
                             return None
 
