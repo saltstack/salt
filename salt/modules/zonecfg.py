@@ -10,9 +10,9 @@ Module for Solaris 10's zonecfg
 .. versionadded:: nitrogen
 
 .. TODO:
-    - set_property
-    - add_resource
-    - delete_resource
+    - add_resource ( pass dict of props )
+    - update_resource ( pass dict of props )
+    - remove_resource
 
 .. warning::
     Oracle Solaris 11's zonecfg is not supported by this module!
@@ -260,6 +260,101 @@ def import_(zone, path):
         del ret['message']
 
     return ret
+
+
+def _property(methode, zone, key, value):
+    '''
+    internal handler for set and clear_property
+
+    methode : string
+        either set, add, or clear
+    zone : string
+        name of zone
+    key : string
+        name of property
+    value : string
+        value of property
+
+    '''
+    ret = {'status': True}
+
+    # generate update script
+    cfg_file = None
+    if methode not in ['set', 'clear']:
+        ret['status'] = False
+        ret['message'] = 'unkown methode {0}!'.format(methode)
+    else:
+        cfg_file = salt.utils.files.mkstemp()
+        with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
+            if methode == 'set':
+                fp_.write("{0} {1}={2}\n".format(methode, key, value))
+            elif methode == 'clear':
+                fp_.write("{0} {1}\n".format(methode, key))
+
+    ## update property
+    if cfg_file:
+        res = __salt__['cmd.run_all']('zonecfg -z {zone} -f {path}'.format(
+            zone=zone,
+            path=cfg_file,
+        ))
+        ret['status'] = res['retcode'] == 0
+        ret['message'] = res['stdout'] if ret['status'] else res['stderr']
+        ret['message'] = ret['message'].replace('zonecfg: ', '')
+        if ret['message'] == '':
+            del ret['message']
+
+        ## cleanup config file
+        __salt__['file.remove'](cfg_file)
+
+    return ret
+
+
+def set_property(zone, key, value):
+    '''
+    Set a property
+
+    zone : string
+        name of zone
+    key : string
+        name of property
+    value : string
+        value of property
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zonecfg.set_property deathscythe cpu_shares 100
+    '''
+    return _property(
+        'set',
+        zone,
+        key,
+        value,
+    )
+
+
+def clear_property(zone, key):
+    '''
+    Clear a property
+
+    zone : string
+        name of zone
+    key : string
+        name of property
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zonecfg.clear_property deathscythe cpu_shares
+    '''
+    return _property(
+        'clear',
+        zone,
+        key,
+        None,
+    )
 
 
 def info(zone, show_all=False):
