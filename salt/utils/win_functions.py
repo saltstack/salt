@@ -121,9 +121,14 @@ def get_current_user():
     '''
     try:
         user_name = win32api.GetUserNameEx(win32api.NameSamCompatible)
-        if user_name[-1] == '$' and win32api.GetUserName() == 'SYSTEM':
+        if user_name[-1] == '$':
             # Make the system account easier to identify.
-            user_name = 'SYSTEM'
+            # Fetch sid so as to handle other language than english
+            test_user = win32api.GetUserName()
+            if test_user == 'SYSTEM':
+                user_name = 'SYSTEM'
+            elif get_sid_from_name(test_user) == 'S-1-5-18':
+                user_name = 'SYSTEM'
     except pywintypes.error as exc:
         raise CommandExecutionError(
             'Failed to get current user: {0}'.format(exc[2]))
