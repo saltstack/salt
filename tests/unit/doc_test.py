@@ -48,12 +48,13 @@ class DocTestCase(TestCase):
 
             key, val = line.split(':', 1)
 
-            # Don't test man pages or this file
-            if 'man' in key or key.endswith('doc_test.py'):
-                continue
-
-            # Don't test the page that documents to not use ":doc:"
-            if key.endswith('/conventions/documentation.rst'):
+            # Don't test man pages, this file,
+            # the page that documents to not use ":doc:", or
+            # the doc/conf.py file
+            if 'man' in key \
+                or key.endswith('doc_test.py') \
+                or key.endswith('doc/conf.py') \
+                or key.endswith('/conventions/documentation.rst'):
                 continue
 
             # Set up test return dict
