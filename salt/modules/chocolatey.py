@@ -255,6 +255,7 @@ def list_(narrow=None,
         cmd.extend(['-source', source])
     if local_only:
         cmd.extend(['-localonly'])
+        cmd.extend(['-limitoutput'])
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -264,7 +265,7 @@ def list_(narrow=None,
         raise CommandExecutionError(err)
 
     ret = {}
-    pkg_re = re.compile(r'(\S+)\s+(\S+)')
+    pkg_re = re.compile(r'(\S+)\|(\S+)')
     for line in result['stdout'].split('\n'):
         if line.startswith("No packages"):
             return ret
