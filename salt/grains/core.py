@@ -1319,7 +1319,7 @@ def os_data():
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     init_bin = salt.utils.which(init_cmdline[0])
                     if init_bin is not None and init_bin.endswith('bin/init'):
-                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'), six.b('runit'))
+                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
                         edge_len = max(len(x) for x in supported_inits) - 1
                         try:
                             buf_size = __opts__['file_buffer_size']
@@ -1349,6 +1349,8 @@ def os_data():
                             )
                     elif salt.utils.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
+                    elif init_cmdline == ['runit']:
+                        grains['init'] = 'runit'
                     else:
                         log.info(
                             'Could not determine init system from command line: ({0})'
