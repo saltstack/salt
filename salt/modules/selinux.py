@@ -16,9 +16,6 @@ from __future__ import absolute_import
 import os
 import re
 
-import logging
-log = logging.getLogger(__name__)
-
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
@@ -458,6 +455,6 @@ def fcontext_apply_policy(name, recursive=False):
     ret.update(apply_ret)
     if apply_ret['retcode'] == 0:
         changes_list = re.findall('context (.*)->(.*)$', changes_text)
-        log.debug('fcontext_apply_policy: Changes: {0}'.format(changes_list))
-        ret.update({'changes': {'old': changes_list[0][0], 'new': changes_list[0][1]}})
+        if len(changes_list) > 0:
+            ret.update({'changes': {'old': changes_list[0][0], 'new': changes_list[0][1]}})
     return ret
