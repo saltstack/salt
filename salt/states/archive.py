@@ -142,7 +142,70 @@ def extracted(name,
     Ensure that an archive is extracted to a specific directory.
 
     .. important::
+        **Changes for 2016.11.0**
+
+        In earlier releases, this state would rely on the ``if_missing``
+        argument to determine whether or not the archive needed to be
+        extracted. When this argument was not passed, then the state would just
+        assume ``if_missing`` is the same as the ``name`` argument (i.e. the
+        parent directory into which the archive would be extracted).
+
+        This caused a number of annoyances. One such annoyance was the need to
+        know beforehand a path that would result from the extraction of the
+        archive, and setting ``if_missing`` to that directory, like so:
+
+        .. code-block:: yaml
+
+            extract_myapp:
+              archive.extracted:
+                - name: /var/www
+                - source: salt://apps/src/myapp-16.2.4.tar.gz
+                - user: www
+                - group: www
+                - if_missing: /var/www/myapp-16.2.4
+
+        If ``/var/www`` already existed, this would effectively make
+        ``if_missing`` a required argument, just to get Salt to extract the
+        archive.
+
+        Some users worked around this by adding the top-level directory of the
+        archive to the end of the ``name`` argument, and then used ``--strip``
+        or ``--strip-components`` to remove that top-level dir when extracting:
+
+        .. code-block:: yaml
+
+            extract_myapp:
+              archive.extracted:
+                - name: /var/www/myapp-16.2.4
+                - source: salt://apps/src/myapp-16.2.4.tar.gz
+                - user: www
+                - group: www
+                - tar_options: --strip-components=1
+
+        With the rewrite for 2016.11.0, these workarounds are no longer
+        necessary. ``if_missing`` is still a supported argument, but it is no
+        longer required. The equivalent SLS in 2016.11.0 would be:
+
+        .. code-block:: yaml
+
+            extract_myapp:
+              archive.extracted:
+                - name: /var/www
+                - source: salt://apps/src/myapp-16.2.4.tar.gz
+                - user: www
+                - group: www
+
+        Salt now uses a function called :py:func:`archive.list
+        <salt.modules.archive.list>` to get a list of files/directories in the
+        archive. Using this information, the state can now check the minion to
+        see if any paths are missing, and know whether or not the archive needs
+        to be extracted. This makes the ``if_missing`` argument unnecessary in
+        most use cases.
+
+    .. important::
         **ZIP Archive Handling**
+
+        *Note: this information applies to 2016.11.0 and later.*
 
         Salt has two different functions for extracting ZIP archives:
 
@@ -182,18 +245,6 @@ def extracted(name,
           is the only function that can be used to extract the archive.
           Therefore, if ``use_cmd_unzip`` is specified and set to ``False``,
           and ``options`` is also set, the state will not proceed.
-
-        - *Password-protected ZIP Archives* (only supported by
-          :py:func:`archive.unzip <salt.modules.archive.unzip>`) -
-          :py:func:`archive.cmd_unzip <salt.modules.archive.cmd_unzip>` is not
-          be permitted to extract password-protected ZIP archives, as
-          attempting to do so will cause the unzip command to block on user
-          input. The :py:func:`archive.is_encrypted
-          <salt.modules.archive.unzip>` function will be used to determine if
-          the archive is password-protected. If it is, then the ``password``
-          argument will be required for the state to proceed. If
-          ``use_cmd_unzip`` is specified and set to ``True``, then the state
-          will not proceed.
 
         - *Permissions* - Due to an `upstream bug in Python`_, permissions are
           not preserved when the zipfile_ module is used to extract an archive.
@@ -313,6 +364,11 @@ def extracted(name,
         **For ZIP archives only.** Password used for extraction.
 
         .. versionadded:: 2016.3.0
+        .. versionchanged:: 2016.11.0
+          The newly-added :py:func:`archive.is_encrypted
+          <salt.modules.archive.is_encrypted>` function will be used to
+          determine if the archive is password-protected. If it is, then the
+          ``password`` argument will be required for the state to proceed.
 
     options
         **For tar and zip archives only.**  This option can be used to specify
