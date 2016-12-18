@@ -954,6 +954,14 @@ VALID_OPTS = {
     # array of functions to execute. This allows for calling the same
     # function multiple times in the same multi-function job.
     'multifunc_ordered': bool,
+
+    # Controls whether beacons are set up before a connection
+    # to the master is attempted.
+    'beacons_before_connect': bool,
+
+    # Controls whether the scheduler is set up before a connection
+    # to the master is attempted.
+    'scheduler_before_connect': bool,
 }
 
 # default configurations
@@ -1200,6 +1208,8 @@ DEFAULT_MINION_OPTS = {
     'minion_jid_queue_hwm': 100,
     'ssl': None,
     'multifunc_ordered': False,
+    'beacons_before_connect': False,
+    'scheduler_before_connect': False,
 }
 
 DEFAULT_MASTER_OPTS = {
