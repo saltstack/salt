@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Beacon to emit Telegram messages of a bot
+Beacon to emit Telegram messages
 '''
 
 # Import Python libs
@@ -50,8 +50,8 @@ def __validate__(config):
 
 def beacon(config):
     '''
-    Emit a dict name "msgs" whose value is a list of messages sent to
-    the configured bot by the listed users.
+    Emit a dict with a key "msgs" whose value is a list of messages
+    sent to the configured bot by one of the allowed usernames.
 
     .. code-block:: yaml
 
@@ -59,7 +59,7 @@ def beacon(config):
           telegram_bot_msg:
             token: "<bot access token>"
             accept_from:
-              - <valid username>
+              - "<valid username>"
             interval: 10
 
     '''
