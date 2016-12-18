@@ -5881,11 +5881,19 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
     .. versionadded:: 2016.11.0
     '''
 
+    create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
+    for key in ('image', 'name', 'cmd', 'interactive', 'tty'):
+        try:
+            del create_kwargs[key]
+        except KeyError:
+            pass
+
     # start a new container
     ret = __salt__['dockerng.create'](image=base,
                                       name=name,
                                       cmd='sleep infinity',
-                                      interactive=True, tty=True)
+                                      interactive=True, tty=True,
+                                      **create_kwargs)
     id_ = ret['Id']
     try:
         __salt__['dockerng.start'](id_)
