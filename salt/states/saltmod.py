@@ -594,6 +594,8 @@ def wait_for_event(
 
         if fnmatch.fnmatch(event['tag'], name):
             val = event['data'].get(event_id)
+            if val is None and 'data' in event['data']:
+                val = event['data']['data'].get(event_id)
 
             if val is not None:
                 try:
