@@ -3023,15 +3023,17 @@ class ProxyMinion(Minion):
             pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
 
-        if 'proxy' not in self.opts['pillar']:
-            errmsg = 'No proxy key found in pillar for id '+self.opts['id']+'. '+\
-                     'Check your pillar configuration and contents.  Salt-proxy aborted.'
+        if 'proxy' not in self.opts['pillar'] and 'proxy' not in self.opts:
+            errmsg = 'No proxy key found in pillar or config for id '+self.opts['id']+'. '+\
+                     'Check your pillar/opts configuration and contents.  Salt-proxy aborted.'
             log.error(errmsg)
             self._running = False
             raise SaltSystemExit(code=-1, msg=errmsg)
 
-        fq_proxyname = self.opts['pillar']['proxy']['proxytype']
-        self.opts['proxy'] = self.opts['pillar']['proxy']
+        if 'proxy' not in self.opts:
+            self.opts['proxy'] = self.opts['pillar']['proxy']
+
+        fq_proxyname = self.opts['proxy']['proxytype']
 
         # Need to load the modules so they get all the dunder variables
         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
