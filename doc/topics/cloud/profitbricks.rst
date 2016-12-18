@@ -144,5 +144,5 @@ ssh_interface
 deploy
     Set to False if Salt should not be installed on the node.
 
-For more information concerning cloud profiles, see :doc:`here
-</topics/cloud/profiles>`.
+For more information concerning cloud profiles, see :ref:`here
+<salt-cloud-profiles>`.

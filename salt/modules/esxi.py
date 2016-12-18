@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
 '''
 Glues the VMware vSphere Execution Module to the VMware ESXi Proxy Minions to the
-:doc:`esxi proxymodule </ref/proxy/all/salt.proxy.esxi>`.
+:mod:`esxi proxymodule <salt.proxy.esxi>`.
 
 .. versionadded:: 2015.8.4
 
-Depends: :doc:`vSphere Remote Execution Module (salt.modules.vsphere)
-</ref/modules/all/salt.modules.vsphere>`
+Depends: :mod:`vSphere Remote Execution Module (salt.modules.vsphere)
+<salt.modules.vsphere>`
 
 For documentation on commands that you can direct to an ESXi host via proxy,
-look in the documentation for :doc:`salt.modules.vsphere
-</ref/modules/all/salt.modules.vsphere>`.
+look in the documentation for :mod:`salt.modules.vsphere <salt.modules.vsphere>`.
 
 This execution module calls through to a function in the ESXi proxy module
 called ``ch_config``, which looks up the function passed in the ``command``
-parameter in :doc:`salt.modules.vsphere </ref/modules/all/salt.modules.vsphere>`
-and calls it.
+parameter in :mod:`salt.modules.vsphere <salt.modules.vsphere>` and calls it.
 
 To execute commands with an ESXi Proxy Minion using the vSphere Execution Module,
 use the ``esxi.cmd <vsphere-function-name>`` syntax. Both args and kwargs needed

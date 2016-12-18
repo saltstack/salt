@@ -1,3 +1,5 @@
+.. _master-tops-system:
+
 ==================
 Master Tops System
 ==================
@@ -18,7 +20,7 @@ Using the new `master_tops` option is simple:
     master_tops:
       ext_nodes: cobbler-external-nodes
 
-for :doc:`Cobbler <../../ref/tops/all/salt.tops.cobbler>` or:
+for :mod:`Cobbler <salt.tops.cobbler>` or:
 
 .. code-block:: yaml
 
@@ -27,7 +29,7 @@ for :doc:`Cobbler <../../ref/tops/all/salt.tops.cobbler>` or:
         inventory_base_uri: /etc/reclass
         classes_uri: roles
 
-for :doc:`Reclass <../../ref/tops/all/salt.tops.reclass_adapter>`.
+for :mod:`Reclass <salt.tops.reclass_adapter>`.
 
 It's also possible to create custom master_tops modules. These modules must go
 in a subdirectory called `tops` in the `extension_modules` directory.

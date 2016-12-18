@@ -229,7 +229,7 @@ Edit the minion config file:
     also running a non-development version of Salt, then you will have to
     change the ``master_port`` value in the minion config to match.
 
-.. note:: Using `salt-call` with a :doc:`Standalone Minion </topics/tutorials/standalone_minion>`
+.. note:: Using `salt-call` with a :ref:`Standalone Minion <tutorial-standalone-minion>`
 
     If you plan to run `salt-call` with this self-contained development
     environment in a masterless setup, you should invoke `salt-call` with

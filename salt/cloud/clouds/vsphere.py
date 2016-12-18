@@ -10,7 +10,7 @@ vSphere Cloud Module
         The :py:func:`vsphere <salt.cloud.clouds.vsphere>` cloud driver has been
         deprecated in favor of the :py:func:`vmware <salt.cloud.clouds.vmware>`
         cloud driver and will be removed in Salt Carbon. Please refer to
-        :doc:`Getting started with VMware </topics/cloud/vmware>` to get started
+        :ref:`Getting started with VMware <cloud-getting-started-vmware>` to get started
         and convert your vsphere provider configurations to use the vmware driver.
 
 The vSphere cloud module is used to control access to VMWare vSphere.

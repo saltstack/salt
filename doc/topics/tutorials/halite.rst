@@ -1,3 +1,5 @@
+.. _tutorial-halite:
+
 =================================
 Installing and Configuring Halite
 =================================

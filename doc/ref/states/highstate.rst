@@ -25,7 +25,7 @@ during state execution.
 
 Configurable via :conf_master:`state_top`.
 
-.. seealso:: :doc:`A detailed description of the top file </ref/states/top>`
+.. seealso:: :ref:`A detailed description of the top file <states-top>`
 
 .. _include-declaration:
 
@@ -115,7 +115,7 @@ declaration that will restart Apache whenever the Apache configuration file,
     <requisites-watch-in>` or :ref:`require_in <requisites-require-in>` syntax
     instead of extending another ``SLS`` file.
 
-    :doc:`State Requisites </ref/states/requisites>`
+    :ref:`State Requisites <requisites>`
 
 .. _state-declaration:
 

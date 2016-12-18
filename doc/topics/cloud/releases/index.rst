@@ -1,5 +1,7 @@
 :orphan:
 
+.. _legacy-salt-cloud-release-notes:
+
 ===============================
 Legacy salt-cloud Release Notes
 ===============================
