@@ -867,6 +867,9 @@ VALID_OPTS = {
 
     # Extra modules for Salt Thin
     'thin_extra_mods': str,
+
+    # Default returners minion should use. List or comma-delimited string
+    'return': (str, list),
 }
 
 # default configurations
@@ -1090,6 +1093,8 @@ DEFAULT_MINION_OPTS = {
     # ZMQ HWM for EventPublisher pub socket - different for minion vs. master
     'event_publisher_pub_hwm': 1000,
     'event_match_type': 'startswith',
+    # Default Minion returner
+    'return': '',
 }
 
 DEFAULT_MASTER_OPTS = {
