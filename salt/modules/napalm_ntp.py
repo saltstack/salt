@@ -26,12 +26,15 @@ from __future__ import absolute_import
 import logging
 log = logging.getLogger(__file__)
 
+# import NAPALM utils
+import salt.utils.napalm
+from salt.utils.napalm import proxy_napalm_wrap
 
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
     # pylint: disable=W0611
-    from napalm_base import get_network_driver
+    import napalm_base
     # pylint: enable=W0611
     HAS_NAPALM = True
 except ImportError:
@@ -54,10 +57,9 @@ def __virtual__():
 
     '''
     NAPALM library must be installed for this module to work.
-    Also, the key proxymodule must be set in the __opts___ dictionary.
     '''
 
-    if HAS_NAPALM and 'proxy' in __opts__:
+    if HAS_NAPALM:
         return __virtualname__
     else:
         return (False, 'The module NTP cannot be loaded: \
@@ -72,7 +74,8 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def peers():
+@proxy_napalm_wrap
+def peers(**kwargs):
 
     '''
     Returns a list the NTP peers configured on the network device.
@@ -98,7 +101,8 @@ def peers():
 
     '''
 
-    ntp_peers = __proxy__['napalm.call'](
+    ntp_peers = salt.utils.napalm.call(
+        napalm_device,
         'get_ntp_peers',
         **{
         }
@@ -114,7 +118,8 @@ def peers():
     return ntp_peers
 
 
-def servers():
+@proxy_napalm_wrap
+def servers(**kwargs):
 
     '''
     Returns a list of the configured NTP servers on the device.
@@ -126,7 +131,8 @@ def servers():
         salt '*' ntp.servers
     '''
 
-    ntp_servers = __proxy__['napalm.call'](
+    ntp_servers = salt.utils.napalm.call(
+        napalm_device,
         'get_ntp_servers',
         **{
         }
@@ -142,7 +148,8 @@ def servers():
     return ntp_servers
 
 
-def stats(peer=None):
+@proxy_napalm_wrap
+def stats(peer=None, **kwargs):
 
     '''
     Returns a dictionary containing synchronization details of the NTP peers.
@@ -189,7 +196,8 @@ def stats(peer=None):
         ]
     '''
 
-    proxy_output = __proxy__['napalm.call'](
+    proxy_output = salt.utils.napalm.call(
+        napalm_device,
         'get_ntp_stats',
         **{
         }
@@ -210,6 +218,7 @@ def stats(peer=None):
     return proxy_output
 
 
+@proxy_napalm_wrap
 def set_peers(*peers, **options):
 
     '''
@@ -238,9 +247,11 @@ def set_peers(*peers, **options):
     return __salt__['net.load_template']('set_ntp_peers',
                                          peers=peers,
                                          test=test,
-                                         commit=commit)
+                                         commit=commit,
+                                         inherit_napalm_device=napalm_device)
 
 
+@proxy_napalm_wrap
 def set_servers(*servers, **options):
 
     '''
@@ -269,9 +280,11 @@ def set_servers(*servers, **options):
     return __salt__['net.load_template']('set_ntp_servers',
                                          servers=servers,
                                          test=test,
-                                         commit=commit)
+                                         commit=commit,
+                                         inherit_napalm_device=napalm_device)
 
 
+@proxy_napalm_wrap
 def delete_peers(*peers, **options):
 
     '''
@@ -300,9 +313,11 @@ def delete_peers(*peers, **options):
     return __salt__['net.load_template']('delete_ntp_peers',
                                          peers=peers,
                                          test=test,
-                                         commit=commit)
+                                         commit=commit,
+                                         inherit_napalm_device=napalm_device)
 
 
+@proxy_napalm_wrap
 def delete_servers(*servers, **options):
 
     '''
@@ -331,4 +346,5 @@ def delete_servers(*servers, **options):
     return __salt__['net.load_template']('delete_ntp_servers',
                                          servers=servers,
                                          test=test,
-                                         commit=commit)
+                                         commit=commit,
+                                         inherit_napalm_device=napalm_device)
