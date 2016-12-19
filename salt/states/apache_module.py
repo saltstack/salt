@@ -68,25 +68,6 @@ def enabled(name):
     return ret
 
 
-def enable(name):
-    '''
-    Ensure an Apache module is enabled. This function is deprecated and will be
-    removed in Salt Nitrogen. Please use the ``enabled`` state function instead.
-
-    .. deprecated:: 2016.3.0
-
-    name
-        Name of the Apache module
-    '''
-    salt.utils.warn_until(
-        'Nitrogen',
-        'This functionality has been deprecated; use "apache_module.enabled" '
-        'instead.'
-    )
-
-    return enabled(name)
-
-
 def disabled(name):
     '''
     Ensure an Apache module is disabled.
@@ -121,21 +102,3 @@ def disabled(name):
     else:
         ret['comment'] = '{0} already disabled.'.format(name)
     return ret
-
-
-def disable(name):
-    '''
-    Ensure an Apache module is disabled.
-
-    .. deprecated:: 2016.3.0
-
-    name
-        Name of the Apache module
-    '''
-    salt.utils.warn_until(
-        'Nitrogen',
-        'This functionality has been deprecated; use "apache_module.disabled" '
-        'instead.'
-    )
-
-    return disabled(name)
