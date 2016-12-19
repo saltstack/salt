@@ -25,12 +25,15 @@ from __future__ import absolute_import
 import logging
 log = logging.getLogger(__file__)
 
+# import NAPALM utils
+import salt.utils.napalm
+from salt.utils.napalm import proxy_napalm_wrap
 
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
     # pylint: disable=W0611
-    from napalm_base import get_network_driver
+    import napalm_base
     # pylint: enable=W0611
     HAS_NAPALM = True
 except ImportError:
@@ -53,10 +56,9 @@ def __virtual__():
 
     '''
     NAPALM library must be installed for this module to work.
-    Also, the key proxymodule must be set in the __opts___ dictionary.
     '''
 
-    if HAS_NAPALM and 'proxy' in __opts__:
+    if HAS_NAPALM:
         return __virtualname__
     else:
         return (False, 'The module napalm_users cannot be loaded: \
@@ -71,7 +73,8 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def config():
+@proxy_napalm_wrap
+def config(**kwargs):
 
     '''
     Returns the configuration of the users on the device
@@ -102,14 +105,16 @@ def config():
         }
     '''
 
-    return __proxy__['napalm.call'](
+    return salt.utils.napalm.call(
+        napalm_device,
         'get_users',
         **{
         }
     )
 
 
-def set_users(users, test=False, commit=True):
+@proxy_napalm_wrap
+def set_users(users, test=False, commit=True, **kwargs):
 
     '''
     Configures users on network devices.
@@ -141,10 +146,12 @@ def set_users(users, test=False, commit=True):
     return __salt__['net.load_template']('set_users',
                                          users=users,
                                          test=test,
-                                         commit=commit)
+                                         commit=commit,
+                                         inherit_napalm_device=napalm_device)
 
 
-def delete_users(users, test=False, commit=True):
+@proxy_napalm_wrap
+def delete_users(users, test=False, commit=True, **kwargs):
 
     '''
     Removes users from the configuration of network devices.
@@ -176,4 +183,5 @@ def delete_users(users, test=False, commit=True):
     return __salt__['net.load_template']('delete_users',
                                          users=users,
                                          test=test,
-                                         commit=commit)
+                                         commit=commit,
+                                         inherit_napalm_device=napalm_device)
