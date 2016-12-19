@@ -995,6 +995,12 @@ def create_datasource(orgname=None, profile='grafana', **kwargs):
         Configuration profile used to connect to the Grafana instance.
         Default is 'grafana'.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grafana4.create_datasource
+
     '''
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)
@@ -1066,6 +1072,12 @@ def update_datasource(datasourceid, orgname=None, profile='grafana', **kwargs):
     profile
         Configuration profile used to connect to the Grafana instance.
         Default is 'grafana'.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grafana4.update_datasource <datasourceid>
 
     '''
     if isinstance(profile, string_types):
