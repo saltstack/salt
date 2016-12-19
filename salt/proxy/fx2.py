@@ -12,9 +12,9 @@ and above)
 Dependencies
 ------------
 
-- :doc:`iDRAC Remote execution module (salt.modules.dracr) </ref/modules/all/salt.modules.dracr>`
-- :doc:`Chassis command shim (salt.modules.chassis) </ref/modules/all/salt.modules.chassis>`
-- :doc:`Dell Chassis States (salt.states.dellchassis) </ref/states/all/salt.states.dellchassis>`
+- :mod:`iDRAC Remote execution module (salt.modules.dracr) <salt.modules.dracr>`
+- :mod:`Chassis command shim (salt.modules.chassis) <salt.modules.chassis>`
+- :mod:`Dell Chassis States (salt.states.dellchassis) <salt.states.dellchassis>`
 - Dell's ``racadm`` command line interface to CMC and iDRAC devices.
 
 
@@ -32,7 +32,7 @@ process that "proxies" communication from the salt-master.  The master does not
 know nor care that the target is not a real minion.
 
 More in-depth conceptual reading on Proxy Minions can be found
-:doc:`in the Proxy Minion section </topics/proxyminion/index>` of
+:ref:`in the Proxy Minion section <proxy-minion>` of
 Salt's documentation.
 
 To configure this integration, follow these steps:
@@ -144,7 +144,7 @@ Note that you don't need to provide credentials or an ip/hostname.  Salt knows
 to use the credentials you stored in Pillar.
 
 It's important to understand how this particular proxy works.
-:doc:`Salt.modules.dracr </ref/modules/all/salt.modules.dracr>` is a standard Salt execution
+:mod:`Salt.modules.dracr <salt.modules.dracr>` is a standard Salt execution
 module.  If you pull up the docs for it you'll see that almost every function
 in the module takes credentials and a target host.  When credentials and a host
 aren't passed, Salt runs ``racadm`` against the local machine.  If you wanted
@@ -160,13 +160,13 @@ credentials and hostname to be pulled from the pillar section for this proxy min
 
 Because of the presence of the shim, to lookup documentation for what
 functions you can use to interface with the chassis, you'll want to
-look in :doc:`salt.modules.dracr </ref/modules/all/salt.modules.dracr>` instead
-of :doc:`salt.modules.chassis </ref/modules/all/salt.modules.chassis>`.
+look in :mod:`salt.modules.dracr <salt.modules.dracr>` instead
+of :mod:`salt.modules.chassis <salt.modules.chassis>`.
 
 States
 ------
 
-Associated states are thoroughly documented in :doc:`salt.states.dellchassis </ref/states/all/salt.states.dellchassis>`.
+Associated states are thoroughly documented in :mod:`salt.states.dellchassis <salt.states.dellchassis>`.
 Look there to find an example structure for pillar as well as an example
 ``.sls`` file for standing up a Dell Chassis from scratch.
 
@@ -318,9 +318,9 @@ def find_credentials():
 
 def chconfig(cmd, *args, **kwargs):
     '''
-    This function is called by the :doc:`salt.modules.chassis.cmd </ref/modules/all/salt.modules.chassis>`
+    This function is called by the :mod:`salt.modules.chassis.cmd <salt.modules.chassis.cmd>`
     shim.  It then calls whatever is passed in ``cmd``
-    inside the :doc:`salt.modules.dracr </ref/modules/all/salt.modules.dracr>`
+    inside the :mod:`salt.modules.dracr <salt.modules.dracr>`
     module.
 
     :param cmd: The command to call inside salt.modules.dracr

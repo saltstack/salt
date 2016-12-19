@@ -1,3 +1,5 @@
+.. _table-of-contents:
+
 ======================
 Salt Table of Contents
 ======================

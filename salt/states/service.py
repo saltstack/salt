@@ -54,7 +54,7 @@ service, then set the reload value to True:
 .. note::
 
     More details regarding ``watch`` can be found in the
-    :doc:`Requisites </ref/states/requisites>` documentation.
+    :ref:`Requisites <requisites>` documentation.
 
 '''
 
@@ -317,7 +317,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ``watch`` can be used with service.running to restart a service when
          another state changes ( example: a file.managed state that creates the
          service's config file ). More details regarding ``watch`` can be found
-         in the :doc:`Requisites </ref/states/requisites>` documentation.
+         in the :ref:`Requisites <requisites>` documentation.
     '''
     ret = {'name': name,
            'changes': {},

@@ -174,7 +174,7 @@ a security vulnerability.
 
 .. seealso::
 
-    :doc:`Installing Salt for development </topics/development/hacking>` and
+    :ref:`Installing Salt for development <installing-for-development>` and
     contributing to the project.
 
 Building Packages using Salt Pack

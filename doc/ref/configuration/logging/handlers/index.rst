@@ -1,4 +1,4 @@
-.. conf_log:: external-logging-handlers
+.. _external-logging-handlers:
 
 External Logging Handlers
 -------------------------

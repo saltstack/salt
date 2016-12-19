@@ -21,19 +21,19 @@ your typical housecat would be excellent source material for a PhD thesis.
 Salt proxy-minions provide the 'plumbing' that allows device enumeration
 and discovery, control, status, remote execution, and state management.
 
-See the :doc:`Proxy Minion Walkthrough </topics/proxyminion/demo>` for an end-to-end
+See the :ref:`Proxy Minion Walkthrough <proxy-minion-end-to-end-example>` for an end-to-end
 demonstration of a working REST-based proxy minion.
 
-See the :doc:`Proxy Minion SSH Walkthrough </topics/proxyminion/ssh>` for an end-to-end
+See the :ref:`Proxy Minion SSH Walkthrough <proxy-minion-ssh-end-to-end-example>` for an end-to-end
 demonstration of a working SSH proxy minion.
 
 
-See :doc:`Proxyminion States </topics/proxyminion/state>` to configure and
+See :ref:`Proxyminion States <proxy-minion-states>` to configure and
 run ``salt-proxy`` on a remote minion. Specify all your master side
 proxy (pillar) configuration and use this state to remotely configure proxies on one
 or more minions.
 
-See :doc:`Proxyminion Beacon </topics/proxyminion/beacon>` to help
+See :ref:`Proxyminion Beacon <proxy-minion-beacon>` to help
 with easy configuration and management of ``salt-proxy`` processes.
 
 New in 2016.11.0

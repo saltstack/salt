@@ -5,10 +5,9 @@ Orchestrate Runner
 ==================
 
 Orchestration is accomplished in salt primarily through the :ref:`Orchestrate
-Runner <orchestrate-runner>`. Added in version 0.17.0, this Salt :doc:`Runner
-</ref/runners/index>` can use the full suite of :doc:`requisites
-</ref/states/requisites>` available in states, and can also execute
-states/functions using salt-ssh.
+Runner <orchestrate-runner>`. Added in version 0.17.0, this Salt :ref:`Runner
+<runners>` can use the full suite of :ref:`requisites` available in states,
+and can also execute states/functions using salt-ssh.
 
 The Orchestrate Runner
 ----------------------
@@ -20,7 +19,7 @@ The Orchestrate Runner
   The Orchestrate Runner (originally called the state.sls runner) offers all
   the functionality of the OverState, but with some advantages:
 
-  * All :doc:`requisites </ref/states/requisites>` available in states can be
+  * All :ref:`requisites` available in states can be
     used.
   * The states/functions will also work on salt-ssh minions.
 
@@ -166,11 +165,11 @@ More Complex Orchestration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Many states/functions can be configured in a single file, which when combined
-with the full suite of :doc:`requisites </ref/states/requisites>`, can be used
+with the full suite of :ref:`requisites`, can be used
 to easily configure complex orchestration tasks. Additionally, the
 states/functions will be executed in the order in which they are defined,
-unless prevented from doing so by any :doc:`requisites
-</ref/states/requisites>`, as is the default in SLS files since 0.17.0.
+unless prevented from doing so by any :ref:`requisites`, as is the default in
+SLS files since 0.17.0.
 
 .. code-block:: yaml
 
