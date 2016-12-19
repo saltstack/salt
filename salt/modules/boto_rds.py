@@ -277,9 +277,9 @@ def create(name, allocated_storage, db_instance_class, engine,
             val = locals()[key]
             if val is not None:
                 mapped = boto3_param_map[key]
-                if key == 'tags':
-                    val = _tag_doc(val)
                 kwargs[mapped[0]] = mapped[1](val)
+
+        taglist = _tag_doc(tags)
 
         # Validation doesn't want parameters that are None
         # https://github.com/boto/boto3/issues/400
@@ -548,7 +548,7 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
                     'CopyTagsToSnapshot', 'MonitoringInterval',
                     'MonitoringRoleArn', 'PromotionTier',
                     'DomainMemberships')
-            return {'rds': dict([(k, rds.get('DBInstances', [{}])[0].get(k)) for k in keys])}
+            return {'rds': dict([(k, rds.get(k)) for k in keys])}
         else:
             return {'rds': None}
     except ClientError as e:
@@ -567,31 +567,27 @@ def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
         salt myminion boto_rds.get_endpoint myrds
 
     '''
-    endpoint = 'None'
+    endpoint = False
     res = __salt__['boto_rds.exists'](name, tags, region, key, keyid,
                                       profile)
-    if not res:
-        return {'exists': bool(res), 'message':
-                'RDS instance {0} does not exist.'.format(name)}
+    if res.get('exists'):
+        try:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            if conn:
+                rds = conn.describe_db_instances(DBInstanceIdentifier=name)
 
-    try:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if not conn:
-            return {'results': bool(conn)}
+                if rds and 'Endpoint' in rds['DBInstances'][0]:
+                    endpoint = rds['DBInstances'][0]['Endpoint']['Address']
+                    return endpoint
 
-        rds = conn.describe_db_instances(DBInstanceIdentifier=name)
+        except ClientError as e:
+            return {'error': salt.utils.boto3.get_error(e)}
 
-        if rds:
-            inst = rds['DBInstances'][0]['Endpoint']
-            endpoint = '{0}:{1}'.format(inst.get('Address'), inst.get('Port'))
-            return endpoint
-
-    except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+    return endpoint
 
 
 def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
-           region=None, key=None, keyid=None, profile=None,
+           region=None, key=None, keyid=None, profile=None, tags=None,
            wait_for_deletion=True, timeout=180):
     '''
     Delete an RDS instance.
@@ -629,10 +625,10 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
 
         start_time = time()
         while True:
-            if not __salt__['boto_rds.exists'](name=name, region=region,
+            res = __salt__['boto_rds.exists'](name=name, tags=tags, region=region,
                                                key=key, keyid=keyid,
-                                               profile=profile):
-
+                                               profile=profile)
+            if not res.get('exists'):
                 return {'deleted': bool(res), 'message':
                         'Deleted RDS instance {0} completely.'.format(name)}
 
