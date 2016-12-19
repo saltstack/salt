@@ -1055,7 +1055,7 @@ def create(vm_):
         except KeyError:
             try:
                 private_ip = data['template']['nic']['ip']
-            except:
+            except KeyError:
                 # if IPv6 is used try this as last resort
                 # OpenNebula does not yet show ULA address here so take global
                 private_ip = data['template']['nic']['ip6_global']
