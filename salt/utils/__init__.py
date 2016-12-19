@@ -495,9 +495,14 @@ def daemonize(redirect_out=True):
     # multiprocessing process attempts to access stdout or err.
     if redirect_out:
         with fopen('/dev/null', 'r+') as dev_null:
+            # Redirect python stdin/out/err
+            # and the os stdin/out/err which can be different
             os.dup2(dev_null.fileno(), sys.stdin.fileno())
             os.dup2(dev_null.fileno(), sys.stdout.fileno())
             os.dup2(dev_null.fileno(), sys.stderr.fileno())
+            os.dup2(dev_null.fileno(), 0)
+            os.dup2(dev_null.fileno(), 1)
+            os.dup2(dev_null.fileno(), 2)
 
 
 def daemonize_if(opts):
