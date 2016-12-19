@@ -50,12 +50,7 @@ config:
         - keyid: GKTADJGHEIQSXMKKRBJ08H
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
         - tags:
-          -
-            - key1
-            - value1
-          -
-            - key2
-            - value2
+            key: value
 
 .. code-block:: yaml
 
@@ -261,7 +256,7 @@ def present(name,
         the state. Available states: available, modifying, backing-up
 
     tags
-        A list of tags.
+        A dict of tags.
 
     copy_tags_to_snapshot
         Specifies whether tags are copied from the DB instance to snapshots of
@@ -382,7 +377,7 @@ def replica_present(name, source, db_instance_class=None,
            }
     replica_exists = __salt__['boto_rds.exists'](name, tags, region, key,
                                                  keyid, profile)
-    if not replica_exists:
+    if not replica_exists.get('exists'):
         if __opts__['test']:
             ret['comment'] = 'RDS read replica {0} is set to be created '.format(name)
             ret['result'] = None
@@ -442,7 +437,7 @@ def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
         Subnet group description.
 
     tags
-        A list of tags.
+        A dict of tags.
 
     region
         Region to connect to.
@@ -538,7 +533,7 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
         snapshot.
 
     tags
-        A list of tags.
+        A dict of tags.
 
     region
         Region to connect to.
@@ -570,7 +565,7 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
 
     exists = __salt__['boto_rds.exists'](name, tags, region, key, keyid,
                                          profile)
-    if not exists:
+    if not exists.get('exists'):
         ret['result'] = True
         ret['comment'] = '{0} RDS does not exist.'.format(name)
         return ret
@@ -581,7 +576,7 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
         return ret
     deleted = __salt__['boto_rds.delete'](name, skip_final_snapshot,
                                           final_db_snapshot_identifier,
-                                          region, key, keyid, profile,
+                                          region, key, keyid, profile, tags,
                                           wait_for_deletion, timeout)
     if not deleted:
         ret['result'] = False
@@ -652,7 +647,7 @@ def parameter_present(name, db_parameter_group_family, description, parameters=N
         parameters.
 
     tags
-        A list of tags.
+        A dict of tags.
 
     region
         Region to connect to.
