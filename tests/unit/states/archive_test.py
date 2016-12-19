@@ -43,6 +43,7 @@ def _isfile_side_effect(path):
         '/tmp/foo.tar.gz': True,
         '/tmp/out': False,
         '/usr/bin/tar': True,
+        '/bin/tar': True,
         '/tmp/test_extracted_tar': False,
     }[path]
 
