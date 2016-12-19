@@ -3183,8 +3183,8 @@ def read(path, binary=False):
     access_mode = 'r'
     if binary is True:
         access_mode += 'b'
-    with open(path, access_mode) as file_obj:
-        return file_obj.readlines()
+    with salt.utils.fopen(path, access_mode) as file_obj:
+        return file_obj.read()
 
 
 def readlink(path, canonicalize=False):
