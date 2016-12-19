@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Junos Syslog Engine
-==========================
+===================
+
+.. versionadded:: Nitrogen
 
 An engine that listen to syslog message from Junos devices,
 extract event information and generate message on SaltStack bus.
@@ -22,13 +24,15 @@ Here is a sample syslog event which is received from the junos device:
 The source for parsing the syslog messages is taken from:
     https://gist.github.com/leandrosilva/3651640#file-xlog-py
 '''
-from __future__ import absolute_import
 
+# Import Python libs
+from __future__ import absolute_import
 import re
 from time import strftime
 import logging
 
-import salt
+# Import Salt libs
+import salt.utils.event
 
 try:
     from twisted.internet.protocol import DatagramProtocol
