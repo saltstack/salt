@@ -424,10 +424,10 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 continue
         elif item == 'log_config':
             # https://github.com/saltstack/salt/issues/30577#issuecomment-238322721
-            if not data.get('Config', None) and actual_data.get('Config', None):
+            if not data.get('Config'):
                 data['Config'] = {}
                 actual_data['Config'] = {}
-            if not data.get('Type', None) and actual_data.get('Type', None):
+            if not data.get('Type'):
                 data['Type'] = None
                 actual_data['Type'] = None
             if data != actual_data:
