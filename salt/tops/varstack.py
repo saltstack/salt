@@ -4,9 +4,9 @@ Use `Varstack <https://github.com/conversis/varstack>` to provide tops data
 
 .. |varstack| replace:: **varstack**
 
-This :doc:`master_tops </topics/master_tops/index>` plugin provides access to
+This :ref:`master_tops <master-tops-system>` plugin provides access to
 the |varstack| hierarchical yaml files, so you can user |varstack| as a full
-:doc:`external node classifier </ref/tops/all/salt.tops.ext_nodes.html>` and
+:mod:`external node classifier <salt.tops.ext_nodes>` and
 store state information (top data) in it.
 
 Configuring Varstack

@@ -13,7 +13,7 @@ Manage the SNMP configuration on network devices.
 Dependencies
 ------------
 
-- :doc:`napalm snmp management module (salt.modules.napalm_snmp) </ref/modules/all/salt.modules.napalm_snmp>`
+- :mod:`napalm snmp management module (salt.modules.napalm_snmp) <salt.modules.napalm_snmp>`
 
 .. versionadded: 2016.11.0
 '''

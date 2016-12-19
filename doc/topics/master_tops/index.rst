@@ -36,7 +36,7 @@ for :mod:`Reclass <salt.tops.reclass_adapter>`.
     master_tops:
       varstack: /path/to/the/config/file/varstack.yaml
 
-for :doc:`Varstack <../../ref/tops/all/salt.tops.varstack>`.
+for :mod:`Varstack <salt.tops.varstack>`.
 
 It's also possible to create custom master_tops modules. These modules must go
 in a subdirectory called `tops` in the `extension_modules` directory.
