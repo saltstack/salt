@@ -87,6 +87,22 @@ General Deprecations
 
 - Beacon configurations should be lists instead of dictionaries.
 
+Configuration Option Deprecations
+---------------------------------
+
+- The ``win_gitrepos`` configuration option has been removed. Please use
+  the ``winrepo_remotes`` option instead.
+- The ``win_repo`` configuration option has been removed. Please use
+  ``winrepo_dir`` instead.
+- The ``win_repo_mastercachefile`` configuration option has been removed.
+  Please use the ``winrepo_cachefile`` option instead.
+
+Module Deprecations
+-------------------
+
+- The ``win_repo_source_dir`` option has been removed from the ``win_repo``
+  module. Please use ``winrepo_source_dir`` instead.
+
 Pillar Deprecations
 -------------------
 
@@ -112,3 +128,11 @@ Salt-SSH Deprecations
 
 - The ``wipe_ssh`` option for ``salt-ssh`` has been removed. Please use the
   ``ssh_wipe`` option instead.
+
+State Deprecations
+------------------
+
+- The ``chocolatey`` state had the following functions removed:
+
+  - ``install``: Please use ``installed`` instead.
+  - ``uninstall``: Please use ``uninstalled`` instead.

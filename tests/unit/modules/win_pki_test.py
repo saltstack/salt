@@ -3,7 +3,7 @@
     :synopsis: Unit Tests for Windows PKI Module 'module.win_pki'
     :platform: Windows
     :maturity: develop
-    versionadded:: Nitrogen
+    .. versionadded:: Nitrogen
 '''
 
 # Import Python Libs
