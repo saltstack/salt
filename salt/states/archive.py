@@ -700,6 +700,14 @@ def extracted(name,
     urlparsed_source = _urlparse(source_match)
     source_hash_basename = urlparsed_source.path or urlparsed_source.netloc
 
+    source_is_local = urlparsed_source.scheme in ('', 'file')
+    if source_is_local:
+        # Get rid of "file://" from start of source_match
+        source_match = urlparsed_source.path
+        if not os.path.isfile(source_match):
+            ret['comment'] = 'Source file \'{0}\' does not exist'.format(source_match)
+            return ret
+
     valid_archive_formats = ('tar', 'rar', 'zip')
     if not archive_format:
         archive_format = salt.utils.files.guess_archive_type(source_hash_basename)
@@ -827,16 +835,19 @@ def extracted(name,
             )
             return ret
 
-    cached_source = os.path.join(
-        __opts__['cachedir'],
-        'files',
-        __env__,
-        re.sub(r'[:/\\]', '_', source_hash_basename),
-    )
+    if source_is_local:
+        cached_source = source_match
+    else:
+        cached_source = os.path.join(
+            __opts__['cachedir'],
+            'files',
+            __env__,
+            re.sub(r'[:/\\]', '_', source_hash_basename),
+        )
 
-    if os.path.isdir(cached_source):
-        # Prevent a traceback from attempting to read from a directory path
-        salt.utils.rm_rf(cached_source)
+        if os.path.isdir(cached_source):
+            # Prevent a traceback from attempting to read from a directory path
+            salt.utils.rm_rf(cached_source)
 
     if source_hash:
         try:
@@ -858,7 +869,7 @@ def extracted(name,
     else:
         source_sum = {}
 
-    if not os.path.isfile(cached_source):
+    if not source_is_local and not os.path.isfile(cached_source):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = \
@@ -1373,7 +1384,7 @@ def extracted(name,
                 ret['changes']['directories_created'] = [name]
             ret['changes']['extracted_files'] = files
             ret['comment'] = '{0} extracted to {1}'.format(source_match, name)
-            if not keep:
+            if not source_is_local and not keep:
                 log.debug('Cleaning cached source file %s', cached_source)
                 try:
                     os.remove(cached_source)
