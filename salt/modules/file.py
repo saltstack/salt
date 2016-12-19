@@ -3168,6 +3168,25 @@ def access(path, mode):
         raise SaltInvocationError('Invalid mode specified.')
 
 
+def read(path, binary=False):
+    '''
+    .. versionadded:: Nitrogen
+
+    Return the content of the file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.read /path/to/file
+    '''
+    access_mode = 'r'
+    if binary is True:
+        access_mode += 'b'
+    with salt.utils.fopen(path, access_mode) as file_obj:
+        return file_obj.read()
+
+
 def readlink(path, canonicalize=False):
     '''
     .. versionadded:: 2014.1.0
