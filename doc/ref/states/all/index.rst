@@ -202,6 +202,7 @@ state modules
     slack
     smartos
     smtp
+    snapper
     splunk
     splunk_search
     sqlite3
