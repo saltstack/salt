@@ -1122,17 +1122,8 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
             try:
                 self.publisher.start()
                 self.puller.start()
-                if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
-                    salt.utils.warn_until(
-                            'Nitrogen',
-                            'ACL rules should be configured with \'publisher_acl\' and '
-                            '\'publisher_acl_blacklist\' not \'client_acl\' and '
-                            '\'client_acl_blacklist\'. This functionality will be removed in Salt '
-                            'Nitrogen.'
-                            )
                 if (self.opts['ipc_mode'] != 'tcp' and (
                         self.opts['publisher_acl'] or
-                        self.opts['client_acl'] or
                         self.opts['external_auth'])):
                     os.chmod(os.path.join(
                         self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)

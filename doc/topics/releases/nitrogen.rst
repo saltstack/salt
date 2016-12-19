@@ -90,6 +90,10 @@ General Deprecations
 Configuration Option Deprecations
 ---------------------------------
 
+- The ``client_acl`` configuration option has been removed. Please use
+  ``publisher_acl`` instead.
+- The ``client_acl_blacklist`` configuration option has been removed.
+  Please use ``publisher_acl_blacklist`` instead.
 - The ``win_gitrepos`` configuration option has been removed. Please use
   the ``winrepo_remotes`` option instead.
 - The ``win_repo`` configuration option has been removed. Please use
