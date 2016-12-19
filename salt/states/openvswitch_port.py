@@ -11,7 +11,7 @@ def __virtual__():
     return 'openvswitch.port_add' in __salt__
 
 
-def present(name, bridge, type=None, id=None, remote=None, dst_port=None):
+def present(name, bridge, type=None, id=None, remote=None, dst_port=None, internal=False):
     '''
     Ensures that the named port exists on bridge, eventually creates it.
 
@@ -22,6 +22,7 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None):
         id: Optional tunnel's key.
         remote: Remote endpoint's IP address.
         dst_port: Port to use when creating tunnelport in the switch.
+        internal: Create an internal port if one does not exist
 
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -95,7 +96,7 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None):
         if not 0 <= id <= 4095:
             ret['result'] = False
             ret['comment'] = comment_vlan_invalid_id
-        elif name not in interfaces:
+        elif not internal and name not in interfaces:
             ret['result'] = False
             ret['comment'] = comment_vlan_invalid_name
         elif tag and name in port_list:
@@ -180,7 +181,7 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None):
         if type == 'vlan':
             _check_vlan()
             if not ret['comment']:
-                port_create_vlan = __salt__['openvswitch.port_create_vlan'](bridge, name, id)
+                port_create_vlan = __salt__['openvswitch.port_create_vlan'](bridge, name, id, internal)
                 if port_create_vlan:
                     ret['result'] = True
                     ret['comment'] = comment_vlan_created
