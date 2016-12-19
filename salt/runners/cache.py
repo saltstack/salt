@@ -332,25 +332,8 @@ def clear_git_lock(role, remote=None, **kwargs):
                 obj.init_remotes(ext_pillar['git'], __GIT_PILLAR_OVERRIDES)
                 git_objects.append(obj)
     elif role == 'winrepo':
-        if 'win_repo' in __opts__:
-            salt.utils.warn_until(
-                'Nitrogen',
-                'The \'win_repo\' config option is deprecated, please use '
-                '\'winrepo_dir\' instead.'
-            )
-            winrepo_dir = __opts__['win_repo']
-        else:
-            winrepo_dir = __opts__['winrepo_dir']
-
-        if 'win_gitrepos' in __opts__:
-            salt.utils.warn_until(
-                'Nitrogen',
-                'The \'win_gitrepos\' config option is deprecated, please use '
-                '\'winrepo_remotes\' instead.'
-            )
-            winrepo_remotes = __opts__['win_gitrepos']
-        else:
-            winrepo_remotes = __opts__['winrepo_remotes']
+        winrepo_dir = __opts__['winrepo_dir']
+        winrepo_remotes = __opts__['winrepo_remotes']
 
         git_objects = []
         for remotes, base_dir in (
