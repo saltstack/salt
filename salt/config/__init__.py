@@ -1093,8 +1093,6 @@ DEFAULT_MINION_OPTS = {
     # ZMQ HWM for EventPublisher pub socket - different for minion vs. master
     'event_publisher_pub_hwm': 1000,
     'event_match_type': 'startswith',
-    # Default Minion returner
-    'return': '',
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1548,6 +1546,11 @@ def _validate_opts(opts):
                            type(val).__name__,
                            format_multi_opt(VALID_OPTS[key]))
             )
+
+    # Convert list to comma-delimited string for 'return' config option
+    if isinstance(opts.get('return'), list):
+        opts['return'] = ','.join(opts['return'])
+
 
     # RAET on Windows uses 'win32file.CreateMailslot()' for IPC. Due to this,
     # sock_dirs must start with '\\.\mailslot\' and not contain any colons.
