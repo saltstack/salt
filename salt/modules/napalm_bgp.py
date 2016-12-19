@@ -24,12 +24,15 @@ from __future__ import absolute_import
 import logging
 log = logging.getLogger(__file__)
 
+# import NAPALM utils
+import salt.utils.napalm
+from salt.utils.napalm import proxy_napalm_wrap
 
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
     # pylint: disable=W0611
-    from napalm_base import get_network_driver
+    import napalm_base
     # pylint: enable=W0611
     HAS_NAPALM = True
 except ImportError:
@@ -52,10 +55,9 @@ def __virtual__():
 
     '''
     NAPALM library must be installed for this module to work.
-    Also, the key proxymodule must be set in the __opts___ dictionary.
     '''
 
-    if HAS_NAPALM and 'proxy' in __opts__:
+    if HAS_NAPALM:
         return __virtualname__
     else:
         return (False, 'The module napalm_bgp (BGP) cannot be loaded: \
@@ -70,7 +72,8 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def config(group=None, neighbor=None):
+@proxy_napalm_wrap
+def config(group=None, neighbor=None, **kwargs):
 
     '''
     Provides the BGP configuration on the device.
@@ -170,7 +173,8 @@ def config(group=None, neighbor=None):
         }
     '''
 
-    return __proxy__['napalm.call'](
+    return salt.utils.napalm.call(
+        napalm_device,
         'get_bgp_config',
         **{
             'group': group,
@@ -179,7 +183,8 @@ def config(group=None, neighbor=None):
     )
 
 
-def neighbors(neighbor=None):
+@proxy_napalm_wrap
+def neighbors(neighbor=None, **kwargs):
 
     '''
     Provides details regarding the BGP sessions configured on the network device.
@@ -278,7 +283,8 @@ def neighbors(neighbor=None):
         }
     '''
 
-    return __proxy__['napalm.call'](
+    return salt.utils.napalm.call(
+        napalm_device,
         'get_bgp_neighbors_detail',
         **{
             'neighbor_address': neighbor
