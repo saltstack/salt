@@ -22,6 +22,7 @@ Here is a sample syslog event which is received from the junos device:
 The source for parsing the syslog messages is taken from:
     https://gist.github.com/leandrosilva/3651640#file-xlog-py
 '''
+from __future__ import absolute_import
 
 import re
 from time import strftime
@@ -173,7 +174,7 @@ class Parser(object):
 obj = Parser()
 
 
-class Echo(DatagramProtocol):
+class Echo(DatagramProtocol):  # pylint: disable=W0232
 
     def datagramReceived(self, data, connection_details):
         (host, port) = connection_details
@@ -189,6 +190,7 @@ class Echo(DatagramProtocol):
                 __opts__,
                 __opts__['sock_dir']).fire_event(data, topic)
             # Do nothing if the syslog do not contain events
+
 
 def start(port=516):
     log.info('Starting junos syslog engine (port {0})'.format(port))
