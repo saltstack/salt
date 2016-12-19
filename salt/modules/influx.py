@@ -461,6 +461,27 @@ def alter_retention_policy(database,
     return True
 
 
+def list_privileges(name, **client_args):
+    '''
+    List privileges from a user.
+
+    name
+        Name of the user from whom privileges will be listed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.list_privileges <name>
+    '''
+    client = _client(**client_args)
+
+    res = {}
+    for item in client.get_list_privileges(name):
+        res[item['database']] = item['privilege'].split()[0].lower()
+    return res
+
+
 def grant_privilege(database, privilege, username, **client_args):
     '''
     Grant a privilege on a database to a user.
