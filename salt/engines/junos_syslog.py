@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Junos Syslog Engine
 ==========================
@@ -13,16 +14,14 @@ extract event information and generate message on SaltStack bus.
 
 For junos_syslog engine to receive events syslog must be set on junos device.
 This can be done via following configuration:
-	set system syslog host <ip-of-the-salt-device> any any
+    set system syslog host <ip-of-the-salt-device> port 516 any any
 
 Here is a sample syslog event which is received from the junos device:
-	' <30>May 29 05:18:12 bng-ui-vm-92 mspd[1492]: No chassis configuration found '
+    ' <30>May 29 05:18:12 bng-ui-vm-92 mspd[1492]: No chassis configuration found '
 
 The source for parsing the syslog messages is taken from:
-	https://gist.github.com/leandrosilva/3651640#file-xlog-py
+    https://gist.github.com/leandrosilva/3651640#file-xlog-py
 '''
-__author__ = "Nitin Kumar, Rajvi Dhimar"
-
 
 import re
 from time import strftime
@@ -105,10 +104,10 @@ class Parser(object):
     def parse(self, line):
         try:
             parsed = self.__pattern.parseString(line)
-        except:
+        except Exception:
             try:
                 parsed = self.__pattern_without_appname.parseString(line)
-            except:
+            except Exception:
                 return
         if len(parsed) == 6:
             payload = {}
@@ -118,7 +117,7 @@ class Parser(object):
             payload["timestamp"] = strftime("%Y-%m-%d %H:%M:%S")
             payload["hostname"] = parsed[4]
             payload["message"] = parsed[5]
-            payload["event"] = 'system_event'
+            payload["event"] = 'SYSTEM'
             return payload
         elif len(parsed) == 7:
             payload = {}
@@ -129,7 +128,7 @@ class Parser(object):
             payload["hostname"] = parsed[4]
             payload["appname"] = parsed[5]
             payload["message"] = parsed[6]
-            payload["event"] = 'system_event'
+            payload["event"] = 'SYSTEM'
             obj = re.match(r'(\w+): (.*)', payload["message"])
             if obj:
                 payload["message"] = obj.group(2)
@@ -145,7 +144,7 @@ class Parser(object):
             payload["appname"] = parsed[5]
             payload["pid"] = parsed[6]
             payload["message"] = parsed[7]
-            payload["event"] = 'system_event'
+            payload["event"] = 'SYSTEM'
             obj = re.match(r'(\w+): (.*)', payload["message"])
             if obj:
                 payload["event"] = obj.group(1)
@@ -163,7 +162,7 @@ class Parser(object):
             payload["appname"] = parsed[6]
             payload["pid"] = parsed[7]
             payload["message"] = parsed[8]
-            payload["event"] = 'system_event'
+            payload["event"] = 'SYSTEM'
             obj = re.match(r'(\w+): (.*)', payload["message"])
             if obj:
                 payload["event"] = obj.group(1)
@@ -176,20 +175,20 @@ obj = Parser()
 
 class Echo(DatagramProtocol):
 
-    def datagramReceived(self, data, xxx_todo_changeme):
-        (host, port) = xxx_todo_changeme
+    def datagramReceived(self, data, connection_details):
+        (host, port) = connection_details
         data = obj.parse(data)
-        log.debug("Junos Syslog - received %r from %s:%d" % (data, host, port))
+        log.debug('Junos Syslog - received {0} from {1}:{2}'.format(data, host, port))
 
         if data is not None and data['event']:
             topic = 'jnpr/event/{0}/{1}'.format(
                 data['hostname'], data['event'])
+            data['port'] = port
+
             fire_master = salt.utils.event.get_master_event(
                 __opts__,
-                __opts__['sock_dir']).fire_event({'data': data, 'host': data['hostname'], 'ip': host, 'port': port},
-                                                 topic)
+                __opts__['sock_dir']).fire_event(data, topic)
             # Do nothing if the syslog do not contain events
-
 
 def start(port=516):
     log.info('Starting junos syslog engine (port {0})'.format(port))
