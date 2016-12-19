@@ -26,11 +26,15 @@ from __future__ import absolute_import
 import logging
 log = logging.getLogger(__file__)
 
+# import NAPALM utils
+import salt.utils.napalm
+from salt.utils.napalm import proxy_napalm_wrap
+
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
     # pylint: disable=W0611
-    from napalm_base import get_network_driver
+    import napalm_base
     # pylint: enable=W0611
     HAS_NAPALM = True
 except ImportError:
@@ -53,10 +57,9 @@ def __virtual__():
 
     '''
     NAPALM library must be installed for this module to work.
-    Also, the key proxymodule must be set in the __opts___ dictionary.
     '''
 
-    if HAS_NAPALM and 'proxy' in __opts__:
+    if HAS_NAPALM:
         return __virtualname__
     else:
         return (False, 'The module SNMP (napalm_snmp) cannot be loaded: \
@@ -71,7 +74,8 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def config():
+@proxy_napalm_wrap
+def config(**kwargs):
 
     '''
     Returns the SNMP configuration
@@ -83,19 +87,22 @@ def config():
         salt '*' snmp.config
     '''
 
-    return __proxy__['napalm.call'](
+    return salt.utils.napalm.call(
+        napalm_device,
         'get_snmp_information',
         **{
         }
     )
 
 
+@proxy_napalm_wrap
 def remove_config(chassis_id=None,
                   community=None,
                   contact=None,
                   location=None,
                   test=False,
-                  commit=True):
+                  commit=True,
+                  **kwargs):
 
     '''
     Removes a configuration element from the SNMP configuration.
@@ -143,16 +150,19 @@ def remove_config(chassis_id=None,
         dic['contact'] = contact
     if location:
         dic['location'] = location
+    dic['inherit_napalm_device'] = napalm_device
 
     return __salt__['net.load_template'](**dic)
 
 
+@proxy_napalm_wrap
 def update_config(chassis_id=None,
                   community=None,
                   contact=None,
                   location=None,
                   test=False,
-                  commit=True):
+                  commit=True,
+                  **kwargs):
 
     '''
     Updates the SNMP configuration.
@@ -217,5 +227,6 @@ def update_config(chassis_id=None,
         dic['contact'] = contact
     if location:
         dic['location'] = location
+    dic['inherit_napalm_device'] = napalm_device
 
     return __salt__['net.load_template'](**dic)
