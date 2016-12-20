@@ -144,6 +144,21 @@ Salt-SSH Deprecations
 State Deprecations
 ------------------
 
+The ``apache_conf`` state had the following functions removed:
+
+  - ``disable``: Please use ``disabled`` instead.
+  - ``enable``: Please use ``enabled`` instead.
+
+The ``apache_module`` state had the following functions removed:
+
+  - ``disable``: Please use ``disabled`` instead.
+  - ``enable``: Please use ``enabled`` instead.
+
+The ``apache_site`` state had the following functions removed:
+
+  - ``disable``: Please use ``disabled`` instead.
+  - ``enable``: Please use ``enabled`` instead.
+
 - The ``chocolatey`` state had the following functions removed:
 
   - ``install``: Please use ``installed`` instead.
