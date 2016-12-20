@@ -105,6 +105,12 @@ Configuration Option Deprecations
 Module Deprecations
 -------------------
 
+The ``glusterfs`` execution module had the following functions removed:
+
+- ``create``: Please use ``create_volume`` instead.
+- ``delete``: Please use ``delete_volume`` instead.
+-  ``list_peers``: Please use ``peer_status`` instead.
+
 - The ``win_repo_source_dir`` option has been removed from the ``win_repo``
   module. Please use ``winrepo_source_dir`` instead.
 
@@ -163,3 +169,7 @@ The ``apache_site`` state had the following functions removed:
 
   - ``install``: Please use ``installed`` instead.
   - ``uninstall``: Please use ``uninstalled`` instead.
+
+The ``glusterfs`` state had the following function removed:
+
+  - ``created``: Please use ``volume_present`` instead.
