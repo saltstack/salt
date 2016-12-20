@@ -252,11 +252,6 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
