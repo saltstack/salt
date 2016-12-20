@@ -61,7 +61,7 @@ def _retrieve_grains(proxy=None):
     global DEVICE_CACHE
 
     if not GRAINS_CACHE:
-        if proxy and salt.utils.napalm.is_proxy():
+        if proxy and salt.utils.napalm.is_proxy(__opts__):
             # if proxy var passed and is NAPALM-type proxy minion
             GRAINS_CACHE = proxy['napalm.get_grains']()
             if 'napalm.get_device' in proxy:
@@ -265,7 +265,7 @@ def username(proxy=None):
         device2:
             True
     '''
-    if proxy and salt.utils.napalm.is_proxy():
+    if proxy and salt.utils.napalm.is_proxy(__opts__):
         # only if proxy will override the username
         # otherwise will use the default Salt grains
         return {'username': _get_device_grain('username')}
