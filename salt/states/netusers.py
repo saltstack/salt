@@ -29,6 +29,19 @@ from json import loads, dumps
 
 # salt lib
 from salt.ext import six
+# import NAPALM utils
+import salt.utils.napalm
+
+# Import third party lib
+try:
+    # will try to import NAPALM
+    # https://github.com/napalm-automation/napalm
+    # pylint: disable=W0611
+    import napalm_base
+    # pylint: enable=W0611
+    HAS_NAPALM = True
+except ImportError:
+    HAS_NAPALM = False
 
 # ----------------------------------------------------------------------------------------------------------------------
 # state properties

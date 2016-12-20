@@ -22,8 +22,18 @@ import logging
 log = logging.getLogger(__name__)
 
 # Salt lib
-import salt.utils
 import salt.utils.napalm
+
+# Import third party lib
+try:
+    # will try to import NAPALM
+    # https://github.com/napalm-automation/napalm
+    # pylint: disable=W0611
+    import napalm_base
+    # pylint: enable=W0611
+    HAS_NAPALM = True
+except ImportError:
+    HAS_NAPALM = False
 
 # ----------------------------------------------------------------------------------------------------------------------
 # grains properties
@@ -45,7 +55,16 @@ DEVICE_CACHE = {}
 
 
 def __virtual__():
-    return __virtualname__
+
+    '''
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
+    '''
+
+    if HAS_NAPALM \
+       and (salt.utils.napalm.is_proxy(__opts__) or salt.utils.napalm.is_minion(__opts__)):
+        return __virtualname__
+    else:
+        return False
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helpers
@@ -66,7 +85,7 @@ def _retrieve_grains(proxy=None):
             GRAINS_CACHE = proxy['napalm.get_grains']()
             if 'napalm.get_device' in proxy:
                 DEVICE_CACHE = proxy['napalm.get_device']()
-        elif not proxy and salt.utils.napalm.is_minion():
+        elif not proxy and salt.utils.napalm.is_minion(__opts__):
             # if proxy var not passed and is running in a straight minion
             DEVICE_CACHE = salt.utils.napalm.get_device(__opts__)
             GRAINS_CACHE = salt.utils.napalm.call(
@@ -295,7 +314,7 @@ def hostname(proxy=None):
     return {'hostname': _get_grain('hostname', proxy=proxy)}
 
 
-def optional_args(proxy=None):
+def optional_args():
     '''
     Return the connection optional args.
 

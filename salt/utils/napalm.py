@@ -15,6 +15,8 @@ Utils for the NAPALM modules and proxy.
 .. versionadded:: Nitrogen
 '''
 
+from __future__ import absolute_import
+
 import traceback
 import logging
 log = logging.getLogger(__file__)
@@ -149,7 +151,7 @@ def get_device(opts, salt_obj=None):
     network_device['OPTIONAL_ARGS'] = device_dict.get('optional_args', {})
     network_device['UP'] = False
     # get driver object form NAPALM
-    if 'config_lock' not in network_device['OPTIONAL_ARGS'].keys():
+    if 'config_lock' not in list(network_device['OPTIONAL_ARGS'].keys()):
         network_device['OPTIONAL_ARGS']['config_lock'] = False
     _driver_ = napalm_base.get_network_driver(network_device.get('DRIVER_NAME'))
     try:
@@ -191,7 +193,7 @@ def proxy_napalm_wrap(func):
     :return:
     '''
     def func_wrapper(*args, **kwargs):
-        wrapped_global_namespace = func.func_globals
+        wrapped_global_namespace = func.__globals__
         # get __proxy__ from func_globals
         proxy = wrapped_global_namespace.get('__proxy__')
 
@@ -205,7 +207,7 @@ def proxy_napalm_wrap(func):
             opts = wrapped_global_namespace.get('__opts__')
             _salt_obj = wrapped_global_namespace.get('__salt__')
             if 'inherit_napalm_device' not in kwargs or ('inherit_napalm_device' in kwargs and
-               not kwargs['inherit_napalm_device']):
+                                                         not kwargs['inherit_napalm_device']):
                 # try to open a new connection
                 # but only if the function does not inherit the napalm driver
                 # for configuration management this is very important,
