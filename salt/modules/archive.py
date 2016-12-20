@@ -966,6 +966,9 @@ def is_encrypted(name, clean=False, saltenv='base'):
     Returns ``True`` if the zip archive is password-protected, ``False`` if
     not. If the specified file is not a ZIP archive, an error will be raised.
 
+    name
+        The path / URL of the archive to check.
+
     clean : False
         Set this value to ``True`` to delete the path referred to by ``name``
         once the contents have been listed. This option should be used with
@@ -982,6 +985,7 @@ def is_encrypted(name, clean=False, saltenv='base'):
 
             salt '*' archive.is_encrypted /path/to/myfile.zip
             salt '*' archive.is_encrypted salt://foo.zip
+            salt '*' archive.is_encrypted salt://foo.zip saltenv=dev
             salt '*' archive.is_encrypted https://domain.tld/myfile.zip clean=True
             salt '*' archive.is_encrypted ftp://10.1.2.3/foo.zip
     '''

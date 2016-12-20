@@ -510,7 +510,7 @@ def file(name,
         Overrides the default backup mode for the user's crontab.
     '''
     # Initial set up
-    mode = salt.utils.normalize_mode('0600')
+    mode = '0600'
 
     try:
         group = __salt__['user.info'](user)['groups'][0]
