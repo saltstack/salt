@@ -119,7 +119,7 @@ def get_device(opts, salt_obj=None):
     log.debug('Setting up NAPALM connection')
     network_device = {}
     # by default, look in the proxy config details
-    device_dict = opts.get('proxy', {})
+    device_dict = opts.get('proxy', {}) or opts.get('napalm', {})
     if salt_obj and not device_dict:
         # get the connection details from the opts
         device_dict = salt_obj['config.option']('napalm')
