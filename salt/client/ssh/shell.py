@@ -78,7 +78,7 @@ class Shell(object):
         self.mods = mods
         self.identities_only = identities_only
         self.remote_port_forwards = remote_port_forwards
-        self.ssh_options=ssh_options
+        self.ssh_options = ssh_options
 
     def get_error(self, errstr):
         '''
