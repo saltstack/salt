@@ -141,6 +141,8 @@ state modules
     mysql_query
     mysql_user
     netntp
+    netsnmp
+    netusers
     network
     nftables
     npm
@@ -200,6 +202,7 @@ state modules
     slack
     smartos
     smtp
+    snapper
     splunk
     splunk_search
     sqlite3

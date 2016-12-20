@@ -228,6 +228,9 @@ execution modules
     napalm_network
     napalm_ntp
     napalm_probes
+    napalm_route
+    napalm_snmp
+    napalm_users
     netaddress
     netbsd_sysctl
     netbsdservice
@@ -340,6 +343,7 @@ execution modules
     ssh
     ssh_package
     ssh_service
+    snapper
     state
     status
     stormpath
