@@ -49,6 +49,26 @@ def is_minion(opts):
     return not salt.utils.is_proxy() and 'napalm' in opts
 
 
+def virtual(opts, virtualname, filename):
+    '''
+    Returns the __virtual__.
+    '''
+
+    if HAS_NAPALM and (is_proxy(opts) or is_minion(opts)):
+        return virtualname
+    else:
+        return (
+            False,
+            (
+                '`{vname}` {filename} cannot be loaded:'
+                'NAPALM is not installed or not running in a (proxy) minion'
+            ).format(
+                vname=virtualname,
+                filename='({})'.format(filename)
+            )
+        )
+
+
 def call(napalm_device, method, *args, **kwargs):
     '''
     Calls arbitrary methods from the network driver instance.
