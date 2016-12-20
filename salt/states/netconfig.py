@@ -24,12 +24,15 @@ from __future__ import absolute_import
 import logging
 log = logging.getLogger(__name__)
 
+# import NAPALM utils
+import salt.utils.napalm
+
 # third party libs
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
     # pylint: disable=W0611
-    from napalm_base import get_network_driver
+    import napalm_base
     # pylint: enable=W0611
     HAS_NAPALM = True
 except ImportError:
@@ -50,18 +53,19 @@ __virtualname__ = 'netconfig'
 # ----------------------------------------------------------------------------------------------------------------------
 
 
+
 def __virtual__():
 
     '''
-    NAPALM library must be installed for this module to work.
-    Also, the key proxymodule must be set in the __opts___ dictionary.
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
     '''
 
-    if HAS_NAPALM and 'proxy' in __opts__:
+    if HAS_NAPALM \
+       and (salt.utils.napalm.is_proxy(__opts__) or salt.utils.napalm.is_minion(__opts__)):
         return __virtualname__
     else:
-        return (False, 'The network config state (netconfig) cannot be loaded: \
-                NAPALM or proxy could not be loaded.')
+        return (False, 'The netconfig state cannot be loaded: \
+                NAPALM is not installed or not running in a (proxy) minion')
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported

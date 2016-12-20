@@ -32,6 +32,8 @@ from salt.ext import six
 # state properties
 # ----------------------------------------------------------------------------------------------------------------------
 
+__virtualname__ = 'netsnmp'
+
 _COMMUNITY_MODE_MAP = {
     'read-only': 'ro',
     'readonly': 'ro',
@@ -49,7 +51,17 @@ _COMMUNITY_MODE_MAP = {
 
 
 def __virtual__():
-    return 'netsnmp'
+
+    '''
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
+    '''
+
+    if HAS_NAPALM \
+       and (salt.utils.napalm.is_proxy(__opts__) or salt.utils.napalm.is_minion(__opts__)):
+        return __virtualname__
+    else:
+        return (False, 'The netsnmp state cannot be loaded: \
+                NAPALM is not installed or not running in a (proxy) minion')
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported

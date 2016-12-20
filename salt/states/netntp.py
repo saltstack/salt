@@ -72,15 +72,15 @@ __virtualname__ = 'netntp'
 def __virtual__():
 
     '''
-    NAPALM library must be installed for this module to work.
-    Also, the key proxymodule must be set in the __opts___ dictionary.
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
     '''
 
-    if HAS_NAPALM and 'proxy' in __opts__:
+    if HAS_NAPALM \
+       and (salt.utils.napalm.is_proxy(__opts__) or salt.utils.napalm.is_minion(__opts__)):
         return __virtualname__
     else:
-        return (False, 'The network NTP state (netntp) cannot be loaded: \
-                NAPALM or proxy could not be loaded.')
+        return (False, 'The netntp state cannot be loaded: \
+                NAPALM is not installed or not running in a (proxy) minion')
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
