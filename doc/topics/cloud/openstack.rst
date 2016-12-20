@@ -131,8 +131,8 @@ ssh_interface
     for a certain period of time and then destroys the VM. With the nova drive,
     private cloud networks can be defined here.
 
-For more information concerning cloud profiles, see :doc:`here
-</topics/cloud/profiles>`.
+For more information concerning cloud profiles, see :ref:`here
+<salt-cloud-profiles>`.
 
 
 change_password

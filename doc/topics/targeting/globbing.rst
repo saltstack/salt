@@ -68,7 +68,7 @@ Match the ``web-x``, ``web-y``, and ``web-z`` minions:
 .. note::
 
     For additional targeting methods please review the
-    :doc:`compound matchers </topics/targeting/compound>` documentation.
+    :ref:`compound matchers <targeting-compound>` documentation.
 
 
 Regular Expressions

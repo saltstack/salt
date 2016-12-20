@@ -92,7 +92,7 @@ Major Features
 Pillar
 ------
 
-:doc:`Pillar </topics/pillar/index>` offers an interface to declare variable data on the master that is then
+:ref:`Pillar <pillar>` offers an interface to declare variable data on the master that is then
 assigned to the minions. The pillar data is made available to all modules,
 states, sls files etc. It is compiled on the master and is declared using the
 existing renderer system. This means that learning pillar should be fairly
@@ -314,51 +314,51 @@ server restarts behind a load balancer or doing maintenance on BSD firewalls
 using carp much easier with salt.
 
 Module Updates
----------------
+--------------
 
 This is a list of notable, but non-exhaustive updates with new and existing
 modules.
 
 Windows support has seen a flurry of support this release cycle. We've gained
-all new :doc:`file </ref/modules/all/salt.modules.win_file>`,
-:doc:`network </ref/modules/all/salt.modules.win_network>`, and
-:doc:`shadow </ref/modules/all/salt.modules.win_shadow>` modules. Please note
+all new :mod:`file <alt.modules.win_file>`,
+:mod:`network <salt.modules.win_network>`, and
+:mod:`shadow <salt.modules.win_shadow>` modules. Please note
 that these are still a work in progress.
 
-For our ruby users, new :doc:`rvm </ref/modules/all/salt.modules.rvm>` and
-:doc:`gem </ref/modules/all/salt.modules.gem>` modules have been added along
-with the :doc:`associated </ref/states/all/salt.states.rvm>`
-:doc:`states </ref/states/all/salt.states.gem>`
+For our ruby users, new :mod:`rvm <salt.modules.rvm>` and
+:mod:`gem <salt.modules.gem>` modules have been added along
+with the :mod:`associated <salt.states.rvm>`
+:mod:`states <salt.states.gem>`
 
-The :doc:`virt </ref/modules/all/salt.modules.virt>` module gained basic Xen support.
+The :mod:`virt <salt.modules.virt>` module gained basic Xen support.
 
-The :doc:`yum </ref/modules/all/salt.modules.yumpkg>` module gained
+The :mod:`yum <salt.modules.yumpkg>` module gained
 Scientific Linux support.
 
-The :doc:`pkg </ref/modules/all/salt.modules.aptpkg>` module on Debian, Ubuntu,
+The :mod:`pkg <salt.modules.aptpkg>` module on Debian, Ubuntu,
 and derivatives force apt to run in a non-interactive mode. This prevents
 issues when package installation waits for confirmation.
 
-A :doc:`pkg </ref/modules/all/salt.modules.zypper>` module for openSUSE's
+A :mod:`pkg <salt.modules.zypper>` module for OpenSUSE's
 zypper was added.
 
-The :doc:`service </ref/modules/all/salt.modules.upstart>` module on Ubuntu
+The :mod:`service <salt.modules.upstart>` module on Ubuntu
 natively supports upstart.
 
-A new :doc:`debconf </ref/modules/all/salt.modules.debconfmod>` module was
+A new :mod:`debconf <salt.modules.debconfmod>` module was
 contributed by our community for more advanced control over deb package
 deployments on Debian based distributions.
 
-The :doc:`mysql.user </ref/states/all/salt.states.mysql_user>` state and
-:doc:`mysql </ref/modules/all/salt.modules.mysql>` module gained a
+The :mod:`mysql.user <salt.states.mysql_user>` state and
+:mod:`mysql <salt.modules.mysql>` module gained a
 *password_hash* argument.
 
-The :doc:`cmd </ref/modules/all/salt.modules.cmdmod>` module and state gained
+The :mod:`cmd <salt.modules.cmdmod>` module and state gained
 a *shell* keyword argument for specifying a shell other than ``/bin/sh`` on
 Linux / Unix systems.
 
-New :doc:`git </ref/modules/all/salt.modules.git>` and
-:doc:`mercurial </ref/modules/all/salt.modules.hg>` modules have been added
+New :mod:`git <salt.modules.git>` and
+:mod:`mercurial <salt.modules.hg>` modules have been added
 for fans of distributed version control.
 
 

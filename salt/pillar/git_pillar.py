@@ -4,8 +4,8 @@ Use a git repository as a Pillar source
 ---------------------------------------
 
 .. note::
-    This external pillar has been rewritten for the :doc:`2015.8.0
-    </topics/releases/2015.8.0>` release. The old method of configuring this
+    This external pillar has been rewritten for the :ref:`2015.8.0
+    <release-2015-8-0>` release. The old method of configuring this
     external pillar will be maintained for a couple releases, allowing time for
     configurations to be updated to reflect the new usage.
 
@@ -56,7 +56,7 @@ the repo's URL. Configuration details can be found below.
 Configuring git_pillar for Salt releases before 2015.8.0
 ========================================================
 
-For Salt releases earlier than :doc:`2015.8.0 </topics/releases/2015.8.0>`,
+For Salt releases earlier than :ref:`2015.8.0 <release-2015-8-0>`,
 GitPython is the only supported provider for git_pillar. Individual
 repositories can be configured under the :conf_master:`ext_pillar`
 configuration parameter like so:
@@ -67,8 +67,8 @@ configuration parameter like so:
       - git: master https://gitserver/git-pillar.git root=subdirectory
 
 The repository is specified in the format ``<branch> <repo_url>``, with an
-optional ``root`` parameter (added in the :doc:`2014.7.0
-</topics/releases/2014.7.0>` release) which allows the pillar SLS files to be
+optional ``root`` parameter (added in the :ref:`2014.7.0
+<release-2014-7-0>` release) which allows the pillar SLS files to be
 served up from a subdirectory (similar to :conf_master:`gitfs_root` in gitfs).
 
 To use more than one branch from the same repo, multiple lines must be

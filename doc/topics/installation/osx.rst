@@ -1,3 +1,5 @@
+.. _macos-installation:
+
 ====
 OS X
 ====
@@ -76,5 +78,5 @@ Now the salt-master should run without errors:
 Post-installation tasks
 =======================
 
-Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
+Now go to the :ref:`Configuring Salt<configuring-salt>` page.
 

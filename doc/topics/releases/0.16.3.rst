@@ -4,8 +4,8 @@ Salt 0.16.3 Release Notes
 
 :release: 2013-08-09
 
-Version 0.16.3 is another bugfix release for :doc:`0.16.0
-</topics/releases/0.16.0>`. The changes include:
+Version 0.16.3 is another bugfix release for :ref:`0.16.0
+<release-0-16-0>`. The changes include:
 
 - Various documentation fixes
 - Fix proc directory regression (:issue:`6502`)

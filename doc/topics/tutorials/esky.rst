@@ -1,3 +1,5 @@
+.. _tutorial-esky:
+
 ======================================
 Automatic Updates / Frozen Deployments
 ======================================
