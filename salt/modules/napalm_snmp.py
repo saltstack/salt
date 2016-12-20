@@ -56,14 +56,15 @@ __proxyenabled__ = ['napalm']
 def __virtual__():
 
     '''
-    NAPALM library must be installed for this module to work.
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
     '''
 
-    if HAS_NAPALM:
+    if HAS_NAPALM \
+       and (salt.utils.napalm.is_proxy(__opts__) or salt.utils.napalm.is_minion(__opts__)):
         return __virtualname__
     else:
         return (False, 'The module SNMP (napalm_snmp) cannot be loaded: \
-                NAPALM or proxy could not be loaded.')
+                NAPALM is not installed or not running in a (proxy) minion')
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
