@@ -53,14 +53,13 @@ def virtual(opts, virtualname, filename):
     '''
     Returns the __virtual__.
     '''
-
     if HAS_NAPALM and (is_proxy(opts) or is_minion(opts)):
         return virtualname
     else:
         return (
             False,
             (
-                '`{vname}` {filename} cannot be loaded:'
+                '"{vname}"" {filename} cannot be loaded: '
                 'NAPALM is not installed or not running in a (proxy) minion'
             ).format(
                 vname=virtualname,
