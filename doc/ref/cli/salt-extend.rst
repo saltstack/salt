@@ -1,3 +1,5 @@
+.. _salt-extend:
+
 ===============
 ``salt-extend``
 ===============
@@ -26,7 +28,7 @@ You can use Salt Extend to quickly create templated modules for adding new behav
 
 Salt Extend takes a template directory and merges it into a SaltStack source code directory.
 
-*See also*: :doc:`Salt Extend </topics/development/extend/index>`.
+*See also*: :ref:`Salt Extend <development-salt-extend>`.
 
 Options
 =======

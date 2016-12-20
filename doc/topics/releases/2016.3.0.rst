@@ -1,4 +1,4 @@
-:orphan:
+.. _release-2016-3-0:
 
 ============================================
 Salt 2016.3.0 Release Notes - Codename Boron
@@ -88,7 +88,7 @@ External Module Packaging
 =========================
 
 Modules may now be packaged via entry-points in setuptools. See
-:doc:`external module packaging </topics/tutorials/packaging_modules>` tutorial
+:ref:`external module packaging <tutorial-packaging-modules>` tutorial
 for more information.
 
 

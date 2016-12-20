@@ -5,7 +5,7 @@ Execution module for Cisco Network Services Orchestrator Proxy minions
 .. versionadded: 2016.11.0
 
 For documentation on setting up the cisconso proxy minion look in the documentation
-for :doc:`salt.proxy.cisconso</ref/proxy/all/salt.proxy.cisconso>`.
+for :mod:`salt.proxy.cisconso<salt.proxy.cisconso>`.
 '''
 from __future__ import absolute_import
 
@@ -134,7 +134,7 @@ def apply_rollback(datastore, name):
 def _proxy_cmd(command, *args, **kwargs):
     '''
     run commands from __proxy__
-    :doc:`salt.proxy.cisconso</ref/proxy/all/salt.proxy.cisconso>`
+    :mod:`salt.proxy.cisconso<salt.proxy.cisconso>`
 
     command
         function from `salt.proxy.cisconso` to run

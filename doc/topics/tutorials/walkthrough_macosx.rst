@@ -1,3 +1,5 @@
+.. _tutorial-macos-walk-through:
+
 ========================================================================
 The MacOS X (Maverick) Developer Step By Step Guide To Salt Installation
 ========================================================================

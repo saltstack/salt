@@ -1,3 +1,5 @@
+.. _development-salt-extend:
+
 ===========
 Salt Extend
 ===========
@@ -12,7 +14,7 @@ Salt Extend takes a template directory and merges it into a SaltStack source cod
 Command line usage
 ~~~~~~~~~~~~~~~~~~
 
-*See* :doc:`salt-extend </ref/cli/salt-extend>`
+*See* :ref:`salt-extend <salt-extend>`
 
 Choosing a template
 ~~~~~~~~~~~~~~~~~~~
@@ -30,12 +32,12 @@ module_unit
 Creates a new execution module unit test suite within tests/unit/modules/{{module_name}}_test.py
 
 state
-^^^^^^
+^^^^^
 
 Creates a new state module within salt/states/{{module_name}}.py
 
 state_unit
-^^^^^^^^^^^
+^^^^^^^^^^
 
 Creates a new state module unit test suite within tests/unit/states/{{module_name}}_test.py
 

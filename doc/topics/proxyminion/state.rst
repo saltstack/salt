@@ -1,3 +1,5 @@
+.. _proxy-minion-states:
+
 .. versionadded:: 2015.8.2
 
 ===================

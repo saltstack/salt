@@ -2,5 +2,4 @@
 Salt 2016.11.2 Release Notes
 ============================
 
-Version 2016.11.2 is a bugfix release for :doc:`2016.11.0
-</topics/releases/2016.11.0>`.
+Version 2016.11.2 is a bugfix release for :ref:`2016.11.0 <release-2016-11-0>`.

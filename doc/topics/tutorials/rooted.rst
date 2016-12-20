@@ -1,3 +1,5 @@
+.. _tutorial-rooted:
+
 ====================================
 running salt as normal user tutorial
 ====================================

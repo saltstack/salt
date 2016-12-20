@@ -1,4 +1,4 @@
-.. syslog_ng-sate-usage:
+.. _syslog-ng-sate-usage:
 
 Syslog-ng usage
 ===============

@@ -40,7 +40,7 @@ aren't running FreeBSD, and the second block changes the file name based on the
 *os* grain.
 
 Writing **if-else** blocks can lead to very redundant state files however. In
-this case, using :doc:`pillars</topics/pillar/index>`, or using a previously
+this case, using :ref:`pillars<pillar>`, or using a previously
 defined variable might be easier:
 
 .. code-block:: yaml

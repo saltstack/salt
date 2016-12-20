@@ -22,7 +22,7 @@ Functions in the saltutil Module
 ================================
 
 Salt 0.9.7 introduced a few new functions to the
-:doc:`saltutil</ref/modules/all/salt.modules.saltutil>` module for managing
+:mod:`saltutil<salt.modules.saltutil>` module for managing
 jobs. These functions are:
 
 1. ``running``
@@ -108,8 +108,8 @@ Scheduling can be enabled by multiple methods:
 - Minion pillar data.  Schedule is implemented by refreshing the minion's pillar data,
   for example by using ``saltutil.refresh_pillar``.
 
-- The :doc:`schedule state</ref/states/all/salt.states.schedule>` or
-  :doc:`schedule module</ref/modules/all/salt.modules.schedule>`
+- The :mod:`schedule state<salt.states.schedule>` or
+  :mod:`schedule module<salt.modules.schedule>`
 
 .. note::
 
