@@ -91,7 +91,7 @@ def present(name,
                         database, 'all', name, **client_args)
                 del db_privileges[database]
             if database not in db_privileges:
-                ret['changes']['Grant on database %s to user %s' % (
+                ret['changes']['Grant on database {0} to user {1}'.format(
                     database, name)] = privilege
                 if not __opts__['test']:
                     __salt__['influxdb.grant_privilege'](
