@@ -1,11 +1,13 @@
+.. _tutorial-states-part-3:
+
 =======================================================
 States tutorial, part 3 - Templating, Includes, Extends
 =======================================================
 
 .. note::
 
-  This tutorial builds on topics covered in :doc:`part 1 <states_pt1>` and
-  :doc:`part 2 <states_pt2>`. It is recommended that you begin there.
+  This tutorial builds on topics covered in :ref:`part 1 <states-tutorial>` and
+  :ref:`part 2 <tutorial-states-part-2>`. It is recommended that you begin there.
 
 This part of the tutorial will cover more advanced templating and
 configuration techniques for ``sls`` files.
@@ -68,8 +70,8 @@ Using Grains in SLS modules
 ===========================
 
 Often times a state will need to behave differently on different systems.
-:doc:`Salt grains </topics/targeting/grains>` objects are made available
-in the template context. The `grains` can be used from within sls modules:
+:ref:`Salt grains <targeting-grains>` objects are made available in the template
+context. The `grains` can be used from within sls modules:
 
 .. code-block:: jinja
 
@@ -170,7 +172,7 @@ Include declaration
 -------------------
 
 A previous example showed how to spread a Salt tree across several files.
-Similarly, :doc:`requisites </ref/states/requisites>` span multiple files by
+Similarly, :ref:`requisites` span multiple files by
 using an :ref:`include-declaration`. For example:
 
 ``python/python-libs.sls:``
@@ -273,6 +275,6 @@ can be rewritten without the loop:
 Next steps
 ==========
 
-In :doc:`part 4 <states_pt4>` we will discuss how to use salt's
+In :ref:`part 4 <tutorial-states-part-4>` we will discuss how to use salt's
 :conf_master:`file_roots` to set up a workflow in which states can be
 "promoted" from dev, to QA, to production.

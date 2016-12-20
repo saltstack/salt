@@ -86,7 +86,7 @@ Install Salt (and dependencies) into the virtualenv:
 .. note:: Installing dependencies on OS X.
 
     You can install needed dependencies on OS X using homebrew or macports.
-    See :doc:`OS X Installation </topics/installation/osx>`
+    See :ref:`OS X Installation <macos-installation>`
 
 .. warning:: Installing on RedHat-based Distros
 
@@ -134,7 +134,7 @@ Edit the minion config file:
     also running a non-development version of Salt, then you will have to
     change the ``master_port`` value in the minion config to match.
 
-.. note:: Using `salt-call` with a :doc:`Standalone Minion </topics/tutorials/standalone_minion>`
+.. note:: Using `salt-call` with a :ref:`Standalone Minion <tutorial-standalone-minion>`
 
     If you plan to run `salt-call` with this self-contained development
     environment in a masterless setup, you should invoke `salt-call` with
@@ -195,8 +195,8 @@ If you would like to log to the console instead of to the log file, remove the
         # use 'limit descriptors 2047' for c-shell
         ulimit -n 2047
 
-    To set file descriptors on OSX, refer to the :doc:`OS X Installation
-    </topics/installation/osx>` instructions.
+    To set file descriptors on OSX, refer to the :ref:`OS X Installation
+    <macos-installation>` instructions.
 
 
 Changing Default Paths
@@ -311,7 +311,7 @@ Run the test suite with following command:
 
     ./setup.py test
 
-See :doc:`here <tests/index>` for more information regarding the test suite.
+See :ref:`here <salt-test-suite>` for more information regarding the test suite.
 
 Issue and Pull Request Labeling System
 --------------------------------------

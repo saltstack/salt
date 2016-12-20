@@ -28,14 +28,14 @@ SaltStack the company does make proprietary products which use Salt and its libr
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
 
 I think I found a bug! What should I do?
------------------------------------------
+----------------------------------------
 
 The salt-users mailing list as well as the salt IRC channel can both be helpful
 resources to confirm if others are seeing the issue and to assist with
 immediate debugging.
 
 To report a bug to the Salt project, please follow the instructions in
-:doc:`reporting a bug </topics/development/reporting_bugs>`.
+:ref:`reporting a bug <reporting-bugs>`.
 
 
 What ports should I open on my firewall?
@@ -43,7 +43,7 @@ What ports should I open on my firewall?
 
 Minions need to be able to connect to the Master on TCP ports 4505 and 4506.
 Minions do not need any inbound ports open. More detailed information on
-firewall settings can be found :doc:`here </topics/tutorials/firewall>`.
+firewall settings can be found :ref:`here <firewall>`.
 
 I'm seeing weird behavior (including but not limited to packages not installing their users properly)
 -----------------------------------------------------------------------------------------------------
@@ -207,7 +207,7 @@ Does Salt support backing up managed files?
 -------------------------------------------
 
 Yes. Salt provides an easy to use addition to your file.managed states that
-allow you to back up files via :doc:`backup_mode </ref/states/backup_mode>`,
+allow you to back up files via :ref:`backup_mode <file-state-backups>`,
 backup_mode can be configured on a per state basis, or in the minion config
 (note that if set in the minion config this would simply be the default
 method to use, you still need to specify that the file should be backed up!).

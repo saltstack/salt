@@ -1,3 +1,5 @@
+.. _cloud-getting-started-vmware:
+
 ===========================
 Getting Started With VMware
 ===========================

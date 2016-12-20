@@ -1,3 +1,5 @@
+.. _mod-aggregate-state:
+
 =========================================
 Mod Aggregate State Runtime Modifications
 =========================================

@@ -1954,7 +1954,10 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         if contents is not None:
             try:
                 tmpfd, file_to_upload = tempfile.mkstemp()
-                os.write(tmpfd, contents)
+                if isinstance(contents, str):
+                    os.write(tmpfd, contents.encode(__salt_system_encoding__))
+                else:
+                    os.write(tmpfd, contents)
             finally:
                 try:
                     os.close(tmpfd)

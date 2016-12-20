@@ -10,7 +10,7 @@ MinionFS Backend Walkthrough
 
     This walkthrough assumes basic knowledge of Salt and :mod:`cp.push
     <salt.modules.cp.push>`. To get up to speed, check out the
-    :doc:`walkthrough </topics/tutorials/walkthrough>`.
+    :ref:`Salt Walkthrough <tutorial-salt-walk-through>`.
 
 Sometimes it is desirable to deploy a file located on one minion to one or more
 other minions. This is supported in Salt, and can be accomplished in two parts:

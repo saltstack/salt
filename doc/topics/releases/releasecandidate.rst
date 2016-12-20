@@ -7,9 +7,9 @@ Installing/Testing a Salt Release Candidate
 ===========================================
 
 It's time for a new feature release of Salt! Follow the instructions below to
-install the latest release candidate of Salt, and try :doc:`all the shiny new
-features </topics/releases/2016.11.0>`! Be sure to report any bugs you find on
-`Github <https://github.com/saltstack/salt/issues/new/>`_.
+install the latest release candidate of Salt, and try :ref:`all the shiny new
+features <release-2016-11-0>`! Be sure to report any bugs you find on `Github
+<https://github.com/saltstack/salt/issues/new/>`_.
 
 Installing Using Packages
 =========================

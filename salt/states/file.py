@@ -80,7 +80,7 @@ salt fileserver. Here's an example:
 
     Salt supports backing up managed files via the backup option. For more
     details on this functionality please review the
-    :doc:`backup_mode documentation </ref/states/backup_mode>`.
+    :ref:`backup_mode documentation <file-state-backups>`.
 
 The ``source`` parameter can also specify a file in another Salt environment.
 In this example ``foo.conf`` in the ``dev`` environment will be used instead.

@@ -1,3 +1,5 @@
+.. _pillar-walk-through:
+
 ==================
 Pillar Walkthrough
 ==================
@@ -5,7 +7,7 @@ Pillar Walkthrough
 .. note::
 
     This walkthrough assumes that the reader has already completed the initial
-    Salt :doc:`walkthrough </topics/tutorials/walkthrough>`.
+    Salt :ref:`walkthrough <tutorial-salt-walk-through>`.
 
 Pillars are tree-like structures of data defined on the Salt Master and passed
 through to minions. They allow confidential, targeted data to be securely sent
@@ -344,7 +346,7 @@ information about an infrastructure is stored in a separate location.
 Reference information on pillar and the external pillar interface can be found
 in the Salt documentation:
 
-:doc:`Pillar </topics/pillar/index>`
+:ref:`Pillar <pillar>`
 
 Minion Config in Pillar
 =======================
