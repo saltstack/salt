@@ -1,7 +1,38 @@
 # -*- coding: utf-8 -*-
 '''
-Data cache plugin for Consul key/value data store.
-This requires python-consul python package.
+Minion data cache plugin for Consul key/value data store.
+
+It is up to the system administrator to set up and configure the Consul
+infrastructure. All is needed for this plugin is a working Consul agent
+with a read-write access to the key-value storae.
+
+The related documentation can be found here: https://www.consul.io/docs/index.html
+
+To enable this cache plugin the master will need the python client for
+Consul installed that could be easily done with `pip install python-consul`.
+
+Optionally depending on the Consul agent configuration the following values
+could be set in the master config, these are the defaults:
+
+.. code-block:: yaml
+
+    consul.host: 127.0.0.1
+    consul.port: 8500
+    consul.token: None
+    consul.scheme: http
+    consul.consistency: default
+    consul.dc: None
+    consul.verify: True
+
+Related docs could be found here:
+* python-consul: https://python-consul.readthedocs.io/en/latest/#consul
+
+To use the consul as a minion data cache backend set the master `cache` config
+value to `consul`:
+
+.. code-block:: yaml
+
+    cache: consul
 
 .. versionadded:: 2016.11.2
 '''
@@ -16,7 +47,7 @@ except ImportError:
 from salt.exceptions import SaltCacheError
 
 log = logging.getLogger(__name__)
-CONSUL = None
+api = None
 
 
 # Define the module's virtual name
@@ -30,8 +61,18 @@ def __virtual__():
     if not HAS_CONSUL:
         return (False, "Please install python-consul package to use consul data cache driver")
 
-    global CONSUL
-    CONSUL = consul.Consul()
+    consul_kwargs = {
+            'host': __opts__.get('consul.host', '127.0.0.1'),
+            'port': __opts__.get('consul.port', 8500),
+            'token': __opts__.get('consul.token', None),
+            'scheme': __opts__.get('consul.scheme', 'http'),
+            'consistency': __opts__.get('consul.consistency', 'default'),
+            'dc': __opts__.get('consul.dc', None),
+            'verify': __opts__.get('consul.verify', True),
+            }
+
+    global api
+    api = consul.Consul(**consul_kwargs)
 
     return __virtualname__
 
@@ -43,7 +84,7 @@ def store(bank, key, data):
     c_key = '{0}/{1}'.format(bank, key)
     try:
         c_data = __context__['serial'].dumps(data)
-        CONSUL.kv.put(c_key, c_data)
+        api.kv.put(c_key, c_data)
     except Exception as exc:
         raise SaltCacheError(
             'There was an error writing the key, {0}: {1}'.format(
@@ -58,7 +99,7 @@ def fetch(bank, key):
     '''
     c_key = '{0}/{1}'.format(bank, key)
     try:
-        _, value = CONSUL.kv.get(c_key)
+        _, value = api.kv.get(c_key)
         if value is None:
             return value
         return __context__['serial'].loads(value['Value'])
@@ -79,7 +120,7 @@ def flush(bank, key=None):
     else:
         c_key = '{0}/{1}'.format(bank, key)
     try:
-        return CONSUL.kv.delete(c_key, recurse=key is None)
+        return api.kv.delete(c_key, recurse=key is None)
     except Exception as exc:
         raise SaltCacheError(
             'There was an error removing the key, {0}: {1}'.format(
@@ -93,7 +134,7 @@ def list(bank):
     Return an iterable object containing all entries stored in the specified bank.
     '''
     try:
-        _, keys = CONSUL.kv.get(bank + '/', keys=True, separator='/')
+        _, keys = api.kv.get(bank + '/', keys=True, separator='/')
     except Exception as exc:
         raise SaltCacheError(
             'There was an error getting the key "{0}": {1}'.format(
@@ -121,7 +162,7 @@ def contains(bank, key):
     else:
         try:
             c_key = '{0}/{1}'.format(bank, key)
-            _, value = CONSUL.kv.get(c_key)
+            _, value = api.kv.get(c_key)
         except Exception as exc:
             raise SaltCacheError(
                 'There was an error getting the key, {0}: {1}'.format(
