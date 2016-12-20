@@ -23,6 +23,7 @@ from __future__ import absolute_import
 # Import salt libs
 from salt.ext.six import string_types
 
+
 def __virtual__():
     '''
     Only load if a2enmod is available.
