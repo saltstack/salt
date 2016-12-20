@@ -19,11 +19,9 @@ Enable and disable apache modules.
 
 # Import Python libs
 from __future__ import absolute_import
-from salt.ext.six import string_types
 
 # Import salt libs
-import salt.utils
-
+from salt.ext.six import string_types
 
 def __virtual__():
     '''

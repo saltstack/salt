@@ -17,11 +17,9 @@ Enable and disable apache sites.
         - name: default
 '''
 from __future__ import absolute_import
-from salt.ext.six import string_types
 
 # Import salt libs
-import salt.utils
-
+from salt.ext.six import string_types
 
 def __virtual__():
     '''
