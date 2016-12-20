@@ -49,6 +49,13 @@ class Mock(object):
         else:
             data = Mock(mapping=self.__mapping)
         return data
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        raise StopIteration
+
 # pylint: enable=R0903
 
 MOCK_MODULES = [

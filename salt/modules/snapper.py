@@ -2,6 +2,8 @@
 '''
 Module to manage filesystem snapshots with snapper
 
+.. versionadded:: 2016.11.0
+
 :codeauthor:    Duncan Mac-Vicar P. <dmacvicar@suse.de>
 :codeauthor:    Pablo Suárez Hernández <psuarezhernandez@suse.de>
 
