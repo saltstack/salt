@@ -1551,7 +1551,6 @@ def _validate_opts(opts):
     if isinstance(opts.get('return'), list):
         opts['return'] = ','.join(opts['return'])
 
-
     # RAET on Windows uses 'win32file.CreateMailslot()' for IPC. Due to this,
     # sock_dirs must start with '\\.\mailslot\' and not contain any colons.
     # We don't expect the user to know this, so we will fix up their path for
