@@ -59,7 +59,7 @@ def __virtual__():
 
 
 @proxy_napalm_wrap
-def config(**kwargs):
+def config(**kwargs):  # pylint: disable=unused-argument
 
     '''
     Returns the SNMP configuration
@@ -72,7 +72,7 @@ def config(**kwargs):
     '''
 
     return salt.utils.napalm.call(
-        napalm_device,
+        napalm_device,  # pylint: disable=undefined-variable
         'get_snmp_information',
         **{
         }
@@ -86,7 +86,7 @@ def remove_config(chassis_id=None,
                   location=None,
                   test=False,
                   commit=True,
-                  **kwargs):
+                  **kwargs):  # pylint: disable=unused-argument
 
     '''
     Removes a configuration element from the SNMP configuration.
@@ -134,7 +134,7 @@ def remove_config(chassis_id=None,
         dic['contact'] = contact
     if location:
         dic['location'] = location
-    dic['inherit_napalm_device'] = napalm_device
+    dic['inherit_napalm_device'] = napalm_device  # pylint: disable=undefined-variable
 
     return __salt__['net.load_template'](**dic)
 
@@ -146,7 +146,7 @@ def update_config(chassis_id=None,
                   location=None,
                   test=False,
                   commit=True,
-                  **kwargs):
+                  **kwargs):  # pylint: disable=unused-argument
 
     '''
     Updates the SNMP configuration.
@@ -211,6 +211,6 @@ def update_config(chassis_id=None,
         dic['contact'] = contact
     if location:
         dic['location'] = location
-    dic['inherit_napalm_device'] = napalm_device
+    dic['inherit_napalm_device'] = napalm_device  # pylint: disable=undefined-variable
 
     return __salt__['net.load_template'](**dic)

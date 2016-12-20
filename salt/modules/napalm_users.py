@@ -58,7 +58,7 @@ def __virtual__():
 
 
 @proxy_napalm_wrap
-def config(**kwargs):
+def config(**kwargs):  # pylint: disable=unused-argument
 
     '''
     Returns the configuration of the users on the device
@@ -90,7 +90,7 @@ def config(**kwargs):
     '''
 
     return salt.utils.napalm.call(
-        napalm_device,
+        napalm_device,  # pylint: disable=undefined-variable
         'get_users',
         **{
         }
@@ -98,7 +98,7 @@ def config(**kwargs):
 
 
 @proxy_napalm_wrap
-def set_users(users, test=False, commit=True, **kwargs):
+def set_users(users, test=False, commit=True, **kwargs):  # pylint: disable=unused-argument
 
     '''
     Configures users on network devices.
@@ -131,11 +131,11 @@ def set_users(users, test=False, commit=True, **kwargs):
                                          users=users,
                                          test=test,
                                          commit=commit,
-                                         inherit_napalm_device=napalm_device)
+                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
 
 
 @proxy_napalm_wrap
-def delete_users(users, test=False, commit=True, **kwargs):
+def delete_users(users, test=False, commit=True, **kwargs):  # pylint: disable=unused-argument
 
     '''
     Removes users from the configuration of network devices.
@@ -168,4 +168,4 @@ def delete_users(users, test=False, commit=True, **kwargs):
                                          users=users,
                                          test=test,
                                          commit=commit,
-                                         inherit_napalm_device=napalm_device)
+                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable

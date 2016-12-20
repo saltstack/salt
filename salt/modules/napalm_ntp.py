@@ -59,7 +59,7 @@ def __virtual__():
 
 
 @proxy_napalm_wrap
-def peers(**kwargs):
+def peers(**kwargs):  # pylint: disable=unused-argument
 
     '''
     Returns a list the NTP peers configured on the network device.
@@ -86,7 +86,7 @@ def peers(**kwargs):
     '''
 
     ntp_peers = salt.utils.napalm.call(
-        napalm_device,
+        napalm_device,  # pylint: disable=undefined-variable
         'get_ntp_peers',
         **{
         }
@@ -103,7 +103,7 @@ def peers(**kwargs):
 
 
 @proxy_napalm_wrap
-def servers(**kwargs):
+def servers(**kwargs):  # pylint: disable=unused-argument
 
     '''
     Returns a list of the configured NTP servers on the device.
@@ -116,7 +116,7 @@ def servers(**kwargs):
     '''
 
     ntp_servers = salt.utils.napalm.call(
-        napalm_device,
+        napalm_device,  # pylint: disable=undefined-variable
         'get_ntp_servers',
         **{
         }
@@ -133,7 +133,7 @@ def servers(**kwargs):
 
 
 @proxy_napalm_wrap
-def stats(peer=None, **kwargs):
+def stats(peer=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
     Returns a dictionary containing synchronization details of the NTP peers.
@@ -181,7 +181,7 @@ def stats(peer=None, **kwargs):
     '''
 
     proxy_output = salt.utils.napalm.call(
-        napalm_device,
+        napalm_device,  # pylint: disable=undefined-variable
         'get_ntp_stats',
         **{
         }
@@ -232,7 +232,7 @@ def set_peers(*peers, **options):
                                          peers=peers,
                                          test=test,
                                          commit=commit,
-                                         inherit_napalm_device=napalm_device)
+                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
 
 
 @proxy_napalm_wrap
@@ -265,7 +265,7 @@ def set_servers(*servers, **options):
                                          servers=servers,
                                          test=test,
                                          commit=commit,
-                                         inherit_napalm_device=napalm_device)
+                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
 
 
 @proxy_napalm_wrap
@@ -298,7 +298,7 @@ def delete_peers(*peers, **options):
                                          peers=peers,
                                          test=test,
                                          commit=commit,
-                                         inherit_napalm_device=napalm_device)
+                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
 
 
 @proxy_napalm_wrap
@@ -331,4 +331,4 @@ def delete_servers(*servers, **options):
                                          servers=servers,
                                          test=test,
                                          commit=commit,
-                                         inherit_napalm_device=napalm_device)
+                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable

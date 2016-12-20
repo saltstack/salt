@@ -158,7 +158,7 @@ def config(group=None, neighbor=None, **kwargs):
     '''
 
     return salt.utils.napalm.call(
-        napalm_device,
+        napalm_device,  # pylint: disable=undefined-variable
         'get_bgp_config',
         **{
             'group': group,
@@ -268,7 +268,7 @@ def neighbors(neighbor=None, **kwargs):
     '''
 
     return salt.utils.napalm.call(
-        napalm_device,
+        napalm_device,  # pylint: disable=undefined-variable
         'get_bgp_neighbors_detail',
         **{
             'neighbor_address': neighbor
