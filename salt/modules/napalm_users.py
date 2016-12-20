@@ -29,16 +29,6 @@ log = logging.getLogger(__file__)
 import salt.utils.napalm
 from salt.utils.napalm import proxy_napalm_wrap
 
-try:
-    # will try to import NAPALM
-    # https://github.com/napalm-automation/napalm
-    # pylint: disable=W0611
-    import napalm_base
-    # pylint: enable=W0611
-    HAS_NAPALM = True
-except ImportError:
-    HAS_NAPALM = False
-
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
@@ -53,17 +43,10 @@ __proxyenabled__ = ['napalm']
 
 
 def __virtual__():
-
     '''
     NAPALM library must be installed for this module to work and run in a (proxy) minion.
     '''
-
-    if HAS_NAPALM \
-       and (salt.utils.napalm.is_proxy(__opts__) or salt.utils.napalm.is_minion(__opts__)):
-        return __virtualname__
-    else:
-        return (False, 'The module users (napalm_users) cannot be loaded: \
-                NAPALM is not installed or not running in a (proxy) minion')
+    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
