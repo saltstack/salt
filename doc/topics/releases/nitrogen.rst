@@ -86,6 +86,7 @@ General Deprecations
 --------------------
 
 - Beacon configurations should be lists instead of dictionaries.
+- The ``PidfileMixin`` has been removed. Please use ``DaemonMixIn`` instead.
 
 Configuration Option Deprecations
 ---------------------------------
