@@ -389,11 +389,6 @@ def latest(name,
 
         .. versionadded:: 2015.8.3
 
-    force : False
-        .. deprecated:: 2015.8.0
-            Use ``force_clone`` instead. For earlier Salt versions, ``force``
-            must be used.
-
     force_checkout : False
         When checking out the local branch, the state will fail if there are
         unwritten changes. Set this argument to ``True`` to discard unwritten
@@ -438,11 +433,6 @@ def latest(name,
         it using this value as the initial remote name. If the repository
         already exists, and a remote by this name is not present, one will be
         added.
-
-    remote_name
-        .. deprecated:: 2015.8.0
-            Use ``remote`` instead. For earlier Salt versions, ``remote_name``
-            must be used.
 
     fetch_tags : True
         If ``True``, then when a fetch is performed all tags will be fetched,
@@ -580,35 +570,11 @@ def latest(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     kwargs = salt.utils.clean_kwargs(**kwargs)
-    always_fetch = kwargs.pop('always_fetch', False)
-    force = kwargs.pop('force', False)
-    remote_name = kwargs.pop('remote_name', False)
     if kwargs:
         return _fail(
             ret,
             salt.utils.invalid_kwargs(kwargs, raise_exc=False)
         )
-
-    if always_fetch:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'always_fetch\' argument to the git.latest state no longer '
-            'has any effect, see the 2015.8.0 release notes for details.'
-        )
-    if force:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'force\' argument to the git.latest state has been '
-            'deprecated, please use \'force_clone\' instead.'
-        )
-        force_clone = force
-    if remote_name:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'remote_name\' argument to the git.latest state has been '
-            'deprecated, please use \'remote\' instead.'
-        )
-        remote = remote_name
 
     if not remote:
         return _fail(ret, '\'remote\' argument is required')
@@ -2806,11 +2772,6 @@ def config_set(name,
     global : False
         If ``True``, this will set a global git config option
 
-        .. versionchanged:: 2015.8.0
-            Option renamed from ``is_global`` to ``global``. For earlier
-            versions, use ``is_global``.
-
-
     **Local Config Example:**
 
     .. code-block:: yaml
@@ -2860,20 +2821,11 @@ def config_set(name,
     # passed.
     kwargs = salt.utils.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
-    is_global = kwargs.pop('is_global', False)
     if kwargs:
         return _fail(
             ret,
             salt.utils.invalid_kwargs(kwargs, raise_exc=False)
         )
-
-    if is_global:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'is_global\' argument to the git.config_set state has been '
-            'deprecated, please use \'global\' instead.'
-        )
-        global_ = is_global
 
     if not global_ and not repo:
         return _fail(
@@ -2976,30 +2928,6 @@ def config_set(name,
         value_comment
     )
     return ret
-
-
-def config(name,
-           value=None,
-           multivar=None,
-           repo=None,
-           user=None,
-           password=None,
-           **kwargs):
-    '''
-    Pass through to git.config_set and display a deprecation warning
-    '''
-    salt.utils.warn_until(
-        'Nitrogen',
-        'The \'git.config\' state has been renamed to \'git.config_set\', '
-        'please update your SLS files'
-    )
-    return config_set(name=name,
-                      value=value,
-                      multivar=multivar,
-                      repo=repo,
-                      user=user,
-                      password=password,
-                      **kwargs)
 
 
 def mod_run_check(cmd_kwargs, onlyif, unless):

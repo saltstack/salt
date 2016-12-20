@@ -109,13 +109,28 @@ Configuration Option Deprecations
 Module Deprecations
 -------------------
 
+The ``git`` execution module had the following changes:
+
+- The ``fmt`` argument was removed from the ``archive`` function. Please
+  use ``format`` instead.
+- The ``repository`` argument was removed from the ``clone`` function.
+  Please use ``url`` instead.
+- The ``is_global`` argument was removed from the ``config_set`` function.
+  Please use ``global`` instead.
+- The ``branch`` argument was removed from the ``merge`` function. Please
+  use ``rev`` instead.
+- The ``branch`` argument was removed from the ``push`` function. Please
+  use ``rev`` instead.
+
 The ``glusterfs`` execution module had the following functions removed:
 
 - ``create``: Please use ``create_volume`` instead.
 - ``delete``: Please use ``delete_volume`` instead.
 -  ``list_peers``: Please use ``peer_status`` instead.
 
-- The ``win_repo_source_dir`` option has been removed from the ``win_repo``
+The ``win_repo`` execution module had the following changes:
+
+- The ``win_repo_source_dir`` option was removed from the ``win_repo``
   module. Please use ``winrepo_source_dir`` instead.
 
 Pillar Deprecations
@@ -169,10 +184,23 @@ The ``apache_site`` state had the following functions removed:
   - ``disable``: Please use ``disabled`` instead.
   - ``enable``: Please use ``enabled`` instead.
 
-- The ``chocolatey`` state had the following functions removed:
+The ``chocolatey`` state had the following functions removed:
 
   - ``install``: Please use ``installed`` instead.
   - ``uninstall``: Please use ``uninstalled`` instead.
+
+The ``git`` state had the following changes:
+
+  - The ``config`` function was removed. Please use ``config_set`` instead.
+  - The ``is_global`` option was removed from the ``config_set`` function.
+    Please use ``global`` instead.
+  - The ``always_fetch`` option was removed from the ``latest`` function, as
+    it no longer has any effect. Please see the :ref:`2015.8.0<release-2015-8-0>`
+    release notes for more information.
+  - The ``force`` option was removed from the ``latest`` function. Please
+    use ``force_clone`` instead.
+  - The ``remote_name`` option was removed from the ``latest`` function.
+    Please use ``remote`` instead.
 
 The ``glusterfs`` state had the following function removed:
 
