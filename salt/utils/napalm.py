@@ -33,6 +33,20 @@ except ImportError:
     HAS_NAPALM = False
 
 
+def is_proxy(opts):
+    '''
+    Is this a NAPALM proxy?
+    '''
+    return salt.utils.is_proxy() and opts.get('proxy', {}).get('proxytype') == 'napalm'
+
+
+def is_minion(opts):
+    '''
+    Is this a NAPALM straight minion?
+    '''
+    return not salt.utils.is_proxy() and 'napalm' in opts
+
+
 def call(napalm_device, method, *args, **kwargs):
     '''
     Calls arbitrary methods from the network driver instance.
