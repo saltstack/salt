@@ -52,20 +52,6 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def _is_proxy_napalm():
-    '''
-    Is this a NAPALM proxy?
-    '''
-    return salt.utils.is_proxy() and __opts__.get('proxy', {}).get('proxytype') == 'napalm'
-
-
-def _is_minion_napalm():
-    '''
-    Is this a straight proxy?
-    '''
-    return not salt.utils.is_proxy() and 'napalm' in __opts__
-
-
 def _retrieve_grains(proxy=None):
     '''
     Retrieves the grains from the network device if not cached already.
@@ -75,12 +61,12 @@ def _retrieve_grains(proxy=None):
     global DEVICE_CACHE
 
     if not GRAINS_CACHE:
-        if proxy and _is_proxy_napalm():
+        if proxy and salt.utils.napalm.is_proxy():
             # if proxy var passed and is NAPALM-type proxy minion
             GRAINS_CACHE = proxy['napalm.get_grains']()
             if 'napalm.get_device' in proxy:
                 DEVICE_CACHE = proxy['napalm.get_device']()
-        elif not proxy and _is_minion_napalm():
+        elif not proxy and salt.utils.napalm.is_minion():
             # if proxy var not passed and is running in a straight minion
             DEVICE_CACHE = salt.utils.napalm.get_device(__opts__)
             GRAINS_CACHE = salt.utils.napalm.call(
@@ -279,7 +265,7 @@ def username(proxy=None):
         device2:
             True
     '''
-    if proxy and _is_proxy_napalm():
+    if proxy and salt.utils.napalm.is_proxy():
         # only if proxy will override the username
         # otherwise will use the default Salt grains
         return {'username': _get_device_grain('username')}
