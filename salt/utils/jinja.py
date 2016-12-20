@@ -62,7 +62,10 @@ class SaltCacheLoader(BaseLoader):
         self.saltenv = saltenv
         self.encoding = encoding
         if self.opts['file_roots'] is self.opts['pillar_roots']:
-            self.searchpath = opts['file_roots'][saltenv]
+            if saltenv not in self.opts['file_roots']:
+                self.searchpath = []
+            else:
+                self.searchpath = opts['file_roots'][saltenv]
         else:
             self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
