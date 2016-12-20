@@ -49,10 +49,15 @@ __virtualname__ = 'probes'
 def __virtual__():
 
     '''
-    This is a virtual state module called "probes".
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
     '''
 
-    return True
+    if HAS_NAPALM \
+       and (salt.utils.napalm.is_proxy(__opts__) or salt.utils.napalm.is_minion(__opts__)):
+        return __virtualname__
+    else:
+        return (False, 'The probes state cannot be loaded: \
+                NAPALM is not installed or not running in a (proxy) minion')
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
