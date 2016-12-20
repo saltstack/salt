@@ -1965,15 +1965,7 @@ class ClearFuncs(object):
         '''
         extra = clear_load.get('kwargs', {})
 
-        if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
-            salt.utils.warn_until(
-                    'Nitrogen',
-                    'ACL rules should be configured with \'publisher_acl\' and '
-                    '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
-                    'This functionality will be removed in Salt Nitrogen.'
-                    )
-        publisher_acl = salt.acl.PublisherACL(
-                self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist'])
+        publisher_acl = salt.acl.PublisherACL(self.opts['publisher_acl_blacklist'])
 
         if publisher_acl.user_is_blacklisted(clear_load['user']) or \
                 publisher_acl.cmd_is_blacklisted(clear_load['fun']):
@@ -2177,7 +2169,7 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-                publisher_acl = self.opts['publisher_acl'] or self.opts['client_acl']
+                publisher_acl = self.opts['publisher_acl']
                 if self.opts['sudo_acl'] and publisher_acl:
                     publisher_acl = salt.utils.get_values_of_matching_keys(
                             publisher_acl,
@@ -2221,7 +2213,7 @@ class ClearFuncs(object):
                         return ''
                     # Build ACL matching the user name
                     acl = salt.utils.get_values_of_matching_keys(
-                            self.opts['publisher_acl'] or self.opts['client_acl'],
+                            self.opts['publisher_acl'],
                             clear_load['user'])
                     if not acl:
                         log.warning(

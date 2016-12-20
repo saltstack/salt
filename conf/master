@@ -327,10 +327,6 @@
 #    - '^(?!sudo_).*$'   #  all non sudo users
 #  modules:
 #    - cmd
-#
-# WARNING: client_acl and client_acl_blacklist options are deprecated and will
-# be removed in the future releases. Use publisher_acl and
-# publisher_acl_blacklist instead.
 
 # Enforce publisher_acl & publisher_acl_blacklist when users have sudo
 # access to the salt command.

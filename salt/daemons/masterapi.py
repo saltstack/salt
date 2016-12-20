@@ -240,14 +240,7 @@ def access_keys(opts):
     #       For now users pattern matching will not work for publisher_acl.
     users = []
     keys = {}
-    if opts['client_acl'] or opts['client_acl_blacklist']:
-        salt.utils.warn_until(
-                'Nitrogen',
-                'ACL rules should be configured with \'publisher_acl\' and '
-                '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
-                'This functionality will be removed in Salt Nitrogen.'
-                )
-    publisher_acl = opts['publisher_acl'] or opts['client_acl']
+    publisher_acl = opts['publisher_acl']
     acl_users = set(publisher_acl.keys())
     if opts.get('user'):
         acl_users.add(opts['user'])
@@ -1329,16 +1322,7 @@ class LocalFuncs(object):
 
         # check blacklist/whitelist
         # Check if the user is blacklisted
-        if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
-            salt.utils.warn_until(
-                    'Nitrogen',
-                    'ACL rules should be configured with \'publisher_acl\' and '
-                    '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
-                    'This functionality will be removed in Salt Nitrogen.'
-                    )
-
-        publisher_acl = salt.acl.PublisherACL(
-                self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist'])
+        publisher_acl = salt.acl.PublisherACL(self.opts['publisher_acl_blacklist'])
         good = not publisher_acl.user_is_blacklisted(load['user']) and \
                 not publisher_acl.cmd_is_blacklisted(load['fun'])
 
@@ -1477,7 +1461,7 @@ class LocalFuncs(object):
                         )
                         return ''
                     acl = salt.utils.get_values_of_matching_keys(
-                            self.opts['publisher_acl'] or self.opts['client_acl'],
+                            self.opts['publisher_acl'],
                             load['user'])
                     if load['user'] not in acl:
                         log.warning(
