@@ -32,10 +32,8 @@ except ImportError:
 class TestSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
         urls = [('/', saltnado.SaltAPIHandler)]
-
         application = self.build_tornado_app(urls)
-
-        application.event_listener = saltnado.EventListener({}, self.opts)
+        application.event_subject = saltnado.EventSubject(self.opts)
         return application
 
     def test_root(self):
@@ -212,7 +210,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               request_timeout=30,
                               )
         response_obj = json.loads(response.body)
-        self.assertEqual(response_obj['return'], [{}])
+        self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
 
     # local_async tests
     def test_simple_local_async_post(self):
@@ -356,7 +354,7 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
                 (r"/minions", saltnado.MinionSaltAPIHandler),
                 ]
         application = self.build_tornado_app(urls)
-        application.event_listener = saltnado.EventListener({}, self.opts)
+        application.event_subject = saltnado.EventSubject(self.opts)
         return application
 
     @skipIf(True, 'issue #34753')
@@ -455,7 +453,7 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
                 (r"/jobs", saltnado.JobsSaltAPIHandler),
                 ]
         application = self.build_tornado_app(urls)
-        application.event_listener = saltnado.EventListener({}, self.opts)
+        application.event_subject = saltnado.EventSubject(self.opts)
         return application
 
     @skipIf(True, 'to be reenabled when #23623 is merged')
@@ -508,7 +506,7 @@ class TestRunSaltAPIHandler(SaltnadoTestCase):
         urls = [("/run", saltnado.RunSaltAPIHandler),
                 ]
         application = self.build_tornado_app(urls)
-        application.event_listener = saltnado.EventListener({}, self.opts)
+        application.event_subject = saltnado.EventSubject(self.opts)
         return application
 
     @skipIf(True, 'to be reenabled when #23623 is merged')
@@ -533,7 +531,7 @@ class TestEventsSaltAPIHandler(SaltnadoTestCase):
         urls = [(r"/events", saltnado.EventsSaltAPIHandler),
                 ]
         application = self.build_tornado_app(urls)
-        application.event_listener = saltnado.EventListener({}, self.opts)
+        application.event_subject = saltnado.EventSubject(self.opts)
 
         # store a reference, for magic later!
         self.application = application
@@ -552,7 +550,7 @@ class TestEventsSaltAPIHandler(SaltnadoTestCase):
 
     def on_event(self, event):
         if self.events_to_fire > 0:
-            self.application.event_listener.event.fire_event({
+            self.application.event_subject.event.fire_event({
                 'foo': 'bar',
                 'baz': 'qux',
             }, 'salt/netapi/test')
@@ -583,24 +581,19 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
 
         self.application = application
 
-        application.event_listener = saltnado.EventListener({}, self.opts)
+        application.event_subject = saltnado.EventSubject(self.opts)
         return application
 
     def test_post(self):
-        def verify_event(future):
-            '''
-            Verify that the event fired on the master matches what we sent
-            '''
-            event = future.result()
-            self.assertEqual(event['tag'], 'salt/netapi/hook')
-            self.assertIn('headers', event['data'])
-            self.assertEqual(event['data']['post'], {'foo': 'bar'})
-        # get an event future
         self._finished = False  # TODO: remove after some cleanup of the event listener
-        event = self.application.event_listener.get_event(self,
-                                                          tag='salt/netapi/hook',
-                                                          callback=verify_event,
-                                                          )
+        tag_observable = self.application.event_subject.tag_observable_take(self,
+                                                                            1,
+                                                                            tag='salt/netapi/hook',
+                                                                            )
+        import rx.testing
+        result = rx.testing.TestScheduler().create_observer()
+        tag_observable.subscribe(result)
+
         # fire the event
         response = self.fetch('/hook',
                               method='POST',
@@ -609,6 +602,41 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
                               )
         response_obj = json.loads(response.body)
         self.assertTrue(response_obj['success'])
+
+        '''
+        Verify that the event fired on the master matches what we sent
+        '''
+        # One for on next with data, one for on completed
+        self.assertEqual(2, len(result.messages))
+        self.assertEqual('salt/netapi/hook', result.messages[0].value.value['tag'])
+        self.assertIn('headers', result.messages[0].value.value['data'])
+        self.assertEqual({'foo': 'bar'}, result.messages[0].value.value['data']['post'])
+
+    def test_post_timeout(self):
+        self._finished = False  # TODO: remove after some cleanup of the event listener
+        tag_observable = self.application.event_subject.tag_observable_take(self,
+                                                                            1,
+                                                                            tag='evt1',
+                                                                            timeout=1,
+                                                                            )
+        import rx.testing
+        result = rx.testing.TestScheduler().create_observer()
+        tag_observable.tap(lambda _: None, lambda _: self.stop(), lambda : self.stop()) \
+                      .subscribe(result)
+
+        # fire the event
+        response = self.fetch('/hook',
+                              method='POST',
+                              body='foo=bar',
+                              headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              )
+        response_obj = json.loads(response.body)
+        self.assertTrue(response_obj['success'])
+
+        self.wait()
+        self.assertEqual(1, len(result.messages))
+        with self.assertRaises(saltnado.TimeoutException):
+            raise result.messages[0].value.exception
 
 
 if __name__ == '__main__':

@@ -13,9 +13,14 @@ ensure_in_syspath('../../..')
 # Import 3rd-party libs
 # pylint: disable=import-error
 try:
+    import tornado
     import tornado.testing
     import tornado.concurrent
     from tornado.testing import AsyncTestCase
+
+    # To test rx in rest_tornado
+    import rx.testing
+
     HAS_TORNADO = True
 except ImportError:
     HAS_TORNADO = False
@@ -49,50 +54,11 @@ class TestUtils(TestCase):
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
-class TestSaltnadoUtils(AsyncTestCase):
-    def test_any_future(self):
-        '''
-        Test that the Any Future does what we think it does
-        '''
-        # create a few futures
-        futures = []
-        for x in range(0, 3):
-            future = tornado.concurrent.Future()
-            future.add_done_callback(self.stop)
-            futures.append(future)
-
-        # create an any future, make sure it isn't immediately done
-        any_ = saltnado.Any(futures)
-        self.assertIs(any_.done(), False)
-
-        # finish one, lets see who finishes
-        futures[0].set_result('foo')
-        self.wait()
-
-        self.assertIs(any_.done(), True)
-        self.assertIs(futures[0].done(), True)
-        self.assertIs(futures[1].done(), False)
-        self.assertIs(futures[2].done(), False)
-
-        # make sure it returned the one that finished
-        self.assertEqual(any_.result(), futures[0])
-
-        futures = futures[1:]
-        # re-wait on some other futures
-        any_ = saltnado.Any(futures)
-        futures[0].set_result('foo')
-        self.wait()
-        self.assertIs(any_.done(), True)
-        self.assertIs(futures[0].done(), True)
-        self.assertIs(futures[1].done(), False)
-
-
-@skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
-class TestEventListener(AsyncTestCase):
+class TestEventSubject(AsyncTestCase):
     def setUp(self):
         if not os.path.exists(SOCK_DIR):
             os.makedirs(SOCK_DIR)
-        super(TestEventListener, self).setUp()
+        super(TestEventSubject, self).setUp()
 
     def test_simple(self):
         '''
@@ -100,59 +66,71 @@ class TestEventListener(AsyncTestCase):
         '''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR)
-            event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
-                                                    {'sock_dir': SOCK_DIR,
-                                                     'transport': 'zeromq'})
+            event_subject = saltnado.EventSubject({'sock_dir': SOCK_DIR,
+                                                   'transport': 'zeromq'},
+                                                  )
             self._finished = False  # fit to event_listener's behavior
-            event_future = event_listener.get_event(self, 'evt1', self.stop)  # get an event future
-            me.fire_event({'data': 'foo2'}, 'evt2')  # fire an event we don't want
-            me.fire_event({'data': 'foo1'}, 'evt1')  # fire an event we do want
-            self.wait()  # wait for the future
 
-            # check that we got the event we wanted
-            self.assertTrue(event_future.done())
-            self.assertEqual(event_future.result()['tag'], 'evt1')
-            self.assertEqual(event_future.result()['data']['data'], 'foo1')
+            result = rx.testing.TestScheduler().create_observer()
 
-    def test_set_event_handler(self):
-        '''
-        Test subscribing events using set_event_handler
-        '''
-        with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR)
-            event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
-                                                    {'sock_dir': SOCK_DIR,
-                                                     'transport': 'zeromq'})
-            self._finished = False  # fit to event_listener's behavior
-            event_future = event_listener.get_event(self,
-                                                    tag='evt',
-                                                    callback=self.stop,
-                                                    timeout=1,
-                                                    )  # get an event future
-            me.fire_event({'data': 'foo'}, 'evt')  # fire an event we do want
+            event_subject.tag_observable_take(self, 1, tag='evt1', timeout=1) \
+                         .tap(lambda _: None, lambda _: self.stop(), lambda: self.stop()) \
+                         .subscribe(result)
+
+            me.fire_event({'data': 'foo2'}, 'evt2')
+            me.fire_event({'data': 'foo1'}, 'evt1')
             self.wait()
 
-            # check that we subscribed the event we wanted
-            self.assertEqual(len(event_listener.timeout_map), 0)
+            # one for on next with data, one for on completed
+            self.assertEqual(2, len(result.messages))
+            self.assertEqual('evt1', result.messages[0].value.value['tag'])
+            self.assertEqual('foo1', result.messages[0].value.value['data']['data'])
 
     def test_timeout(self):
         '''
         Make sure timeouts work correctly
         '''
         with eventpublisher_process():
-            event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
-                                                    {'sock_dir': SOCK_DIR,
-                                                     'transport': 'zeromq'})
+            event_subject = saltnado.EventSubject({'sock_dir': SOCK_DIR,
+                                                   'transport': 'zeromq'},
+                                                  )
             self._finished = False  # fit to event_listener's behavior
-            event_future = event_listener.get_event(self,
-                                                    tag='evt1',
-                                                    callback=self.stop,
-                                                    timeout=1,
-                                                    )  # get an event future
+
+            result = rx.testing.TestScheduler().create_observer()
+
+            event_subject.tag_observable_take(self, 1, tag='evt1', timeout=1) \
+                         .tap(lambda _: None, lambda _: self.stop(), lambda: self.stop()) \
+                         .subscribe(result)
+
             self.wait()
-            self.assertTrue(event_future.done())
+
+            self.assertEqual(1, len(result.messages))
             with self.assertRaises(saltnado.TimeoutException):
-                event_future.result()
+                raise result.messages[0].value.exception
+
+    def test_after_finished(self):
+        '''
+        Make sure timeouts work correctly
+        '''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR)
+            event_subject = saltnado.EventSubject({'sock_dir': SOCK_DIR,
+                                                   'transport': 'zeromq'},
+                                                  )
+            self._finished = True  # fit to event_listener's behavior
+
+            result = rx.testing.TestScheduler().create_observer()
+
+            event_subject.tag_observable_take(self, 1, tag='evt1', timeout=1) \
+                         .tap(lambda _: None, lambda _: self.stop(), lambda: self.stop()) \
+                         .subscribe(result)
+
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            self.wait()
+
+            self.assertEqual(1, len(result.messages))
+            with self.assertRaises(saltnado.TimeoutException):
+                raise result.messages[0].value.exception
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error
