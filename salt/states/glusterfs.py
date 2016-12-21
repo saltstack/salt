@@ -10,7 +10,6 @@ import logging
 import socket
 
 # Import salt libs
-import salt.utils
 import salt.utils.cloud as suc
 from salt.exceptions import SaltCloudException
 
