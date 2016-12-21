@@ -106,7 +106,7 @@ def chocolatey_version():
         return __context__['chocolatey._version']
 
     cmd = [_find_chocolatey(__context__, __salt__)]
-    cmd.append('--version')
+    cmd.append('-v')
     out = __salt__['cmd.run'](cmd, python_shell=False)
     __context__['chocolatey._version'] = out
 
@@ -254,8 +254,8 @@ def list_(narrow=None,
     if source:
         cmd.extend(['--source', source])
     if local_only:
-        cmd.extend(['-localonly'])
-        cmd.extend(['-limitoutput'])
+        cmd.extend(['--localonly'])
+        cmd.extend(['--limitoutput'])
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -897,7 +897,7 @@ def add_source(name, source_location, username=None, password=None):
 
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
-    cmd = [choc_path, 'sources', 'add', '-name', name, "--source", source_location]
+    cmd = [choc_path, 'sources', 'add', '--name', name, '--source', source_location]
     if username:
         cmd.extend(['--user', username])
     if password:
@@ -924,7 +924,7 @@ def _change_source_state(name, state):
 
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
-    cmd = [choc_path, 'source', state, "--name", name]
+    cmd = [choc_path, 'source', state, '--name', name]
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
