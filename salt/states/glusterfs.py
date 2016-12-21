@@ -10,7 +10,6 @@ import logging
 import socket
 
 # Import salt libs
-import salt.utils
 import salt.utils.cloud as suc
 from salt.exceptions import SaltCloudException
 
@@ -195,18 +194,6 @@ def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
     else:
         ret['result'] = True
     return ret
-
-
-def created(*args, **kwargs):
-    '''
-    Deprecated version of more descriptively named volume_present
-    '''
-    salt.utils.warn_until(
-        'Nitrogen',
-        'The glusterfs.created state is deprecated in favor of more descriptive'
-        ' glusterfs.volume_present.'
-    )
-    return volume_present(*args, **kwargs)
 
 
 def started(name):
