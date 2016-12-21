@@ -370,6 +370,7 @@ execution modules
     tls
     tomcat
     trafficserver
+    travisci
     tuned
     twilio_notify
     udev
