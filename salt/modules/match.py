@@ -354,3 +354,45 @@ def filter_by(lookup,
             return lookup[key]
 
     return None
+
+
+def search_by(lookup, tgt_type='compound', minion_id=None):
+    '''
+    Search a dictionary of target strings for matching targets
+
+    This is the inverse of :py:func:`match.filter_by
+    <salt.modules.match.filter_by>` and allows matching values instead of
+    matching keys. A minion can be matched by multiple entries.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: base
+
+        salt '*' match.search_by '{web: [node1, node2], db: [node2, node]}'
+
+    Pillar Example:
+
+    .. code-block:: yaml
+
+        {% set roles = salt.match.search_by({
+            'web': ['G@os_family:Debian not nodeX'],
+            'db': ['L@node2,node3 and G@datacenter:west'],
+            'caching': ['node3', 'node4'],
+        }) %}
+
+        # Make the filtered data available to Pillar:
+        roles: {{ roles | yaml() }}
+    '''
+    expr_funcs = dict(inspect.getmembers(sys.modules[__name__],
+        predicate=inspect.isfunction))
+
+    matches = []
+    for key, target_list in lookup.items():
+        for target in target_list:
+            params = (target, minion_id) if minion_id else (target, )
+            if expr_funcs[tgt_type](*params):
+                matches.append(key)
+
+    return matches or None
