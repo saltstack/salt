@@ -569,8 +569,6 @@ class SaltEvent(object):
                   wait=5,
                   tag='',
                   full=False,
-                  use_pending=None,
-                  pending_tags=None,
                   match_type=None,
                   no_block=False,
                   auto_reconnect=False):
@@ -620,18 +618,6 @@ class SaltEvent(object):
         '''
         assert self._run_io_loop_sync
 
-        if use_pending is not None:
-            salt.utils.warn_until(
-                'Nitrogen',
-                'The \'use_pending\' keyword argument is deprecated and is simply ignored. '
-                'Please stop using it since it\'s support will be removed in {version}.'
-            )
-        if pending_tags is not None:
-            salt.utils.warn_until(
-                'Nitrogen',
-                'The \'pending_tags\' keyword argument is deprecated and is simply ignored. '
-                'Please stop using it since it\'s support will be removed in {version}.'
-            )
         match_func = self._get_match_func(match_type)
 
         ret = self._check_pending(tag, match_func)
