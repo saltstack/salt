@@ -60,8 +60,22 @@ Execution Module Changes
 Master Configuration Additions
 ==============================
 
-- ``syndic_forward_all_events``: Option on multi-syndic or single when connected
-  to multiple masters to be able to send events to all connected masters.
+- :conf_master:`syndic_forward_all_events` - Option on multi-syndic or single
+  when connected to multiple masters to be able to send events to all connected
+  masters.
+
+Minion Configuration Additions
+==============================
+
+- :conf_minion:`pillarenv_from_saltenv` - When set to ``True`` (default is
+  ``False``), the :conf_minion:`pillarenv` option will take the same value as
+  the effective saltenv when running states. This would allow a user to run
+  ``salt '*' state.apply mysls saltenv=dev``, and the SLS for both the state
+  and pillar data would be sourced from the ``dev`` environment, essentially
+  the equivalent of running ``salt '*' state.apply mysls saltenv=dev
+  pillarenv=dev``. Note that if :conf_minion:`pillarenv` is set in the minion
+  config file, or if ``pillarenv`` is provided on the CLI, it will override
+  this option.
 
 Python API Changes
 ==================
