@@ -1665,6 +1665,23 @@ the environment setting, but for pillar instead of states.
 
     pillarenv: None
 
+.. conf_minion:: pillarenv_from_saltenv
+
+``pillarenv_from_saltenv``
+--------------------------
+
+Default: ``False``
+
+When set to ``True``, the :conf_minion:`pillarenv` value will assume the value
+of the effective saltenv when running states. This essentially makes ``salt '*'
+state.sls mysls saltenv=dev`` equivalent to ``salt '*' state.sls mysls
+saltenv=dev pillarenv=dev``. If :conf_minion:`pillarenv` is set, either in the
+minion config file or via the CLI, it will override this option.
+
+.. code-block:: yaml
+
+    pillarenv_from_saltenv: True
+
 .. conf_minion:: pillar_raise_on_missing
 
 ``pillar_raise_on_missing``

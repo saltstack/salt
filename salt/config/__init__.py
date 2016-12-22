@@ -223,6 +223,9 @@ VALID_OPTS = {
     # Force the minion into a single pillar root when it fetches pillar data from the master
     'pillarenv': str,
 
+    # Make the pillarenv always match the effective saltenv
+    'pillarenv_from_saltenv': bool,
+
     # Allows a user to provide an alternate name for top.sls
     'state_top': str,
 
@@ -970,6 +973,7 @@ DEFAULT_MINION_OPTS = {
     'autoload_dynamic_modules': True,
     'environment': None,
     'pillarenv': None,
+    'pillarenv_from_saltenv': False,
     'pillar_opts': False,
     # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
     # are not used on the minion but are unavoidably in the code path
