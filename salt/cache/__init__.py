@@ -22,7 +22,7 @@ class Cache(object):
 
     :param cache:
         The name of the cache driver to use. This is the name of the python
-        module of the `salt.cache` package. Defult is `localfs`.
+        module of the `salt.cache` package. Default is `localfs`.
 
     :param serial:
         The module of `salt.serializers` package that should be used by the cache

@@ -244,18 +244,35 @@ def item(*args, **kwargs):
     Return one or more pillar entries
 
     pillar
-        if specified, allows for a dictionary of pillar data to be made
+        If specified, allows for a dictionary of pillar data to be made
         available to pillar and ext_pillar rendering. these pillar variables
         will also override any variables of the same name in pillar or
         ext_pillar.
 
         .. versionadded:: 2015.5.0
 
+    delimiter
+        Delimiter used to traverse nested dictionaries.
+
+        .. note::
+            This is different from :py:func:`pillar.get
+            <salt.modules.pillar.get>` in that no default value can be
+            specified. :py:func:`pillar.get <salt.modules.pillar.get>` should
+            probably still be used in most cases to retrieve nested pillar
+            values, as it is a bit more flexible. One reason to use this
+            function instead of :py:func:`pillar.get <salt.modules.pillar.get>`
+            however is when it is desirable to retrieve the values of more than
+            one key, since :py:func:`pillar.get <salt.modules.pillar.get>` can
+            only retrieve one key at a time.
+
+        .. versionadded:: 2015.8.0
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' pillar.item foo
+        salt '*' pillar.item foo:bar
         salt '*' pillar.item foo bar baz
     '''
     ret = {}
