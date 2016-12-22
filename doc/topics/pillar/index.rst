@@ -317,6 +317,46 @@ updated pillar data, but :py:func:`pillar.item <salt.modules.pillar.item>`,
 <salt.modules.pillar.raw>` will not see this data unless refreshed using
 :py:func:`saltutil.refresh_pillar <salt.modules.saltutil.refresh_pillar>`.
 
+
+How Pillar Environments Are Handled
+===================================
+
+When multiple pillar environments are used, the default behavior is for the
+pillar data from all environments to be merged together. The pillar dictionary
+will therefore contain keys from all configured environments.
+
+The :conf_minion:`pillarenv` minion config option can be used to force the
+minion to only consider pillar configuration from a single environment. This
+can be useful in cases where one needs to run states with alternate pillar
+data, either in a testing/QA environment or to test changes to the pillar data
+before pushing them live.
+
+For example, assume that the following is set in the minion config file:
+
+.. code-block:: yaml
+
+    pillarenv: base
+
+This would cause that minion to ignore all other pillar environments besides
+``base`` when compiling the in-memory pillar data. Then, when running states,
+the ``pillarenv`` CLI argument can be used to override the minion's
+:conf_minion:`pillarenv` config value:
+
+.. code-block:: bash
+
+    salt '*' state.apply mystates pillarenv=testing
+
+The above command will run the states with pillar data sourced exclusively from
+the ``testing`` environment, without modifying the in-memory pillar data.
+
+.. note::
+    When running states, the ``pillarenv`` CLI option does not require a
+    :conf_minion:`pillarenv` option to be set in the minion config file. When
+    :conf_minion:`pillarenv` is left unset, as mentioned above all configured
+    environments will be combined. Running states with ``pillarenv=testing`` in
+    this case would still restrict the states' pillar data to just that of the
+    ``testing`` pillar environment.
+
 Viewing Pillar Data
 ===================
 
