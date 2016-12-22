@@ -56,6 +56,23 @@ class IniManageTestCase(TestCase):
                 ret.update({'comment': comt, 'result': True, 'changes': changes})
                 self.assertDictEqual(ini_manage.options_present(name), ret)
 
+        original = {'mysection': {'first': 'who is on',
+                                  'second': 'what is on',
+                                  'third': "I don't know"}}
+        desired = {'mysection': {'first': 'who is on',
+                                 'second': 'what is on'}}
+        changes = {'mysection': {'first': 'who is on',
+                                 'second': 'what is on',
+                                 'third': {'after': None, 'before': "I don't know"}}}
+        with patch.dict(ini_manage.__salt__, {'ini.get_section': MagicMock(return_value=original['mysection'])}):
+            with patch.dict(ini_manage.__salt__, {'ini.remove_option': MagicMock(return_value='third')}):
+                with patch.dict(ini_manage.__salt__, {'ini.get_option': MagicMock(return_value="I don't know")}):
+                    with patch.dict(ini_manage.__salt__, {'ini.set_option': MagicMock(return_value=desired)}):
+                        with patch.dict(ini_manage.__opts__, {'test': False}):
+                            comt = ('Changes take effect')
+                            ret.update({'comment': comt, 'result': True, 'changes': changes})
+                            self.assertDictEqual(ini_manage.options_present(name, desired, strict=True), ret)
+
     # 'options_absent' function tests: 1
 
     def test_options_absent(self):
