@@ -2252,7 +2252,7 @@ exposed.
       - 'mail\d+.mydomain.tld'
 
 
-.. _pillar-configuration:
+.. _pillar-configuration-master:
 
 Pillar Configuration
 ====================
