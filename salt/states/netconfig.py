@@ -166,16 +166,28 @@ def managed(name,
 
     template_name
         Identifies path to the template source. The template can be either stored on the local machine,
-        either remotely. When locally, the absolute path must be provided. Otherwise, the source can be retrieved via
-        ``http``, ``https`` or ``ftp``. Examples:
+        either remotely.
+        The recommended location is under the ``file_roots`` as specified in the master config file.
+        For example, let's suppose the ``file_roots`` is configured as:
 
+        .. code-block:: yaml
+
+            file_roots:
+                base:
+                    - /etc/salt/states
+
+        Placing the template under ``/etc/salt/states/templates/example.jinja``, it can be used as
+        ``salt://templates/example.jinja``.
+        Alternatively, for local files, the user can specify the abolute path.
+        If remotely, the source can be retrieved via ``http``, ``https`` or ``ftp``.
+
+        Examples:
+
+        - ``salt://my_template.jinja``
         - ``/absolute/path/to/my_template.jinja``
         - ``http://example.com/template.cheetah``
         - ``https:/example.com/template.mako``
         - ``ftp://example.com/template.py``
-
-        The file extension is not mandatory, but the content must correspond to the ``template_engine``
-        specified (default: ``Jinja``).
 
     template_source: None
         Inline config template to be rendered and loaded on the device.
@@ -329,7 +341,7 @@ def managed(name,
                     },
                     'comment': 'Testing mode: Configuration discarded.',
                     'duration': 7400.759,
-                    'loaded_config': 'system {\n  ntp {\n  peer 172.17.17.1;\n  peer 172.17.17.3;\n}\n}\n',
+                    'loaded_config': 'system {  ntp {  peer 172.17.17.1;  peer 172.17.17.3; } }',
                     'name': 'ntp_peers_example_using_pillar',
                     'result': None,
                     'start_time': '12:09:09.811445'
@@ -380,8 +392,10 @@ def managed(name,
         },
         'already_configured': config_update_ret.get('already_configured', False),
         'result': result,
-        'comment': comment,
-        'loaded_config': config_update_ret.get('loaded_config', ''),
+        'comment': comment
     })
+
+    if debug:
+        ret['changes']['loaded'] = config_update_ret.get('loaded_config', '')
 
     return ret
