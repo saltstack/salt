@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import collections
 
 # Import third party libs
+import copy
 import os
 import copy
 import logging
@@ -140,6 +141,12 @@ def items(*args, **kwargs):
 
         .. versionadded:: 2015.5.0
 
+    saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
+
+        .. versionadded:: 2016.11.3
+
     pillarenv
         Pass a specific pillar environment from which to compile pillar data.
         If not specified, then the minion's :conf_minion:`pillarenv` option is
@@ -159,12 +166,21 @@ def items(*args, **kwargs):
     if args:
         return item(*args)
 
+    pillarenv = kwargs.get('pillarenv')
+    if pillarenv is None:
+        if __opts__.get('pillarenv_from_saltenv', False):
+            pillarenv = kwargs.get('saltenv') or __opts__['environment']
+        else:
+            pillarenv = __opts__.get('pillarenv')
+
+    opts = copy.copy(__opts__)
+    opts['pillarenv'] = pillarenv
     pillar = salt.pillar.get_pillar(
-        __opts__,
+        opts,
         __grains__,
-        __opts__['id'],
-        pillar=kwargs.get('pillar'),
-        pillarenv=kwargs.get('pillarenv') or __opts__['pillarenv'])
+        opts['id'],
+        saltenv=pillarenv,
+        pillar=kwargs.get('pillar'))
 
     return pillar.compile_pillar()
 
