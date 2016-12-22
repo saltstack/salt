@@ -73,9 +73,9 @@ class XapiTestCase(TestCase):
     '''
         Test cases for salt.modules.xapi
     '''
-    def test_list_vms(self):
+    def test_list_domains(self):
         '''
-            Test to return a list of virtual machine names on the minion
+            Test to return a list of domain names on the minion
         '''
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             self.assertListEqual(xapi.list_domains(), [])
@@ -274,14 +274,6 @@ class XapiTestCase(TestCase):
                 with patch.object(xapi, "_get_label_uuid", mock):
                     self.assertFalse(xapi.resume("salt"))
 
-    def test_create(self):
-        '''
-            Test to start a defined domain
-        '''
-        mock = MagicMock(return_value=True)
-        with patch.dict(xapi.__salt__, {'cmd.run': mock}):
-            self.assertTrue(xapi.start("salt"))
-
     def test_start(self):
         '''
             Test to reboot a domain via ACPI request
@@ -345,7 +337,7 @@ class XapiTestCase(TestCase):
                 with patch.object(xapi, "_get_label_uuid", mock):
                     self.assertFalse(xapi.migrate("salt", "stack"))
 
-    def test_destroy(self):
+    def test_stop(self):
         '''
             Test to Hard power down the virtual machine,
             this is equivalent to pulling the power

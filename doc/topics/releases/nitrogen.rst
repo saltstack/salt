@@ -142,10 +142,53 @@ The ``glusterfs`` execution module had the following functions removed:
 - ``delete``: Please use ``delete_volume`` instead.
 -  ``list_peers``: Please use ``peer_status`` instead.
 
+The ``htpasswd`` execution module had the following function removed:
+
+- ``useradd_all``: Please use ``useradd`` instead.
+
+The ``img`` execution module has been removed. All of its associated functions
+were marked for removal in the Nitrogen release. The functions removed in this
+module are mapped as follows:
+
+- ``mount_image``/``mnt_image``: Please use ``mount.mount`` instead.
+- ``umount_image``: Please use ``mount.umount`` instead.
+- ``bootstrap``: Please use ``genesis.bootstrap`` instead.
+
+The ``smartos_virt`` execution module had the following functions removed:
+
+- ``create``: Please use ``start`` instead.
+- ``destroy`` Please use ``stop`` instead.
+- ``list_vms``: Please use ``list_domains`` instead.
+
+The ``virt`` execution module had the following functions removed:
+
+- ``create``: Please use ``start`` instead.
+- ``destroy`` Please use ``stop`` instead.
+- ``list_vms``: Please use ``list_domains`` instead.
+
+The ``virtualenv_mod`` execution module had the following changes:
+
+- The ``package_or_requirement`` argument was removed from both the
+  ``get_resource_path`` and the ``get_resource_content`` functions.
+  Please use ``package`` instead.
+- The ``resource_name`` argument was removed from both the
+  ``get_resource_path`` and ``get_resource_content`` functions.
+  Please use ``resource`` instead.
+
 The ``win_repo`` execution module had the following changes:
 
 - The ``win_repo_source_dir`` option was removed from the ``win_repo``
   module. Please use ``winrepo_source_dir`` instead.
+
+The ``xapi`` execution module had the following functions removed:
+
+- ``create``: Please use ``start`` instead.
+- ``destroy``: Please use ``stop`` instead.
+- ``list_vms``: Please use ``list_domains`` instead.
+
+The ``zypper`` execution module had the following function removed:
+
+- ``info``: Please use ``info_available`` instead.
 
 Pillar Deprecations
 -------------------
