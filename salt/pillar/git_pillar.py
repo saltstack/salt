@@ -122,7 +122,7 @@ The corresponding Pillar top file would look like this:
 
 .. code-block:: yaml
 
-    {{env}}:
+    {{saltenv}}:
       '*':
         - bar
 
@@ -138,6 +138,10 @@ The corresponding Pillar top file would look like this:
     ``environment`` config option (instead of the minion's) before falling back
     to :conf_master:`gitfs_base`. This has been fixed in the 2016.3.5 and
     2016.11.1 releases (2016.11.0 contains the incorrect behavior).
+
+    Additionally, in releases before 2016.11.0, both ``{{env}}`` and
+    ``{{saltenv}}`` could be used as a placeholder for the environment.
+    Starting in 2016.11.0, ``{{env}}`` is no longer supported.
 
 .. _git-pillar-2015-8-0-and-later:
 
@@ -232,7 +236,7 @@ The corresponding Pillar top file would look like this:
 
 .. code-block:: yaml
 
-    {{env}}:
+    {{saltenv}}:
       '*':
         - bar
 
@@ -257,6 +261,10 @@ The corresponding Pillar top file would look like this:
     2016.3.4 incorrectly checks the *master's* ``environment`` config option
     (instead of the minion's) before falling back to the master's
     :conf_master:`git_pillar_base`.
+
+    Additionally, in releases before 2016.11.0, both ``{{env}}`` and
+    ``{{saltenv}}`` could be used as a placeholder for the environment.
+    Starting in 2016.11.0, ``{{env}}`` is no longer supported.
 
 With the addition of pygit2_ support, git_pillar can now interact with
 authenticated remotes. Authentication works just like in gitfs (as outlined in
