@@ -411,5 +411,5 @@ def cloud(tgt, provider=None):
             for name, data in servers.items():
                 if fnmatch.fnmatch(name, tgt):
                     ret[name] = data
-		    ret['name']['provider'] = provider
+                    ret['name']['provider'] = provider
     return ret
