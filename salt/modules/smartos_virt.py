@@ -244,7 +244,7 @@ def get_macs(domain):
 # Deprecated aliases
 def create(domain):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2016.3.0
        Use :py:func:`~salt.modules.virt.start` instead.
 
     Start a defined domain
@@ -261,7 +261,7 @@ def create(domain):
 
 def destroy(domain):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2016.3.0
        Use :py:func:`~salt.modules.virt.stop` instead.
 
     Power off a defined domain
@@ -278,7 +278,7 @@ def destroy(domain):
 
 def list_vms():
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2016.3.0
        Use :py:func:`~salt.modules.virt.list_domains` instead.
 
     List all virtual machines.
