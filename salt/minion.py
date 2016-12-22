@@ -536,6 +536,10 @@ class MinionBase(object):
                 opts['master_uri_list'].append(resolve_dns(opts)['master_uri'])
 
             while True:
+                if attempts != 0:
+                    # Give up a little time between connection attempts
+                    # to allow the IOLoop to run any other scheduled tasks.
+                    yield tornado.gen.sleep(1)
                 attempts += 1
                 if tries > 0:
                     log.debug('Connecting to master. Attempt {0} '
@@ -597,6 +601,10 @@ class MinionBase(object):
             if opts['random_master']:
                 log.warning('random_master is True but there is only one master specified. Ignoring.')
             while True:
+                if attempts != 0:
+                    # Give up a little time between connection attempts
+                    # to allow the IOLoop to run any other scheduled tasks.
+                    yield tornado.gen.sleep(1)
                 attempts += 1
                 if tries > 0:
                     log.debug('Connecting to master. Attempt {0} '
