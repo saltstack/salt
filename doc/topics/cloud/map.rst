@@ -82,6 +82,36 @@ A map file can include grains and minion configuration options:
             cheese: more tasty
             omelet: with peppers
 
+Any top level data element from your profile may be overridden in the map file:
+
+.. code-block:: yaml
+
+    fedora_small:
+      - web1:
+        size: t2.micro
+      - web2:
+        size: t2.nano
+
+Nested elements cannot be specified individually. Instead, the complete
+definition for any top level data element must be repeated. In this example a
+separate subnet is assigned to each ec2 instance:
+
+.. code-block:: yaml
+
+    fedora_small_aws:
+      - web1:
+        network_interfaces:
+          - DeviceIndex: 0
+            SubnetId: subnet-3bf94a72
+            SecurityGroupId:
+              - sg-9f644fe5
+      - web2:
+        network_interfaces:
+          - DeviceIndex: 0
+            SubnetId: subnet-c3ad9fa4
+            SecurityGroupId:
+              - sg-9f644fe5
+
 A map file may also be used with the various query options:
 
 .. code-block:: bash
