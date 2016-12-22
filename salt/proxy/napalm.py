@@ -148,8 +148,8 @@ def init(opts):
         log.error(
             "Cannot connect to {hostname}{port} as {username}. Please check error: {error}".format(
                 hostname=NETWORK_DEVICE.get('HOSTNAME', ''),
-                port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS'])
-                      if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''),
+                port=(':{port}'.format(port=NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port'))
+                      if NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port') else ''),
                 username=NETWORK_DEVICE.get('USERNAME', ''),
                 error=error
             )
@@ -227,8 +227,8 @@ def shutdown(opts):
         log.error(
             'Cannot close connection with {hostname}{port}! Please check error: {error}'.format(
                 hostname=NETWORK_DEVICE.get('HOSTNAME', '[unknown hostname]'),
-                port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS'])
-                      if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''),
+                port=(':{port}'.format(port=NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port'))
+                      if NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port') else ''),
                 error=error
             )
         )
@@ -289,8 +289,8 @@ def call(method, **params):
         err_tb = traceback.format_exc()  # let's get the full traceback and display for debugging reasons.
         comment = 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
             device=NETWORK_DEVICE.get('HOSTNAME', '[unspecified hostname]'),
-            port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS'])
-                  if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''),
+            port=(':{port}'.format(port=NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port'))
+                  if NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port') else ''),
             user=NETWORK_DEVICE.get('USERNAME', ''),
             method=method,
             error=error
