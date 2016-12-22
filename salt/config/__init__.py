@@ -943,6 +943,9 @@ VALID_OPTS = {
     'thin_extra_mods': str,
     'min_extra_mods': str,
 
+    # Default returners minion should use. List or comma-delimited string
+    'return': (str, list),
+
     # TLS/SSL connection options. This could be set to a dictionary containing arguments
     # corresponding to python ssl.wrap_socket method. For details see:
     # http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer
@@ -1696,6 +1699,10 @@ def _validate_opts(opts):
                            type(val).__name__,
                            format_multi_opt(VALID_OPTS[key]))
             )
+
+    # Convert list to comma-delimited string for 'return' config option
+    if isinstance(opts.get('return'), list):
+        opts['return'] = ','.join(opts['return'])
 
     # RAET on Windows uses 'win32file.CreateMailslot()' for IPC. Due to this,
     # sock_dirs must start with '\\.\mailslot\' and not contain any colons.

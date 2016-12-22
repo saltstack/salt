@@ -801,8 +801,16 @@
 
 ######      Returner  settings        ######
 ############################################
-# Which returner(s) will be used for minion's result:
+# Default Minion returners. Can be a comma delimited string or a list:
+#
 #return: mysql
+#
+#return: mysql,slack,redis
+#
+#return:
+#  - mysql
+#  - hipchat
+#  - slack
 
 
 ######    Miscellaneous  settings     ######

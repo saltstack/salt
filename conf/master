@@ -127,8 +127,12 @@
 # the jobs system and is not generally recommended.
 #job_cache: True
 
-# Cache minion grains and pillar data in the cachedir.
+# Cache minion grains, pillar and mine data via the cache subsystem in the
+# cachedir or a database.
 #minion_data_cache: True
+
+# Cache subsystem module to use for minion data cache.
+#cache: localfs
 
 # Store all returns in the given returner.
 # Setting this option requires that any returner-specific configuration also

@@ -3,6 +3,8 @@
 Managing implicit state and baselines using snapshots
 =====================================================
 
+.. versionadded:: 2016.11.0
+
 Salt can manage state against explicitly defined state, for example
 if your minion state is defined by:
 
