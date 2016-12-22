@@ -24,6 +24,16 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 # Import 3rd-party libs
 import salt.ext.six as six
 
+_SELINUX_FILETYPES = {
+        'a': 'all files',
+        'f': 'regular file',
+        'd': 'directory',
+        'c': 'character device',
+        'b': 'block device',
+        's': 'socket',
+        'l': 'symbolic link',
+        'p': 'named pipe'}
+
 
 def __virtual__():
     '''
@@ -305,42 +315,52 @@ def list_semod():
 
 def _validate_filetype(filetype):
     '''
-        Checks if the given filetype is a valid SELinux filetype specification.
-        Throws an SaltInvocationError if it isn't.
-
-        .. versionadded:: 2016.3.4
+    Checks if the given filetype is a valid SELinux filetype specification.
+    Throws an SaltInvocationError if it isn't.
     '''
-    if filetype not in ['a', 'f', 'd', 'c', 'b', 's', 'l', 'p']:
+    if filetype not in _SELINUX_FILETYPES.keys():
         raise SaltInvocationError('Invalid filetype given: {0}'.format(filetype))
     return True
+
+
+def _context_dict_to_string(context):
+    '''
+    Converts an SELinux file context from a dict to a string.
+    '''
+    return '{sel_user}:{sel_role}:{sel_type}:{sel_level}'.format(**context)
+
+
+def _context_string_to_dict(context):
+    '''
+    Converts an SELinux file context from string to dict.
+    '''
+    if not re.match('[^:]+:[^:]+:[^:]+:[^:]+$', context):
+        raise SaltInvocationError('Invalid SELinux context string: {0}. ' +
+                                  'Expected "sel_user:sel_role:sel_type:sel_level"')
+    context_list = context.split(':', 3)
+    ret = {}
+    for index, value in enumerate(['sel_user', 'sel_role', 'sel_type', 'sel_level']):
+        ret[value] = context_list[index]
+    return ret
 
 
 def filetype_id_to_string(filetype='a'):
     '''
     Translates SELinux filetype single-letter representation
     to a more human-readable version (which is also used in `semanage fcontext -l`).
-
-    .. versionadded:: 2016.3.4
     '''
-    return {
-        'a': 'all files',
-        'f': 'regular file',
-        'd': 'directory',
-        'c': 'character device',
-        'b': 'block device',
-        's': 'socket',
-        'l': 'symbolic link',
-        'p': 'named pipe'}.get(filetype, 'error')
+    _validate_filetype(filetype)
+    return _SELINUX_FILETYPES.get(filetype, 'error')
 
 
-def fcontext_get_policy(name, filetype=None, se_type=None, se_user=None, se_level=None):
+def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
     '''
     Returns the current entry in the SELinux policy list as a dictionary.
     Returns None if no exact match was found
     Returned keys are:
     - filespec (the name supplied and matched)
     - filetype (the descriptive name of the filetype supplied)
-    - selinux_user, selinux_role, selinux_type, selinux_level (the selinux context)
+    - sel_user, sel_role, sel_type, sel_level (the selinux context)
     For a more in-depth explanation of the selinux context, go to
     https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Security-Enhanced_Linux/chap-Security-Enhanced_Linux-SELinux_Contexts.html
 
@@ -349,48 +369,32 @@ def fcontext_get_policy(name, filetype=None, se_type=None, se_user=None, se_leve
               Use one of [a, f, d, c, b, s, l, p].
               See also `man semanage-fcontext`.
               Defaults to 'a' (all files)
-
-    .. versionadded:: 2016.3.4
     '''
     _validate_filetype(filetype)
-    cmd = "semanage fcontext -l | egrep '^" + re.escape(name) + "[ ]{2,}"
-    if filetype is not None:
-        cmd += filetype_id_to_string(filetype)
-    else:
-        cmd += '[[:alpha:] ]+'
-    cmd += '[ ]{2,}'
-    if se_user is not None:
-        cmd += se_user
-    else:
-        cmd += '[^:]+'
-    cmd += ':[^:]+:'  # Include any SELinux role
-    if se_type is not None:
-        cmd += se_type
-    else:
-        cmd += '[^:]+'
-    cmd += ':'
-    if se_level is not None:
-        cmd += se_level
-    else:
-        cmd += '[^:]+'
-    cmd += "$'"
+    re_spacer = '[ ]{2,}'
+    cmd_kwargs = {'spacer': re_spacer,
+                  'filespec': re.escape(name),
+                  'sel_user': sel_user or '[^:]+',
+                  'sel_role': '[^:]+',  # se_role for file context is always object_r
+                  'sel_type': sel_type or '[^:]+',
+                  'sel_level': sel_level or '[^:]+'}
+    cmd_kwargs['filetype'] = '[[:alpha:] ]+' if filetype is None else filetype_id_to_string(filetype)
+    cmd = 'semanage fcontext -l | egrep ' + \
+          "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}$'".format(**cmd_kwargs)
     current_entry_text = __salt__['cmd.shell'](cmd)
     if current_entry_text == '':
         return None
     ret = {}
-    current_entry_list = re.split('[ ]{2,}', current_entry_text)
+    current_entry_list = re.split(re_spacer, current_entry_text)
     ret['filespec'] = current_entry_list[0]
     ret['filetype'] = current_entry_list[1]
-    selinux_context = current_entry_list[2].split(':')
-    for index, value in enumerate(['selinux_user', 'selinux_role', 'selinux_type', 'selinux_level']):
-        ret[value] = selinux_context[index]
+    ret.update(_context_string_to_dict(current_entry_list[2]))
     return ret
 
 
-def fcontext_add_or_delete_policy(action, name, filetype=None, se_type=None, se_user=None, se_level=None):
+def fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
     '''
-    Sets ('add' overwrites policies) or deletes the SELinux policy for a given
-    filespec and other optional parameters.
+    Sets or deletes the SELinux policy for a given filespec and other optional parameters.
     Returns the result of the call to semanage.
     Note that you don't have to remove an entry before setting a new one for a given
     filespec and filetype, as adding one with semanage automatically overwrites a
@@ -401,11 +405,9 @@ def fcontext_add_or_delete_policy(action, name, filetype=None, se_type=None, se_
               Use one of [a, f, d, c, b, s, l, p].
               See also ``man semanage-fcontext``.
               Defaults to 'a' (all files)
-    se_type: SELinux context type. There are many.
-    se_user: SELinux user. Use ``semanage login -l`` to determine which ones are available to you
-    se_level: The MLS range of the SELinux context.
-
-    .. versionadded:: 2016.3.4
+    sel_type: SELinux context type. There are many.
+    sel_user: SELinux user. Use ``semanage login -l`` to determine which ones are available to you
+    sel_level: The MLS range of the SELinux context.
     '''
     if action not in ['add', 'delete']:
         raise SaltInvocationError('Actions supported are "add" and "delete", not "{0}".'.format(action))
@@ -413,12 +415,12 @@ def fcontext_add_or_delete_policy(action, name, filetype=None, se_type=None, se_
     if filetype is not None:
         _validate_filetype(filetype)
         cmd += ' --ftype {0}'.format(filetype)
-    if se_type is not None:
-        cmd += ' --type {0}'.format(se_type)
-    if se_user is not None:
-        cmd += ' --seuser {0}'.format(se_user)
-    if se_level is not None:
-        cmd += ' --range {0}'.format(se_level)
+    if sel_type is not None:
+        cmd += ' --type {0}'.format(sel_type)
+    if sel_user is not None:
+        cmd += ' --seuser {0}'.format(sel_user)
+    if sel_level is not None:
+        cmd += ' --range {0}'.format(sel_level)
     cmd += ' ' + re.escape(name)
     return __salt__['cmd.run_all'](cmd)
 
@@ -429,8 +431,6 @@ def fcontext_policy_is_applied(name):
     returns string with differences in policy and actual situation otherwise.
 
     name: filespec of the file or directory. Regex syntax is allowed.
-
-    .. versionadded:: 2016.3.4
     '''
     return __salt__['cmd.run']('restorecon -n -v {0}'.format(re.escape(name)))
 
@@ -442,8 +442,6 @@ def fcontext_apply_policy(name, recursive=False):
 
     name: filespec of the file or directory. Regex syntax is allowed.
     recursive: Recursively apply SELinux policies.
-
-    .. versionadded:: 2016.3.4
     '''
     ret = {}
     changes_text = fcontext_policy_is_applied(name)
@@ -456,5 +454,15 @@ def fcontext_apply_policy(name, recursive=False):
     if apply_ret['retcode'] == 0:
         changes_list = re.findall('context (.*)->(.*)$', changes_text)
         if len(changes_list) > 0:
-            ret.update({'changes': {'old': changes_list[0][0], 'new': changes_list[0][1]}})
+            old = _context_string_to_dict(changes_list[0][0])
+            new = _context_string_to_dict(changes_list[0][1])
+            intersect = {}
+            for key, value in old.iteritems():
+                if new.get(key) == value:
+                    intersect.update({key: value})
+            for key in intersect.keys():
+                del old[key]
+                del new[key]
+            ret.update({'changes': {'old': old,
+                                    'new': new}})
     return ret
