@@ -10,8 +10,6 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import sys
-sys.modules['pkg_resources'] = None
 
 # Import Salt libs
 import salt.spm
