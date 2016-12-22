@@ -382,7 +382,7 @@ def get_resource_path(venv,
     package_or_requirement
         Name of the package in which the resource resides
 
-        .. deprecated:: Nitrogen
+        .. deprecated:: 2016.3.0
             Use ``package`` instead.
 
     resource
@@ -393,7 +393,7 @@ def get_resource_path(venv,
     resource_name
         Name of the resource of which the path is to be returned
 
-        .. deprecated:: Nitrogen
+        .. deprecated:: 2016.3.0
 
 
     .. versionadded:: 2015.5.0
@@ -473,7 +473,7 @@ def get_resource_content(venv,
     package_or_requirement
         Name of the package in which the resource resides
 
-        .. deprecated:: Nitrogen
+        .. deprecated:: 2016.3.0
             Use ``package`` instead.
 
     resource
@@ -484,7 +484,7 @@ def get_resource_content(venv,
     resource_name
         Name of the resource of which the content is to be returned
 
-        .. deprecated:: Nitrogen
+        .. deprecated:: 2016.3.0
 
 
     .. versionadded:: 2015.5.0
