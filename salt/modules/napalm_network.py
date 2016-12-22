@@ -767,22 +767,18 @@ def load_config(filename=None,
         and will commit the changes on the device.
 
     commit: True
-        Commit? (default: ``True``) Sometimes it is not needed to commit the config immediately
-        after loading the changes. E.g.: a state loads a couple of parts (add / remove / update)
-        and would not be optimal to commit after each operation.
-        Also, from the CLI when the user needs to apply the similar changes before committing,
-        can specify ``commit=False`` and will not discard the config.
+        Commit? Default: ``True``.
 
     debug: False
         Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` contaning the raw
         configuration loaded on the device.
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.2
 
     replace: False
         Load and replace the configuration. Default: ``False``.
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.2
 
     :return: a dictionary having the following keys:
 
@@ -854,103 +850,144 @@ def load_template(template_name,
                   replace=False,
                   **template_vars):
     '''
-    Renders a configuration template (Jinja) and loads the result on the device.
+    Renders a configuration template (default: Jinja) and loads the result on the device.
 
-    By default this function will commit the changes. If there are no changes, it does not commit and
-    the flag ``already_configured`` will be set as ``True`` to point this out.
+    By default this function will commit the changes. If there are no changes,
+    it does not commit, discards he config and the flag ``already_configured``
+    will be set as ``True`` to point this out.
 
-    To avoid committing the configuration, set the argument ``test`` to ``True`` and will discard (dry run).
+    To avoid committing the configuration, set the argument ``test`` to ``True``
+    and will discard (dry run).
 
-    To keep the chnages but not commit, set ``commit`` to ``False``.
+    To preserve the chnages, set ``commit`` to ``False``.
+    However, this is recommended to be used only in exceptional cases
+    when there are applied few consecutive states
+    and/or configuration changes.
+    Otherwise the user might forget that the config DB is locked
+    and the candidate config buffer is not cleared/merged in the running config.
 
     To replace the config, set ``replace`` to ``True``.
 
     template_name
-        Identifies the template name. If specifies the complete path, will render the template via
+        Identifies path to the template source.
+        The template can be either stored on the local machine, either remotely.
+        The recommended location is under the ``file_roots``
+        as specified in the master config file.
+        For example, let's suppose the ``file_roots`` is configured as:
+
+        .. code-block:: yaml
+
+            file_roots:
+                base:
+                    - /etc/salt/states
+
+        Placing the template under ``/etc/salt/states/templates/example.jinja``,
+        it can be used as ``salt://templates/example.jinja``.
+        Alternatively, for local files, the user can specify the abolute path.
+        If remotely, the source can be retrieved via ``http``, ``https`` or ``ftp``.
+
+        Examples:
+
+        - ``salt://my_template.jinja``
+        - ``/absolute/path/to/my_template.jinja``
+        - ``http://example.com/template.cheetah``
+        - ``https:/example.com/template.mako``
+        - ``ftp://example.com/template.py``
 
     template_source: None
         Inline config template to be rendered and loaded on the device.
 
     template_path: None
-        Specifies the absolute path to a the template directory.
+        Required only in case the argument ``template_name`` provides only the file basename
+        when referencing a local template using the absolute path.
+        E.g.: if ``template_name`` is specified as ``my_template.jinja``,
+        in order to find the template, this argument must be provided:
+        ``template_path: /absolute/path/to/``.
 
     template_hash: None
         Hash of the template file. Format: ``{hash_type: 'md5', 'hsum': <md5sum>}``
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.2
 
     template_hash_name: None
-        When ``template_hash`` refers to a remote file, this specifies the filename to look for in that file.
+        When ``template_hash`` refers to a remote file,
+        this specifies the filename to look for in that file.
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.2
 
     template_group: root
         Owner of file.
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.2
 
     template_user: root
         Group owner of file.
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.2
 
     template_user: 755
-        Permissions of file
+        Permissions of file.
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.2
 
     saltenv: base
-        Specifies the template environment. This will influence the relative imports inside the templates.
+        Specifies the template environment.
+        This will influence the relative imports inside the templates.
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.2
 
     template_engine: jinja
         The following templates engines are supported:
 
-            - :mod:`cheetah<salt.renderers.cheetah>`
-            - :mod:`genshi<salt.renderers.genshi>`
-            - :mod:`jinja<salt.renderers.jinja>`
-            - :mod:`mako<salt.renderers.mako>`
-            - :mod:`py<salt.renderers.py>`
-            - :mod:`wempy<salt.renderers.wempy>`
+        - :mod:`cheetah<salt.renderers.cheetah>`
+        - :mod:`genshi<salt.renderers.genshi>`
+        - :mod:`jinja<salt.renderers.jinja>`
+        - :mod:`mako<salt.renderers.mako>`
+        - :mod:`py<salt.renderers.py>`
+        - :mod:`wempy<salt.renderers.wempy>`
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.2
 
     skip_verify: True
-        If ``True``, hash verification of remote file sources (``http://``, ``https://``, ``ftp://``) will be skipped,
+        If ``True``, hash verification of remote file sources
+        (``http://``, ``https://``, ``ftp://``) will be skipped,
         and the ``source_hash`` argument will be ignored.
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.2
 
     test: False
-        Dry run? If set to ``True``, will apply the config, discard and return the changes. Default: ``False``
-        and will commit the changes on the device.
+        Dry run? If set to ``True``, will apply the config,
+        discard and return the changes.
+        Default: ``False`` and will commit the changes on the device.
 
     commit: True
-        Commit? (default: ``True``) Sometimes it is not needed to commit the config immediately
-        after loading the changes. E.g.: a state loads a couple of parts (add / remove / update)
-        and would not be optimal to commit after each operation.
-        Also, from the CLI when the user needs to apply the similar changes before committing,
-        can specify ``commit=False`` and will not discard the config.
+        Commit? (default: ``True``)
 
     debug: False
-        Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` contaning the raw
-        result after the template was rendered.
+        Debug mode. Will insert a new key under the output dictionary,
+        as ``loaded_config`` contaning the raw result after the template was rendered.
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.2
 
     replace: False
         Load and replace the configuration.
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.2
 
     defaults: None
         Default variables/context passed to the template.
 
-        .. versionadded:: 2016.11.1
+        .. versionadded:: 2016.11.2
 
     **template_vars
         Dictionary with the arguments/context to be used when the template is rendered.
+
+        .. note::
+
+            Do not explicitely specify this argument.
+            This represents any other variable that will be sent
+            to the template rendering system.
+            Please see the examples below!
 
     :return: a dictionary having the following keys:
 
