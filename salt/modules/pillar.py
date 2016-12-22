@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import collections
 
 # Import third party libs
+import copy
 import os
 import yaml
 import salt.ext.six as six
@@ -25,7 +26,8 @@ def get(key,
         default=KeyError,
         merge=False,
         delimiter=DEFAULT_TARGET_DELIM,
-        saltenv=None):
+        saltenv=None,
+        pillarenv=None):
     '''
     .. versionadded:: 0.14
 
@@ -59,6 +61,12 @@ def get(key,
         .. versionadded:: 2014.7.0
 
     saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
+
+        .. versionadded:: Nitrogen
+
+    pillarenv
         If specified, this function will query the master to generate fresh
         pillar data on the fly, specifically from the requested pillar
         environment. Note that this can produce different pillar data than
@@ -84,7 +92,9 @@ def get(key,
         if default is KeyError:
             default = ''
     opt_merge_lists = __opts__.get('pillar_merge_lists', False)
-    pillar_dict = __pillar__ if saltenv is None else items(saltenv=saltenv)
+    pillar_dict = __pillar__ \
+        if all(x is None for x in (saltenv, pillarenv)) \
+        else items(saltenv=saltenv, pillarenv=pillarenv)
 
     if merge:
         ret = salt.utils.traverse_dict_and_list(pillar_dict, key, {}, delimiter)
@@ -119,11 +129,13 @@ def items(*args, **kwargs):
         .. versionadded:: 2015.5.0
 
     saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
+
+        .. versionadded:: Nitrogen
+
+    pillarenv
         Pass a specific pillar environment from which to compile pillar data.
-        If unspecified, the minion's :conf_minion:`environment` option is used,
-        and if that also is not specified then all configured pillar
-        environments will be merged into a single pillar dictionary and
-        returned.
 
         .. versionadded:: Nitrogen
 
@@ -137,11 +149,20 @@ def items(*args, **kwargs):
     if args:
         return item(*args)
 
+    pillarenv = kwargs.get('pillarenv')
+    if pillarenv is None:
+        if __opts__.get('pillarenv_from_saltenv', False):
+            pillarenv = kwargs.get('saltenv') or __opts__['environment']
+        else:
+            pillarenv = __opts__.get('pillarenv')
+
+    opts = copy.copy(__opts__)
+    opts['pillarenv'] = pillarenv
     pillar = salt.pillar.get_pillar(
-        __opts__,
+        opts,
         __grains__,
-        __opts__['id'],
-        kwargs.get('saltenv') or __opts__['environment'],
+        opts['id'],
+        saltenv=pillarenv,
         pillar=kwargs.get('pillar'))
 
     return pillar.compile_pillar()

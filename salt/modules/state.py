@@ -511,7 +511,7 @@ def apply_(mods=None,
             multiple state runs can safely be run at the same time. Do *not*
             use this flag for performance optimization.
 
-    saltenv : None
+    saltenv
         Specify a salt fileserver environment to be used when applying states
 
         .. versionchanged:: 0.17.0
@@ -525,8 +525,11 @@ def apply_(mods=None,
             saltenv was not explicitly set.
 
     pillarenv
-        Specify a Pillar environment to be used when applying states. By
-        default, all Pillar environments will be merged together and used.
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
 
     localconfig
         Optionally, instead of using the minion config, load minion opts from
@@ -711,6 +714,26 @@ def highstate(test=None,
 
         .. versionadded:: 2016.3.0
 
+    saltenv
+        Specify a salt fileserver environment to be used when applying states
+
+        .. versionchanged:: 0.17.0
+            Argument name changed from ``env`` to ``saltenv``.
+
+        .. versionchanged:: 2014.7.0
+            If no saltenv is specified, the minion config will be checked for a
+            ``saltenv`` parameter and if found, it will be used. If none is
+            found, ``base`` will be used. In prior releases, the minion config
+            was not checked and ``base`` would always be assumed when the
+            saltenv was not explicitly set.
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
     queue : False
         Instead of failing immediately when another state run is in progress,
         queue the new state run to begin running once the other has finished.
@@ -774,6 +797,9 @@ def highstate(test=None,
     if 'saltenv' in kwargs:
         opts['environment'] = kwargs['saltenv']
 
+    if 'pillarenv' in kwargs:
+        opts['pillarenv'] = kwargs['pillarenv']
+
     pillar = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
     if pillar_enc is None \
@@ -783,9 +809,6 @@ def highstate(test=None,
             'Pillar data must be formatted as a dictionary, unless pillar_enc '
             'is specified.'
         )
-
-    if 'pillarenv' in kwargs:
-        opts['pillarenv'] = kwargs['pillarenv']
 
     try:
         st_ = salt.state.HighState(opts,
@@ -881,7 +904,7 @@ def sls(mods,
             multiple state runs can safely be run at the same time. Do *not*
             use this flag for performance optimization.
 
-    saltenv : None
+    saltenv
         Specify a salt fileserver environment to be used when applying states
 
         .. versionchanged:: 0.17.0
@@ -895,9 +918,11 @@ def sls(mods,
             saltenv was not explicitly set.
 
     pillarenv
-
-        Specify a Pillar environment to be used when applying states. By
-        default, all Pillar environments will be merged together and used.
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
 
     localconfig
 
@@ -1076,11 +1101,31 @@ def top(topfn,
         test=None,
         queue=False,
         saltenv=None,
+        pillarenv=None,
         **kwargs):
     '''
     Execute a specific top file instead of the default. This is useful to apply
     configurations from a different environment (for example, dev or prod), without
     modifying the default top file.
+
+    queue : False
+        Instead of failing immediately when another state run is in progress,
+        queue the new state run to begin running once the other has finished.
+
+        This option starts a new thread for each queued state run, so use this
+        option sparingly.
+
+    saltenv
+        Specify a salt fileserver environment to be used when applying states
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
+        .. versionadded:: Nitrogen
 
     CLI Example:
 
@@ -1101,6 +1146,12 @@ def top(topfn,
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
     opts['test'] = _get_test_value(test, **kwargs)
+
+    if saltenv is not None:
+        opts['environment'] = saltenv
+
+    if pillarenv is not None:
+        opts['pillarenv'] = pillarenv
 
     pillar = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
@@ -1235,6 +1286,7 @@ def sls_id(
         id_,
         mods,
         saltenv='base',
+        pillarenv=None,
         test=None,
         queue=False,
         **kwargs):
@@ -1251,6 +1303,16 @@ def sls_id(
 
     .. versionadded:: 2014.7.0
 
+    saltenv : base
+        Specify a salt fileserver environment to be used when applying states
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1265,8 +1327,9 @@ def sls_id(
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
     opts['test'] = _get_test_value(test, **kwargs)
-    if 'pillarenv' in kwargs:
-        opts['pillarenv'] = kwargs['pillarenv']
+    opts['environment'] = saltenv
+    if pillarenv is not None:
+        opts['pillarenv'] = pillarenv
     try:
         st_ = salt.state.HighState(opts, proxy=__proxy__)
     except NameError:
@@ -1302,12 +1365,23 @@ def sls_id(
 
 def show_low_sls(mods,
                  saltenv='base',
+                 pillarenv=None,
                  test=None,
                  queue=False,
                  **kwargs):
     '''
     Display the low data from a specific sls. The default environment is
     ``base``, use ``saltenv`` to specify a different environment.
+
+    saltenv
+        Specify a salt fileserver environment to be used when applying states
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
 
     CLI Example:
 
@@ -1330,8 +1404,9 @@ def show_low_sls(mods,
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
     opts['test'] = _get_test_value(test, **kwargs)
-    if 'pillarenv' in kwargs:
-        opts['pillarenv'] = kwargs['pillarenv']
+    opts['environment'] = saltenv
+    if pillarenv is not None:
+        opts['pillarenv'] = pillarenv
     st_ = salt.state.HighState(opts)
     if isinstance(mods, six.string_types):
         mods = mods.split(',')
@@ -1361,6 +1436,16 @@ def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
     ``show_top`` instead.
 
     Custom Pillar data can be passed with the ``pillar`` kwarg.
+
+    saltenv
+        Specify a salt fileserver environment to be used when applying states
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
 
     CLI Example:
 

@@ -78,8 +78,12 @@ class AsyncRemotePillar(object):
         self.grains = grains
         self.minion_id = minion_id
         self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
-        if pillarenv is not None or 'pillarenv' not in self.opts:
+        if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
+        elif self.opts.get('pillarenv_from_saltenv', False):
+            self.opts['pillarenv'] = saltenv
+        elif 'pillarenv' not in self.opts:
+            self.opts['pillarenv'] = None
         self.pillar_override = {}
         if pillar is not None:
             if isinstance(pillar, dict):
@@ -131,8 +135,12 @@ class RemotePillar(object):
         self.grains = grains
         self.minion_id = minion_id
         self.channel = salt.transport.Channel.factory(opts)
-        if pillarenv is not None or 'pillarenv' not in self.opts:
+        if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
+        elif self.opts.get('pillarenv_from_saltenv', False):
+            self.opts['pillarenv'] = saltenv
+        elif 'pillarenv' not in self.opts:
+            self.opts['pillarenv'] = None
         self.pillar_override = {}
         if pillar is not None:
             if isinstance(pillar, dict):
