@@ -31,7 +31,7 @@ import salt.config
 import salt.cache
 import salt.payload
 import salt.transport
-#import salt.loader
+import salt.loader
 import salt.utils
 import salt.utils.args
 import salt.utils.event
