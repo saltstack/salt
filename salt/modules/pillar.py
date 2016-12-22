@@ -30,7 +30,8 @@ def get(key,
         default=KeyError,
         merge=False,
         delimiter=DEFAULT_TARGET_DELIM,
-        saltenv=None):
+        saltenv=None,
+        pillarenv=None):
     '''
     .. versionadded:: 0.14
 
@@ -66,6 +67,12 @@ def get(key,
         .. versionadded:: 2014.7.0
 
     saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
+
+        .. versionadded:: Nitrogen
+
+    pillarenv
         If specified, this function will query the master to generate fresh
         pillar data on the fly, specifically from the requested pillar
         environment. Note that this can produce different pillar data than
@@ -92,7 +99,9 @@ def get(key,
         if default is KeyError:
             default = ''
     opt_merge_lists = __opts__.get('pillar_merge_lists', False)
-    pillar_dict = __pillar__ if saltenv is None else items(saltenv=saltenv)
+    pillar_dict = __pillar__ \
+        if all(x is None for x in (saltenv, pillarenv)) \
+        else items(saltenv=saltenv, pillarenv=pillarenv)
 
     if merge:
         if default is None:
