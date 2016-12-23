@@ -200,7 +200,6 @@ def start(token,
                                     expr_form = kwargs['expr_form']
                                     del kwargs['expr_form']
 
-
                                 ret = {}
 
                                 if cmd in runner_functions:
