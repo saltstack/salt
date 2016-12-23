@@ -296,7 +296,7 @@ def fcontext_policy_present(name, sel_type, filetype='a', sel_user=None, sel_lev
                 ret.update({'comment': 'Error adding new rule: {0}'.format(change_ret)})
             else:
                 ret.update({'result': True})
-    if new_state or old_state:
+    if ret['result'] and (new_state or old_state):
         ret['changes'].update({'old': old_state, 'new': new_state})
     return ret
 
