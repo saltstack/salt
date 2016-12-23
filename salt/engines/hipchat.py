@@ -213,6 +213,13 @@ def start(token,
                 target = kwargs['target']
                 del kwargs['target']
 
+            # Check for expr_form. Otherwise assume glob
+            if 'expr_form' not in kwargs:
+                expr_form = 'glob'
+            else:
+                expr_form = kwargs['expr_form']
+                del kwargs['expr_form']
+
             # Ensure the command is allowed
             if valid_commands:
                 if cmd not in valid_commands:
@@ -227,7 +234,7 @@ def start(token,
             # Default to trying to run as a client module.
             else:
                 local = salt.client.LocalClient()
-                ret = local.cmd('{0}'.format(target), cmd, args, kwargs)
+                ret = local.cmd('{0}'.format(target), cmd, args, kwargs, expr_form='{0}'.format(expr_form))
 
             tmp_path_fn = salt.utils.files.mkstemp()
             with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
