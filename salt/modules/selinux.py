@@ -24,6 +24,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 # Import 3rd-party libs
 import salt.ext.six as six
 
+
 _SELINUX_FILETYPES = {
         'a': 'all files',
         'f': 'regular file',
@@ -425,14 +426,18 @@ def fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, se
     return __salt__['cmd.run_all'](cmd)
 
 
-def fcontext_policy_is_applied(name):
+def fcontext_policy_is_applied(name, recursive=False):
     '''
     Returns an empty string if the SELinux policy for a given filespec is applied,
     returns string with differences in policy and actual situation otherwise.
 
     name: filespec of the file or directory. Regex syntax is allowed.
     '''
-    return __salt__['cmd.run']('restorecon -n -v {0}'.format(re.escape(name)))
+    cmd = 'restorecon -n -v '
+    if recursive:
+        cmd += '-R '
+    cmd += re.escape(name)
+    return __salt__['cmd.run_all'](cmd).get('stdout')
 
 
 def fcontext_apply_policy(name, recursive=False):
@@ -444,18 +449,21 @@ def fcontext_apply_policy(name, recursive=False):
     recursive: Recursively apply SELinux policies.
     '''
     ret = {}
-    changes_text = fcontext_policy_is_applied(name)
-    cmd = 'restorecon '
+    changes_text = fcontext_policy_is_applied(name, recursive)
+    cmd = 'restorecon -v -F '
     if recursive:
         cmd += '-R '
     cmd += re.escape(name)
     apply_ret = __salt__['cmd.run_all'](cmd)
     ret.update(apply_ret)
     if apply_ret['retcode'] == 0:
-        changes_list = re.findall('context (.*)->(.*)$', changes_text)
+        changes_list = re.findall('restorecon reset (.*) context (.*)->(.*)$', changes_text, re.M)
         if len(changes_list) > 0:
-            old = _context_string_to_dict(changes_list[0][0])
-            new = _context_string_to_dict(changes_list[0][1])
+            ret.update({'changes': {}})
+        for item in changes_list:
+            filespec = item[0]
+            old = _context_string_to_dict(item[1])
+            new = _context_string_to_dict(item[2])
             intersect = {}
             for key, value in old.iteritems():
                 if new.get(key) == value:
@@ -463,6 +471,5 @@ def fcontext_apply_policy(name, recursive=False):
             for key in intersect.keys():
                 del old[key]
                 del new[key]
-            ret.update({'changes': {'old': old,
-                                    'new': new}})
+            ret['changes'].update({filespec: {'old': old, 'new': new}})
     return ret
