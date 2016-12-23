@@ -269,8 +269,8 @@ def fcontext_policy_present(name, sel_type, filetype='a', sel_user=None, sel_lev
             else:
                 ret.update({'result': True})
     else:
-        if current_state['selinux_type'] != sel_type:
-            old_state.update({name: {'sel_type': current_state['selinux_type']}})
+        if current_state['sel_type'] != sel_type:
+            old_state.update({name: {'sel_type': current_state['sel_type']}})
             new_state.update({name: {'sel_type': sel_type}})
         else:
             ret.update({'result': True,
@@ -357,7 +357,7 @@ def fcontext_policy_applied(name, recursive=False):
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
 
-    changes_text = __salt__['selinux.fcontext_policy_is_applied'](name)
+    changes_text = __salt__['selinux.fcontext_policy_is_applied'](name, recursive)
     if changes_text == '':
         ret.update({'result': True,
                     'comment': 'SElinux policies are already applied for filespec "{0}"'.format(name)})
@@ -370,5 +370,5 @@ def fcontext_policy_applied(name, recursive=False):
             ret.update({'comment': apply_ret})
         else:
             ret.update({'result': True})
-            ret.update({'changes': apply_ret['changes']})
+            ret.update({'changes': apply_ret.get('changes')})
     return ret
