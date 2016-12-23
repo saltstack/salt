@@ -371,7 +371,8 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
               See also `man semanage-fcontext`.
               Defaults to 'a' (all files)
     '''
-    _validate_filetype(filetype)
+    if filetype:
+        _validate_filetype(filetype)
     re_spacer = '[ ]{2,}'
     cmd_kwargs = {'spacer': re_spacer,
                   'filespec': re.escape(name),
