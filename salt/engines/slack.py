@@ -3,7 +3,7 @@
 An engine that reads messages from Slack and sends them to the Salt
 event bus.  Alternatively Salt commands can be sent to the Salt master
 via Slack by setting the control parameter to ``True`` and using command
-prefaced with a ``!``.
+prefaced with a ``!``. 
 
 .. versionadded: 2016.3.0
 
@@ -26,7 +26,7 @@ prefaced with a ``!``.
                    list_jobs:
                        cmd: jobs.list_jobs
                    list_commands:
-                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster
+                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster expr_form=list
 
 :depends: slackclient
 '''

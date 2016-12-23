@@ -28,7 +28,7 @@ keys make the engine interactive.
                    list_jobs:
                        cmd: jobs.list_jobs
                    list_commands:
-                       cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster
+                       cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster expr_form=list
 '''
 
 from __future__ import absolute_import
