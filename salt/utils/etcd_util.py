@@ -184,8 +184,10 @@ class EtcdClient(object):
             return None
         except ValueError:
             return None
-
-        return getattr(result, 'value', None)
+        if result.value is None and result._children:
+            return getattr(result, '_children', None)
+        else:
+            return getattr(result, 'value', None)
 
     def read(self, key, recursive=False, wait=False, timeout=None, waitIndex=None):
         try:
