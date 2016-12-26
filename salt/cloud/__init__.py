@@ -31,6 +31,7 @@ import salt.client
 import salt.loader
 import salt.utils
 import salt.utils.cloud
+import salt.utils.dictupdate
 import salt.utils.files
 import salt.syspaths
 from salt.utils import reinit_crypto
@@ -1957,7 +1958,7 @@ class Map(Cloud):
                     if len(overrides['minion']) == 0:
                         del overrides['minion']
 
-                nodedata.update(overrides)
+                nodedata = salt.utils.dictupdate.update(nodedata, overrides)
                 # Add the computed information to the return data
                 ret['create'][nodename] = nodedata
                 # Add the node name to the defined set
@@ -1992,7 +1993,7 @@ class Map(Cloud):
                             break
 
                         log.warning("'{0}' already exists, removing from "
-                                 'the create map.'.format(name))
+                                    'the create map.'.format(name))
 
                         if 'existing' not in ret:
                             ret['existing'] = {}

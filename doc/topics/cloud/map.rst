@@ -92,25 +92,27 @@ Any top level data element from your profile may be overridden in the map file:
       - web2:
         size: t2.nano
 
-Nested elements cannot be specified individually. Instead, the complete
-definition for any top level data element must be repeated. In this example a
-separate subnet is assigned to each ec2 instance:
+As of Salt Nitrogen, nested elements are merged, and can can be specified
+individually without having to repeat the complete definition for each top
+level data element. In this example a separate MAC is assigned to each VMware
+instance while inheriting device parameters for for disk and network
+configuration:
 
 .. code-block:: yaml
 
-    fedora_small_aws:
-      - web1:
-        network_interfaces:
-          - DeviceIndex: 0
-            SubnetId: subnet-3bf94a72
-            SecurityGroupId:
-              - sg-9f644fe5
-      - web2:
-        network_interfaces:
-          - DeviceIndex: 0
-            SubnetId: subnet-c3ad9fa4
-            SecurityGroupId:
-              - sg-9f644fe5
+    nyc-vm:
+      - db1:
+          devices:
+            network:
+              Network Adapter 1:
+                mac: '44:44:44:44:44:41'
+      - db2:
+          devices:
+            network:
+              Network Adapter 1:
+                mac: '44:44:44:44:44:42'
+
+
 
 A map file may also be used with the various query options:
 

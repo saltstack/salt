@@ -1709,8 +1709,8 @@ def _validate_opts(opts):
     # We don't expect the user to know this, so we will fix up their path for
     # them if it isn't compliant.
     if (salt.utils.is_windows() and opts.get('transport') == 'raet' and
-             'sock_dir' in opts and
-             not opts['sock_dir'].startswith('\\\\.\\mailslot\\')):
+            'sock_dir' in opts and
+            not opts['sock_dir'].startswith('\\\\.\\mailslot\\')):
         opts['sock_dir'] = (
                 '\\\\.\\mailslot\\' + opts['sock_dir'].replace(':', ''))
 
@@ -2515,9 +2515,10 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
             vms.pop(profile)
             continue
 
-        extended = vms.get(extends).copy()
+        extended = deepcopy(vms.get(extends))
         extended.pop('profile')
-        extended.update(details)
+        # Merge extended configuration with base profile
+        extended = salt.utils.dictupdate.update(extended, details)
 
         if ':' not in extended['provider']:
             if extended['provider'] not in providers:
@@ -2757,7 +2758,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 # Grab a copy of what should be extended
                 extended = providers.get(ext_alias).get(ext_driver).copy()
                 # Merge the data to extend with the details
-                extended.update(details)
+                extended = salt.utils.dictupdate.update(extended, details)
                 # Update the providers dictionary with the merged data
                 providers[alias][driver] = extended
                 # Update name of the driver, now that it's populated with extended information
