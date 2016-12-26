@@ -28,7 +28,7 @@ keys make the engine interactive.
                    list_jobs:
                        cmd: jobs.list_jobs
                    list_commands:
-                       cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster expr_form=list
+                       cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster tgt_type=list
 '''
 
 from __future__ import absolute_import
@@ -213,12 +213,12 @@ def start(token,
                 target = kwargs['target']
                 del kwargs['target']
 
-            # Check for expr_form. Otherwise assume glob
-            if 'expr_form' not in kwargs:
-                expr_form = 'glob'
+            # Check for tgt_type. Otherwise assume glob
+            if 'tgt_type' not in kwargs:
+                tgt_type = 'glob'
             else:
-                expr_form = kwargs['expr_form']
-                del kwargs['expr_form']
+                tgt_type = kwargs['tgt_type']
+                del kwargs['tgt_type']
 
             # Ensure the command is allowed
             if valid_commands:
@@ -234,7 +234,7 @@ def start(token,
             # Default to trying to run as a client module.
             else:
                 local = salt.client.LocalClient()
-                ret = local.cmd('{0}'.format(target), cmd, args, kwargs, expr_form='{0}'.format(expr_form))
+                ret = local.cmd('{0}'.format(target), cmd, args, kwargs, tgt_type='{0}'.format(tgt_type))
 
             tmp_path_fn = salt.utils.files.mkstemp()
             with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
