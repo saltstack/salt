@@ -357,6 +357,31 @@ the ``testing`` environment, without modifying the in-memory pillar data.
     this case would still restrict the states' pillar data to just that of the
     ``testing`` pillar environment.
 
+Starting in the Nitrogen release, it is possible to pin the pillarenv to the
+effective saltenv, using the :conf_minion:`pillarenv_from_saltenv` minion
+config option. When this is set to ``True``, if a specific saltenv is specified
+when running states, the ``pillarenv`` will be the same. This essentially makes
+the following two commands equivalent:
+
+.. code-block:: bash
+
+    salt '*' state.apply mystates saltenv=dev
+    salt '*' state.apply mystates saltenv=dev pillarenv=dev
+
+However, if a pillarenv is specified, it will override this behavior. So, the
+following command will use the ``qa`` pillar environment but source the SLS
+files from the ``dev`` saltenv:
+
+.. code-block:: bash
+
+    salt '*' state.apply mystates saltenv=dev pillarenv=qa
+
+So, if a ``pillarenv`` is set in the minion config file,
+:conf_minion:`pillarenv_from_saltenv` will be ignored, and passing a
+``pillarenv`` on the CLI will temporarily override
+:conf_minion:`pillarenv_from_saltenv`.
+
+
 Viewing Pillar Data
 ===================
 
