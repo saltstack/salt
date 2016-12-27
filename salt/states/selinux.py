@@ -326,7 +326,7 @@ def fcontext_policy_absent(name, filetype='a', sel_type=None, sel_user=None, sel
             sel_level=sel_level)
     if not current_state:
         ret.update({'result': True,
-                    'comment': 'SELinux policy for "{0}" already absent '.format(name) + 
+                    'comment': 'SELinux policy for "{0}" already absent '.format(name) +
                                'with specified filetype "{0}" and sel_type "{1}".'.format(
                                         filetype,
                                         sel_type)})
