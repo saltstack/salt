@@ -2669,16 +2669,18 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
             os.remove(path)
 
 
-def list_cache_nodes_full(opts, provider=None, base=None):
+def list_cache_nodes_full(opts=None, provider=None, base=None):
     '''
     Return a list of minion data from the cloud cache, rather from the cloud
     providers themselves. This is the cloud cache version of list_nodes_full().
     '''
+    if opts is None:
+        opts = __opts__
     if opts.get('update_cachedir', False) is False:
         return
 
     if base is None:
-        base = os.path.join(__opts__['cachedir'], 'active')
+        base = os.path.join(opts['cachedir'], 'active')
 
     minions = {}
     # First, get a list of all drivers in use
@@ -2693,10 +2695,10 @@ def list_cache_nodes_full(opts, provider=None, base=None):
             minions[driver][prov] = {}
             min_dir = os.path.join(prov_dir, prov)
             # Get a list of all nodes per provider
-            for minion_id in os.listdir(min_dir):
+            for fname in os.listdir(min_dir):
                 # Finally, get a list of full minion data
-                fname = '{0}.p'.format(minion_id)
                 fpath = os.path.join(min_dir, fname)
+                minion_id = fname[:-2]  # strip '.p' from end of msgpack filename
                 with salt.utils.fopen(fpath, 'r') as fh_:
                     minions[driver][prov][minion_id] = msgpack.load(fh_)
 
@@ -2709,7 +2711,7 @@ def cache_nodes_ip(opts, base=None):
     addresses. Returns a dict.
     '''
     if base is None:
-        base = __opts__['cachedir']
+        base = opts['cachedir']
 
     minions = list_cache_nodes_full(opts, base=base)
 
