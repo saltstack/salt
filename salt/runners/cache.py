@@ -4,9 +4,12 @@ Return cached data from minions
 '''
 from __future__ import absolute_import
 # Import python libs
+import fnmatch
 import logging
 
 # Import salt libs
+import salt.config
+import salt.ext.six as six
 import salt.log
 import salt.utils
 import salt.utils.master
@@ -359,4 +362,37 @@ def clear_git_lock(role, remote=None, **kwargs):
                 ret.setdefault('errors', []).extend(errors)
     if not ret:
         return 'No locks were removed'
+    return ret
+
+
+def cloud(tgt, provider=None):
+    '''
+    Return cloud cache data for target.
+
+    .. note:: Only works with glob matching
+
+    tgt
+      Glob Target to match minion ids
+
+    provider
+      Cloud Provider
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.cloud 'salt*'
+        salt-run cache.cloud glance.example.org provider=openstack
+    '''
+    if not isinstance(tgt, six.string_types):
+        return {}
+    ret = {}
+    opts = salt.config.cloud_config('/etc/salt/cloud')
+    cloud_cache = __utils__['cloud.list_cache_nodes_full'](opts=opts, provider=provider)
+    for driver, providers in cloud_cache.items():
+        for provider, servers in providers.items():
+            for name, data in servers.items():
+                if fnmatch.fnmatch(name, tgt):
+                    ret[name] = data
+                    ret['name']['provider'] = provider
     return ret
