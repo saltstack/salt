@@ -264,7 +264,7 @@ def update_user_permissions(userid, profile='grafana', **kwargs):
         Id of the user.
 
     isGrafanaAdmin
-        Wether user is a Grafana admin.
+        Whether user is a Grafana admin.
 
     profile
         Configuration profile used to connect to the Grafana instance.
@@ -1207,7 +1207,7 @@ def create_update_dashboard(orgname=None, profile='grafana', **kwargs):
         A dict that defines the dashboard to create/update.
 
     overwrite
-        Wether the dashboard should be overwritten if already existing.
+        Whether the dashboard should be overwritten if already existing.
 
     orgname
         Name of the organization.
