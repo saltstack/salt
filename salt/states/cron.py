@@ -153,6 +153,7 @@ from salt.modules.cron import (
 
 def _check_cron(user,
                 cmd,
+                special=None,
                 minute=None,
                 hour=None,
                 daymonth=None,
@@ -180,6 +181,8 @@ def _check_cron(user,
         commented = commented is True
     if cmd is not None:
         cmd = str(cmd)
+    if special is not None:
+        special = str(special)
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
         if _cron_matched(cron, cmd, identifier):
@@ -188,6 +191,7 @@ def _check_cron(user,
                      (cron['daymonth'], daymonth), (cron['month'], month),
                      (cron['dayweek'], dayweek), (cron['identifier'], identifier),
                      (cron['cmd'], cmd), (cron['comment'], comment),
+                     (cron['special'], special),
                      (cron['commented'], commented))]):
                 return 'update'
             return 'present'
@@ -290,7 +294,8 @@ def present(name,
         edits. This defaults to the state id
 
     special
-        A special keyword to specify periodicity (eg. @reboot, @hourly...)
+        A special keyword to specify periodicity (eg. @reboot, @hourly...). If
+        set, other period keys are ignored.
 
         .. versionadded:: 2016.3.0
     '''
@@ -304,6 +309,7 @@ def present(name,
     if __opts__['test']:
         status = _check_cron(user,
                              cmd=name,
+                             special=special,
                              minute=minute,
                              hour=hour,
                              daymonth=daymonth,
@@ -334,7 +340,12 @@ def present(name,
                                         commented=commented,
                                         identifier=identifier)
     else:
-        data = __salt__['cron.set_special'](user, special, name)
+        data = __salt__['cron.set_special'](user=user,
+                                        special=special,
+                                        cmd=name,
+                                        comment=comment,
+                                        commented=commented,
+                                        identifier=identifier)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
@@ -402,7 +413,7 @@ def absent(name,
     if special is None:
         data = __salt__['cron.rm_job'](user, name, identifier=identifier)
     else:
-        data = __salt__['cron.rm_special'](user, special, name)
+        data = __salt__['cron.rm_special'](user, special, name, identifier=identifier)
 
     if data == 'absent':
         ret['comment'] = "Cron {0} already absent".format(name)

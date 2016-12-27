@@ -100,9 +100,9 @@ def _needs_change(old, new):
     if old != new:
         if new == 'random':
             # Allow switch from '*' or not present to 'random'
-            if old == '*':
+            if old == '*' or old is None:
                 return True
-        elif new is not None:
+        else:
             return True
     return False
 
@@ -137,18 +137,26 @@ def _render_tab(lst):
 
             comment += '\n'
             ret.append(comment)
-        ret.append('{0}{1} {2} {3} {4} {5} {6}\n'.format(
-                            cron['commented'] is True and '#DISABLED#' or '',
-                            cron['minute'],
-                            cron['hour'],
-                            cron['daymonth'],
-                            cron['month'],
-                            cron['dayweek'],
-                            cron['cmd']
-                            )
-                   )
-    for spec in lst['special']:
-        ret.append('{0} {1}\n'.format(spec['spec'], spec['cmd']))
+
+        if cron.get('spec', None):
+            # is special
+            ret.append('{0}{1} {2}\n'.format(
+                                cron['commented'] is True and '#DISABLED#' or '',
+                                cron['spec'],
+                                cron['cmd']
+                                )
+                       )
+        else:
+            ret.append('{0}{1} {2} {3} {4} {5} {6}\n'.format(
+                                cron['commented'] is True and '#DISABLED#' or '',
+                                cron['minute'],
+                                cron['hour'],
+                                cron['daymonth'],
+                                cron['month'],
+                                cron['dayweek'],
+                                cron['cmd']
+                                )
+                       )
     return ret
 
 
@@ -311,13 +319,24 @@ def list_tab(user):
             if line.startswith('@'):
                 # Its a "special" line
                 dat = {}
-                comps = line.split()
+                comps = line.split(None, 1)
                 if len(comps) < 2:
                     # Invalid line
                     continue
                 dat['spec'] = comps[0]
-                dat['cmd'] = ' '.join(comps[1:])
-                ret['special'].append(dat)
+                dat['cmd'] = comps[1]
+                dat['identifier'] = identifier
+                # avoid empty string as comment
+                dat['comment'] = comment if comment else None
+                if commented_cron_job:
+                    dat['commented'] = True
+                else:
+                    dat['commented'] = False
+
+                ret['crons'].append(dat)
+                identifier = None
+                comment = None
+                commented_cron_job = False
             elif line.startswith('#'):
                 # It's a comment! Catch it!
                 comment_line = line.lstrip('# ')
@@ -351,7 +370,7 @@ def list_tab(user):
                        'dayweek': comps[4],
                        'identifier': identifier,
                        'cmd': ' '.join(comps[5:]),
-                       'comment': comment,
+                       'comment': comment if comment else None,
                        'commented': False}
                 if commented_cron_job:
                     dat['commented'] = True
@@ -367,7 +386,12 @@ def list_tab(user):
 ls = salt.utils.alias_function(list_tab, 'ls')
 
 
-def set_special(user, special, cmd):
+def set_special(user,
+                special,
+                cmd,
+                commented=False,
+                comment=None,
+                identifier=None):
     '''
     Set up a special command in the crontab.
 
@@ -377,18 +401,8 @@ def set_special(user, special, cmd):
 
         salt '*' cron.set_special root @hourly 'echo foobar'
     '''
-    lst = list_tab(user)
-    for cron in lst['special']:
-        if special == cron['spec'] and cmd == cron['cmd']:
-            return 'present'
-    spec = {'spec': special,
-            'cmd': cmd}
-    lst['special'].append(spec)
-    comdat = _write_cron_lines(user, _render_tab(lst))
-    if comdat['retcode']:
-        # Failed to commit, return the error
-        return comdat['stderr']
-    return 'new'
+    return _set_job(user, cmd, special, commented=commented,
+                    comment=comment, identifier=identifier)
 
 
 def _get_cron_date_time(**kwargs):
@@ -432,33 +446,33 @@ def _get_cron_date_time(**kwargs):
 
     return ret
 
-
-def set_job(user,
-            minute,
-            hour,
-            daymonth,
-            month,
-            dayweek,
+def _set_job(user,
             cmd,
+            special=None,
+            minute=None,
+            hour=None,
+            daymonth=None,
+            month=None,
+            dayweek=None,
             commented=False,
             comment=None,
             identifier=None):
     '''
-    Sets a cron job up for a specified user.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' cron.set_job root '*' '*' '*' '*' 1 /usr/local/weekly
+    Does the actual work of setting a job behind set_job and set_special.
     '''
-    # Scrub the types
-    minute = str(minute).lower()
-    hour = str(hour).lower()
-    daymonth = str(daymonth).lower()
-    month = str(month).lower()
-    dayweek = str(dayweek).lower()
     lst = list_tab(user)
+
+    if special is not None:
+        special = str(special).lower()
+        minute = hour = daymonth = month = dayweek = None
+    else:
+        # Scrub the types
+        minute = str(minute).lower()
+        hour = str(hour).lower()
+        daymonth = str(daymonth).lower()
+        month = str(month).lower()
+        dayweek = str(dayweek).lower()
+
     for cron in lst['crons']:
         cid = _cron_id(cron)
         if _cron_matched(cron, cmd, identifier):
@@ -466,14 +480,17 @@ def set_job(user,
                 cron['identifier'] is None
                 and SALT_CRON_NO_IDENTIFIER
                 or cron['identifier'])
+
             tests = [(cron['comment'], comment),
                      (cron['commented'], commented),
                      (identifier, test_setted_id),
-                     (cron['minute'], minute),
-                     (cron['hour'], hour),
-                     (cron['daymonth'], daymonth),
-                     (cron['month'], month),
-                     (cron['dayweek'], dayweek)]
+                     (cron.get('minute', None), minute),
+                     (cron.get('hour', None), hour),
+                     (cron.get('daymonth', None), daymonth),
+                     (cron.get('month', None), month),
+                     (cron.get('dayweek', None), dayweek),
+                     (cron.get('spec', None), special)]
+
             if cid or identifier:
                 tests.append((cron['cmd'], cmd))
             if any([_needs_change(x, y) for x, y in tests]):
@@ -481,16 +498,19 @@ def set_job(user,
 
                 # Use old values when setting the new job if there was no
                 # change needed for a given parameter
-                if not _needs_change(cron['minute'], minute):
-                    minute = cron['minute']
-                if not _needs_change(cron['hour'], hour):
-                    hour = cron['hour']
-                if not _needs_change(cron['daymonth'], daymonth):
-                    daymonth = cron['daymonth']
-                if not _needs_change(cron['month'], month):
-                    month = cron['month']
-                if not _needs_change(cron['dayweek'], dayweek):
-                    dayweek = cron['dayweek']
+                if not _needs_change(cron.get('spec', None), special):
+                    special = cron.get('spec', None)
+                if not _needs_change(cron.get('minute', None), minute):
+                    minute = cron.get('minute', None)
+                if not _needs_change(cron.get('hour', None), hour):
+                    hour = cron.get('hour', None)
+                if not _needs_change(cron.get('daymonth', None), daymonth):
+                    daymonth = cron.get('daymonth', None)
+                if not _needs_change(cron.get('month', None), month):
+                    month = cron.get('month', None)
+                if not _needs_change(cron.get('dayweek', None), dayweek):
+                    dayweek = cron.get('dayweek', None)
+
                 if not _needs_change(cron['commented'], commented):
                     commented = cron['commented']
                 if not _needs_change(cron['comment'], comment):
@@ -512,21 +532,30 @@ def set_job(user,
                     cid and not _needs_change(cid, identifier)
                 ):
                     identifier = cid
-                jret = set_job(user, minute, hour, daymonth,
-                               month, dayweek, cmd, commented=commented,
-                               comment=comment, identifier=identifier)
+                if special:
+                    jret = set_special(user, special, cmd, commented=commented,
+                                       comment=comment, identifier=identifier)
+                else:
+                    jret = set_job(user, minute, hour, daymonth,
+                                   month, dayweek, cmd, commented=commented,
+                                   comment=comment, identifier=identifier)
                 if jret == 'new':
                     return 'updated'
                 else:
                     return jret
             return 'present'
+
+    # create new cronjob - no previous matches found
     cron = {'cmd': cmd,
             'identifier': identifier,
             'comment': comment,
             'commented': commented}
-    cron.update(_get_cron_date_time(minute=minute, hour=hour,
-                                    daymonth=daymonth, month=month,
-                                    dayweek=dayweek))
+    if special:
+        cron['spec'] = special
+    else:
+        cron.update(_get_cron_date_time(minute=minute, hour=hour,
+                                        daymonth=daymonth, month=month,
+                                        dayweek=dayweek))
     lst['crons'].append(cron)
 
     comdat = _write_cron_lines(user, _render_tab(lst))
@@ -536,7 +565,30 @@ def set_job(user,
     return 'new'
 
 
-def rm_special(user, special, cmd):
+def set_job(user,
+            minute,
+            hour,
+            daymonth,
+            month,
+            dayweek,
+            cmd,
+            commented=False,
+            comment=None,
+            identifier=None):
+    '''
+    Sets a cron job up for a specified user.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cron.set_job root '*' '*' '*' '*' 1 /usr/local/weekly
+    '''
+    return _set_job(user, cmd, None, minute, hour, daymonth, month,
+                    dayweek, commented, comment, identifier)
+
+
+def rm_special(user, special, cmd, identifier=None):
     '''
     Remove a special cron job for a specified user.
 
@@ -546,25 +598,12 @@ def rm_special(user, special, cmd):
 
         salt '*' cron.rm_job root @hourly /usr/bin/foo
     '''
-    lst = list_tab(user)
-    ret = 'absent'
-    rm_ = None
-    for ind in range(len(lst['special'])):
-        if lst['special'][ind]['cmd'] == cmd and \
-                lst['special'][ind]['spec'] == special:
-            lst['special'].pop(ind)
-            rm_ = ind
-    if rm_ is not None:
-        ret = 'removed'
-        comdat = _write_cron_lines(user, _render_tab(lst))
-        if comdat['retcode']:
-            # Failed to commit
-            return comdat['stderr']
-    return ret
+    return rm_job(user, cmd, special=special, identifier=identifier)
 
 
 def rm_job(user,
            cmd,
+           special=None,
            minute=None,
            hour=None,
            daymonth=None,
@@ -590,11 +629,12 @@ def rm_job(user,
             break
         if _cron_matched(lst['crons'][ind], cmd, identifier=identifier):
             if not any([x is not None
-                        for x in (minute, hour, daymonth, month, dayweek)]):
+                        for x in (special, minute, hour, daymonth, month, dayweek)]):
                 # No date/time params were specified
                 rm_ = ind
             else:
                 if _date_time_match(lst['crons'][ind],
+                                    special=special,
                                     minute=minute,
                                     hour=hour,
                                     daymonth=daymonth,
