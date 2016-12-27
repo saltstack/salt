@@ -3,7 +3,7 @@
 An engine that reads messages from Slack and sends them to the Salt
 event bus.  Alternatively Salt commands can be sent to the Salt master
 via Slack by setting the control parameter to ``True`` and using command
-prefaced with a ``!``. 
+prefaced with a ``!``.
 
 .. versionadded: 2016.3.0
 
