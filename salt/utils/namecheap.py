@@ -54,7 +54,8 @@ def _handle_request(r):
 
     if apiresponse.getAttribute('Status') == "ERROR":
         data = []
-        for e in apiresponse.getElementsByTagName("Errors")[0].getElementsByTagName("Error"):
+        for e in apiresponse.getElementsByTagName("Errors")[0]
+                            .getElementsByTagName("Error"):
             data.append(e.firstChild.data)
         error = ''.join(data)
         log.info(apiresponse)
@@ -76,7 +77,8 @@ def xml_to_dict(xml):
             return xml.firstChild.data
         else:
             return None
-    elif xml.childNodes.length == 1 and xml.childNodes[0].nodeType == xml.CDATA_SECTION_NODE:
+    elif xml.childNodes.length == 1 and
+         xml.childNodes[0].nodeType == xml.CDATA_SECTION_NODE:
         return xml.childNodes[0].data
     else:
         for n in xml.childNodes:
