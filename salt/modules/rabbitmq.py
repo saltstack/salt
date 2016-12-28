@@ -913,7 +913,7 @@ def plugin_is_enabled(name, runas=None):
     cmd = [_get_rabbitmq_plugin(), 'list', '-m', '-e']
     ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
     _check_response(ret)
-    return bool(name in ret['stdout'])
+    return bool(name in ret['stdout'].split())
 
 
 def enable_plugin(name, runas=None):
