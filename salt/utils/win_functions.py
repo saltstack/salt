@@ -6,9 +6,6 @@ missing functions in other modules
 from __future__ import absolute_import
 from salt.exceptions import CommandExecutionError
 
-# Import Salt Libs
-import salt.utils
-
 # Import 3rd Party Libs
 try:
     import ntsecuritycon
