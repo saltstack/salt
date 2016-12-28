@@ -28,9 +28,9 @@ class ProxyTestCase(TestCase):
     '''
         Validate the proxy state
     '''
-    def test_set_proxy_osx(self):
+    def test_set_proxy_macos(self):
         '''
-            Test to make sure we can set the proxy settings on OSX
+            Test to make sure we can set the proxy settings on macOS
         '''
         proxy.__grains__['os'] = 'Darwin'
         expected = {'changes': {
@@ -80,9 +80,9 @@ class ProxyTestCase(TestCase):
             set_proxy_mock.assert_has_calls(calls)
             self.assertEqual(out, expected)
 
-    def test_set_proxy_osx_same(self):
+    def test_set_proxy_macos_same(self):
         '''
-            Test to make sure we can set the proxy settings on OSX
+            Test to make sure we can set the proxy settings on macOS
         '''
         proxy.__grains__['os'] = 'Darwin'
         expected = {'changes': {

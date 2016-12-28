@@ -48,7 +48,7 @@ minion pillar, grains, or local config file.
 
 .. note::
     The `inotify` beacon only works on OSes that have `inotify` kernel support.
-    Currently this excludes FreeBSD, Mac OS X, and Windows.
+    Currently this excludes FreeBSD, macOS, and Windows.
 
 Beacon Monitoring Interval
 --------------------------

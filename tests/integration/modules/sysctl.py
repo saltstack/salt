@@ -46,7 +46,7 @@ class SysctlModuleTest(integration.ModuleCase):
             ret.get('kern.ostype'), 'OpenBSD', 'Incorrect kern.ostype'
         )
 
-    @skipIf(not sys.platform.startswith('darwin'), 'Darwin (OS X) specific')
+    @skipIf(not sys.platform.startswith('darwin'), 'Darwin (macOS) specific')
     def test_show_darwin(self):
         ret = self.run_function('sysctl.show')
         self.assertIn('kern.ostype', ret, 'kern.ostype absent')

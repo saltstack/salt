@@ -12,7 +12,7 @@
 #    - None
 #
 # Usage:
-#     This script is run as a part of the OSX Salt Installation
+#     This script is run as a part of the macOS Salt Installation
 #
 ###############################################################################
 echo "Post install started on:" > /tmp/postinstall.txt

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Installing of mac pkg files
-=======================
+===========================
 
-Install any kind of pkg, dmg or app file on Mac OS X:
+Install any kind of pkg, dmg or app file on macOS:
 
 .. code-block:: yaml
 
