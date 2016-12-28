@@ -48,8 +48,6 @@ Connection module for Amazon Elasticache
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import socket
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import time
 
 # Import Salt libs
@@ -103,7 +101,7 @@ def _collect_results(func, item, args, marker='Marker'):
 
 def _describe_resource(name=None, name_param=None, res_type=None, info_node=None, conn=None,
                             region=None, key=None, keyid=None, profile=None, **args):
-    if conn == None:
+    if conn is None:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         func = 'describe_'+res_type+'s'
@@ -221,6 +219,55 @@ def _create_resource(name, name_param=None, desc=None, res_type=None, wait=0, st
         return False
 
 
+def _modify_resource(name, name_param=None, desc=None, res_type=None, wait=0, status_param=None,
+                     status_good='available', region=None, key=None, keyid=None, profile=None,
+                     **args):
+    try:
+        wait = int(wait)
+    except:
+        raise SaltInvocationError("Bad value ('{0}') passed for 'wait' param - must be an "
+                                  "int or boolean.".format(wait))
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if name_param in args:
+        log.info("'name: {0}' param being overridden by explicitly provided "
+                 "'{1}: {2}'".format(name, name_param, args[name_param]))
+        name = args[name_param]
+    else:
+        args[name_param] = name
+    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
+    try:
+        func = 'modify_'+res_type
+        f = getattr(conn, func)
+        if wait:
+            func = 'describe_'+res_type+'s'
+            s = globals()[func]
+    except (AttributeError, KeyError) as e:
+        raise SaltInvocationError("No function '{0}()' found: {1}".format(func, e.message))
+    try:
+        f(**args)
+        if not wait:
+            log.info('{0} {1} modification requested.'.format(desc.title(), name))
+            return True
+        log.info('Waiting up to {0} seconds for {1} {2} to be become available.'.format(wait, desc,
+                                                                                        name))
+        while wait > 0:
+            r = s(name=name, conn=conn)
+            if r and r[0].get(status_param) == status_good:
+                log.info('{0} {1} modified and available.'.format(desc.title(), name))
+                return True
+            sleep = wait if wait % 60 == wait else 60
+            log.info('Sleeping {0} seconds for {1} {2} to become available.'.format(sleep, desc,
+                                                                                    name))
+            time.sleep(sleep)
+            wait -= sleep
+        log.error('{0} {1} not available after {2} seconds!'.format(desc.title(), name, wait))
+        return False
+    except botocore.exceptions.ClientError as e:
+        msg = 'Failed to modify {0} {1}: {2}'.format(desc, name, e)
+        log.error(msg)
+        return False
+
+
 def describe_cache_clusters(name=None, conn=None, region=None, key=None,
                             keyid=None, profile=None, **args):
     '''
@@ -231,9 +278,9 @@ def describe_cache_clusters(name=None, conn=None, region=None, key=None,
         salt myminion boto3_elasticache.describe_cache_clusters
         salt myminion boto3_elasticache.describe_cache_clusters myelasticache
     '''
-    return  _describe_resource(name=name, name_param='CacheClusterId', res_type='cache_cluster',
-                               info_node='CacheClusters', conn=conn, region=region, key=key,
-                               keyid=keyid, profile=profile, **args)
+    return _describe_resource(name=name, name_param='CacheClusterId', res_type='cache_cluster',
+                              info_node='CacheClusters', conn=conn, region=region, key=key,
+                              keyid=keyid, profile=profile, **args)
 
 
 def cache_cluster_exists(name, conn=None, region=None, key=None, keyid=None, profile=None):
@@ -294,18 +341,6 @@ def modify_cache_cluster(name, wait=600, security_groups=None, region=None,
         salt myminion boto3_elasticache.create_cache_cluster name=myCacheCluster \
                                                              NotificationTopicStatus=inactive
     '''
-    try:
-        wait = int(wait)
-    except:
-        raise SaltInvocationError("Bad value ('{0}') passed for 'wait' param - must be an "
-                                  "int or boolean.".format(wait))
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    if 'CacheClusterId' in args:
-        log.info("'name: {0}' param being overridden by explicitly provided "
-                 "'CacheClusterId: {1}'".format(name, args['CacheClusterId']))
-        name = args['CacheClusterId']
-    else:
-        args['CacheClusterId'] = name
     if security_groups:
         if not isinstance(security_groups, list):
             security_groups = [security_groups]
@@ -315,29 +350,9 @@ def modify_cache_cluster(name, wait=600, security_groups=None, region=None,
             args['SecurityGroupIds'] = []
         args['SecurityGroupIds'] += sgs
     args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
-    try:
-        conn.modify_cache_cluster(**args)
-        if not wait:
-            log.info('Cache cluster {0} modification requested.'.format(name))
-            return True
-        log.info('Waiting up to {0} seconds for cache cluster {1} to become '
-                 'available.'.format(wait, name))
-        while wait > 0:
-            r = describe_cache_clusters(name=name, conn=conn)
-            if r and r[0].get('CacheClusterStatus') == 'available':
-                log.info('Cache cluster {0} modified and available.'.format(name))
-                return True
-            sleep = wait if wait % 60 == wait else 60
-            log.info('Sleeping {0} seconds for cache cluster {1} to become '
-                     'available.'.format(sleep, name))
-            time.sleep(sleep)
-            wait -= sleep
-        log.error('Cache cluster {0} not available after {1} seconds!'.format(name, sleep))
-        return False
-    except botocore.exceptions.ClientError as e:
-        msg = 'Failed to modify cache cluster {0}: {1}'.format(name, e)
-        log.error(msg)
-        return False
+    return _modify_resource(name, name_param='CacheClusterId', desc='cache cluster',
+                            res_type='cache_cluster', wait=wait, status_param='CacheClusterStatus',
+                            region=region, key=key, keyid=keyid, profile=profile, **args)
 
 
 def delete_cache_cluster(name, wait=600, region=None, key=None, keyid=None, profile=None, **args):
@@ -363,9 +378,9 @@ def describe_replication_groups(name=None, conn=None, region=None, key=None, key
         salt myminion boto3_elasticache.describe_replication_groups
         salt myminion boto3_elasticache.describe_replication_groups myelasticache
     '''
-    return  _describe_resource(name=name, name_param='ReplicationGroupId',
-                               res_type='replication_group', info_node='ReplicationGroups',
-                               conn=conn, region=region, key=key, keyid=keyid, profile=profile)
+    return _describe_resource(name=name, name_param='ReplicationGroupId',
+                              res_type='replication_group', info_node='ReplicationGroups',
+                              conn=conn, region=region, key=key, keyid=keyid, profile=profile)
 
 
 def replication_group_exists(name, region=None, key=None, keyid=None, profile=None):
@@ -383,14 +398,16 @@ def replication_group_exists(name, region=None, key=None, keyid=None, profile=No
 def create_replication_group(name, wait=600, security_groups=None, region=None, key=None, keyid=None,
                              profile=None, **args):
     '''
-    Create replication group.
+    Create a replication group.
     Params are extensive and variable - see
     http://boto3.readthedocs.io/en/latest/reference/services/elasticache.html?#ElastiCache.Client.create_replication_group
     for in-depth usage documentation.
 
     .. code-block:: bash
 
-        salt myminion boto3_elasticache.create_replication_group name=myelasticache ReplicationGroupDescription=description
+        salt myminion boto3_elasticache.create_replication_group \
+                                                  name=myelasticache \
+                                                  ReplicationGroupDescription=description
     '''
     if security_groups:
         if not isinstance(security_groups, list):
@@ -402,6 +419,31 @@ def create_replication_group(name, wait=600, security_groups=None, region=None, 
         args['SecurityGroupIds'] += sgs
     args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
     return _create_resource(name, name_param='ReplicationGroupId', desc='replication group',
+                            res_type='replication_group', wait=wait, status_param='Status',
+                            region=region, key=key, keyid=keyid, profile=profile, **args)
+
+
+def modify_replication_group(name, wait=600, security_groups=None, region=None, key=None, keyid=None,
+                             profile=None, **args):
+    '''
+    Modify a replication group.
+
+    .. code-block:: bash
+
+        salt myminion boto3_elasticache.modify_replication_group \
+                                                  name=myelasticache \
+                                                  ReplicationGroupDescription=newDescription
+    '''
+    if security_groups:
+        if not isinstance(security_groups, list):
+            security_groups = [security_groups]
+        sgs = __salt__['boto_secgroup.convert_to_group_ids'](groups=security_groups, region=region,
+                                                             key=key, keyid=keyid, profile=profile)
+        if 'SecurityGroupIds' not in args:
+            args['SecurityGroupIds'] = []
+        args['SecurityGroupIds'] += sgs
+    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
+    return _modify_resource(name, name_param='ReplicationGroupId', desc='replication group',
                             res_type='replication_group', wait=wait, status_param='Status',
                             region=region, key=key, keyid=keyid, profile=profile, **args)
 
@@ -427,9 +469,9 @@ def describe_cache_subnet_groups(name=None, conn=None, region=None, key=None, ke
 
         salt myminion boto3_elasticache.describe_cache_subnet_groups region=us-east-1
     '''
-    return  _describe_resource(name=name, name_param='CacheSubnetGroupName',
-                               res_type='cache_subnet_group', info_node='CacheSubnetGroups',
-                               conn=conn, region=region, key=key, keyid=keyid, profile=profile)
+    return _describe_resource(name=name, name_param='CacheSubnetGroupName',
+                              res_type='cache_subnet_group', info_node='CacheSubnetGroups',
+                              conn=conn, region=region, key=key, keyid=keyid, profile=profile)
 
 
 def cache_subnet_group_exists(name, region=None, key=None, keyid=None, profile=None):
@@ -492,6 +534,42 @@ def create_cache_subnet_group(name, subnets=None, region=None, key=None, keyid=N
                             region=region, key=key, keyid=keyid, profile=profile, **args)
 
 
+def modify_cache_subnet_group(name, subnets=None, region=None, key=None, keyid=None, profile=None, **args):
+    '''
+    Modify an ElastiCache subnet group
+
+    .. code-block:: bash
+
+        salt myminion boto3_elasticache.modify_cache_subnet_group \
+                                              name=my-subnet-group \
+                                              subnets='[myVPCSubnet3]'
+    '''
+    if subnets:
+        if 'SubnetIds' not in args:
+            args['SubnetIds'] = []
+        if not isinstance(subnets, list):
+            subnets = [subnets]
+        for subnet in subnets:
+            sn = __salt__['boto_vpc.describe_subnets'](subnet_names=subnet,
+                                                       region=region, key=key, keyid=keyid,
+                                                       profile=profile).get('subnets')
+            if len(sn) == 1:
+                args['SubnetIds'] += [sn[0]['id']]
+            elif len(sn) > 1:
+                raise CommandExecutionError('Subnet Name {0} returned more than one '
+                                          'ID.'.format(subnet))
+            elif subnet.startswith('subnet-'):
+                # Moderately safe assumption... :)  Will be caught later if incorrect.
+                args['SubnetIds'] += [subnet]
+            else:
+                raise SaltInvocationError('Could not resolve Subnet Name {0} to an '
+                                          'ID.'.format(subnet))
+    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
+    return _modify_resource(name, name_param='CacheSubnetGroupName', desc='cache subnet group',
+                            res_type='cache_subnet_group',
+                            region=region, key=key, keyid=keyid, profile=profile, **args)
+
+
 def delete_cache_subnet_group(name, region=None, key=None, keyid=None, profile=None, **args):
     '''
     Delete an ElastiCache subnet group.
@@ -514,10 +592,10 @@ def describe_cache_security_groups(name=None, conn=None, region=None, key=None, 
         salt myminion boto3_elasticache.describe_cache_security_groups
         salt myminion boto3_elasticache.describe_cache_security_groups mycachesecgrp
     '''
-    return  _describe_resource(name=name, name_param='CacheSecurityGroupName',
-                               res_type='cache_security_group',
-                               info_node='CacheSecurityGroups', conn=conn, region=region, key=key,
-                               keyid=keyid, profile=profile)
+    return _describe_resource(name=name, name_param='CacheSecurityGroupName',
+                              res_type='cache_security_group',
+                              info_node='CacheSecurityGroups', conn=conn, region=region, key=key,
+                              keyid=keyid, profile=profile)
 
 
 def cache_security_group_exists(name, region=None, key=None, keyid=None, profile=None):
@@ -730,9 +808,9 @@ def describe_cache_parameter_groups(name=None, conn=None, region=None, key=None,
         salt myminion boto3_elasticache.describe_cache_parameter_groups
         salt myminion boto3_elasticache.describe_cache_parameter_groups myParameterGroup
     '''
-    return  _describe_resource(name=name, name_param='CacheParameterGroupName',
-                               res_type='cache_parameter_group', info_node='CacheParameterGroups',
-                               conn=conn, region=region, key=key, keyid=keyid, profile=profile)
+    return _describe_resource(name=name, name_param='CacheParameterGroupName',
+                              res_type='cache_parameter_group', info_node='CacheParameterGroups',
+                              conn=conn, region=region, key=key, keyid=keyid, profile=profile)
 
 
 def create_cache_parameter_group(name, region=None, key=None, keyid=None, profile=None, **args):
