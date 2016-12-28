@@ -8,10 +8,26 @@ from os.path import splitext, abspath
 from sys import modules
 
 # Import third party libs
-import win32serviceutil
-import win32service
-import win32event
-import win32api
+try:
+    import win32serviceutil
+    import win32service
+    import win32event
+    import win32api
+    HAS_WIN32 = True
+except ImportError:
+    HAS_WIN32 = False
+
+
+# Although utils are often directly imported, it is also possible to use the
+# loader.
+def __virtual__():
+    '''
+    Only load if Win32 Libraries are installed
+    '''
+    if not HAS_WIN32:
+        return False, 'This utility requires pywin32'
+
+    return 'winservice'
 
 
 class Service(win32serviceutil.ServiceFramework):
