@@ -48,7 +48,6 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import re
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import salt.ext.six as six
 from salt.exceptions import SaltInvocationError, CommandExecutionError
@@ -311,7 +310,7 @@ def get_group_id(name, vpc_id=None, vpc_name=None, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if name.startswith('sg-'):
-        log.debug('group {0} is a group id. get_group_id not called.'.format(group))
+        log.debug('group {0} is a group id. get_group_id not called.'.format(name))
         return name
     group = _get_group(conn=conn, name=name, vpc_id=vpc_id, vpc_name=vpc_name,
                        region=region, key=key, keyid=keyid, profile=profile)

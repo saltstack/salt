@@ -424,7 +424,7 @@ def cache_cluster_present(name, wait=600, security_groups=None, region=None, key
                                'describe_cache_clusters'](name, region=region, key=key,
                                                           keyid=keyid, profile=profile)
                 if ret['comment']:  # 'create' just ran...
-                    ret['comment'] += ' ... and then immediately modified.'.format(name)
+                    ret['comment'] += ' ... and then immediately modified.'
                 else:
                     ret['comment'] = 'Cache cluster {0} was modified.'.format(name)
                     ret['changes']['old'] = current
@@ -551,8 +551,8 @@ def _diff_replication_group(current, desired):
     return need_update
 
 
-def replication_group_present(name, wait=600, region=None, key=None, keyid=None, profile=None,
-                              **args):
+def replication_group_present(name, wait=600, security_groups=None, region=None, key=None,
+                              keyid=None, profile=None, **args):
     '''
     Ensure a replication group exists and is in the given state.
 
@@ -565,6 +565,11 @@ def replication_group_present(name, wait=600, region=None, key=None, keyid=None,
         of course.  Note that waiting for the cluster to become available is generally the
         better course, as failure to do so will often lead to subsequent failures when managing
         dependent resources.
+
+    security_groups
+        One or more VPC security groups (names and/or IDs) associated with the cache cluster.
+        Note:  This is additive with any sec groups provided via the SecurityGroupIds parameter
+               below.  Use this parameter ONLY when you are creating a cluster in a VPC.
 
     ReplicationGroupId
         The replication group identifier. This parameter is stored as a lowercase string.
@@ -800,7 +805,7 @@ def replication_group_present(name, wait=600, region=None, key=None, keyid=None,
                 ret['result'] = None
                 return ret
             modified = __salt__['boto3_elasticache.'
-                                'modify_replication group'](name, wait=wait,
+                                'modify_replication_group'](name, wait=wait,
                                                             security_groups=security_groups,
                                                             region=region, key=key, keyid=keyid,
                                                             profile=profile, **need_update)
@@ -809,7 +814,7 @@ def replication_group_present(name, wait=600, region=None, key=None, keyid=None,
                                'describe_replication_groups'](name, region=region, key=key,
                                                               keyid=keyid, profile=profile)
                 if ret['comment']:  # 'create' just ran...
-                    ret['comment'] += ' ... and then immediately modified.'.format(name)
+                    ret['comment'] += ' ... and then immediately modified.'
                 else:
                     ret['comment'] = 'Replication group {0} was modified.'.format(name)
                     ret['changes']['old'] = current
@@ -919,7 +924,8 @@ def _diff_cache_subnet_group(current, desired):
     return need_update
 
 
-def cache_subnet_group_present(name, subnets=None, region=None, key=None, keyid=None, profile=None):
+def cache_subnet_group_present(name, subnets=None, region=None, key=None, keyid=None, profile=None,
+                               **args):
     '''
     Ensure cache subnet group exists.
 
