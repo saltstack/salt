@@ -328,6 +328,7 @@ def list_windowsfeatures():
 
     return result['stdout']
 
+
 def install(name,
             version=None,
             source=None,
