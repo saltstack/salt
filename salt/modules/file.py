@@ -1534,17 +1534,15 @@ def line(path, content, match=None, mode=None, location=None,
     before = _regex_to_static(body, before)
     match = _regex_to_static(body, match)
 
-    if mode == 'delete':
+    if os.stat(path).st_size == 0 and mode in ('delete', 'replace'):
+        log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
+        body = ''
+    elif mode == 'delete':
         body = os.linesep.join([line for line in body.split(os.linesep) if line.find(match) < 0])
-
     elif mode == 'replace':
-        if os.stat(path).st_size == 0:
-            log.warning('Cannot find text to replace. File \'{0}\' is empty.'.format(path))
-            body = ''
-        else:
-            body = os.linesep.join([(_get_line_indent(file_line, content, indent)
-                                    if (file_line.find(match) > -1 and not file_line == content) else file_line)
-                                    for file_line in body.split(os.linesep)])
+        body = os.linesep.join([(_get_line_indent(file_line, content, indent)
+                                if (file_line.find(match) > -1 and not file_line == content) else file_line)
+                                for file_line in body.split(os.linesep)])
     elif mode == 'insert':
         if not location and not before and not after:
             raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
