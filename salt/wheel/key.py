@@ -291,6 +291,27 @@ def finger(match):
     return skey.finger(match)
 
 
+def finger_master(hash_type=None):
+    '''
+    Return the fingerprint of the master's public key
+
+    hash_type
+        The hash algorithm used to calculate the fingerprint
+
+    .. code-block:: python
+
+        >>> wheel.cmd('key.finger_master')
+        {'local': {'master.pub': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
+    '''
+    keyname = 'master.pub'
+    if hash_type is None:
+        hash_type = __opts__['hash_type']
+
+    fingerprint = salt.utils.pem_finger(
+        os.path.join(__opts__['pki_dir'], keyname), hash_type)
+    return {'local': {keyname: fingerprint}}
+
+
 def gen(id_=None, keysize=2048):
     '''
     Generate a key pair. No keys are stored on the master. A key pair is
