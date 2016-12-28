@@ -1014,35 +1014,6 @@ def cache_subnet_group_present(name, subnets=None, region=None, key=None, keyid=
     return ret
 
 
-def subnet_group_absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
-
-    exists = __salt__['boto_elasticache.subnet_group_exists'](name=name, tags=tags, region=region, key=key,
-                                                              keyid=keyid, profile=profile)
-    if not exists:
-        ret['result'] = True
-        ret['comment'] = '{0} ElastiCache subnet group does not exist.'.format(name)
-        return ret
-
-    if __opts__['test']:
-        ret['comment'] = 'ElastiCache subnet group {0} would be removed.'.format(name)
-        ret['result'] = None
-        return ret
-    deleted = __salt__['boto_elasticache.delete_subnet_group'](name, region, key, keyid, profile)
-    if not deleted:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete {0} ElastiCache subnet group.'.format(name)
-        return ret
-    ret['changes']['old'] = name
-    ret['changes']['new'] = None
-    ret['comment'] = 'ElastiCache subnet group {0} deleted.'.format(name)
-    return ret
-
-
 def cache_subnet_group_absent(name, region=None, key=None, keyid=None, profile=None, **args):
     '''
     Ensure a given cache subnet group is deleted.

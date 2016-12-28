@@ -273,6 +273,8 @@ def describe_cache_clusters(name=None, conn=None, region=None, key=None,
     '''
     Return details about all (or just one) Elasticache cache clusters.
 
+    Example:
+
     .. code-block:: bash
 
         salt myminion boto3_elasticache.describe_cache_clusters
@@ -287,6 +289,8 @@ def cache_cluster_exists(name, conn=None, region=None, key=None, keyid=None, pro
     '''
     Check to see if a cache cluster exists.
 
+    Example:
+
     .. code-block:: bash
 
         salt myminion boto3_elasticache.cache_cluster_exists myelasticache
@@ -298,6 +302,8 @@ def create_cache_cluster(name, wait=600, security_groups=None,
                          region=None, key=None, keyid=None, profile=None, **args):
     '''
     Create a cache cluster.
+
+    Example:
 
     .. code-block:: bash
 
@@ -336,6 +342,8 @@ def modify_cache_cluster(name, wait=600, security_groups=None, region=None,
             intentionally before a state call, and removed again before the next.  In
             practice this is not particularly useful and should probably be avoided.
 
+    Example:
+
     .. code-block:: bash
 
         salt myminion boto3_elasticache.create_cache_cluster name=myCacheCluster \
@@ -359,6 +367,8 @@ def delete_cache_cluster(name, wait=600, region=None, key=None, keyid=None, prof
     '''
     Delete a cache cluster.
 
+    Example:
+
     .. code-block:: bash
 
         salt myminion boto3_elasticache.delete myelasticache
@@ -373,6 +383,8 @@ def describe_replication_groups(name=None, conn=None, region=None, key=None, key
     '''
     Return details about all (or just one) Elasticache replication groups.
 
+    Example:
+
     .. code-block:: bash
 
         salt myminion boto3_elasticache.describe_replication_groups
@@ -386,6 +398,8 @@ def describe_replication_groups(name=None, conn=None, region=None, key=None, key
 def replication_group_exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if a replication group exists.
+
+    Example:
 
     .. code-block:: bash
 
@@ -402,6 +416,8 @@ def create_replication_group(name, wait=600, security_groups=None, region=None, 
     Params are extensive and variable - see
     http://boto3.readthedocs.io/en/latest/reference/services/elasticache.html?#ElastiCache.Client.create_replication_group
     for in-depth usage documentation.
+
+    Example:
 
     .. code-block:: bash
 
@@ -428,6 +444,8 @@ def modify_replication_group(name, wait=600, security_groups=None, region=None, 
     '''
     Modify a replication group.
 
+    Example:
+
     .. code-block:: bash
 
         salt myminion boto3_elasticache.modify_replication_group \
@@ -452,6 +470,8 @@ def delete_replication_group(name, wait=600, region=None, key=None, keyid=None, 
     '''
     Delete an ElastiCache replication group, optionally taking a snapshot first.
 
+    Example:
+
     .. code-block:: bash
 
         salt myminion boto3_elasticache.delete_replication_group my-replication-group
@@ -464,6 +484,8 @@ def delete_replication_group(name, wait=600, region=None, key=None, keyid=None, 
 def describe_cache_subnet_groups(name=None, conn=None, region=None, key=None, keyid=None, profile=None):
     '''
     Return details about all (or just one) Elasticache replication groups.
+
+    Example:
 
     .. code-block:: bash
 
@@ -478,6 +500,8 @@ def cache_subnet_group_exists(name, region=None, key=None, keyid=None, profile=N
     '''
     Check to see if an ElastiCache subnet group exists.
 
+    Example:
+
     .. code-block:: bash
 
         salt myminion boto3_elasticache.cache_subnet_group_exists my-subnet-group
@@ -488,6 +512,8 @@ def cache_subnet_group_exists(name, region=None, key=None, keyid=None, profile=N
 def list_cache_subnet_groups(region=None, key=None, keyid=None, profile=None):
     '''
     Return a list of all cache subnet group names
+
+    Example:
 
     .. code-block:: bash
 
@@ -500,6 +526,8 @@ def list_cache_subnet_groups(region=None, key=None, keyid=None, profile=None):
 def create_cache_subnet_group(name, subnets=None, region=None, key=None, keyid=None, profile=None, **args):
     '''
     Create an ElastiCache subnet group
+
+    Example:
 
     .. code-block:: bash
 
@@ -538,6 +566,8 @@ def modify_cache_subnet_group(name, subnets=None, region=None, key=None, keyid=N
     '''
     Modify an ElastiCache subnet group
 
+    Example:
+
     .. code-block:: bash
 
         salt myminion boto3_elasticache.modify_cache_subnet_group \
@@ -574,6 +604,8 @@ def delete_cache_subnet_group(name, region=None, key=None, keyid=None, profile=N
     '''
     Delete an ElastiCache subnet group.
 
+    Example:
+
     .. code-block:: bash
 
         salt myminion boto3_elasticache.delete_subnet_group my-subnet-group region=us-east-1
@@ -586,6 +618,8 @@ def delete_cache_subnet_group(name, region=None, key=None, keyid=None, profile=N
 def describe_cache_security_groups(name=None, conn=None, region=None, key=None, keyid=None, profile=None):
     '''
     Return details about all (or just one) Elasticache cache clusters.
+
+    Example:
 
     .. code-block:: bash
 
@@ -602,6 +636,8 @@ def cache_security_group_exists(name, region=None, key=None, keyid=None, profile
     '''
     Check to see if an ElastiCache security group exists.
 
+    Example:
+
     .. code-block:: bash
 
         salt myminion boto3_elasticache.cache_security_group_exists mysecuritygroup
@@ -612,6 +648,8 @@ def cache_security_group_exists(name, region=None, key=None, keyid=None, profile
 def create_cache_security_group(name, region=None, key=None, keyid=None, profile=None, **args):
     '''
     Create a cache security group.
+
+    Example:
 
     .. code-block:: bash
 
@@ -626,6 +664,8 @@ def delete_cache_security_group(name, region=None, key=None, keyid=None, profile
     '''
     Delete a cache security group.
 
+    Example:
+
     .. code-block:: bash
 
         salt myminion boto3_elasticache.delete_cache_security_group myelasticachesg
@@ -638,6 +678,8 @@ def delete_cache_security_group(name, region=None, key=None, keyid=None, profile
 def authorize_cache_security_group_ingress(name, region=None, key=None, keyid=None, profile=None, **args):
     '''
     Authorize network ingress from an ec2 security group to a cache security group.
+
+    Example:
 
     .. code-block:: bash
 
@@ -667,6 +709,8 @@ def revoke_cache_security_group_ingress(name, region=None, key=None, keyid=None,
     '''
     Revoke network ingress from an ec2 security group to a cache security
     group.
+
+    Example:
 
     .. code-block:: bash
 
@@ -803,6 +847,8 @@ def describe_cache_parameter_groups(name=None, conn=None, region=None, key=None,
     '''
     Return details about all (or just one) Elasticache cache clusters.
 
+    Example:
+
     .. code-block:: bash
 
         salt myminion boto3_elasticache.describe_cache_parameter_groups
@@ -816,6 +862,8 @@ def describe_cache_parameter_groups(name=None, conn=None, region=None, key=None,
 def create_cache_parameter_group(name, region=None, key=None, keyid=None, profile=None, **args):
     '''
     Create a cache parameter group.
+
+    Example:
 
     .. code-block:: bash
 
@@ -832,6 +880,8 @@ def create_cache_parameter_group(name, region=None, key=None, keyid=None, profil
 def delete_cache_parameter_group(name, region=None, key=None, keyid=None, profile=None, **args):
     '''
     Delete a cache parameter group.
+
+    Example:
 
     .. code-block:: bash
 
