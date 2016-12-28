@@ -69,6 +69,7 @@ def present(name,
               - sslVerify: False
     '''
     record_type = record_type.lower()
+    value_utf8 = unicode(value, "utf-8")
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     records = __salt__['infoblox.get_record'](name,
                                               record_type,
@@ -83,13 +84,13 @@ def present(name,
         for record in records:
             update_record = False
             if record_type == 'cname':
-                if record['Canonical Name'] != value:
+                if record['Canonical Name'] != value_utf8:
                     update_record = True
             elif record_type == 'a':
-                if record['IP Address'] != value:
+                if record['IP Address'] != value_utf8:
                     update_record = True
             elif record_type == 'host':
-                if record['IP Addresses'] != value:
+                if record['IP Addresses'] != [value_utf8]:
                     update_record = True
             if update_record:
                 if __opts__['test']:
