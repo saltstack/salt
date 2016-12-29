@@ -9,6 +9,7 @@ Management of Zabbix hosts.
 from __future__ import absolute_import
 from json import loads, dumps
 from copy import deepcopy
+from salt.ext import six
 
 
 def __virtual__():
@@ -28,7 +29,7 @@ def present(host, groups, interfaces, **kwargs):
     .. versionadded:: 2016.3.0
 
     :param host: technical name of the host
-    :param groups: groupnames or groupids of host groups to add the host to
+    :param groups: groupids of host groups to add the host to
     :param interfaces: interfaces to be created for the host
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
@@ -44,7 +45,7 @@ def present(host, groups, interfaces, **kwargs):
                 - groups:
                     - 5
                     - 6
-                    - Linux servers
+                    - 7
                 - interfaces:
                     - test1.example.com:
                         - ip: '192.168.1.8'
@@ -128,10 +129,10 @@ def present(host, groups, interfaces, **kwargs):
     # Ensure groups are all groupid
     groupids = []
     for group in groups:
-        if isinstance(group, basestring):
+        if isinstance(group, six.string_types):
             groupid = __salt__['zabbix.hostgroup_get'](name=group)
             try:
-                groupids.append(groupid[0]['groupid'])
+                groupids.append(int(groupid[0]['groupid']))
             except TypeError:
                 ret['comment'] = 'Invalid group {0}'.format(group)
                 return ret
