@@ -336,9 +336,9 @@ def list_tab(user):
                     comment = comment_line
                 else:
                     comment += '\n' + comment_line
-            elif len(line.split()) > 5:
+            elif len(line.split(' ')) > 5:
                 # Appears to be a standard cron line
-                comps = line.split()
+                comps = line.split(' ')
                 dat = {'minute': comps[0],
                        'hour': comps[1],
                        'daymonth': comps[2],
