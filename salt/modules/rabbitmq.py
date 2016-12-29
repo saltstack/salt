@@ -181,6 +181,21 @@ def _output_to_dict(cmdoutput, values_mapper=None):
         ret[key] = values_mapper(values)
     return ret
 
+def _output_to_list(cmdoutput):
+    '''
+    Convert rabbitmqctl output to a list of strings (assuming whitespace-delimited output).
+    Ignores output lines that shouldn't be parsed, like warnings.
+    cmdoutput: string output of rabbitmqctl commands
+    '''
+    return [item for line in cmdoutput.splitlines() if _safe_output(line) for item in line.split()]
+
+def _output_lines_to_list(cmdoutput):
+    '''
+    Convert rabbitmqctl output to a list of strings (assuming newline-delimited output).
+    Ignores output lines that shouldn't be parsed, like warnings.
+    cmdoutput: string output of rabbitmqctl commands
+    '''
+    return [line.strip() for line in cmdoutput.splitlines() if _safe_output(line)]
 
 def list_users(runas=None):
     '''
@@ -198,7 +213,7 @@ def list_users(runas=None):
     if runas is None and not salt.utils.is_windows():
         runas = salt.utils.get_user()
     res = __salt__['cmd.run_all'](
-        [__context__['rabbitmqctl'], 'list_users'],
+        [__context__['rabbitmqctl'], 'list_users', '-q'],
         runas=runas,
         python_shell=False)
 
@@ -225,7 +240,7 @@ def list_vhosts(runas=None):
         runas=runas,
         python_shell=False)
     _check_response(res)
-    return res['stdout'].splitlines()
+    return _output_to_list(res['stdout'])
 
 
 def user_exists(name, runas=None):
@@ -240,10 +255,7 @@ def user_exists(name, runas=None):
     '''
     if runas is None and not salt.utils.is_windows():
         runas = salt.utils.get_user()
-    user_list = list_users(runas=runas)
-    log.debug(user_list)
-
-    return name in user_list
+    return name in list_users(runas=runas)
 
 
 def vhost_exists(name, runas=None):
@@ -549,7 +561,7 @@ def list_permissions(vhost, runas=None):
     if runas is None and not salt.utils.is_windows():
         runas = salt.utils.get_user()
     res = __salt__['cmd.run_all'](
-        [__context__['rabbitmqctl'], 'list_permissions', '-p', vhost],
+        [__context__['rabbitmqctl'], 'list_permissions', '-q', '-p', vhost],
         runas=runas,
         python_shell=False)
 
@@ -569,7 +581,7 @@ def list_user_permissions(name, runas=None):
     if runas is None and not salt.utils.is_windows():
         runas = salt.utils.get_user()
     res = __salt__['cmd.run_all'](
-        [__context__['rabbitmqctl'], 'list_user_permissions', name],
+        [__context__['rabbitmqctl'], 'list_user_permissions', name, '-q'],
         runas=runas,
         python_shell=False)
 
@@ -755,11 +767,11 @@ def list_queues(runas=None, *args):
     '''
     if runas is None and not salt.utils.is_windows():
         runas = salt.utils.get_user()
-    cmd = [__context__['rabbitmqctl'], 'list_queues']
+    cmd = [__context__['rabbitmqctl'], 'list_queues', '-q']
     cmd.extend(args)
     res = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
     _check_response(res)
-    return res['stdout']
+    return _output_to_dict(res['stdout'])
 
 
 def list_queues_vhost(vhost, runas=None, *args):
@@ -777,11 +789,11 @@ def list_queues_vhost(vhost, runas=None, *args):
     '''
     if runas is None and not salt.utils.is_windows():
         runas = salt.utils.get_user()
-    cmd = [__context__['rabbitmqctl'], 'list_queues', '-p', vhost]
+    cmd = [__context__['rabbitmqctl'], 'list_queues', '-q', '-p', vhost]
     cmd.extend(args)
     res = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
     _check_response(res)
-    return res['stdout']
+    return _output_to_dict(res['stdout'])
 
 
 def list_policies(vhost="/", runas=None):
@@ -801,31 +813,30 @@ def list_policies(vhost="/", runas=None):
     if runas is None and not salt.utils.is_windows():
         runas = salt.utils.get_user()
     res = __salt__['cmd.run_all'](
-        [__context__['rabbitmqctl'], 'list_policies', '-p', vhost],
+        [__context__['rabbitmqctl'], 'list_policies', '-q', '-p', vhost],
         runas=runas,
         python_shell=False)
     _check_response(res)
     output = res['stdout']
-    for line in salt.utils.itertools.split(output, '\n'):
-        if '...' not in line:
-            parts = line.split('\t')
-            if len(parts) not in (5, 6):
-                continue
-            vhost, name = parts[0], parts[1]
-            if vhost not in ret:
-                ret[vhost] = {}
-            ret[vhost][name] = {}
-            # How many fields are there? - 'apply_to' was inserted in position
-            # 2 at some point
-            offset = len(parts) - 5
-            if len(parts) == 6:
-                ret[vhost][name]['apply_to'] = parts[2]
-            ret[vhost][name].update({
-                'pattern': parts[offset+2],
-                'definition': parts[offset+3],
-                'priority': parts[offset+4]
-            })
-    log.debug('Listing policies: {0}'.format(ret))
+    for line in _output_lines_to_list(output):
+        parts = line.split('\t')
+        if len(parts) not in (5, 6):
+            continue
+        vhost, name = parts[0], parts[1]
+        if vhost not in ret:
+            ret[vhost] = {}
+        ret[vhost][name] = {}
+        # How many fields are there? - 'apply_to' was inserted in position
+        # 2 at some point
+        offset = len(parts) - 5
+        if len(parts) == 6:
+            ret[vhost][name]['apply_to'] = parts[2]
+        ret[vhost][name].update({
+            'pattern': parts[offset+2],
+            'definition': parts[offset+3],
+            'priority': parts[offset+4]
+        })
+
     return ret
 
 
@@ -898,6 +909,42 @@ def policy_exists(vhost, name, runas=None):
     return bool(vhost in policies and name in policies[vhost])
 
 
+def list_available_plugins(runas=None):
+    '''
+        Returns a list of the names of all available plugins (enabled and disabled).
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' rabbitmq.list_available_plugins
+        '''
+    if runas is None and not salt.utils.is_windows():
+        runas = salt.utils.get_user()
+    cmd = [_get_rabbitmq_plugin(), 'list', '-m']
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    _check_response(ret)
+    return _output_to_list(ret['stdout'])
+
+
+def list_enabled_plugins(runas=None):
+    '''
+        Returns a list of the names of the enabled plugins.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' rabbitmq.list_enabled_plugins
+        '''
+    if runas is None and not salt.utils.is_windows():
+        runas = salt.utils.get_user()
+    cmd = [_get_rabbitmq_plugin(), 'list', '-m', '-e']
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    _check_response(ret)
+    return _output_to_list(ret['stdout'])
+
+
 def plugin_is_enabled(name, runas=None):
     '''
     Return whether the plugin is enabled.
@@ -906,14 +953,11 @@ def plugin_is_enabled(name, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.plugin_is_enabled foo
+        salt '*' rabbitmq.plugin_is_enabled rabbitmq_plugin_name
     '''
     if runas is None and not salt.utils.is_windows():
         runas = salt.utils.get_user()
-    cmd = [_get_rabbitmq_plugin(), 'list', '-m', '-e']
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
-    _check_response(ret)
-    return bool(name in ret['stdout'])
+    return name in list_enabled_plugins(runas)
 
 
 def enable_plugin(name, runas=None):
