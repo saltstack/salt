@@ -747,6 +747,13 @@ def list_tags_for_resource(name, region=None, key=None, keyid=None, profile=None
     about the account number, AWS partition, and other magic details to generate.
 
     If you happen to have those handy, feel free to utilize this however...
+
+    Example:
+
+    .. code-block:: bash
+
+        salt myminion boto3_elasticache.list_tags_for_resource \
+                name'=arn:aws:elasticache:us-west-2:0123456789:snapshot:mySnapshot'
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if 'ResourceName' in args:
@@ -776,6 +783,14 @@ def add_tags_to_resource(name, region=None, key=None, keyid=None, profile=None, 
     about the account number, AWS partition, and other magic details to generate.
 
     If you happen to have those at hand though, feel free to utilize this function...
+
+    Example:
+
+    .. code-block:: bash
+
+        salt myminion boto3_elasticache.add_tags_to_resource \
+                name'=arn:aws:elasticache:us-west-2:0123456789:snapshot:mySnapshot' \
+                Tags="[{'Key': 'TeamOwner', 'Value': 'infrastructure'}]"
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if 'ResourceName' in args:
@@ -804,6 +819,14 @@ def remove_tags_from_resource(name, region=None, key=None, keyid=None, profile=N
     about the account number, AWS partition, and other magic details to generate.
 
     If you happen to have those at hand though, feel free to utilize this function...
+
+    Example:
+
+    .. code-block:: bash
+
+        salt myminion boto3_elasticache.remove_tags_from_resource \
+                name'=arn:aws:elasticache:us-west-2:0123456789:snapshot:mySnapshot' \
+                TagKeys="['TeamOwner']"
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if 'ResourceName' in args:
@@ -825,6 +848,13 @@ def remove_tags_from_resource(name, region=None, key=None, keyid=None, profile=N
 def copy_snapshot(name, region=None, key=None, keyid=None, profile=None, **args):
     '''
     Make a copy of an existing snapshot.
+
+    Example:
+
+    .. code-block:: bash
+
+        salt myminion boto3_elasticache.copy_snapshot name=mySnapshot \
+                                                      TargetSnapshotName=copyOfMySnapshot
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if 'SourceSnapshotName' in args:
