@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Manage Elasticache
-==================
+Manage Elasticache with boto3
+=============================
 
-.. versionadded:: Philistinium
+.. versionadded:: Nitrogen
 
 Create, destroy and update Elasticache clusters. Be aware that this interacts
 with Amazon's services, and so may incur charges.

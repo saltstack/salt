@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Connection module for Amazon Elasticache
+Execution module for Amazon Elasticache using boto3
+===================================================
 
-.. versionadded:: 2014.7.0
+.. versionadded:: Nitrogen
 
 :configuration: This module accepts explicit elasticache credentials but can
     also utilize IAM roles assigned to the instance through Instance Profiles.
