@@ -72,8 +72,11 @@ def task_present(name,
     with salt.utils.fopen(script_path, 'r') as file:
         new_script = file.read().replace('\t', '    ')
 
-    is_up_to_date = old_script == new_script and task_type == task['type'] and \
+    is_up_to_date = task and (
+        old_script == new_script and
+        task_type == task['type'] and
         task['dbrps'] == [{'db': database, 'rp': retention_policy}]
+    )
 
     if is_up_to_date:
         comments.append('Task script is already up-to-date')
