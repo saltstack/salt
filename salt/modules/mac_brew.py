@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Homebrew for Mac OS X
+Homebrew for macOS
 
 .. important::
     If you feel that Salt should be using this module to manage packages on a

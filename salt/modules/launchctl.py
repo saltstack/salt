@@ -39,7 +39,7 @@ def __virtual__():
     '''
     if not salt.utils.is_darwin():
         return (False, 'Failed to load the mac_service module:\n'
-                       'Only available on Mac OS X systems.')
+                       'Only available on macOS systems.')
 
     if not os.path.exists('/bin/launchctl'):
         return (False, 'Failed to load the mac_service module:\n'
