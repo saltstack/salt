@@ -181,6 +181,7 @@ def _output_to_dict(cmdoutput, values_mapper=None):
         ret[key] = values_mapper(values)
     return ret
 
+
 def _output_to_list(cmdoutput):
     '''
     Convert rabbitmqctl output to a list of strings (assuming whitespace-delimited output).
@@ -189,6 +190,7 @@ def _output_to_list(cmdoutput):
     '''
     return [item for line in cmdoutput.splitlines() if _safe_output(line) for item in line.split()]
 
+
 def _output_lines_to_list(cmdoutput):
     '''
     Convert rabbitmqctl output to a list of strings (assuming newline-delimited output).
@@ -196,6 +198,7 @@ def _output_lines_to_list(cmdoutput):
     cmdoutput: string output of rabbitmqctl commands
     '''
     return [line.strip() for line in cmdoutput.splitlines() if _safe_output(line)]
+
 
 def list_users(runas=None):
     '''
