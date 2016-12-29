@@ -341,7 +341,7 @@ class MultiKeyCLI(KeyCLI):
     def finger(self, match, hash_type):
         self._call_all('finger', match, hash_type)
 
-    def finger_all(self):
+    def finger_all(self, hash_type):
         self._call_all('finger_all', hash_type)
 
     def prep_signature(self):
