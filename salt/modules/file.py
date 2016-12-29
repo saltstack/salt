@@ -4592,7 +4592,7 @@ def manage_file(name,
 
         # Only test the checksums on files with managed contents
         if source and not (not follow_symlinks and os.path.islink(real_name)):
-            name_sum = get_hash(real_name, source_sum['hash_type'])
+            name_sum = get_hash(real_name, source_sum.get('hash_type', __opts__.get('hash_type', 'md5')))
         else:
             name_sum = None
 
