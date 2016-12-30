@@ -34,6 +34,8 @@ try:
 except ImportError:
     HAS_NAPALM = False
 
+from salt.ext import six as six
+
 
 def is_proxy(opts):
     '''
@@ -63,7 +65,7 @@ def virtual(opts, virtualname, filename):
                 'NAPALM is not installed or not running in a (proxy) minion'
             ).format(
                 vname=virtualname,
-                filename='({})'.format(filename)
+                filename='({filename})'.format(filename=filename)
             )
         )
 
@@ -115,6 +117,13 @@ def call(napalm_device, method, *args, **kwargs):
         if not napalm_device.get('UP', False):
             raise Exception('not connected')
         # if connected will try to execute desired command
+        kwargs_copy = {}
+        kwargs_copy.update(kwargs)
+        for karg, warg in six.iteritems(kwargs_copy):
+            # lets clear None arguments
+            # to not be sent to NAPALM methods
+            if warg is None:
+                kwargs.pop(karg)
         out = getattr(napalm_device.get('DRIVER'), method)(*args, **kwargs)
         # calls the method with the specified parameters
         result = True
@@ -124,7 +133,7 @@ def call(napalm_device, method, *args, **kwargs):
         err_tb = traceback.format_exc()  # let's get the full traceback and display for debugging reasons.
         comment = 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
             device=napalm_device.get('HOSTNAME', '[unspecified hostname]'),
-            port=(':{port}'.format(port=napalm_device.get('OPTIONAL_ARGS', {}))
+            port=(':{port}'.format(port=napalm_device.get('OPTIONAL_ARGS', {}).get('port'))
                   if napalm_device.get('OPTIONAL_ARGS', {}).get('port') else ''),
             user=napalm_device.get('USERNAME', ''),
             method=method,
@@ -187,7 +196,7 @@ def get_device(opts, salt_obj=None):
     except napalm_base.exceptions.ConnectionException as error:
         base_err_msg = "Cannot connect to {hostname}{port} as {username}.".format(
             hostname=network_device.get('HOSTNAME', '[unspecified hostname]'),
-            port=(':{port}'.format(port=network_device['OPTIONAL_ARGS']['port'])
+            port=(':{port}'.format(port=network_device.get('OPTIONAL_ARGS', {}).get('port'))
                   if network_device.get('OPTIONAL_ARGS', {}).get('port') else ''),
             username=network_device.get('USERNAME', '')
         )
