@@ -38,7 +38,11 @@
         #namecheap.url: https://api.sandbox.namecheap.xml.response
 
 """
+
+
 CAN_USE_NAMECHEAP = True
+
+
 try:
     import salt.utils.namecheap
 except ImportError:
