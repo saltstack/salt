@@ -81,6 +81,8 @@ try:
 except ImportError:
     HAS_NAPALM = False
 
+from salt.ext import six as six
+
 # ----------------------------------------------------------------------------------------------------------------------
 # proxy properties
 # ----------------------------------------------------------------------------------------------------------------------
@@ -281,6 +283,14 @@ def call(method, **params):
         if not NETWORK_DEVICE.get('UP', False):
             raise Exception('not connected')
         # if connected will try to execute desired command
+        # but lets clean the kwargs first
+        params_copy = {}
+        params_copy.update(params)
+        for karg, warg in six.iteritems(params_copy):
+            # will remove None values
+            # thus the NAPALM methods will be called with their defaults
+            if warg is None:
+                params.pop(karg)
         out = getattr(NETWORK_DEVICE.get('DRIVER'), method)(**params)  # calls the method with the specified parameters
         result = True
     except Exception as error:
