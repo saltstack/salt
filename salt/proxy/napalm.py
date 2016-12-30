@@ -189,7 +189,7 @@ def shutdown(opts):
         log.error(
             'Cannot close connection with {hostname}{port}! Please check error: {error}'.format(
                 hostname=NETWORK_DEVICE.get('HOSTNAME', '[unknown hostname]'),
-                port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS']['port'])
+                port=(':{port}'.format(port=NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port'))
                       if NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port') else ''),
                 error=error
             )
