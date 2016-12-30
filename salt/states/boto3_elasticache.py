@@ -796,8 +796,8 @@ def replication_group_present(name, wait=600, security_groups=None, region=None,
     if check_update:
         # Refresh this in case we're updating from 'only_on_modify' above...
         updated = __salt__['boto3_elasticache.'
-                           'describe_replication_group'](name, region=region, key=key,
-                                                      keyid=keyid, profile=profile)[0]
+                           'describe_replication_groups'](name, region=region, key=key,
+                                                          keyid=keyid, profile=profile)[0]
         need_update = _diff_replication_group(updated, args)
         if need_update:
             if __opts__['test']:
@@ -817,8 +817,8 @@ def replication_group_present(name, wait=600, security_groups=None, region=None,
                     ret['comment'] += ' ... and then immediately modified.'
                 else:
                     ret['comment'] = 'Replication group {0} was modified.'.format(name)
-                    ret['changes']['old'] = current
-                ret['changes']['new'] = new['ReplicationGroups'][0]
+                    ret['changes']['old'] = current[0] if len(current) else None
+                ret['changes']['new'] = new[0]
             else:
                 ret['result'] = False
                 ret['comment'] = 'Failed to modify replication group {0}.'.format(name)
