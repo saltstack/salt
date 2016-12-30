@@ -38,13 +38,19 @@
         #namecheap.url: https://api.sandbox.namecheap.xml.response
 
 """
+
+
 CAN_USE_NAMECHEAP = True
+
+
 try:
     import salt.utils.namecheap
 except ImportError:
     CAN_USE_NAMECHEAP = False
 
+
 __virtualname__ = 'namecheap_domains_ns'
+
 
 def __virtual__():
     """
