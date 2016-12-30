@@ -46,6 +46,7 @@ Connection module for Amazon EFS
 :depends: boto3
 '''
 
+
 # Import python libs
 import logging
 from distutils.version import LooseVersion as _LooseVersion
@@ -70,11 +71,11 @@ def __virtual__():
     required_boto_version = '1.0.0'
 
     if not HAS_BOTO3:
-        return (False, "The boto3.efs module cannot be loaded: " + \
+        return (False, "The boto3.efs module cannot be loaded: " +
                 "boto3 library not found")
     elif _LooseVersion(boto3.__version__) < \
          _LooseVersion(required_boto_version):
-        return (False, "The boto3.efs module cannot be loaded:"+ \
+        return (False, "The boto3.efs module cannot be loaded:" +
                 "boto3 library version incorrect")
     else:
         return True
@@ -104,7 +105,6 @@ def _get_conn(key=None,
         if region:
             profile['region'] = region
 
-
     if isinstance(profile, dict):
         if 'region' in profile:
             profile['region_name'] = profile['region']
@@ -118,7 +118,7 @@ def _get_conn(key=None,
 
         client = boto3.client('efs', **profile)
     else:
-        client= boto3.client('efs')
+        client = boto3.client('efs')
 
     return client
 
@@ -234,7 +234,7 @@ def create_tags(filesystemid,
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     new_tags = []
-    for k,v in tags.iteritems():
+    for k, v in tags.iteritems():
         new_tags.append({'Key': k, 'Value': v})
 
     client.create_tags(FileSystemId=filesystemid, Tags=new_tags)
@@ -309,7 +309,7 @@ def delete_tags(filesystemid,
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
-    client.delete_tags(FileSystemId=filesystemid,Tags=tags)
+    client.delete_tags(FileSystemId=filesystemid, Tags=tags)
 
 
 def get_file_systems(filesystemid=None,
@@ -333,7 +333,7 @@ def get_file_systems(filesystemid=None,
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     if filesystemid:
-        response = client.describe_file_systems(FileSystemId)
+        response = client.describe_file_systems(FileSystemId=filesystemid)
         result = response["FileSystems"]
     else:
         response = client.describe_file_systems()
@@ -435,4 +435,4 @@ def set_security_groups(mounttargetid,
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
     client.modify_mount_target_security_groups(MountTargetId=mounttargetid,
-                                               SecurityGroups=securitygroups)
+                                               SecurityGroups=securitygroup)
