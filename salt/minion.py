@@ -347,14 +347,15 @@ def eval_master_func(opts):
                 raise KeyError
             # we take whatever the module returns as master address
             opts['master'] = master_mod[mod_fun]()
-            if not isinstance(opts['master'], str):
+            if not isinstance(opts['master'], str) and \
+               not isinstance(opts['master'], list):
                 raise TypeError
             opts['__master_func_evaluated'] = True
         except KeyError:
             log.error('Failed to load module {0}'.format(mod_fun))
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except TypeError:
-            log.error('{0} returned from {1} is not a string'.format(opts['master'], mod_fun))
+            log.error('{0} returned from {1} is not a string or a list'.format(opts['master'], mod_fun))
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         log.info('Evaluated master from module: {0}'.format(mod_fun))
 
