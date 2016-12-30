@@ -153,6 +153,7 @@ def _delete_resource(name, name_param, desc, res_type, wait=0, status_param=None
             log.info('{0} {1} deletion requested.'.format(desc.title(), name))
             return True
         log.info('Waiting up to {0} seconds for {1} {2} to be deleted.'.format(wait, desc, name))
+        orig_wait = wait
         while wait > 0:
             r = s(name=name, conn=conn)
             if not r or not len(r) or r[0].get(status_param) == status_gone:
@@ -163,7 +164,7 @@ def _delete_resource(name, name_param, desc, res_type, wait=0, status_param=None
                                                                                   name))
             time.sleep(sleep)
             wait -= sleep
-        log.error('{0} {1} not deleted after {2} seconds!'.format(desc.title(), name, wait))
+        log.error('{0} {1} not deleted after {2} seconds!'.format(desc.title(), name, orig_wait))
 
         return False
     except botocore.exceptions.ClientError as e:
@@ -202,6 +203,7 @@ def _create_resource(name, name_param=None, desc=None, res_type=None, wait=0, st
             return True
         log.info('Waiting up to {0} seconds for {1} {2} to be become available.'.format(wait, desc,
                                                                                         name))
+        orig_wait = wait
         while wait > 0:
             r = s(name=name, conn=conn)
             if r and r[0].get(status_param) == status_good:
@@ -212,7 +214,7 @@ def _create_resource(name, name_param=None, desc=None, res_type=None, wait=0, st
                                                                                     name))
             time.sleep(sleep)
             wait -= sleep
-        log.error('{0} {1} not available after {2} seconds!'.format(desc.title(), name, wait))
+        log.error('{0} {1} not available after {2} seconds!'.format(desc.title(), name, orig_wait))
         return False
     except botocore.exceptions.ClientError as e:
         msg = 'Failed to create {0} {1}: {2}'.format(desc, name, e)
@@ -251,6 +253,7 @@ def _modify_resource(name, name_param=None, desc=None, res_type=None, wait=0, st
             return True
         log.info('Waiting up to {0} seconds for {1} {2} to be become available.'.format(wait, desc,
                                                                                         name))
+        orig_wait = wait
         while wait > 0:
             r = s(name=name, conn=conn)
             if r and r[0].get(status_param) == status_good:
@@ -261,7 +264,7 @@ def _modify_resource(name, name_param=None, desc=None, res_type=None, wait=0, st
                                                                                     name))
             time.sleep(sleep)
             wait -= sleep
-        log.error('{0} {1} not available after {2} seconds!'.format(desc.title(), name, wait))
+        log.error('{0} {1} not available after {2} seconds!'.format(desc.title(), name, orig_wait))
         return False
     except botocore.exceptions.ClientError as e:
         msg = 'Failed to modify {0} {1}: {2}'.format(desc, name, e)
