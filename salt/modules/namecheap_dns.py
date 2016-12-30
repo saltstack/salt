@@ -39,13 +39,18 @@
 
 """
 
+
 CAN_USE_NAMECHEAP = True
+
+
 try:
     import salt.utils.namecheap
 except ImportError:
     CAN_USE_NAMECHEAP = False
 
 __virtualname__ = 'namecheap_domains_dns'
+
+
 def __virtual__():
     """
     Check to make sure requests and xml are installed and requests
