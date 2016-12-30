@@ -54,8 +54,8 @@ def _handle_request(r):
 
     if apiresponse.getAttribute('Status') == "ERROR":
         data = []
-        for e in apiresponse.getElementsByTagName("Errors")[0]
-                            .getElementsByTagName("Error"):
+        errors = apiresponse.getElementsByTagName("Errors")[0]
+        for e in errors.getElementsByTagName("Error"):
             data.append(e.firstChild.data)
         error = ''.join(data)
         log.info(apiresponse)
