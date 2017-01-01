@@ -294,7 +294,7 @@ def present(name,
 
         .. versionadded:: 2016.3.0
     '''
-    name = ' '.join(name.strip().split())
+    name = name.strip()
     if identifier is False:
         identifier = name
     ret = {'changes': {},
@@ -381,7 +381,7 @@ def absent(name,
     ###       cannot be removed from the function definition, otherwise the use
     ###       of unsupported arguments will result in a traceback.
 
-    name = ' '.join(name.strip().split())
+    name = name.strip()
     if identifier is False:
         identifier = name
     ret = {'name': name,
@@ -703,7 +703,7 @@ def env_absent(name,
         the root user
     '''
 
-    name = ' '.join(name.strip().split())
+    name = name.strip()
     ret = {'name': name,
            'result': True,
            'changes': {},
