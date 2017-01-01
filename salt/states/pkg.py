@@ -76,6 +76,7 @@ state module
 # Import python libs
 from __future__ import absolute_import
 import errno
+import fnmatch
 import logging
 import os
 import re
@@ -192,18 +193,14 @@ def _fulfills_version_spec(versions, oper, desired_version,
             versions = versions['version']
     for ver in versions:
         if oper == '==':
-            # support wildcards in desired version
-            limit = desired_version.find('*')
-            if limit == -1:
-                limit = None
-            ver =  ver[:limit]
-            desired_version = desired_version[:limit]
+            if fnmatch.fnmatch(ver, desired_version):
+                return True
 
-        if salt.utils.compare_versions(ver1=ver,
-                                       oper=oper,
-                                       ver2=desired_version,
-                                       cmp_func=cmp_func,
-                                       ignore_epoch=ignore_epoch):
+        elif salt.utils.compare_versions(ver1=ver,
+                                         oper=oper,
+                                         ver2=desired_version,
+                                         cmp_func=cmp_func,
+                                         ignore_epoch=ignore_epoch):
             return True
     return False
 
