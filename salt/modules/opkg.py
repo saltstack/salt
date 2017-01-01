@@ -12,8 +12,8 @@ Support for Opkg
 
 .. note::
 
-    For version comparison support, the ``opkg-utils`` package must be
-    installed.
+    For version comparison support on opkg < 0.3.4, the ``opkg-utils`` package
+    must be installed.
 
 '''
 from __future__ import absolute_import
@@ -23,6 +23,7 @@ import copy
 import os
 import re
 import logging
+import distutils.version
 from salt.ext import six
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
@@ -32,7 +33,6 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
-from salt.utils.decorators import which as _which
 
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -922,7 +922,6 @@ def upgrade_available(name):
     return latest_version(name) != ''
 
 
-@_which('opkg-compare-versions')
 def version_cmp(pkg1, pkg2, ignore_epoch=False):
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
@@ -944,7 +943,19 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 
-    cmd_compare = ['opkg-compare-versions']
+    output = __salt__['cmd.run_stdout'](['opkg', '--version'],
+                                        output_loglevel='trace',
+                                        python_shell=False)
+    opkg_version = output.split(' ')[2].strip()
+    if distutils.version.LooseVersion(opkg_version) >= distutils.version.LooseVersion('0.3.4'):
+        cmd_compare = ['opkg', 'compare-versions']
+    elif salt.utils.which('opkg-compare-versions'):
+        cmd_compare = ['opkg-compare-versions']
+    else:
+        log.warning('Unable to find a compare-versions utility installed. Either upgrade opkg to '
+                    'version > 0.3.4 (preferred) or install the older opkg-compare-versions script.')
+        return None
+
     for oper, ret in (("<<", -1), ("=", 0), (">>", 1)):
         cmd = cmd_compare[:]
         cmd.append(_cmd_quote(pkg1))
