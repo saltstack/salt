@@ -233,7 +233,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
         installed = _cpv_to_version(_vartree().dep_bestmatch(name))
         avail = _cpv_to_version(_porttree().dep_bestmatch(name))
-        if avail and salt.utils.compare_versions(ver1=installed, oper='<', ver2=avail, cmp_func=version_cmp):
+        if avail and (not installed or salt.utils.compare_versions(ver1=installed, oper='<', ver2=avail, cmp_func=version_cmp)):
             ret[name] = avail
 
     # Return a string if only one package name passed
