@@ -9,6 +9,7 @@ Management of Zabbix hosts.
 from __future__ import absolute_import
 from json import loads, dumps
 from copy import deepcopy
+from salt.ext import six
 
 
 def __virtual__():
@@ -124,6 +125,20 @@ def present(host, groups, interfaces, **kwargs):
         return interfaces_list_sorted
 
     interfaces_formated = _interface_format(interfaces)
+
+    # Ensure groups are all groupid
+    groupids = []
+    for group in groups:
+        if isinstance(group, six.string_types):
+            groupid = __salt__['zabbix.hostgroup_get'](name=group)
+            try:
+                groupids.append(int(groupid[0]['groupid']))
+            except TypeError:
+                ret['comment'] = 'Invalid group {0}'.format(group)
+                return ret
+        else:
+            groupids.append(group)
+    groups = groupids
 
     host_exists = __salt__['zabbix.host_exists'](host)
 
