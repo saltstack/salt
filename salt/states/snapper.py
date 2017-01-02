@@ -166,18 +166,18 @@ def baseline_snapshot(name, number=None, tag=None, config='root', ignore=None):
                 status.pop(target_file, None)
 
     for file in status:
-        status[file]['actions'] = status[file].pop("status")
-
         # Only include diff for modified files
-        if "modified" in status[file]['actions']:
+        if "modified" in status[file]["status"] and include_diff:
+            status[file].pop("status")
             status[file].update(__salt__['snapper.diff'](config,
                                                          num_pre=0,
                                                          num_post=number,
-                                                         filename=file)[file])
+                                                         filename=file).get(file, {}))
+
 
     if __opts__['test'] and status:
-        ret['pchanges'] = ret["changes"]
-        ret['changes'] = {}
+        ret['pchanges'] = status
+        ret['changes'] = ret['pchanges']
         ret['comment'] = "{0} files changes are set to be undone".format(len(status.keys()))
         ret['result'] = None
     elif __opts__['test'] and not status:
