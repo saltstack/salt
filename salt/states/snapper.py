@@ -109,12 +109,12 @@ def __virtual__():
     return 'snapper' if 'snapper.diff' in __salt__ else False
 
 
-def _get_baseline_from_tag(tag):
+def _get_baseline_from_tag(config, tag):
     '''
     Returns the last created baseline snapshot marked with `tag`
     '''
     last_snapshot = None
-    for snapshot in __salt__['snapper.list_snapshots']():
+    for snapshot in __salt__['snapper.list_snapshots'](config):
         if tag == snapshot['userdata'].get("baseline_tag"):
             if not last_snapshot or last_snapshot['timestamp'] < snapshot['timestamp']:
                 last_snapshot = snapshot
@@ -148,7 +148,7 @@ def baseline_snapshot(name, number=None, tag=None, config='root', ignore=None):
         return ret
 
     if tag:
-        snapshot = _get_baseline_from_tag(tag)
+        snapshot = _get_baseline_from_tag(config, tag)
         if not snapshot:
             ret.update({'result': False,
                         'comment': 'Baseline tag "{0}" not found'.format(tag)})
