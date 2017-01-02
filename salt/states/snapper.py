@@ -25,7 +25,7 @@ The snapper state module allows you to manage state implicitly, in addition
 to explicit rules, in order to define a baseline and iterate with explicit
 rules as they show that they work in production.
 
-The workflow is: once you have a workin and audited system, you would create
+The workflow is: once you have a working and audited system, you would create
 your baseline snapshot (eg. with ``salt tgt snapper.create_snapshot``) and
 define in your state this baseline using the identifier of the snapshot
 (in this case: 20):
@@ -35,10 +35,20 @@ define in your state this baseline using the identifier of the snapshot
     my_baseline:
       snapper.baseline_snapshot:
         - number: 20
+        - include_diff: False
         - ignore:
           - /var/log
           - /var/cache
 
+Baseline snapshots can be also referenced by tag. Most recent baseline snapshot
+is used in case of multiple snapshots with the same tag:
+
+    my_baseline_external_storage:
+      snapper.baseline_snapshot:
+        - tag: my_custom_baseline_tag
+        - config: external
+        - ignore:
+          - /mnt/tmp_files/
 
 If you have this state, and you haven't done changes to the system since the
 snapshot, and you add a user, the state will show you the changes (including
@@ -121,13 +131,27 @@ def _get_baseline_from_tag(config, tag):
     return last_snapshot
 
 
-def baseline_snapshot(name, number=None, tag=None, config='root', ignore=None):
+def baseline_snapshot(name, number=None, tag=None, include_diff=True, config='root', ignore=None):
     '''
     Enforces that no file is modified comparing against a previously
     defined snapshot identified by number.
 
+    number
+        Number of selected baseline snapshot.
+
+    tag
+        Tag of the selected baseline snapshot. Most recent baseline baseline
+        snapshot is used in case of multiple snapshots with the same tag.
+        (`tag` and `number` cannot be used at the same time)
+
+    include_diff
+        Include a diff in the response (Default: True)
+
+    config
+        Snapper config name (Default: root)
+
     ignore
-        List of files to ignore
+        List of files to ignore. (Default: None)
     '''
     if not ignore:
         ignore = []
