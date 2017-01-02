@@ -550,15 +550,20 @@ def undo(config='root', files=None, num_pre=None, num_post=None):
             'Given file list contains files that are not present'
             'in the changed filelist: {0}'.format(changed - requested))
 
-    components = cmdret.split(' ')
-    ret = {}
-    for comp in components:
-        key, val = comp.split(':')
-        ret[key] = val
-    return ret
 
     cmdret = __salt__['cmd.run']('snapper -c {0} undochange {1}..{2} {3}'.format(
        config, pre, post, ' '.join(requested)))
+
+    try:
+        components = cmdret.split(' ')
+        ret = {}
+        for comp in components:
+            key, val = comp.split(':')
+            ret[key] = val
+        return ret
+    except ValueError as exc:
+        raise CommandExecutionError(
+            'Error while processing Snapper response: {}'.format(cmdret))
 
 
 def _get_jid_snapshots(jid, config='root'):
