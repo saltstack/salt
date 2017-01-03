@@ -103,8 +103,9 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
         version_info = __salt__['chocolatey.version'](name, check_remote=True)
 
         full_name = name
+        lower_name = name.lower()
         for pkg in version_info:
-            if name.lower() == pkg.lower():
+            if lower_name == pkg.lower():
                 full_name = pkg
 
         available_version = version_info[full_name]['available'][0]

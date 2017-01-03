@@ -874,8 +874,9 @@ def version(name, check_remote=False, source=None, pre_versions=False):
     installed = list_(narrow=name, local_only=True)
 
     packages = {}
+    lower_name = name.lower()
     for pkg in installed:
-        if name.lower() in pkg.lower():
+        if lower_name in pkg.lower():
             packages[pkg] = installed[pkg]
 
     if check_remote:
