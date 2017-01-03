@@ -180,7 +180,7 @@ def baseline_snapshot(name, number=None, tag=None, include_diff=True, config='ro
         number = snapshot['id']
 
     status = __salt__['snapper.status'](
-        config, num_pre=number, num_post=0)
+        config, num_pre=0, num_post=number)
 
     for target in ignore:
         if os.path.isfile(target):
