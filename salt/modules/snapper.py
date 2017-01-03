@@ -651,6 +651,10 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
             pre_file = os.path.normpath(pre_mount + "/" + _filepath)
             post_file = os.path.normpath(post_mount + "/" + _filepath)
 
+            # Just in case, removing posible double '/' from the final file paths
+            pre_file = pre_file.replace("//", "/")
+            post_file = post_file.replace("//", "/")
+
             if os.path.isfile(pre_file):
                 pre_file_exists = True
                 pre_file_content = salt.utils.fopen(pre_file).readlines()
