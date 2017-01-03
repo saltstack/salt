@@ -27,6 +27,7 @@ import hashlib  # do not remove, used in imported file.py functions
 import errno  # do not remove, used in imported file.py functions
 import shutil  # do not remove, used in imported file.py functions
 import re  # do not remove, used in imported file.py functions
+import string  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import fileinput  # do not remove, used in imported file.py functions
 import fnmatch  # do not remove, used in imported file.py functions
