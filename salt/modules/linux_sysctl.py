@@ -233,7 +233,12 @@ def persist(name, value, config=None):
                     if str(running[name]) != str(value):
                         assign(name, value)
                         return 'Updated'
-                return 'Already set'
+                    else:
+                        return 'Already set'
+                # It is missing from the running config. We can not set it.
+                else:
+                    raise CommandExecutionError('sysctl {0} does not exist'.format(name))
+
             nlines.append('{0} = {1}\n'.format(name, value))
             edited = True
             continue
