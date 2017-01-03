@@ -6,9 +6,6 @@ missing functions in other modules
 from __future__ import absolute_import
 from salt.exceptions import CommandExecutionError
 
-# Import Salt Libs
-import salt.utils
-
 # Import 3rd Party Libs
 try:
     import psutil
@@ -21,12 +18,12 @@ except ImportError:
     HAS_WIN32 = False
 
 
+# Although utils are often directly imported, it is also possible to use the
+# loader.
 def __virtual__():
     '''
-    Load only on Windows with necessary modules
+    Only load if Win32 Libraries are installed
     '''
-    if not salt.utils.is_windows():
-        return False, 'This utility only works on Windows'
     if not HAS_WIN32:
         return False, 'This utility requires pywin32'
 

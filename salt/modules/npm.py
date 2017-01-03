@@ -185,7 +185,7 @@ def _extract_json(npm_output):
         lines = lines[1:]
     while lines and not lines[-1].startswith('}') and not lines[-1].startswith(']'):
         lines = lines[:-1]
-    # Mac OSX with fsevents includes the following line in the return
+    # macOS with fsevents includes the following line in the return
     # when a new module is installed which is invalid JSON:
     #     [fsevents] Success: "..."
     while lines and lines[0].startswith('[fsevents]'):

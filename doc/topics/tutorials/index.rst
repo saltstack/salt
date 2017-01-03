@@ -30,6 +30,6 @@ Tutorials Index
 * :ref:`How to Convert Jinja Logic to an Execution Module <tutorial-jinja_to_execution-module>`
 * :ref:`Using Salt with Stormpath <tutorial-stormpath>`
 * :ref:`Syslog-ng usage <syslog-ng-sate-usage>`
-* :ref:`The MacOS X (Maverick) Developer Step By Step Guide To Salt Installation <tutorial-macos-walk-through>`
+* :ref:`The macOS (Maverick) Developer Step By Step Guide To Salt Installation <tutorial-macos-walk-through>`
 * :ref:`SaltStack Walk-through <tutorial-salt-walk-through>`
 * :ref:`Writing Salt Tests <tutorial-salt-testing>`

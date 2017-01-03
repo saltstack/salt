@@ -27,20 +27,20 @@ try:
 except ImportError:
     HAS_WIN32 = False
 
-# Import Salt Libs
-import salt.utils
-
 # Set up logging
 log = logging.getLogger(__name__)
 
 
+# Although utils are often directly imported, it is also possible to use the
+# loader.
 def __virtual__():
     '''
-    Load only on Windows
+    Only load if Win32 Libraries are installed
     '''
-    if salt.utils.is_windows() and HAS_WIN32:
-        return 'win_runas'
-    return False
+    if not HAS_WIN32:
+        return False, 'This utility requires pywin32'
+
+    return 'win_runas'
 
 
 if HAS_WIN32:

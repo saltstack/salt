@@ -203,7 +203,7 @@ def event(tagmatch='*',
         # Watch the event bus forever in a shell while-loop.
         salt-run state.event | while read -r tag data; do
             echo $tag
-            echo $data | jq -colour-output .
+            echo $data | jq --color-output .
         done
 
     .. seealso::

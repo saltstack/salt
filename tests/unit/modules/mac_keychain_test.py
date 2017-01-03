@@ -23,7 +23,7 @@ class KeychainTestCase(TestCase):
 
     def test_install_cert(self):
         '''
-            Test installing a certificate into the OSX keychain
+            Test installing a certificate into the macOS keychain
         '''
         mock = MagicMock()
         with patch.dict(keychain.__salt__, {'cmd.run': mock}):
@@ -34,7 +34,7 @@ class KeychainTestCase(TestCase):
     @patch('salt.modules.mac_keychain.unlock_keychain')
     def test_install_cert_extras(self, unlock_mock):
         '''
-            Test installing a certificate into the OSX keychain with extras
+            Test installing a certificate into the macOS keychain with extras
         '''
         mock = MagicMock()
         with patch.dict(keychain.__salt__, {'cmd.run': mock}):
@@ -45,7 +45,7 @@ class KeychainTestCase(TestCase):
 
     def test_uninstall_cert(self):
         '''
-            Test uninstalling a certificate from the OSX keychain
+            Test uninstalling a certificate from the macOS keychain
         '''
         mock = MagicMock()
         with patch.dict(keychain.__salt__, {'cmd.run': mock}):
