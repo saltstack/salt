@@ -677,6 +677,25 @@ def query(database, query, **connection_args):
 
 
 def file_query(database, file_name, **connection_args):
+    '''
+    Run an arbitrary SQL query from the specified file and return the
+    the number of affected rows.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.file_query mydb file_name=/tmp/sqlfile.sql
+
+    Return data:
+
+    .. code-block:: python
+
+        {'query time': {'human': '39.0ms', 'raw': '0.03899'}, 'rows affected': 1L}
+
+    '''
     if os.path.exists(file_name):
         with salt.utils.fopen(file_name, 'r') as ifile:
             contents = ifile.read()
@@ -687,13 +706,13 @@ def file_query(database, file_name, **connection_args):
     query_string = ""
     ret = {'rows returned': 0, 'columns': 0, 'results': 0, 'rows affected': 0, 'query time': {'raw': 0}}
     for line in contents.splitlines():
-        if re.match(r'--', line): #ignore sql comments
+        if re.match(r'--', line):  # ignore sql comments
             continue
-        if not re.search(r'[^-;]+;', line): # keep appending lines that don't end in ;
+        if not re.search(r'[^-;]+;', line):  # keep appending lines that don't end in ;
             query_string = query_string + line
         else:
-            query_string = query_string + line # append lines that end with ; and run query
-            query_result=query(database, query_string, **connection_args)
+            query_string = query_string + line  # append lines that end with ; and run query
+            query_result = query(database, query_string, **connection_args)
             query_string = ""
 
             if query_result == False:

@@ -83,6 +83,8 @@ def run_file(name,
 
     overwrite:
         The file or grain will be overwritten if it already exists (default)
+
+    .. versionadded:: Nitrogen
     '''
     ret = {'name': name,
            'changes': {},
