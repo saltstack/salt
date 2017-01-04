@@ -634,11 +634,7 @@ def salt_ip_verify_tool():
                 logger.debug("Request from IP: {0}".format(rem_ip))
                 if rem_ip not in auth_ip_list:
                     logger.error("Blocked IP: {0}".format(rem_ip))
-                    cherrypy.response.status = 403
-                    return {
-                        'status': cherrypy.response.status,
-                        'return': "Bad IP",
-                    }
+                    raise cherrypy.HTTPError(403, 'Bad IP')
 
 
 def salt_auth_tool():

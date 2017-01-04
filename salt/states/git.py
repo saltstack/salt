@@ -861,7 +861,11 @@ def latest(name,
 
             revs_match = _revs_equal(local_rev, remote_rev, remote_rev_type)
             try:
+                # If not a bare repo, check `git diff HEAD` to determine if
+                # there are local changes.
                 local_changes = bool(
+                    not bare
+                    and
                     __salt__['git.diff'](target,
                                          'HEAD',
                                          user=user,

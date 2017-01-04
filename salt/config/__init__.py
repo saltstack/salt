@@ -3455,14 +3455,10 @@ def api_config(path):
     Read in the Salt Master config file and add additional configs that
     need to be stubbed out for salt-api
     '''
-    # Let's grab a copy of salt's master opts
-    opts = client_config(path, defaults=DEFAULT_MASTER_OPTS)
-    # Let's override them with salt-api's required defaults
-    api_opts = DEFAULT_API_OPTS
-    api_opts.update({
-        'pidfile': opts.get('api_pidfile', DEFAULT_API_OPTS['api_pidfile']),
-    })
-    opts.update(api_opts)
+    # Let's grab a copy of salt-api's required defaults
+    opts = DEFAULT_API_OPTS
+    # Let's override them with salt's master opts
+    opts.update(client_config(path, defaults=DEFAULT_MASTER_OPTS))
     prepend_root_dir(opts, [
         'api_pidfile',
         'api_logfile',
