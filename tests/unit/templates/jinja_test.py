@@ -490,6 +490,12 @@ class TestCustomExtensions(TestCase):
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
         self.assertEqual(dataset, rendered)
 
+    def test_serialize_yaml_unicode(self):
+        dataset = u"str value"
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
+        self.assertEqual("!!python/unicode str value", rendered)
+
     def test_serialize_python(self):
         dataset = {
             "foo": True,
