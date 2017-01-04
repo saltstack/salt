@@ -471,7 +471,14 @@ class TestCustomExtensions(TestCase):
             "foo": True,
             "bar": 42,
             "baz": [1, 2, 3],
-            "qux": 2.0
+            "qux": 2.0,
+            "spam": OrderedDict([
+                ('foo', OrderedDict([
+                    ('bar', 'baz'),
+                    ('qux', 42)
+                ])
+                )
+            ])
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
