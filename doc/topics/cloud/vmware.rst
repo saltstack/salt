@@ -38,6 +38,14 @@ This package can be installed using `pip` or `easy_install`:
 
 .. _Issue #29537: https://github.com/saltstack/salt/issues/29537
 
+.. note::
+
+    pyVmomi doesn't expose the ability to specify the locale when connecting to
+    VMware. This causes parsing issues when connecting to an instance of VMware
+    running under a non-English locale. Until this feature is added upstream
+    `Issue #38402`_ contains a workaround.
+
+.. _Issue #38402: https://github.com/saltstack/salt/issues/38402
 
 Configuration
 =============

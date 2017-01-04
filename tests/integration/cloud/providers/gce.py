@@ -22,6 +22,8 @@ ensure_in_syspath('../../../')
 # Import Third-Party Libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
+TIMEOUT = 500
+
 
 def _random_name(size=6):
     '''
@@ -92,18 +94,18 @@ class GCETest(integration.ShellCase):
         '''
 
         # create the instance
-        instance = self.run_cloud('-p gce-test {0}'.format(self.INSTANCE_NAME), timeout=500)
+        instance = self.run_cloud('-p gce-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
         ret_str = '{0}:'.format(self.INSTANCE_NAME)
 
         # check if instance returned with salt installed
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=500)
+            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=500)
+        delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
         delete_str = ''.join(delete)
 
@@ -120,18 +122,20 @@ class GCETest(integration.ShellCase):
         '''
 
         # create the instance
-        instance = self.run_cloud('-p gce-test-extra {0}'.format(self.INSTANCE_NAME))
+        instance = self.run_cloud('-p gce-test-extra \
+                                  {0}'.format(self.INSTANCE_NAME),
+                                  timeout=TIMEOUT)
         ret_str = '{0}:'.format(self.INSTANCE_NAME)
 
         # check if instance returned with salt installed
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=500)
+            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=500)
+        delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
         delete_str = ''.join(delete)
 
@@ -152,7 +156,7 @@ class GCETest(integration.ShellCase):
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=500)
+            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
 
 
 if __name__ == '__main__':

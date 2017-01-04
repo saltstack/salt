@@ -1323,8 +1323,6 @@ DEFAULT_MASTER_OPTS = {
     'job_cache_store_endtime': False,
     'minion_data_cache': True,
     'enforce_mine_cache': False,
-    'ipc_mode': _DFLT_IPC_MODE,
-    'ipc_write_buffer': _DFLT_IPC_WBUFFER,
     'ipv6': False,
     'tcp_master_pub_port': 4512,
     'tcp_master_pull_port': 4513,
@@ -1333,10 +1331,6 @@ DEFAULT_MASTER_OPTS = {
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'master'),
     'log_level': 'warning',
     'log_level_logfile': None,
-    'log_datefmt': _DFLT_LOG_DATEFMT,
-    'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
-    'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
-    'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-master.pid'),
     'publish_session': 86400,
@@ -1409,9 +1403,6 @@ DEFAULT_MASTER_OPTS = {
     'ssh_scan_timeout': 0.01,
     'ssh_identities_only': False,
     'ssh_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'ssh'),
-    'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
-    'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
-    'maintenance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
     'ioflo_verbose': 0,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
@@ -2950,6 +2941,8 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     if driver == 'linode' and profile_key.get('clonefrom', False):
         non_image_drivers.append('linode')
         non_size_drivers.append('linode')
+    elif driver == 'gce' and 'sourceImage' in str(vm_.get('ex_disks_gce_struct')):
+        non_image_drivers.append('gce')
 
     # If cloning on VMware, specifying image is not necessary.
     if driver == 'vmware' and 'image' not in list(profile_key.keys()):
@@ -3448,10 +3441,23 @@ def api_config(path):
     Read in the Salt Master config file and add additional configs that
     need to be stubbed out for salt-api
     '''
-    # Let's grab a copy of salt-api's required defaults
-    opts = DEFAULT_API_OPTS
-    # Let's override them with salt's master opts
-    opts.update(client_config(path, defaults=DEFAULT_MASTER_OPTS))
+    # Let's grab a copy of salt's master opts
+    opts = client_config(path, defaults=DEFAULT_MASTER_OPTS)
+    # Let's override them with salt-api's required defaults
+    api_opts = DEFAULT_API_OPTS
+
+    # Update the pidfile/log_file keys with api_pidfile/api_logfile opts
+    api_opts.update({
+        'pidfile': opts.get('api_pidfile', DEFAULT_API_OPTS['api_pidfile']),
+        'log_file': opts.get('api_logfile', DEFAULT_API_OPTS['api_logfile']),
+    })
+
+    # Override opts keys
+    opts.update(api_opts)
+
+    # Add rest_timeout key to opts, since it's not present in DEFAULT_MASTER_CONFIG
+    opts['rest_timeout'] = api_opts.get('rest_timeout', DEFAULT_API_OPTS['rest_timeout'])
+
     prepend_root_dir(opts, [
         'api_pidfile',
         'api_logfile',

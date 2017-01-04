@@ -34,10 +34,10 @@ prefaced with a ``!``.
 # Import python libraries
 from __future__ import absolute_import
 import datetime
+import json
 import logging
 import time
 import re
-import json
 import yaml
 
 try:
