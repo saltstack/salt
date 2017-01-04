@@ -815,7 +815,7 @@ def group_absent(name, region=None, key=None, keyid=None, profile=None):
     return ret
 
 
-def group_present(name, policies=None, policies_from_pillars=None, managed_policies=None, users=None, path='/', region=None, key=None, keyid=None, profile=None):
+def group_present(name, policies=None, policies_from_pillars=None, managed_policies=None, users=None, path='/', region=None, key=None, keyid=None, profile=None, delete_policies=True):
     '''
 
     .. versionadded:: 2015.8.0
@@ -858,6 +858,12 @@ def group_present(name, policies=None, policies_from_pillars=None, managed_polic
     profile (dict)
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
+
+    delete_policies (boolean)
+        Delete or detach existing policies that are not in the given list of policies.
+        Default value is ``True``. If ``False`` is specified, existing policies
+        will not be deleted or detached allowing manual modifications on the IAM group
+        to be persistent.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not policies:
@@ -888,14 +894,14 @@ def group_present(name, policies=None, policies_from_pillars=None, managed_polic
         ret['comment'] = ' '.join([ret['comment'], 'Group {0} is present.'.format(name)])
     # Group exists, ensure group policies and users are set.
     _ret = _group_policies_present(
-        name, _policies, region, key, keyid, profile
+        name, _policies, region, key, keyid, profile, delete_policies
     )
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
         ret['result'] = _ret['result']
         return ret
-    _ret = _group_policies_attached(name, managed_policies, region, key, keyid, profile)
+    _ret = _group_policies_attached(name, managed_policies, region, key, keyid, profile, delete_policies)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -947,7 +953,8 @@ def _group_policies_present(
         region=None,
         key=None,
         keyid=None,
-        profile=None):
+        profile=None,
+        delete_policies=True):
     ret = {'result': True, 'comment': '', 'changes': {}}
     policies_to_create = {}
     policies_to_delete = []
@@ -964,7 +971,7 @@ def _group_policies_present(
         name, region, key, keyid, profile
     )
     for policy_name in _list:
-        if policy_name not in policies:
+        if delete_policies and policy_name not in policies:
             policies_to_delete.append(policy_name)
     if policies_to_create or policies_to_delete:
         _to_modify = list(policies_to_delete)
@@ -1016,7 +1023,8 @@ def _group_policies_attached(
         region=None,
         key=None,
         keyid=None,
-        profile=None):
+        profile=None,
+        detach_policies=True):
     ret = {'result': True, 'comment': '', 'changes': {}}
     policies_to_attach = []
     policies_to_detach = []
@@ -1036,7 +1044,8 @@ def _group_policies_attached(
                                                     profile=profile)
     oldpolicies = [x.get('policy_arn') for x in _list]
     for policy_data in _list:
-        if policy_data.get('policy_name') not in managed_policies \
+        if detach_policies \
+                  and policy_data.get('policy_name') not in managed_policies \
                   and policy_data.get('policy_arn') not in managed_policies:
             policies_to_detach.append(policy_data.get('policy_arn'))
     if policies_to_attach or policies_to_detach:
