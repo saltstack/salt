@@ -198,7 +198,6 @@ def baseline_snapshot(name, number=None, tag=None, include_diff=True, config='ro
                                                          num_post=number,
                                                          filename=file).get(file, {}))
 
-
     if __opts__['test'] and status:
         ret['pchanges'] = status
         ret['changes'] = ret['pchanges']
