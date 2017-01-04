@@ -464,7 +464,7 @@ def info_available(*names, **kwargs):
 
 def info(*names, **kwargs):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2016.3.0
        Use :py:func:`~salt.modules.pkg.info_available` instead.
 
     Return the information of the named package available for the system.

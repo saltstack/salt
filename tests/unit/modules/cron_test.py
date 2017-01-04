@@ -28,6 +28,12 @@ STUB_CRON_TIMESTAMP = {'minute': '1',
 
 STUB_SIMPLE_RAW_CRON = '5 0 * * * /tmp/no_script.sh'
 STUB_SIMPLE_CRON_DICT = {'pre': ['5 0 * * * /tmp/no_script.sh'], 'crons': [], 'env': [], 'special': []}
+STUB_CRON_SPACES = """
+# Lines below here are managed by Salt, do not edit
+TEST_VAR="a string with plenty of spaces"
+# SALT_CRON_IDENTIFIER:echo "must  be  double  spaced"
+11 * * * * echo "must  be  double  spaced"
+"""
 
 __grains__ = {}
 L = '# Lines below here are managed by Salt, do not edit\n'
@@ -528,6 +534,28 @@ class CronTestCase(TestCase):
                 'env': [],
                 'pre': ['# An unmanaged commented cron job', '#0 * * * * /bin/true'],
                 'special': []})
+
+    @patch('salt.modules.cron.raw_cron', new=MagicMock(return_value=STUB_CRON_SPACES))
+    def test_cron_extra_spaces(self):
+        '''
+        Issue #38449
+        '''
+        self.maxDiff = None
+        with patch.dict(cron.__grains__, {'os': None}):
+            ret = cron.list_tab('root')
+            eret = {'crons': [{'cmd': 'echo "must  be  double  spaced"',
+                               'comment': '',
+                               'commented': False,
+                               'daymonth': '*',
+                               'dayweek': '*',
+                               'hour': '*',
+                               'identifier': 'echo "must  be  double  spaced"',
+                               'minute': '11',
+                               'month': '*'}],
+                    'env': [{'name': 'TEST_VAR', 'value': '"a string with plenty of spaces"'}],
+                    'pre': [''],
+                    'special': []}
+            self.assertEqual(eret, ret)
 
     @patch('salt.modules.cron.raw_cron',
            new=MagicMock(side_effect=[
