@@ -1045,7 +1045,7 @@ def _windows_platform_data():
 
 def _osx_platform_data():
     '''
-    Additional data for Mac OS X systems
+    Additional data for macOS systems
     Returns: A dictionary containing values for the following:
         - model_name
         - boot_rom_version

@@ -107,7 +107,7 @@ Cloud Changes
 Platform Changes
 ================
 
-- Renamed modules related to OS X. The following module filenames were changed.
+- Renamed modules related to macOS. The following module filenames were changed.
   The virtual name remained unchanged.
 
 - **PR** `#30558`_: renamed osxdesktop.py to mac_desktop.py

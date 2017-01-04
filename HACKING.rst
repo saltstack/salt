@@ -94,10 +94,10 @@ virtualenv using the ``--system-site-packages`` option so that these modules
 are available in the virtualenv.
 
 
-Installing dependencies on OS X
-```````````````````````````````
+Installing dependencies on macOS
+````````````````````````````````
 
-One simple way to get all needed dependencies on OS X is to use homebrew,
+One simple way to get all needed dependencies on macOS is to use homebrew,
 and install the following packages::
 
     brew install zmq
@@ -187,7 +187,7 @@ Edit the master config file:
     ``/path/to/your/virtualenv/salt-master.pid``.
 4.  If you are also running a non-development version of Salt you will have to
     change the ``publish_port`` and ``ret_port`` values as well.
-5. On OS X also set max_open_files to 2048.
+5. On xxxOS X also set max_open_files to 2048.
 
 Edit the minion config file:
 

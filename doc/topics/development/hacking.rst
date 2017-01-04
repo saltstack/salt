@@ -83,10 +83,10 @@ Install Salt (and dependencies) into the virtualenv:
 .. _`Fedora Linux`: http://fedoraproject.org/
 .. _`Amazon Linux`: https://aws.amazon.com/amazon-linux-ami/
 
-.. note:: Installing dependencies on OS X.
+.. note:: Installing dependencies on macOS.
 
-    You can install needed dependencies on OS X using homebrew or macports.
-    See :ref:`OS X Installation <macos-installation>`
+    You can install needed dependencies on macOS using homebrew or macports.
+    See :ref:`macOS Installation <macos-installation>`
 
 .. warning:: Installing on RedHat-based Distros
 
@@ -195,7 +195,7 @@ If you would like to log to the console instead of to the log file, remove the
         # use 'limit descriptors 2047' for c-shell
         ulimit -n 2047
 
-    To set file descriptors on OSX, refer to the :ref:`OS X Installation
+    To set file descriptors on macOS, refer to the :ref:`macOS Installation
     <macos-installation>` instructions.
 
 

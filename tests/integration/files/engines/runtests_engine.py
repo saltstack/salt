@@ -84,7 +84,7 @@ class PyTestEngine(object):
                 if exc.errno != errno.ENOTCONN:
                     raise
             except AttributeError:
-                # This is not OSX !?
+                # This is not macOS !?
                 pass
 
     @gen.coroutine

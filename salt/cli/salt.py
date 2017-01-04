@@ -2,8 +2,9 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import os
 import sys
+sys.modules['pkg_resources'] = None
+import os
 
 # Import Salt libs
 from salt.ext.six import string_types
