@@ -2853,6 +2853,8 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
         linode_cloning = True
         non_image_drivers.append('linode')
         non_size_drivers.append('linode')
+    elif driver == 'gce' and 'sourceImage' in str(vm_.get('ex_disks_gce_struct')):
+        non_image_drivers.append('gce')
 
     if driver not in non_image_drivers:
         required_keys.append('image')
