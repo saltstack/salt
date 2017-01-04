@@ -550,7 +550,6 @@ def undo(config='root', files=None, num_pre=None, num_post=None):
             'Given file list contains files that are not present'
             'in the changed filelist: {0}'.format(changed - requested))
 
-
     cmdret = __salt__['cmd.run']('snapper -c {0} undochange {1}..{2} {3}'.format(
        config, pre, post, ' '.join(requested)))
 
@@ -563,7 +562,7 @@ def undo(config='root', files=None, num_pre=None, num_post=None):
         return ret
     except ValueError as exc:
         raise CommandExecutionError(
-            'Error while processing Snapper response: {}'.format(cmdret))
+            'Error while processing Snapper response: {0}'.format(cmdret))
 
 
 def _get_jid_snapshots(jid, config='root'):
@@ -648,12 +647,9 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
             if filepath.startswith(SUBVOLUME):
                 _filepath = filepath[len(SUBVOLUME):]
 
-            pre_file = os.path.normpath(pre_mount + "/" + _filepath)
-            post_file = os.path.normpath(post_mount + "/" + _filepath)
-
             # Just in case, removing posible double '/' from the final file paths
-            pre_file = pre_file.replace("//", "/")
-            post_file = post_file.replace("//", "/")
+            pre_file = os.path.normpath(pre_mount + "/" + _filepath).replace("//", "/")
+            post_file = os.path.normpath(post_mount + "/" + _filepath).replace("//", "/")
 
             if os.path.isfile(pre_file):
                 pre_file_exists = True
