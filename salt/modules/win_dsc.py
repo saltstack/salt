@@ -535,7 +535,7 @@ def set_lcm_config(config_mode=None,
     cmd = r'Set-DscLocalConfigurationManager -Path "{0}\SaltConfig"' \
           r''.format(temp_dir)
     ret = __salt__['cmd.run_all'](cmd, shell='powershell', python_shell=True)
-    __salt__['file.remove']('{0}\SaltConfig'.format(temp_dir))
+    __salt__['file.remove'](r'{0}\SaltConfig'.format(temp_dir))
     if not ret['retcode']:
         log.info('LCM config applied successfully')
         return True
