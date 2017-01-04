@@ -170,6 +170,55 @@ To run a highstate, set ``highstate: True`` in your state config:
 
     salt-run state.orchestrate orch.web_setup
 
+Runner
+^^^^^^
+
+To execute another runner, use :mod:`salt.runner <salt.states.saltmod.runner>`.
+For example to use the ``cloud.profile`` runner in your orchestration state
+additional options to replace values in the configured profile, use this:
+
+.. code-block:: yaml
+
+    # /srv/salt/orch/deploy.sls
+    create_instance:
+      salt.runner:
+        - name: cloud.profile
+        - prof: cloud-centos
+        - provider: cloud
+        - instances:
+          - server1
+        - opts:
+            minion:
+              master: master1
+
+To get a more dynamic state, use jinja variables together with
+``inline pillar data``.
+Using the same example but passing on pillar data, the state would be like
+this.
+
+.. code-block:: yaml
+
+    # /srv/salt/orch/deploy.sls
+    {% set servers = salt['pillar.get']('servers', 'test') %}
+    {% set master = salt['pillat.get']('master', 'salt') %}
+    create_instance:
+      salt.runner:
+        - name: cloud.profile
+        - prof: cloud-centos
+        - provider: cloud
+        - instances:
+          - {{ servers }}
+        - opts:
+            minion:
+              master: {{ master }}
+
+To execute with pillar data.
+
+.. code-block:: bash
+
+    salt-run state.orch orch.deploy pillar='{"servers": "newsystem1",
+    "master": "mymaster"}'
+
 
 More Complex Orchestration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
