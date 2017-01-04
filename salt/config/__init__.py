@@ -2950,6 +2950,8 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     if driver == 'linode' and profile_key.get('clonefrom', False):
         non_image_drivers.append('linode')
         non_size_drivers.append('linode')
+    elif driver == 'gce' and 'sourceImage' in str(vm_.get('ex_disks_gce_struct')):
+        non_image_drivers.append('gce')
 
     # If cloning on VMware, specifying image is not necessary.
     if driver == 'vmware' and 'image' not in list(profile_key.keys()):
@@ -3448,10 +3450,15 @@ def api_config(path):
     Read in the Salt Master config file and add additional configs that
     need to be stubbed out for salt-api
     '''
-    # Let's grab a copy of salt-api's required defaults
-    opts = DEFAULT_API_OPTS
-    # Let's override them with salt's master opts
-    opts.update(client_config(path, defaults=DEFAULT_MASTER_OPTS))
+    # Let's grab a copy of salt's master opts
+    opts = client_config(path, defaults=DEFAULT_MASTER_OPTS)
+    # Let's override them with salt-api's required defaults
+    api_opts = DEFAULT_API_OPTS
+    api_opts.update({
+        'pidfile': opts.get('api_pidfile', DEFAULT_API_OPTS['api_pidfile']),
+        'log_file': opts.get('api_logfile', DEFAULT_API_OPTS['api_logfile']),
+    })
+    opts.update(api_opts)
     prepend_root_dir(opts, [
         'api_pidfile',
         'api_logfile',
