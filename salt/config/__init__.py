@@ -3321,6 +3321,7 @@ def api_config(path):
     api_opts = DEFAULT_API_OPTS
     api_opts.update({
         'pidfile': opts.get('api_pidfile', DEFAULT_API_OPTS['api_pidfile']),
+        'log_file': opts.get('api_logfile', DEFAULT_API_OPTS['api_logfile']),
     })
     opts.update(api_opts)
     prepend_root_dir(opts, [
