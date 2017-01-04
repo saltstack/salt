@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 import salt.config
+from salt.syspaths import BASE_FILE_ROOTS_DIR
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
@@ -67,7 +68,9 @@ class WinrepoTestCase(TestCase):
                'changes': {},
                'result': False,
                'comment': ''}
-        ret.update({'comment': '/srv/salt/win/repo is missing'})
+        ret.update({'comment':
+                    '{file_roots}/win/repo is '
+                    'missing'.format(file_roots=BASE_FILE_ROOTS_DIR)})
         self.assertDictEqual(winrepo.genrepo('salt'), ret)
 
         mock = MagicMock(return_value={'winrepo_dir': 'salt',
