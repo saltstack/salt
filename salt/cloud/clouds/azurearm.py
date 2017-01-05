@@ -703,11 +703,17 @@ def show_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     data['ip_configurations'] = {}
     for ip_ in iface.ip_configurations:
         data['ip_configurations'][ip_.name] = make_safe(ip_)
-        pubip = netconn.public_ip_addresses.get(
-            kwargs['resource_group'],
-            ip_.name,
-        )
-        data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
+        try:
+            pubip = netconn.public_ip_addresses.get(
+                kwargs['resource_group'],
+                ip_.name,
+            )
+            data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
+        except Exception as exc:
+            log.warning('There was a cloud error: {0}'.format(exc))
+            log.warning('{0}'.format(type(exc)))
+            continue
+
     return data
 
 
@@ -819,6 +825,13 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     ip_kwargs = {}
     ip_configurations = None
+
+    if 'private_ip_address' in kwargs.keys():
+        ip_kwargs['private_ip_address'] = kwargs['private_ip_address']
+        ip_kwargs['private_ip_allocation_method'] = IPAllocationMethod.static
+    else:
+        ip_kwargs['private_ip_allocation_method'] = IPAllocationMethod.dynamic
+
     if bool(kwargs.get('public_ip')) is True:
         pub_ip_name = '{0}-ip'.format(kwargs['iface_name'])
         poller = netconn.public_ip_addresses.create_or_update(
@@ -844,7 +857,6 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                     ip_configurations = [
                         NetworkInterfaceIPConfiguration(
                             name='{0}-ip'.format(kwargs['iface_name']),
-                            private_ip_allocation_method='Dynamic',
                             subnet=subnet_obj,
                             **ip_kwargs
                         )
@@ -861,8 +873,8 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         ip_configurations = [
             NetworkInterfaceIPConfiguration(
                 name='{0}-ip'.format(kwargs['iface_name']),
-                private_ip_allocation_method='Dynamic',
                 subnet=subnet_obj,
+                **ip_kwargs
             )
         ]
 
@@ -1067,6 +1079,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 ),
                 os_type=os_type,
                 image=source_image,
+                disk_size_gb=vm_.get('os_disk_size_gb', 30)
             ),
             data_disks=data_disks,
             image_reference=img_ref,
@@ -1165,7 +1178,9 @@ def create(vm_):
         finally:
             raise SaltCloudSystemExit(str(exc))
 
-    hostname = _query_ip_address()
+    # calling _query_ip_address() causes Salt to attempt to build the VM again.
+    #hostname = _query_ip_address()
+    hostname = data
 
     if not hostname or not isinstance(hostname, six.string_types):
         log.error('Failed to get a value for the hostname.')
