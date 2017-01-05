@@ -224,6 +224,6 @@ def start(token,
                     else:
                         # Fire event to event bus
                         fire('{0}/{1}'.format(tag, _m['type']), _m)
-            time.sleep(1)
+            time.sleep(1)
     else:
         raise UserWarning("Could not connect to slack")
