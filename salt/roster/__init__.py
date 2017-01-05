@@ -19,6 +19,12 @@ log = logging.getLogger(__name__)
 
 
 def get_roster_file(options):
+    '''
+    Find respective roster file.
+
+    :param options:
+    :return:
+    '''
     template = None
     if options.get('__disable_custom_roster') and options.get('roster_file'):
         roster = options.get('roster_file').strip('/')
