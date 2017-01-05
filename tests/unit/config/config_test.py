@@ -26,6 +26,7 @@ import salt.minion
 import salt.utils
 import salt.utils.network
 import integration
+from salt.syspaths import CONFIG_DIR
 from salt import config as sconfig
 from salt.exceptions import (
     CommandExecutionError,
@@ -154,7 +155,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
             os.environ['SALT_MASTER_CONFIG'] = env_fpath
             # Should load from env variable, not the default configuration file.
-            config = sconfig.master_config('/etc/salt/master')
+            config = sconfig.master_config('{0}/master'.format(CONFIG_DIR))
             self.assertEqual(config['log_file'], env_fpath)
             os.environ.clear()
             os.environ.update(original_environ)
@@ -198,7 +199,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
             os.environ['SALT_MINION_CONFIG'] = env_fpath
             # Should load from env variable, not the default configuration file
-            config = sconfig.minion_config('/etc/salt/minion')
+            config = sconfig.minion_config('{0}/minion'.format(CONFIG_DIR))
             self.assertEqual(config['log_file'], env_fpath)
             os.environ.clear()
             os.environ.update(original_environ)
