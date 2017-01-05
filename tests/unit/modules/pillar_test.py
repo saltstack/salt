@@ -54,6 +54,17 @@ class PillarModuleTestCase(TestCase):
     def test_ls(self):
         self.assertEqual(pillarmod.ls(), ['a', 'b'])
 
+    def test_pillar_get_default_merge(self):
+        pillarmod.__opts__ = {}
+        pillarmod.__pillar__ = {'key': 'value'}
+        default = {'default': 'plop'}
+
+        res = pillarmod.get(key='key', default=default)
+        self.assertEqual("value", res)
+
+        res = pillarmod.get(key='missing pillar', default=default)
+        self.assertEqual({'default': 'plop'}, res)
+
     def test_pillar_get_default_merge_regression_38558(self):
         """Test for pillar.get(key=..., default=..., merge=True)
 
