@@ -343,6 +343,7 @@ def extracted(name,
             __env__,
             '{0}.{1}'.format(re.sub('[:/\\\\]', '_', if_missing), archive_format))
 
+    concurrent = bool(__opts__.get('sudo_user'))
     if not source_is_local and not os.path.isfile(filename):
         if __opts__['test']:
             ret['result'] = None
@@ -363,7 +364,8 @@ def extracted(name,
                                                makedirs=True,
                                                skip_verify=skip_verify,
                                                saltenv=__env__,
-                                               source_hash_name=source_hash_name)
+                                               source_hash_name=source_hash_name,
+                                               concurrent=concurrent)
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
         try:
@@ -527,7 +529,8 @@ def extracted(name,
                                                   if_missing,
                                                   user=user,
                                                   group=group,
-                                                  recurse=recurse)
+                                                  recurse=recurse,
+                                                  concurrent=concurrent)
             log.debug('file.directory: %s', dir_result)
         elif os.path.isfile(if_missing):
             log.debug('if_missing (%s) is a file, not enforcing user/group '
