@@ -129,7 +129,8 @@ class NetapiClient(object):
 
         :return: Returns the result from the salt-ssh command
         '''
-        ssh_client = salt.client.ssh.client.SSHClient(mopts=self.opts)
+        ssh_client = salt.client.ssh.client.SSHClient(mopts=self.opts,
+                                                      disable_custom_roster=True)
         return ssh_client.cmd_sync(kwargs)
 
     def runner(self, fun, timeout=None, **kwargs):

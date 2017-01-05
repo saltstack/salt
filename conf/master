@@ -400,6 +400,17 @@
 # Pass in an alternative location for the salt-ssh roster file
 #roster_file: /etc/salt/roster
 
+# Define a locations for roster files so they can be chosen when using Salt API.
+# An administrator can place roster files into these locations. Then when
+# calling Salt API, parameter 'roster_file' should contain a relative path to
+# these locations. That is, "roster_file=/foo/roster" will be resolved as
+# "/etc/salt/roster.d/foo/roster" etc. This feature prevents passing insecure
+# custom rosters through the Salt API.
+#
+#rosters:
+# - /etc/salt/roster.d
+# - /opt/salt/some/more/rosters
+
 # The log file of the salt-ssh command:
 #ssh_log_file: /var/log/salt/ssh
 
