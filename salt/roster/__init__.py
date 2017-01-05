@@ -26,6 +26,10 @@ def get_roster_file(options):
     :return:
     '''
     template = None
+    # The __disable_custom_roster is always True if Salt SSH Client comes
+    # from Salt API. In that case no way to define own 'roster_file', instead
+    # this file needs to be chosen from already validated rosters
+    # (see /etc/salt/master config).
     if options.get('__disable_custom_roster') and options.get('roster_file'):
         roster = options.get('roster_file').strip('/')
         for roster_location in options.get('rosters'):
