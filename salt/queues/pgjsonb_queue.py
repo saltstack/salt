@@ -112,7 +112,7 @@ def _list_tables(cur):
 
 
 def _create_table(cur, queue):
-    cmd = 'CREATE TABLE {0}(id INTEGER PRIMARY KEY, '\
+    cmd = 'CREATE TABLE {0}(id SERIAL PRIMARY KEY, '\
           'data jsonb NOT NULL)'.format(queue)
     log.debug('SQL Query: {0}'.format(cmd))
     cur.execute(cmd)
@@ -157,10 +157,34 @@ def list_length(queue):
     return len(items)
 
 
+def _queue_exists(queue):
+    '''
+    Does this queue exist
+    :param queue: Name of the queue
+    :type str
+    :return: True if this queue exists and
+    False otherwise
+    :rtype bool
+    '''
+    return queue in list_queues()
+
+
+def handle_queue_creation(queue):
+    if not _queue_exists(queue):
+        with _conn(commit=True) as cur:
+            log.debug('Queue %s does not exist.'
+                      ' Creating', queue)
+            _create_table(cur, queue)
+    else:
+        log.debug('Queue %s already exists.', queue)
+
+
 def insert(queue, items):
     '''
     Add an item or items to a queue
     '''
+    handle_queue_creation(queue)
+
     with _conn(commit=True) as cur:
         if isinstance(items, dict):
             items = json.dumps(items)
