@@ -116,6 +116,7 @@ STATE_FUNCTIONS = {
     'state.sls':       'state_apply',
 }
 
+
 def __virtual__():
     return __virtualname__
 
@@ -205,7 +206,6 @@ def returner(ret):
     '''
     Process the return from Salt
     '''
-    log.debug('Ret: {0}'.format(ret)) # JPH
 
     job_fun = ret['fun']
     job_fun_escaped = job_fun.replace('.', '_')
@@ -286,7 +286,7 @@ def returner(ret):
         # Need to count state successes and failures
         if options['states_count']:
             for state_data in ret['return'].values():
-                if state_data['result'] == False:
+                if state_data['result'] is False:
                     counts['failed'] += 1
                 else:
                     counts['suceeded'] += 1
