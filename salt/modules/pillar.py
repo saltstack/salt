@@ -97,6 +97,7 @@ def get(key,
         else items(saltenv=saltenv, pillarenv=pillarenv)
 
     if merge:
+        default = copy.deepcopy(default)
         ret = salt.utils.traverse_dict_and_list(pillar_dict, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
