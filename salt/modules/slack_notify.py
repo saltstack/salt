@@ -311,7 +311,7 @@ def call_hook(message,
             'payload': json.dumps(payload, ensure_ascii=False)
         }
     )
-    result = salt.utils.http.query(url, 'POST', data=data)
+    result = salt.utils.http.query(url, method='POST', data=data, status=True)
 
     if result['status'] <= 201:
         return True

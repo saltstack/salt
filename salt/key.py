@@ -357,7 +357,7 @@ class Key(object):
     REJ = 'minions_rejected'
     DEN = 'minions_denied'
 
-    def __init__(self, opts):
+    def __init__(self, opts, io_loop=None):
         self.opts = opts
         kind = self.opts.get('__role', '')  # application kind
         if kind not in salt.utils.kinds.APPL_KINDS:
@@ -369,7 +369,9 @@ class Key(object):
                 opts['sock_dir'],
                 opts['transport'],
                 opts=opts,
-                listen=False)
+                listen=False,
+                io_loop=io_loop
+                )
 
     def _check_minions_directories(self):
         '''

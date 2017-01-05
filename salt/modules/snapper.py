@@ -483,8 +483,12 @@ def status(config='root', num_pre=None, num_post=None):
         snapper.CreateComparison(config, int(pre), int(post))
         files = snapper.GetFiles(config, int(pre), int(post))
         status_ret = {}
+        SUBVOLUME = list_configs()[config]['SUBVOLUME']
         for file in files:
-            status_ret[file[0]] = {'status': status_to_string(file[1])}
+            # In case of SUBVOLUME is included in filepath we remove it
+            # to prevent from filepath starting with double '/'
+            _filepath = file[0][len(SUBVOLUME):] if file[0].startswith(SUBVOLUME) else file[0]
+            status_ret[os.path.normpath(SUBVOLUME + _filepath)] = {'status': status_to_string(file[1])}
         return status_ret
     except dbus.DBusException as exc:
         raise CommandExecutionError(
@@ -546,14 +550,19 @@ def undo(config='root', files=None, num_pre=None, num_post=None):
             'Given file list contains files that are not present'
             'in the changed filelist: {0}'.format(changed - requested))
 
-    cmdret = __salt__['cmd.run']('snapper undochange {0}..{1} {2}'.format(
-        pre, post, ' '.join(requested)))
-    components = cmdret.split(' ')
-    ret = {}
-    for comp in components:
-        key, val = comp.split(':')
-        ret[key] = val
-    return ret
+    cmdret = __salt__['cmd.run']('snapper -c {0} undochange {1}..{2} {3}'.format(
+       config, pre, post, ' '.join(requested)))
+
+    try:
+        components = cmdret.split(' ')
+        ret = {}
+        for comp in components:
+            key, val = comp.split(':')
+            ret[key] = val
+        return ret
+    except ValueError as exc:
+        raise CommandExecutionError(
+            'Error while processing Snapper response: {0}'.format(cmdret))
 
 
 def _get_jid_snapshots(jid, config='root'):
@@ -627,13 +636,20 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
         if filename:
             files = [filename] if filename in files else []
 
-        pre_mount = snapper.MountSnapshot(config, pre, False) if pre else ""
-        post_mount = snapper.MountSnapshot(config, post, False) if post else ""
+        SUBVOLUME = list_configs()[config]['SUBVOLUME']
+        pre_mount = snapper.MountSnapshot(config, pre, False) if pre else SUBVOLUME
+        post_mount = snapper.MountSnapshot(config, post, False) if post else SUBVOLUME
 
         files_diff = dict()
         for filepath in [filepath for filepath in files if not os.path.isdir(filepath)]:
-            pre_file = pre_mount + filepath
-            post_file = post_mount + filepath
+
+            _filepath = filepath
+            if filepath.startswith(SUBVOLUME):
+                _filepath = filepath[len(SUBVOLUME):]
+
+            # Just in case, removing posible double '/' from the final file paths
+            pre_file = os.path.normpath(pre_mount + "/" + _filepath).replace("//", "/")
+            post_file = os.path.normpath(post_mount + "/" + _filepath).replace("//", "/")
 
             if os.path.isfile(pre_file):
                 pre_file_exists = True

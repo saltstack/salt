@@ -1649,11 +1649,12 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         '''
-        start_time = datetime.datetime.now()
+        utc_start_time = datetime.datetime.utcnow()
+        local_start_time = utc_start_time - (datetime.datetime.utcnow() - datetime.datetime.now())
         log.info('Running state [{0}] at time {1}'.format(
             low['name'].strip() if isinstance(low['name'], str)
                 else low['name'],
-            start_time.time().isoformat())
+            local_start_time.time().isoformat())
         )
         errors = self.verify_data(low)
         if errors:
@@ -1796,9 +1797,12 @@ class State(object):
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
-        finish_time = datetime.datetime.now()
-        ret['start_time'] = start_time.time().isoformat()
-        delta = (finish_time - start_time)
+        utc_finish_time = datetime.datetime.utcnow()
+        timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
+        local_finish_time = utc_finish_time - timezone_delta
+        local_start_time = utc_start_time - timezone_delta
+        ret['start_time'] = local_start_time.time().isoformat()
+        delta = (utc_finish_time - utc_start_time)
         # duration in milliseconds.microseconds
         duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
         ret['duration'] = duration
@@ -1807,7 +1811,7 @@ class State(object):
             'Completed state [{0}] at time {1} duration_in_ms={2}'.format(
                 low['name'].strip() if isinstance(low['name'], str)
                     else low['name'],
-                finish_time.time().isoformat(),
+                local_finish_time.time().isoformat(),
                 duration
             )
         )
