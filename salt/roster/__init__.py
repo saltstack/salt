@@ -54,7 +54,7 @@ def get_roster_file(options):
         raise IOError('No roster file found')
 
     if not os.access(template, os.R_OK):
-        raise IOError('Access denied to roster "{}"'.format(template))
+        raise IOError('Access denied to roster "{0}"'.format(template))
 
     return template
 
