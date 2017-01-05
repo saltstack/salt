@@ -27,6 +27,9 @@ Module to provide Elasticsearch compatibility to Salt
         elasticsearch:
           hosts:
             - '10.10.10.100:9200'
+          use_ssl: True
+          verify_certs: True
+          ca_certs: /path/to/custom_ca_bundle.pem
           number_of_shards: 1
           number_of_replicas: 0
           functions_blacklist:
@@ -79,6 +82,9 @@ def _get_instance(hosts=None, profile=None):
     '''
     es = None
     proxies = {}
+    use_ssl = False
+    ca_certs = False
+    verify_certs = False
 
     if profile is None:
         profile = 'elasticsearch'
@@ -92,6 +98,9 @@ def _get_instance(hosts=None, profile=None):
         if not hosts:
             hosts = _profile.get('hosts', None)
         proxies = _profile.get('proxies', {})
+        use_ssl = _profile.get('use_ssl', False)
+        ca_certs = _profile.get('ca_certs', False)
+        verify_certs = _profile.get('verify_certs', False)
 
     if not hosts:
         hosts = ['127.0.0.1:9200']
@@ -99,7 +108,12 @@ def _get_instance(hosts=None, profile=None):
         hosts = [hosts]
     try:
         if proxies == {}:
-            es = elasticsearch.Elasticsearch(hosts)
+            es = elasticsearch.Elasticsearch(
+                    hosts,
+                    use_ssl=use_ssl,
+                    ca_certs=ca_certs,
+                    verify_certs=verify_certs,
+                )
         else:
             # Custom connection class to use requests module with proxies
             class ProxyConnection(RequestsHttpConnection):
@@ -112,6 +126,9 @@ def _get_instance(hosts=None, profile=None):
                 hosts,
                 connection_class=ProxyConnection,
                 proxies=_profile.get('proxies', {}),
+                use_ssl=use_ssl,
+                ca_certs=ca_certs,
+                verify_certs=verify_certs,
             )
         if not es.ping():
             raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}, is it unhealthy?'.format(hosts))
