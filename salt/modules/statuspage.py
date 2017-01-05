@@ -47,6 +47,12 @@ UPDATE_FORBIDDEN_FILEDS = [
     'updated_at',  # updated_at and created_at are handled by the backend framework of the API
     'page_id'  # can't move it to a different page
 ]
+INSERT_FORBIDDEN_FILEDS = UPDATE_FORBIDDEN_FILEDS[:]  # they are the same for the moment
+
+METHOD_OK_STATUS = {
+    'POST': 201,
+    'DELETE': 204
+}
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -119,14 +125,15 @@ def _http_request(url,
                            headers=headers,
                            data=data)
     ret = _default_ret()
-    if req.status_code != 200:
+    ok_status = METHOD_OK_STATUS.get(method, 200)
+    if req.status_code != ok_status:
         ret.update({
             'comment': req.json().get('error', '')
         })
         return ret
     ret.update({
         'result': True,
-        'out': req.json()
+        'out': req.json() if method != 'DELETE' else None  # no body when DELETE
     })
     return ret
 
@@ -134,6 +141,103 @@ def _http_request(url,
 # ----------------------------------------------------------------------------------------------------------------------
 # callable functions
 # ----------------------------------------------------------------------------------------------------------------------
+
+
+def create(endpoint='incidents',
+           api_url=None,
+           page_id=None,
+           api_key=None,
+           api_version=None,
+           **kwargs):
+    '''
+    Insert a new entry under a specific endpoint.
+
+    endpoint: incidents
+        Insert under this specific endpoint.
+
+    page_id
+        Page ID. Can also be specified in the config file.
+
+    api_key
+        API key. Can also be specified in the config file.
+
+    api_version: 1
+        API version. Can also be specified in the config file.
+
+    api_url
+        Custom API URL in case the user has a StatusPage service running in a custom environment.
+
+    **kwargs
+        Other params.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' statuspage.create endpoint='components' name='my component' group_id='993vgplshj12'
+
+    Example output:
+
+    .. code-block:: yaml
+
+        minion:
+            ----------
+            comment:
+            out:
+                ----------
+                created_at:
+                    2017-01-05T19:35:27.135Z
+                description:
+                    None
+                group_id:
+                    993vgplshj12
+                id:
+                    mjkmtt5lhdgc
+                name:
+                    my component
+                page_id:
+                    ksdhgfyiuhaa
+                position:
+                    7
+                status:
+                    operational
+                updated_at:
+                    2017-01-05T19:35:27.135Z
+            result:
+                True
+    '''
+    params = _get_api_params(api_url=api_url,
+                             page_id=page_id,
+                             api_key=api_key,
+                             api_version=api_version)
+    if not _validate_api_params(params):
+        log.error('Invalid API params.')
+        log.error(params)
+        return {
+            'result': False,
+            'comment': 'Invalid API params. See log for details'
+        }
+    endpoint_sg = endpoint[:-1]  # singular
+    headers = _get_headers(params)
+    create_url = '{base_url}/v{version}/pages/{page_id}/{endpoint}.json'.format(
+        base_url=params['api_url'],
+        version=params['api_version'],
+        page_id=params['api_page_id'],
+        endpoint=endpoint
+    )
+    change_request = {}
+    for karg, warg in six.iteritems(kwargs):
+        if warg is None or karg.startswith('__') or karg in INSERT_FORBIDDEN_FILEDS:
+            continue
+        change_request_key = '{endpoint_sg}[{karg}]'.format(
+            endpoint_sg=endpoint_sg,
+            karg=karg
+        )
+        change_request[change_request_key] = warg
+    return _http_request(create_url,
+                         method='POST',
+                         headers=headers,
+                         data=change_request)
 
 
 def retrieve(endpoint='incidents',
@@ -374,3 +478,76 @@ def update(endpoint='incidents',
                          method='PATCH',
                          headers=headers,
                          data=change_request)
+
+
+def delete(endpoint='incidents',
+           id=None,
+           api_url=None,
+           page_id=None,
+           api_key=None,
+           api_version=None):
+    '''
+    Remove an entry from an endpoint.
+
+    endpoint: incidents
+        Request a specific endpoint.
+
+    page_id
+        Page ID. Can also be specified in the config file.
+
+    api_key
+        API key. Can also be specified in the config file.
+
+    api_version: 1
+        API version. Can also be specified in the config file.
+
+    api_url
+        Custom API URL in case the user has a StatusPage service running in a custom environment.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' statuspage.delete endpoint='components' id='ftgks51sfs2d'
+
+    Example output:
+
+    .. code-block:: yaml
+
+        minion:
+            ----------
+            comment:
+            out:
+                None
+            result:
+                True
+    '''
+    params = _get_api_params(api_url=api_url,
+                             page_id=page_id,
+                             api_key=api_key,
+                             api_version=api_version)
+    if not _validate_api_params(params):
+        log.error('Invalid API params.')
+        log.error(params)
+        return {
+            'result': False,
+            'comment': 'Invalid API params. See log for details'
+        }
+    endpoint_sg = endpoint[:-1]  # singular
+    if not id:
+        log.error('Invalid {endpoint} ID'.format(endpoint=endpoint_sg))
+        return {
+            'result': False,
+            'comment': 'Please specify a valid {endpoint} ID'.format(endpoint=endpoint_sg)
+        }
+    headers = _get_headers(params)
+    delete_url = '{base_url}/v{version}/pages/{page_id}/{endpoint}/{id}.json'.format(
+        base_url=params['api_url'],
+        version=params['api_version'],
+        page_id=params['api_page_id'],
+        endpoint=endpoint,
+        id=id
+    )
+    return _http_request(delete_url,
+                         method='DELETE',
+                         headers=headers)
