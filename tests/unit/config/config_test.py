@@ -553,6 +553,33 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                                                           overrides,
                                                           defaults=DEFAULT), ret)
 
+    def test_apply_vm_profiles_config_extend_override_success(self):
+        '''
+        Tests profile extends and recursively merges data elements
+        '''
+        self.maxDiff = None
+        providers = {'test-config': {'ec2': {'profiles': {}, 'driver': 'ec2'}}}
+        overrides = {'Fedora': {'image': 'test-image-2',
+                                'extends': 'dev-instances',
+                                'minion': {'grains': {'stage': 'experimental'}}},
+                     'conf_file': PATH,
+                     'dev-instances': {'ssh_username': 'test_user',
+                                       'provider': 'test-config',
+                                       'minion': {'grains': {'role': 'webserver'}}}}
+        ret = {'Fedora': {'profile': 'Fedora',
+                          'ssh_username': 'test_user',
+                          'image': 'test-image-2',
+                          'minion': {'grains': {'role': 'webserver',
+                                                'stage': 'experimental'}},
+                          'provider': 'test-config:ec2'},
+               'dev-instances': {'profile': 'dev-instances',
+                                 'ssh_username': 'test_user',
+                                 'minion': {'grains': {'role': 'webserver'}},
+                                 'provider': 'test-config:ec2'}}
+        self.assertEqual(sconfig.apply_vm_profiles_config(providers,
+                                                          overrides,
+                                                          defaults=DEFAULT), ret)
+
     # apply_cloud_providers_config tests
 
     def test_apply_cloud_providers_config_same_providers(self):
