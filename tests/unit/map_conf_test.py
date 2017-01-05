@@ -82,10 +82,10 @@ class MapConfTest(TestCase):
 
     @patch('salt.cloud.Map.read', MagicMock(return_value=EXAMPLE_MAP))
     def test_cloud_map_merge_conf(self):
-        self.maxDiff = None
         '''
         Ensure that nested values can be selectivly overridden in a map file
         '''
+        self.maxDiff = None
         opts = {'extension_modules': '/var/cache/salt/master/extmods',
                 'providers': EXAMPLE_PROVIDERS, 'profiles': EXAMPLE_PROFILES}
         cloud_map = salt.cloud.Map(opts)
