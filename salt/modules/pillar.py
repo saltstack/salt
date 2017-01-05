@@ -91,6 +91,7 @@ def get(key,
             raise SaltInvocationError(
                 'default must be a dictionary when merge=True'
             )
+        default = copy.deepcopy(default)
         ret = salt.utils.traverse_dict_and_list(pillar_dict, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
