@@ -550,7 +550,6 @@ def add_volume_bricks(name, bricks):
     return True
 
 
-
 def enable_quota_volume(name):
     '''
     Enable quota on a glusterfs volume.
@@ -645,7 +644,6 @@ def list_quota_volume(name):
         Name of the gluster volume
 
     '''
-    
     cmd = 'volume quota {0}'.format(name)
     cmd += ' list'
 
@@ -659,4 +657,3 @@ def list_quota_volume(name):
         ret[path] = _etree_to_dict(limit)
 
     return ret
-
