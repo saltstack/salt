@@ -40,6 +40,7 @@ import logging
 import re
 import sys
 import shlex
+import os
 
 # Import salt libs
 import salt.utils
