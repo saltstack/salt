@@ -888,6 +888,15 @@ def extracted(name,
                                                saltenv=__env__)
         log.debug('file.managed: {0}'.format(file_result))
 
+        # Prevent a traceback if errors prevented the above state from getting
+        # off the ground.
+        if isinstance(file_result, list):
+            try:
+                ret['comment'] = '\n'.join(file_result)
+            except TypeError:
+                ret['comment'] = '\n'.join([str(x) for x in file_result])
+            return ret
+
         # Get actual state result. The state.single return is a single-element
         # dictionary with the state's unique ID at the top level, and its value
         # being the state's return dictionary. next(iter(dict_name)) will give
