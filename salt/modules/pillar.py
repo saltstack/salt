@@ -16,7 +16,7 @@ import salt.ext.six as six
 import salt.pillar
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __proxyenabled__ = ['*']
 
@@ -87,6 +87,10 @@ def get(key,
     pillar_dict = __pillar__ if saltenv is None else items(saltenv=saltenv)
 
     if merge:
+        if not isinstance(default, dict):
+            raise SaltInvocationError(
+                'default must be a dictionary when merge=True'
+            )
         ret = salt.utils.traverse_dict_and_list(pillar_dict, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
