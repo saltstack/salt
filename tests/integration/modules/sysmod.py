@@ -47,7 +47,8 @@ class SysModuleTest(integration.ModuleCase):
                 'state.apply',
                 'pip.iteritems',
                 'cmd.win_runas',
-                'status.list2cmdline'
+                'status.list2cmdline',
+                'travisci.parse_qs',
         )
 
         for fun in docs:
