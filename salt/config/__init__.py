@@ -3321,6 +3321,12 @@ def api_config(path):
     # Let's override them with salt's master opts
     opts.update(client_config(path, defaults=DEFAULT_MASTER_OPTS))
 
+    # Let's set the pidfile and log_file values in opts to api settings
+    opts.update({
+        'pidfile': opts.get('api_pidfile', DEFAULT_API_OPTS['api_pidfile']),
+        'log_file': opts.get('api_logfile', DEFAULT_API_OPTS['api_logfile']),
+    })
+
     prepend_root_dir(opts, [
         'api_pidfile',
         'api_logfile',
