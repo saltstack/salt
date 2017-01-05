@@ -72,7 +72,7 @@ def beacon(config):
     updates = bot.get_updates(limit=100, timeout=0, network_delay=10)
 
     log.debug('Num updates: {0}'.format(len(updates)))
-    if len(updates) < 1:
+    if not updates:
         log.debug('Telegram Bot beacon has no new messages')
         return ret
 
@@ -90,6 +90,6 @@ def beacon(config):
     bot.get_updates(offset=latest_update_id + 1)
 
     log.debug('Emitting {0} messages.'.format(len(output['msgs'])))
-    if len(output['msgs']) > 0:
+    if output['msgs']:
         ret.append(output)
     return ret
