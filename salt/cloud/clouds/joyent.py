@@ -1134,5 +1134,3 @@ def query(action=None,
         return_content = yaml.safe_load(content)
 
     return [result['status'], return_content]
-
-
