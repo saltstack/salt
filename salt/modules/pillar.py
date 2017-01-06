@@ -9,6 +9,7 @@ import collections
 
 # Import third party libs
 import os
+import copy
 import yaml
 import salt.ext.six as six
 
