@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
  Namecheap management
 
  General Notes
@@ -37,8 +37,8 @@
         #Sandbox url
         #namecheap.url: https://api.sandbox.namecheap.xml.response
 
-"""
-
+'''
+from __future__ import absolute_import
 
 CAN_USE_NAMECHEAP = True
 
@@ -50,16 +50,16 @@ except ImportError:
 
 
 def __virtual__():
-    """
+    '''
     Check to make sure requests and xml are installed and requests
-    """
+    '''
     if CAN_USE_NAMECHEAP:
         return 'namecheap_users'
     return False
 
 
 def get_balances():
-    """
+    '''
     Gets information about fund in the user's account.This method returns the following information:
     Available Balance, Account Balance, Earned Amount, Withdrawable Amount and Funds Required for AutoRenew.
 
@@ -67,7 +67,7 @@ def get_balances():
     the FundsRequiredForAutoRenew attribute shows the amount needed in your Namecheap account to complete auto renewal.
 
     returns a dictionary of the results
-    """
+    '''
     opts = salt.utils.namecheap.get_opts('namecheap.users.getBalances')
 
     response_xml = salt.utils.namecheap.get_request(opts)
