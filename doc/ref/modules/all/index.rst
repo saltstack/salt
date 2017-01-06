@@ -350,6 +350,7 @@ execution modules
     snapper
     state
     status
+    statuspage
     stormpath
     supervisord
     suse_apache
