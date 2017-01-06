@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
  Namecheap management
 
  General Notes
@@ -37,7 +37,7 @@
         #Sandbox url
         #namecheap.url: https://api.sandbox.namecheap.xml.response
 
-"""
+'''
 
 
 CAN_USE_NAMECHEAP = True
@@ -50,9 +50,9 @@ except ImportError:
 
 
 def __virtual__():
-    """
+    '''
     Check to make sure requests and xml are installed and requests
-    """
+    '''
     if CAN_USE_NAMECHEAP:
         return 'namecheap_ssl'
     return False
@@ -64,7 +64,7 @@ def reissue(csr_file,
             approver_email=None,
             http_dc_validation=False,
             **kwargs):
-    """
+    '''
     Reissues a purchased SSL certificate
 
     returns a dictionary of result values
@@ -101,7 +101,7 @@ def reissue(csr_file,
 
     Other required parameters:
         please see https://www.namecheap.com/support/api/methods/ssl/reissue.aspx
-    """
+    '''
     return __get_certificates('namecheap.ssl.reissue', "SSLReissueResult", csr_file, certificate_id, web_server_type,
                               approver_email, http_dc_validation, kwargs)
 
@@ -112,7 +112,7 @@ def activate(csr_file,
              approver_email=None,
              http_dc_validation=False,
              **kwargs):
-    """
+    '''
     Activates a newly purchased SSL certificate
 
     returns a dictionary of result values
@@ -149,8 +149,8 @@ def activate(csr_file,
 
     Other required parameters:
         please see https://www.namecheap.com/support/api/methods/ssl/activate.aspx
-    """
-    return __get_certificates('namecheap.ssl.activate', "SSLActivateResult", csr_file, certificate_id, web_server_type,
+    '''
+    return __get_certificates('namecheap.ssl.activate', 'SSLActivateResult', csr_file, certificate_id, web_server_type,
                               approver_email, http_dc_validation, kwargs)
 
 
@@ -197,12 +197,12 @@ def __get_certificates(command,
         raise Exception('Invalid option for web_server_type=' + web_server_type)
 
     if approver_email is not None and http_dc_validation:
-        salt.utils.namecheap.log.error("approver_email and http_dc_validation cannot both have values")
-        raise Exception("approver_email and http_dc_validation cannot both have values")
+        salt.utils.namecheap.log.error('approver_email and http_dc_validation cannot both have values')
+        raise Exception('approver_email and http_dc_validation cannot both have values')
 
     if approver_email is None and not http_dc_validation:
-        salt.utils.namecheap.log.error("approver_email or http_dc_validation must have a value")
-        raise Exception("approver_email or http_dc_validation must have a value")
+        salt.utils.namecheap.log.error('approver_email or http_dc_validation must have a value')
+        raise Exception('approver_email or http_dc_validation must have a value')
 
     opts = salt.utils.namecheap.get_opts(command)
 
@@ -231,13 +231,13 @@ def __get_certificates(command,
     result = salt.utils.namecheap.atts_to_dict(sslresult)
 
     if http_dc_validation:
-        validation_tag = sslresult.getElementsByTagName("HttpDCValidation")
+        validation_tag = sslresult.getElementsByTagName('HttpDCValidation')
         if validation_tag is not None and len(validation_tag) > 0:
             validation_tag = validation_tag[0]
 
-            if validation_tag.getAttribute("ValueAvailable").lower() == "true":
-                validation_dict = {'filename': validation_tag.getElementsByTagName("FileName")[0].childNodes[0].data,
-                                   'filecontent': validation_tag.getElementsByTagName("FileContent")[0].childNodes[
+            if validation_tag.getAttribute('ValueAvailable').lower() == 'true':
+                validation_dict = {'filename': validation_tag.getElementsByTagName('FileName')[0].childNodes[0].data,
+                                   'filecontent': validation_tag.getElementsByTagName('FileContent')[0].childNodes[
                                        0].data}
                 result['httpdcvalidation'] = validation_dict
 
@@ -245,7 +245,7 @@ def __get_certificates(command,
 
 
 def renew(years, certificate_id, certificate_type, promotion_code=None):
-    """
+    '''
     Renews an SSL certificate if it is ACTIVE and Expires <= 30 days
 
     returns a dictionary with the following values:
@@ -279,7 +279,7 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
     Optional parameters:
         promotional_code
             string  Promotional (coupon) code for the certificate
-    """
+    '''
 
     valid_certs = set(['QuickSSL Premium',
                        'RapidSSL',
@@ -331,12 +331,12 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
     if response_xml is None:
         return {}
 
-    sslrenewresult = response_xml.getElementsByTagName("SSLRenewResult")[0]
+    sslrenewresult = response_xml.getElementsByTagName('SSLRenewResult')[0]
     return salt.utils.namecheap.atts_to_dict(sslrenewresult)
 
 
 def create(years, certificate_type, promotion_code=None, sans_to_add=None):
-    """
+    '''
     Creates a new SSL certificate
 
     returns a dictionary with the following values:
@@ -435,7 +435,7 @@ Symantec  Secure Site                      1                 25              24
 Symantec  Secure Site                      1                 25              24
           Pro
 --------------------------------------------------------------------------------
-    """
+    '''
     valid_certs = set(['QuickSSL Premium',
                        'RapidSSL',
                        'RapidSSL Wildcard',
@@ -488,8 +488,8 @@ Symantec  Secure Site                      1                 25              24
     if response_xml is None:
         return {}
 
-    sslcreateresult = response_xml.getElementsByTagName("SSLCreateResult")[0]
-    sslcertinfo = sslcreateresult.getElementsByTagName("SSLCertificate")[0]
+    sslcreateresult = response_xml.getElementsByTagName('SSLCreateResult')[0]
+    sslcertinfo = sslcreateresult.getElementsByTagName('SSLCertificate')[0]
 
     result = salt.utils.namecheap.atts_to_dict(sslcreateresult)
     result.update(salt.utils.namecheap.atts_to_dict(sslcertinfo))
@@ -497,7 +497,7 @@ Symantec  Secure Site                      1                 25              24
 
 
 def parse_csr(csr_file, certificate_type, http_dc_validation=False):
-    """
+    '''
     Parses the CSR
 
     returns a dictionary of result values
@@ -526,7 +526,7 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
         http_dc_validation
             bool  True if a Comodo certificate and validation should be done with files
                   instead of emails and to return the info to do so
-    """
+    '''
     valid_certs = set(['QuickSSL Premium',
                        'RapidSSL',
                        'RapidSSL Wildcard',
@@ -574,13 +574,13 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
 
     response_xml = salt.utils.namecheap.post_request(opts)
 
-    sslparseresult = response_xml.getElementsByTagName("SSLParseCSRResult")[0]
+    sslparseresult = response_xml.getElementsByTagName('SSLParseCSRResult')[0]
 
     return salt.utils.namecheap.xml_to_dict(sslparseresult)
 
 
 def get_list(**kwargs):
-    """
+    '''
     Returns a list of SSL certificates for a particular user
 
     Optional parameters:
@@ -609,7 +609,7 @@ def get_list(**kwargs):
                                         SSLTYPE,SSLTYPE_DESC,
                                         EXPIREDATETIME,EXPIREDATETIME_DESC,
                                         Host_Name,Host_Name_DESC
-    """
+    '''
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.getList')
     for key, value in kwargs.iteritems():
         opts[key] = value
@@ -619,10 +619,10 @@ def get_list(**kwargs):
     if response_xml is None:
         return []
 
-    ssllistresult = response_xml.getElementsByTagName("SSLListResult")[0]
+    ssllistresult = response_xml.getElementsByTagName('SSLListResult')[0]
 
     result = []
-    for e in ssllistresult.getElementsByTagName("SSL"):
+    for e in ssllistresult.getElementsByTagName('SSL'):
         ssl = salt.utils.namecheap.atts_to_dict(e)
         result.append(ssl)
 
@@ -630,7 +630,7 @@ def get_list(**kwargs):
 
 
 def get_info(certificate_id, returncertificate=False, returntype=None):
-    """
+    '''
     Retrieves information about the requested SSL certificate
 
     returns a dictionary of information about the SSL certificate with two keys
@@ -647,7 +647,7 @@ def get_info(certificate_id, returncertificate=False, returntype=None):
     returntype
         string  Type of returned certificate.  Parameter takes "Individual (for X.509 format) or PKCS7"
                 Required if returncertificate is True
-    """
+    '''
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.getinfo')
     opts['certificateID'] = certificate_id
 
@@ -666,6 +666,6 @@ def get_info(certificate_id, returncertificate=False, returntype=None):
     if response_xml is None:
         return {}
 
-    sslinforesult = response_xml.getElementsByTagName("SSLGetInfoResult")[0]
+    sslinforesult = response_xml.getElementsByTagName('SSLGetInfoResult')[0]
 
     return salt.utils.namecheap.xml_to_dict(sslinforesult)
