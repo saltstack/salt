@@ -58,6 +58,41 @@ class PillarModuleTestCase(TestCase):
         else:
             self.assertEqual(pillarmod.ls(), ['a', 'b'])
 
+    def test_pillar_get_default_merge(self):
+        pillarmod.__opts__ = {}
+        pillarmod.__pillar__ = {'key': 'value'}
+        default = {'default': 'plop'}
+
+        res = pillarmod.get(key='key', default=default)
+        self.assertEqual("value", res)
+
+        res = pillarmod.get(key='missing pillar', default=default)
+        self.assertEqual({'default': 'plop'}, res)
+
+    def test_pillar_get_default_merge_regression_38558(self):
+        """Test for pillar.get(key=..., default=..., merge=True)
+
+        Do not update the ``default`` value when using ``merge=True``.
+
+        See: https://github.com/saltstack/salt/issues/38558
+        """
+
+        pillarmod.__opts__ = {}
+        pillarmod.__pillar__ = {'l1': {'l2': {'l3': 42}}}
+
+        res = pillarmod.get(key='l1')
+        self.assertEqual({'l2': {'l3': 42}}, res)
+
+        default = {'l2': {'l3': 43}}
+
+        res = pillarmod.get(key='l1', default=default)
+        self.assertEqual({'l2': {'l3': 42}}, res)
+        self.assertEqual({'l2': {'l3': 43}}, default)
+
+        res = pillarmod.get(key='l1', default=default, merge=True)
+        self.assertEqual({'l2': {'l3': 42}}, res)
+        self.assertEqual({'l2': {'l3': 43}}, default)
+
 
 # gracinet: not sure this is really useful, but other test modules have this as well
 if __name__ == '__main__':

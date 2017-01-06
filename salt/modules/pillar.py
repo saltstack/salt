@@ -100,6 +100,7 @@ def get(key,
         ret = salt.utils.traverse_dict_and_list(pillar_dict, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
+            default = copy.deepcopy(default)
             return salt.utils.dictupdate.update(default, ret, merge_lists=opt_merge_lists)
 
     ret = salt.utils.traverse_dict_and_list(pillar_dict,
