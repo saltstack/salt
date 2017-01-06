@@ -203,8 +203,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         Return a list of minions from a given target
         '''
         minion_list = self.local_client.gather_minions(self.config['tgt'], self.selected_target_option or 'glob')
-        self._output_ret( minion_list, self.config.get('output', 'nested'))
-
+        self._output_ret(minion_list, self.config.get('output', 'nested'))
 
     def _run_batch(self):
         import salt.cli.batch
