@@ -7,35 +7,46 @@ from __future__ import absolute_import
 import salt.exceptions
 import salt.loader
 import salt.template
-from salt.utils.dictupdate import merge, update
+import salt.utils.dictupdate
 
-update.__doc__ = update.__doc__ + '''\
+def update(dest, upd, recursive_update=True, merge_lists=False):
+    '''
+    Merge ``upd`` recursively into ``dest``
 
-CLI Example:
+    If ``merge_lists=True``, will aggregate list object types instead of
+    replacing. This behavior is only activated when ``recursive_update=True``.
 
-.. code-block:: shell
+    CLI Example:
 
-    salt '*' slsutil.update '{foo: Foo}' '{bar: Bar}'
+    .. code-block:: shell
 
-'''
+        salt '*' slsutil.update '{foo: Foo}' '{bar: Bar}'
 
-merge.__doc__ = '''\
-Merge a data structure into another by choosing a merge strategy
+    '''
+    return salt.utils.dictupdate.update(dest, upd, recursive_update,
+            merge_lists)
 
-Strategies:
 
-* aggregate
-* list
-* overwrite
-* recurse
-* smart
+def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
+    '''
+    Merge a data structure into another by choosing a merge strategy
 
-CLI Example:
+    Strategies:
 
-.. code-block:: shell
+    * aggregate
+    * list
+    * overwrite
+    * recurse
+    * smart
 
-    salt '*' slsutil.merge '{foo: Foo}' '{bar: Bar}'
-'''
+    CLI Example:
+
+    .. code-block:: shell
+
+        salt '*' slsutil.merge '{foo: Foo}' '{bar: Bar}'
+    '''
+    return salt.utils.dictupdate.merge(obj_a, obj_b, strategy, renderer,
+            merge_lists)
 
 
 def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
