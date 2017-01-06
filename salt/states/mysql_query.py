@@ -152,7 +152,7 @@ def run_file(name,
     # The database is present, execute the query
     query_result = __salt__['mysql.file_query'](database, query_file, **connection_args)
 
-    if query_result == False:
+    if query_result is False:
         ret['result'] = False
         return ret
 
