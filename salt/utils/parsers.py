@@ -1983,9 +1983,16 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             help=('Dump the master configuration values')
         )
+        self.add_option(
+            '--preview-target',
+            dest='preview_target',
+            action='store_true',
+            default=False,
+            help=('Show the minions expected to match a target. Does not issue any command.')
+        )
 
     def _mixin_after_parsed(self):
-        if len(self.args) <= 1 and not self.options.doc:
+        if len(self.args) <= 1 and not self.options.doc and not self.options.preview_target:
             try:
                 self.print_help()
             except Exception:  # pylint: disable=broad-except
@@ -2001,6 +2008,10 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             cfg = config.master_config(self.get_config_file_path())
             sys.stdout.write(yaml.dump(cfg, default_flow_style=False))
             sys.exit(salt.defaults.exitcodes.EX_OK)
+
+        if self.options.preview_target:
+            # Insert dummy arg which won't be used
+            self.args.append('not_a_valid_command')
 
         if self.options.doc:
             # Include the target
