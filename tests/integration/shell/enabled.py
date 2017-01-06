@@ -44,9 +44,13 @@ class EnabledTest(integration.ModuleCase):
         ret = self.run_function('cmd.run', [self.cmd], python_shell=False)
         self.assertEqual(ret, disabled_ret)
 
-    def test_template_default_enabled(self):
+    def test_template_shell(self):
         '''
-        ensure that python_shell defaults to True for templates
+        Test cmd.shell works correctly when using a template.
+
+        Note: This test used to test that python_shell defaulted to True for templates
+        in releases before Nitrogen. The cmd.run --> cmd.shell aliasing was removed in
+        Nitrogen. Templates should now be using cmd.shell.
         '''
         state_name = 'template_shell_enabled'
         state_filename = state_name + '.sls'
@@ -58,7 +62,7 @@ class EnabledTest(integration.ModuleCase):
         try:
             with salt.utils.fopen(state_file, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
-                {{% set shell_enabled = salt['cmd.run']("{0}").strip() %}}
+                {{% set shell_enabled = salt['cmd.shell']("{0}").strip() %}}
 
                 shell_enabled:
                   test.configurable_test_state:
@@ -70,9 +74,10 @@ class EnabledTest(integration.ModuleCase):
         finally:
             os.remove(state_file)
 
-    def test_template_disabled(self):
+    def test_template_default_disabled(self):
         '''
-        test shell disabled output for templates
+        test shell disabled output for templates (python_shell=False is the default
+        beginning with the Nitrogen release).
         '''
         state_name = 'template_shell_disabled'
         state_filename = state_name + '.sls'
@@ -86,7 +91,7 @@ class EnabledTest(integration.ModuleCase):
         try:
             with salt.utils.fopen(state_file, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
-                {{% set shell_disabled = salt['cmd.run']("{0}", python_shell=False) %}}
+                {{% set shell_disabled = salt['cmd.run']("{0}") %}}
 
                 shell_enabled:
                   test.configurable_test_state:
