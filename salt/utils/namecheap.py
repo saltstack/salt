@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
  Namecheap Management library of common functions used by
  all the namecheap execution modules
 
@@ -15,8 +15,8 @@
             pip install requests
 
  - As saltstack depends on ``requests`` this shouldn't be a problem
-"""
-
+'''
+from __future__ import absolute_import
 import logging
 import salt.utils
 import requests
@@ -77,7 +77,7 @@ def xml_to_dict(xml):
             return xml.firstChild.data
         else:
             return None
-    elif xml.childNodes.length == 1 and
+    elif xml.childNodes.length == 1 and \
          xml.childNodes[0].nodeType == xml.CDATA_SECTION_NODE:
         return xml.childNodes[0].data
     else:
