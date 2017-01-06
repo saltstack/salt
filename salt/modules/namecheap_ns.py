@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
  Namecheap management
 
  General Notes
@@ -37,7 +37,7 @@
         #Sandbox url
         #namecheap.url: https://api.sandbox.namecheap.xml.response
 
-"""
+'''
 
 
 CAN_USE_NAMECHEAP = True
@@ -53,16 +53,16 @@ __virtualname__ = 'namecheap_domains_ns'
 
 
 def __virtual__():
-    """
+    '''
     Check to make sure requests and xml are installed and requests
-    """
+    '''
     if CAN_USE_NAMECHEAP:
         return 'namecheap_domains_ns'
     return False
 
 
 def get_info(sld, tld, nameserver):
-    """
+    '''
     Retrieves information about a registered nameserver
 
     returns the following information in a dictionary
@@ -78,7 +78,7 @@ def get_info(sld, tld, nameserver):
 
     nameserver
         string  Nameserver to retrieve
-    """
+    '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.ns.delete')
     opts['SLD'] = sld
     opts['TLD'] = tld
@@ -88,13 +88,13 @@ def get_info(sld, tld, nameserver):
     if response_xml is None:
         return {}
 
-    domainnsinforesult = response_xml.getElementsByTagName("DomainNSInfoResult")[0]
+    domainnsinforesult = response_xml.getElementsByTagName('DomainNSInfoResult')[0]
 
     return salt.utils.namecheap.xml_to_dict(domainnsinforesult)
 
 
 def update(sld, tld, nameserver, old_ip, new_ip):
-    """
+    '''
     Deletes a nameserver
 
     returns True if the nameserver was updated successfully
@@ -113,7 +113,7 @@ def update(sld, tld, nameserver, old_ip, new_ip):
 
     new_ip
         string  new ip address
-    """
+    '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.ns.update')
     opts['SLD'] = sld
     opts['TLD'] = tld
@@ -125,12 +125,12 @@ def update(sld, tld, nameserver, old_ip, new_ip):
     if response_xml is None:
         return False
 
-    domainnsupdateresult = response_xml.getElementsByTagName("DomainNSUpdateResult")[0]
-    return salt.utils.namecheap.string_to_value(domainnsupdateresult.getAttribute("IsSuccess"))
+    domainnsupdateresult = response_xml.getElementsByTagName('DomainNSUpdateResult')[0]
+    return salt.utils.namecheap.string_to_value(domainnsupdateresult.getAttribute('IsSuccess'))
 
 
 def delete(sld, tld, nameserver):
-    """
+    '''
     Deletes a nameserver
 
     returns True if the nameserver was deleted successfully
@@ -143,7 +143,7 @@ def delete(sld, tld, nameserver):
 
     nameserver
         string  Nameserver to create
-    """
+    '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.ns.delete')
     opts['SLD'] = sld
     opts['TLD'] = tld
@@ -153,12 +153,12 @@ def delete(sld, tld, nameserver):
     if response_xml is None:
         return False
 
-    domainnsdeleteresult = response_xml.getElementsByTagName("DomainNSDeleteResult")[0]
-    return salt.utils.namecheap.string_to_value(domainnsdeleteresult.getAttribute("IsSuccess"))
+    domainnsdeleteresult = response_xml.getElementsByTagName('DomainNSDeleteResult')[0]
+    return salt.utils.namecheap.string_to_value(domainnsdeleteresult.getAttribute('IsSuccess'))
 
 
 def create(sld, tld, nameserver, ip):
-    """
+    '''
     Creates a new nameserver
 
     returns True if the nameserver was created successfully
@@ -174,7 +174,7 @@ def create(sld, tld, nameserver, ip):
 
     ip
         string  Nameserver IP address
-    """
+    '''
 
     opts = salt.utils.namecheap.get_opts('namecheap.domains.ns.create')
     opts['SLD'] = sld
@@ -186,5 +186,5 @@ def create(sld, tld, nameserver, ip):
     if response_xml is None:
         return False
 
-    domainnscreateresult = response_xml.getElementsByTagName("DomainNSCreateResult")[0]
-    return salt.utils.namecheap.string_to_value(domainnscreateresult.getAttribute("IsSuccess"))
+    domainnscreateresult = response_xml.getElementsByTagName('DomainNSCreateResult')[0]
+    return salt.utils.namecheap.string_to_value(domainnscreateresult.getAttribute('IsSuccess'))
