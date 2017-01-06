@@ -888,9 +888,15 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # will go through the logging listener.
             return
 
+        # ensure that yaml stays valid with log output
+        if getattr(self.options, 'output', None) == 'yaml':
+            log_format = '# {0}'.format(self.config['log_fmt_console'])
+        else:
+            log_format = self.config['log_fmt_console']
+
         log.setup_console_logger(
             self.config['log_level'],
-            log_format=self.config['log_fmt_console'],
+            log_format=log_format,
             date_format=self.config['log_datefmt_console']
         )
         for name, level in six.iteritems(self.config.get('log_granular_levels', {})):
