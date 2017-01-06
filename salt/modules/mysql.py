@@ -716,7 +716,7 @@ def file_query(database, file_name, **connection_args):
             query_result = query(database, query_string, **connection_args)
             query_string = ""
 
-            if query_result == False:
+            if query_result is False:
                 # Fail out on error
                 return False
 
