@@ -48,6 +48,7 @@ Connection module for Amazon EFS
 
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 from distutils.version import LooseVersion as _LooseVersion
 
