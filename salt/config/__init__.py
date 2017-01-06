@@ -1902,7 +1902,7 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
             if include:
                 opts.update(include_config(include, fn_, verbose))
 
-            salt.utils.dictupdate.update(configuration, opts)
+            salt.utils.dictupdate.update(configuration, opts, True, True)
 
     return configuration
 
