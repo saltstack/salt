@@ -49,16 +49,16 @@ except ImportError:
 
 
 def __virtual__():
-    """
+    '''
     Check to make sure requests and xml are installed and requests
-    """
+    '''
     if CAN_USE_NAMECHEAP:
         return 'namecheap_domains'
     return False
 
 
 def reactivate(domain_name):
-    """
+    '''
     Try to reactivate the expired domain name
 
     returns the following information in a dictionary
@@ -66,7 +66,7 @@ def reactivate(domain_name):
         amount charged for reactivation
         orderid unique integer value for the order
         transactionid unique integer value for the transaction
-    """
+    '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.reactivate')
     opts['DomainName'] = domain_name
 
@@ -75,12 +75,12 @@ def reactivate(domain_name):
     if response_xml is None:
         return {}
 
-    domainreactivateresult = response_xml.getElementsByTagName("DomainReactivateResult")[0]
+    domainreactivateresult = response_xml.getElementsByTagName('DomainReactivateResult')[0]
     return salt.utils.namecheap.xml_to_dict(domainreactivateresult)
 
 
 def renew(domain_name, years, promotion_code=None):
-    """
+    '''
     Try to renew the specified expiring domain name for a specified number of years
 
     returns the following information in a dictionary
@@ -100,7 +100,7 @@ def renew(domain_name, years, promotion_code=None):
     Optional parameters:
         promotion_code
             string Promotional code for renewing the domain
-    """
+    '''
 
     opts = salt.utils.namecheap.get_opts('namecheap.domains.renew')
     opts['DomainName'] = domain_name
@@ -118,7 +118,7 @@ def renew(domain_name, years, promotion_code=None):
 
 
 def create(domain_name, years, **kwargs):
-    """
+    '''
     Try to create the specified domain name for the specified number of years
 
     returns the following information in a dictionary
@@ -142,7 +142,7 @@ def create(domain_name, years, **kwargs):
 
         If registering TLDs, please refer to https://www.namecheap.com/support/api/extended-attributes.aspx
         for additional parameters
-    """
+    '''
     idn_codes = set(['afr',
                      'alb',
                      'ara',
@@ -311,7 +311,7 @@ def create(domain_name, years, **kwargs):
 
 
 def check(*domains_to_check):
-    """
+    '''
     Checks the availability of domains
 
     returns a dictionary where the domain name is the key and
@@ -319,7 +319,7 @@ def check(*domains_to_check):
 
     domains_to_check
         array of strings  List of domains to check
-    """
+    '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.check')
     opts['DomainList'] = ','.join(domains_to_check)
 
@@ -337,14 +337,14 @@ def check(*domains_to_check):
 
 
 def get_info(domain_name):
-    """
+    '''
     Returns information about the requested domain
 
     returns a dictionary of information about the domain_name
 
     domain_name
         string  Domain name to get information about
-    """
+    '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.getinfo')
     opts['DomainName'] = domain_name
 
@@ -359,9 +359,9 @@ def get_info(domain_name):
 
 
 def get_tld_list():
-    """
+    '''
     Returns a list of TLDs as objects
-    """
+    '''
 
     response_xml = salt.utils.namecheap.get_request(salt.utils.namecheap.get_opts('namecheap.domains.gettldlist'))
 
@@ -389,7 +389,7 @@ def get_list(list_type=None,
              page=None,
              page_size=None,
              sort_by=None):
-    """
+    '''
     Returns a list of domains for the particular user as a list of objects
     offset by ``page`` length of ``page_size``
 
@@ -412,7 +412,7 @@ def get_list(list_type=None,
     sort_by
         string  Possible values are NAME/NAME_DESC/EXPIREDATE/
                 EXPIREDATE_DESC/CREATEDATE/CREATEDATE_DESC
-    """
+    '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.getList')
 
     if list_type is not None:
