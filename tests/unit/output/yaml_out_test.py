@@ -5,8 +5,6 @@ unittests for yaml outputter
 
 # Import Python Libs
 from __future__ import absolute_import
-from StringIO import StringIO
-import sys
 
 # Import Salt Testing Libs
 from salttesting import TestCase
