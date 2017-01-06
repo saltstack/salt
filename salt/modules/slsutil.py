@@ -9,6 +9,7 @@ import salt.loader
 import salt.template
 import salt.utils.dictupdate
 
+
 def update(dest, upd, recursive_update=True, merge_lists=False):
     '''
     Merge ``upd`` recursively into ``dest``
