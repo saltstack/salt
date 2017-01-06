@@ -257,4 +257,5 @@ state modules
     zenoss
     zk_concurrency
     zfs
+    zone
     zpool
