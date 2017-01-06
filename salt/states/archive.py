@@ -869,6 +869,7 @@ def extracted(name,
     else:
         source_sum = {}
 
+    concurrent = bool(__opts__.get('sudo_user'))
     if not source_is_local and not os.path.isfile(cached_source):
         if __opts__['test']:
             ret['result'] = None
@@ -885,8 +886,18 @@ def extracted(name,
                                                source_hash_name=source_hash_name,
                                                makedirs=True,
                                                skip_verify=skip_verify,
-                                               saltenv=__env__)
+                                               saltenv=__env__,
+                                               concurrent=concurrent)
         log.debug('file.managed: {0}'.format(file_result))
+
+        # Prevent a traceback if errors prevented the above state from getting
+        # off the ground.
+        if isinstance(file_result, list):
+            try:
+                ret['comment'] = '\n'.join(file_result)
+            except TypeError:
+                ret['comment'] = '\n'.join([str(x) for x in file_result])
+            return ret
 
         # Get actual state result. The state.single return is a single-element
         # dictionary with the state's unique ID at the top level, and its value
@@ -1324,7 +1335,8 @@ def extracted(name,
                                                       user=user,
                                                       group=group,
                                                       recurse=recurse,
-                                                      test=__opts__['test'])
+                                                      test=__opts__['test'],
+                                                      concurrent=concurrent)
                 try:
                     dir_result = dir_result[next(iter(dir_result))]
                 except AttributeError:

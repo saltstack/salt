@@ -713,6 +713,9 @@ class Client(object):
         else:
             netloc = url_data.netloc
 
+        # Strip user:pass from URLs
+        netloc = netloc.split('@')[-1]
+
         if cachedir is None:
             cachedir = self.opts['cachedir']
         elif not os.path.isabs(cachedir):
