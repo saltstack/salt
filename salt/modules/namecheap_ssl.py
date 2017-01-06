@@ -38,8 +38,7 @@
         #namecheap.url: https://api.sandbox.namecheap.xml.response
 
 '''
-
-
+from __future__ import absolute_import
 CAN_USE_NAMECHEAP = True
 
 
