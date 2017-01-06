@@ -370,7 +370,7 @@ def cli(*commands):
     # in case of errors, they'll be catched in the proxy
 
 
-def traceroute(destination, source='', ttl=0, timeout=0):
+def traceroute(destination, source=None, ttl=None, timeout=None):
 
     '''
     Calls the method traceroute from the NAPALM driver object and returns a dictionary with the result of the traceroute
@@ -400,7 +400,7 @@ def traceroute(destination, source='', ttl=0, timeout=0):
     )
 
 
-def ping(destination, source='', ttl=0, timeout=0, size=0, count=0):
+def ping(destination, source=None, ttl=None, timeout=None, size=None, count=None):
 
     '''
     Executes a ping on the network device and returns a dictionary as a result.
