@@ -3222,3 +3222,25 @@ def filter_by(lookup_dict,
             salt.utils.dictupdate.update(ret, copy.deepcopy(merge))
 
     return ret
+
+
+def fnmatch_multiple(candidates, pattern):
+    '''
+    Convenience function which runs fnmatch.fnmatch() on each element of passed
+    iterable. The first matching candidate is returned, or None if there is no
+    matching candidate.
+    '''
+    # Make sure that candidates is iterable to avoid a TypeError when we try to
+    # iterate over its items.
+    try:
+        candidates_iter = iter(candidates)
+    except TypeError:
+        return None
+
+    for candidate in candidates_iter:
+        try:
+            if fnmatch.fnmatch(candidate, pattern):
+                return candidate
+        except TypeError:
+            pass
+    return None
