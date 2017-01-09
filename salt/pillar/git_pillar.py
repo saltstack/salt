@@ -557,17 +557,26 @@ def ext_pillar(minion_id, repo, pillar_dirs):
                 'git_pillar is processing pillar SLS from %s for pillar '
                 'env \'%s\'', pillar_dir, env
             )
-            all_dirs = [d for (d, e) in six.iteritems(pillar.pillar_dirs)
-                        if env == e]
 
-            # Ensure that the current pillar_dir is first in the list, so that
-            # the pillar top.sls is sourced from the correct location.
-            pillar_roots = [pillar_dir]
-            pillar_roots.extend([x for x in all_dirs if x != pillar_dir])
             if env == '__env__':
                 env = opts.get('pillarenv') \
                     or opts.get('environment') \
                     or opts.get('git_pillar_base')
+                log.debug('__env__ maps to %s', env)
+
+            pillar_roots = [pillar_dir]
+
+            if __opts__['git_pillar_includes']:
+                # Add the rest of the pillar_dirs in this environment to the
+                # list, excluding the current pillar_dir being processed. This
+                # is because it was already specified above as the first in the
+                # list, so that its top file is sourced from the correct
+                # location and not from another git_pillar remote.
+                pillar_roots.extend(
+                    [d for (d, e) in six.iteritems(pillar.pillar_dirs)
+                     if env == e and d != pillar_dir]
+                )
+
             opts['pillar_roots'] = {env: pillar_roots}
 
             local_pillar = Pillar(opts, __grains__, minion_id, env)
