@@ -3330,6 +3330,8 @@ def api_config(path):
     prepend_root_dir(opts, [
         'api_pidfile',
         'api_logfile',
+        'log_file',
+        'pidfile'
     ])
     return opts
 
