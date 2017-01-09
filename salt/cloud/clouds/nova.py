@@ -48,6 +48,25 @@ examples could be set up in the cloud configuration at
       driver: nova
       userdata_file: /tmp/userdata.txt
 
+To use keystoneauth1 instead of keystoneclient, include the `use_keystoneauth`
+option in the provider config.
+
+.. note:: this is required to use keystone v3 as for authentication.
+
+.. code-block:: yaml
+
+    my-openstack-config:
+      use_keystoneauth: True
+      identity_url: 'https://controller:5000/v3'
+      auth_version: 3
+      compute_name: nova
+      compute_region: RegionOne
+      service_type: compute
+      tenant: admin
+      user: admin
+      password: passwordgoeshere
+      driver: nova
+
 For local installations that only use private IP address ranges, the
 following option may be useful. Using the old syntax:
 
