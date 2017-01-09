@@ -24,6 +24,7 @@ import salt.utils
 import salt.utils.itertools
 import salt.utils.url
 import salt.fileserver
+from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running as pid_exists
 from salt.exceptions import (
     FileserverConfigError,
@@ -2641,7 +2642,7 @@ class GitPillar(GitBase):
         '''
         Checkout the targeted branches/tags from the git_pillar remotes
         '''
-        self.pillar_dirs = {}
+        self.pillar_dirs = OrderedDict()
         linkdir = os.path.join(self.cache_root, 'links')
         if not os.path.isdir(linkdir):
             os.makedirs(linkdir)
