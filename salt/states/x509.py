@@ -212,6 +212,17 @@ def _get_file_args(name, **kwargs):
     return file_args
 
 
+def _check_private_key(name, bits=2048, new=False):
+    current_bits = 0
+    if os.path.isfile(name):
+        try:
+            current_bits = __salt__['x509.get_private_key_size'](private_key=name)
+        except salt.exceptions.SaltInvocationError:
+            pass
+
+    return current_bits == bits and not new
+
+
 def private_key_managed(name,
                         bits=2048,
                         new=False,
@@ -256,21 +267,11 @@ def private_key_managed(name,
               - x509: /etc/pki/www.crt
             {%- endif %}
     '''
-    current_bits = 0
-    if os.path.isfile(name):
-        try:
-            current_bits = __salt__['x509.get_private_key_size'](private_key=name)
-            current = "{0} bit private key".format(current_bits)
-        except salt.exceptions.SaltInvocationError:
-            current = '{0} is not a valid Private Key.'.format(name)
-    else:
-        current = '{0} does not exist.'.format(name)
-
     file_args = _get_file_args(name, **kwargs)
-    if current_bits == bits and not new:
+    if _check_private_key(name, bits, new):
         file_args['contents'] = __salt__['x509.get_pem_entry'](name, pem_type='RSA PRIVATE KEY')
     else:
-        file_args['contents'] = contents = __salt__['x509.create_private_key'](text=True, bits=bits, verbose=verbose)
+        file_args['contents'] = __salt__['x509.create_private_key'](text=True, bits=bits, verbose=verbose)
 
 
     return __states__['file.managed'](**file_args)
@@ -312,6 +313,8 @@ def csr_managed(name,
 
 def certificate_managed(name,
                         days_remaining=90,
+                        managed_private_key=None,
+                        append_certs=[],
                         **kwargs):
     '''
     Manage a Certificate
@@ -322,6 +325,12 @@ def certificate_managed(name,
     days_remaining:
         The minimum number of days remaining when the certificate should be recreated. Default is 90. A
         value of 0 disables automatic renewal.
+
+    managed_private_key:
+        Manages the private key corresponding to the certificate. All of the arguments supported by :state:`x509.private_key_managed <salt.states.x509.private_key_managed>` are supported. If `name` is not speicified or is the same as the name of the certificate, the private key and certificate will be written together in the same file.
+
+    append_certs:
+        A list of certificates to be appended to the managed file.
 
     kwargs:
         Any arguments supported by :mod:`x509.create_certificate <salt.modules.x509.create_certificate>` or :state:`file.managed <salt.states.file.managed>` are supported.
@@ -361,6 +370,30 @@ def certificate_managed(name,
     '''
     if 'path' in kwargs:
         name = kwargs.pop('path')
+
+    rotate_private_key = False
+    new_private_key = False
+    if managed_private_key:
+        if 'new' not in managed_private_key:
+            managed_private_key['new'] = False
+        if 'name' not in managed_private_key:
+            managed_private_key['name'] = name
+        if 'bits' not in managed_private_key:
+            managed_private_key['bits'] = 2048
+        if 'verbose' not in managed_private_key:
+            managed_private_key['verbose'] = True
+
+        if managed_private_key['new']:
+            rotate_private_key = True
+            managed_private_key['new'] = False
+
+        if _check_private_key(managed_private_key['name'], managed_private_key['bits'], managed_private_key['new']):
+            private_key = __salt__['x509.get_pem_entry'](managed_private_key['name'], pem_type='RSA PRIVATE KEY')
+        else:
+            new_private_key = True
+            private_key = __salt__['x509.create_private_key'](text=True, bits=managed_private_key['bits'], verbose=managed_private_key['verbose'])
+
+        kwargs['public_key'] = private_key
 
     current_days_remaining = 0
     current_comp = {}
@@ -423,9 +456,29 @@ def certificate_managed(name,
     if (current_comp == new_comp and
             current_days_remaining > days_remaining and
             __salt__['x509.verify_signature'](name, new_issuer_public_key)):
-        file_args['contents'] = __salt__['x509.get_pem_entry'](name, pem_type='CERTIFICATE')
+        certificate = __salt__['x509.get_pem_entry'](name, pem_type='CERTIFICATE')
     else:
-        file_args['contents'] = __salt__['x509.create_certificate'](text=True, **kwargs)
+        if rotate_private_key and not new_private_key:
+            private_key = __salt__['x509.create_private_key'](text=True, bits=managed_private_key['bits'], verbose=managed_private_key['verbose'])
+            kwargs['public_key'] = private_key
+        certificate = __salt__['x509.create_certificate'](text=True, **kwargs)
+
+    if managed_private_key and managed_private_key['name'] != name:
+        file_args['name'] = managed_private_key['name']
+        file_args['contents'] = private_key
+        private_ret = __states__['file.managed'](**file_args)
+        if not private_ret['result']:
+            return private_ret
+
+    file_args['name'] = name
+    file_args['contents'] = ''
+    if managed_private_key and managed_private_key['name'] == name:
+        file_args['contents'] = private_key
+
+    file_args['contents'] += certificate
+
+    for append_cert in append_certs:
+        file_args['contents'] += __salt__['x509.get_pem_entry'](append_cert, pem_type='CERTIFICATE')
 
     return __states__['file.managed'](**file_args)
 
