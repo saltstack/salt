@@ -1785,6 +1785,8 @@ the environment setting, but for pillar instead of states.
 ``pillarenv_from_saltenv``
 --------------------------
 
+.. versionadded:: Nitrogen
+
 Default: ``False``
 
 When set to ``True``, the :conf_minion:`pillarenv` value will assume the value
