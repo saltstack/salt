@@ -33,7 +33,7 @@ try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
     # pylint: disable=W0611
-    from napalm import get_network_driver
+    from napalm_base import get_network_driver
     # pylint: enable=W0611
     HAS_NAPALM = True
 except ImportError:
