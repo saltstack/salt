@@ -692,7 +692,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
             Content-Type: application/json
             Content-Legnth: 83
 
-            {"clients": ["local", "local_batch", "local_async", "runner", "runner_async"], "return": "Welcome"}
+            {"clients": ["local", "local_async", "runner", "runner_async"], "return": "Welcome"}
         '''
         ret = {"clients": list(self.saltclients.keys()),
                "return": "Welcome"}
