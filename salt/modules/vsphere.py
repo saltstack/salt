@@ -262,7 +262,7 @@ def gets_service_instance_via_proxy(fn):
     try:
         arg_names, args_name, kwargs_name, default_values, _, _, _ = \
                 inspect.getfullargspec(fn)
-    except AttributeError: 
+    except AttributeError:
         # Fallback to Python 2.7
         arg_names, args_name, kwargs_name, default_values = \
                 inspect.getargspec(fn)
