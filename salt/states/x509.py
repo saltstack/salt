@@ -268,13 +268,17 @@ def private_key_managed(name,
             {%- endif %}
     '''
     file_args = _get_file_args(name, **kwargs)
+    new_key = False
     if _check_private_key(name, bits, new):
         file_args['contents'] = __salt__['x509.get_pem_entry'](name, pem_type='RSA PRIVATE KEY')
     else:
+        new_key = True
         file_args['contents'] = __salt__['x509.create_private_key'](text=True, bits=bits, verbose=verbose)
 
 
-    return __states__['file.managed'](**file_args)
+    ret = __states__['file.managed'](**file_args)
+    if ret['changes'] and new_key:
+        ret['changes'] = 'New private key generated'
 
 
 def csr_managed(name,
@@ -305,10 +309,17 @@ def csr_managed(name,
              - L: Salt Lake City
              - keyUsage: 'critical dataEncipherment'
     '''
+    old = __salt__['x509.read_csr'](name)
     file_args = _get_file_args(name, **kwargs)
     file_args['contents'] = __salt__['x509.create_csr'](text=True, **kwargs)
 
-    return __states__['file.managed'](**file_args)
+    ret = __states__['file.managed'](**file_args)
+    if ret['changes']:
+        new = __salt__['x509.read_csr'](file_args['contents'])
+        if old != new:
+            ret['changes'] = {"Old": old, "New": new}
+
+    return ret
 
 
 def certificate_managed(name,
@@ -452,6 +463,7 @@ def certificate_managed(name,
     else:
         new_comp = new
 
+    new_certificate = False
     file_args = _get_file_args(name, **kwargs)
     if (current_comp == new_comp and
             current_days_remaining > days_remaining and
@@ -459,8 +471,10 @@ def certificate_managed(name,
         certificate = __salt__['x509.get_pem_entry'](name, pem_type='CERTIFICATE')
     else:
         if rotate_private_key and not new_private_key:
+            new_private_key = True
             private_key = __salt__['x509.create_private_key'](text=True, bits=managed_private_key['bits'], verbose=managed_private_key['verbose'])
             kwargs['public_key'] = private_key
+        new_certificate = True
         certificate = __salt__['x509.create_certificate'](text=True, **kwargs)
 
     if managed_private_key and managed_private_key['name'] != name:
@@ -480,7 +494,21 @@ def certificate_managed(name,
     for append_cert in append_certs:
         file_args['contents'] += __salt__['x509.get_pem_entry'](append_cert, pem_type='CERTIFICATE')
 
-    return __states__['file.managed'](**file_args)
+    file_args['show_changes'] = False
+    ret = __states__['file.managed'](**file_args)
+
+    if ret['changes']:
+        ret['changes'] = {'Certificate': ret['changes']}
+    if private_ret['changes']:
+        ret['changes'] = {'Private Key': private_ret['changes']}
+    if new_private_key:
+        ret['changes']['Private Key'] = 'New private key generated'
+    if new_certificate:
+        ret['changes']['Certificate'] = {
+                'Old': current,
+                'New': __salt__['x509.read_certificate'](certificate=certificate) }
+
+    return ret
 
 
 def crl_managed(name,
@@ -580,14 +608,19 @@ def crl_managed(name,
     new_comp.pop('Next Update')
 
     file_args = _get_file_args(name, **kwargs)
+    new_crl = False
     if (current_comp == new_comp and
             current_days_remaining > days_remaining and
             __salt__['x509.verify_crl'](name, signing_cert)):
         file_args['contents'] = __salt__['x509.get_pem_entry'](name, pem_type='X509 CRL')
     else:
+        new_crl = True
         file_args['contents'] = new_crl
 
-    return __states__['file.managed'](**file_args)
+    ret = __states__['file.managed'](**file_args)
+    if new_crl:
+        ret['changes'] = {'Old': current, 'New': __salt__['x509.read_crl'](crl=new_crl)}
+    return ret
 
 
 def pem_managed(name,
