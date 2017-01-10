@@ -227,8 +227,8 @@ class Batch(object):
                     ret[minion] = data
                     yield data
                 else:
-                    ret[minion] = data
-                    yield {minion: data}
+                    ret[minion] = data['ret']
+                    yield {minion: data['ret']}
                 if not self.quiet:
                     ret[minion] = data['ret']
                     data[minion] = data.pop('ret')
