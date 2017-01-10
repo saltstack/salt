@@ -2710,7 +2710,13 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
             for t_admfile in files:
                 admfile = os.path.join(root, t_admfile)
                 parser = lxml.etree.XMLParser(remove_comments=True)
-                xmltree = lxml.etree.parse(admfile, parser=parser)
+                try:
+                    xmltree = lxml.etree.parse(admfile, parser=parser)
+                except:
+                    msg = ('A syntax error was found while processing admx file {0},'
+                           ' all policies from this file will be unavailable via this module')
+                    log.error(msg.format(admfile))
+                    continue
                 namespaces = xmltree.getroot().nsmap
                 namespace_string = ''
                 if None in namespaces:
@@ -2761,7 +2767,13 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                         raise SaltInvocationError(msg.format(display_language,
                                                              display_language_fallback,
                                                              t_admfile))
-                xmltree = lxml.etree.parse(adml_file)
+                try:
+                    xmltree = lxml.etree.parse(adml_file)
+                except lxml.etree.XMLSyntaxError:
+                    msg = ('A syntax error was found while processing adml file {0}, all policy'
+                           ' languange data from this file will be unavailable via this module')
+                    log.error(msg.format(adml_file))
+                    continue
                 if None in namespaces:
                     namespaces['None'] = namespaces[None]
                     namespaces.pop(None)
