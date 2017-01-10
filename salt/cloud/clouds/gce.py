@@ -464,6 +464,7 @@ def __get_region(conn, vm_):
     '''
     location = __get_location(conn, vm_)
     region = '-'.join(location.name.split('-')[:2])
+
     return conn.ex_get_region(region)
 
 
@@ -547,7 +548,11 @@ def __get_ssh_credentials(vm_):
 
 def create_network(kwargs=None, call=None):
     '''
+<<<<<<< 8011652750b28ec85546813fd816253359e1006b
     ... versionchanged:: Nitrogen
+=======
+    ... versionchanged:: 2017.1
+>>>>>>> Added __get_subnetwork and __get_region functions.
     Create a GCE network. Must specify name and cidr.
 
     CLI Example:
@@ -699,7 +704,11 @@ def show_network(kwargs=None, call=None):
 
 def create_subnetwork(kwargs=None, call=None):
     '''
+<<<<<<< 8011652750b28ec85546813fd816253359e1006b
     ... versionadded:: Nitrogen
+=======
+    ... versionadded:: 2017.1
+>>>>>>> Added __get_subnetwork and __get_region functions.
     Create a GCE Subnetwork. Must specify name, cidr, network, and region.
 
     CLI Example:
@@ -781,7 +790,11 @@ def create_subnetwork(kwargs=None, call=None):
 
 def delete_subnetwork(kwargs=None, call=None):
     '''
+<<<<<<< 8011652750b28ec85546813fd816253359e1006b
     ... versionadded:: Nitrogen
+=======
+    ... versionadded:: 2017.1
+>>>>>>> Added __get_subnetwork and __get_region functions.
     Delete a GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -850,7 +863,11 @@ def delete_subnetwork(kwargs=None, call=None):
 
 def show_subnetwork(kwargs=None, call=None):
     '''
+<<<<<<< 8011652750b28ec85546813fd816253359e1006b
     ... versionadded:: Nitrogen
+=======
+    ... versionadded:: 2017.1
+>>>>>>> Added __get_subnetwork and __get_region functions.
     Show details of an existing GCE Subnetwork. Must specify name and region.
 
     CLI Example:
