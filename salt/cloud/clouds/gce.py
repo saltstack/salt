@@ -41,7 +41,7 @@ Example Provider Configuration
       ssh_interface: public_ips
 
 :maintainer: Eric Johnson <erjohnso@google.com>
-:depends: libcloud >= 0.14.1
+:depends: libcloud >= 1.0.0
 '''
 # pylint: disable=invalid-name,function-redefined
 
@@ -457,6 +457,16 @@ def __get_subnetwork(vm_):
     return ex_subnetwork
 
 
+def __get_region(conn, vm_):
+    '''
+    Return a GCE libcloud region object with matching name.
+    '''
+    region = config.get_cloud_config_value(
+        'region', vm_, __opts__,
+        default='default', search_global=False)
+    return conn.ex_get_region(region)
+
+
 def __get_ssh_interface(vm_):
     '''
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
@@ -537,6 +547,7 @@ def __get_ssh_credentials(vm_):
 
 def create_network(kwargs=None, call=None):
     '''
+    ... versionchanged:: 2017.1
     Create a GCE network. Must specify name and cidr.
 
     CLI Example:
@@ -685,6 +696,7 @@ def show_network(kwargs=None, call=None):
 
 def create_subnetwork(kwargs=None, call=None):
     '''
+    ... versionadded:: 2017.1
     Create a GCE Subnetwork. Must specify name, cidr, network, and region.
 
     CLI Example:
@@ -766,6 +778,7 @@ def create_subnetwork(kwargs=None, call=None):
 
 def delete_subnetwork(kwargs=None, call=None):
     '''
+    ... versionadded:: 2017.1
     Delete a GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -834,6 +847,7 @@ def delete_subnetwork(kwargs=None, call=None):
 
 def show_subnetwork(kwargs=None, call=None):
     '''
+    ... versionadded:: 2017.1
     Show details of an existing GCE Subnetwork. Must specify name and region.
 
     CLI Example:
