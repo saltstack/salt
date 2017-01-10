@@ -2255,7 +2255,9 @@ def request_instance(vm_):
             'ex_service_accounts': config.get_cloud_config_value(
                 'ex_service_accounts', vm_, __opts__, default=None),
             'ex_can_ip_forward': config.get_cloud_config_value(
-                'ip_forwarding', vm_, __opts__, default=False
+                'ip_forwarding', vm_, __opts__, default=False),
+	    'ex_preemptible': config.get_cloud_config_value(
+		'preemptible', vm_, __opts__, default=False
             )
         })
         if kwargs.get('ex_disk_type') not in ('pd-standard', 'pd-ssd'):
