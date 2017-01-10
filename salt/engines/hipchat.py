@@ -15,6 +15,7 @@ keys make the engine interactive.
 
         engines:
             hipchat:
+               api_url: http://api.hipchat.myteam.com
                token: 'XXXXXX'
                room: 'salt'
                control: True
@@ -30,6 +31,8 @@ keys make the engine interactive.
                        cmd: jobs.list_jobs
                    list_commands:
                        cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster tgt_type=list
+                max_rooms: 0
+                wait_time: 1
 '''
 
 from __future__ import absolute_import
@@ -55,11 +58,14 @@ import salt.loader
 def __virtual__():
     return HAS_HYPCHAT
 
-
 log = logging.getLogger(__name__)
 
+_DEFAULT_API_URL = 'https://api.hipchat.com'
+_DEFAULT_SLEEP = 5
+_DEFAULT_MAX_ROOMS = 1000
 
-def _publish_file(token, room, filepath, message='', host='api.hipchat.com'):
+
+def _publish_file(token, room, filepath, message='', api_url=None):
     """ Send file to a HipChat room via API version 2
     Parameters
     ----------
@@ -71,8 +77,8 @@ def _publish_file(token, room, filepath, message='', host='api.hipchat.com'):
         Full path of file to be sent
     message: str, optional
         Message to send to room
-    host: str, optional
-        Host to connect to, defaults to api.hipchat.com
+    api_url: str, optional
+        Hipchat API URL to use, defaults to http://api.hipchat.com
     """
 
     if not os.path.isfile(filepath):
@@ -80,7 +86,7 @@ def _publish_file(token, room, filepath, message='', host='api.hipchat.com'):
     if len(message) > 1000:
         raise ValueError('Message too long')
 
-    url = "https://{0}/v2/room/{1}/share/file".format(host, room)
+    url = "{0}/v2/room/{1}/share/file".format(api_url, room)
     headers = {'Content-type': 'multipart/related; boundary=boundary123456'}
     headers['Authorization'] = "Bearer " + token
     msg = json.dumps({'message': message})
@@ -110,7 +116,11 @@ def start(token,
           valid_commands=None,
           control=False,
           trigger="!",
-          tag='salt/engines/hipchat/incoming'):
+          tag='salt/engines/hipchat/incoming',
+          api_key=None,
+          api_url=None,
+          max_rooms=None,
+          wait_time=None):
     '''
     Listen to Hipchat messages and forward them to Salt
     '''
@@ -142,17 +152,27 @@ def start(token,
                 text = message_text.replace(trigger, '').strip()
                 yield message['from']['mention_name'], text
 
+    token = token or api_key
     if not token:
         raise UserWarning("Hipchat token not found")
 
     runner_functions = sorted(salt.runner.Runner(__opts__).functions)
 
-    hipc = hypchat.HypChat(token)
+    if not api_url:
+        api_url = _DEFAULT_API_URL
+    hipc = hypchat.HypChat(token, endpoint=api_url)
     if not hipc:
         raise UserWarning("Unable to connect to hipchat")
 
     log.debug('Connected to Hipchat')
-    all_rooms = hipc.rooms(max_results=1000)['items']
+    rooms_kwargs = {}
+    if max_rooms is None:
+        max_rooms = _DEFAULT_MAX_ROOMS
+        rooms_kwargs['max_results'] = max_rooms
+    elif max_rooms > 0:
+        rooms_kwargs['max_results'] = max_rooms
+    # if max_rooms is 0 => retrieve all (rooms_kwargs is empty dict)
+    all_rooms = hipc.rooms(**rooms_kwargs)['items']
     for a_room in all_rooms:
         if a_room['name'] == room:
             target_room = a_room
@@ -241,6 +261,6 @@ def start(token,
             with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
                 fp_.write(json.dumps(ret, sort_keys=True, indent=4))
             message_string = '@{0} Results for: {1} {2} {3} on {4}'.format(partner, cmd, args, kwargs, target)
-            _publish_file(token, room, tmp_path_fn, message=message_string)
+            _publish_file(token, room, tmp_path_fn, message=message_string, api_url=api_url)
             salt.utils.safe_rm(tmp_path_fn)
-        time.sleep(5)
+        time.sleep(wait_time or _DEFAULT_SLEEP)
