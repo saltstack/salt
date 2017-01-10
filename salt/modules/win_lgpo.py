@@ -2712,7 +2712,7 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                 parser = lxml.etree.XMLParser(remove_comments=True)
                 try:
                     xmltree = lxml.etree.parse(admfile, parser=parser)
-                except:
+                except lxml.etree.XMLSyntaxError:
                     msg = ('A syntax error was found while processing admx file {0},'
                            ' all policies from this file will be unavailable via this module')
                     log.error(msg.format(admfile))
