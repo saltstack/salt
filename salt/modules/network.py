@@ -1502,7 +1502,10 @@ def ifacestartswith(cidr):
         if 'inet' in ifval:
             for inet in ifval['inet']:
                 if inet['address'][0:size] == pattern:
-                    intfnames.append(inet['label'])
+                    if 'label' in inet:
+                        intfnames.append(inet['label'])
+                    else:
+                        intfnames.append(ifname)
     return intfnames
 
 

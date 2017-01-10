@@ -1411,7 +1411,6 @@ def extracted(name,
         else:
             ret['result'] = False
             ret['comment'] = 'Can\'t extract content of {0}'.format(source_match)
-
     else:
         ret['result'] = True
         if if_missing_path_exists:

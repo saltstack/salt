@@ -508,7 +508,8 @@ def loaded(name, tag='latest', source=None, source_hash='', force=False):
     __salt__['state.single']('file.managed',
                              name=tmp_filename,
                              source=source,
-                             source_hash=source_hash)
+                             source_hash=source_hash,
+                             concurrent=bool(__opts__.get('sudo_user')))
     changes = {}
 
     if image_infos['status']:
