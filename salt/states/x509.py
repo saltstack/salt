@@ -204,19 +204,31 @@ def _revoked_to_list(revs):
 
 
 def _get_file_args(name, **kwargs):
+    valid_file_args = ['user',
+                       'group',
+                       'mode',
+                       'makedirs',
+                       'dir_mode',
+                       'backup',
+                       'create',
+                       'follow_symlinks',
+                       'check_cmd']
     file_args = {}
+    extra_args = {}
     for k, v in kwargs.items():
-        if k not in inspect.stack()[0][0].f_code.co_varnames:
+        if k in valid_file_args:
             file_args[k] = v
+        else:
+            extra_args[k] = v
     file_args['name'] = name
-    return file_args
+    return file_args, extra_args
 
 
-def _check_private_key(name, bits=2048, new=False):
+def _check_private_key(name, bits=2048, passphrase=None, new=False):
     current_bits = 0
     if os.path.isfile(name):
         try:
-            current_bits = __salt__['x509.get_private_key_size'](private_key=name)
+            current_bits = __salt__['x509.get_private_key_size'](private_key=name, passphrase=passphrase)
         except salt.exceptions.SaltInvocationError:
             pass
 
@@ -225,6 +237,8 @@ def _check_private_key(name, bits=2048, new=False):
 
 def private_key_managed(name,
                         bits=2048,
+                        passphrase=None,
+                        cipher='aes_128_cbc',
                         new=False,
                         verbose=True,
                         **kwargs):
@@ -236,6 +250,12 @@ def private_key_managed(name,
 
     bits:
         Key length in bits. Default 2048.
+
+    passphrase:
+        Passphrase for encrypting the private key.
+
+    cipher:
+        Cipher for encrypting the private key.
 
     new:
         Always create a new key. Defaults to False.
@@ -267,13 +287,13 @@ def private_key_managed(name,
               - x509: /etc/pki/www.crt
             {%- endif %}
     '''
-    file_args = _get_file_args(name, **kwargs)
+    file_args, kwargs = _get_file_args(name, **kwargs)
     new_key = False
-    if _check_private_key(name, bits, new):
+    if _check_private_key(name, bits, passphrase, cipher, new):
         file_args['contents'] = __salt__['x509.get_pem_entry'](name, pem_type='RSA PRIVATE KEY')
     else:
         new_key = True
-        file_args['contents'] = __salt__['x509.create_private_key'](text=True, bits=bits, verbose=verbose)
+        file_args['contents'] = __salt__['x509.create_private_key'](text=True, bits=bits, passphrase=passphrase, cipher=cipher, verbose=verbose)
 
 
     ret = __states__['file.managed'](**file_args)
@@ -310,7 +330,7 @@ def csr_managed(name,
              - keyUsage: 'critical dataEncipherment'
     '''
     old = __salt__['x509.read_csr'](name)
-    file_args = _get_file_args(name, **kwargs)
+    file_args, kwargs = _get_file_args(name, **kwargs)
     file_args['contents'] = __salt__['x509.create_csr'](text=True, **kwargs)
 
     ret = __states__['file.managed'](**file_args)
@@ -382,27 +402,34 @@ def certificate_managed(name,
     if 'path' in kwargs:
         name = kwargs.pop('path')
 
+    file_args, kwargs = _get_file_args(name, **kwargs)
+
     rotate_private_key = False
     new_private_key = False
     if managed_private_key:
-        if 'new' not in managed_private_key:
-            managed_private_key['new'] = False
-        if 'name' not in managed_private_key:
-            managed_private_key['name'] = name
-        if 'bits' not in managed_private_key:
-            managed_private_key['bits'] = 2048
-        if 'verbose' not in managed_private_key:
-            managed_private_key['verbose'] = True
+        private_key_args = {
+                'name': name,
+                'new': False,
+                'bits': 2048,
+                'passphrase': None,
+                'cipher': 'aes_128_cbc',
+                'verbose': True
+        }
+        private_key_args.update(managed_private_key)
+        kwargs['public_key_passphrase'] = managed_private_key['passphrase']
 
-        if managed_private_key['new']:
+        if private_key_args['new']:
             rotate_private_key = True
-            managed_private_key['new'] = False
+            private_key_args['new'] = False
 
-        if _check_private_key(managed_private_key['name'], managed_private_key['bits'], managed_private_key['new']):
-            private_key = __salt__['x509.get_pem_entry'](managed_private_key['name'], pem_type='RSA PRIVATE KEY')
+        if _check_private_key(private_key_args['name'],
+                              private_key_args['bits'],
+                              private_key_args['passphrase'],
+                              private_key_args['new']):
+            private_key = __salt__['x509.get_pem_entry'](private_key_args['name'], pem_type='RSA PRIVATE KEY')
         else:
             new_private_key = True
-            private_key = __salt__['x509.create_private_key'](text=True, bits=managed_private_key['bits'], verbose=managed_private_key['verbose'])
+            private_key = __salt__['x509.create_private_key'](text=True, bits=private_key_args['bits'], passphrase=private_key_args['passphrase'], cipher=private_key_args['cipher'], verbose=private_key_args['verbose'])
 
         kwargs['public_key'] = private_key
 
@@ -464,7 +491,6 @@ def certificate_managed(name,
         new_comp = new
 
     new_certificate = False
-    file_args = _get_file_args(name, **kwargs)
     if (current_comp == new_comp and
             current_days_remaining > days_remaining and
             __salt__['x509.verify_signature'](name, new_issuer_public_key)):
@@ -472,22 +498,24 @@ def certificate_managed(name,
     else:
         if rotate_private_key and not new_private_key:
             new_private_key = True
-            private_key = __salt__['x509.create_private_key'](text=True, bits=managed_private_key['bits'], verbose=managed_private_key['verbose'])
+            private_key = __salt__['x509.create_private_key'](text=True, bits=private_key_args['bits'], verbose=private_key_args['verbose'])
             kwargs['public_key'] = private_key
         new_certificate = True
         certificate = __salt__['x509.create_certificate'](text=True, **kwargs)
 
-    if managed_private_key and managed_private_key['name'] != name:
-        file_args['name'] = managed_private_key['name']
-        file_args['contents'] = private_key
-        private_ret = __states__['file.managed'](**file_args)
-        if not private_ret['result']:
-            return private_ret
-
-    file_args['name'] = name
     file_args['contents'] = ''
-    if managed_private_key and managed_private_key['name'] == name:
-        file_args['contents'] = private_key
+    private_ret = {}
+    if managed_private_key:
+        if private_key_args['name'] == name:
+            file_args['contents'] = private_key
+        else:
+            private_file_args = copy.deepcopy(file_args)
+            unique_private_file_args = _get_file_args(private_key_args['name'], **private_key_args)
+            private_file_args.update(unique_private_file_args)
+            private_file_args['contents'] = private_key
+            private_ret = __states__['file.managed'](**private_file_args)
+            if not private_ret['result']:
+                return private_ret
 
     file_args['contents'] += certificate
 
@@ -499,8 +527,10 @@ def certificate_managed(name,
 
     if ret['changes']:
         ret['changes'] = {'Certificate': ret['changes']}
-    if private_ret['changes']:
-        ret['changes'] = {'Private Key': private_ret['changes']}
+    else:
+        ret['changes'] = {}
+    if private_ret and private_ret['changes']:
+        ret['changes']['Private Key'] = private_ret['changes']
     if new_private_key:
         ret['changes']['Private Key'] = 'New private key generated'
     if new_certificate:
@@ -607,7 +637,7 @@ def crl_managed(name,
     new_comp.pop('Last Update')
     new_comp.pop('Next Update')
 
-    file_args = _get_file_args(name, **kwargs)
+    file_args, kwargs = _get_file_args(name, **kwargs)
     new_crl = False
     if (current_comp == new_comp and
             current_days_remaining > days_remaining and
@@ -639,7 +669,7 @@ def pem_managed(name,
     kwargs:
         Any arguments supported by :state:`file.managed <salt.states.file.managed>` are supported.
     '''
-    file_args = _get_file_args(name, **kwargs)
+    file_args, kwargs = _get_file_args(name, **kwargs)
     file_args['contents'] = __salt__['x509.get_pem_entry'](text=text)
 
     return __states__['file.managed'](**file_args)
