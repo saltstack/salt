@@ -141,11 +141,13 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
         lhash = None
     except AttributeError:
         lhash = M2Crypto.m2.x509v3_lhash()                      # pylint: disable=no-member
-        ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)          # pylint: disable=no-member
-        #ctx not zeroed
+        ctx = M2Crypto.m2.x509v3_set_conf_lhash(
+            lhash)          # pylint: disable=no-member
+        # ctx not zeroed
         _fix_ctx(ctx, issuer)
-        x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value)  # pylint: disable=no-member
-    #ctx,lhash freed
+        x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(
+            lhash, ctx, name, value)  # pylint: disable=no-member
+    # ctx,lhash freed
 
     if x509_ext_ptr is None:
         raise M2Crypto.X509.X509Error(
@@ -354,7 +356,8 @@ def _get_private_key_obj(private_key, passphrase=None):
     '''
     private_key = _text_or_file(private_key)
     private_key = get_pem_entry(private_key, pem_type='RSA PRIVATE KEY')
-    rsaprivkey = M2Crypto.RSA.load_key_string(private_key, callback=_passphrase_callback(passphrase))
+    rsaprivkey = M2Crypto.RSA.load_key_string(
+        private_key, callback=_passphrase_callback(passphrase))
     evpprivkey = M2Crypto.EVP.PKey()
     evpprivkey.assign_rsa(rsaprivkey)
     return evpprivkey
@@ -435,15 +438,16 @@ def get_pem_entry(text, pem_type=None):
 
     _match = None
 
-    if len(text.splitlines()) == 1 and text.startswith('-----') and text.endswith('-----'):
+    if len(text.splitlines()) == 1 and text.startswith(
+            '-----') and text.endswith('-----'):
         # mine.get returns the PEM on a single line, we fix this
         pem_fixed = []
         pem_temp = text
         while len(pem_temp) > 0:
             if pem_temp.startswith('-----'):
                 # Grab ----(.*)---- blocks
-                pem_fixed.append(pem_temp[:pem_temp.index('-----', 5)+5])
-                pem_temp = pem_temp[pem_temp.index('-----', 5)+5:]
+                pem_fixed.append(pem_temp[:pem_temp.index('-----', 5) + 5])
+                pem_temp = pem_temp[pem_temp.index('-----', 5) + 5:]
             else:
                 # grab base64 chunks
                 if pem_temp[:64].count('-') == 0:
@@ -690,7 +694,8 @@ def get_public_key(key, passphrase=None, asObj=False):
         rsa = csr.get_pubkey().get_rsa()
     if (text.startswith('-----BEGIN PRIVATE KEY-----') or
             text.startswith('-----BEGIN RSA PRIVATE KEY-----')):
-        rsa = M2Crypto.RSA.load_key_string(text, callback=_passphrase_callback(passphrase))
+        rsa = M2Crypto.RSA.load_key_string(
+            text, callback=_passphrase_callback(passphrase))
 
     if asObj:
         evppubkey = M2Crypto.EVP.PKey()
@@ -825,8 +830,11 @@ def create_private_key(path=None,
     # pylint: enable=no-member
     bio = M2Crypto.BIO.MemoryBuffer()
     if passphrase is None:
-        cipher=None
-    rsa.save_key_bio(bio, cipher=cipher, callback=_passphrase_callback(passphrase))
+        cipher = None
+    rsa.save_key_bio(
+        bio,
+        cipher=cipher,
+        callback=_passphrase_callback(passphrase))
 
     if path:
         return write_pem(
@@ -967,10 +975,20 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         get_pem_entry(signing_private_key))
 
     try:
-        crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid, digest=bytes(digest))
+        crltext = crl.export(
+            cert,
+            key,
+            OpenSSL.crypto.FILETYPE_PEM,
+            days=days_valid,
+            digest=bytes(digest))
     except TypeError:
-        log.warning('Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used.')
-        crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid)
+        log.warning(
+            'Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used.')
+        crltext = crl.export(
+            cert,
+            key,
+            OpenSSL.crypto.FILETYPE_PEM,
+            days=days_valid)
 
     if text:
         return crltext
@@ -1334,14 +1352,15 @@ def create_certificate(
         if 'public_key' in kwargs:
             # Strip newlines to make passing through as cli functions easier
             kwargs['public_key'] = get_public_key(
-                kwargs['public_key'], 
+                kwargs['public_key'],
                 passphrase=kwargs['public_key_passphrase']).replace('\n', '')
 
         # Remove system entries in kwargs
         # Including listen_in and preqreuired because they are not included
         # in STATE_INTERNAL_KEYWORDS
         # for salt 2014.7.2
-        for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['listen_in', 'preqrequired', '__prerequired__']:
+        for ignore in list(_STATE_INTERNAL_KEYWORDS) + \
+                ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
 
         cert_txt = __salt__['publish.publish'](
@@ -1406,8 +1425,8 @@ def create_certificate(
         cert.set_subject(csr.get_subject())
         csrexts = read_csr(kwargs['csr'])['X509v3 Extensions']
 
-    cert.set_pubkey(get_public_key(kwargs['public_key'], 
-        passphrase=kwargs['public_key_passphrase'], asObj=True))
+    cert.set_pubkey(get_public_key(kwargs['public_key'],
+                                   passphrase=kwargs['public_key_passphrase'], asObj=True))
 
     subject = cert.get_subject()
 
@@ -1466,8 +1485,9 @@ def create_certificate(
         return cert_props
 
     if not verify_private_key(private_key=kwargs['signing_private_key'],
-            passphrase=kwargs['signing_private_key_passphrase'],
-            public_key=signing_cert):
+                              passphrase=kwargs[
+                                  'signing_private_key_passphrase'],
+                              public_key=signing_cert):
         raise salt.exceptions.SaltInvocationError(
             'signing_private_key: {0} '
             'does no match signing_cert: {1}'.format(
@@ -1478,7 +1498,7 @@ def create_certificate(
 
     cert.sign(
         _get_private_key_obj(kwargs['signing_private_key'],
-            passphrase=kwargs['signing_private_key_passphrase']),
+                             passphrase=kwargs['signing_private_key_passphrase']),
         kwargs['algorithm']
     )
 
@@ -1492,7 +1512,7 @@ def create_certificate(
         else:
             prepend = ''
         write_pem(text=cert.as_pem(), path=os.path.join(kwargs['copypath'],
-                  prepend + kwargs['serial_number']+'.crt'),
+                                                        prepend + kwargs['serial_number'] + '.crt'),
                   pem_type='CERTIFICATE')
 
     if path:
@@ -1552,7 +1572,8 @@ def create_csr(path=None, text=False, **kwargs):
 
     if 'private_key' not in kwargs and 'public_key' in kwargs:
         kwargs['private_key'] = kwargs['public_key']
-        log.warning("OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key")
+        log.warning(
+            "OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key")
 
     if 'private_key' not in kwargs not in kwargs:
         raise salt.exceptions.SaltInvocationError('private_key is required')
@@ -1563,7 +1584,7 @@ def create_csr(path=None, text=False, **kwargs):
     if 'public_key_passphrase' not in kwargs:
         kwargs['public_key_passphrase'] = None
     csr.set_pubkey(get_public_key(kwargs['public_key'],
-        passphrase=kwargs['public_key_passphrase'], asObj=True))
+                                  passphrase=kwargs['public_key_passphrase'], asObj=True))
 
     # pylint: disable=unused-variable
     for entry, num in six.iteritems(subject.nid):
@@ -1602,7 +1623,7 @@ def create_csr(path=None, text=False, **kwargs):
     csr.add_extensions(extstack)
 
     csr.sign(_get_private_key_obj(kwargs['private_key'],
-        passphrase=kwargs['public_key_passphrase']), kwargs['algorithm'])
+                                  passphrase=kwargs['public_key_passphrase']), kwargs['algorithm'])
 
     if path:
         return write_pem(
@@ -1636,10 +1657,12 @@ def verify_private_key(private_key, public_key, passphrase=None):
         salt '*' x509.verify_private_key private_key=/etc/pki/myca.key \\
                 public_key=/etc/pki/myca.crt
     '''
-    return bool(get_public_key(private_key, passphrase) == get_public_key(public_key))
+    return bool(get_public_key(private_key, passphrase)
+                == get_public_key(public_key))
 
 
-def verify_signature(certificate, signing_pub_key=None, signing_pub_key_passphrase=None):
+def verify_signature(certificate, signing_pub_key=None,
+                     signing_pub_key_passphrase=None):
     '''
     Verify that ``certificate`` has been signed by ``signing_pub_key``
 
@@ -1665,7 +1688,7 @@ def verify_signature(certificate, signing_pub_key=None, signing_pub_key_passphra
 
     if signing_pub_key:
         signing_pub_key = get_public_key(signing_pub_key,
-                passphrase=signing_pub_key_passphrase, asObj=True)
+                                         passphrase=signing_pub_key_passphrase, asObj=True)
 
     return bool(cert.verify(pkey=signing_pub_key) == 1)
 
