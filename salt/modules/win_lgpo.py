@@ -86,6 +86,7 @@ try:
     import struct
     from lxml import etree
     from salt.modules.reg import Registry as Registry
+    import StringIO
     HAS_WINDOWS_MODULES = True
     TRUE_VALUE_XPATH = etree.XPath('.//*[local-name() = "trueValue"]')
     FALSE_VALUE_XPATH = etree.XPath('.//*[local-name() = "falseValue"]')
@@ -2032,7 +2033,21 @@ def _updatePolicyElements(policy_item, regkey):
     return policy_item
 
 
-def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions', display_language='en-US'):
+def _remove_unicode_encoding(xml_file):
+    '''
+    attempts to remove the "encoding='unicode'" from an xml file
+    as lxml does not support that on a windows node currently
+    see issue #38100
+    '''
+    with open(xml_file, 'rb') as f:
+        xml_content = f.read()
+    modified_xml = re.sub(r' encoding=[\'"]+unicode[\'"]+', '', xml_content.decode('utf-16'), count=1)
+    xmltree = lxml.etree.parse(StringIO(modified_xml))
+    return xmltree
+
+
+def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
+                              display_language='en-US'):
     '''
     helper function to process all ADMX files in the specified policy_def_path
     and build a single XML doc that we can search/use for admx polic processing
@@ -2053,13 +2068,17 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions', 
             for t_admfile in files:
                 admfile = os.path.join(root, t_admfile)
                 parser = lxml.etree.XMLParser(remove_comments=True)
+                # see issue #38100
                 try:
                     xmltree = lxml.etree.parse(admfile, parser=parser)
                 except lxml.etree.XMLSyntaxError:
-                    msg = ('A syntax error was found while processing admx file {0},'
-                           ' all policies from this file will be unavailable via this module')
-                    log.error(msg.format(admfile))
-                    continue
+                    try:
+                        xmltree = _remove_unicode_encoding(admfile)
+                    except:
+                        msg = ('A error was found while processing admx file {0},'
+                               ' all policies from this file will be unavailable via this module')
+                        log.error(msg.format(admfile))
+                        continue
                 namespaces = xmltree.getroot().nsmap
                 namespace_string = ''
                 if None in namespaces:
@@ -2111,10 +2130,14 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions', 
                 try:
                     xmltree = lxml.etree.parse(adml_file)
                 except lxml.etree.XMLSyntaxError:
-                    msg = ('A syntax error was found while processing adml file {0}, all policy'
-                           ' languange data from this file will be unavailable via this module')
-                    log.error(msg.format(adml_file))
-                    continue
+                    # see issue #38100
+                    try:
+                        xmltree = _remove_unicode_encoding(adml_file)
+                    except:
+                        msg = ('An error was found while processing adml file {0}, all policy'
+                               ' languange data from this file will be unavailable via this module')
+                        log.error(msg.format(adml_file))
+                        continue
                 if None in namespaces:
                     namespaces['None'] = namespaces[None]
                     namespaces.pop(None)
