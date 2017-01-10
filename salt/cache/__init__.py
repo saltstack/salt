@@ -11,6 +11,7 @@ import time
 
 # Import Salt lobs
 import salt.loader
+import salt.syspaths
 from salt.payload import Serial
 
 
@@ -50,7 +51,7 @@ class Cache(object):
     def __init__(self, opts, cachedir=None):
         self.opts = opts
         if cachedir is None:
-            self.cachedir = opts['cachedir']
+            self.cachedir = opts.get('cachedir', salt.syspaths.CACHE_DIR)
         else:
             self.cachedir = cachedir
         self.driver = opts['cache']
