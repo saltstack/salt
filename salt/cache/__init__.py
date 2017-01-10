@@ -123,7 +123,10 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'store')
-        return self.modules[fun](bank, key, data, self.cachedir)
+        try:
+            return self.modules[fun](bank, key, data, self.cachedir)
+        except TypeError:
+            return self.modules[fun](bank, key, data)
 
     def fetch(self, bank, key):
         '''
@@ -147,7 +150,10 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'fetch')
-        return self.modules[fun](bank, key, self.cachedir)
+        try:
+            return self.modules[fun](bank, key, self.cachedir)
+        except TypeError:
+            return self.modules[fun](bank, key)
 
     def updated(self, bank, key):
         '''
@@ -171,7 +177,10 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'updated')
-        return self.modules[fun](bank, key, self.cachedir)
+        try:
+            return self.modules[fun](bank, key, self.cachedir)
+        except TypeError:
+            return self.modules[fun](bank, key)
 
     def flush(self, bank, key=None):
         '''
@@ -192,7 +201,10 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'flush')
-        return self.modules[fun](bank, key=key, cachedir=self.cachedir)
+        try:
+            return self.modules[fun](bank, key=key, cachedir=self.cachedir)
+        except TypeError:
+            return self.modules[fun](bank, key=key)
 
     def list(self, bank):
         '''
@@ -211,7 +223,10 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'list')
-        return self.modules[fun](bank, self.cachedir)
+        try:
+            return self.modules[fun](bank, self.cachedir)
+        except TypeError:
+            return self.modules[fun](bank)
 
     def contains(self, bank, key=None):
         '''
@@ -236,4 +251,7 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'contains')
-        return self.modules[fun](bank, key, self.cachedir)
+        try:
+            return self.modules[fun](bank, key, self.cachedir)
+        except TypeError:
+            return self.modules[fun](bank, key)
