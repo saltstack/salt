@@ -1175,6 +1175,7 @@ DEFAULT_MINION_OPTS = {
     'proxy_port': 0,
     'minion_jid_queue_hwm': 100,
     'ssl': None,
+    'cache': 'localfs',
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1488,6 +1489,7 @@ DEFAULT_CLOUD_OPTS = {
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
     'bootstrap_delay': None,
+    'cache': 'localfs',
 }
 
 DEFAULT_API_OPTS = {
