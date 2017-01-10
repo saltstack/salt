@@ -582,7 +582,7 @@ def create_network(kwargs=None, call=None):
 
     __utils__['cloud.fire_event'](
         'event',
-        'create network',
+        'creating network',
         'salt/cloud/net/creating',
         args={
             'name': name,
@@ -662,8 +662,8 @@ def delete_network(kwargs=None, call=None):
 
     __utils__['cloud.fire_event'](
         'event',
-        'deleted network',
-        'salt/cloud/net/deleted',
+        'destroyed network',
+        'salt/cloud/net/destroyed',
         args={
             'name': name,
         },
@@ -746,7 +746,7 @@ def create_subnetwork(kwargs=None, call=None):
 
     __utils__['cloud.fire_event'](
         'event',
-        'create subnetwork',
+        'creating subnetwork',
         'salt/cloud/subnet/creating',
         args={
             'name': name,
