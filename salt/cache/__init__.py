@@ -47,8 +47,12 @@ class Cache(object):
     Key name is a string identifier of a data container (like a file inside a
     directory) which will hold the data.
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, cachedir=None):
         self.opts = opts
+        if cachedir is None:
+            self.cachedir = opts['cachedir']
+        else:
+            self.cachedir = cachedir
         self.driver = opts['cache']
         self.serial = Serial(opts)
         self._modules = None
@@ -119,7 +123,7 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'store')
-        return self.modules[fun](bank, key, data)
+        return self.modules[fun](bank, key, data, self.cachedir)
 
     def fetch(self, bank, key):
         '''
@@ -143,7 +147,7 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'fetch')
-        return self.modules[fun](bank, key)
+        return self.modules[fun](bank, key, self.cachedir)
 
     def updated(self, bank, key):
         '''
@@ -167,7 +171,7 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'updated')
-        return self.modules[fun](bank, key)
+        return self.modules[fun](bank, key, self.cachedir)
 
     def flush(self, bank, key=None):
         '''
@@ -188,7 +192,7 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'flush')
-        return self.modules[fun](bank, key=key)
+        return self.modules[fun](bank, key=key, cachedir=self.cachedir)
 
     def list(self, bank):
         '''
@@ -206,8 +210,8 @@ class Cache(object):
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
         '''
-        fun = '{0}.{1}'.format(self.driver, 'getlist')
-        return self.modules[fun](bank)
+        fun = '{0}.{1}'.format(self.driver, 'list')
+        return self.modules[fun](bank, self.cachedir)
 
     def contains(self, bank, key=None):
         '''
@@ -232,4 +236,4 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'contains')
-        return self.modules[fun](bank, key)
+        return self.modules[fun](bank, key, self.cachedir)
