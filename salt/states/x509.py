@@ -63,13 +63,6 @@ the mine where it can be easily retrieved by other minions.
     /etc/pki/issued_certs:
       file.directory: []
 
-    /etc/pki/ca.key:
-      x509.private_key_managed:
-        - bits: 4096
-        - backup: True
-        - require:
-          - file: /etc/pki
-
     /etc/pki/ca.crt:
       x509.certificate_managed:
         - signing_private_key: /etc/pki/ca.key
@@ -84,8 +77,12 @@ the mine where it can be easily retrieved by other minions.
         - days_valid: 3650
         - days_remaining: 0
         - backup: True
+        - managed_private_key:
+            name: /etc/pki/ca.key
+            bits: 4096
+            backup: True
         - require:
-          - x509: /etc/pki/ca.key
+          - file: /etc/pki
 
     mine.send:
       module.run:
@@ -142,10 +139,6 @@ This state creates a private key then requests a certificate signed by ca accord
 
 .. code-block:: yaml
 
-    /etc/pki/www.key:
-      x509.private_key_managed:
-        - bits: 4096
-
     /etc/pki/www.crt:
       x509.certificate_managed:
         - ca_server: ca
@@ -154,6 +147,10 @@ This state creates a private key then requests a certificate signed by ca accord
         - CN: www.example.com
         - days_remaining: 30
         - backup: True
+        - managed_private_key:
+            name: /etc/pki/www.key
+            bits: 4096
+            backup: True
 
 '''
 
@@ -259,8 +256,7 @@ def private_key_managed(name,
 
     new:
         Always create a new key. Defaults to False.
-        Combining new with :mod:`prereq <salt.states.requsities.preqreq>` can allow key rotation
-        whenever a new certificiate is generated.
+        Combining new with :mod:`prereq <salt.states.requsities.preqreq>`, or when used as part of a `managed_private_key` can allow key rotation whenever a new certificiate is generated.
 
     verbose:
         Provide visual feedback on stdout, dots while key is generated.
