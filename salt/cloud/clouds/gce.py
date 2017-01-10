@@ -465,6 +465,7 @@ def __get_region(conn, vm_):
         default='default', search_global=False)
     return conn.ex_get_region(region)
 
+
 def __get_ssh_interface(vm_):
     '''
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
