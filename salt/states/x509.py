@@ -287,7 +287,7 @@ def private_key_managed(name,
     '''
     file_args, kwargs = _get_file_args(name, **kwargs)
     new_key = False
-    if _check_private_key(name, bits, passphrase, cipher, new):
+    if _check_private_key(name, bits, passphrase, new):
         file_args['contents'] = __salt__['x509.get_pem_entry'](
             name, pem_type='RSA PRIVATE KEY')
     else:
@@ -298,6 +298,8 @@ def private_key_managed(name,
     ret = __states__['file.managed'](**file_args)
     if ret['changes'] and new_key:
         ret['changes'] = 'New private key generated'
+
+    return ret
 
 
 def csr_managed(name,
@@ -415,7 +417,7 @@ def certificate_managed(name,
             'verbose': True
         }
         private_key_args.update(managed_private_key)
-        kwargs['public_key_passphrase'] = managed_private_key['passphrase']
+        kwargs['public_key_passphrase'] = private_key_args['passphrase']
 
         if private_key_args['new']:
             rotate_private_key = True
@@ -514,8 +516,7 @@ def certificate_managed(name,
             file_args['contents'] = private_key
         else:
             private_file_args = copy.deepcopy(file_args)
-            unique_private_file_args = _get_file_args(
-                private_key_args['name'], **private_key_args)
+            unique_private_file_args, _ = _get_file_args(**private_key_args)
             private_file_args.update(unique_private_file_args)
             private_file_args['contents'] = private_key
             private_ret = __states__['file.managed'](**private_file_args)
