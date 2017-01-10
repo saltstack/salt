@@ -69,13 +69,13 @@ class APIConfigTestCase(TestCase):
         the user's master config file.
         '''
         foo_dir = '/foo/bar/baz'
-        hello_dir = '/hellp/world'
+        hello_dir = '/hello/world'
         mock_master_config = {
             'api_pidfile': foo_dir,
             'api_logfile': hello_dir,
             'rest_timeout': 5
         }
-        mock_master_config.update(MOCK_MASTER_DEFAULT_OPTS)
+        mock_master_config.update(MOCK_MASTER_DEFAULT_OPTS.copy())
 
         with patch('salt.config.client_config',
                    MagicMock(return_value=mock_master_config)):
@@ -88,7 +88,7 @@ class APIConfigTestCase(TestCase):
 
     def test_api_config_prepend_root_dirs_return(self):
         '''
-        Tests the opts value of the api_lofile, log_file, api_pidfile, and pidfile
+        Tests the opts value of the api_logfile, log_file, api_pidfile, and pidfile
         when a custom root directory is used. This ensures that each of these
         values is present in the list of opts keys that should have the root_dir
         prepended when the api_config function returns the opts dictionary.
