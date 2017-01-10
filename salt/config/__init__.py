@@ -1175,6 +1175,7 @@ DEFAULT_MINION_OPTS = {
     'proxy_port': 0,
     'minion_jid_queue_hwm': 100,
     'ssl': None,
+    'cache': 'localfs',
 }
 
 DEFAULT_MASTER_OPTS = {
