@@ -259,8 +259,13 @@ def gets_service_instance_via_proxy(fn):
         is returned.
     '''
     fn_name = fn.__name__
-    arg_names, args_name, kwargs_name, default_values = \
-            inspect.getargspec(fn)
+    try:
+        arg_names, args_name, kwargs_name, default_values, _, _, _ = \
+                inspect.getfullargspec(fn)
+    except AttributeError:
+        # Fallback to Python 2.7
+        arg_names, args_name, kwargs_name, default_values = \
+                inspect.getargspec(fn)
     default_values = default_values if default_values is not None else []
 
     @wraps(fn)
