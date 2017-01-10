@@ -537,13 +537,13 @@ def __get_ssh_credentials(vm_):
 
 def create_network(kwargs=None, call=None):
     '''
-    Create a GCE network.
+    Create a GCE network. Must specify name and cidr.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-cloud -f create_network gce name=mynet cidr=10.10.10.0/24
+        salt-cloud -f create_network gce name=mynet cidr=10.10.10.0/24 mode=legacy description=optional
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -555,14 +555,17 @@ def create_network(kwargs=None, call=None):
             'A name must be specified when creating a network.'
         )
         return False
+
     if 'cidr' not in kwargs:
         log.error(
             'A network CIDR range must be specified when creating a network.'
         )
-        return
+        return False
 
     name = kwargs['name']
     cidr = kwargs['cidr']
+    mode = kwargs.get('mode', 'legacy')
+    desc = kwargs.get('description', None)
     conn = get_conn()
 
     __utils__['cloud.fire_event'](
@@ -572,12 +575,14 @@ def create_network(kwargs=None, call=None):
         args={
             'name': name,
             'cidr': cidr,
+            'description': desc,
+            'mode': mode
         },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
-    network = conn.ex_create_network(name, cidr)
+    network = conn.ex_create_network(name, cidr, description, mode)
 
     __utils__['cloud.fire_event'](
         'event',
@@ -619,8 +624,8 @@ def delete_network(kwargs=None, call=None):
 
     __utils__['cloud.fire_event'](
         'event',
-        'delete network',
-        'salt/cloud/net/deleting',
+        'destroying network',
+        'salt/cloud/net/destroying',
         args={
             'name': name,
         },
@@ -643,8 +648,8 @@ def delete_network(kwargs=None, call=None):
 
     __utils__['cloud.fire_event'](
         'event',
-        'deleted network',
-        'salt/cloud/net/deleted',
+        'destroyed network',
+        'salt/cloud/net/destroyed',
         args={
             'name': name,
         },
@@ -676,6 +681,189 @@ def show_network(kwargs=None, call=None):
 
     conn = get_conn()
     return _expand_item(conn.ex_get_network(kwargs['name']))
+
+
+def create_subnetwork(kwargs=None, call=None):
+    '''
+    Create a GCE Subnetwork. Must specify name, cidr, network, and region.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_subnetwork gce name=mysubnet network=mynet1 region=us-west1 cidr=10.0.0.0/24 description=optional
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_subnetwork function must be called with -f or --function.'
+        )
+
+    if not kwargs or 'name' not in kwargs:
+        log.error(
+            'Must specify name of subnet.'
+        )
+        return False
+
+    if 'network' not in kwargs:
+        log.errror(
+            'Must specify name of network to create subnet under.'
+        )
+        return False
+
+    if 'cidr' not in kwargs:
+        log.errror(
+            'A network CIDR range must be specified when creating a subnet.'
+        )
+        return False
+
+    if 'region' not in kwargs:
+        log.error(
+            'A region must be specified when creating a subnetwork.'
+        )
+        return False
+
+    name = kwargs['name']
+    cidr = kwargs['cidr']
+    network = kwargs['network']
+    region = kwargs['region']
+    desc = kwargs.get('description', None)
+    conn = get_conn()
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'creating subnetwork',
+        'salt/cloud/subnet/creating',
+        args={
+            'name': name,
+            'network': network,
+            'cidr': cidr,
+            'region': region,
+            'description': desc
+        },
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    subnet = conn.ex_create_subnetwork(name, network, cidr, region, desc)
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'created subnetwork',
+        'salt/cloud/subnet/created',
+        args={
+            'name': name,
+            'network': network,
+            'cidr': cidr,
+            'region': region,
+            'description': desc
+        },
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    return _expand_item(subnet)
+
+
+def delete_subnetwork(kwargs=None, call=None):
+    '''
+    Delete a GCE Subnetwork. Must specify name and region.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f delete_subnetwork gce name=mysubnet network=mynet1 region=us-west1
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_subnet function must be called with -f or --function.'
+        )
+
+    if not kwargs or 'name' not in kwargs:
+        log.error(
+            'Must specify name of subnet.'
+        )
+        return False
+
+    if 'region' not in kwargs:
+        log.error(
+            'Must specify region of subnet.'
+        )
+        return False
+
+    name = kwargs['name']
+    region = kwargs['region']
+    conn = get_conn()
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroying subnetwork',
+        'salt/cloud/subnet/destroying',
+        args={
+            'name': name,
+            'region': region
+        },
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    try:
+        result = conn.ex_destroy_subnetwork(name, region)
+    except ResourceNotFoundError as exc:
+        log.error(
+            'Subnework {0} could not be found.\n'
+            'The following exception was thrown by libcloud:\n{1}'.format(
+                name, exc),
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return False
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroyed subnetwork',
+        'salt/cloud/subnet/destroyed',
+        args={
+            'name': name,
+            'region': region
+        },
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+    return result
+
+
+def show_subnetwork(kwargs=None, call=None):
+    '''
+    Show details of an existing GCE Subnetwork. Must specify name and region.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f show_subnetwork gce name=mysubnet region=us-west1
+
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_subnetwork function must be called with -f or --function.'
+        )
+
+    if not kwargs or 'name' not in kwargs:
+        log.error(
+            'Must specify name of subnet.'
+        )
+        return False
+
+    if 'region' not in kwargs:
+        log.error(
+            'Must specify region of subnet.'
+        )
+        return False
+
+    name = kwargs['name']
+    region = kwargs['region']
+    conn = get_conn()
+    return _expand_item(conn.ex_get_subnetwork(name, region))
 
 
 def create_fwrule(kwargs=None, call=None):
@@ -2269,8 +2457,7 @@ def request_instance(vm_):
             'ex_can_ip_forward': config.get_cloud_config_value(
                 'ip_forwarding', vm_, __opts__, default=False),
             'ex_preemptible': config.get_cloud_config_value(
-                'preemptible', vm_, __opts__, default=False
-            )
+                'preemptible', vm_, __opts__, default=False)
         })
         if kwargs.get('ex_disk_type') not in ('pd-standard', 'pd-ssd'):
             raise SaltCloudSystemExit(
