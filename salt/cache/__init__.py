@@ -206,7 +206,7 @@ class Cache(object):
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
         '''
-        fun = '{0}.{1}'.format(self.driver, 'list')
+        fun = '{0}.{1}'.format(self.driver, 'getlist')
         return self.modules[fun](bank)
 
     def contains(self, bank, key=None):
