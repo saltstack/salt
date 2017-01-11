@@ -34,6 +34,16 @@ __virtualname__ = 'statuspage'
 
 log = logging.getLogger(__file__)
 
+_DO_NOT_COMPARE_FIELDS = [
+    'created_at',
+    'updated_at'
+]
+
+_MATCH_KEYS = [
+    'id',
+    'name'
+]
+
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
 # ----------------------------------------------------------------------------------------------------------------------
@@ -55,6 +65,135 @@ def _default_ret(name):
         'result': False,
         'comment': '',
         'changes': {}
+    }
+
+
+def _compute_diff_ret():
+    '''
+    Default dictionary retuned by the _compute_diff helper.
+    '''
+    return {
+        'add': [],
+        'update': [],
+        'remove': []
+    }
+
+
+def _clear_dict(endpoint_props):
+    '''
+    Eliminates None entries from the features of the endpoint dict.
+    '''
+    return dict(
+        (prop_name, prop_val)
+        for prop_name, prop_val in six.iteritems(endpoint_props)
+        if prop_val is not None
+    )
+
+
+def _ignore_keys(endpoint_props):
+    '''
+    Ignores some keys that might be different without any important info.
+    These keys are defined under _DO_NOT_COMPARE_FIELDS.
+    '''
+    return dict(
+        (prop_name, prop_val)
+        for prop_name, prop_val in six.iteritems(endpoint_props)
+        if prop_name not in _DO_NOT_COMPARE_FIELDS
+    )
+
+
+def _clear_ignore(endpoint_props):
+    '''
+    Both _clear_dict and _ignore_keys in a single iteration.
+    '''
+    return dict(
+        (prop_name, prop_val)
+        for prop_name, prop_val in six.iteritems(endpoint_props)
+        if prop_name not in _DO_NOT_COMPARE_FIELDS and prop_val is not None
+    )
+
+
+def _clear_ignore_list(lst):
+    '''
+    Apply _clear_ignore to a list.
+    '''
+    return [
+        _clear_ignore(ele)
+        for ele in lst
+    ]
+
+
+def _find_match(ele, lst):
+    '''
+    Find a matching element in a list.
+    '''
+    for _ele in lst:
+        for match_key in _MATCH_KEYS:
+            if _ele.get(match_key) == ele.get(match_key):
+                return _ele
+
+
+def _update_on_fields(prev_ele, new_ele):
+    '''
+    Return a dict with fields that differ between two dicts.
+    '''
+    return dict(
+        (prop_name, prop_val)
+        for prop_name, prop_val in six.iteritems(new_ele)
+        if new_ele.get(prop_name) != prev_ele.get(prop_name) or prop_name in _MATCH_KEYS
+    )
+
+
+def _compute_diff(expected_endpoints, configured_endpoints):
+    '''
+    Compares configured endpoints with the expected configuration and returns the differences.
+    '''
+    new_endpoints = []
+    update_endpoints = []
+    remove_endpoints = []
+
+    ret = _compute_diff_ret()
+
+    # noth configured => configure with expected endpoints
+    if not configured_endpoints:
+        ret.update({
+            'add': expected_endpoints
+        })
+        return ret
+
+    # noting expected => remove everything
+    if not expected_endpoints:
+        ret.update({
+            'remove': configured_endpoints
+        })
+        return ret
+
+    expected_endpoints_clear = _clear_ignore_list(expected_endpoints)
+    configured_endpoints_clear = _clear_ignore_list(configured_endpoints)
+
+    for expected_endpoint_clear in expected_endpoints_clear:
+        if expected_endpoint_clear not in configured_endpoints_clear:
+            # none equal => add or update
+            matching_ele = _find_match(expected_endpoint_clear, configured_endpoints_clear)
+            if not matching_ele:
+                # new element => add
+                new_endpoints.append(expected_endpoint_clear)
+            else:
+                # element matched, but some fields are different
+                update_endpoints.append(
+                    _update_on_fields(matching_ele, expected_endpoint_clear)
+                )
+    for configured_endpoint_clear in configured_endpoints_clear:
+        if configured_endpoint_clear not in expected_endpoints_clear:
+            matching_ele = _find_match(configured_endpoint_clear, expected_endpoints_clear)
+            if not matching_ele:
+                #  no match found => remove
+                remove_endpoints.append(configured_endpoint_clear)
+
+    return {
+        'add': new_endpoints,
+        'update': update_endpoints,
+        'remove': remove_endpoints
     }
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -124,7 +263,6 @@ def create(name,
         ret['comment'] = '{endpoint} created!'.format(endpoint=endpoint_sg)
         ret['result'] = True
         ret['changes'] = sp_create.get('out')
-
 
 
 def update(name,
@@ -245,8 +383,7 @@ def delete(name,
                                               api_url=api_url,
                                               page_id=page_id,
                                               api_key=api_key,
-                                              api_version=api_version,
-                                              **kwargs)
+                                              api_version=api_version)
     if not sp_delete.get('result'):
         ret['comment'] = 'Unable to delete {endpoint} #{id}: {msg}'.format(endpoint=endpoint_sg,
                                                                            id=id,
@@ -303,8 +440,66 @@ def managed(name,
                           status: investigating
                           impact: minor
     '''
-    # retrieve everything, per endpoint
-    # compare
-    # build out dict
-    # make calls
-    # return
+    complete_diff = {}
+    ret = _default_ret(name)
+    for endpoint_name, endpoint_expected_config in six.iteritems(config):
+        endpoint_existing_config_ret = __salt__['statuspage.retrieve'](endpoint=endpoint_name,
+                                                                       api_url=api_url,
+                                                                       page_id=page_id,
+                                                                       api_key=api_key,
+                                                                       api_version=api_version)
+        if not endpoint_existing_config_ret.get('result'):
+            ret.update({
+                'comment': endpoint_existing_config_ret.get('comment')
+            })
+            return ret  # stop at first error
+        endpoint_existing_config = endpoint_existing_config_ret.get('out')
+        complete_diff[endpoint_name] = _compute_diff(endpoint_expected_config, endpoint_existing_config)
+    ret.update({
+        'changes': complete_diff
+    })
+    if __opts__.get('test'):
+        ret.update({
+            'comment': 'Testing mode. Would apply the following changes:',
+            'result': None
+        })
+        return ret
+    for endpoint_name, endpoint_diff in six.iteritems(complete_diff):
+        endpoint_sg = endpoint_name[:-1]  # singular
+        for new_endpoint in endpoint_diff.get('add'):
+            log.debug('Defining new {endpoint}: {props}'.format(
+                endpoint=endpoint_sg,
+                props=new_endpoint
+            ))
+            __salt__['statuspage.create'](endpoint=endpoint_name,
+                                          api_url=api_url,
+                                          page_id=page_id,
+                                          api_key=api_key,
+                                          api_version=api_version,
+                                          **new_endpoint)
+        for update_endpoint in endpoint_diff.get('update'):
+            endpoint_id = update_endpoint.pop('id')
+            log.debug('Updating {endpoint} #{id}: {props}'.format(
+                endpoint=endpoint_sg,
+                id=endpoint_id,
+                props=update_endpoint
+            ))
+            __salt__['statuspage.update'](endpoint=endpoint_name,
+                                          id=endpoint_id,
+                                          api_url=api_url,
+                                          page_id=page_id,
+                                          api_key=api_key,
+                                          api_version=api_version,
+                                          **update_endpoint)
+        for remove_endpoint in endpoint_diff.get('remove'):
+            endpoint_id = remove_endpoint.pop('id')
+            log.debug('Removing {endpoint} #{id}'.format(
+                endpoint=endpoint_sg,
+                id=endpoint_id
+            ))
+            __salt__['statuspage.update'](endpoint=endpoint_name,
+                                          id=endpoint_id,
+                                          api_url=api_url,
+                                          page_id=page_id,
+                                          api_key=api_key,
+                                          api_version=api_version)
