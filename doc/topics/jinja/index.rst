@@ -618,7 +618,6 @@ to_bytes
 
     {{ 'wall of text' | to_bytes }}
 
-
 json_decode_list
   JSON decodes as unicode, Jinja needs bytes.
 
@@ -1202,3 +1201,43 @@ module dictionary just like the built-in execution modules:
 - :ref:`How to Convert Jinja Logic to an Execution Module <tutorial-jinja_to_execution-module>`
 - :ref:`Writing Execution Modules <writing-execution-modules>`
 
+Custom Jinja filters
+====================
+
+Given that all execution modules are available in the Jinja template,
+one can easily define a custom module as in the previous paragraph
+and use it as a Jinja filter.
+However, please note that it will not be accessible through the pipe.
+
+For example, instead of:
+
+.. code-block:: jinja
+
+    {{ my_variable | my_jinja_filter }}
+
+The user will need to define ``my_jinja_filter`` function under an extension
+module, say ``my_filters`` and use as:
+
+.. code-block:: jinja
+
+    {{ salt.my_filters.my_jinja_filter(my_variable) }}
+
+The greatest benefit is that you are able to access thousands of existing functions, e.g.:
+
+- get the DNS AAAA records for a specific address using the :mod:`dnsutil <salt.modules.dnsutil>`:
+
+  .. code-block:: jinja
+
+    {{ salt.dnsutil.AAAA('www.google.com') }}
+
+- retrieve a specific field value from a :mod:`Redis <salt.modules.modredis>` hash:
+
+  .. code-block:: jinja
+
+    {{ salt.redis.hget('foo_hash', 'bar_field') }}
+
+- get the routes to ``0.0.0.0/0`` using the :mod:`NAPALM route <salt.modules.napalm_route>`:
+
+  .. code-block:: jinja
+
+    {{ salt.route.show('0.0.0.0/0') }}
