@@ -858,7 +858,7 @@ class TestVcenterConnectionTestCase(TestCase):
                     MagicMock(side_effect=exc)):
             with self.assertRaises(Exception) as excinfo:
                 res = vsphere.test_vcenter_connection()
-        self.assertEqual('NonVMwareSaltError', excinfo.exception.message)
+        self.assertEqual('NonVMwareSaltError', str(excinfo.exception))
 
     def test_output_true(self):
         with patch('salt.utils.vmware.is_connection_to_a_vcenter',
