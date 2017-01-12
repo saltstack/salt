@@ -66,8 +66,10 @@ class ModuleStateTest(TestCase):
         Tests the return of module.run state when arguments are missing
         '''
         ret = module.run(CMD)
-        comment = 'The following arguments are missing: world hello'
-        self.assertEqual(ret['comment'], comment)
+        comment = 'The following arguments are missing:'
+        self.assertIn(comment, ret['comment'])
+        self.assertIn('world', ret['comment'])
+        self.assertIn('hello', ret['comment'])
 
 
 if __name__ == '__main__':
