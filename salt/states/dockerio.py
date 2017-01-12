@@ -505,11 +505,9 @@ def loaded(name, tag='latest', source=None, source_hash='', force=False):
         return _ret_status(name=name, comment=comment)
 
     tmp_filename = salt.utils.files.mkstemp()
-    __salt__['state.single']('file.managed',
-                             name=tmp_filename,
-                             source=source,
-                             source_hash=source_hash,
-                             concurrent=bool(__opts__.get('sudo_user')))
+    __states__['file.managed'](name=tmp_filename,
+                               source=source,
+                               source_hash=source_hash)
     changes = {}
 
     if image_infos['status']:
