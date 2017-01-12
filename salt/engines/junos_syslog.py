@@ -185,10 +185,12 @@ class Echo(DatagramProtocol):
                 data['hostname'], data['event'])
             data['port'] = port
 
-            fire_master = salt.utils.event.get_master_event(
-                __opts__,
-                __opts__['sock_dir']).fire_event(data, topic)
-            # Do nothing if the syslog do not contain events
+            if __opts__['__role'] == 'master':
+                fire_master = salt.utils.event.get_master_event(
+                    __opts__,
+                    __opts__['sock_dir']).fire_event(data, topic)
+            else:
+                __salt__['event.fire_master'](data=data, tag=topic)
 
 def start(port=516):
     log.info('Starting junos syslog engine (port {0})'.format(port))
