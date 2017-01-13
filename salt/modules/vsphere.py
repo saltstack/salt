@@ -185,6 +185,12 @@ try:
 except ImportError:
     HAS_PYVMOMI = False
 
+esx_cli = salt.utils.which('esxcli')
+if esx_cli:
+    HAS_ESX_CLI = True
+else:
+    HAS_ESX_CLI = False
+
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'vsphere'
