@@ -24,7 +24,7 @@ Declaring the Master Pillar
 The Salt Master server maintains a :conf_master:`pillar_roots` setup that
 matches the structure of the :conf_master:`file_roots` used in the Salt file
 server. Like :conf_master:`file_roots`, the :conf_master:`pillar_roots` option
-mapps environments to directories. The pillar data is then mapped to minions
+maps environments to directories. The pillar data is then mapped to minions
 based on matchers in a top file which is laid out in the same way as the state
 top file. Salt pillars can use the same matcher types as the standard :ref:`top
 file <states-top>`.
