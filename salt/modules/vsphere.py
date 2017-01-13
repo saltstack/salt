@@ -357,6 +357,7 @@ def disconnect(service_instance):
     return True
 
 
+@depends(HAS_ESX_CLI)
 def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, port=None, esxi_hosts=None):
     '''
     Run an ESXCLI command directly on the host or list of hosts.
@@ -425,6 +426,7 @@ def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, 
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def get_coredump_network_config(host, username, password, protocol=None, port=None, esxi_hosts=None):
     '''
     Retrieve information on ESXi or vCenter network dump collection and
@@ -496,6 +498,7 @@ def get_coredump_network_config(host, username, password, protocol=None, port=No
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def coredump_network_enable(host, username, password, enabled, protocol=None, port=None, esxi_hosts=None):
     '''
     Enable or disable ESXi core dump collection. Returns ``True`` if coredump is enabled
@@ -569,6 +572,7 @@ def coredump_network_enable(host, username, password, enabled, protocol=None, po
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def set_coredump_network_config(host,
                                 username,
                                 password,
@@ -660,6 +664,7 @@ def set_coredump_network_config(host,
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def get_firewall_status(host, username, password, protocol=None, port=None, esxi_hosts=None):
     '''
     Show status of all firewall rule sets.
@@ -734,6 +739,7 @@ def get_firewall_status(host, username, password, protocol=None, port=None, esxi
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def enable_firewall_ruleset(host,
                             username,
                             password,
@@ -808,6 +814,7 @@ def enable_firewall_ruleset(host,
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def syslog_service_reload(host, username, password, protocol=None, port=None, esxi_hosts=None):
     '''
     Reload the syslog service so it will pick up any changes.
@@ -868,6 +875,7 @@ def syslog_service_reload(host, username, password, protocol=None, port=None, es
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def set_syslog_config(host,
                       username,
                       password,
@@ -999,6 +1007,7 @@ def set_syslog_config(host,
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def get_syslog_config(host, username, password, protocol=None, port=None, esxi_hosts=None):
     '''
     Retrieve the syslog configuration.
@@ -1061,6 +1070,7 @@ def get_syslog_config(host, username, password, protocol=None, port=None, esxi_h
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def reset_syslog_config(host,
                         username,
                         password,
