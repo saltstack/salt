@@ -813,6 +813,42 @@ class GetsServiceInstanceViaProxyTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
 # Decorator mocks
+@patch('salt.modules.vsphere.get_proxy_type',MagicMock(return_value='esxi'))
+# Function mocks
+@patch('salt.modules.vsphere._get_proxy_connection_details', MagicMock())
+@patch('salt.utils.vmware.get_service_instance', MagicMock())
+class GetServiceInstanceViaProxyTestCase(TestCase):
+    '''Tests for salt.modules.vsphere.get_service_instance_via_proxy'''
+
+    def test_supported_proxes(self):
+        supported_proxies = ['esxi']
+        for proxy_type in supported_proxies:
+            with patch('salt.modules.vsphere.get_proxy_type',
+                       MagicMock(return_value=proxy_type)):
+                vsphere.get_service_instance_via_proxy()
+
+    def test_get_service_instance_call(self):
+        mock_connection_details = [MagicMock(), MagicMock(), MagicMock()]
+        mock_get_service_instance = MagicMock()
+        with patch('salt.modules.vsphere._get_proxy_connection_details',
+                    MagicMock(return_value=mock_connection_details)):
+            with patch('salt.utils.vmware.get_service_instance',
+                       mock_get_service_instance):
+                vsphere.get_service_instance_via_proxy()
+        mock_get_service_instance.assert_called_once_with(
+            *mock_connection_details)
+
+    def test_output(self):
+        mock_si = MagicMock()
+        with patch('salt.utils.vmware.get_service_instance',
+                    MagicMock(return_value=mock_si)):
+            res = vsphere.get_service_instance_via_proxy()
+        self.assertEqual(res, mock_si)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
+# Decorator mocks
 @patch('salt.modules.vsphere.get_proxy_type', MagicMock(return_value='esxi'))
 @patch('salt.modules.vsphere._get_proxy_connection_details', MagicMock())
 @patch('salt.utils.vmware.get_service_instance',
