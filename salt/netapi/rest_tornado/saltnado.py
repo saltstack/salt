@@ -154,7 +154,6 @@ a return like::
 # Import Python libs
 from __future__ import absolute_import
 import time
-import math
 import fnmatch
 import logging
 from copy import copy
