@@ -30,6 +30,7 @@ filemod.__opts__ = {
     'file_roots': {'base': 'tmp'},
     'pillar_roots': {'base': 'tmp'},
     'cachedir': 'tmp',
+    'grains': {},
 }
 filemod.__grains__ = {'kernel': 'Linux'}
 
