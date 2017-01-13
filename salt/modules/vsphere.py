@@ -342,6 +342,21 @@ def get_service_instance_via_proxy(service_instance=None):
     return salt.utils.vmware.get_service_instance(*connection_details)
 
 
+@supports_proxies('esxi')
+def disconnect(service_instance):
+    '''
+    Disconnects from a vCenter or ESXi host
+
+    Note:
+        Should be used by state functions, not invoked directly.
+
+    service_instance
+        Service instance (vim.ServiceInstance)
+    '''
+    salt.utils.vmware.disconnect(service_instance)
+    return True
+
+
 def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, port=None, esxi_hosts=None):
     '''
     Run an ESXCLI command directly on the host or list of hosts.
