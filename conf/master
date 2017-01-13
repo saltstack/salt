@@ -357,6 +357,20 @@
 # Pass in an alternative location for the salt-ssh roster file
 #roster_file: /etc/salt/roster
 
+# Define a location for roster files so they can be chosen when using Salt API.
+# An administrator can place roster files into these locations. Then when
+# calling Salt API, parameter 'roster_file' should contain a relative path to
+# these locations. That is, "roster_file=/foo/roster" will be resolved as
+# "/etc/salt/roster.d/foo/roster" etc. This feature prevents passing insecure
+# custom rosters through the Salt API.
+#
+#rosters:
+# - /etc/salt/roster.d
+# - /opt/salt/some/more/rosters
+
+# The log file of the salt-ssh command:
+#ssh_log_file: /var/log/salt/ssh
+
 # Pass in minion option overrides that will be inserted into the SHIM for
 # salt-ssh calls. The local minion config is not used for salt-ssh. Can be
 # overridden on a per-minion basis in the roster (`minion_opts`)
