@@ -2,6 +2,8 @@
 '''
  Namecheap management
 
+ .. versionadded:: Nitrogen
+
  General Notes
  -------------
 
@@ -66,6 +68,13 @@ def reactivate(domain_name):
         amount charged for reactivation
         orderid unique integer value for the order
         transactionid unique integer value for the transaction
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' namecheap_domains.reactivate my-domain-name
+
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.reactivate')
     opts['DomainName'] = domain_name
@@ -94,12 +103,11 @@ def renew(domain_name, years, promotion_code=None):
         domain_name
             string  The domain name you wish to renew
 
-        years
-            integer  Number of years to renew
+    CLI Example:
 
-    Optional parameters:
-        promotion_code
-            string Promotional code for renewing the domain
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_domains.renew my-domain-name 5
     '''
 
     opts = salt.utils.namecheap.get_opts('namecheap.domains.renew')
@@ -130,18 +138,11 @@ def create(domain_name, years, **kwargs):
         whoisguardenable True,False if enabled for this domain
         nonrealtimedomain True,False if domain registration is instant or not
 
-    Required parameters:
-        domain_name
-            string  The name of the domain to purchase
+    CLI Example:
 
-        years
-            integer  Number of years to register
-                     Default Value: 2
-    Other required parameters:
-        see https://www.namecheap.com/support/api/methods/domains/create.aspx
+    .. code-block:: bash
 
-        If registering TLDs, please refer to https://www.namecheap.com/support/api/extended-attributes.aspx
-        for additional parameters
+        salt 'my-minion' namecheap_domains.create my-domain-name 2
     '''
     idn_codes = set(['afr',
                      'alb',
@@ -319,6 +320,12 @@ def check(*domains_to_check):
 
     domains_to_check
         array of strings  List of domains to check
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_domains.check domain-to-check
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.check')
     opts['DomainList'] = ','.join(domains_to_check)
@@ -344,6 +351,12 @@ def get_info(domain_name):
 
     domain_name
         string  Domain name to get information about
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_domains.get_info my-domain-name
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.getinfo')
     opts['DomainName'] = domain_name
@@ -361,6 +374,12 @@ def get_info(domain_name):
 def get_tld_list():
     '''
     Returns a list of TLDs as objects
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_domains.get_tld_list
     '''
 
     response_xml = salt.utils.namecheap.get_request(salt.utils.namecheap.get_opts('namecheap.domains.gettldlist'))
@@ -412,6 +431,12 @@ def get_list(list_type=None,
     sort_by
         string  Possible values are NAME/NAME_DESC/EXPIREDATE/
                 EXPIREDATE_DESC/CREATEDATE/CREATEDATE_DESC
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_domains.get_list
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.getList')
 

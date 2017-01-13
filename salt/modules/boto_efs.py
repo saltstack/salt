@@ -2,6 +2,8 @@
 '''
 Connection module for Amazon EFS
 
+.. versionadded:: Nitrogen
+
 :configuration: This module accepts explicit EFS credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles or
     it can read them from the ~/.aws/credentials file or from these
@@ -143,6 +145,12 @@ def create_file_system(name,
 
     returns
         (dict) - A dict of the data for the elastic file system
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' boto_efs.create_file_system efs-name generalPurpose
     '''
     import os
     import base64
@@ -202,6 +210,12 @@ def create_mount_target(filesystemid,
 
     returns
         (dict) - A dict of the response data
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' boto_efs.create_mount_target filesystemid subnetid
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
@@ -230,6 +244,12 @@ def create_tags(filesystemid,
 
     tags
         (dict) - The tags to add to the file system
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' boto_efs.create_tags
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
@@ -256,6 +276,12 @@ def delete_file_system(filesystemid,
 
     filesystemid
         (string) - ID of the file system to delete.
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' boto_efs.delete_file_system filesystemid
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
@@ -284,6 +310,12 @@ def delete_mount_target(mounttargetid,
 
     mounttargetid
         (string) - ID of the mount target to delete
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' boto_efs.delete_mount_target mounttargetid
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
@@ -306,6 +338,12 @@ def delete_tags(filesystemid,
 
     tags
         (list[string]) - The tag keys to delete to the file system
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' boto_efs.delete_tags
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
@@ -328,6 +366,12 @@ def get_file_systems(filesystemid=None,
 
     returns
         (list[dict]) - list of all elastic file system properties
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' boto_efs.get_file_systems efs-id
     '''
 
     result = None
@@ -371,6 +415,12 @@ def get_mount_targets(filesystemid=None,
 
     returns
         (list[dict]) - list of all mount point properties
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' boto_efs.get_mount_targets
     '''
 
     result = None
@@ -404,6 +454,12 @@ def get_tags(filesystemid,
 
     returns
         (list) - list of tags as key/value pairs
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' boto_efs.get_tags efs-id
     '''
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
     response = client.describe_tags(FileSystemId=filesystemid)
@@ -432,6 +488,12 @@ def set_security_groups(mounttargetid,
 
     securitygroups
         (list[string]) - list of no more than 5 VPC security group IDs.
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' boto_efs.set_security_groups my-mount-target-id my-sec-group
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
