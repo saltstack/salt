@@ -198,13 +198,6 @@ __proxyenabled__ = ['esxi']
 
 
 def __virtual__():
-    if not HAS_PYVMOMI:
-        return False, 'Missing dependency: The vSphere module requires the pyVmomi Python module.'
-
-    esx_cli = salt.utils.which('esxcli')
-    if not esx_cli:
-        return False, 'Missing dependency: The vSphere module requires ESXCLI.'
-
     return __virtualname__
 
 
