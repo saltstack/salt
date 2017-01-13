@@ -175,6 +175,7 @@ import salt.utils.vmware
 import salt.utils.http
 from salt.utils import dictupdate
 from salt.exceptions import CommandExecutionError, VMwareSaltError
+from salt.utils.decorators import depends
 from salt.utils import clean_kwargs
 
 # Import Third Party Libs
