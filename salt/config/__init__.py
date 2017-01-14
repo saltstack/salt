@@ -1218,6 +1218,7 @@ DEFAULT_MINION_OPTS = {
     'multifunc_ordered': False,
     'beacons_before_connect': False,
     'scheduler_before_connect': False,
+    'cache': 'localfs',
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1535,6 +1536,7 @@ DEFAULT_CLOUD_OPTS = {
     'log_rotate_max_bytes': 0,
     'log_rotate_backup_count': 0,
     'bootstrap_delay': None,
+    'cache': 'localfs',
 }
 
 DEFAULT_API_OPTS = {
