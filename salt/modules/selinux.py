@@ -370,6 +370,12 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
               Use one of [a, f, d, c, b, s, l, p].
               See also `man semanage-fcontext`.
               Defaults to 'a' (all files)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.fcontext_get_policy my-policy
     '''
     if filetype:
         _validate_filetype(filetype)
@@ -410,6 +416,12 @@ def fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, se
     sel_type: SELinux context type. There are many.
     sel_user: SELinux user. Use ``semanage login -l`` to determine which ones are available to you
     sel_level: The MLS range of the SELinux context.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.fcontext_add_or_delete_policy add my-policy
     '''
     if action not in ['add', 'delete']:
         raise SaltInvocationError('Actions supported are "add" and "delete", not "{0}".'.format(action))
@@ -433,6 +445,12 @@ def fcontext_policy_is_applied(name, recursive=False):
     returns string with differences in policy and actual situation otherwise.
 
     name: filespec of the file or directory. Regex syntax is allowed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.fcontext_policy_is_applied my-policy
     '''
     cmd = 'restorecon -n -v '
     if recursive:
@@ -448,6 +466,12 @@ def fcontext_apply_policy(name, recursive=False):
 
     name: filespec of the file or directory. Regex syntax is allowed.
     recursive: Recursively apply SELinux policies.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.fcontext_apply_policy my-policy
     '''
     ret = {}
     changes_text = fcontext_policy_is_applied(name, recursive)
