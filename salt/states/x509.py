@@ -163,6 +163,7 @@ import datetime
 import os
 import re
 import copy
+import inspect
 
 # Import Salt Libs
 import salt.exceptions
@@ -202,11 +203,20 @@ def _revoked_to_list(revs):
     return list_
 
 
+def _get_file_args(name, **kwargs):
+    file_args = {}
+    for k, v in kwargs.items():
+        if k not in inspect.stack()[0][0].f_code.co_varnames:
+            file_args[k] = v
+    file_args['name'] = name
+    return file_args
+
+
 def private_key_managed(name,
                         bits=2048,
                         new=False,
-                        backup=False,
-                        verbose=True,):
+                        verbose=True,
+                        **kwargs):
     '''
     Manage a private key's existence.
 
@@ -221,15 +231,14 @@ def private_key_managed(name,
         Combining new with :mod:`prereq <salt.states.requsities.preqreq>` can allow key rotation
         whenever a new certificiate is generated.
 
-    backup:
-        When replacing an existing file, backup the old file on the minion.
-        Default is False.
-
     verbose:
         Provide visual feedback on stdout, dots while key is generated.
         Default is True.
 
         .. versionadded:: 2016.11.0
+
+    kwargs:
+        Any kwargs supported by file.managed are supported.
 
     Example:
 
@@ -247,8 +256,6 @@ def private_key_managed(name,
               - x509: /etc/pki/www.crt
             {%- endif %}
     '''
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-
     current_bits = 0
     if os.path.isfile(name):
         try:
@@ -259,33 +266,17 @@ def private_key_managed(name,
     else:
         current = '{0} does not exist.'.format(name)
 
+    file_args = _get_file_args(name, **kwargs)
     if current_bits == bits and not new:
-        ret['result'] = True
-        ret['comment'] = 'The Private key is already in the correct state'
-        return ret
+        file_args['contents'] = __salt__['x509.get_pem_entry'](name, pem_type='RSA PRIVATE KEY')
+    else:
+        file_args['contents'] = __salt__['x509.create_private_key'](text=True, bits=bits, verbose=verbose)
 
-    ret['changes'] = {
-            'old': current,
-            'new': "{0} bit private key".format(bits)}
 
-    if __opts__['test'] is True:
-        ret['result'] = None
-        ret['comment'] = 'The Private Key "{0}" will be updated.'.format(name)
-        return ret
-
-    if os.path.isfile(name) and backup:
-        bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
-        salt.utils.backup_minion(name, bkroot)
-
-    ret['comment'] = __salt__['x509.create_private_key'](
-        path=name, bits=bits, verbose=verbose)
-    ret['result'] = True
-
-    return ret
+    return __states__['file.managed'](**file_args)
 
 
 def csr_managed(name,
-                backup=False,
                 **kwargs):
     '''
     Manage a Certificate Signing Request
@@ -296,6 +287,9 @@ def csr_managed(name,
     properties:
         The properties to be added to the certificate request, including items like subject, extensions
         and public key. See above for valid properties.
+
+    kwargs:
+        Any arguments supported by :state:`file.managed <salt.states.file.managed>` are supported.
 
     Example:
 
@@ -310,45 +304,14 @@ def csr_managed(name,
              - L: Salt Lake City
              - keyUsage: 'critical dataEncipherment'
     '''
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    file_args = _get_file_args(name, **kwargs)
+    file_args['contents'] = __salt__['x509.create_csr'](text=True, **kwargs)
 
-    if os.path.isfile(name):
-        try:
-            current = __salt__['x509.read_csr'](csr=name)
-        except salt.exceptions.SaltInvocationError:
-            current = '{0} is not a valid CSR.'.format(name)
-    else:
-        current = '{0} does not exist.'.format(name)
-
-    new_csr = __salt__['x509.create_csr'](text=True, **kwargs)
-    new = __salt__['x509.read_csr'](csr=new_csr)
-
-    if current == new:
-        ret['result'] = True
-        ret['comment'] = 'The CSR is already in the correct state'
-        return ret
-
-    ret['changes'] = {
-            'old': current,
-            'new': new, }
-
-    if __opts__['test'] is True:
-        ret['result'] = None
-        ret['comment'] = 'The CSR {0} will be updated.'.format(name)
-
-    if os.path.isfile(name) and backup:
-        bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
-        salt.utils.backup_minion(name, bkroot)
-
-    ret['comment'] = __salt__['x509.write_pem'](text=new_csr, path=name, pem_type="CERTIFICATE REQUEST")
-    ret['result'] = True
-
-    return ret
+    return __states__['file.managed'](**file_args)
 
 
 def certificate_managed(name,
                         days_remaining=90,
-                        backup=False,
                         **kwargs):
     '''
     Manage a Certificate
@@ -360,12 +323,8 @@ def certificate_managed(name,
         The minimum number of days remaining when the certificate should be recreated. Default is 90. A
         value of 0 disables automatic renewal.
 
-    backup:
-        When replacing an existing file, backup the old file on the minion. Default is False.
-
     kwargs:
-        Any arguments supported by :mod:`x509.create_certificate <salt.modules.x509.create_certificate>`
-        are supported.
+        Any arguments supported by :mod:`x509.create_certificate <salt.modules.x509.create_certificate>` or :state:`file.managed <salt.states.file.managed>` are supported.
 
     Examples:
 
@@ -400,8 +359,6 @@ def certificate_managed(name,
             - backup: True
 
     '''
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-
     if 'path' in kwargs:
         name = kwargs.pop('path')
 
@@ -462,30 +419,15 @@ def certificate_managed(name,
     else:
         new_comp = new
 
+    file_args = _get_file_args(name, **kwargs)
     if (current_comp == new_comp and
             current_days_remaining > days_remaining and
             __salt__['x509.verify_signature'](name, new_issuer_public_key)):
-        ret['result'] = True
-        ret['comment'] = 'The certificate is already in the correct state'
-        return ret
+        file_args['contents'] = __salt__['x509.get_pem_entry'](name, pem_type='CERTIFICATE')
+    else:
+        file_args['contents'] = __salt__['x509.create_certificate'](text=True, **kwargs)
 
-    ret['changes'] = {
-            'old': current,
-            'new': new, }
-
-    if __opts__['test'] is True:
-        ret['result'] = None
-        ret['comment'] = 'The certificate {0} will be updated.'.format(name)
-        return ret
-
-    if os.path.isfile(name) and backup:
-        bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
-        salt.utils.backup_minion(name, bkroot)
-
-    ret['comment'] = __salt__['x509.create_certificate'](path=name, **kwargs)
-    ret['result'] = True
-
-    return ret
+    return __states__['file.managed'](**file_args)
 
 
 def crl_managed(name,
@@ -496,7 +438,7 @@ def crl_managed(name,
                 digest="",
                 days_remaining=30,
                 include_expired=False,
-                backup=False,):
+                **kwargs):
     '''
     Manage a Certificate Revocation List
 
@@ -530,8 +472,8 @@ def crl_managed(name,
     include_expired:
         Include expired certificates in the CRL. Default is ``False``.
 
-    backup:
-        When replacing an existing file, backup the old file on the minion. Default is False.
+    kwargs:
+        Any arguments supported by :state:`file.managed <salt.states.file.managed>` are supported.
 
     Example:
 
@@ -552,8 +494,6 @@ def crl_managed(name,
                 - revocation_date: 2015-02-25 00:00:00
                 - reason: cessationOfOperation
     '''
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-
     if revoked is None:
         revoked = []
 
@@ -586,36 +526,21 @@ def crl_managed(name,
     new_comp.pop('Last Update')
     new_comp.pop('Next Update')
 
+    file_args = _get_file_args(name, **kwargs)
     if (current_comp == new_comp and
             current_days_remaining > days_remaining and
             __salt__['x509.verify_crl'](name, signing_cert)):
+        file_args['contents'] = __salt__['x509.get_pem_entry'](name, pem_type='X509 CRL')
+    else:
+        file_args['contents'] = new_crl
 
-        ret['result'] = True
-        ret['comment'] = 'The crl is already in the correct state'
-        return ret
-
-    ret['changes'] = {
-            'old': current,
-            'new': new, }
-
-    if __opts__['test'] is True:
-        ret['result'] = None
-        ret['comment'] = 'The crl {0} will be updated.'.format(name)
-        return ret
-
-    if os.path.isfile(name) and backup:
-        bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
-        salt.utils.backup_minion(name, bkroot)
-
-    ret['comment'] = __salt__['x509.write_pem'](text=new_crl, path=name, pem_type='X509 CRL')
-    ret['result'] = True
-
-    return ret
+    return __states__['file.managed'](**file_args)
 
 
 def pem_managed(name,
                 text,
-                backup=False):
+                backup=False,
+                **kwargs):
     '''
     Manage the contents of a PEM file directly with the content in text, ensuring correct formatting.
 
@@ -625,37 +550,10 @@ def pem_managed(name,
     text:
         The PEM formatted text to write.
 
-    backup:
-        When replacing an existing file, backup the old file on the minion. Default is False.
+    kwargs:
+        Any arguments supported by :state:`file.managed <salt.states.file.managed>` are supported.
     '''
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    file_args = _get_file_args(name, **kwargs)
+    file_args['contents'] = __salt__['x509.get_pem_entry'](text=text)
 
-    new = __salt__['x509.get_pem_entry'](text=text)
-
-    try:
-        with salt.utils.fopen(name) as fp_:
-            current = fp_.read()
-    except (OSError, IOError):
-        current = '{0} does not exist or is unreadable'.format(name)
-
-    if new == current:
-        ret['result'] = True
-        ret['comment'] = 'The file is already in the correct state'
-        return ret
-
-    ret['changes']['new'] = new
-    ret['changes']['old'] = current
-
-    if __opts__['test'] is True:
-        ret['result'] = None
-        ret['comment'] = 'The file {0} will be updated.'.format(name)
-        return ret
-
-    if os.path.isfile(name) and backup:
-        bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
-        salt.utils.backup_minion(name, bkroot)
-
-    ret['comment'] = __salt__['x509.write_pem'](text=text, path=name)
-    ret['result'] = True
-
-    return ret
+    return __states__['file.managed'](**file_args)
