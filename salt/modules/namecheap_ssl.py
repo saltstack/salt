@@ -2,6 +2,8 @@
 '''
  Namecheap management
 
+ .. versionadded:: Nitrogen
+
  General Notes
  -------------
 
@@ -100,6 +102,12 @@ def reissue(csr_file,
 
     Other required parameters:
         please see https://www.namecheap.com/support/api/methods/ssl/reissue.aspx
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' namecheap_ssl.reissue my-csr-file my-cert-id apachessl
     '''
     return __get_certificates('namecheap.ssl.reissue', "SSLReissueResult", csr_file, certificate_id, web_server_type,
                               approver_email, http_dc_validation, kwargs)
@@ -148,6 +156,12 @@ def activate(csr_file,
 
     Other required parameters:
         please see https://www.namecheap.com/support/api/methods/ssl/activate.aspx
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' namecheap_ssl.activate my-csr-file my-cert-id apachessl
     '''
     return __get_certificates('namecheap.ssl.activate', 'SSLActivateResult', csr_file, certificate_id, web_server_type,
                               approver_email, http_dc_validation, kwargs)
@@ -278,6 +292,12 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
     Optional parameters:
         promotional_code
             string  Promotional (coupon) code for the certificate
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' namecheap_ssl.renew 1 my-cert-id RapidSSL
     '''
 
     valid_certs = set(['QuickSSL Premium',
@@ -434,6 +454,12 @@ Symantec  Secure Site                      1                 25              24
 Symantec  Secure Site                      1                 25              24
           Pro
 --------------------------------------------------------------------------------
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' namecheap_ssl.create 2 RapidSSL
     '''
     valid_certs = set(['QuickSSL Premium',
                        'RapidSSL',
@@ -525,6 +551,12 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
         http_dc_validation
             bool  True if a Comodo certificate and validation should be done with files
                   instead of emails and to return the info to do so
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' namecheap_ssl.parse_csr my-csr-file PremiumSSL
     '''
     valid_certs = set(['QuickSSL Premium',
                        'RapidSSL',
@@ -608,6 +640,12 @@ def get_list(**kwargs):
                                         SSLTYPE,SSLTYPE_DESC,
                                         EXPIREDATETIME,EXPIREDATETIME_DESC,
                                         Host_Name,Host_Name_DESC
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' namecheap_ssl.get_list Processing
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.getList')
     for key, value in kwargs.iteritems():
@@ -646,6 +684,12 @@ def get_info(certificate_id, returncertificate=False, returntype=None):
     returntype
         string  Type of returned certificate.  Parameter takes "Individual (for X.509 format) or PKCS7"
                 Required if returncertificate is True
+
+    CLI Example:
+
+    .. code-block::
+
+        salt 'my-minion' namecheap_ssl.get_info my-cert-id
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.getinfo')
     opts['certificateID'] = certificate_id
