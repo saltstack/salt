@@ -1198,6 +1198,20 @@ The default renderer used for local state executions
 
     renderer: yaml_jinja
 
+.. conf_master:: test
+
+``test``
+--------
+
+Default: ``False``
+
+Set all state calls to only test if they are going to actually make changes
+or just post what changes are going to be made.
+
+.. code-block:: yaml
+
+    test: False
+
 .. conf_minion:: state_verbose
 
 ``state_verbose``
