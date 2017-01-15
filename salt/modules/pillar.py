@@ -124,14 +124,14 @@ def items(*args, **kwargs):
 
         .. versionadded:: 2015.5.0
 
-    saltenv
+    pillarenv
         Pass a specific pillar environment from which to compile pillar data.
-        If unspecified, the minion's :conf_minion:`environment` option is used,
-        and if that also is not specified then all configured pillar
+        If not specified, then the minion's :conf_minion:`pillarenv` option is
+        not used, and if that also is not specified then all configured pillar
         environments will be merged into a single pillar dictionary and
         returned.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2016.11.2
 
     CLI Example:
 
@@ -147,8 +147,8 @@ def items(*args, **kwargs):
         __opts__,
         __grains__,
         __opts__['id'],
-        kwargs.get('saltenv') or __opts__['environment'],
-        pillar=kwargs.get('pillar'))
+        pillar=kwargs.get('pillar'),
+        pillarenv=kwargs.get('pillarenv') or __opts__['pillarenv'])
 
     return pillar.compile_pillar()
 
