@@ -598,6 +598,31 @@ master event bus. The value is expressed in bytes.
 
     max_event_size: 1048576
 
+.. conf_master:: ping_on_rotate
+
+``ping_on_rotate``
+------------------
+
+.. versionadded:: 2014.7.0
+
+Default:  ``False``
+
+By default, the master AES key rotates every 24 hours. The next command
+following a key rotation will trigger a key refresh from the minion which may
+result in minions which do not respond to the first command after a key refresh.
+
+To tell the master to ping all minions immediately after an AES key refresh, set
+ping_on_rotate to ``True``. This should mitigate the issue where a minion does not
+appear to initially respond after a key is rotated.
+
+Note that ping_on_rotate may cause high load on the master immediately after
+the key rotation event as minions reconnect. Consider this carefully if this
+salt master is managing a large number of minions.
+
+.. code-black:: yaml
+
+    ping_on_rotate: False
+
 .. conf_master:: master_job_cache
 
 ``master_job_cache``
