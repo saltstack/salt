@@ -2,6 +2,8 @@
 '''
 Module for controlling Jenkins
 
+:depends: python-jenkins
+
 .. versionadded:: 2016.3.0
 
 :configuration: This module can be used by either passing an api key and version
