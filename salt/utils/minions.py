@@ -634,6 +634,8 @@ class CkMinions(object):
         make sure everyone has checked back in.
         '''
         try:
+            if expr is None:
+                expr = ''
             check_func = getattr(self, '_check_{0}_minions'.format(expr_form), None)
             if expr_form in ('grain',
                              'grain_pcre',
