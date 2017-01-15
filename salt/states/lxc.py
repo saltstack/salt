@@ -79,8 +79,11 @@ def present(name,
     **Container Creation Arguments**
 
     template
-        The template to use. E.g., 'ubuntu' or 'fedora'. Conflicts with the
-        ``image`` argument.
+        The template to use. For example, ``ubuntu`` or ``fedora``.
+        For a full list of available templates, check out
+        the :mod:`lxc.templates <salt.modules.lxc.templates>` function.
+
+        Conflicts with the ``image`` argument.
 
         .. note::
 
@@ -114,6 +117,10 @@ def present(name,
 
         Remember to double-indent the options, due to :ref:`how PyYAML works
         <nested-dict-indentation>`.
+
+        For available template options, refer to the lxc template scripts
+        which are ususally located under ``/usr/share/lxc/templates``,
+        or run ``lxc-create -t <template> -h``.
 
     image
         A tar archive to use as the rootfs for the container. Conflicts with
