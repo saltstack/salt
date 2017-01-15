@@ -213,6 +213,7 @@ state modules
     ssh_known_hosts
     stateconf
     status
+    statuspage
     stormpath_account
     supervisord
     svn
