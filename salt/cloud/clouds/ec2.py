@@ -1278,7 +1278,7 @@ def securitygroupid(vm_):
                 log.debug('AWS SecurityGroup ID of {0} is {1}'.format(
                     sg['groupName'], sg['groupId'])
                 )
-                securitygroupid_set = securitygroupid_set.add(sg['groupId'])
+                securitygroupid_set.add(sg['groupId'])
     return list(securitygroupid_set)
 
 
