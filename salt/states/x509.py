@@ -160,7 +160,6 @@ import datetime
 import os
 import re
 import copy
-import inspect
 
 # Import Salt Libs
 import salt.exceptions
@@ -346,7 +345,7 @@ def csr_managed(name,
 def certificate_managed(name,
                         days_remaining=90,
                         managed_private_key=None,
-                        append_certs=[],
+                        append_certs=None,
                         **kwargs):
     '''
     Manage a Certificate
@@ -525,6 +524,8 @@ def certificate_managed(name,
 
     file_args['contents'] += certificate
 
+    if not append_certs:
+      append_certs = []
     for append_cert in append_certs:
         file_args[
             'contents'] += __salt__['x509.get_pem_entry'](append_cert, pem_type='CERTIFICATE')
