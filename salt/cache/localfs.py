@@ -118,7 +118,7 @@ def flush(bank, key=None, cachedir=None):
     return True
 
 
-def _list(bank, cachedir):
+def list_(bank, cachedir):
     '''
     Return an iterable object containing all entries stored in the specified bank.
     '''
@@ -135,7 +135,7 @@ def _list(bank, cachedir):
         )
 
 
-getlist = _list
+getlist = list_
 
 
 def contains(bank, key, cachedir):
