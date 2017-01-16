@@ -525,7 +525,7 @@ def certificate_managed(name,
     file_args['contents'] += certificate
 
     if not append_certs:
-      append_certs = []
+        append_certs = []
     for append_cert in append_certs:
         file_args[
             'contents'] += __salt__['x509.get_pem_entry'](append_cert, pem_type='CERTIFICATE')
