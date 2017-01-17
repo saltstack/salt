@@ -297,14 +297,20 @@ def call(method, **params):
         # either not connected
         # either unable to execute the command
         err_tb = traceback.format_exc()  # let's get the full traceback and display for debugging reasons.
-        comment = 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
-            device=NETWORK_DEVICE.get('HOSTNAME', '[unspecified hostname]'),
-            port=(':{port}'.format(port=NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port'))
-                  if NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port') else ''),
-            user=NETWORK_DEVICE.get('USERNAME', ''),
-            method=method,
-            error=error
-        )
+        if isinstance(error, NotImplementedError):
+            comment = '{method} is not implemented for the NAPALM {driver} driver!'.format(
+                method=method,
+                driver=NETWORK_DEVICE.get('DRIVER_NAME')
+            )
+        else:
+            comment = 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
+                device=NETWORK_DEVICE.get('HOSTNAME', '[unspecified hostname]'),
+                port=(':{port}'.format(port=NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port'))
+                      if NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port') else ''),
+                user=NETWORK_DEVICE.get('USERNAME', ''),
+                method=method,
+                error=error
+            )
         log.error(comment)
         log.error(err_tb)
         return {

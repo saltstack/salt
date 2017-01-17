@@ -113,12 +113,12 @@ There is more documentation about this feature in the
 
 Special files can be managed via the ``mknod`` function. This function will
 create and enforce the permissions on a special file. The function supports the
-creation of character devices, block devices, and fifo pipes. The function will
+creation of character devices, block devices, and FIFO pipes. The function will
 create the directory structure up to the special file if it is needed on the
 minion. The function will not overwrite or operate on (change major/minor
 numbers) existing special files with the exception of user, group, and
 permissions. In most cases the creation of some special files require root
-permisisons on the minion. This would require that the minion to be run as the
+permissions on the minion. This would require that the minion to be run as the
 root user. Here is an example of a character device:
 
 .. code-block:: yaml
@@ -1489,7 +1489,8 @@ def managed(name,
         Default context passed to the template.
 
     backup
-        Overrides the default backup mode for this specific file.
+        Overrides the default backup mode for this specific file. See
+        :ref:`backup_mode documentation <file-state-backups>` for more details.
 
     show_changes
         Output a unified diff of the old file and the new file. If ``False``
@@ -2781,6 +2782,10 @@ def recurse(name,
     include_empty
         Set this to True if empty directories should also be created
         (default is False)
+
+    backup
+        Overrides the default backup mode for all replaced files. See
+        :ref:`backup_mode documentation <file-state-backups>` for more details.
 
     include_pat
         When copying, include only this pattern from the source. Default

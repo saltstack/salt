@@ -1348,22 +1348,6 @@ Enable extra routines for YAML renderer used states containing UTF characters.
 
     yaml_utf8: False
 
-.. conf_master:: test
-
-``test``
---------
-
-Default: ``False``
-
-Set all state calls to only test if they are going to actually make changes
-or just post what changes are going to be made.
-
-.. code-block:: yaml
-
-    test: False
-
-.. conf_master:: runner_returns
-
 ``runner_returns``
 ------------------
 
