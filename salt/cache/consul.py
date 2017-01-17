@@ -46,6 +46,9 @@ except ImportError:
 
 from salt.exceptions import SaltCacheError
 
+# Don't shadow built-ins
+__func_alias__ = {'list_': 'list'}
+
 log = logging.getLogger(__name__)
 api = None
 
@@ -129,7 +132,7 @@ def flush(bank, key=None):
         )
 
 
-def getlist(bank):
+def list_(bank):
     '''
     Return an iterable object containing all entries stored in the specified bank.
     '''
@@ -151,6 +154,9 @@ def getlist(bank):
             out.add(key[len(bank) + 1:].rstrip('/'))
         keys = list(out)
     return keys
+
+
+getlist = list_
 
 
 def contains(bank, key):
