@@ -8,12 +8,26 @@
 @echo ---------------------------------------------------------------------
 net session >nul 2>&1
 if %errorLevel%==0 (
-    echo Success: Administrative permissions confirmed.
+    echo ...Success: Administrative permissions confirmed.
 ) else (
-    echo Failure: This script must be run as Administrator
+    echo ...Failure: This script must be run as Administrator
     goto eof
 )
+@echo =====================================================================
 @echo.
+
+@echo Git required. Detecting git...
+@echo ---------------------------------------------------------------------
+where git >nul 2>&1
+if %errorLevel%==0 (
+    echo ...Success: Git found.
+) else (
+    echo ...Failure: This script needs to call git
+    goto eof
+)
+@echo =====================================================================
+@echo.
+
 
 :: Define Variables
 @echo %0 :: Defining Variables...
@@ -26,9 +40,12 @@ for /f "delims=" %%a in ('git rev-parse --show-toplevel') do @set "SrcDir=%%a"
 :: Get the version from git if not passed
 if [%1]==[] (
     for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
+	echo ... Version from git describe == %Version%
 ) else (
     set "Version=%~1"
 )
+@echo =====================================================================
+pause
 @echo.
 
 :: Create Build Environment
