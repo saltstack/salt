@@ -65,7 +65,7 @@ class PkgModuleTest(integration.ModuleCase,
             if os_grain == 'Ubuntu':
                 repo = 'ppa:otto-kesselgulasch/gimp-edge'
                 uri = 'http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu'
-                ret = self.run_function('pkg.mod_repo', [repo, 'comps=main'])
+                ret = self.run_function('pkg.mod_repo', [repo], comps=main)
                 self.assertNotEqual(ret, {})
                 ret = self.run_function('pkg.get_repo', [repo])
                 self.assertEqual(ret['uri'], uri)
