@@ -45,7 +45,6 @@ if [%1]==[] (
     set "Version=%~1"
 )
 @echo =====================================================================
-pause
 @echo.
 
 :: Create Build Environment
