@@ -1,5 +1,11 @@
-import salt.exceptions
+# -*- coding: utf-8 -*-
+'''
+States for solrcloud alias and collection configuration
+'''
+from __future__ import absolute_import
+
 import json
+
 
 def alias(name, collections, **kwargs):
     '''
@@ -31,7 +37,7 @@ def alias(name, collections, **kwargs):
             ret['comment'] = 'Alias is in desired state'
             return ret
 
-        if __opts__['test'] == True:
+        if __opts__['test']:
             ret['comment'] = 'The alias "{0}" will be updated.'.format(name)
             ret['pchanges'] = {
                 'old': ",".join(alias_content),
@@ -48,7 +54,7 @@ def alias(name, collections, **kwargs):
 
             ret['result'] = True
     else:
-        if __opts__['test'] == True:
+        if __opts__['test']:
             ret['comment'] = 'The alias "{0}" will be created.'.format(name)
             ret['pchanges'] = {
                 'old': None,
@@ -67,7 +73,8 @@ def alias(name, collections, **kwargs):
 
     return ret
 
-def collection(name, options={}, **kwargs):
+
+def collection(name, options=None, **kwargs):
     '''
     Create collection and enforce options.
 
@@ -88,7 +95,8 @@ def collection(name, options={}, **kwargs):
         'pchanges': {},
     }
 
-
+    if options is None:
+        options = {}
 
     if __salt__["solrcloud.collection_exists"](name, **kwargs):
 
@@ -97,7 +105,15 @@ def collection(name, options={}, **kwargs):
         current_options = __salt__["solrcloud.collection_get_options"](name, **kwargs)
 
         # Filter options that can be updated
-        options = filter(lambda (k,v): True if k in ["maxShardsPerNode","replicationFactor","autoAddReplicas","collection.configName","rule","snitch"] else False, options.iteritems())
+        updatable_options = [
+            "maxShardsPerNode",
+            "replicationFactor",
+            "autoAddReplicas",
+            "collection.configName",
+            "rule",
+            "snitch"]
+
+        options = [k for k in options.iteritems() if k in updatable_options]
 
         for key, value in options:
             if key not in current_options or current_options[key] != value:
@@ -110,7 +126,7 @@ def collection(name, options={}, **kwargs):
 
         else:
 
-            if __opts__['test'] == True:
+            if __opts__['test']:
                 ret['comment'] = 'Collection options "{0}" will be changed.'.format(name)
                 ret['pchanges'] = {
                     'old': json.dumps(current_options, sort_keys=True, indent=4, separators=(',', ': ')),
@@ -120,7 +136,7 @@ def collection(name, options={}, **kwargs):
 
                 return ret
             else:
-                __salt__["solrcloud.collection_set_options"](name,diff,**kwargs)
+                __salt__["solrcloud.collection_set_options"](name, diff, **kwargs)
 
                 ret['comment'] = 'Parameters were updated for collection "{0}".'.format(name)
                 ret['result'] = True
@@ -132,7 +148,7 @@ def collection(name, options={}, **kwargs):
                 return ret
 
     else:
-        if __opts__['test'] == True:
+        if __opts__['test']:
             ret['comment'] = 'The collection "{0}" will be created.'.format(name)
             ret['pchanges'] = {
                 'old': None,
