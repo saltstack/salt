@@ -3300,7 +3300,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
     ret['mtime'] = pstat.st_mtime
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
-    ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
+    ret['mode'] = salt.utils.normalize_mode(stat.S_IMODE(pstat.st_mode))
     if hash_type:
         ret['sum'] = get_hash(path, hash_type)
     ret['type'] = 'file'
@@ -4313,7 +4313,7 @@ def check_managed_changes(
             if _urlparse(source).scheme in ('salt', 'file') \
                     or source.startswith('/'):
                 try:
-                    mode = salt.utils.st_mode_to_octal(os.stat(sfn).st_mode)
+                    mode = salt.utils.normalize_mode(os.stat(sfn).st_mode)
                 except Exception as exc:
                     log.warning('Unable to stat %s: %s', sfn, exc)
     changes = check_file_meta(name, sfn, source, source_sum, user,
@@ -4610,7 +4610,7 @@ def manage_file(name,
             if _urlparse(source).scheme in ('salt', 'file') \
                     or source.startswith('/'):
                 try:
-                    mode = salt.utils.st_mode_to_octal(os.stat(sfn).st_mode)
+                    mode = salt.utils.normalize_mode(os.stat(sfn).st_mode)
                 except Exception as exc:
                     log.warning('Unable to stat %s: %s', sfn, exc)
 

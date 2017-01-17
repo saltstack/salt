@@ -1853,17 +1853,6 @@ def check_state_result(running, recurse=False):
     return ret
 
 
-def st_mode_to_octal(mode):
-    '''
-    Convert the st_mode value from a stat(2) call (as returned from os.stat())
-    to an octal mode.
-    '''
-    try:
-        return oct(mode)[-4:]
-    except (TypeError, IndexError):
-        return ''
-
-
 def normalize_mode(mode):
     '''
     Return a mode value, normalized to a string and containing a leading zero
@@ -1874,11 +1863,13 @@ def normalize_mode(mode):
     '''
     if mode is None:
         return None
-    if not isinstance(mode, six.string_types):
+    if isinstance(mode, six.integer_types):
+        mode = oct(mode)
+    elif not isinstance(mode, six.string_types):
         mode = str(mode)
-    # Strip any quotes any initial zeroes, then though zero-pad it up to 4.
-    # This ensures that somethign like '00644' is normalized to '0644'
-    return mode.strip('"').strip('\'').lstrip('0').zfill(4)
+    # Strip any quotes, initial zeroes, and Python 3's octal specifier "o",
+    # then zero-pad it up to 4. This ensures that we get a 4-digit octal mode.
+    return mode.strip('"').strip('\'').lstrip('0o').zfill(4)
 
 
 def test_mode(**kwargs):

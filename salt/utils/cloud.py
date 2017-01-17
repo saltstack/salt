@@ -3194,7 +3194,7 @@ def check_key_path_and_mode(provider, key_path):
         )
         return False
 
-    key_mode = str(oct(stat.S_IMODE(os.stat(key_path).st_mode)))
+    key_mode = salt.utils.normalize_mode(stat.S_IMODE(os.stat(key_path).st_mode))
     if key_mode not in ('0400', '0600'):
         log.error(
             'The key file \'{0}\' used in the \'{1}\' provider configuration '

@@ -2528,8 +2528,8 @@ def create(vm_=None, call=None):
                 )
             )
 
-        key_mode = str(
-            oct(stat.S_IMODE(os.stat(key_filename).st_mode))
+        key_mode = salt.utils.normalize_mode(
+            stat.S_IMODE(os.stat(key_filename).st_mode)
         )
         if key_mode not in ('0400', '0600'):
             raise SaltCloudSystemExit(

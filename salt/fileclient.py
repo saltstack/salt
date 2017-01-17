@@ -1070,8 +1070,8 @@ class RemoteClient(Client):
                                     '\'%s\', mode updated from %s to %s',
                                     saltenv,
                                     path,
-                                    salt.utils.st_mode_to_octal(mode_local),
-                                    salt.utils.st_mode_to_octal(mode_server)
+                                    salt.utils.normalize_mode(mode_local),
+                                    salt.utils.normalize_mode(mode_server)
                                 )
                             except OSError as exc:
                                 log.warning(
@@ -1214,7 +1214,7 @@ class RemoteClient(Client):
                                 '** done ** \'%s\', mode set to %s',
                                 saltenv,
                                 path,
-                                salt.utils.st_mode_to_octal(mode_server)
+                                salt.utils.normalize_mode(mode_server)
                             )
                         except OSError:
                             log.warning('Failed to chmod %s: %s', dest, exc)
