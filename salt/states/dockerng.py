@@ -1388,9 +1388,9 @@ def running(name,
     restart_policy
         Set a restart policy for the container. Must be passed as a string in
         the format ``policy[:retry_count]`` where ``policy`` is one of
-        ``always`` or ``on-failure``, and ``retry_count`` is an optional limit
-        to the number of retries. The retry count is ignored when using the
-        ``always`` restart policy.
+        ``always``, ``unless-stopped``, or ``on-failure``, and ``retry_count``
+        is an optional limit to the number of retries. The retry count is ignored
+        when using the ``always`` or ``unless-stopped`` restart policy.
 
         .. code-block:: yaml
 
