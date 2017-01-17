@@ -52,6 +52,7 @@ from salt.exceptions import SaltInvocationError
 import salt.utils.dictupdate as dictupdate
 from salt.ext.six import string_types
 from salt.ext.six.moves import range
+from salt.ext.six import StringIO
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'
@@ -91,7 +92,6 @@ try:
     import struct
     from lxml import etree
     from salt.modules.reg import Registry as Registry
-    import StringIO
     HAS_WINDOWS_MODULES = True
     TRUE_VALUE_XPATH = etree.XPath('.//*[local-name() = "trueValue"]')
     FALSE_VALUE_XPATH = etree.XPath('.//*[local-name() = "falseValue"]')
@@ -2730,7 +2730,7 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                 except lxml.etree.XMLSyntaxError:
                     try:
                         xmltree = _remove_unicode_encoding(admfile)
-                    except:
+                    except as Exception:
                         msg = ('A error was found while processing admx file {0},'
                                ' all policies from this file will be unavailable via this module')
                         log.error(msg.format(admfile))
@@ -2791,7 +2791,7 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                     # see issue #38100
                     try:
                         xmltree = _remove_unicode_encoding(adml_file)
-                    except:
+                    except as Exception:
                         msg = ('An error was found while processing adml file {0}, all policy'
                                ' languange data from this file will be unavailable via this module')
                         log.error(msg.format(adml_file))
