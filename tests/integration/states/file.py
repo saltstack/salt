@@ -588,6 +588,28 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(name))
 
+    def test_directory_symlink_dry_run(self):
+        '''
+        Ensure that symlinks are followed when file.directory is run with
+        test=True
+        '''
+        try:
+            tmp_dir = os.path.join(integration.TMP, 'pgdata')
+            sym_dir = os.path.join(integration.TMP, 'pg_data')
+            os.mkdir(tmp_dir, 0o700)
+            os.symlink(tmp_dir, sym_dir)
+
+            ret = self.run_state(
+                'file.directory', test=True, name=sym_dir, follow_symlinks=True,
+                mode=700
+            )
+            self.assertSaltTrueReturn(ret)
+        finally:
+            if os.path.isdir(tmp_dir):
+                shutil.rmtree(tmp_dir)
+            if os.path.islink(sym_dir):
+                os.unlink(sym_dir)
+
     @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     def test_directory_max_depth(self):
         '''

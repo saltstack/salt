@@ -486,7 +486,8 @@ def _check_directory(name,
                      clean,
                      require,
                      exclude_pat,
-                     max_depth=None):
+                     max_depth=None,
+                     follow_symlinks=False):
     '''
     Check what changes need to be made on a directory
     '''
@@ -519,7 +520,7 @@ def _check_directory(name,
                     fchange = {}
                     path = os.path.join(root, fname)
                     stats = __salt__['file.stats'](
-                        path, None, follow_symlinks=False
+                        path, None, follow_symlinks
                     )
                     if user is not None and user != stats.get('user'):
                         fchange['user'] = user
@@ -530,11 +531,11 @@ def _check_directory(name,
             if check_dirs:
                 for name_ in dirs:
                     path = os.path.join(root, name_)
-                    fchange = _check_dir_meta(path, user, group, mode)
+                    fchange = _check_dir_meta(path, user, group, mode, follow_symlinks)
                     if fchange:
                         changes[path] = fchange
     # Recurse skips root (we always do dirs, not root), so always check root:
-    fchange = _check_dir_meta(name, user, group, mode)
+    fchange = _check_dir_meta(name, user, group, mode, follow_symlinks)
     if fchange:
         changes[name] = fchange
     if clean:
@@ -699,11 +700,12 @@ def _check_directory_win(name,
 def _check_dir_meta(name,
                     user,
                     group,
-                    mode):
+                    mode,
+                    follow_symlinks=False):
     '''
     Check the changes in directory metadata
     '''
-    stats = __salt__['file.stats'](name, follow_symlinks=False)
+    stats = __salt__['file.stats'](name, None, follow_symlinks)
     changes = {}
     if not stats:
         changes['directory'] = 'new'
@@ -2503,7 +2505,7 @@ def directory(name,
     else:
         presult, pcomment, ret['pchanges'] = _check_directory(
             name, user, group, recurse or [], dir_mode, clean, require,
-            exclude_pat, max_depth)
+            exclude_pat, max_depth, follow_symlinks)
 
     if __opts__['test']:
         ret['result'] = presult
