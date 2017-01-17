@@ -794,6 +794,18 @@ def mod_repo(repo, **kwargs):
                 'Please check zypper logs.'.format(repo))
         added = True
 
+    repo_info = _get_repo_info(repo)
+    if (
+        not added and 'baseurl' in kwargs and
+        not (kwargs['baseurl'] == repo_info['baseurl'])
+    ):
+        # Note: zypper does not support changing the baseurl
+        # we need to remove the repository and add it again with the new baseurl
+        repo_info.update(kwargs)
+        repo_info.setdefault('cache', False)
+        del_repo(repo)
+        return mod_repo(repo, **repo_info)
+
     # Modify added or existing repo according to the options
     cmd_opt = []
     global_cmd_opt = []
