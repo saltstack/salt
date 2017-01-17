@@ -175,6 +175,7 @@ import salt.utils.vmware
 import salt.utils.http
 from salt.utils import dictupdate
 from salt.exceptions import CommandExecutionError, VMwareSaltError
+from salt.utils.decorators import depends
 from salt.utils import clean_kwargs
 
 # Import Third Party Libs
@@ -184,6 +185,12 @@ try:
 except ImportError:
     HAS_PYVMOMI = False
 
+esx_cli = salt.utils.which('esxcli')
+if esx_cli:
+    HAS_ESX_CLI = True
+else:
+    HAS_ESX_CLI = False
+
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'vsphere'
@@ -191,13 +198,6 @@ __proxyenabled__ = ['esxi']
 
 
 def __virtual__():
-    if not HAS_PYVMOMI:
-        return False, 'Missing dependency: The vSphere module requires the pyVmomi Python module.'
-
-    esx_cli = salt.utils.which('esxcli')
-    if not esx_cli:
-        return False, 'Missing dependency: The vSphere module requires ESXCLI.'
-
     return __virtualname__
 
 
@@ -357,6 +357,7 @@ def disconnect(service_instance):
     return True
 
 
+@depends(HAS_ESX_CLI)
 def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, port=None, esxi_hosts=None):
     '''
     Run an ESXCLI command directly on the host or list of hosts.
@@ -425,6 +426,7 @@ def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, 
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def get_coredump_network_config(host, username, password, protocol=None, port=None, esxi_hosts=None):
     '''
     Retrieve information on ESXi or vCenter network dump collection and
@@ -496,6 +498,7 @@ def get_coredump_network_config(host, username, password, protocol=None, port=No
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def coredump_network_enable(host, username, password, enabled, protocol=None, port=None, esxi_hosts=None):
     '''
     Enable or disable ESXi core dump collection. Returns ``True`` if coredump is enabled
@@ -569,6 +572,7 @@ def coredump_network_enable(host, username, password, enabled, protocol=None, po
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def set_coredump_network_config(host,
                                 username,
                                 password,
@@ -660,6 +664,7 @@ def set_coredump_network_config(host,
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def get_firewall_status(host, username, password, protocol=None, port=None, esxi_hosts=None):
     '''
     Show status of all firewall rule sets.
@@ -734,6 +739,7 @@ def get_firewall_status(host, username, password, protocol=None, port=None, esxi
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def enable_firewall_ruleset(host,
                             username,
                             password,
@@ -808,6 +814,7 @@ def enable_firewall_ruleset(host,
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def syslog_service_reload(host, username, password, protocol=None, port=None, esxi_hosts=None):
     '''
     Reload the syslog service so it will pick up any changes.
@@ -868,6 +875,7 @@ def syslog_service_reload(host, username, password, protocol=None, port=None, es
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def set_syslog_config(host,
                       username,
                       password,
@@ -999,6 +1007,7 @@ def set_syslog_config(host,
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def get_syslog_config(host, username, password, protocol=None, port=None, esxi_hosts=None):
     '''
     Retrieve the syslog configuration.
@@ -1061,6 +1070,7 @@ def get_syslog_config(host, username, password, protocol=None, port=None, esxi_h
     return ret
 
 
+@depends(HAS_ESX_CLI)
 def reset_syslog_config(host,
                         username,
                         password,
@@ -1280,6 +1290,7 @@ def get_ssh_key(host,
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def get_host_datetime(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Get the date/time information for a given host or list of host_names.
@@ -1337,6 +1348,7 @@ def get_host_datetime(host, username, password, protocol=None, port=None, host_n
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def get_ntp_config(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Get the NTP configuration information for a given host or list of host_names.
@@ -1393,6 +1405,7 @@ def get_ntp_config(host, username, password, protocol=None, port=None, host_name
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def get_service_policy(host, username, password, service_name, protocol=None, port=None, host_names=None):
     '''
     Get the service name's policy for a given host or list of hosts.
@@ -1498,6 +1511,7 @@ def get_service_policy(host, username, password, service_name, protocol=None, po
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def get_service_running(host, username, password, service_name, protocol=None, port=None, host_names=None):
     '''
     Get the service name's running state for a given host or list of hosts.
@@ -1603,6 +1617,7 @@ def get_service_running(host, username, password, service_name, protocol=None, p
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def get_vmotion_enabled(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Get the VMotion enabled status for a given host or a list of host_names. Returns ``True``
@@ -1663,6 +1678,7 @@ def get_vmotion_enabled(host, username, password, protocol=None, port=None, host
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def get_vsan_enabled(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Get the VSAN enabled status for a given host or a list of host_names. Returns ``True``
@@ -1728,6 +1744,7 @@ def get_vsan_enabled(host, username, password, protocol=None, port=None, host_na
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Returns a list of VSAN-eligible disks for a given host or list of host_names.
@@ -1801,6 +1818,7 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
     return ret
 
 
+@depends(HAS_PYVMOMI)
 @supports_proxies('esxi')
 @gets_service_instance_via_proxy
 def test_vcenter_connection(service_instance=None):
@@ -1819,6 +1837,7 @@ def test_vcenter_connection(service_instance=None):
     return False
 
 
+@depends(HAS_PYVMOMI)
 def system_info(host, username, password, protocol=None, port=None):
     '''
     Return system information about a VMware environment.
@@ -1858,6 +1877,7 @@ def system_info(host, username, password, protocol=None, port=None):
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def list_datacenters(host, username, password, protocol=None, port=None):
     '''
     Returns a list of datacenters for the the specified host.
@@ -1891,6 +1911,7 @@ def list_datacenters(host, username, password, protocol=None, port=None):
     return salt.utils.vmware.list_datacenters(service_instance)
 
 
+@depends(HAS_PYVMOMI)
 def list_clusters(host, username, password, protocol=None, port=None):
     '''
     Returns a list of clusters for the the specified host.
@@ -1924,6 +1945,7 @@ def list_clusters(host, username, password, protocol=None, port=None):
     return salt.utils.vmware.list_clusters(service_instance)
 
 
+@depends(HAS_PYVMOMI)
 def list_datastore_clusters(host, username, password, protocol=None, port=None):
     '''
     Returns a list of datastore clusters for the the specified host.
@@ -1957,6 +1979,7 @@ def list_datastore_clusters(host, username, password, protocol=None, port=None):
     return salt.utils.vmware.list_datastore_clusters(service_instance)
 
 
+@depends(HAS_PYVMOMI)
 def list_datastores(host, username, password, protocol=None, port=None):
     '''
     Returns a list of datastores for the the specified host.
@@ -1990,6 +2013,7 @@ def list_datastores(host, username, password, protocol=None, port=None):
     return salt.utils.vmware.list_datastores(service_instance)
 
 
+@depends(HAS_PYVMOMI)
 def list_hosts(host, username, password, protocol=None, port=None):
     '''
     Returns a list of hosts for the the specified VMware environment.
@@ -2023,6 +2047,7 @@ def list_hosts(host, username, password, protocol=None, port=None):
     return salt.utils.vmware.list_hosts(service_instance)
 
 
+@depends(HAS_PYVMOMI)
 def list_resourcepools(host, username, password, protocol=None, port=None):
     '''
     Returns a list of resource pools for the the specified host.
@@ -2056,6 +2081,7 @@ def list_resourcepools(host, username, password, protocol=None, port=None):
     return salt.utils.vmware.list_resourcepools(service_instance)
 
 
+@depends(HAS_PYVMOMI)
 def list_networks(host, username, password, protocol=None, port=None):
     '''
     Returns a list of networks for the the specified host.
@@ -2089,6 +2115,7 @@ def list_networks(host, username, password, protocol=None, port=None):
     return salt.utils.vmware.list_networks(service_instance)
 
 
+@depends(HAS_PYVMOMI)
 def list_vms(host, username, password, protocol=None, port=None):
     '''
     Returns a list of VMs for the the specified host.
@@ -2122,6 +2149,7 @@ def list_vms(host, username, password, protocol=None, port=None):
     return salt.utils.vmware.list_vms(service_instance)
 
 
+@depends(HAS_PYVMOMI)
 def list_folders(host, username, password, protocol=None, port=None):
     '''
     Returns a list of folders for the the specified host.
@@ -2155,6 +2183,7 @@ def list_folders(host, username, password, protocol=None, port=None):
     return salt.utils.vmware.list_folders(service_instance)
 
 
+@depends(HAS_PYVMOMI)
 def list_dvs(host, username, password, protocol=None, port=None):
     '''
     Returns a list of distributed virtual switches for the the specified host.
@@ -2188,6 +2217,7 @@ def list_dvs(host, username, password, protocol=None, port=None):
     return salt.utils.vmware.list_dvs(service_instance)
 
 
+@depends(HAS_PYVMOMI)
 def list_vapps(host, username, password, protocol=None, port=None):
     '''
     Returns a list of vApps for the the specified host.
@@ -2221,6 +2251,7 @@ def list_vapps(host, username, password, protocol=None, port=None):
     return salt.utils.vmware.list_vapps(service_instance)
 
 
+@depends(HAS_PYVMOMI)
 def list_ssds(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Returns a list of SSDs for the given host or list of host_names.
@@ -2280,6 +2311,7 @@ def list_ssds(host, username, password, protocol=None, port=None, host_names=Non
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def list_non_ssds(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Returns a list of Non-SSD disks for the given host or list of host_names.
@@ -2346,6 +2378,7 @@ def list_non_ssds(host, username, password, protocol=None, port=None, host_names
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def set_ntp_config(host, username, password, ntp_servers, protocol=None, port=None, host_names=None):
     '''
     Set NTP configuration for a given host of list of host_names.
@@ -2424,6 +2457,7 @@ def set_ntp_config(host, username, password, ntp_servers, protocol=None, port=No
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def service_start(host,
                   username,
                   password,
@@ -2533,6 +2567,7 @@ def service_start(host,
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def service_stop(host,
                  username,
                  password,
@@ -2642,6 +2677,7 @@ def service_stop(host,
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def service_restart(host,
                     username,
                     password,
@@ -2751,6 +2787,7 @@ def service_restart(host,
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def set_service_policy(host,
                        username,
                        password,
@@ -2878,6 +2915,7 @@ def set_service_policy(host,
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def update_host_datetime(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Update the date/time on the given host or list of host_names. This function should be
@@ -2943,6 +2981,7 @@ def update_host_datetime(host, username, password, protocol=None, port=None, hos
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def update_host_password(host, username, password, new_password, protocol=None, port=None):
     '''
     Update the password for a given host.
@@ -3004,6 +3043,7 @@ def update_host_password(host, username, password, new_password, protocol=None, 
     return True
 
 
+@depends(HAS_PYVMOMI)
 def vmotion_disable(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Disable vMotion for a given host or list of host_names.
@@ -3071,6 +3111,7 @@ def vmotion_disable(host, username, password, protocol=None, port=None, host_nam
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def vmotion_enable(host, username, password, protocol=None, port=None, host_names=None, device='vmk0'):
     '''
     Enable vMotion for a given host or list of host_names.
@@ -3142,6 +3183,7 @@ def vmotion_enable(host, username, password, protocol=None, port=None, host_name
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def vsan_add_disks(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Add any VSAN-eligible disks to the VSAN System for the given host or list of host_names.
@@ -3244,6 +3286,7 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def vsan_disable(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Disable VSAN for a given host or list of host_names.
@@ -3327,6 +3370,7 @@ def vsan_disable(host, username, password, protocol=None, port=None, host_names=
     return ret
 
 
+@depends(HAS_PYVMOMI)
 def vsan_enable(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Enable VSAN for a given host or list of host_names.
