@@ -38,7 +38,7 @@ simply by creating a data structure. (And this is exactly how much of Salt's
 own internals work!)
 
 .. autoclass:: salt.netapi.NetapiClient
-    :members: local, local_async, local_batch, local_subset, ssh, ssh_async, 
+    :members: local, local_async, local_subset, ssh, ssh_async, 
         runner, runner_async, wheel, wheel_async
 
 .. toctree::
