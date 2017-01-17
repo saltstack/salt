@@ -1106,6 +1106,7 @@ _OS_NAME_MAP = {
     'scientific': 'ScientificLinux',
     'synology': 'Synology',
     'nilrt': 'NILinuxRT',
+    'nilrt-xfce': 'NILinuxRT-XFCE',
     'manjaro': 'Manjaro',
     'antergos': 'Antergos',
     'sles': 'SUSE',
@@ -1171,6 +1172,7 @@ _OS_FAMILY_MAP = {
     'Devuan': 'Debian',
     'antiX': 'Debian',
     'NILinuxRT': 'NILinuxRT',
+    'NILinuxRT-XFCE': 'NILinuxRT',
     'Void': 'Void',
 }
 
