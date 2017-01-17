@@ -88,8 +88,9 @@ def compile_template(template,
         if not isinstance(input_data, (dict, OrderedDict)):
             try:
                 input_data.seek(0)
-            except Exception as exp:
-                log.error('error while compiling template \'{0}\': {1}'.format(template, exp))
+            except AttributeError:
+                # Only cStringIO and StringIO have the .seek-method. Ignore if it doesn't have it.
+                pass
 
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
@@ -153,8 +154,6 @@ def template_shebang(template, renderers, default, blacklist, whitelist, input_d
       #!mako|yaml_odict|stateconf
 
     '''
-    render_pipe = []
-
     line = ''
     # Open up the first line of the sls template
     if template == ':string:':
@@ -165,14 +164,12 @@ def template_shebang(template, renderers, default, blacklist, whitelist, input_d
 
     # Check if it starts with a shebang and not a path
     if line.startswith('#!') and not line.startswith('#!/'):
-
         # pull out the shebang data
-        render_pipe = check_render_pipe_str(line.strip()[2:], renderers, blacklist, whitelist)
-
-    if not render_pipe:
-        render_pipe = check_render_pipe_str(default, renderers, blacklist, whitelist)
-
-    return render_pipe
+        # If the shebang does not contain recognized/not-blacklisted/whitelisted
+        # renderers, do not fall back to the default renderer
+        return check_render_pipe_str(line.strip()[2:], renderers, blacklist, whitelist)
+    else:
+        return check_render_pipe_str(default, renderers, blacklist, whitelist)
 
 
 # A dict of combined renderer (i.e., rend1_rend2_...) to
@@ -202,6 +199,8 @@ def check_render_pipe_str(pipestr, renderers, blacklist, whitelist):
     If so, return the list of render functions in the pipe as
     (render_func, arg_str) tuples; otherwise return [].
     '''
+    if pipestr is None:
+        return []
     parts = [r.strip() for r in pipestr.split('|')]
     # Note: currently, | is not allowed anywhere in the shebang line except
     #       as pipes between renderers.
