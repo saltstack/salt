@@ -279,9 +279,15 @@ def get_conn():
     kwargs['project_id'] = vm_['tenant']
     kwargs['auth_url'] = vm_['identity_url']
     kwargs['region_name'] = vm_['compute_region']
+    kwargs['use_keystoneauth'] = vm_['use_keystoneauth']
 
     if 'password' in vm_:
         kwargs['password'] = vm_['password']
+    
+    if 'verify' in vm_ and vm_['use_keystoneauth'] == True:
+        kwargs['verify'] = vm_['verify']
+    elif 'verify' in vm_ and vm_['use_keystoneauth'] == False:
+        log.warning('SSL Certificate verification variable is specified but keystoneauth is not used')
 
     conn = nova.SaltNova(**kwargs)
 
@@ -590,7 +596,7 @@ def request_instance(vm_=None, call=None):
         'security_groups', vm_, __opts__, search_global=False
     )
     if security_groups is not None:
-        vm_groups = security_groups.split(',')
+        vm_groups = security_groups
         avail_groups = conn.secgroup_list()
         group_list = []
 
@@ -682,7 +688,7 @@ def request_instance(vm_=None, call=None):
                 break
         if floating_ip is None:
             floating_ip = conn.floating_ip_create(pool)['ip']
-
+            
         def __query_node_data(vm_):
             try:
                 node = show_instance(vm_['name'], 'action')
@@ -720,7 +726,7 @@ def request_instance(vm_=None, call=None):
                 pass
             finally:
                 raise SaltCloudSystemExit(str(exc))
-
+ 
         try:
             conn.floating_ip_associate(vm_['name'], floating_ip)
             vm_['floating_ip'] = floating_ip
