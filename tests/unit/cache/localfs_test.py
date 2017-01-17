@@ -217,7 +217,7 @@ class LocalFSTest(TestCase):
         Tests that the list function returns an empty list if the bank directory
         doesn't exist.
         '''
-        self.assertEqual(localfs.list(bank='', cachedir=''), [])
+        self.assertEqual(localfs.list_(bank='', cachedir=''), [])
 
     @patch('os.path.isdir', MagicMock(return_value=True))
     @patch('os.listdir', MagicMock(side_effect=OSError))
@@ -226,7 +226,7 @@ class LocalFSTest(TestCase):
         Tests that a SaltCacheError is raised when there is a problem accessing the
         cache bank directory.
         '''
-        self.assertRaises(SaltCacheError, localfs.list, bank='', cachedir='')
+        self.assertRaises(SaltCacheError, localfs.list_, bank='', cachedir='')
 
     @destructiveTest
     def test_list_success(self):
