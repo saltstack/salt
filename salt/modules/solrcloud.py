@@ -347,9 +347,7 @@ def collection_backup(collection_name, location, backup_name=None, **kwargs):
                 collection=collection_name,
                 backup_name=backup_name,
                 location=location
-            ),
-            **kwargs
-        )
+            ), **kwargs)
 
 
 def collection_backup_all(location, backup_name=None, **kwargs):
@@ -376,9 +374,7 @@ def collection_backup_all(location, backup_name=None, **kwargs):
                     collection=collection_name,
                     backup_name=backup_name,
                     location=location
-                ),
-                **kwargs
-            )
+                ), **kwargs)
 
 
 def collection_create(collection_name, options=None, **kwargs):
@@ -457,7 +453,7 @@ def collection_get_options(collection_name, **kwargs):
         "router.name": cluster["collections"][collection_name]["router"]["name"],
         "replicationFactor": int(cluster["collections"][collection_name]["replicationFactor"]),
         "maxShardsPerNode": int(cluster["collections"][collection_name]["maxShardsPerNode"]),
-        "autoAddReplicas": True if cluster["collections"][collection_name]["autoAddReplicas"] == True else False
+        "autoAddReplicas": cluster["collections"][collection_name]["autoAddReplicas"] is True
     }
 
     if 'rule' in cluster["collections"][collection_name]:
