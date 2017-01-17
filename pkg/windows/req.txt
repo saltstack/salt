@@ -11,7 +11,7 @@ idna==2.1
 ioflo==1.5.5
 ioloop==0.1a0
 ipaddress==1.0.16
-Jinja2==2.8
+Jinja2==2.9.4
 libnacl==1.4.5
 lxml==3.6.0
 Mako==1.0.4
