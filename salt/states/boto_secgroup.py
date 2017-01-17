@@ -53,7 +53,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                   to_port: 8090
                   cidr_ip:
                     - 10.0.0.0/8
-                    - 192.168.0.0/16                    
+                    - 192.168.0.0/16
                 - ip_protocol: icmp
                   from_port: -1
                   to_port: -1
