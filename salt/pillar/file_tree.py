@@ -51,6 +51,21 @@ intended to be used to deploy a file using ``contents_pillar`` with a
     files would not affected by the ``keep_newline`` configuration.  However,
     this module does not actually distinguish between binary and text files.
 
+.. versionchanged:: develop
+    Templating/rendering has been added. You can now specify a default render
+    pipeline and a black- and whitelist of (dis)allowed renderers.
+
+    .. code-block:: yaml
+
+        ext_pillar:
+          - file_tree:
+            root_dir: /path/to/root/directory
+            render_default: jinja|yaml
+            renderer_blacklist:
+              - gpg
+            renderer_whitelist:
+              - jinja
+              - yaml
 
 Assigning Pillar Data to Individual Hosts
 -----------------------------------------
@@ -198,9 +213,9 @@ def _check_newline(prefix, file_name, keep_newline):
 def _construct_pillar(top_dir,
                       follow_dir_links,
                       keep_newline=False,
-                      template_default=None,
-                      template_blacklist=None,
-                      template_whitelist=None):
+                      render_default=None,
+                      renderer_blacklist=None,
+                      renderer_whitelist=None):
     '''
     Construct pillar from file tree.
     '''
@@ -254,9 +269,9 @@ def _construct_pillar(top_dir,
             else:
                 data = salt.template.compile_template_str(template=contents,
                                                           renderers=renderers,
-                                                          default=template_default,
-                                                          blacklist=template_blacklist,
-                                                          whitelist=template_whitelist)
+                                                          default=render_default,
+                                                          blacklist=renderer_blacklist,
+                                                          whitelist=renderer_whitelist)
                 if isinstance(data, cStringIO.InputType):
                     pillar_node[file_name] = data.getvalue()
                 else:
@@ -271,9 +286,9 @@ def ext_pillar(minion_id,
                follow_dir_links=False,
                debug=False,
                keep_newline=False,
-               template_default=None,
-               template_blacklist=None,
-               template_whitelist=None):
+               render_default=None,
+               renderer_blacklist=None,
+               renderer_whitelist=None):
     '''
     Compile pillar data for the specified minion ID
     '''
@@ -319,9 +334,9 @@ def ext_pillar(minion_id,
                             _construct_pillar(ngroup_dir,
                                               follow_dir_links,
                                               keep_newline,
-                                              template_default,
-                                              template_blacklist,
-                                              template_whitelist)
+                                              render_default,
+                                              renderer_blacklist,
+                                              renderer_whitelist)
                         )
         else:
             if debug is True:
@@ -345,9 +360,9 @@ def ext_pillar(minion_id,
     host_pillar = _construct_pillar(host_dir,
                                     follow_dir_links,
                                     keep_newline,
-                                    template_default,
-                                    template_blacklist,
-                                    template_whitelist)
+                                    render_default,
+                                    renderer_blacklist,
+                                    renderer_whitelist)
     return salt.utils.dictupdate.merge(ngroup_pillar,
                                        host_pillar,
                                        strategy='recurse')
