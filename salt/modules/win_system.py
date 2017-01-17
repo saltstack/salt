@@ -448,9 +448,9 @@ def get_hostname():
 
         salt 'minion-id' system.get_hostname
     '''
-    cmd = 'wmic computersystem get name'
+    cmd = 'wmic nicconfig get dnshostname'
     ret = __salt__['cmd.run'](cmd=cmd)
-    _, hostname = ret.split("\n")
+    _, _, hostname = ret.split("\n")
     return hostname
 
 
