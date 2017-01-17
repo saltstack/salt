@@ -77,6 +77,12 @@ def get_info(sld, tld, nameserver):
 
     nameserver
         string  Nameserver to retrieve
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' namecheap_domains_ns.get_info sld tld nameserver
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.ns.delete')
     opts['SLD'] = sld
@@ -112,6 +118,12 @@ def update(sld, tld, nameserver, old_ip, new_ip):
 
     new_ip
         string  new ip address
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' namecheap_domains_ns.update sld tld nameserver old_ip new_ip
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.ns.update')
     opts['SLD'] = sld
@@ -142,6 +154,12 @@ def delete(sld, tld, nameserver):
 
     nameserver
         string  Nameserver to create
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' namecheap_domains_ns.delete sld tld nameserver
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.ns.delete')
     opts['SLD'] = sld
@@ -173,6 +191,12 @@ def create(sld, tld, nameserver, ip):
 
     ip
         string  Nameserver IP address
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' namecheap_domains_ns.create sld tld nameserver ip
     '''
 
     opts = salt.utils.namecheap.get_opts('namecheap.domains.ns.create')
