@@ -518,11 +518,6 @@ VALID_OPTS = {
     # http://api.zeromq.org/3-2:zmq-setsockopt
     'pub_hwm': int,
 
-    # ZMQ HWM for SaltEvent pub socket
-    'salt_event_pub_hwm': int,
-    # ZMQ HWM for EventPublisher pub socket
-    'event_publisher_pub_hwm': int,
-
     # IPC buffer size
     # Refs https://github.com/saltstack/salt/issues/34215
     'ipc_write_buffer': int,
@@ -1202,10 +1197,6 @@ DEFAULT_MINION_OPTS = {
     'sudo_user': '',
     'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
     'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
-    # ZMQ HWM for SaltEvent pub socket - different for minion vs. master
-    'salt_event_pub_hwm': 2000,
-    # ZMQ HWM for EventPublisher pub socket - different for minion vs. master
-    'event_publisher_pub_hwm': 1000,
     'event_match_type': 'startswith',
     'minion_restart_command': [],
     'pub_ret': True,
@@ -1226,10 +1217,6 @@ DEFAULT_MASTER_OPTS = {
     'publish_port': 4505,
     'zmq_backlog': 1000,
     'pub_hwm': 1000,
-    # ZMQ HWM for SaltEvent pub socket - different for minion vs. master
-    'salt_event_pub_hwm': 2000,
-    # ZMQ HWM for EventPublisher pub socket - different for minion vs. master
-    'event_publisher_pub_hwm': 1000,
     'auth_mode': 1,
     'user': 'root',
     'worker_threads': 5,

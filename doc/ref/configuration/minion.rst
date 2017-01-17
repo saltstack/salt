@@ -608,7 +608,9 @@ The directory where Unix sockets will be kept.
 
 Default: ``''``
 
-Backup files replaced by file.managed and file.recurse under cachedir.
+Make backups of files replaced by ``file.managed`` and ``file.recurse`` state modules under
+:conf_minion:`cachedir` in ``file_backup`` subdirectory preserving original paths.
+Refer to :ref:`File State Backups documentation <file-state-backups>` for more details.
 
 .. code-block:: yaml
 
@@ -1197,6 +1199,20 @@ The default renderer used for local state executions
 .. code-block:: yaml
 
     renderer: yaml_jinja
+
+.. conf_master:: test
+
+``test``
+--------
+
+Default: ``False``
+
+Set all state calls to only test if they are going to actually make changes
+or just post what changes are going to be made.
+
+.. code-block:: yaml
+
+    test: False
 
 .. conf_minion:: state_verbose
 

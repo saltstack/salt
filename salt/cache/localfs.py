@@ -112,7 +112,7 @@ def flush(bank, key=None):
     return True
 
 
-def list(bank):
+def getlist(bank):
     '''
     Return an iterable object containing all entries stored in the specified bank.
     '''
