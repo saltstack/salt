@@ -2074,7 +2074,7 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                 except lxml.etree.XMLSyntaxError:
                     try:
                         xmltree = _remove_unicode_encoding(admfile)
-                    except as Exception:
+                    except Exception:
                         msg = ('A error was found while processing admx file {0},'
                                ' all policies from this file will be unavailable via this module')
                         log.error(msg.format(admfile))
@@ -2133,7 +2133,7 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                     # see issue #38100
                     try:
                         xmltree = _remove_unicode_encoding(adml_file)
-                    except as Exception:
+                    except Exception:
                         msg = ('An error was found while processing adml file {0}, all policy'
                                ' languange data from this file will be unavailable via this module')
                         log.error(msg.format(adml_file))
