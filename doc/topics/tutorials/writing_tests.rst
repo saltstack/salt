@@ -44,14 +44,14 @@ depending on your relevant version of Python:
 
 To be able to run integration tests which utilizes ZeroMQ transport, you also
 need to install additional requirements for it. Make sure you have installed
-the C compiler and development libraries and header files needed for your
+the C/C++ compiler and development libraries and header files needed for your
 Python version.
 
 This is an example for RedHat-based operating systems:
 
 .. code-block:: bash
 
-    yum install gcc python-devel
+    yum install gcc gcc-c++ python-devel
     pip install -r requirements/zeromq.txt
 
 On Debian, Ubuntu or their derivatives run the following commands:
