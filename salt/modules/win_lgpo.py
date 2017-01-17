@@ -109,7 +109,7 @@ try:
     VALUE_LIST_XPATH = etree.XPath('.//*[local-name() = "valueList"]')
     ENUM_ITEM_DISPLAY_NAME_XPATH = etree.XPath('.//*[local-name() = "item" and @*[local-name() = "displayName" = $display_name]]')
     ADMX_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "name"] = $policy_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class)]')
-    ADML_SEARCH_XPATH = etree.XPath('//*[text() = $policy_name and @*[local-name() = "id"]]')
+    ADML_SEARCH_XPATH = etree.XPath('//*[starts-with(text(), $policy_name) and @*[local-name() = "id"]]')
     ADMX_DISPLAYNAME_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "displayName"] = $display_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class) ]')
     PRESENTATION_ANCESTOR_XPATH = etree.XPath('ancestor::*[local-name() = "presentation"]')
     TEXT_ELEMENT_XPATH = etree.XPath('.//*[local-name() = "text"]')
@@ -4555,6 +4555,9 @@ def _lookup_admin_template(policy_name,
             suggested_policies = ''
             if len(adml_search_results) > 1:
                 multiple_adml_entries = True
+                for adml_search_result in adml_search_results:
+                    if not adml_search_result.attrib['text'].strip() == policy_name:
+                        adml_search_results.remove(adml_search_result)
             for adml_search_result in adml_search_results:
                 dmsg = 'found an ADML entry matching the string! {0} -- {1}'
                 log.debug(dmsg.format(adml_search_result.tag,
