@@ -25,7 +25,6 @@ param(
     [switch]$Silent
 )
 
-#Clear-Host
 Write-Output "================================================================="
 Write-Output ""
 Write-Output "               Development Environment Installation"
@@ -90,13 +89,12 @@ If (!(Get-IsAdministrator)) {
 #------------------------------------------------------------------------------
 # Load Settings
 #------------------------------------------------------------------------------
-$VerbosePreference = "Continue"
 $ini = Get-Settings
 
 
 #------------------------------------------------------------------------------
-# Create empty directories, DownloadDir only if not SALTREPO_LOCAL_CACHE environment variable set
-# If to set an environment variable SALTREPO_LOCAL_CACHE, DownloadDir is set to its value in get-settings.psm1
+# You can set SALTREPO_LOCAL_CACHE and SALTREPO_LOCAL_CACHE_PIP to  permanent cache directories (DownloadDir). 
+# The script empties DownloadDir unless SALTREPO_LOCAL_CACHE environment variable set
 #------------------------------------------------------------------------------
 if ( ! [bool]$Env:SALTREPO_LOCAL_CACHE ) {
   $p = New-Item $ini['Settings']['DownloadDir'] -ItemType Directory -Force
@@ -284,9 +282,9 @@ ForEach($key in $ini[$bitDLLs].Keys) {
         Write-Output "   - $key . . ."
         $file = "$($ini[$bitDLLs][$key])"
         $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-		$file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
+        $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
         DownloadFileWithProgress $url $file
-		Copy-Item $file  -destination $($ini['Settings']['PythonDir'])
+        Copy-Item $file  -destination $($ini['Settings']['PythonDir'])
     }
 }
 
