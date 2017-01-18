@@ -47,6 +47,12 @@ if [%1]==[] (
 @echo =====================================================================
 @echo.
 
+:: Version must be set
+if [%Version%]==[] (
+    echo Failure: Version must be set
+    goto eof
+)
+
 :: Create Build Environment
 @echo %0 :: Create the Build Environment...
 @echo ---------------------------------------------------------------------
