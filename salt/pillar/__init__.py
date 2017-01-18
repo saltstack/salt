@@ -270,6 +270,9 @@ class Pillar(object):
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
                  pillar=None, pillarenv=None, rend=None):
         self.minion_id = minion_id
+        if pillarenv is None:
+            if opts.get('pillarenv_from_saltenv', False):
+                opts['pillarenv'] = saltenv
         # Store the file_roots path so we can restore later. Issue 5449
         self.actual_file_roots = opts['file_roots']
         # use the local file client

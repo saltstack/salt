@@ -731,6 +731,11 @@
 # Recursively merge lists by aggregating them instead of replacing them.
 #pillar_merge_lists: False
 
+# Set this option to True to force the pillarenv to be the same as the effective
+# saltenv when running states. If pillarenv is specified this option will be
+# ignored.
+#pillarenv_from_saltenv: False
+
 # Set this option to 'True' to force a 'KeyError' to be raised whenever an
 # attempt to retrieve a named value from pillar fails. When this option is set
 # to 'False', the failed attempt returns an empty string. Default is 'False'.
