@@ -406,10 +406,10 @@ def _gen_recurse_managed_files(
     srcpath, senv = salt.utils.url.parse(source)
     if senv is None:
         senv = __env__
-    if not srcpath.endswith('/'):
+    if not srcpath.endswith(os.sep):
         # we're searching for things that start with this *directory*.
         # use '/' since #master only runs on POSIX
-        srcpath = srcpath + '/'
+        srcpath = srcpath + os.sep
     fns_ = __salt__['cp.list_master'](senv, srcpath)
 
     # If we are instructed to keep symlinks, then process them.
@@ -554,7 +554,7 @@ def _gen_keep_files(name, require, walk_d=None):
                                 keep.update(_process(fn))
                     else:
                         keep.add(fn)
-    log.debug('Files to keep from required states: %s' % list(keep))
+    log.debug('Files to keep from required states: {0}'.format(list(keep)))
     return list(keep)
 
 
