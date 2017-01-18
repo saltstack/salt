@@ -3184,7 +3184,7 @@ def recurse(name,
 
     if clean:
         # TODO: Use directory(clean=True) instead
-        keep += _gen_keep_files(name, require)
+        keep.update(_gen_keep_files(name, require))
         removed = _clean_dir(name, list(keep), exclude_pat)
         if removed:
             if __opts__['test']:
