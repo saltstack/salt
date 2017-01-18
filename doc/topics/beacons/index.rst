@@ -209,7 +209,8 @@ Add the following to ``/srv/reactor/revert.sls``:
     revert-file:
       local.state.apply:
         - tgt: {{ data['data']['id'] }}
-        - mods: maintain_important_file
+        - arg:
+          - maintain_important_file
 
 .. note::
 
