@@ -25,7 +25,7 @@ param(
     [switch]$Silent
 )
 
-Clear-Host
+#Clear-Host
 Write-Output "================================================================="
 Write-Output ""
 Write-Output "               Development Environment Installation"
@@ -44,6 +44,11 @@ Write-Output ""
 #==============================================================================
 $script_path = dir "$($myInvocation.MyCommand.Definition)"
 $script_path = $script_path.DirectoryName
+
+#==============================================================================
+# Get the name of actual script
+#==============================================================================
+$script_name = $MyInvocation.MyCommand.Name
 
 #==============================================================================
 # Import Modules
@@ -85,12 +90,20 @@ If (!(Get-IsAdministrator)) {
 #------------------------------------------------------------------------------
 # Load Settings
 #------------------------------------------------------------------------------
+$VerbosePreference = "Continue"
 $ini = Get-Settings
 
+
 #------------------------------------------------------------------------------
-# Create Directories
+# Create empty directories, DownloadDir only if not SALTREPO_LOCAL_CACHE environment variable set
+# If to set an environment variable SALTREPO_LOCAL_CACHE, DownloadDir is set to its value in get-settings.psm1
 #------------------------------------------------------------------------------
-$p = New-Item $ini['Settings']['DownloadDir'] -ItemType Directory -Force
+if ( ! [bool]$Env:SALTREPO_LOCAL_CACHE ) {
+  $p = New-Item $ini['Settings']['DownloadDir'] -ItemType Directory -Force
+  $p = New-Item "$($ini['Settings']['DownloadDir'])\64" -ItemType Directory -Force
+  $p = New-Item "$($ini['Settings']['DownloadDir'])\32" -ItemType Directory -Force
+  # Write-Output "created  DownloadDir\64  ## $($ini['Settings']['DownloadDir'])\64 ##"
+}
 $p = New-Item $ini['Settings']['SaltDir'] -ItemType Directory -Force
 
 #------------------------------------------------------------------------------
@@ -182,11 +195,10 @@ If (Test-Path "$($ini['Settings']['PythonDir'])\python.exe") {
     Write-Output " - Downloading $($ini[$bitPrograms]['Python']) . . ."
     $file = "$($ini[$bitPrograms]['Python'])"
     $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-    $file = "$($ini['Settings']['DownloadDir'])\$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
     DownloadFileWithProgress $url $file
     
-    Write-Output " - Installing $($ini[$bitPrograms]['Python']) . . ."
-    $file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['Python'])"
+    Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python']) . . ."
     $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['PythonDir'])" -Wait -NoNewWindow -PassThru
 
 }
@@ -206,56 +218,65 @@ If (!($Path.ToLower().Contains("$($ini['Settings']['ScriptsDir'])".ToLower()))) 
 # Update PIP and SetupTools
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Updating PIP and SetupTools . . ."
+Write-Output " - $script_name :: Updating PIP and SetupTools . . ."
 Write-Output " ----------------------------------------------------------------"
 Start_Process_and_test_exitcode "$($ini['Settings']['PythonDir'])\python.exe" "-m pip --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
 
 #==============================================================================
 # Install pypi resources using pip
+#    caching depends on environmant variable SALTREPO_LOCAL_CACHE_PIP
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Installing pypi resources using pip . . ."
+Write-Output " - $script_name :: Installing pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
-Start_Process_and_test_exitcode "$($ini['Settings']['ScriptsDir'])\pip.exe"  "--no-cache-dir install -r $($script_path)\req.txt" "pip install"
+if ( ! [bool]$Env:SALTREPO_LOCAL_CACHE_PIP) {
+  Start_Process_and_test_exitcode "$($ini['Settings']['ScriptsDir'])\pip.exe"  "--no-cache-dir install -r $($script_path)\req.txt" "pip install"
+} else {
+  if ( (Get-ChildItem $Env:SALTREPO_LOCAL_CACHE_PIP | Measure-Object).Count -eq 0 ) {
+    # folder empty
+	Write-Output "    pip download into empty local cache $Env:SALTREPO_LOCAL_CACHE_PIP"
+    Start_Process_and_test_exitcode "$($ini['Settings']['ScriptsDir'])\pip.exe"  "download --dest $Env:SALTREPO_LOCAL_CACHE_PIP -r $($script_path)\req.txt" "pip download"
+  } 
+  Write-Output "    reading from local pip cache $Env:SALTREPO_LOCAL_CACHE_PIP"
+  Start_Process_and_test_exitcode "$($ini['Settings']['ScriptsDir'])\pip.exe"  "install --no-index --find-links=$Env:SALTREPO_LOCAL_CACHE_PIP -r $($script_path)\req.txt" "pip install"
+}
 
 #==============================================================================
 # Install PyYAML with CLoader
 # This has to be a compiled binary to get the CLoader
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Installing PyYAML . . ."
+Write-Output " - $script_name :: Installing PyYAML . . ."
 Write-Output " ----------------------------------------------------------------"
 # Download
 $file = "$($ini[$bitPrograms]['PyYAML'])"
 $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-$file = "$($ini['Settings']['DownloadDir'])\$file"
+$file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
 DownloadFileWithProgress $url $file
 
 # Install
-$file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['PyYAML'])"
 Start_Process_and_test_exitcode "$($ini['Settings']['ScriptsDir'])\easy_install.exe" "-Z $file " "easy_install PyYAML"
 
 #==============================================================================
 # Install PyCrypto from wheel file
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Installing PyCrypto . . ."
+Write-Output " - $script_name :: Installing PyCrypto . . ."
 Write-Output " ----------------------------------------------------------------"
 # Download
 $file = "$($ini[$bitPrograms]['PyCrypto'])"
 $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-$file = "$($ini['Settings']['DownloadDir'])\$file"
+$file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
 DownloadFileWithProgress $url $file
 
 # Install
-$file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['PyCrypto'])"
 Start_Process_and_test_exitcode  "$($ini['Settings']['ScriptsDir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyCrypto"
 
 #==============================================================================
 # Copy DLLs to Python Directory
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output "   - Copying DLLs . . ."
+Write-Output "   - $script_name :: Copying DLLs . . ."
 Write-Output " ----------------------------------------------------------------"
 # Architecture Specific DLL's
 ForEach($key in $ini[$bitDLLs].Keys) {
@@ -263,8 +284,9 @@ ForEach($key in $ini[$bitDLLs].Keys) {
         Write-Output "   - $key . . ."
         $file = "$($ini[$bitDLLs][$key])"
         $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-        $file = "$($ini['Settings']['PythonDir'])\$file"
+		$file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
         DownloadFileWithProgress $url $file
+		Copy-Item $file  -destination $($ini['Settings']['PythonDir'])
     }
 }
 
@@ -272,7 +294,7 @@ ForEach($key in $ini[$bitDLLs].Keys) {
 # Script complete
 #------------------------------------------------------------------------------
 Write-Output "================================================================="
-Write-Output "Salt Stack Dev Environment Script Complete"
+Write-Output " $script_name :: Salt Stack Dev Environment Script Complete"
 Write-Output "================================================================="
 Write-Output ""
 
@@ -286,7 +308,9 @@ If (-Not $Silent) {
 # Remove the temporary download directory
 #------------------------------------------------------------------------------
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Cleaning up downloaded files"
+Write-Output " - $script_name :: Cleaning up downloaded files unless you use SALTREPO_LOCAL_CACHE"
 Write-Output " ----------------------------------------------------------------"
 Write-Output ""
+if ( ! [bool]$Env:SALTREPO_LOCAL_CACHE ) {
 Remove-Item $($ini['Settings']['DownloadDir']) -Force -Recurse
+}

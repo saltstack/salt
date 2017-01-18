@@ -8,6 +8,12 @@ Function DownloadFileWithProgress {
     #    $url - the file source
     #    $localfile - the file destination on the local machine
 
+	# The "original" DownLoadDir is deleted for each install, therefore
+	# this function originally did not expect that the file exists.
+	# You may want to set an environment variable SALTREPO_LOCAL_CACHE, a cache which lives as long as you decide.
+	# Then this function must test if the file exists.
+	
+	
     param(
         [Parameter(Mandatory=$true)]
         [String] $url,
@@ -16,6 +22,13 @@ Function DownloadFileWithProgress {
     )
 
     begin {
+	    $Global:NEED_PROCESS_AND_END = $true
+	    # Write-Host " **** DownloadFileWithProgress looking for **** $localFile ********"
+	    if ( [bool]$Env:SALTREPO_LOCAL_CACHE -and (Test-Path $localFile) ) { 
+		  # Write-Host " **** found **** $localFile ********"
+		$Global:NEED_PROCESS_AND_END = $false
+		} else {
+		# Write-Host " ++++++ BEGIN DOWNLOADING ++++++ $localFile +++++++"
         $client = New-Object System.Net.WebClient
         $Global:downloadComplete = $false
         $eventDataComplete = Register-ObjectEvent $client DownloadFileCompleted `
@@ -24,8 +37,11 @@ Function DownloadFileWithProgress {
         $eventDataProgress = Register-ObjectEvent $client DownloadProgressChanged `
             -SourceIdentifier WebClient.DownloadProgressChanged `
             -Action { $Global:DPCEventArgs = $EventArgs }
+		}
     }
     process {
+	    if ( $Global:NEED_PROCESS_AND_END ) { 
+		#Write-Host " ++++++ actually DOWNLOADING ++++++ $localFile +++++++"
         Write-Progress -Activity 'Downloading file' -Status $url
         $client.DownloadFileAsync($url, $localFile)
 
@@ -36,9 +52,14 @@ Function DownloadFileWithProgress {
             }
         }
         Write-Progress -Activity 'Downloading file' -Status $url -Complete
+		} else {
+		  #Write-Host "      * no need for download  for **** $localFile ********"
+		}
     }
 
     end {
+	    if ( $Global:NEED_PROCESS_AND_END ) { 
+		#Write-Host " ++++++ end of  DOWNLOAD ++++++ $localFile +++++++"
         Unregister-Event -SourceIdentifier WebClient.DownloadProgressChanged
         Unregister-Event -SourceIdentifier WebClient.DownloadFileComplete
         $client.Dispose()
@@ -53,6 +74,6 @@ Function DownloadFileWithProgress {
             Write-Error "Exiting because download missing or zero-length:    $localfile"
             exit 2
         }
-
+		}
     }
 }

@@ -20,8 +20,23 @@ Function Get-Settings {
             "ScriptsDir"  = "C:\Python27\Scripts"
             "DownloadDir" = "$env:Temp\DevSalt"
             }
+		if ( [bool]$Env:SALTREPO_LOCAL_CACHE ) {
+		# The DownLoadDir above is deleted for each install.
+		# You may want to set an environment variable SALTREPO_LOCAL_CACHE, a cache which lives as long as you decide.
+		# write files to the SALTREPO_LOCAL_CACHE, if the evnironment variable exists.
+        $Settings = @{
+            "SaltRepo"    = "https://repo.saltstack.com/windows/dependencies"
+            "SaltDir"     = "C:\salt"
+            "PythonDir"   = "C:\Python27"
+            "ScriptsDir"  = "C:\Python27\Scripts"
+            "DownloadDir" = "$Env:SALTREPO_LOCAL_CACHE"
+            }		
+		}
+		# NICE-TO-HAVE One could only change the single attribute DownloadDir of Settings
+		
         $ini.Add("Settings", $Settings)
-
+		Write-Verbose "DownloadDir ===  $($ini['Settings']['DownloadDir'])       *********"
+		
         # Prerequisite software
         $Prerequisites = @{
             "NSIS"        = "nsis-3.0b1-setup.exe"
