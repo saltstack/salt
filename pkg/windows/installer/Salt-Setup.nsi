@@ -406,7 +406,7 @@ Function .onInit
         Delete "$INSTDIR\uninst.exe"
         Delete "$INSTDIR\nssm.exe"
         Delete "$INSTDIR\salt*"
-        Delete "$INSTDIR\vcredist.ext"
+        Delete "$INSTDIR\vcredist.exe"
         RMDir /r "$INSTDIR\bin"
 
         ; Remove registry entries
@@ -517,7 +517,7 @@ Section -Post
     Push "C:\salt"
     Call AddToPath
 
-    Delete "$INSTDIR\vcredist.ext"
+    Delete "$INSTDIR\vcredist.exe"
 
 SectionEnd
 
@@ -558,7 +558,7 @@ Section Uninstall
     Delete "$INSTDIR\uninst.exe"
     Delete "$INSTDIR\nssm.exe"
     Delete "$INSTDIR\salt*"
-    Delete "$INSTDIR\vcredist.ext"
+    Delete "$INSTDIR\vcredist.exe"
 
     ; Remove salt directory, you must check to make sure you're not removing
     ; the Program Files directory
