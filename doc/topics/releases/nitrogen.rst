@@ -276,4 +276,10 @@ The ``glusterfs`` state had the following function removed:
 
 The ``openvswitch_port`` state had the following change:
 
-  - The ``type`` option was removed from the ``present`` function. Please use ``tunnel_type`` instead.
+  - The ``type`` option was removed from the ``present`` function. Please use
+    ``tunnel_type`` instead.
+
+The ``pkgrepo`` state had the following change:
+
+  - The ``enabled`` option was removed from the ``managed`` function. Please
+    use ``disabled`` instead.
