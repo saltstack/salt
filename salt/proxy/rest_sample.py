@@ -58,6 +58,12 @@ def initialized():
     '''
     return DETAILS.get('initialized', False)
 
+def alive(opts):
+    log.debug('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
+    log.debug('proxys alive() fn called')
+    log.debug('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
+    return False
+
 
 def id(opts):
     '''
