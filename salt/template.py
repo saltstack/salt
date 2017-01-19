@@ -10,19 +10,19 @@ import time
 import os
 import codecs
 import logging
+import cStringIO
 
 # Import salt libs
 import salt.utils
 import salt.utils.files
-from salt.utils.odict import OrderedDict
 from salt._compat import string_io
 from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
 
-#FIXME: we should make the default encoding of a .sls file a configurable
-#       option in the config, and default it to 'utf-8'.
+# FIXME: we should make the default encoding of a .sls file a configurable
+#        option in the config, and default it to 'utf-8'.
 #
 SLS_ENCODING = 'utf-8'  # this one has no BOM.
 SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
@@ -83,15 +83,8 @@ def compile_template(template,
 
     input_data = string_io(input_data)
     for render, argline in render_pipe:
-        # For GPG renderer, input_data can be an OrderedDict (from YAML) or dict (from py renderer).
-        # Repress the error.
-        if not isinstance(input_data, (dict, OrderedDict)):
-            try:
-                input_data.seek(0)
-            except AttributeError:
-                # Only cStringIO and StringIO have the .seek-method. Ignore if it doesn't have it.
-                pass
-
+        if isinstance(input_data, cStringIO.InputType):
+            input_data.seek(0)      # pylint: disable=no-member
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
         if argline:
@@ -111,17 +104,14 @@ def compile_template(template,
             ret = render(input_data, saltenv, sls, **render_kwargs)
         input_data = ret
         if log.isEnabledFor(logging.GARBAGE):  # pylint: disable=no-member
-            try:
+            # If ret is not a StringIO (which means it was rendered using
+            # yaml, mako, or another engine which renders to a data
+            # structure) we don't want to log this.
+            if isinstance(ret, cStringIO.InputType):
                 log.debug('Rendered data from file: {0}:\n{1}'.format(
                     template,
-                    ret.read()))
-                ret.seek(0)
-            except Exception:
-                # ret is not a StringIO, which means it was rendered using
-                # yaml, mako, or another engine which renders to a data
-                # structure. We don't want to log this, so ignore this
-                # exception.
-                pass
+                    ret.read()))    # pylint: disable=no-member
+                ret.seek(0)         # pylint: disable=no-member
     return ret
 
 
