@@ -67,7 +67,8 @@ class Shell(object):
             remote_port_forwards=None,
             ssh_options=None):
         self.opts = opts
-        self.host = host
+        # ssh <ipv6>, but scp [<ipv6]:/path
+        self.host = host.strip('[]')
         self.user = user
         self.port = port
         self.passwd = str(passwd) if passwd else passwd
@@ -330,6 +331,10 @@ class Shell(object):
         '''
         if makedirs:
             self.exec_cmd('mkdir -p {0}'.format(os.path.dirname(remote)))
+
+        # scp needs [<ipv6}
+        if ':' in self.host:
+            self.host = '[{0}]'.format(self.host)
 
         cmd = '{0} {1}:{2}'.format(local, self.host, remote)
         cmd = self._cmd_str(cmd, ssh='scp')
