@@ -545,10 +545,9 @@ def get_hostname():
 
         salt 'minion-id' system.get_hostname
     '''
-    cmd = 'wmic nicconfig get dnshostname'
+    cmd = 'hostname'
     ret = __salt__['cmd.run'](cmd=cmd)
-    _, _, hostname = ret.split("\n")
-    return hostname
+    return ret
 
 
 def set_hostname(hostname):
