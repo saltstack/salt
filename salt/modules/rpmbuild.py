@@ -430,7 +430,8 @@ def make_repo(repodir,
 
         except SaltInvocationError:
             raise SaltInvocationError(
-                'Public and Private key files associated with Pillar data and \'keyid\' {0} could not be found'
+                'Public and Private key files associated with Pillar data and \'keyid\' '
+                '{0} could not be found'
                 .format(keyid)
             )
 
@@ -445,14 +446,17 @@ def make_repo(repodir,
 
         if local_keyid is None:
             raise SaltInvocationError(
-                '\'keyid\' was not found in gpg keyring'
+                'The key ID \'{0}\' was not found in GnuPG keyring at \'{1}\''
+                .format(keyid, gnupghome)
             )
 
         if use_passphrase:
             phrase = __salt__['pillar.get']('gpg_passphrase')
 
         if local_uids:
-            define_gpg_name = '--define=\'%_signature gpg\' --define=\'%_gpg_name {0}\''.format(local_uids[0])
+            define_gpg_name = '--define=\'%_signature gpg\' --define=\'%_gpg_name {0}\''.format(
+                local_uids[0]
+            )
 
         # need to update rpm with public key
         cmd = 'rpm --import {0}'.format(pkg_pub_key_file)

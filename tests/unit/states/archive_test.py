@@ -81,15 +81,17 @@ class ArchiveTestCase(TestCase):
 
         mock_true = MagicMock(return_value=True)
         mock_false = MagicMock(return_value=False)
-        ret = {'stdout': ['saltines', 'cheese'], 'stderr': 'biscuits', 'retcode': '31337', 'pid': '1337'}
+        ret = {'stdout': ['cheese', 'ham', 'saltines'], 'stderr': 'biscuits', 'retcode': '31337', 'pid': '1337'}
         mock_run = MagicMock(return_value=ret)
         mock_source_list = MagicMock(return_value=(source, None))
         state_single_mock = MagicMock(return_value={'local': {'result': True}})
         list_mock = MagicMock(return_value={
             'dirs': [],
-            'files': ['saltines', 'cheese'],
+            'files': ['cheese', 'saltines'],
+            'links': ['ham'],
             'top_level_dirs': [],
-            'top_level_files': ['saltines', 'cheese'],
+            'top_level_files': ['cheese', 'saltines'],
+            'top_level_links': ['ham'],
         })
         isfile_mock = MagicMock(side_effect=_isfile_side_effect)
 
@@ -127,8 +129,10 @@ class ArchiveTestCase(TestCase):
         list_mock = MagicMock(return_value={
             'dirs': [],
             'files': ['stdout'],
+            'links': [],
             'top_level_dirs': [],
             'top_level_files': ['stdout'],
+            'top_level_links': [],
         })
         isfile_mock = MagicMock(side_effect=_isfile_side_effect)
 
@@ -162,8 +166,10 @@ class ArchiveTestCase(TestCase):
         list_mock = MagicMock(return_value={
             'dirs': [],
             'files': ['stderr'],
+            'links': [],
             'top_level_dirs': [],
             'top_level_files': ['stderr'],
+            'top_level_links': [],
         })
         isfile_mock = MagicMock(side_effect=_isfile_side_effect)
 

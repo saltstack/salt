@@ -241,12 +241,15 @@ class Batch(object):
                     active.remove(minion)
                     if bwait:
                         wait.append(datetime.now() + timedelta(seconds=bwait))
+                # Munge retcode into return data
+                if 'retcode' in data and isinstance(data['ret'], dict) and 'retcode' not in data['ret']:
+                    data['ret']['retcode'] = data['retcode']
                 if self.opts.get('raw'):
                     ret[minion] = data
                     yield data
                 else:
-                    ret[minion] = data
-                    yield {minion: data}
+                    ret[minion] = data['ret']
+                    yield {minion: data['ret']}
                 if not self.quiet:
                     ret[minion] = data['ret']
                     data[minion] = data.pop('ret')

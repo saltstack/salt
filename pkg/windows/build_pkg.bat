@@ -9,6 +9,7 @@
 Set "CurrDir=%cd%"
 Set "BinDir=%cd%\buildenv\bin"
 Set "InsDir=%cd%\installer"
+Set "PreDir=%cd%\prereqs"
 Set "PyDir27=C:\Python27"
 Set "PyDir35=C:\Program Files\Python35"
 Set "PyDir36=C:\Program Files\Python36"
@@ -58,6 +59,21 @@ If Exist "%BinDir%\" rd /S /Q "%BinDir%"
 :: Copy the Python directory to bin
 @echo xcopy /E /Q "%PyDir%" "%BinDir%\"
 xcopy /E /Q "%PyDir%" "%BinDir%\"
+@echo.
+
+@echo Copying VCRedist 2008 MFC to Prerequisites
+@echo ----------------------------------------------------------------------
+:: Make sure the "prereq" directory exists
+If NOT Exist "%PreDir%" mkdir "%PreDir%"
+
+:: Check for 64 bit by finding the Program Files (x86) directory
+Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
+Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
+If Exist "C:\Program Files (x86)" (
+    bitsadmin /transfer "VCRedist 2008 MFC AMD64" "%Url64%" "%PreDir%\vcredist.exe"
+) Else (
+    bitsadmin /transfer "VCRedist 2008 MFC x86" "%Url32%" "%PreDir%\vcredist.exe"
+)
 @echo.
 
 :: Remove the fixed path in .exe files
