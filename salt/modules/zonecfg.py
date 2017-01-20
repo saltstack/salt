@@ -296,7 +296,8 @@ def _property(methode, zone, key, value):
         cfg_file = salt.utils.files.mkstemp()
         with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
             if methode == 'set':
-                fp_.write("{0} {1}={2}\n".format(methode, key, value))
+                safe_value = str(value).lower() if isinstance(value, bool) else str(value)
+                fp_.write("{0} {1}={2}\n".format(methode, key, safe_value))
             elif methode == 'clear':
                 fp_.write("{0} {1}\n".format(methode, key))
 
