@@ -18,7 +18,6 @@ Management of Solaris Zones
     TODO:
     - zone.resource_present
     - zone.resource_absent
-    - zone.property_absent
     - zone.present
     - zone.absent
 
@@ -79,9 +78,6 @@ def property_present(name, property, value):
         zonecfg = __salt__['zonecfg.info'](name, show_all=True)
         if property in zonecfg:
             if zonecfg[property] != value:
-                # fixup value that got parsed wrong
-                if isinstance(value, bool):
-                    value = str(value).lower()
                 # update property
                 zonecfg_res = __salt__['zonecfg.set_property'](name, property, value)
                 ret['result'] = zonecfg_res['status']
@@ -92,6 +88,49 @@ def property_present(name, property, value):
             else:
                 ret['result'] = True
                 ret['comment'] = 'The property {0} is already set to {1}!'.format(property, value)
+        else:
+            ret['result'] = False
+            ret['comment'] = 'The property {0} does not exist!'.format(property)
+    else:
+        ## zone does not exist
+        ret['result'] = False
+        ret['comment'] = 'The zone {0} is not in the configured, installed, or booted state.'.format(name)
+
+    return ret
+
+
+def property_absent(name, property):
+    '''
+    Ensure property is absent
+
+    name : string
+        name of the zone
+    property : string
+        name of property
+
+    .. note::
+        This does a zoneacfg clear call. So the property may be reset to a default value!
+        Does has the side effect of always having to be called.
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    zones = __salt__['zoneadm.list'](installed=True, configured=True)
+    if name in zones:
+        ## zone exists
+        zonecfg = __salt__['zonecfg.info'](name, show_all=True)
+        if property in zonecfg:
+            # clear property
+            zonecfg_res = __salt__['zonecfg.clear_property'](name, property)
+            zonecfg_new = __salt__['zonecfg.info'](name, show_all=True)
+            ret['result'] = zonecfg_res['status']
+            if 'messages' in zonecfg_res:
+                ret['comment'] = zonecfg_res['message']
+            if zonecfg[property] != zonecfg_new[property]:
+                ret['changes'][property] = zonecfg_new[property]
         else:
             ret['result'] = False
             ret['comment'] = 'The property {0} does not exist!'.format(property)
