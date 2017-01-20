@@ -518,8 +518,8 @@ def apply_(mods=None,
             Argument name changed from ``env`` to ``saltenv``
 
         .. versionchanged:: 2014.7.0
-            If no saltenv is specified, the minion config will be checked for a
-            ``saltenv`` parameter and if found, it will be used. If none is
+            If no saltenv is specified, the minion config will be checked for an
+            ``environment`` parameter and if found, it will be used. If none is
             found, ``base`` will be used. In prior releases, the minion config
             was not checked and ``base`` would always be assumed when the
             saltenv was not explicitly set.
@@ -911,8 +911,8 @@ def sls(mods,
             Argument name changed from ``env`` to ``saltenv``.
 
         .. versionchanged:: 2014.7.0
-            If no saltenv is specified, the minion config will be checked for a
-            ``saltenv`` parameter and if found, it will be used. If none is
+            If no saltenv is specified, the minion config will be checked for an
+            ``environment`` parameter and if found, it will be used. If none is
             found, ``base`` will be used. In prior releases, the minion config
             was not checked and ``base`` would always be assumed when the
             saltenv was not explicitly set.

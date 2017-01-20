@@ -2613,7 +2613,11 @@ def create(vm_):
             'event',
             'requesting instance',
             'salt/cloud/{0}/requesting'.format(vm_['name']),
-            args={'kwargs': vm_},
+            args={
+                'name': vm_['name'],
+                'profile': vm_['profile'],
+                'provider': vm_['driver'],
+            },
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )

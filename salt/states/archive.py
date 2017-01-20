@@ -1009,7 +1009,7 @@ def extracted(name,
                           ))
         return ret
 
-    # Check to see if we need to extract the archive. Using os.stat() in a
+    # Check to see if we need to extract the archive. Using os.lstat() in a
     # try/except is considerably faster than using os.path.exists(), and we
     # already need to catch an OSError to cover edge cases where the minion is
     # running as a non-privileged user and is trying to check for the existence
@@ -1024,7 +1024,7 @@ def extracted(name,
     if not if_missing_path_exists:
         if contents is None:
             try:
-                os.stat(if_missing)
+                os.lstat(if_missing)
                 extraction_needed = False
             except OSError as exc:
                 if exc.errno == errno.ENOENT:
@@ -1037,12 +1037,15 @@ def extracted(name,
                     return ret
         else:
             incorrect_type = []
-            for path_list, func in ((contents['dirs'], stat.S_ISDIR),
-                                    (contents['files'], stat.S_ISREG)):
+            for path_list, func in \
+                    ((contents['dirs'], stat.S_ISDIR),
+                     (contents['files'], lambda x: not stat.S_ISLNK(x)
+                                         and not stat.S_ISDIR(x)),
+                     (contents['links'], stat.S_ISLNK)):
                 for path in path_list:
                     full_path = os.path.join(name, path)
                     try:
-                        path_mode = os.stat(full_path.rstrip(os.sep)).st_mode
+                        path_mode = os.lstat(full_path.rstrip(os.sep)).st_mode
                         if not func(path_mode):
                             incorrect_type.append(path)
                     except OSError as exc:
@@ -1050,7 +1053,7 @@ def extracted(name,
                             extraction_needed = True
                         elif exc.errno != errno.ENOTDIR:
                             # In cases where a directory path was occupied by a
-                            # file instead, all os.stat() calls to files within
+                            # file instead, all os.lstat() calls to files within
                             # that dir will raise an ENOTDIR OSError. So we
                             # expect these and will only abort here if the
                             # error code is something else.
@@ -1063,8 +1066,8 @@ def extracted(name,
                 )
                 ret['comment'] = (
                     'The below paths (relative to {0}) exist, but are the '
-                    'incorrect type (i.e. file instead of directory or '
-                    'vice-versa).'.format(name)
+                    'incorrect type (file instead of directory, symlink '
+                    'instead of file, etc.).'.format(name)
                 )
                 if __opts__['test'] and clean and contents is not None:
                     ret['result'] = None
@@ -1081,7 +1084,7 @@ def extracted(name,
                 if not (clean and contents is not None):
                     if not force:
                         ret['comment'] += (
-                            'To proceed with extraction, set \'force\' to '
+                            ' To proceed with extraction, set \'force\' to '
                             'True. Note that this will remove these paths '
                             'before extracting.{0}'.format(incorrect_paths)
                         )
@@ -1094,6 +1097,7 @@ def extracted(name,
                                 salt.utils.rm_rf(full_path.rstrip(os.sep))
                                 ret['changes'].setdefault(
                                     'removed', []).append(full_path)
+                                extraction_needed = True
                             except OSError as exc:
                                 if exc.errno != errno.ENOENT:
                                     errors.append(exc.__str__())
@@ -1301,12 +1305,19 @@ def extracted(name,
     enforce_failed = []
     if user or group:
         if enforce_ownership_on:
-            enforce_dirs = [enforce_ownership_on]
-            enforce_files = []
+            if os.path.isdir(enforce_ownership_on):
+                enforce_dirs = [enforce_ownership_on]
+                enforce_files = []
+                enforce_links = []
+            else:
+                enforce_dirs = []
+                enforce_files = [enforce_ownership_on]
+                enforce_links = []
         else:
             if contents is not None:
                 enforce_dirs = contents['top_level_dirs']
                 enforce_files = contents['top_level_files']
+                enforce_links = contents['top_level_links']
 
         recurse = []
         if user:
@@ -1359,14 +1370,14 @@ def extracted(name,
                             dir_result, dirname
                         )
 
-        for filename in enforce_files:
+        for filename in enforce_files + enforce_links:
             full_path = os.path.join(name, filename)
             try:
-                # Using os.stat instead of calling out to
+                # Using os.lstat instead of calling out to
                 # __salt__['file.stats'], since we may be doing this for a lot
-                # of files, and simply calling os.stat directly will speed
+                # of files, and simply calling os.lstat directly will speed
                 # things up a bit.
-                file_stat = os.stat(full_path)
+                file_stat = os.lstat(full_path)
             except OSError as exc:
                 if not __opts__['test']:
                     if exc.errno == errno.ENOENT:
@@ -1385,7 +1396,7 @@ def extracted(name,
                         ret['changes']['updated ownership'] = True
                     else:
                         try:
-                            os.chown(full_path, uid, gid)
+                            os.lchown(full_path, uid, gid)
                             ret['changes']['updated ownership'] = True
                         except OSError:
                             enforce_failed.append(filename)
