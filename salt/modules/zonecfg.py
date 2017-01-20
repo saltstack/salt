@@ -315,6 +315,8 @@ def _property(methode, zone, key, value):
             if line.startswith('On line'):
                 ret['message'].remove(line)
         ret['message'] = "\n".join(ret['message'])
+        if ret['message'] == '':
+            del ret['message']
 
         ## cleanup config file
         __salt__['file.remove'](cfg_file)
