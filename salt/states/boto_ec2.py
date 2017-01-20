@@ -1788,6 +1788,14 @@ def secgroup_present(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    .. code_block:: yaml
+        add_security_groups:
+          boto_ec2.secgroup_present:
+          - name: "cool_server-*"
+          - secgroup_names:
+            - "security_group_1"
+            - "security_group_2"
     '''
     return _secgroup_change(name, device_index, secgroup_names, operation='add',
                             region=region, key=key, keyid=keyid, profile=profile)
@@ -1827,6 +1835,14 @@ def secgroup_absent(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    .. code_block:: yaml
+        remove_security_groups:
+          boto_ec2.secgroup_absent:
+          - name: "cool_server-*"
+          - secgroup_names:
+            - "security_group_1"
+            - "security_group_2"
     '''
     return _secgroup_change(name, device_index, secgroup_names, operation='remove',
                             region=region, key=key, keyid=keyid, profile=profile)
@@ -1867,6 +1883,14 @@ def secgroup_equals(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    .. code_block:: yaml
+        set_security_groups:
+          boto_ec2.secgroup_equals:
+          - name: "cool_server-*"
+          - secgroup_names:
+            - "security_group_1"
+            - "security_group_2"
     '''
     return _secgroup_change(name, device_index, secgroup_names, operation='equals',
                             region=region, key=key, keyid=keyid, profile=profile)
