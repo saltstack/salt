@@ -18,7 +18,6 @@ Management of Solaris Zones
     TODO:
     - zone.resource_present
     - zone.resource_absent
-    - zone.property_present
     - zone.property_absent
     - zone.present
     - zone.absent
@@ -55,6 +54,53 @@ def __virtual__():
                 __virtualname__
             )
         )
+
+
+def property_present(name, property, value):
+    '''
+    Ensure property has a certain value
+
+    name : string
+        name of the zone
+    property : string
+        name of property
+    value : string
+        value of property
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    zones = __salt__['zoneadm.list'](installed=True, configured=True)
+    if name in zones:
+        ## zone exists
+        zonecfg = __salt__['zonecfg.info'](name, show_all=True)
+        if property in zonecfg:
+            if zonecfg[property] != value:
+                # fixup value that got parsed wrong
+                if isinstance(value, bool):
+                    value = str(value).lower()
+                # update property
+                zonecfg_res = __salt__['zonecfg.set_property'](name, property, value)
+                ret['result'] = zonecfg_res['status']
+                if 'messages' in zonecfg_res:
+                    ret['comment'] = zonecfg_res['message']
+                if ret['result']:
+                    ret['changes'][property] = value
+            else:
+                ret['result'] = True
+                ret['comment'] = 'The property {0} is already set to {1}!'.format(property, value)
+        else:
+            ret['result'] = False
+            ret['comment'] = 'The property {0} does not exist!'.format(property)
+    else:
+        ## zone does not exist
+        ret['result'] = False
+        ret['comment'] = 'The zone {0} is not in the configured, installed, or booted state.'.format(name)
+
+    return ret
 
 
 def booted(name):
