@@ -309,8 +309,11 @@ def _property(methode, zone, key, value):
         ret['status'] = res['retcode'] == 0
         ret['message'] = res['stdout'] if ret['status'] else res['stderr']
         ret['message'] = ret['message'].replace('zonecfg: ', '')
-        if ret['message'] == '':
-            del ret['message']
+        ret['message'] = ret['message'].splitlines()
+        for line in ret['message']:
+            if line.startswith('On line'):
+                ret['message'].remove(line)
+        ret['message'] = "\n".join(ret['message'])
 
         ## cleanup config file
         __salt__['file.remove'](cfg_file)
