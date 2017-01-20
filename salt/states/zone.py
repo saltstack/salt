@@ -56,7 +56,8 @@ def __virtual__():
             )
         )
 
-def running(name):
+
+def booted(name):
     '''
     Ensure zone is booted
 
@@ -73,15 +74,15 @@ def running(name):
     if name in zones:
         ## zone exists
         if zones[name]['state'] == 'running':
-            ## zone is running 
+            ## zone is running
             ret['result'] = True
-            ret['comment'] = 'zone {0} already running'.format(name)
+            ret['comment'] = 'zone {0} already booted'.format(name)
         else:
             ## try and boot the zone
             zoneadm_res = __salt__['zoneadm.boot'](name)
             if __opts__['test'] or zoneadm_res['status']:
                 ret['result'] = True
-                ret['changes'][name] = 'running'
+                ret['changes'][name] = 'booted'
                 ret['comment'] = 'zone {0} booted'.format(name)
             else:
                 ret['result'] = False
@@ -90,7 +91,7 @@ def running(name):
         ## zone does not exist
         ret['comment'] = []
         ret['comment'].append(
-            'The zone {0} is not in the installed or running state.'.format(name)
+            'The zone {0} is not in the installed or booted state.'.format(name)
         )
         for zone in zones:
             if zones[zone]['uuid'] == name:
@@ -107,7 +108,7 @@ def running(name):
     return ret
 
 
-def stopped(name):
+def halted(name):
     '''
     Ensure zone is halted
 
@@ -124,7 +125,7 @@ def stopped(name):
     if name in zones:
         ## zone exists
         if zones[name]['state'] != 'running':
-            ## zone is not running 
+            ## zone is not running
             ret['result'] = True
             ret['comment'] = 'zone {0} already halted'.format(name)
         else:
