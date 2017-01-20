@@ -2146,3 +2146,199 @@ def create_volume(zone_name, size=None, snapshot_id=None, volume_type=None,
     except boto.exception.BotoServerError as error:
         ret['error'] = __utils__['boto.get_error'](error)
     return ret
+
+
+def modify_instances_secgroup(
+        name, device_index, operation, secgroup_names,
+        region=None, key=None, keyid=None, profile=None):
+    '''
+    Modifies the network-interface with device_index of all AWS EC2
+    instances which match the 'name'-argument (wildcards allowed)
+    with regards to the operation and given secgroup_names.
+    '''
+    instances = __salt__['boto_ec2.describe_instances'](
+            filters={'tag:Name': name},
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile)
+    if len(instances) == 0:
+        return {'result': False, 'comment': 'No instances found with Name-tag: {0}'.format(name)}
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    for instance in instances:
+        instance_name_or_id = instance['tags']['Name'] or instance['id']
+        result = _modify_instance_secgroup(
+                instance,
+                device_index=device_index,
+                operation=operation,
+                secgroup_names=secgroup_names,
+                region=region, key=key, keyid=keyid, profile=profile)
+        if result['result']:
+            if len(result['changes']) > 0:
+                ret['changes'].update({instance_name_or_id: result['changes']})
+        else:
+            ret.update({'result': False})
+    if len(ret['changes']) == 0:
+        ret.update({'result': True, 'comment': 'All selected security groups already as wanted. Nothing done.'})
+    return ret
+
+
+def _modify_instance_secgroup(
+        instance, device_index, operation, secgroup_names,
+        region=None, key=None, keyid=None, profile=None):
+    '''
+    Modifies the network-interface with device_index of the given
+    AWS EC2 Instance object with regards to the operation and list of
+    security groups. Returns dict with 'result' and 'changes' keys.
+    The 'changes'-key contains a dict with as key the operation and
+    as value the list of security group names on which the operation
+    was performed.
+
+    instance
+        AWS EC2 Instance object
+
+    The other arguments are the same as for modify_instances_secgroup
+    '''
+    for interface in instance['interfaces']:
+        if interface['attachment']['device_index'] == device_index:
+            eni_id = interface['id']
+            current_groups = set([group['name'] for group in instance['groups']])
+    secgroup_names = set(secgroup_names)
+    if operation == 'add':
+        changes = {'added': list(secgroup_names - current_groups)}
+        new_groups = secgroup_names | current_groups
+    elif operation == 'remove':
+        changes = {'removed': list(current_groups & secgroup_names)}
+        new_groups = current_groups - secgroup_names
+    elif operation == 'equals':
+        changes = {'added': list(secgroup_names - current_groups),
+                   'removed': list(current_groups - secgroup_names)}
+        new_groups = secgroup_names
+    else:
+        log.error('Invalid operation "{0}" specified. Please use one of "add" \
+                  "remove" or "equals"'.format(operation))
+        return {'result': False}
+    if len(new_groups ^ current_groups) == 0:
+        return {'result': True, 'changes': {}}
+    else:
+        result = __salt__['boto_ec2.modify_network_interface_attribute'](
+                network_interface_id=eni_id,
+                attr='groups',
+                value=list(new_groups),
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile)
+        if result:
+            return {'result': result, 'changes': changes}
+        else:
+            return {'result': result}
+
+
+def describe_instances(
+        filters=None,
+        instance_ids=None,
+        max_results=None,
+        dry_run=None,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    '''
+    Describes one or more of your instances.
+
+    If you specify one or more instance IDs, Amazon EC2 returns information for those instances.
+    If you do not specify instance IDs, Amazon EC2 returns information for all relevant instances.
+    If you specify an instance ID that is not valid, an error is returned.
+    If you specify an instance that you do not own, it is not included in the returned results.
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    instances = conn.get_only_instances(instance_ids, filters, dry_run, max_results)
+    retval = []
+    for instance in instances:
+        retval.append(_instance_to_dict(instance))
+    return retval
+
+
+def _instance_to_dict(obj):
+    '''
+    Maps an AWS EC2 Instance object to a dict.
+    '''
+    retval = {}
+    for attr in ['id', 'public_dns_name', 'private_dns_name', 'state', 'state_code',
+                 'previous_state', 'previous_state_code', 'key_name', 'instance_type',
+                 'launch_time', 'image_id', 'placement', 'placement_group',
+                 'placement_tenacy', 'kernel', 'ramdisk', 'architecture', 'hypervisor',
+                 'virtualization_type', 'ami_launch_index', 'monitored', 'monitoring_state',
+                 'spot_instance_request_id', 'subnet_id', 'vpc_id', 'private_ip_address',
+                 'ip_address', 'platform', 'root_device_name', 'root_device_type',
+                 'state_reason', 'ebs_optimized', 'instance_profile', 'tags']:
+        if hasattr(obj, attr):
+            retval[attr] = getattr(obj, attr)
+
+    retval.update({'groups': [_group_to_dict(group) for group in getattr(obj, 'groups')]})
+    retval.update({'product_codes': [product_code for product_code in getattr(obj, 'product_codes')]})
+    retval.update({'interfaces': [_interface_to_dict(interface) for interface in getattr(obj, 'interfaces')]})
+    retval.update({'block_device_mapping': _block_device_mapping_to_dict(getattr(obj, 'block_device_mapping'))})
+    return retval
+
+
+def _group_to_dict(group):
+    '''
+    Maps an AWS EC2 Group attribute to a dict.
+    '''
+    return {'id': getattr(group, 'id'), 'name': getattr(group, 'name')}
+
+
+def _interface_to_dict(obj):
+    '''
+    Maps an AWS EC2 Interface object to a dict.
+    '''
+    retval = {}
+    for attr in ['id', 'subnet_id', 'vpd_id', 'description', 'owner_id', 'requester_managed',
+                 'status', 'mac_address', 'source_dest_check', 'attachment']:
+        if hasattr(obj, attr):
+            retval[attr] = getattr(obj, attr)
+    retval.update({'private_ip_address': _private_ip_address_to_dict(getattr(obj, 'private_ip_address'))})
+    retval.update({'attachment': _attachment_to_dict(getattr(obj, 'attachment'))})
+    retval.update({'groups': [_group_to_dict(group) for group in getattr(obj, 'groups')]})
+    retval.update({'private_ip_addresses': [
+            _private_ip_address_to_dict(item) for item in getattr(obj, 'private_ip_addresses')
+            ]})
+    return retval
+
+
+def _block_device_mapping_to_dict(bdm):
+    '''
+    Maps an AWS EC2 Block Device Mapping object to a dict.
+    '''
+    retval = {}
+    for attr in ['connection', 'ephemeral_name', 'no_device', 'volume_id', 'snapshot_id',
+                 'status', 'attach_time', 'delete_on_termination', 'size', 'volume_type',
+                 'iops', 'encrypted']:
+        if hasattr(bdm, attr):
+            retval[attr] = getattr(bdm, attr)
+    return retval
+
+
+def _private_ip_address_to_dict(obj):
+    '''
+    Maps an AWS EC2 Private IP Address object to a dict.
+    '''
+    retval = {}
+    for attr in ['private_ip_address', 'primary']:
+        if hasattr(obj, attr):
+            retval[attr] = getattr(obj, attr)
+    return retval
+
+
+def _attachment_to_dict(obj):
+    '''
+    Maps an AWS EC2 Attachment object to a dict.
+    '''
+    retval = {}
+    for attr in ['id', 'instance_id', 'instance_owner_id', 'device_index', 'status',
+                 'attach_time', 'delete_on_termination']:
+        if hasattr(obj, attr):
+            retval[attr] = getattr(obj, attr)
+    return retval

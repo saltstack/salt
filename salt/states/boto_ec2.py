@@ -1371,9 +1371,7 @@ def volume_present(name, volume_name=None, volume_id=None, instance_name=None,
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-
     '''
-
     ret = {'name': name,
            'result': True,
            'comment': '',
@@ -1755,4 +1753,143 @@ def private_ips_absent(name, network_interface_name=None, network_interface_id=N
         # there were no changes since we did not attempt to remove ips
         ret['changes'] = {}
 
+
+def secgroup_present(
+        name,
+        device_index=0,
+        secgroup_names=None,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    '''
+    Ensure security groups are present for existing instance(s) with given
+    instance name (wildcards allowed).
+
+    name
+        Instance name (wildcards allowed)
+
+    device_index
+        Network Device Index (default 0)
+
+    secgroup_names
+        List of security group names (which must exist) to ensure presence on
+        the given instances
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    return _secgroup_change(name, device_index, secgroup_names, operation='add',
+                            region=region, key=key, keyid=keyid, profile=profile)
+
+
+def secgroup_absent(
+        name,
+        device_index=0,
+        secgroup_names=None,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    '''
+    Ensure security groups are absent for existing instance(s) with given
+    instance name (wildcards allowed).
+
+    name
+        Instance name (wildcards allowed)
+
+    device_index
+        Network Device Index (default 0)
+
+    secgroup_names
+        List of security group names (which must exist) to ensure absence on
+        the given instances
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    return _secgroup_change(name, device_index, secgroup_names, operation='remove',
+                            region=region, key=key, keyid=keyid, profile=profile)
+
+
+def secgroup_equals(
+        name,
+        device_index=0,
+        secgroup_names=None,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    '''
+    Ensure security groups are present for existing instance(s) with given
+    instance name (wildcards allowed). All other security groups are removed
+    from the instance(s).
+
+    name
+        Instance name (wildcards allowed)
+
+    device_index
+        Network Device Index (default 0) to operate on.
+
+    secgroup_names
+        List of security group names (which must exist) to ensure absence on
+        the given instances
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    return _secgroup_change(name, device_index, secgroup_names, operation='equals',
+                            region=region, key=key, keyid=keyid, profile=profile)
+
+
+def _secgroup_change(
+        name,
+        device_index=0,
+        secgroup_names=None,
+        operation=None,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    '''
+    Multifunction wrapper function for secgroup_present, secgroup_absent and secgroup_equals
+    '''
+    ret = {'name': name, 'result': True, 'changes': {}, 'comment': ''}
+    result = __salt__['boto_ec2.modify_instances_secgroup'](
+            name,
+            device_index,
+            secgroup_names=secgroup_names,
+            operation=operation,
+            region=region, key=key, keyid=keyid, profile=profile)
+    ret.update(result)
     return ret
