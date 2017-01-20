@@ -1139,6 +1139,23 @@ class StateModuleTest(integration.ModuleCase,
         listener_state = 'cmd_|-listener_test_listening_resolution_two_|-echo "Successful listen resolution"_|-mod_watch'
         self.assertIn(listener_state, state_run)
 
+    def test_issue_10838_requisite_in_match_by_name(self):
+        '''
+        This tests the case where a requisite references a relative include
+
+        See https://github.com/saltstack/salt/issues/30820 for more info
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='requisites.issue-10838-relative-includes.include-test'
+        )
+
+        second_state = 'cmd_|-second_state_|-echo "Also success!"_|-run'
+
+        self.assertIn(second_state, state_run)
+        self.assertEqual(state_run[second_state]['comment'],
+                         'Command "echo "Also success!"" run')
+
     def test_issue_30820_requisite_in_match_by_name(self):
         '''
         This tests the case where a requisite_in matches by name instead of ID

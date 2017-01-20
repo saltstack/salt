@@ -284,6 +284,39 @@ def mock_ret(cdata):
             'result': True}
 
 
+def resolve_relative_sls(target_sls, saltenv, base_sls):
+    '''
+    Convert relative sls ``target_sls`` into an absolute reference,
+    relative to ``base_sls``.
+    '''
+    match = re.match(r'^(\.+)(.*)$', target_sls)
+    if match:
+        levels, include = match.groups()
+    else:
+        msg = ('Badly formatted include {0} found in include '
+                'in SLS \'{2}:{3}\''
+                .format(target_sls, saltenv, base_sls))
+        log.error(msg)
+        raise RelativeSlsError(msg)
+    level_count = len(levels)
+    p_comps = base_sls.split('.')
+    if level_count > len(p_comps):
+        msg = ('Attempted relative include of \'{0}\' '
+               'within SLS \'{1}:{2}\' '
+               'goes beyond top level package '
+               .format(target_sls, saltenv, base_sls))
+        log.error(msg)
+        raise RelativeSlsError(msg)
+    return '.'.join(p_comps[:-level_count] + [include])
+
+
+class RelativeSlsError(Exception):
+    '''
+    Relative SLS reference error.
+    '''
+    pass
+
+
 class StateError(Exception):
     '''
     Custom exception class.
@@ -1300,6 +1333,15 @@ class State(object):
                                   not isinstance(val, six.string_types)):
                                 # Invalid name, fall back to ID
                                 chunk[key] = name
+                            elif ('__sls__' in body and
+                                  '__env__' in body and
+                                  key in STATE_REQUISITE_KEYWORDS):
+                                _val = type(val)()
+                                for req_key, req_val in six.iteritems(val):
+                                    if req_key == 'sls':
+                                        req_val = resolve_relative_sls(req_val, body['__env__'], body['__sls__'])
+                                    _val[req_key] = req_val
+                                chunk[key] = _val
                             else:
                                 chunk[key] = val
                 if names:
@@ -3130,29 +3172,15 @@ class BaseHighState(object):
                         continue
 
                     if inc_sls.startswith('.'):
-                        match = re.match(r'^(\.+)(.*)$', inc_sls)
-                        if match:
-                            levels, include = match.groups()
-                        else:
-                            msg = ('Badly formatted include {0} found in include '
-                                    'in SLS \'{2}:{3}\''
-                                    .format(inc_sls, saltenv, sls))
-                            log.error(msg)
-                            errors.append(msg)
+                        try:
+                            source_file = state_data.get('source', '')
+                            _sls = sls
+                            if source_file.endswith('/init.sls'):
+                                _sls += '.init'
+                            inc_sls = resolve_relative_sls(inc_sls, saltenv, _sls)
+                        except RelativeSlsError as e:
+                            errors.append(e.msg)
                             continue
-                        level_count = len(levels)
-                        p_comps = sls.split('.')
-                        if state_data.get('source', '').endswith('/init.sls'):
-                            p_comps.append('init')
-                        if level_count > len(p_comps):
-                            msg = ('Attempted relative include of \'{0}\' '
-                                   'within SLS \'{1}:{2}\' '
-                                   'goes beyond top level package '
-                                   .format(inc_sls, saltenv, sls))
-                            log.error(msg)
-                            errors.append(msg)
-                            continue
-                        inc_sls = '.'.join(p_comps[:-level_count] + [include])
 
                     if env_key != xenv_key:
                         if matches is None:
