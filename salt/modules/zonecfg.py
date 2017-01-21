@@ -23,6 +23,7 @@ import salt.ext.six as six
 import salt.utils
 import salt.utils.files
 import salt.utils.decorators
+from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -99,37 +100,68 @@ def __virtual__():
     )
 
 
-def _parse_value(value):
+def _parse_value(value, reverse=False):
     '''Internal helper to parse some values for the info call'''
-    listparser = re.compile(r'''((?:[^,"']|"[^"]*"|'[^']*')+)''')
+    if not reverse:
+        # parse compacted notation to dict
+        listparser = re.compile(r'''((?:[^,"']|"[^"]*"|'[^']*')+)''')
 
-    value = value.strip()
-    if value.startswith('[') and value.endswith(']'):
-        return listparser.split(value[1:-1])[1::2]
-    elif value.startswith('(') and value.endswith(')'):
-        rval = {}
-        for pair in listparser.split(value[1:-1])[1::2]:
-            pair = pair.split('=')
-            if '"' in pair[1]:
-                pair[1] = pair[1].replace('"', '')
-            if pair[1].isdigit():
-                rval[pair[0]] = int(pair[1])
-            elif pair[1] == 'true':
-                rval[pair[0]] = True
-            elif pair[1] == 'false':
-                rval[pair[0]] = False
+        value = value.strip()
+        if value.startswith('[') and value.endswith(']'):
+            return listparser.split(value[1:-1])[1::2]
+        elif value.startswith('(') and value.endswith(')'):
+            rval = {}
+            for pair in listparser.split(value[1:-1])[1::2]:
+                pair = pair.split('=')
+                if '"' in pair[1]:
+                    pair[1] = pair[1].replace('"', '')
+                if pair[1].isdigit():
+                    rval[pair[0]] = int(pair[1])
+                elif pair[1] == 'true':
+                    rval[pair[0]] = True
+                elif pair[1] == 'false':
+                    rval[pair[0]] = False
+                else:
+                    rval[pair[0]] = pair[1]
+            return rval
+        else:
+            if '"' in value:
+                value = value.replace('"', '')
+            if value.isdigit():
+                return int(value)
+            elif value == 'true':
+                return True
+            elif value == 'false':
+                return False
             else:
-                rval[pair[0]] = pair[1]
-        return rval
+                return value
     else:
-        if '"' in value:
-            value = value.replace('"', '')
-        if value.isdigit():
-            return int(value)
-        elif value == 'true':
-            return True
-        elif value == 'false':
-            return False
+        # dump dict into compated
+        if isinstance(value, dict):
+            new_value = []
+            new_value.append('(')
+            for k,v in value.items():
+                new_value.append(k)
+                new_value.append('=')
+                new_value.append(v)
+                new_value.append(',')
+            new_value.append(')')
+            return "".join(str(v) for v in new_value).replace(',)', ')')
+        elif isinstance(value, list):
+            new_value = []
+            new_value.append('(')
+            for item in value:
+                if isinstance(item, OrderedDict):
+                    item = dict(item)
+                    for k,v in item.items():
+                        new_value.append(k)
+                        new_value.append('=')
+                        new_value.append(v)
+                else:
+                    new_value.append(item)
+                new_value.append(',')
+            new_value.append(')')
+            return "".join(str(v) for v in new_value).replace(',)', ')')
         else:
             return value
 
