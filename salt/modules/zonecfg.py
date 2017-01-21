@@ -407,14 +407,16 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
         if methode in ['add']:
             fp_.write("add {0}\n".format(resource_type))
         elif methode in ['update']:
-            fp_.write("select {0} {1}={2}\n".format(resource_type, resource_selector, kwargs[resource_selector]))
+            safe_value = str(kwargs[resource_selector]).lower() if isinstance(kwargs[resource_selector], bool) else str(kwargs[resource_selector])
+            fp_.write("select {0} {1}={2}\n".format(resource_type, resource_selector, safe_value))
         for k, v in six.iteritems(kwargs):
             if methode in ['update'] and k == resource_selector:
                 continue
+            safe_value = str(v).lower() if isinstance(v, bool) else str(v)
             if k in _zonecfg_resource_setters[resource_type]:
-                fp_.write("set {0}={1}\n".format(k, v))
+                fp_.write("set {0}={1}\n".format(k, safe_value))
             else:
-                fp_.write("add {0} {1}\n".format(k, v))
+                fp_.write("add {0} {1}\n".format(k, safe_value))
         fp_.write("end\n")
 
     ## update property
