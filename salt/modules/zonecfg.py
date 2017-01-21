@@ -398,7 +398,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
         return ret
     if methode in ['update'] and resource_selector not in kwargs:
         ret['status'] = False
-        ret['message'] = 'resource selctor {0} not found in parameters'.format(resource_selector)
+        ret['message'] = 'resource selector {0} not found in parameters'.format(resource_selector)
         return ret
 
     # generate update script
