@@ -99,6 +99,51 @@ def __virtual__():
     )
 
 
+def _parse_value(value):
+    '''Internal helper to parse some values for the info call'''
+    listparser = re.compile(r'''((?:[^,"']|"[^"]*"|'[^']*')+)''')
+
+    value = value.strip()
+    if value.startswith('[') and value.endswith(']'):
+        return listparser.split(value[1:-1])[1::2]
+    elif value.startswith('(') and value.endswith(')'):
+        rval = {}
+        for pair in listparser.split(value[1:-1])[1::2]:
+            pair = pair.split('=')
+            if '"' in pair[1]:
+                pair[1] = pair[1].replace('"', '')
+            if pair[1].isdigit():
+                rval[pair[0]] = int(pair[1])
+            elif pair[1] == 'true':
+                rval[pair[0]] = True
+            elif pair[1] == 'false':
+                rval[pair[0]] = False
+            else:
+                rval[pair[0]] = pair[1]
+        return rval
+    else:
+        if '"' in value:
+            value = value.replace('"', '')
+        if value.isdigit():
+            return int(value)
+        elif value == 'true':
+            return True
+        elif value == 'false':
+            return False
+        else:
+            return value
+
+
+def _clean_message(message):
+    '''Internal helper to sanitize message output'''
+    message = message.replace('zonecfg: ', '')
+    message = message.splitlines()
+    for line in message:
+        if line.startswith('On line'):
+            message.remove(line)
+    return "\n".join(message)
+
+
 def create(zone, brand, zonepath, force=False):
     '''
     Create an in-memory configuration for the specified zone.
@@ -136,9 +181,10 @@ def create(zone, brand, zonepath, force=False):
     ))
     ret['status'] = res['retcode'] == 0
     ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zonecfg: ', '')
     if ret['message'] == '':
         del ret['message']
+    else:
+        ret['message'] = _clean_message(ret['message'])
 
     ## cleanup config file
     __salt__['file.remove'](cfg_file)
@@ -173,9 +219,10 @@ def create_from_template(zone, template):
     ))
     ret['status'] = res['retcode'] == 0
     ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zonecfg: ', '')
     if ret['message'] == '':
         del ret['message']
+    else:
+        ret['message'] = _clean_message(ret['message'])
 
     return ret
 
@@ -201,9 +248,10 @@ def delete(zone):
     ))
     ret['status'] = res['retcode'] == 0
     ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zonecfg: ', '')
     if ret['message'] == '':
         del ret['message']
+    else:
+        ret['message'] = _clean_message(ret['message'])
 
     return ret
 
@@ -233,9 +281,10 @@ def export(zone, path=None):
     ))
     ret['status'] = res['retcode'] == 0
     ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zonecfg: ', '')
     if ret['message'] == '':
         del ret['message']
+    else:
+        ret['message'] = _clean_message(ret['message'])
 
     return ret
 
@@ -264,9 +313,10 @@ def import_(zone, path):
     ))
     ret['status'] = res['retcode'] == 0
     ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zonecfg: ', '')
     if ret['message'] == '':
         del ret['message']
+    else:
+        ret['message'] = _clean_message(ret['message'])
 
     return ret
 
@@ -309,14 +359,10 @@ def _property(methode, zone, key, value):
         ))
         ret['status'] = res['retcode'] == 0
         ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-        ret['message'] = ret['message'].replace('zonecfg: ', '')
-        ret['message'] = ret['message'].splitlines()
-        for line in ret['message']:
-            if line.startswith('On line'):
-                ret['message'].remove(line)
-        ret['message'] = "\n".join(ret['message'])
         if ret['message'] == '':
             del ret['message']
+        else:
+            ret['message'] = _clean_message(ret['message'])
 
         ## cleanup config file
         __salt__['file.remove'](cfg_file)
@@ -427,9 +473,10 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
         ))
         ret['status'] = res['retcode'] == 0
         ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-        ret['message'] = ret['message'].replace('zonecfg: ', '')
         if ret['message'] == '':
             del ret['message']
+        else:
+            ret['message'] = _clean_message(ret['message'])
 
         ## cleanup config file
         __salt__['file.remove'](cfg_file)
@@ -513,9 +560,10 @@ def remove_resource(zone, resource_type, resource_key, resource_value):
         ))
         ret['status'] = res['retcode'] == 0
         ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-        ret['message'] = ret['message'].replace('zonecfg: ', '')
         if ret['message'] == '':
             del ret['message']
+        else:
+            ret['message'] = _clean_message(ret['message'])
 
         ## cleanup config file
         __salt__['file.remove'](cfg_file)
@@ -539,40 +587,6 @@ def info(zone, show_all=False):
         salt '*' zonecfg.info tallgeese
     '''
     ret = {}
-
-    ## internal helpers
-    def _parse_value(value):
-        listparser = re.compile(r'''((?:[^,"']|"[^"]*"|'[^']*')+)''')
-
-        value = value.strip()
-        if value.startswith('[') and value.endswith(']'):
-            return listparser.split(value[1:-1])[1::2]
-        elif value.startswith('(') and value.endswith(')'):
-            rval = {}
-            for pair in listparser.split(value[1:-1])[1::2]:
-                pair = pair.split('=')
-                if '"' in pair[1]:
-                    pair[1] = pair[1].replace('"', '')
-                if pair[1].isdigit():
-                    rval[pair[0]] = int(pair[1])
-                elif pair[1] == 'true':
-                    rval[pair[0]] = True
-                elif pair[1] == 'false':
-                    rval[pair[0]] = False
-                else:
-                    rval[pair[0]] = pair[1]
-            return rval
-        else:
-            if '"' in value:
-                value = value.replace('"', '')
-            if value.isdigit():
-                return int(value)
-            elif value == 'true':
-                return True
-            elif value == 'false':
-                return False
-            else:
-                return value
 
     ## dump zone
     res = __salt__['cmd.run_all']('zonecfg -z {zone} info'.format(
