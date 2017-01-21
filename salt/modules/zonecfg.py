@@ -102,7 +102,36 @@ def __virtual__():
 
 def _parse_value(value, reverse=False):
     '''Internal helper to parse some values for the info call'''
-    if not reverse:
+    if reverse:
+        # dump dict into compated
+        if isinstance(value, dict):
+            new_value = []
+            new_value.append('(')
+            for k,v in value.items():
+                new_value.append(k)
+                new_value.append('=')
+                new_value.append(v)
+                new_value.append(',')
+            new_value.append(')')
+            return "".join(str(v) for v in new_value).replace(',)', ')')
+        elif isinstance(value, list):
+            new_value = []
+            new_value.append('(')
+            for item in value:
+                if isinstance(item, OrderedDict):
+                    item = dict(item)
+                    for k,v in item.items():
+                        new_value.append(k)
+                        new_value.append('=')
+                        new_value.append(v)
+                else:
+                    new_value.append(item)
+                new_value.append(',')
+            new_value.append(')')
+            return "".join(str(v) for v in new_value).replace(',)', ')')
+        else:
+            return value
+    elif isinstance(value, str):
         # parse compacted notation to dict
         listparser = re.compile(r'''((?:[^,"']|"[^"]*"|'[^']*')+)''')
 
@@ -136,34 +165,8 @@ def _parse_value(value, reverse=False):
             else:
                 return value
     else:
-        # dump dict into compated
-        if isinstance(value, dict):
-            new_value = []
-            new_value.append('(')
-            for k,v in value.items():
-                new_value.append(k)
-                new_value.append('=')
-                new_value.append(v)
-                new_value.append(',')
-            new_value.append(')')
-            return "".join(str(v) for v in new_value).replace(',)', ')')
-        elif isinstance(value, list):
-            new_value = []
-            new_value.append('(')
-            for item in value:
-                if isinstance(item, OrderedDict):
-                    item = dict(item)
-                    for k,v in item.items():
-                        new_value.append(k)
-                        new_value.append('=')
-                        new_value.append(v)
-                else:
-                    new_value.append(item)
-                new_value.append(',')
-            new_value.append(')')
-            return "".join(str(v) for v in new_value).replace(',)', ')')
-        else:
-            return value
+        # do not try to parse
+        return value
 
 
 def _clean_message(message):
@@ -378,8 +381,10 @@ def _property(methode, zone, key, value):
         cfg_file = salt.utils.files.mkstemp()
         with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
             if methode == 'set':
-                safe_value = str(value).lower() if isinstance(value, bool) else str(value)
-                fp_.write("{0} {1}={2}\n".format(methode, key, safe_value))
+                if isinstance(value, dict) or isinstance(value, list):
+                    value = _parse_value(value, True)
+                value = str(value).lower() if isinstance(value, bool) else str(value)
+                fp_.write("{0} {1}={2}\n".format(methode, key, value))
             elif methode == 'clear':
                 fp_.write("{0} {1}\n".format(methode, key))
 
@@ -470,6 +475,9 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
 
     # parse kwargs
     kwargs = salt.utils.clean_kwargs(**kwargs)
+    for k in kwargs.keys():
+        if isinstance(kwargs[k], dict) or isinstance(kwargs[k], list):
+            kwargs[k] = _parse_value(kwargs[k], True)
     if methode not in ['add', 'update']:
         ret['status'] = False
         ret['message'] = 'unknown methode {0}'.format(methode)
@@ -485,16 +493,20 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
         if methode in ['add']:
             fp_.write("add {0}\n".format(resource_type))
         elif methode in ['update']:
-            safe_value = str(kwargs[resource_selector]).lower() if isinstance(kwargs[resource_selector], bool) else str(kwargs[resource_selector])
-            fp_.write("select {0} {1}={2}\n".format(resource_type, resource_selector, safe_value))
+            if isinstance(value, dict) or isinstance(value, list):
+                value = _parse_value(value, True)
+            value = str(kwargs[resource_selector]).lower() if isinstance(kwargs[resource_selector], bool) else str(kwargs[resource_selector])
+            fp_.write("select {0} {1}={2}\n".format(resource_type, resource_selector, value))
         for k, v in six.iteritems(kwargs):
             if methode in ['update'] and k == resource_selector:
                 continue
-            safe_value = str(v).lower() if isinstance(v, bool) else str(v)
+            if isinstance(v, dict) or isinstance(v, list):
+                value = _parse_value(value, True)
+            value = str(v).lower() if isinstance(v, bool) else str(v)
             if k in _zonecfg_resource_setters[resource_type]:
-                fp_.write("set {0}={1}\n".format(k, safe_value))
+                fp_.write("set {0}={1}\n".format(k, value))
             else:
-                fp_.write("add {0} {1}\n".format(k, safe_value))
+                fp_.write("add {0} {1}\n".format(k, value))
         fp_.write("end\n")
 
     ## update property
