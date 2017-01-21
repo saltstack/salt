@@ -164,6 +164,9 @@ def _parse_value(value, reverse=False):
                 return False
             else:
                 return value
+    elif isinstance(value, dict) or isinstance(value, list):
+        # make a round trip
+        return _parse_value(_parse_value(value, True))
     else:
         # do not try to parse
         return value
@@ -493,9 +496,10 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
         if methode in ['add']:
             fp_.write("add {0}\n".format(resource_type))
         elif methode in ['update']:
+            value = kwargs[resource_selector]
             if isinstance(value, dict) or isinstance(value, list):
                 value = _parse_value(value, True)
-            value = str(kwargs[resource_selector]).lower() if isinstance(kwargs[resource_selector], bool) else str(kwargs[resource_selector])
+            value = str(value).lower() if isinstance(value, bool) else str(value)
             fp_.write("select {0} {1}={2}\n".format(resource_type, resource_selector, value))
         for k, v in six.iteritems(kwargs):
             if methode in ['update'] and k == resource_selector:
