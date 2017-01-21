@@ -107,7 +107,7 @@ def _parse_value(value, reverse=False):
         if isinstance(value, dict):
             new_value = []
             new_value.append('(')
-            for k,v in value.items():
+            for k, v in value.items():
                 new_value.append(k)
                 new_value.append('=')
                 new_value.append(v)
@@ -120,7 +120,7 @@ def _parse_value(value, reverse=False):
             for item in value:
                 if isinstance(item, OrderedDict):
                     item = dict(item)
-                    for k,v in item.items():
+                    for k, v in item.items():
                         new_value.append(k)
                         new_value.append('=')
                         new_value.append(v)
@@ -478,7 +478,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
 
     # parse kwargs
     kwargs = salt.utils.clean_kwargs(**kwargs)
-    for k in kwargs.keys():
+    for k in kwargs:
         if isinstance(kwargs[k], dict) or isinstance(kwargs[k], list):
             kwargs[k] = _parse_value(kwargs[k], True)
     if methode not in ['add', 'update']:
