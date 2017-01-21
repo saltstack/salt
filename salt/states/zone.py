@@ -16,7 +16,6 @@ Management of Solaris Zones
 .. note::
 
     TODO:
-    - zone.resource_present
     - zone.resource_absent
     - zone.present
     - zone.absent
@@ -33,6 +32,7 @@ import salt.utils
 import salt.utils.files
 import salt.utils.atomicfile
 from salt.utils.odict import OrderedDict
+from salt.modules.zonecfg import _parse_value
 
 log = logging.getLogger(__name__)
 
@@ -72,19 +72,22 @@ def property_present(name, property, value):
            'result': None,
            'comment': ''}
 
+    ## sanitize input
+    value = _parse_value(value)
+
     zones = __salt__['zoneadm.list'](installed=True, configured=True)
     if name in zones:
         ## zone exists
         zonecfg = __salt__['zonecfg.info'](name, show_all=True)
         if property in zonecfg:
-            if zonecfg[property] != value:
+            if zonecfg[property] != _parse_value(value):
                 # update property
                 zonecfg_res = __salt__['zonecfg.set_property'](name, property, value)
                 ret['result'] = zonecfg_res['status']
                 if 'messages' in zonecfg_res:
                     ret['comment'] = zonecfg_res['message']
                 if ret['result']:
-                    ret['changes'][property] = value
+                    ret['changes'][property] = _parse_value(value)
             else:
                 ret['result'] = True
                 ret['comment'] = 'The property {0} is already set to {1}!'.format(property, value)
@@ -134,6 +137,91 @@ def property_absent(name, property):
         else:
             ret['result'] = False
             ret['comment'] = 'The property {0} does not exist!'.format(property)
+    else:
+        ## zone does not exist
+        ret['result'] = False
+        ret['comment'] = 'The zone {0} is not in the configured, installed, or booted state.'.format(name)
+
+    return ret
+
+
+def resource_present(name, resource_type, resource_selector_property, resource_selector_value, **kwargs):
+    '''
+    Ensure resource exists with provided properties
+
+    name : string
+        name of the zone
+    resource_type : string
+        type of resource
+    resource_selector_property : string
+        unique resource identifier
+    resource_selector_value : string
+        value for resource selection
+    **kwargs : string|int|...
+        resource properties
+
+    .. note::
+        both resource_selector_property and resource_selector_value must be provided, some properties
+        like ```name``` are already reserved by salt in there states.
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    # sanitize input
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    resource_selector_value = _parse_value(resource_selector_value)
+    for k,v in kwargs.items():
+        kwargs[k] = _parse_value(kwargs[k])
+
+    zones = __salt__['zoneadm.list'](installed=True, configured=True)
+    if name in zones:
+        ## zone exists
+        zonecfg = __salt__['zonecfg.info'](name, show_all=True)
+        if resource_type in zonecfg:
+            for resource in zonecfg[resource_type]:
+                if resource[resource_selector_property] == resource_selector_value:
+                    ret['result'] = True
+                    ret['comment'] = 'The {0} resource {1} is up to date.'.format(
+                        resource_type,
+                        resource_selector_value,
+                    )
+
+                    ## check if update reauired
+                    for key in kwargs.keys():
+                        log.debug('key={0} value={1} current_value={2}'.format(
+                            key,
+                            resource[key],
+                            _parse_value(kwargs[key]),
+                        ))
+                        if key not in resource:
+                            ret['result'] = None
+                        elif resource[key] != _parse_value(kwargs[key]):
+                            ret['result'] = None
+
+                    ## do update
+                    if ret['result'] == None:
+                        ## update kwargs
+                        zonecfg_kwargs = {}
+                        zonecfg_kwargs.update(kwargs)
+                        zonecfg_kwargs['zone'] = name
+                        zonecfg_kwargs['resource_type'] = resource_type
+                        zonecfg_kwargs['resource_selector'] = resource_selector_property
+                        zonecfg_kwargs[resource_selector_property] = resource_selector_value
+                        ## update resource
+                        zonecfg_res = __salt__['zonecfg.update_resource'](**zonecfg_kwargs)
+                        ret['result'] = zonecfg_res['status']
+                        for key in kwargs.keys() if ret['result'] else []:
+                            ret['changes'][key] = _parse_value(kwargs[key])
+                        ret['comment'] = zonecfg_res['message'] if 'message' in zonecfg_res else 'The {0} resource {1} was updated.'.format(
+                            resource_type,
+                            resource_selector_value,
+                        )
+        if ret['result'] == None:
+            ## add
+            ret['comment'] = 'TODO add'
     else:
         ## zone does not exist
         ret['result'] = False
