@@ -64,6 +64,23 @@ class OpenvswitchPortTestCase(TestCase):
                 }
             })
             self.assertDictEqual(openvswitch_port.present(name, bridge), ret)
+        with patch.dict(openvswitch_port.__salt__, {'openvswitch.bridge_exists': mock,
+                                                    'openvswitch.port_list': mock_n,
+                                                    'openvswitch.port_add': mock,
+                                                    'openvswitch.interface_get_options': mock_n,
+                                                    'openvswitch.interface_get_type': MagicMock(return_value=''),
+                                                    'openvswitch.port_create_gre': mock,
+                                                    }):
+            comt = 'Port salt created on bridge br-salt.'
+            self.maxDiff = None
+            ret.update({'result': True, 'comment': 'Created GRE tunnel interface salt with remote ip 10.0.0.1  and key 1 on bridge br-salt.', 'changes': 
+                { 'salt': 
+                    {'new': 'Created GRE tunnel interface salt with remote ip 10.0.0.1 and key 1 on bridge br-salt.',
+                      'old': 'No GRE tunnel interface salt with remote ip 10.0.0.1 and key 1 on bridge br-salt present.',
+                    },
+                }
+            })
+            self.assertDictEqual(openvswitch_port.present(name, bridge, type="gre", id=1, remote="10.0.0.1"), ret)
 
 
 if __name__ == '__main__':
