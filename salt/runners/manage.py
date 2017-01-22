@@ -786,6 +786,8 @@ def bootstrap(version='develop',
         try:
             client_opts['argv'] = ['file.makedirs', tmp_dir, 'mode=0700']
             salt.client.ssh.SSH(client_opts).run()
+            client_opts['argv'] = ['file.touch', deploy_command]
+            salt.client.ssh.SSH(client_opts).run()
             client_opts['argv'] = [
                 'http.query',
                 script,
