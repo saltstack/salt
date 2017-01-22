@@ -1917,7 +1917,7 @@ class ClearFuncs(object):
             name = self.loadauth.load_name(clear_load)
             groups = self.loadauth.get_groups(clear_load)
             eauth_config = self.opts['external_auth'][clear_load['eauth']]
-            if '*' not in eauth_config and name not in eauth_config:
+            if '^model' not in eauth_config and '*' not in eauth_config and name not in eauth_config:
                 found = False
                 for group in groups:
                     if "{0}%".format(group) in eauth_config:
@@ -2017,7 +2017,7 @@ class ClearFuncs(object):
                             break
             except KeyError:
                 pass
-            if '*' not in eauth_users and token['name'] not in eauth_users \
+            if '^model' not in eauth_users and '*' not in eauth_users and token['name'] not in eauth_users \
                 and not group_auth_match:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
