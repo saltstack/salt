@@ -158,6 +158,14 @@ def get_location(conn, vm_):
             return location
 
 
+def get_security_groups(conn, vm_):
+    '''
+    Return a list of security groups to use, defaulting to ['default']
+    '''
+    return config.get_cloud_config_value('securitygroup', vm_, __opts__,
+                                         default=['default'])
+
+
 def get_password(vm_):
     '''
     Return the password to use
@@ -271,6 +279,7 @@ def create(vm_):
         'image': get_image(conn, vm_),
         'size': get_size(conn, vm_),
         'location': get_location(conn, vm_),
+        'ex_security_groups': get_security_groups(conn, vm_)
     }
 
     if get_keypair(vm_) is not False:

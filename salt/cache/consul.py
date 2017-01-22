@@ -21,7 +21,7 @@ could be set in the master config, these are the defaults:
     consul.token: None
     consul.scheme: http
     consul.consistency: default
-    consul.dc: None
+    consul.dc: dc1
     consul.verify: True
 
 Related docs could be found here:
@@ -45,6 +45,9 @@ except ImportError:
     HAS_CONSUL = False
 
 from salt.exceptions import SaltCacheError
+
+# Don't shadow built-ins
+__func_alias__ = {'list_': 'list'}
 
 log = logging.getLogger(__name__)
 api = None
@@ -129,7 +132,7 @@ def flush(bank, key=None):
         )
 
 
-def getlist(bank):
+def list_(bank):
     '''
     Return an iterable object containing all entries stored in the specified bank.
     '''
@@ -151,6 +154,9 @@ def getlist(bank):
             out.add(key[len(bank) + 1:].rstrip('/'))
         keys = list(out)
     return keys
+
+
+getlist = list_
 
 
 def contains(bank, key):

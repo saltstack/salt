@@ -4,6 +4,9 @@ Cache data in filesystem.
 
 .. versionadded:: 2016.11.0
 
+The `localfs` Minion cache module is the default cache module and does not
+require any configuration.
+
 Expirations can be set in the relevant config file (``/etc/salt/master`` for
 the master, ``/etc/salt/cloud`` for Salt Cloud, etc).
 '''
@@ -18,14 +21,17 @@ from salt.exceptions import SaltCacheError
 import salt.utils
 import salt.utils.atomicfile
 
+# Don't shadow built-ins
+__func_alias__ = {'list_': 'list'}
+
 log = logging.getLogger(__name__)
 
 
-def store(bank, key, data):
+def store(bank, key, data, cachedir):
     '''
     Store information in a file.
     '''
-    base = os.path.join(__opts__['cachedir'], os.path.normpath(bank))
+    base = os.path.join(cachedir, os.path.normpath(bank))
     if not os.path.isdir(base):
         try:
             os.makedirs(base)
@@ -51,11 +57,11 @@ def store(bank, key, data):
         )
 
 
-def fetch(bank, key):
+def fetch(bank, key, cachedir):
     '''
     Fetch information from a file.
     '''
-    key_file = os.path.join(__opts__['cachedir'], os.path.normpath(bank), '{0}.p'.format(key))
+    key_file = os.path.join(cachedir, os.path.normpath(bank), '{0}.p'.format(key))
     if not os.path.isfile(key_file):
         log.debug('Cache file "%s" does not exist', key_file)
         return None
@@ -70,11 +76,11 @@ def fetch(bank, key):
         )
 
 
-def updated(bank, key):
+def updated(bank, key, cachedir):
     '''
     Return the epoch of the mtime for this cache file
     '''
-    key_file = os.path.join(__opts__['cachedir'], os.path.normpath(bank), '{0}.p'.format(key))
+    key_file = os.path.join(cachedir, os.path.normpath(bank), '{0}.p'.format(key))
     if not os.path.isfile(key_file):
         log.warning('Cache file "%s" does not exist', key_file)
         return None
@@ -88,18 +94,21 @@ def updated(bank, key):
         )
 
 
-def flush(bank, key=None):
+def flush(bank, key=None, cachedir=None):
     '''
     Remove the key from the cache bank with all the key content.
     '''
+    if cachedir is None:
+        cachedir = __opts__['cachedir']
+
     try:
         if key is None:
-            target = os.path.join(__opts__['cachedir'], os.path.normpath(bank))
+            target = os.path.join(cachedir, os.path.normpath(bank))
             if not os.path.isdir(target):
                 return False
             shutil.rmtree(target)
         else:
-            target = os.path.join(__opts__['cachedir'], os.path.normpath(bank), '{0}.p'.format(key))
+            target = os.path.join(cachedir, os.path.normpath(bank), '{0}.p'.format(key))
             if not os.path.isfile(target):
                 return False
             os.remove(target)
@@ -112,11 +121,11 @@ def flush(bank, key=None):
     return True
 
 
-def getlist(bank):
+def list_(bank, cachedir):
     '''
     Return an iterable object containing all entries stored in the specified bank.
     '''
-    base = os.path.join(__opts__['cachedir'], os.path.normpath(bank))
+    base = os.path.join(cachedir, os.path.normpath(bank))
     if not os.path.isdir(base):
         return []
     try:
@@ -129,13 +138,16 @@ def getlist(bank):
         )
 
 
-def contains(bank, key):
+getlist = list_
+
+
+def contains(bank, key, cachedir):
     '''
     Checks if the specified bank contains the specified key.
     '''
     if key is None:
-        base = os.path.join(__opts__['cachedir'], os.path.normpath(bank))
+        base = os.path.join(cachedir, os.path.normpath(bank))
         return os.path.isdir(base)
     else:
-        keyfile = os.path.join(__opts__['cachedir'], os.path.normpath(bank), '{0}.p'.format(key))
+        keyfile = os.path.join(cachedir, os.path.normpath(bank), '{0}.p'.format(key))
         return os.path.isfile(keyfile)

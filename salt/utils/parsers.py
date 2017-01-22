@@ -585,6 +585,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
     def process_log_level(self):
         if not getattr(self.options, self._loglevel_config_setting_name_, None):
+            # Log level is not set via CLI, checking loaded configuration
             if self.config.get(self._loglevel_config_setting_name_, None):
                 # Is the regular log level setting set?
                 setattr(self.options,
@@ -592,7 +593,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                         self.config.get(self._loglevel_config_setting_name_)
                        )
             else:
-                # Nothing is set on the configuration? Let's use the cli tool
+                # Nothing is set on the configuration? Let's use the CLI tool
                 # defined default
                 setattr(self.options,
                         self._loglevel_config_setting_name_,
@@ -615,6 +616,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
     def process_log_file(self):
         if not getattr(self.options, self._logfile_config_setting_name_, None):
+            # Log file is not set via CLI, checking loaded configuration
             if self.config.get(self._logfile_config_setting_name_, None):
                 # Is the regular log file setting set?
                 setattr(self.options,
@@ -622,7 +624,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                         self.config.get(self._logfile_config_setting_name_)
                        )
             else:
-                # Nothing is set on the configuration? Let's use the cli tool
+                # Nothing is set on the configuration? Let's use the CLI tool
                 # defined default
                 setattr(self.options,
                         self._logfile_config_setting_name_,
@@ -634,6 +636,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
     def process_log_level_logfile(self):
         if not getattr(self.options, self._logfile_loglevel_config_setting_name_, None):
+            # Log file level is not set via CLI, checking loaded configuration
             if self.config.get(self._logfile_loglevel_config_setting_name_, None):
                 # Is the regular log file level setting set?
                 setattr(self.options,
@@ -641,14 +644,18 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                         self.config.get(self._logfile_loglevel_config_setting_name_)
                        )
             else:
-                # Nothing is set on the configuration? Let's use the cli tool
+                # Nothing is set on the configuration? Let's use the CLI tool
                 # defined default
                 setattr(self.options,
                         self._logfile_loglevel_config_setting_name_,
-                        self._default_logging_level_
+                        # From the console log level config setting
+                        self.config.get(
+                            self._loglevel_config_setting_name_,
+                            self._default_logging_level_
+                        )
                        )
                 if self._logfile_loglevel_config_setting_name_ in self.config:
-                    # Remove it from config so it inherits from log_level
+                    # Remove it from config so it inherits from log_level_logfile
                     self.config.pop(self._logfile_loglevel_config_setting_name_)
 
     def __setup_logfile_logger_config(self, *args):  # pylint: disable=unused-argument
@@ -658,7 +665,9 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             self.config.pop(self._logfile_loglevel_config_setting_name_)
 
         loglevel = getattr(self.options,
+                           # From the options setting
                            self._logfile_loglevel_config_setting_name_,
+                           # From the default setting
                            self._default_logging_level_
                            )
 

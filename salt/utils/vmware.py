@@ -76,6 +76,7 @@ You should see output related to the ESXi host's syslog configuration.
 # Import Python Libs
 from __future__ import absolute_import
 import atexit
+import errno
 import logging
 import time
 from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
@@ -816,6 +817,10 @@ def get_mors_with_properties(service_instance, object_type, property_list=None,
     try:
         content = get_content(*content_args, **content_kwargs)
     except BadStatusLine:
+        content = get_content(*content_args, **content_kwargs)
+    except IOError as e:
+        if e.errno != errno.EPIPE:
+            raise e
         content = get_content(*content_args, **content_kwargs)
 
     object_list = []

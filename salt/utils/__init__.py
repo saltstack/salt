@@ -1962,10 +1962,10 @@ def rm_rf(path):
             func(path)
         else:
             raise  # pylint: disable=E0704
-    if os.path.isdir(path):
-        shutil.rmtree(path, onerror=_onerror)
-    else:
+    if os.path.islink(path) or not os.path.isdir(path):
         os.remove(path)
+    else:
+        shutil.rmtree(path, onerror=_onerror)
 
 
 def option(value, default='', opts=None, pillar=None):

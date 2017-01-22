@@ -167,9 +167,6 @@ class LogSettingsParserTests(TestCase):
         '''
         Tests that log level match the configured value
         '''
-        # Set defaults
-        default_log_level = self.default_config[self.loglevel_config_setting_name]
-
         args = self.args
 
         # Set log level in config
@@ -193,7 +190,7 @@ class LogSettingsParserTests(TestCase):
                          log_level)
         self.assertEqual(self.log_setup.temp_log_level, 'error')
         # Check log file logger log level
-        self.assertEqual(self.log_setup.log_level_logfile, default_log_level)
+        self.assertEqual(self.log_setup.log_level_logfile, log_level)
 
     def test_get_log_level_default(self):
         '''
@@ -342,7 +339,7 @@ class LogSettingsParserTests(TestCase):
         Tests that file log level match command-line specified value
         '''
         # Set defaults
-        log_level = self.default_config[self.loglevel_config_setting_name]
+        default_log_level = self.default_config[self.loglevel_config_setting_name]
 
         # Set log file level in CLI
         log_level_logfile = 'error'
@@ -359,10 +356,10 @@ class LogSettingsParserTests(TestCase):
 
         if not self.skip_console_logging_config:
             # Check console loggger
-            self.assertEqual(self.log_setup.log_level, log_level)
+            self.assertEqual(self.log_setup.log_level, default_log_level)
             # Check extended logger
             self.assertEqual(self.log_setup.config[self.loglevel_config_setting_name],
-                             log_level)
+                             default_log_level)
             self.assertEqual(self.log_setup.config[self.logfile_loglevel_config_setting_name],
                              log_level_logfile)
         # Check temp logger
@@ -464,7 +461,6 @@ class LogSettingsParserTests(TestCase):
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):
             parser.parse_args(args)
-
         with patch('salt.utils.parsers.is_writeable', MagicMock(return_value=True)):
             parser.setup_logfile_logger()
 
@@ -701,32 +697,30 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
         '''
         Tests that log level set in config is ignored
         '''
-        # Set defaults
-        default_log_level = self.default_config[self.loglevel_config_setting_name]
-
-        log_level = None
+        log_level = 'info'
         args = self.args
 
-        # Set log level in config
-        opts = {self.loglevel_config_setting_name: 'info'}
+        # Set log level in config and set additional mocked opts keys
+        opts = {self.loglevel_config_setting_name: log_level,
+                self.logfile_config_setting_name: 'key_logfile',
+                'log_fmt_logfile': None,
+                'log_datefmt_logfile': None}
 
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):
             parser.parse_args(args)
-
-        with patch('salt.utils.parsers.is_writeable', MagicMock(return_value=True)):
-            parser.parse_args(args)
-            parser.setup_logfile_logger()
+            with patch('salt.utils.parsers.is_writeable', MagicMock(return_value=True)):
+                parser.setup_logfile_logger()
 
         # Check config name absence in options
         self.assertNotIn(self.loglevel_config_setting_name, parser.options.__dict__)
         # Check console loggger has not been set
-        self.assertEqual(self.log_setup.log_level, log_level)
+        self.assertEqual(self.log_setup.log_level, None)
         self.assertNotIn(self.loglevel_config_setting_name, self.log_setup.config)
         # Check temp logger
         self.assertEqual(self.log_setup.temp_log_level, 'error')
         # Check log file logger log level
-        self.assertEqual(self.log_setup.log_level_logfile, default_log_level)
+        self.assertEqual(self.log_setup.log_level_logfile, log_level)
 
     def test_get_log_level_default(self):
         '''
