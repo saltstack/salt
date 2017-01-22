@@ -50,6 +50,10 @@ indicated above, though the model DOES NOT have to be named
 # Import python libs
 from __future__ import absolute_import
 import logging
+import os
+import sys
+
+from django.db import connection
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -77,6 +81,15 @@ def __virtual__():
     return False
 
 
+def is_connection_usable():
+    try:
+        connection.connection.ping()
+    except:
+        return False
+    else:
+        return True
+
+
 def django_auth_setup():
     '''
     Prepare the connection to the Django authentication framework
@@ -95,21 +108,28 @@ def django_auth_setup():
         django_model_name = django_model_fullname.split('.')[-1]
         django_module_name = '.'.join(django_model_fullname.split('.')[0:-1])
 
-        __import__(django_module_name, globals(), locals(), 'SaltExternalAuthModel')
+        django_auth_module = __import__(django_module_name, globals(), locals(), 'SaltExternalAuthModel')
         DJANGO_AUTH_CLASS_str = 'django_auth_module.{0}'.format(django_model_name)
         DJANGO_AUTH_CLASS = eval(DJANGO_AUTH_CLASS_str)  # pylint: disable=W0123
-
-    if django.VERSION >= (1, 7):
-        django.setup()
 
 
 def auth(username, password):
     '''
     Simple Django auth
     '''
-    import django.contrib.auth  # pylint: disable=import-error
+    sys.path.append(__opts__['django_auth_path'])
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', __opts__['django_auth_settings'])
+
+    import django
+    if django.VERSION >= (1, 7):
+        django.setup()
 
     django_auth_setup()
+
+    if not is_connection_usable():
+        connection.close()
+
+    import django.contrib.auth  # pylint: disable=import-error
     user = django.contrib.auth.authenticate(username=username, password=password)
     if user is not None:
         if user.is_active:
