@@ -49,48 +49,51 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None, intern
                                    }
                             }
 
-    comments['comment_vlan_invalid_id'] = 'VLANs id must be between 0 and 4095.'
-    comments['comment_vlan_invalid_name'] = 'Could not find network interface {0}.'.format(name)
-    comments['comment_vlan_port_exists'] = 'Port {0} with access to VLAN {1} already exists on bridge {2}.'.format(name, id, bridge)
-    comments['comment_vlan_created'] = 'Created port {0} with access to VLAN {1} on bridge {2}.'.format(name, id, bridge)
-    comments['comment_vlan_notcreated'] = 'Unable to create port {0} with access to VLAN {1} on ' \
-                              'bridge {2}.'.format(name, id, bridge)
-    comments['changes_vlan_created'] = {name: {'old': 'No port named {0} with access to VLAN {1} present on '
-                                          'bridge {2} present.'.format(name, id, bridge),
-                                   'new': 'Created port {1} with access to VLAN {2} on '
-                                          'bridge {0}.'.format(bridge, name, id),
-                                   }
-                            }
+    if type:
+        comments['comment_invalid_ip'] = 'Remote is not valid ip address.'
+        if type == "vlan":
+            comments['comment_vlan_invalid_id'] = 'VLANs id must be between 0 and 4095.'
+            comments['comment_vlan_invalid_name'] = 'Could not find network interface {0}.'.format(name)
+            comments['comment_vlan_port_exists'] = 'Port {0} with access to VLAN {1} already exists on bridge {2}.'.format(name, id, bridge)
+            comments['comment_vlan_created'] = 'Created port {0} with access to VLAN {1} on bridge {2}.'.format(name, id, bridge)
+            comments['comment_vlan_notcreated'] = 'Unable to create port {0} with access to VLAN {1} on ' \
+                                      'bridge {2}.'.format(name, id, bridge)
+            comments['changes_vlan_created'] = {name: {'old': 'No port named {0} with access to VLAN {1} present on '
+                                                  'bridge {2} present.'.format(name, id, bridge),
+                                           'new': 'Created port {1} with access to VLAN {2} on '
+                                                  'bridge {0}.'.format(bridge, name, id),
+                                           }
+                                    }
 
-    comments['comment_gre_invalid_id'] = 'Id of GRE tunnel must be an unsigned 32-bit integer.'
-    comments['comment_gre_interface_exists'] = 'GRE tunnel interface {0} with rempte ip {1} and key {2} ' \
-                                   'already exists on bridge {3}.'.format(name, remote, id, bridge)
-    comments['comment_gre_created'] = 'Created GRE tunnel interface {0} with remote ip {1}  and key {2} ' \
-                          'on bridge {3}.'.format(name, remote, id, bridge)
-    comments['comment_gre_notcreated'] = 'Unable to create GRE tunnel interface {0} with remote ip {1} and key {2} ' \
-                             'on bridge {3}.'.format(name, remote, id, bridge)
-    comments['changes_gre_created'] = {name: {'old': 'No GRE tunnel interface {0} with remote ip {1} and key {2} '
-                                         'on bridge {3} present.'.format(name, remote, id, bridge),
-                                   'new': 'Created GRE tunnel interface {0} with remote ip {1} and key {2} '
-                                          'on bridge {3}.'.format(name, remote, id, bridge),
-                                   }
-                            }
-
-    comments['comment_dstport'] = ' (dst_port' + str(dst_port) + ')' if 0 < dst_port <= 65535 else ''
-    comments['comment_vxlan_invalid_id'] = 'Id of VXLAN tunnel must be an unsigned 64-bit integer.'
-    comments['comment_vxlan_interface_exists'] = 'VXLAN tunnel interface {0} with rempte ip {1} and key {2} ' \
-                                   'already exists on bridge {3}{4}.'.format(name, remote, id, bridge, comments['comment_dstport'])
-    comments['comment_vxlan_created'] = 'Created VXLAN tunnel interface {0} with remote ip {1}  and key {2} ' \
-                          'on bridge {3}{4}.'.format(name, remote, id, bridge, comments['comment_dstport'])
-    comments['comment_vxlan_notcreated'] = 'Unable to create VXLAN tunnel interface {0} with remote ip {1} and key {2} ' \
-                             'on bridge {3}{4}.'.format(name, remote, id, bridge, comments['comment_dstport'])
-    comments['changes_vxlan_created'] = {name: {'old': 'No VXLAN tunnel interface {0} with remote ip {1} and key {2} '
-                                         'on bridge {3}{4} present.'.format(name, remote, id, bridge, comments['comment_dstport']),
-                                   'new': 'Created VXLAN tunnel interface {0} with remote ip {1} and key {2} '
-                                          'on bridge {3}{4}.'.format(name, remote, id, bridge, comments['comment_dstport']),
-                                   }
-                            }
-    comments['comment_invalid_ip'] = 'Remote is not valid ip address.'
+        elif type == "gre":
+            comments['comment_gre_invalid_id'] = 'Id of GRE tunnel must be an unsigned 32-bit integer.'
+            comments['comment_gre_interface_exists'] = 'GRE tunnel interface {0} with rempte ip {1} and key {2} ' \
+                                           'already exists on bridge {3}.'.format(name, remote, id, bridge)
+            comments['comment_gre_created'] = 'Created GRE tunnel interface {0} with remote ip {1}  and key {2} ' \
+                                  'on bridge {3}.'.format(name, remote, id, bridge)
+            comments['comment_gre_notcreated'] = 'Unable to create GRE tunnel interface {0} with remote ip {1} and key {2} ' \
+                                     'on bridge {3}.'.format(name, remote, id, bridge)
+            comments['changes_gre_created'] = {name: {'old': 'No GRE tunnel interface {0} with remote ip {1} and key {2} '
+                                                 'on bridge {3} present.'.format(name, remote, id, bridge),
+                                           'new': 'Created GRE tunnel interface {0} with remote ip {1} and key {2} '
+                                                  'on bridge {3}.'.format(name, remote, id, bridge),
+                                           }
+                                    }
+        elif type == "vxlan":
+            comments['comment_dstport'] = ' (dst_port' + str(dst_port) + ')' if 0 < dst_port <= 65535 else ''
+            comments['comment_vxlan_invalid_id'] = 'Id of VXLAN tunnel must be an unsigned 64-bit integer.'
+            comments['comment_vxlan_interface_exists'] = 'VXLAN tunnel interface {0} with rempte ip {1} and key {2} ' \
+                                           'already exists on bridge {3}{4}.'.format(name, remote, id, bridge, comments['comment_dstport'])
+            comments['comment_vxlan_created'] = 'Created VXLAN tunnel interface {0} with remote ip {1}  and key {2} ' \
+                                  'on bridge {3}{4}.'.format(name, remote, id, bridge, comments['comment_dstport'])
+            comments['comment_vxlan_notcreated'] = 'Unable to create VXLAN tunnel interface {0} with remote ip {1} and key {2} ' \
+                                     'on bridge {3}{4}.'.format(name, remote, id, bridge, comments['comment_dstport'])
+            comments['changes_vxlan_created'] = {name: {'old': 'No VXLAN tunnel interface {0} with remote ip {1} and key {2} '
+                                                 'on bridge {3}{4} present.'.format(name, remote, id, bridge, comments['comment_dstport']),
+                                           'new': 'Created VXLAN tunnel interface {0} with remote ip {1} and key {2} '
+                                                  'on bridge {3}{4}.'.format(name, remote, id, bridge, comments['comment_dstport']),
+                                           }
+                                    }
 
     # Check VLANs attributes
     def _check_vlan():
