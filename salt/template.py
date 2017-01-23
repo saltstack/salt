@@ -11,6 +11,7 @@ import os
 import codecs
 import logging
 import cStringIO
+import StringIO
 
 # Import salt libs
 import salt.utils
@@ -83,7 +84,7 @@ def compile_template(template,
 
     input_data = string_io(input_data)
     for render, argline in render_pipe:
-        if isinstance(input_data, cStringIO.InputType):
+        if isinstance(input_data, (cStringIO.InputType, StringIO.StringIO)):
             input_data.seek(0)      # pylint: disable=no-member
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
@@ -107,7 +108,7 @@ def compile_template(template,
             # If ret is not a StringIO (which means it was rendered using
             # yaml, mako, or another engine which renders to a data
             # structure) we don't want to log this.
-            if isinstance(ret, cStringIO.InputType):
+            if isinstance(ret, (cStringIO.InputType, StringIO.StringIO)):
                 log.debug('Rendered data from file: {0}:\n{1}'.format(
                     template,
                     ret.read()))    # pylint: disable=no-member

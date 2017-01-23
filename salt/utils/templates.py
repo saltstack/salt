@@ -406,7 +406,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     if newline:
         output += '\n'
 
-    return output
+    return output.encode(SLS_ENCODING)
 
 
 def render_mako_tmpl(tmplstr, context, tmplpath=None):
