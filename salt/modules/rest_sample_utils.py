@@ -19,3 +19,10 @@ def fix_outage():
 
     '''
     return __proxy__['rest_sample.fix_outage']()
+
+
+def get_test_string():
+    '''
+    Helper function to test cross-calling to the __proxy__ dunder.
+    '''
+    return __proxy__['rest_sample.test_from_state']()
