@@ -53,13 +53,13 @@ import logging
 import os
 import sys
 
-from django.db import connection
 
 # Import 3rd-party libs
 import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import django
+    from django.db import connection
     HAS_DJANGO = True
 except Exception as exc:
     # If Django is installed and is not detected, uncomment
@@ -84,7 +84,7 @@ def __virtual__():
 def is_connection_usable():
     try:
         connection.connection.ping()
-    except:
+    except Exception:
         return False
     else:
         return True
@@ -94,6 +94,9 @@ def django_auth_setup():
     '''
     Prepare the connection to the Django authentication framework
     '''
+    if django.VERSION >= (1, 7):
+        django.setup()
+
     global DJANGO_AUTH_CLASS
 
     if DJANGO_AUTH_CLASS is not None:
@@ -119,10 +122,6 @@ def auth(username, password):
     '''
     sys.path.append(__opts__['django_auth_path'])
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', __opts__['django_auth_settings'])
-
-    import django
-    if django.VERSION >= (1, 7):
-        django.setup()
 
     django_auth_setup()
 
