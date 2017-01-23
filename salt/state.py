@@ -866,7 +866,7 @@ class State(object):
             self.states = salt.loader.states(self.opts, self.functions, self.utils,
                                              self.serializers, proxy=self.proxy)
 
-    def load_modules(self, data=None):
+    def load_modules(self, data=None, proxy=None):
         '''
         Load the modules into the state
         '''

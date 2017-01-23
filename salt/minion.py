@@ -3217,7 +3217,6 @@ class ProxyMinion(Minion):
         # Need to load the modules so they get all the dunder variables
         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
 
-
         # we can then sync any proxymodules down from the master
         # we do a sync_all here in case proxy code was installed by
         # SPM or was manually placed in /srv/salt/_modules etc.
@@ -3262,7 +3261,6 @@ class ProxyMinion(Minion):
         self.opts['grains'] = salt.loader.grains(self.opts, proxy=self.proxy)
 
         self.setup_beacons()
-
 
         if self.connected and self.opts['pillar']:
             # The pillar has changed due to the connection to the master.
@@ -3360,4 +3358,3 @@ class ProxyMinion(Minion):
         self.functions['saltutil.sync_grains'](saltenv=self.opts['environment'])
         self.grains_cache = self.opts['grains']
         self.ready = True
-
