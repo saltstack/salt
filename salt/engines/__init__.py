@@ -116,7 +116,8 @@ class Engine(SignalHandlingMultiprocessingProcess):
                 self.runners = salt.loader.runner(self.opts, utils=self.utils)
             else:
                 self.runners = []
-            self.funcs = salt.loader.minion_mods(self.opts, utils=self.utils)
+            self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
+            self.funcs = salt.loader.minion_mods(self.opts, utils=self.utils, proxy=self.proxy)
 
         self.engine = salt.loader.engines(self.opts,
                                           self.funcs,
