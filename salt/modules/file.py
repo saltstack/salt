@@ -3402,7 +3402,7 @@ def source_list(source, source_hash, saltenv):
                     except MinionError as exc:
                         # Error downloading file. Log the caught exception and
                         # continue on to the next source.
-                        log.warning(exc.strerror)
+                        log.exception(exc)
                 elif proto == 'file' and os.path.exists(urlparsed_single_src.path):
                     ret = (single_src, single_hash)
                     break
