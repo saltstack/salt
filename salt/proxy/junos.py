@@ -44,14 +44,18 @@ def init(opts):
     Open the connection to the Junos device, login, and bind to the
     Resource class
     '''
+    opts['multiprocessing'] = False
     log.debug('Opening connection to junos')
+    port = opts['proxy'].get('port', 830)
     thisproxy['conn'] = jnpr.junos.Device(user=opts['proxy']['username'],
                                           host=opts['proxy']['host'],
-                                          password=opts['proxy']['passwd'])
+                                          password=opts['proxy']['passwd'],
+                                          port=port)
     thisproxy['conn'].open()
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
     thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
     thisproxy['initialized'] = True
+
 
 
 def initialized():
@@ -68,18 +72,12 @@ def proxytype():
     '''
     return 'junos'
 
-
-def id(opts):
-    return thisproxy['conn'].facts['hostname']
-
-
 def grains():
     thisproxy['grains'] = copy.deepcopy(thisproxy['conn'].facts)
-    thisproxy[
-        'grains'][
-        'version_info'] = thisproxy[
-        'grains'][
-        'version_info'].v_dict
+    if not thisproxy['grains']:
+        log.error('The device must be master to gather facts. Grains will not be populated by junos facts.')
+    if thisproxy['grains']['version_info']:
+        thisproxy['grains']['version_info'] = thisproxy['grains']['version_info'].v_dict
     return thisproxy['grains']
 
 
@@ -89,13 +87,11 @@ def ping():
     '''
     return thisproxy['conn'].connected
 
-
 def shutdown(opts):
     '''
     This is called when the proxy-minion is exiting to make sure the
     connection to the device is closed cleanly.
     '''
-
     log.debug('Proxy module {0} shutting down!!'.format(opts['id']))
     try:
         thisproxy['conn'].close()
