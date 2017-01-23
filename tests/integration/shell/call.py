@@ -272,7 +272,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
                 '--config-dir {0} --local cmd.run "echo foo"'.format(
                     config_dir
                 ),
-                timeout=15
+                timeout=60
             )
             try:
                 self.assertIn('local:', ret)
@@ -295,7 +295,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
                 '--config-dir {0} cmd.run "echo foo"'.format(
                     config_dir
                 ),
-                timeout=15
+                timeout=60
             )
             self.assertIn('local:', ret)
         finally:
@@ -325,7 +325,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
             '--config-dir {0} cmd.run "echo foo"'.format(
                 config_dir
             ),
-            timeout=15,
+            timeout=60,
             catch_stderr=True,
             with_retcode=True
         )
