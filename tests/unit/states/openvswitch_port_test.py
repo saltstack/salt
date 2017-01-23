@@ -71,6 +71,7 @@ class OpenvswitchPortTestCase(TestCase):
                                                     'openvswitch.interface_get_options': mock_n,
                                                     'openvswitch.interface_get_type': MagicMock(return_value=''),
                                                     'openvswitch.port_create_gre': mock,
+                                                    'dig.check_ip': mock,
                                                     }):
             comt = 'Port salt created on bridge br-salt.'
             self.maxDiff = None
