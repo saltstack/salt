@@ -529,7 +529,7 @@ def query(url,
         log.trace(('Cannot Trace Log Response Text: {0}. This may be due to '
                   'incompatibilities between requests and logging.').format(exc))
 
-    if text_out is not None and os.path.exists(text_out):
+    if text_out is not None:
         with salt.utils.fopen(text_out, 'w') as tof:
             tof.write(result_text)
 
