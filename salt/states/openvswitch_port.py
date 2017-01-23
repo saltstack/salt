@@ -259,6 +259,7 @@ def absent(name, bridge=None):
         port_list = [name]
 
     # Comment and change messages
+    comments = {}
     comments['comment_bridge_notexists'] = 'Bridge {0} does not exist.'.format(bridge)
     comments['comment_port_notexists'] = 'Port {0} does not exist on bridge {1}.'.format(name, bridge)
     comments['comment_port_deleted'] = 'Port {0} deleted.'.format(name)
