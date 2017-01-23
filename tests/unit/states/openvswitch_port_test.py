@@ -26,6 +26,7 @@ class OpenvswitchPortTestCase(TestCase):
     '''
     Test cases for salt.states.openvswitch_port
     '''
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -56,13 +57,13 @@ class OpenvswitchPortTestCase(TestCase):
                                                     'openvswitch.port_add': mock
                                                     }):
             comt = 'Port salt created on bridge br-salt.'
-            ret.update({'comment': comt, 'result': True, 'changes': 
-                { 'salt': 
-                    {'new': 'Created port salt on bridge br-salt.',
+            ret.update({'comment': comt, 'result': True, 'changes':
+                {'salt':
+                     {'new': 'Created port salt on bridge br-salt.',
                       'old': 'No port named salt present.',
-                    },
-                }
-            })
+                      },
+                 }
+                        })
             self.assertDictEqual(openvswitch_port.present(name, bridge), ret)
         with patch.dict(openvswitch_port.__salt__, {'openvswitch.bridge_exists': mock,
                                                     'openvswitch.port_list': mock_n,
@@ -73,16 +74,20 @@ class OpenvswitchPortTestCase(TestCase):
                                                     }):
             comt = 'Port salt created on bridge br-salt.'
             self.maxDiff = None
-            ret.update({'result': True, 'comment': 'Created GRE tunnel interface salt with remote ip 10.0.0.1  and key 1 on bridge br-salt.', 'changes': 
-                { 'salt': 
-                    {'new': 'Created GRE tunnel interface salt with remote ip 10.0.0.1 and key 1 on bridge br-salt.',
-                      'old': 'No GRE tunnel interface salt with remote ip 10.0.0.1 and key 1 on bridge br-salt present.',
-                    },
-                }
-            })
+            ret.update({'result': True,
+                        'comment': 'Created GRE tunnel interface salt with remote ip 10.0.0.1  and key 1 on bridge br-salt.',
+                        'changes':
+                            {'salt':
+                                {
+                                    'new': 'Created GRE tunnel interface salt with remote ip 10.0.0.1 and key 1 on bridge br-salt.',
+                                    'old': 'No GRE tunnel interface salt with remote ip 10.0.0.1 and key 1 on bridge br-salt present.',
+                                },
+                            }
+                        })
             self.assertDictEqual(openvswitch_port.present(name, bridge, type="gre", id=1, remote="10.0.0.1"), ret)
 
 
 if __name__ == '__main__':
     from integration import run_tests
+
     run_tests(OpenvswitchPortTestCase, needs_daemon=False)
