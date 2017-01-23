@@ -80,7 +80,7 @@ def _mine_get(load, opts):
     return ret
 
 
-def update(clear=False):
+def update(clear=False, mine_functions=None):
     '''
     Execute the configured functions and send the data back up to the master.
     The functions to be executed are merged from the master config, pillar and
@@ -102,9 +102,17 @@ def update(clear=False):
 
         salt '*' mine.update
     '''
-    m_data = __salt__['config.merge']('mine_functions', {})
-    # If we don't have any mine functions configured, then we should just bail out
-    if not m_data:
+    m_data = {}
+    if not mine_functions:
+        m_data = __salt__['config.merge']('mine_functions', {})
+        # If we don't have any mine functions configured, then we should just bail out
+        if not m_data:
+            return
+    elif mine_functions and isinstance(mine_functions, list):
+        m_data = dict((fun, {}) for fun in mine_functions)
+    elif mine_functions and isinstance(mine_functions, dict):
+        m_data = mine_functions
+    else:
         return
 
     data = {}
