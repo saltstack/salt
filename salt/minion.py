@@ -2124,9 +2124,9 @@ class Minion(MinionBase):
                                                              schedule=schedule)
                                 else:
                                     self.schedule.delete_job(name=master_event(type='failback'), persist=True)
-                    else:
-                        self.restart = True
-                        self.io_loop.stop()
+                else:
+                    self.restart = True
+                    self.io_loop.stop()
 
         elif tag.startswith(master_event(type='connected')):
             # handle this event only once. otherwise it will pollute the log
