@@ -37,7 +37,7 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None, intern
         port_list = __salt__['openvswitch.port_list'](bridge)
 
     # Comment and change messages
-    
+
     comments = {}
 
     comments['comment_bridge_notexists'] = 'Bridge {0} does not exist.'.format(bridge)
