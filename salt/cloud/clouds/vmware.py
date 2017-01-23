@@ -914,7 +914,7 @@ def _wait_for_ip(vm_ref, max_wait):
         resolved_ips = salt.utils.network.host_to_ips(vm_name)
         log.debug("Timeout waiting for VMware tools. The name {0} resolved "
                   "to {1}".format(vm_name, str(resolved_ips)))
-        if len(resolved_ips) > 0:
+        if isinstance(resolved_ips, list) and len(resolved_ips):
             return resolved_ips[0]
         else:
             return False
