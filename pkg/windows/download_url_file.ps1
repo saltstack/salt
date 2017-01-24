@@ -36,3 +36,4 @@ if ( [bool]$Env:SALTREPO_LOCAL_CACHE -And $url.StartsWith($saltrepo_url) ) {
 	Write-Verbose "no SALTREPO_LOCAL_CACHE environment variable, or URL not saltrepo, downloading directly"
 	DownloadFileWithProgress $url $file
 }
+

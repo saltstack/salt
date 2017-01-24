@@ -16,37 +16,37 @@ Set "PyDir36=C:\Program Files\Python36"
 
 :: Get the version from git if not passed
 if [%1]==[] (
-    for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
+	for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
 ) else (
-    set "Version=%~1"
+	set "Version=%~1"
 )
 
 If Exist "%PyDir36%\python.exe" (
-    Set "PyDir=%PyDir36%"
-    Set "PyVerMajor=3"
-    Set "PyVerMinor=6"
+	Set "PyDir=%PyDir36%"
+	Set "PyVerMajor=3"
+	Set "PyVerMinor=6"
 ) Else (
-    If Exist "%PyDir35%\python.exe" (
-        Set "PyDir=%PyDir35%"
-        Set "PyVerMajor=3"
-        Set "PyVerMinor=5"
-    ) Else (
-        If Exist "%PyDir27%\python.exe" (
-            Set "PyDir=%PyDir27%"
-            Set "PyVerMajor=2"
-            Set "PyVerMinor=7"
-        ) Else (
-            @echo Could not find Python on the system
-            exit /b 1
-        )
-    )
+	If Exist "%PyDir35%\python.exe" (
+		Set "PyDir=%PyDir35%"
+		Set "PyVerMajor=3"
+		Set "PyVerMinor=5"
+	) Else (
+		If Exist "%PyDir27%\python.exe" (
+			Set "PyDir=%PyDir27%"
+			Set "PyVerMajor=2"
+			Set "PyVerMinor=7"
+		) Else (
+			@echo Could not find Python on the system
+			exit /b 1
+		)
+	)
 )
 
 :: Find the NSIS Installer
 If Exist "C:\Program Files\NSIS\" (
-    Set NSIS="C:\Program Files\NSIS\"
+	Set NSIS="C:\Program Files\NSIS\"
 ) Else (
-    Set NSIS="C:\Program Files (x86)\NSIS\"
+	Set NSIS="C:\Program Files (x86)\NSIS\"
 )
 Set "PATH=%NSIS%;%PATH%"
 @echo.
@@ -70,9 +70,9 @@ If NOT Exist "%PreDir%" mkdir "%PreDir%"
 Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
 Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
 If Exist "C:\Program Files (x86)" (
-  powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%PreDir%\vcredist.exe"
+	powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%PreDir%\vcredist.exe"
 ) Else (
-  powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%PreDir%\vcredist.exe"
+	powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%PreDir%\vcredist.exe"
 )
 @echo.
 
