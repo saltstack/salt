@@ -49,7 +49,8 @@ def init(opts):
             "host"      : opts['proxy']['host'],
             "password"  : opts['proxy']['passwd']
            }
-    optional_args= ['gather_facts', 
+    optional_args= ['port',
+                    'gather_facts', 
                     'mode',
                     'baud',
                     'attempts',
