@@ -194,7 +194,7 @@ def _get_ssl_opts():
 
 
 def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None,
-             protocol_version=4):
+             protocol_version=None):
     '''
     Connect to a Cassandra cluster.
 
