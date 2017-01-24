@@ -353,6 +353,118 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
+    def test_master_file_roots_glob(self):
+        # Config file and stub file_roots.
+        fpath = tempfile.mktemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        try:
+            # Create some kown files.
+            for f in 'abc':
+                fpath = os.path.join(tempdir, f)
+                salt.utils.fopen(fpath, 'w').write(f)
+
+            salt.utils.fopen(fpath, 'w').write(
+                'file_roots:\n'
+                '  base:\n'
+                '    - {0}'.format(os.path.join(tempdir, '*'))
+            )
+            config = sconfig.master_config(fpath)
+            base = config['file_roots']['base']
+            self.assertEqual(set(base), set([
+                os.path.join(tempdir, 'a'),
+                os.path.join(tempdir, 'b'),
+                os.path.join(tempdir, 'c')
+            ]))
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
+    def test_master_pillar_roots_glob(self):
+        # Config file and stub pillar_roots.
+        fpath = tempfile.mktemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        try:
+            # Create some kown files.
+            for f in 'abc':
+                fpath = os.path.join(tempdir, f)
+                salt.utils.fopen(fpath, 'w').write(f)
+
+            salt.utils.fopen(fpath, 'w').write(
+                'pillar_roots:\n'
+                '  base:\n'
+                '    - {0}'.format(os.path.join(tempdir, '*'))
+            )
+            config = sconfig.master_config(fpath)
+            base = config['pillar_roots']['base']
+            self.assertEqual(set(base), set([
+                os.path.join(tempdir, 'a'),
+                os.path.join(tempdir, 'b'),
+                os.path.join(tempdir, 'c')
+            ]))
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
+    def test_minion_file_roots_glob(self):
+        # Config file and stub file_roots.
+        fpath = tempfile.mktemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        try:
+            # Create some kown files.
+            for f in 'abc':
+                fpath = os.path.join(tempdir, f)
+                salt.utils.fopen(fpath, 'w').write(f)
+
+            salt.utils.fopen(fpath, 'w').write(
+                'file_roots:\n'
+                '  base:\n'
+                '    - {0}'.format(os.path.join(tempdir, '*'))
+            )
+            config = sconfig.minion_config(fpath)
+            base = config['file_roots']['base']
+            self.assertEqual(set(base), set([
+                os.path.join(tempdir, 'a'),
+                os.path.join(tempdir, 'b'),
+                os.path.join(tempdir, 'c')
+            ]))
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
+    def test_minion_pillar_roots_glob(self):
+        # Config file and stub pillar_roots.
+        fpath = tempfile.mktemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        try:
+            # Create some kown files.
+            for f in 'abc':
+                fpath = os.path.join(tempdir, f)
+                salt.utils.fopen(fpath, 'w').write(f)
+
+            salt.utils.fopen(fpath, 'w').write(
+                'pillar_roots:\n'
+                '  base:\n'
+                '    - {0}'.format(os.path.join(tempdir, '*'))
+            )
+            config = sconfig.minion_config(fpath)
+            base = config['pillar_roots']['base']
+            self.assertEqual(set(base), set([
+                os.path.join(tempdir, 'a'),
+                os.path.join(tempdir, 'b'),
+                os.path.join(tempdir, 'c')
+            ]))
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
     def test_syndic_config(self):
         syndic_conf_path = self.get_config_file_path('syndic')
         minion_conf_path = self.get_config_file_path('minion')
