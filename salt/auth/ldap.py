@@ -372,6 +372,9 @@ def groups(username, **kwargs):
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
                                            [_config('accountattributename'), 'cn'])
+            for _, entry in search_results:
+                if username in entry[_config('accountattributename')]:
+                    group_list.append(entry['cn'][0])
             for user, entry in search_results:
                 if username == user.split(',')[0].split('=')[-1]:
                     for group in entry[_config('groupattribute')]:
