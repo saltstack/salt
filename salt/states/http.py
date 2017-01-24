@@ -155,5 +155,5 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
         else:
             # Space requests out by delaying for an interval
             if 'request_interval' in kwargs:
-              log.debug("delaying query for {} seconds.".format(kwargs['request_interval']))
-              time.sleep(kwargs['request_interval'])
+                log.debug("delaying query for {0} seconds.".format(kwargs['request_interval']))
+                time.sleep(kwargs['request_interval'])
