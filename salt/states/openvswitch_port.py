@@ -248,7 +248,7 @@ def absent(name, bridge=None):
 
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-
+    bridge_exists = False
     if bridge:
         bridge_exists = __salt__['openvswitch.bridge_exists'](bridge)
         if bridge_exists:
