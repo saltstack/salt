@@ -42,7 +42,7 @@ def installed(product_key):
 
         salt '*' license.installed XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
     '''
-    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + '\System32\slmgr.vbs /dli'
+    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + r'\System32\slmgr.vbs /dli'
     out = __salt__['cmd.run'](cmd)
     return product_key[-5:] in out
 
@@ -57,7 +57,7 @@ def install(product_key):
 
         salt '*' license.install XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
     '''
-    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + '\System32\slmgr.vbs /ipk {0}'.format(product_key)
+    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + r'\System32\slmgr.vbs /ipk {0}'.format(product_key)
     return __salt__['cmd.run'](cmd)
 
 
@@ -76,7 +76,7 @@ def manual_kms_host(host=None, port='1688'):
         salt '*' license.install_kms host=FQDN port=1688
     '''
 
-    set_kms_host_cmd = r'cscript ' + os.path.expandvars("%systemroot%") + '\System32\slmgr.vbs /skms {0}:{1}'.format(host, port)
+    set_kms_host_cmd = r'cscript ' + os.path.expandvars("%systemroot%") + r'\System32\slmgr.vbs /skms {0}:{1}'.format(host, port)
     return __salt__['cmd.run'](set_kms_host_cmd)
 
 
@@ -232,7 +232,7 @@ def manual_kms_key():
     if os_version == 'Microsoft Windows Server 2016 Essentials':
         kms_client_key = 'JCKRF-N37P4-C2D82-9YXRT-4M63B'
 
-    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + '\System32\slmgr.vbs /ipk ' + kms_client_key
+    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + r'\System32\slmgr.vbs /ipk ' + kms_client_key
     return __salt__['cmd.run'](cmd)
 
 
@@ -247,7 +247,7 @@ def uninstall():
 
         salt '*' license.uninstall
     '''
-    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + '\System32\slmgr.vbs /upk'
+    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + r'\System32\slmgr.vbs /upk'
     return __salt__['cmd.run'](cmd)
 
 
@@ -261,7 +261,7 @@ def uninstall_reg():
 
         salt '*' license.uninstall_reg
     '''
-    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + '\System32\slmgr.vbs /cpky'
+    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + r'\System32\slmgr.vbs /cpky'
     return __salt__['cmd.run'](cmd)
 
 
@@ -275,7 +275,7 @@ def rearm():
 
         salt '*' license.rearm
     '''
-    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + '\System32\slmgr.vbs /rearm'
+    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + r'\System32\slmgr.vbs /rearm'
     return __salt__['cmd.run'](cmd)
 
 
@@ -289,7 +289,7 @@ def activate():
 
         salt '*' license.activate
     '''
-    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + '\System32\slmgr.vbs /ato'
+    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + r'\System32\slmgr.vbs /ato'
     return __salt__['cmd.run'](cmd)
 
 
@@ -303,7 +303,7 @@ def licensed():
 
         salt '*' license.licensed
     '''
-    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + '\System32\slmgr.vbs /dli'
+    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + r'\System32\slmgr.vbs /dli'
     out = __salt__['cmd.run'](cmd)
     return 'License Status: Licensed' in out
 
@@ -319,7 +319,7 @@ def type():
         salt '*' license.type
 
     '''
-    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + '\System32\slmgr.vbs /dli'
+    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + r'\System32\slmgr.vbs /dli'
     out = __salt__['cmd.run'](cmd)
 
     match = re.search(r'Description: (.*)\r\n', out,
@@ -346,7 +346,7 @@ def info():
 
         salt '*' license.info
     '''
-    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + '\System32\slmgr.vbs /dli'
+    cmd = r'cscript ' + os.path.expandvars("%systemroot%") + r'\System32\slmgr.vbs /dli'
     out = __salt__['cmd.run'](cmd)
 
     match = re.search(r'Name: (.*)\r\nDescription: (.*)\r\nPartial Product Key: (.*)\r\nLicense Status: (.*)', out,
