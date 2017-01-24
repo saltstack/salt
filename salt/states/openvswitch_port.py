@@ -11,14 +11,14 @@ def __virtual__():
     return 'openvswitch.port_add' in __salt__
 
 
-def present(name, bridge, type=None, id=None, remote=None, dst_port=None, internal=False):
+def present(name, bridge, tunnel_type=None, id=None, remote=None, dst_port=None, internal=False):
     '''
     Ensures that the named port exists on bridge, eventually creates it.
 
     Args:
         name: The name of the port.
         bridge: The name of the bridge.
-        type: Optional type of interface to create, currently supports: vlan, vxlan and gre.
+        tunnel_type: Optional type of interface to create, currently supports: vlan, vxlan and gre.
         id: Optional tunnel's key.
         remote: Remote endpoint's IP address.
         dst_port: Port to use when creating tunnelport in the switch.
@@ -26,10 +26,10 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None, intern
 
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-    types = ('vlan', 'vxlan', 'gre')
+    tunnel_types = ('vlan', 'vxlan', 'gre')
 
-    if type and type not in types:
-        raise TypeError('The optional type argument must be one of these values: {0}.'.format(str(types)))
+    if tunnel_type and tunnel_type not in tunnel_types:
+        raise TypeError('The optional type argument must be one of these values: {0}.'.format(str(tunnel_types)))
 
     bridge_exists = __salt__['openvswitch.bridge_exists'](bridge)
 
@@ -49,9 +49,9 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None, intern
                                    }
                             }
 
-    if type:
+    if tunnel_type:
         comments['comment_invalid_ip'] = 'Remote is not valid ip address.'
-        if type == "vlan":
+        if tunnel_type == "vlan":
             comments['comment_vlan_invalid_id'] = 'VLANs id must be between 0 and 4095.'
             comments['comment_vlan_invalid_name'] = 'Could not find network interface {0}.'.format(name)
             comments['comment_vlan_port_exists'] = 'Port {0} with access to VLAN {1} already exists on bridge {2}.'.format(name, id, bridge)
@@ -65,7 +65,7 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None, intern
                                            }
                                     }
 
-        elif type == "gre":
+        elif tunnel_type == "gre":
             comments['comment_gre_invalid_id'] = 'Id of GRE tunnel must be an unsigned 32-bit integer.'
             comments['comment_gre_interface_exists'] = 'GRE tunnel interface {0} with rempte ip {1} and key {2} ' \
                                            'already exists on bridge {3}.'.format(name, remote, id, bridge)
@@ -79,7 +79,7 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None, intern
                                                   'on bridge {3}.'.format(name, remote, id, bridge),
                                            }
                                     }
-        elif type == "vxlan":
+        elif tunnel_type == "vxlan":
             comments['comment_dstport'] = ' (dst_port' + str(dst_port) + ')' if 0 < dst_port <= 65535 else ''
             comments['comment_vxlan_invalid_id'] = 'Id of VXLAN tunnel must be an unsigned 64-bit integer.'
             comments['comment_vxlan_interface_exists'] = 'VXLAN tunnel interface {0} with rempte ip {1} and key {2} ' \
@@ -155,17 +155,17 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None, intern
     # Dry run, test=true mode
     if __opts__['test']:
         if bridge_exists:
-            if type == 'vlan':
+            if tunnel_type == 'vlan':
                 _check_vlan()
                 if not ret['comment']:
                     ret['result'] = None
                     ret['comment'] = comments['comment_vlan_created']
-            elif type == 'vxlan':
+            elif tunnel_type == 'vxlan':
                 _check_vxlan()
                 if not ret['comment']:
                     ret['result'] = None
                     ret['comment'] = comments['comment_vxlan_created']
-            elif type == 'gre':
+            elif tunnel_type == 'gre':
                 _check_gre()
                 if not ret['comment']:
                     ret['result'] = None
@@ -184,7 +184,7 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None, intern
         return ret
 
     if bridge_exists:
-        if type == 'vlan':
+        if tunnel_type == 'vlan':
             _check_vlan()
             if not ret['comment']:
                 port_create_vlan = __salt__['openvswitch.port_create_vlan'](bridge, name, id, internal)
@@ -195,7 +195,7 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None, intern
                 else:
                     ret['result'] = False
                     ret['comment'] = comments['comment_vlan_notcreated']
-        elif type == 'vxlan':
+        elif tunnel_type == 'vxlan':
             _check_vxlan()
             if not ret['comment']:
                 port_create_vxlan = __salt__['openvswitch.port_create_vxlan'](bridge, name, id, remote, dst_port)
@@ -206,7 +206,7 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None, intern
                 else:
                     ret['result'] = False
                     ret['comment'] = comments['comment_vxlan_notcreated']
-        elif type == 'gre':
+        elif tunnel_type == 'gre':
             _check_gre()
             if not ret['comment']:
                 port_create_gre = __salt__['openvswitch.port_create_gre'](bridge, name, id, remote)

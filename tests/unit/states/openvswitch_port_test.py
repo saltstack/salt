@@ -85,7 +85,7 @@ class OpenvswitchPortTestCase(TestCase):
                                 },
                             }
                         })
-            self.assertDictEqual(openvswitch_port.present(name, bridge, type="gre", id=1, remote="10.0.0.1"), ret)
+            self.assertDictEqual(openvswitch_port.present(name, bridge, tunnel_type="gre", id=1, remote="10.0.0.1"), ret)
 
 
 if __name__ == '__main__':
