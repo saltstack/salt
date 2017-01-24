@@ -133,7 +133,7 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
     query state in case of success or if no successful query was made within wait_for timeout.
 
     request_interval
-        Optional interval to delay requests by N seconds to reduce the number of requests sent. 
+        Optional interval to delay requests by N seconds to reduce the number of requests sent.
     '''
     starttime = time.time()
 
@@ -153,7 +153,7 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
                 raise caught_exception  # pylint: disable=E0702
             return ret
         else:
-        	# Space requests out by delaying for an interval
-        	if 'request_interval' in kwargs:
-        		log.debug("delaying query for {} seconds.".format(kwargs['request_interval']))
-        		time.sleep(kwargs['request_interval'])
+            # Space requests out by delaying for an interval
+            if 'request_interval' in kwargs:
+              log.debug("delaying query for {} seconds.".format(kwargs['request_interval']))
+              time.sleep(kwargs['request_interval'])
