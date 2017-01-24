@@ -45,24 +45,24 @@ def init(opts):
     Resource class
     '''
     log.debug('Opening connection to junos')
-        args = {"user"      : opts['proxy']['username'],
-                "host"      : opts['proxy']['host'],
-                "password"  : opts['proxy']['passwd']
-               }
-        optional_args= ['gather_facts', 
-                        'mode',
-                        'baud',
-                        'attempts',
-                        'auto_probe',
-                        'ssh_private_key',
-                        'ssh_config',
-                        'normalize'
-                       ]
-        for arg in optional_args:
-            if arg in opts['proxy'].keys():
-                args[arg] = opts['proxy'][arg]
+    args = {"user"      : opts['proxy']['username'],
+            "host"      : opts['proxy']['host'],
+            "password"  : opts['proxy']['passwd']
+           }
+    optional_args= ['gather_facts', 
+                    'mode',
+                    'baud',
+                    'attempts',
+                    'auto_probe',
+                    'ssh_private_key',
+                    'ssh_config',
+                    'normalize'
+                   ]
+    for arg in optional_args:
+        if arg in opts['proxy'].keys():
+            args[arg] = opts['proxy'][arg]
 
-        thisproxy['conn'] = jnpr.junos.Device(**args)
+    thisproxy['conn'] = jnpr.junos.Device(**args)
     thisproxy['conn'].open()
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
     thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
