@@ -32,7 +32,7 @@ def present(name, bridge, tunnel_type=None, id=None, remote=None, dst_port=None,
         raise TypeError('The optional type argument must be one of these values: {0}.'.format(str(tunnel_types)))
 
     bridge_exists = __salt__['openvswitch.bridge_exists'](bridge)
-
+    port_list = []
     if bridge_exists:
         port_list = __salt__['openvswitch.port_list'](bridge)
 
