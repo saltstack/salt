@@ -345,6 +345,9 @@ class LocalClient(object):
 
         return self._check_pub_data(pub_data)
 
+    def gather_minions(self, tgt, expr_form):
+        return salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
+
     @tornado.gen.coroutine
     def run_job_async(
             self,
@@ -712,6 +715,9 @@ class LocalClient(object):
                 if fn_ret:
                     for mid, data in six.iteritems(fn_ret):
                         ret[mid] = data.get('ret', {})
+
+            for failed in list(set(pub_data['minions']) ^ set(ret.keys())):
+                ret[failed] = False
             return ret
         finally:
             if not was_listening:

@@ -121,7 +121,7 @@ except ImportError:
             try:
                 cmdline = process.cmdline()
             except psutil.AccessDenied:
-                # OSX denies us access to the above information
+                # macOS denies us access to the above information
                 cmdline = None
             if not cmdline:
                 try:
@@ -597,7 +597,7 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
                                 if exc.errno != errno.ENOTCONN:
                                     raise
                             except AttributeError:
-                                # This is not OSX !?
+                                # This is not macOS !?
                                 pass
                     del sock
                 elif isinstance(port, str):

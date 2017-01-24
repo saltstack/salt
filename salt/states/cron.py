@@ -294,7 +294,7 @@ def present(name,
 
         .. versionadded:: 2016.3.0
     '''
-    name = ' '.join(name.strip().split())
+    name = name.strip()
     if identifier is False:
         identifier = name
     ret = {'changes': {},
@@ -381,7 +381,7 @@ def absent(name,
     ###       cannot be removed from the function definition, otherwise the use
     ###       of unsupported arguments will result in a traceback.
 
-    name = ' '.join(name.strip().split())
+    name = name.strip()
     if identifier is False:
         identifier = name
     ret = {'name': name,
@@ -510,7 +510,7 @@ def file(name,
         Overrides the default backup mode for the user's crontab.
     '''
     # Initial set up
-    mode = salt.utils.normalize_mode('0600')
+    mode = '0600'
 
     try:
         group = __salt__['user.info'](user)['groups'][0]
@@ -573,6 +573,7 @@ def file(name,
             template,
             source,
             source_hash,
+            source_hash_name,
             user,
             group,
             mode,
@@ -702,7 +703,7 @@ def env_absent(name,
         the root user
     '''
 
-    name = ' '.join(name.strip().split())
+    name = name.strip()
     ret = {'name': name,
            'result': True,
            'changes': {},

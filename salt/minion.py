@@ -347,14 +347,15 @@ def eval_master_func(opts):
                 raise KeyError
             # we take whatever the module returns as master address
             opts['master'] = master_mod[mod_fun]()
-            if not isinstance(opts['master'], str):
+            if not isinstance(opts['master'], str) and \
+               not isinstance(opts['master'], list):
                 raise TypeError
             opts['__master_func_evaluated'] = True
         except KeyError:
             log.error('Failed to load module {0}'.format(mod_fun))
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except TypeError:
-            log.error('{0} returned from {1} is not a string'.format(opts['master'], mod_fun))
+            log.error('{0} returned from {1} is not a string or a list'.format(opts['master'], mod_fun))
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         log.info('Evaluated master from module: {0}'.format(mod_fun))
 
@@ -536,6 +537,10 @@ class MinionBase(object):
                 opts['master_uri_list'].append(resolve_dns(opts)['master_uri'])
 
             while True:
+                if attempts != 0:
+                    # Give up a little time between connection attempts
+                    # to allow the IOLoop to run any other scheduled tasks.
+                    yield tornado.gen.sleep(1)
                 attempts += 1
                 if tries > 0:
                     log.debug('Connecting to master. Attempt {0} '
@@ -597,6 +602,10 @@ class MinionBase(object):
             if opts['random_master']:
                 log.warning('random_master is True but there is only one master specified. Ignoring.')
             while True:
+                if attempts != 0:
+                    # Give up a little time between connection attempts
+                    # to allow the IOLoop to run any other scheduled tasks.
+                    yield tornado.gen.sleep(1)
                 attempts += 1
                 if tries > 0:
                     log.debug('Connecting to master. Attempt {0} '
@@ -1559,6 +1568,15 @@ class Minion(MinionBase):
                 ret,
                 timeout=minion_instance._return_retry_timer()
             )
+
+        # Add default returners from minion config
+        # Should have been coverted to comma-delimited string already
+        if isinstance(opts.get('return'), six.string_types):
+            if data['ret']:
+                data['ret'] = ','.join((data['ret'], opts['return']))
+            else:
+                data['ret'] = opts['return']
+
         # TODO: make a list? Seems odd to split it this late :/
         if data['ret'] and isinstance(data['ret'], six.string_types):
             if 'ret_config' in data:
@@ -2001,8 +2019,9 @@ class Minion(MinionBase):
         elif tag.startswith('_minion_mine'):
             self._mine_send(tag, data)
         elif tag.startswith('fire_master'):
-            log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
-            self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
+            if self.connected:
+                log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
+                self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
         elif tag.startswith('__schedule_return'):
             # reporting current connection with master
             if data['schedule'].startswith(master_event(type='alive', master='')):
@@ -2105,9 +2124,9 @@ class Minion(MinionBase):
                                                              schedule=schedule)
                                 else:
                                     self.schedule.delete_job(name=master_event(type='failback'), persist=True)
-                    else:
-                        self.restart = True
-                        self.io_loop.stop()
+                else:
+                    self.restart = True
+                    self.io_loop.stop()
 
         elif tag.startswith(master_event(type='connected')):
             # handle this event only once. otherwise it will pollute the log
@@ -3181,7 +3200,7 @@ class ProxyMinion(Minion):
 
         if 'proxy' not in self.opts['pillar'] and 'proxy' not in self.opts:
             errmsg = 'No proxy key found in pillar or opts for id '+self.opts['id']+'. '+\
-                    'Check your pillar/opts configuration and contents.  Salt-proxy aborted.'
+                     'Check your pillar/opts configuration and contents.  Salt-proxy aborted.'
             log.error(errmsg)
             self._running = False
             raise SaltSystemExit(code=-1, msg=errmsg)

@@ -7,7 +7,7 @@ Git Fileserver Backend Walkthrough
 .. note::
 
     This walkthrough assumes basic knowledge of Salt. To get up to speed, check
-    out the :doc:`Salt Walkthrough </topics/tutorials/walkthrough>`.
+    out the :ref:`Salt Walkthrough <tutorial-salt-walk-through>`.
 
 The gitfs backend allows Salt to serve files from git repositories. It can be
 enabled by adding ``git`` to the :conf_master:`fileserver_backend` list, and
@@ -73,6 +73,10 @@ packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
 <pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
 libraries to be present before libgit2_ is built. On some Debian-based distros
 ``pkg-config`` is also required to link libgit2_ with libssh2.
+.. note::
+    If you are receiving the error "Unsupported URL Protocol" in the Salt Master
+    log when making a connection using SSH, review the libssh2 details listed 
+    above.
 
 Additionally, version 0.21.0 of pygit2 introduced a dependency on python-cffi_,
 which in turn depends on newer releases of libffi_. Upgrading libffi_ is not
@@ -954,8 +958,8 @@ for documentation.
 Why aren't my custom modules/states/etc. syncing to my Minions?
 ===============================================================
 
-In versions 0.16.3 and older, when using the :doc:`git fileserver backend
-</topics/tutorials/gitfs>`, certain versions of GitPython may generate errors
+In versions 0.16.3 and older, when using the :mod:`git fileserver backend
+<salt.fileserver.gitfs>`, certain versions of GitPython may generate errors
 when fetching, which Salt fails to catch. While not fatal to the fetch process,
 these interrupt the fileserver update that takes place before custom types are
 synced, and thus interrupt the sync itself. Try disabling the git fileserver

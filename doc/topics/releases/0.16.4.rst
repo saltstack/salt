@@ -4,8 +4,8 @@ Salt 0.16.4 Release Notes
 
 :release: 2013-09-07
 
-Version 0.16.4 is another bugfix release for :doc:`0.16.0
-</topics/releases/0.16.0>`, likely to be the last before 0.17.0 is released.
+Version 0.16.4 is another bugfix release for :ref:`0.16.0
+<release-0-16-0>`, likely to be the last before 0.17.0 is released.
 The changes include:
 
 

@@ -156,7 +156,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
         if not host or host.startswith('/'):
             if 'FreeBSD' in __grains__['os_family']:
                 runas = 'pgsql'
-            if 'OpenBSD' in __grains__['os_family']:
+            elif 'OpenBSD' in __grains__['os_family']:
                 runas = '_postgresql'
             else:
                 runas = 'postgres'
@@ -204,7 +204,7 @@ def _run_initdb(name,
     if runas is None:
         if 'FreeBSD' in __grains__['os_family']:
             runas = 'pgsql'
-        if 'OpenBSD' in __grains__['os_family']:
+        elif 'OpenBSD' in __grains__['os_family']:
             runas = '_postgresql'
         else:
             runas = 'postgres'

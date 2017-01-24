@@ -256,6 +256,7 @@ def state(name,
             cmd_kw['topfn'] = ''.join(cmd_kw.pop('arg'))
         elif sls:
             cmd_kw['mods'] = cmd_kw.pop('arg')
+        cmd_kw.update(cmd_kw.pop('kwarg'))
         tmp_ret = __salt__[fun](**cmd_kw)
         cmd_ret = {__opts__['id']: {
             'ret': tmp_ret,
@@ -594,6 +595,8 @@ def wait_for_event(
 
         if fnmatch.fnmatch(event['tag'], name):
             val = event['data'].get(event_id)
+            if val is None and 'data' in event['data']:
+                val = event['data']['data'].get(event_id)
 
             if val is not None:
                 try:

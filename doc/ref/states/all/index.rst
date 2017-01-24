@@ -205,6 +205,7 @@ state modules
     slack
     smartos
     smtp
+    snapper
     splunk
     splunk_search
     sqlite3
@@ -212,6 +213,7 @@ state modules
     ssh_known_hosts
     stateconf
     status
+    statuspage
     stormpath_account
     supervisord
     svn

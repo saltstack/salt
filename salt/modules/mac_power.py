@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Module for editing power settings on Mac OS X
+Module for editing power settings on macOS
 
  .. versionadded:: 2016.3.0
 '''
@@ -18,11 +18,11 @@ __virtualname__ = 'power'
 
 def __virtual__():
     '''
-    Only for Mac OS X
+    Only for macOS
     '''
     if not salt.utils.is_darwin():
         return (False, 'The mac_power module could not be loaded: '
-                       'module only works on Mac OS X systems.')
+                       'module only works on macOS systems.')
 
     return __virtualname__
 
@@ -423,7 +423,7 @@ def set_restart_freeze(enabled):
     '''
     Specifies whether the server restarts automatically after a system freeze.
     This setting doesn't seem to be editable. The command completes successfully
-    but the setting isn't actually updated. This is probably an OS X bug. The
+    but the setting isn't actually updated. This is probably a macOS. The
     functions remains in case they ever fix the bug.
 
     :param bool enabled: True to enable, False to disable. "On" and "Off" are

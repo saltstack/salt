@@ -569,8 +569,6 @@ class SaltEvent(object):
                   wait=5,
                   tag='',
                   full=False,
-                  use_pending=None,
-                  pending_tags=None,
                   match_type=None,
                   no_block=False,
                   auto_reconnect=False):
@@ -620,18 +618,6 @@ class SaltEvent(object):
         '''
         assert self._run_io_loop_sync
 
-        if use_pending is not None:
-            salt.utils.warn_until(
-                'Nitrogen',
-                'The \'use_pending\' keyword argument is deprecated and is simply ignored. '
-                'Please stop using it since it\'s support will be removed in {version}.'
-            )
-        if pending_tags is not None:
-            salt.utils.warn_until(
-                'Nitrogen',
-                'The \'pending_tags\' keyword argument is deprecated and is simply ignored. '
-                'Please stop using it since it\'s support will be removed in {version}.'
-            )
         match_func = self._get_match_func(match_type)
 
         ret = self._check_pending(tag, match_func)
@@ -1122,17 +1108,8 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
             try:
                 self.publisher.start()
                 self.puller.start()
-                if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
-                    salt.utils.warn_until(
-                            'Nitrogen',
-                            'ACL rules should be configured with \'publisher_acl\' and '
-                            '\'publisher_acl_blacklist\' not \'client_acl\' and '
-                            '\'client_acl_blacklist\'. This functionality will be removed in Salt '
-                            'Nitrogen.'
-                            )
                 if (self.opts['ipc_mode'] != 'tcp' and (
                         self.opts['publisher_acl'] or
-                        self.opts['client_acl'] or
                         self.opts['external_auth'])):
                     os.chmod(os.path.join(
                         self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)

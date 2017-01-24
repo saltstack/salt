@@ -11,6 +11,4 @@ Salt can be easily installed on Gentoo via Portage:
 Post-installation tasks
 =======================
 
-Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
-
-.. _GitHub downloads: https://github.com/saltstack/salt/downloads
+Now go to the :ref:`Configuring Salt<configuring-salt>` page.

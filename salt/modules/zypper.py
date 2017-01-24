@@ -462,24 +462,6 @@ def info_available(*names, **kwargs):
     return ret
 
 
-def info(*names, **kwargs):
-    '''
-    .. deprecated:: Nitrogen
-       Use :py:func:`~salt.modules.pkg.info_available` instead.
-
-    Return the information of the named package available for the system.
-
-    CLI example:
-
-    .. code-block:: bash
-
-        salt '*' pkg.info <package1>
-        salt '*' pkg.info <package1> <package2> <package3> ...
-    '''
-    salt.utils.warn_until('Nitrogen', "Please use 'pkg.info_available' instead")
-    return info_available(*names)
-
-
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -811,6 +793,18 @@ def mod_repo(repo, **kwargs):
                 'Failed add new repository \'{0}\' for unspecified reason. '
                 'Please check zypper logs.'.format(repo))
         added = True
+
+    repo_info = _get_repo_info(repo)
+    if (
+        not added and 'baseurl' in kwargs and
+        not (kwargs['baseurl'] == repo_info['baseurl'])
+    ):
+        # Note: zypper does not support changing the baseurl
+        # we need to remove the repository and add it again with the new baseurl
+        repo_info.update(kwargs)
+        repo_info.setdefault('cache', False)
+        del_repo(repo)
+        return mod_repo(repo, **repo_info)
 
     # Modify added or existing repo according to the options
     cmd_opt = []

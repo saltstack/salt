@@ -159,8 +159,8 @@ def _replace_auth_key(
                     lines.append(line)
                     continue
                 key_ind = 1
-                if comps[0][:4:] not in ['ssh-', 'ecds']:
-                    key_ind = 2
+                while comps[key_ind - 1][:4:] not in ['ssh-', 'ecds'] and key_ind < len(comps):
+                    key_ind += 1
                 if comps[key_ind] == key:
                     lines.append(auth_line)
                 else:

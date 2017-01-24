@@ -128,7 +128,8 @@ def get_http_proxy(network_service="Ethernet"):
     Returns the current http proxy settings
 
     network_service
-        The network service to apply the changes to, this only necessary on OSX
+        The network service to apply the changes to, this only necessary on
+        macOS
 
     CLI Example:
 
@@ -160,7 +161,8 @@ def set_http_proxy(server, port, user=None, password=None, network_service="Ethe
         The password to use if required by the server
 
     network_service
-        The network service to apply the changes to, this only necessary on OSX
+        The network service to apply the changes to, this only necessary on
+        macOS
 
     bypass_hosts
         The hosts that are allowed to by pass the proxy. Only used on Windows for other OS's use
@@ -183,7 +185,8 @@ def get_https_proxy(network_service="Ethernet"):
     Returns the current https proxy settings
 
     network_service
-        The network service to apply the changes to, this only necessary on OSX
+        The network service to apply the changes to, this only necessary on
+        macOS
 
     CLI Example:
 
@@ -215,7 +218,8 @@ def set_https_proxy(server, port, user=None, password=None, network_service="Eth
         The password to use if required by the server
 
     network_service
-        The network service to apply the changes to, this only necessary on OSX
+        The network service to apply the changes to, this only necessary on
+        macOS
 
     bypass_hosts
         The hosts that are allowed to by pass the proxy. Only used on Windows for other OS's use
@@ -238,7 +242,8 @@ def get_ftp_proxy(network_service="Ethernet"):
     Returns the current ftp proxy settings
 
     network_service
-        The network service to apply the changes to, this only necessary on OSX
+        The network service to apply the changes to, this only necessary on
+        macOS
 
     CLI Example:
 
@@ -269,7 +274,8 @@ def set_ftp_proxy(server, port, user=None, password=None, network_service="Ether
         The password to use if required by the server
 
     network_service
-        The network service to apply the changes to, this only necessary on OSX
+        The network service to apply the changes to, this only necessary on
+        macOS
 
     bypass_hosts
         The hosts that are allowed to by pass the proxy. Only used on Windows for other OS's use
@@ -292,7 +298,8 @@ def get_proxy_bypass(network_service="Ethernet"):
     Returns the current domains that can bypass the proxy
 
     network_service
-        The network service to get the bypass domains from, this is only necessary on OSX
+        The network service to get the bypass domains from, this is only
+        necessary on macOS
 
     CLI Example:
 
@@ -322,7 +329,8 @@ def set_proxy_bypass(domains, network_service="Ethernet"):
         An array of domains allowed to bypass the proxy
 
     network_service
-        The network service to apply the changes to, this only necessary on OSX
+        The network service to apply the changes to, this only necessary on
+        macOS
 
     CLI Example:
 

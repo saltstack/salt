@@ -30,6 +30,7 @@ filemod.__opts__ = {
     'file_roots': {'base': 'tmp'},
     'pillar_roots': {'base': 'tmp'},
     'cachedir': 'tmp',
+    'grains': {},
 }
 filemod.__grains__ = {'kernel': 'Linux'}
 
@@ -664,6 +665,32 @@ class FileModuleTestCase(TestCase):
                                       content='foo',
                                       match='bar',
                                       mode='replace'))
+
+        # Close and remove the file
+        empty_file.close()
+        os.remove(empty_file.name)
+
+    def test_delete_line_in_empty_file(self):
+        '''
+        Tests that when calling file.line with ``mode=delete``,
+        the function doesn't stack trace if the file is empty.
+        Should return ``False``.
+
+        See Issue #38438.
+        '''
+        # Create an empty temporary named file
+        empty_file = tempfile.NamedTemporaryFile(delete=False,
+                                                 mode='w+')
+
+        # Assert that the file was created and is empty
+        self.assertEqual(os.stat(empty_file.name).st_size, 0)
+
+        # Now call the function on the empty file and assert
+        # the return is False instead of stack-tracing
+        self.assertFalse(filemod.line(empty_file.name,
+                                      content='foo',
+                                      match='bar',
+                                      mode='delete'))
 
         # Close and remove the file
         empty_file.close()

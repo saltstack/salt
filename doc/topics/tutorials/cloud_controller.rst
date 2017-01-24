@@ -1,3 +1,5 @@
+.. _cloud-controller:
+
 ==========================
 Salt as a Cloud Controller
 ==========================
@@ -122,7 +124,7 @@ on the hypervisor and is bridged to an active network device.
     To use more advanced networking in Salt Virt, read the `Salt Virt
     Networking` document:
 
-    :doc:`Salt Virt Networking </topics/virt/nic>`
+    :ref:`Salt Virt Networking <vm-nic-profiles>`
 
 Libvirt State
 -------------
@@ -281,7 +283,7 @@ opened on hypervisors:
 
     More in-depth information regarding distribution specific firewall settings can read in:
 
-    :doc:`Opening the Firewall up for Salt </topics/tutorials/firewall>`
+    :ref:`Opening the Firewall up for Salt <firewall>`
 
 Salt also needs an additional flag to be turned on as well. The ``virt.tunnel``
 option needs to be turned on. This flag tells Salt to run migrations securely

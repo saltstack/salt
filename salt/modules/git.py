@@ -422,7 +422,6 @@ def add(cwd,
 def archive(cwd,
             output,
             rev='HEAD',
-            fmt=None,
             prefix=None,
             user=None,
             password=None,
@@ -472,11 +471,6 @@ def archive(cwd,
         manpage) for further information.
 
         .. versionadded:: 2015.8.0
-
-    fmt
-        Replaced by ``format`` in version 2015.8.0
-
-        .. deprecated:: 2015.8.0
 
     prefix
         Prepend ``<prefix>`` to every filename in the archive. If unspecified,
@@ -532,14 +526,6 @@ def archive(cwd,
     format_ = kwargs.pop('format', None)
     if kwargs:
         salt.utils.invalid_kwargs(kwargs)
-
-    if fmt:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'fmt\' argument to git.archive has been deprecated, please '
-            'use \'format\' instead.'
-        )
-        format_ = fmt
 
     command = ['git', 'archive']
     # If prefix was set to '' then we skip adding the --prefix option
@@ -740,7 +726,6 @@ def clone(cwd,
           https_user=None,
           https_pass=None,
           ignore_retcode=False,
-          repository=None,
           saltenv='base'):
     '''
     Interface to `git-clone(1)`_
@@ -830,13 +815,6 @@ def clone(cwd,
         salt myminion git.clone /path/to/repo_parent_dir git://github.com/saltstack/salt.git
     '''
     cwd = _expand_path(cwd, user)
-    if repository is not None:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'repository\' argument to git.clone has been '
-            'deprecated, please use \'url\' instead.'
-        )
-        url = repository
 
     if not url:
         raise SaltInvocationError('Missing \'url\' argument')
@@ -1193,13 +1171,6 @@ def config_set(key,
     global : False
         If ``True``, set a global variable
 
-    is_global : False
-        If ``True``, set a global variable
-
-        .. deprecated:: 2015.8.0
-            Use ``global`` instead
-
-
     CLI Example:
 
     .. code-block:: bash
@@ -1210,18 +1181,8 @@ def config_set(key,
     kwargs = salt.utils.clean_kwargs(**kwargs)
     add_ = kwargs.pop('add', False)
     global_ = kwargs.pop('global', False)
-    is_global = kwargs.pop('is_global', False)
     if kwargs:
         salt.utils.invalid_kwargs(kwargs)
-
-    if is_global:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'is_global\' argument to git.config_set has been '
-            'deprecated, please set the \'cwd\' argument to \'global\' '
-            'instead.'
-        )
-        global_ = True
 
     if cwd is None:
         if not global_:
@@ -2531,13 +2492,6 @@ def merge(cwd,
 
         .. versionadded:: 2015.8.0
 
-    branch
-        The remote branch or revision to merge into the current branch
-        Revision to merge into the current branch
-
-        .. deprecated:: 2015.8.0
-            Use ``rev`` instead.
-
     opts
         Any additional options to add to the command line, in a single string
 
@@ -2577,18 +2531,10 @@ def merge(cwd,
         salt myminion git.merge /path/to/repo rev=upstream/foo
     '''
     kwargs = salt.utils.clean_kwargs(**kwargs)
-    branch_ = kwargs.pop('branch', None)
     if kwargs:
         salt.utils.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
-    if branch_:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'branch\' argument to git.merge has been deprecated, please '
-            'use \'rev\' instead.'
-        )
-        rev = branch_
     command = ['git', 'merge']
     command.extend(_format_opts(opts))
     if rev:
@@ -2979,12 +2925,6 @@ def push(cwd,
             Being a refspec_, this argument can include a colon to define local
             and remote ref names.
 
-    branch
-        Name of the ref to push
-
-        .. deprecated:: 2015.8.0
-            Use ``ref`` instead
-
     opts
         Any additional options to add to the command line, in a single string
 
@@ -3052,18 +2992,10 @@ def push(cwd,
         salt myminion git.push /path/to/repo upstream :temp
     '''
     kwargs = salt.utils.clean_kwargs(**kwargs)
-    branch_ = kwargs.pop('branch', None)
     if kwargs:
         salt.utils.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
-    if branch_:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'branch\' argument to git.push has been deprecated, please '
-            'use \'ref\' instead.'
-        )
-        ref = branch_
     command = ['git', 'push']
     command.extend(_format_opts(opts))
     if not isinstance(remote, six.string_types):

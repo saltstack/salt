@@ -424,10 +424,10 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 continue
         elif item == 'log_config':
             # https://github.com/saltstack/salt/issues/30577#issuecomment-238322721
-            if not data.get('Config', None) and actual_data.get('Config', None):
+            if not data.get('Config'):
                 data['Config'] = {}
                 actual_data['Config'] = {}
-            if not data.get('Type', None) and actual_data.get('Type', None):
+            if not data.get('Type'):
                 data['Type'] = None
                 actual_data['Type'] = None
             if data != actual_data:
@@ -1388,9 +1388,9 @@ def running(name,
     restart_policy
         Set a restart policy for the container. Must be passed as a string in
         the format ``policy[:retry_count]`` where ``policy`` is one of
-        ``always`` or ``on-failure``, and ``retry_count`` is an optional limit
-        to the number of retries. The retry count is ignored when using the
-        ``always`` restart policy.
+        ``always``, ``unless-stopped``, or ``on-failure``, and ``retry_count``
+        is an optional limit to the number of retries. The retry count is ignored
+        when using the ``always`` or ``unless-stopped`` restart policy.
 
         .. code-block:: yaml
 

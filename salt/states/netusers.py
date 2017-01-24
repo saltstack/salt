@@ -111,8 +111,8 @@ def _compute_diff(configured, expected):
     remove_usernames = configured_users - expected_users
     common_usernames = expected_users & configured_users
 
-    add = dict((username, expected.get(username)) for (username, _) in add_usernames)
-    remove = dict((username, configured.get(username)) for (username, _) in remove_usernames)
+    add = dict((username, expected.get(username)) for username in add_usernames)
+    remove = dict((username, configured.get(username)) for username in remove_usernames)
     update = {}
 
     for username in common_usernames:

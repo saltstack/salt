@@ -41,6 +41,7 @@ DEVICE="{{name}}"
 {%endif%}{% if bonding %}BONDING_OPTS="{%for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}"
 {%endif%}{% if ethtool %}ETHTOOL_OPTS="{%for item in ethtool %}{{item}} {{ethtool[item]}} {%endfor%}"
 {%endif%}{% if domain %}DOMAIN="{{ domain|join(' ') }}"
+{%endif%}{% if nm_controlled %}NM_CONTROLLED="{{nm_controlled}}"
 {% endif %}{% for server in dns -%}
 DNS{{loop.index}}="{{server}}"
 {% endfor -%}

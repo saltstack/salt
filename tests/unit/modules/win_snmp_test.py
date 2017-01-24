@@ -3,7 +3,7 @@
     :synopsis: Unit Tests for Windows SNMP Module 'module.win_snmp'
     :platform: Windows
     :maturity: develop
-    versionadded:: Nitrogen
+    .. versionadded:: Nitrogen
 '''
 
 # Import Python Libs

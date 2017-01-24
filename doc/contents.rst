@@ -1,3 +1,5 @@
+.. _table-of-contents:
+
 ======================
 Salt Table of Contents
 ======================
@@ -21,6 +23,7 @@ Salt Table of Contents
     ref/index
     topics/api
     topics/topology/index
+    topics/cache/index
     topics/windows/index
     topics/development/index
     topics/releases/index

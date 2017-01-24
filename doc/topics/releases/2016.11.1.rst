@@ -2,11 +2,10 @@
 Salt 2016.11.1 Release Notes
 ============================
 
-Version 2016.11.1 is a bugfix release for :doc:`2016.11.0
-</topics/releases/2016.11.0>`.
+Version 2016.11.1 is a bugfix release for :ref:`2016.11.0 <release-2016-11-0>`.
 
 Changes for v2016.11.0..v2016.11.1
-----------------------------------------------------------------
+----------------------------------
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 

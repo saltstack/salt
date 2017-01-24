@@ -684,6 +684,26 @@ def avail_sizes(call=None):
                 'ram': '60 GiB'
             },
         },
+        'GPU Compute': {
+            'p2.xlarge': {
+                'id': 'p2.xlarge',
+                'cores': '4',
+                'disk': 'EBS',
+                'ram': '61 GiB'
+            },
+            'p2.8xlarge': {
+                'id': 'p2.8xlarge',
+                'cores': '32',
+                'disk': 'EBS',
+                'ram': '488 GiB'
+            },
+            'p2.16xlarge': {
+                'id': 'p2.16xlarge',
+                'cores': '64',
+                'disk': 'EBS',
+                'ram': '732 GiB'
+            },
+        },
         'High I/O': {
             'i2.xlarge': {
                 'id': 'i2.xlarge',
@@ -711,23 +731,53 @@ def avail_sizes(call=None):
             }
         },
         'High Memory': {
-            'm2.2xlarge': {
-                'id': 'm2.2xlarge',
-                'cores': '4 (with 3.25 ECUs each)',
-                'disk': '840 GiB (1 x 840 GiB)',
-                'ram': '34.2 GiB'
+            'x1.16xlarge': {
+                'id': 'x1.16xlarge',
+                'cores': '64 (with 5.45 ECUs each)',
+                'disk': '1920 GiB (1 x 1920 GiB)',
+                'ram': '976 GiB'
             },
-            'm2.xlarge': {
-                'id': 'm2.xlarge',
-                'cores': '2 (with 3.25 ECUs each)',
-                'disk': '410 GiB (1 x 410 GiB)',
-                'ram': '17.1 GiB'
+            'x1.32xlarge': {
+                'id': 'x1.32xlarge',
+                'cores': '128 (with 2.73 ECUs each)',
+                'disk': '3840 GiB (2 x 1920 GiB)',
+                'ram': '1952 GiB'
             },
-            'm2.4xlarge': {
-                'id': 'm2.4xlarge',
-                'cores': '8 (with 3.25 ECUs each)',
-                'disk': '1680 GiB (2 x 840 GiB)',
-                'ram': '68.4 GiB'
+            'r4.large': {
+                'id': 'r4.large',
+                'cores': '2 (with 3.45 ECUs each)',
+                'disk': 'EBS',
+                'ram': '15.25 GiB'
+            },
+            'r4.xlarge': {
+                'id': 'r4.xlarge',
+                'cores': '4 (with 3.35 ECUs each)',
+                'disk': 'EBS',
+                'ram': '30.5 GiB'
+            },
+            'r4.2xlarge': {
+                'id': 'r4.2xlarge',
+                'cores': '8 (with 3.35 ECUs each)',
+                'disk': 'EBS',
+                'ram': '61 GiB'
+            },
+            'r4.4xlarge': {
+                'id': 'r4.4xlarge',
+                'cores': '16 (with 3.3 ECUs each)',
+                'disk': 'EBS',
+                'ram': '122 GiB'
+            },
+            'r4.8xlarge': {
+                'id': 'r4.8xlarge',
+                'cores': '32 (with 3.1 ECUs each)',
+                'disk': 'EBS',
+                'ram': '244 GiB'
+            },
+            'r4.16xlarge': {
+                'id': 'r4.16xlarge',
+                'cores': '64 (with 3.05 ECUs each)',
+                'disk': 'EBS',
+                'ram': '488 GiB'
             },
             'r3.large': {
                 'id': 'r3.large',
@@ -807,6 +857,18 @@ def avail_sizes(call=None):
                 'disk': 'EBS',
                 'ram': '8 GiB'
             },
+            't2.xlarge': {
+                'id': 't2.xlarge',
+                'cores': '4',
+                'disk': 'EBS',
+                'ram': '16 GiB'
+            },
+            't2.2xlarge': {
+                'id': 't2.2xlarge',
+                'cores': '8',
+                'disk': 'EBS',
+                'ram': '32 GiB'
+            },
             'm4.large': {
                 'id': 'm4.large',
                 'cores': '2',
@@ -836,6 +898,12 @@ def avail_sizes(call=None):
                 'cores': '40',
                 'disk': 'EBS - 4000 Mbps',
                 'ram': '160 GiB'
+            },
+            'm4.16xlarge': {
+                'id': 'm4.16xlarge',
+                'cores': '64',
+                'disk': 'EBS - 10000 Mbps',
+                'ram': '256 GiB'
             },
             'm3.medium': {
                 'id': 'm3.medium',
@@ -1210,7 +1278,7 @@ def securitygroupid(vm_):
                 log.debug('AWS SecurityGroup ID of {0} is {1}'.format(
                     sg['groupName'], sg['groupId'])
                 )
-                securitygroupid_set = securitygroupid_set.add(sg['groupId'])
+                securitygroupid_set.add(sg['groupId'])
     return list(securitygroupid_set)
 
 
@@ -1239,12 +1307,7 @@ def get_provider(vm_=None):
     if vm_ is None:
         provider = __active_provider_name__ or 'ec2'
     else:
-        # Since using "provider: <provider-engine>" is deprecated, alias provider
-        # to use driver: "driver: <provider-engine>"
-        if 'provider' in vm_:
-            vm_['driver'] = vm_.pop('provider')
-
-        provider = vm_.get('driver', 'ec2')
+        provider = vm_.get('provider', 'ec2')
 
     if ':' in provider:
         prov_comps = provider.split(':')
@@ -2438,11 +2501,6 @@ def create(vm_=None, call=None):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     # Check for private_key and keyfile name for bootstrapping new instances
     deploy = config.get_cloud_config_value(
         'deploy', vm_, __opts__, default=True
@@ -3381,11 +3439,6 @@ def list_nodes_full(location=None, call=None):
 
 
 def _vm_provider_driver(vm_):
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     alias, driver = vm_['driver'].split(':')
     if alias not in __opts__['providers']:
         return None

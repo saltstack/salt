@@ -234,6 +234,7 @@ class SnapperTestCase(TestCase):
     @patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(42, 43)))
     @patch('salt.modules.snapper.snapper.GetComparison', MagicMock())
     @patch('salt.modules.snapper.snapper.GetFiles', MagicMock(return_value=DBUS_RET['GetFiles']))
+    @patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs']))
     def test_status(self):
         if six.PY3:
             self.assertCountEqual(snapper.status(), MODULE_RET['GETFILES'])
@@ -288,6 +289,7 @@ class SnapperTestCase(TestCase):
     @patch('salt.modules.snapper._is_text_file', MagicMock(return_value=True))
     @patch('os.path.isfile', MagicMock(side_effect=[False, True]))
     @patch('salt.utils.fopen', mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post']))
+    @patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs']))
     def test_diff_text_file(self):
         if sys.version_info < (2, 7):
             self.assertEqual(snapper.diff(), {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo26']})
@@ -302,6 +304,7 @@ class SnapperTestCase(TestCase):
     @patch('salt.modules.snapper._is_text_file', MagicMock(return_value=True))
     @patch('os.path.isfile', MagicMock(side_effect=[True, True, False, True]))
     @patch('os.path.isdir', MagicMock(return_value=False))
+    @patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs']))
     @skipIf(sys.version_info < (2, 7), 'Python 2.7 required to compare diff properly')
     def test_diff_text_files(self):
         fopen_effect = [
@@ -331,6 +334,7 @@ class SnapperTestCase(TestCase):
             "f18f971f1517449208a66589085ddd3723f7f6cefb56c141e3d97ae49e1d87fa",
         ])
     })
+    @patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs']))
     def test_diff_binary_files(self):
         fopen_effect = [
             mock_open(read_data="dummy binary").return_value,

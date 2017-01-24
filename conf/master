@@ -127,8 +127,12 @@
 # the jobs system and is not generally recommended.
 #job_cache: True
 
-# Cache minion grains and pillar data in the cachedir.
+# Cache minion grains, pillar and mine data via the cache subsystem in the
+# cachedir or a database.
 #minion_data_cache: True
+
+# Cache subsystem module to use for minion data cache.
+#cache: localfs
 
 # Store all returns in the given returner.
 # Setting this option requires that any returner-specific configuration also
@@ -234,6 +238,9 @@
 # Set the ZeroMQ high water marks
 # http://api.zeromq.org/3-2:zmq-setsockopt
 
+# The listen queue size / backlog
+#zmq_backlog: 1000
+
 # The publisher interface ZeroMQPubServerChannel
 #pub_hwm: 1000
 
@@ -327,10 +334,6 @@
 #    - '^(?!sudo_).*$'   #  all non sudo users
 #  modules:
 #    - cmd
-#
-# WARNING: client_acl and client_acl_blacklist options are deprecated and will
-# be removed in the future releases. Use publisher_acl and
-# publisher_acl_blacklist instead.
 
 # Enforce publisher_acl & publisher_acl_blacklist when users have sudo
 # access to the salt command.
@@ -396,6 +399,17 @@
 
 # Pass in an alternative location for the salt-ssh roster file
 #roster_file: /etc/salt/roster
+
+# Define a location for roster files so they can be chosen when using Salt API.
+# An administrator can place roster files into these locations. Then when
+# calling Salt API, parameter 'roster_file' should contain a relative path to
+# these locations. That is, "roster_file=/foo/roster" will be resolved as
+# "/etc/salt/roster.d/foo/roster" etc. This feature prevents passing insecure
+# custom rosters through the Salt API.
+#
+#rosters:
+# - /etc/salt/roster.d
+# - /opt/salt/some/more/rosters
 
 # The log file of the salt-ssh command:
 #ssh_log_file: /var/log/salt/ssh
@@ -717,6 +731,11 @@
 # Recursively merge lists by aggregating them instead of replacing them.
 #pillar_merge_lists: False
 
+# Set this option to True to force the pillarenv to be the same as the effective
+# saltenv when running states. If pillarenv is specified this option will be
+# ignored.
+#pillarenv_from_saltenv: False
+
 # Set this option to 'True' to force a 'KeyError' to be raised whenever an
 # attempt to retrieve a named value from pillar fails. When this option is set
 # to 'False', the failed attempt returns an empty string. Default is 'False'.
@@ -851,6 +870,10 @@
 # will be iterated in random order. If ``ordered`` is specified, the configured
 # order will be used.
 #syndic_failover: random
+
+# The number of seconds for the salt client to wait for additional syndics to
+# check in with their lists of expected minions before giving up.
+#syndic_wait: 5
 
 
 #####      Peer Publish settings     #####

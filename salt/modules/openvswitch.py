@@ -335,7 +335,7 @@ def interface_get_type(port):
     return _stdout_list_split(retcode, stdout)
 
 
-def port_create_vlan(br, port, id):
+def port_create_vlan(br, port, id, internal=False):
     '''
     Isolate VM traffic using VLANs.
 
@@ -343,6 +343,7 @@ def port_create_vlan(br, port, id):
         br: A string - bridge name.
         port: A string - port name.
         id: An integer in the valid range 0 to 4095 (inclusive), name of VLAN.
+        internal: A boolean to create an internal interface if one does not exist.
 
     Returns:
         True on success, else False.
@@ -359,14 +360,18 @@ def port_create_vlan(br, port, id):
         return False
     elif not bridge_exists(br):
         return False
-    elif port not in interfaces:
+    elif not internal and port not in interfaces:
         return False
     elif port in port_list(br):
         cmd = 'ovs-vsctl set port {0} tag={1}'.format(port, id)
+        if internal:
+            cmd += ' -- set interface {0} type=internal'.format(port)
         result = __salt__['cmd.run_all'](cmd)
         return _retcode_to_bool(result['retcode'])
     else:
         cmd = 'ovs-vsctl add-port {0} {1} tag={2}'.format(br, port, id)
+        if internal:
+            cmd += ' -- set interface {0} type=internal'.format(port)
         result = __salt__['cmd.run_all'](cmd)
         return _retcode_to_bool(result['retcode'])
 

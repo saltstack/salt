@@ -1537,7 +1537,7 @@ class DefinitionsSchema(Schema):
     '''
     .. versionadded:: 2016.11.0
 
-    JSON schema classs that supports ComplexSchemaItem objects by adding
+    JSON schema class that supports ComplexSchemaItem objects by adding
     a definitions section to the JSON schema, containing the item definitions.
 
     All references to ComplexSchemaItems are built using schema inline
@@ -1551,6 +1551,11 @@ class DefinitionsSchema(Schema):
         complex_items = []
         # Augment the serializations with the definitions of all complex items
         aux_items = cls._items.values()
+
+        # Convert dict_view object to a list on Python 3
+        if six.PY3:
+            aux_items = list(aux_items)
+
         while aux_items:
             item = aux_items.pop(0)
             # Add complex attributes

@@ -1,3 +1,5 @@
+.. _tutorial-multi-master:
+
 =====================
 Multi Master Tutorial
 =====================

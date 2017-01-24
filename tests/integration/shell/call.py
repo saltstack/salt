@@ -67,16 +67,13 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
 
     def test_json_out_indent(self):
         out = self.run_call('test.ping -l quiet --out=json --out-indent=-1')
-        expect = ['{"local": true}']
-        self.assertEqual(expect, out)
+        self.assertIn('"local": true', ''.join(out))
 
         out = self.run_call('test.ping -l quiet --out=json --out-indent=0')
-        expect = ['{', '"local": true', '}']
-        self.assertEqual(expect, out)
+        self.assertIn('"local": true', ''.join(out))
 
         out = self.run_call('test.ping -l quiet --out=json --out-indent=1')
-        expect = ['{', ' "local": true', '}']
-        self.assertEqual(expect, out)
+        self.assertIn('"local": true', ''.join(out))
 
     def test_local_sls_call(self):
         fileroot = os.path.join(integration.FILES, 'file', 'base')

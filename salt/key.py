@@ -338,11 +338,11 @@ class MultiKeyCLI(KeyCLI):
     def print_all(self):
         self._call_all('print_all')
 
-    def finger(self, match):
-        self._call_all('finger', match)
+    def finger(self, match, hash_type):
+        self._call_all('finger', match, hash_type)
 
-    def finger_all(self):
-        self._call_all('finger_all')
+    def finger_all(self, hash_type):
+        self._call_all('finger_all', hash_type)
 
     def prep_signature(self):
         self._call_all('prep_signature')
@@ -357,7 +357,7 @@ class Key(object):
     REJ = 'minions_rejected'
     DEN = 'minions_denied'
 
-    def __init__(self, opts):
+    def __init__(self, opts, io_loop=None):
         self.opts = opts
         kind = self.opts.get('__role', '')  # application kind
         if kind not in salt.utils.kinds.APPL_KINDS:
@@ -369,7 +369,9 @@ class Key(object):
                 opts['sock_dir'],
                 opts['transport'],
                 opts=opts,
-                listen=False)
+                listen=False,
+                io_loop=io_loop
+                )
 
     def _check_minions_directories(self):
         '''
@@ -895,10 +897,13 @@ class Key(object):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
-    def finger(self, match):
+    def finger(self, match, hash_type=None):
         '''
         Return the fingerprint for a specified key
         '''
+        if hash_type is None:
+            hash_type = __opts__['hash_type']
+
         matches = self.name_match(match, True)
         ret = {}
         for status, keys in six.iteritems(matches):
@@ -908,13 +913,16 @@ class Key(object):
                     path = os.path.join(self.opts['pki_dir'], key)
                 else:
                     path = os.path.join(self.opts['pki_dir'], status, key)
-                ret[status][key] = salt.utils.pem_finger(path, sum_type=self.opts['hash_type'])
+                ret[status][key] = salt.utils.pem_finger(path, sum_type=hash_type)
         return ret
 
-    def finger_all(self):
+    def finger_all(self, hash_type=None):
         '''
         Return fingerprints for all keys
         '''
+        if hash_type is None:
+            hash_type = __opts__['hash_type']
+
         ret = {}
         for status, keys in six.iteritems(self.all_keys()):
             ret[status] = {}
@@ -923,7 +931,7 @@ class Key(object):
                     path = os.path.join(self.opts['pki_dir'], key)
                 else:
                     path = os.path.join(self.opts['pki_dir'], status, key)
-                ret[status][key] = salt.utils.pem_finger(path, sum_type=self.opts['hash_type'])
+                ret[status][key] = salt.utils.pem_finger(path, sum_type=hash_type)
         return ret
 
 
@@ -1320,10 +1328,13 @@ class RaetKey(Key):
         self.check_minion_cache()
         return self.list_keys()
 
-    def finger(self, match):
+    def finger(self, match, hash_type=None):
         '''
         Return the fingerprint for a specified key
         '''
+        if hash_type is None:
+            hash_type = __opts__['hash_type']
+
         matches = self.name_match(match, True)
         ret = {}
         for status, keys in six.iteritems(matches):
@@ -1336,10 +1347,13 @@ class RaetKey(Key):
                 ret[status][key] = self._get_key_finger(path)
         return ret
 
-    def finger_all(self):
+    def finger_all(self, hash_type=None):
         '''
         Return fingerprints for all keys
         '''
+        if hash_type is None:
+            hash_type = __opts__['hash_type']
+
         ret = {}
         for status, keys in six.iteritems(self.list_keys()):
             ret[status] = {}

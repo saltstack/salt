@@ -461,6 +461,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
+        self.clients.setsockopt(zmq.BACKLOG, self.opts.get('zmq_backlog', 1000))
         if HAS_ZMQ_MONITOR and self.opts['zmq_monitor']:
             # Socket monitor shall be used the only for debug  purposes so using threading doesn't look too bad here
             import threading
@@ -715,6 +716,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             pub_sock.setsockopt(zmq.IPV4ONLY, 0)
+        pub_sock.setsockopt(zmq.BACKLOG, self.opts.get('zmq_backlog', 1000))
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)

@@ -4,8 +4,8 @@ Salt 2014.1.3 Release Notes
 
 :release: 2014-04-15
 
-Version 2014.1.3 is another bugfix release for :doc:`2014.1.0
-</topics/releases/2014.1.0>`.  It was created as a hotfix for a regression
+Version 2014.1.3 is another bugfix release for :ref:`2014.1.0
+<release-2014-1-0>`.  It was created as a hotfix for a regression
 found in 2014.1.2, which was not distributed.  The only change made was as
 follows:
 

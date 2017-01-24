@@ -22,7 +22,8 @@ class SSHClient(object):
     '''
     def __init__(self,
                  c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
-                 mopts=None):
+                 mopts=None,
+                 disable_custom_roster=False):
         if mopts:
             self.opts = mopts
         else:
@@ -34,6 +35,9 @@ class SSHClient(object):
                     )
                 )
             self.opts = salt.config.client_config(c_path)
+
+        # Salt API should never offer a custom roster!
+        self.opts['__disable_custom_roster'] = disable_custom_roster
 
     def _prep_ssh(
             self,

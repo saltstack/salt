@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Writing/reading defaults from an OS X minion
+Writing/reading defaults from a macOS minion
 ============================================
 
 '''

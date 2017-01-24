@@ -55,7 +55,7 @@ def available(software=True,
               severities=None,
               ):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: Nitrogen
 
     List updates that match the passed criteria.
 
@@ -179,7 +179,7 @@ def available(software=True,
 
 def list_update(name, download=False, install=False):
     '''
-    .. deprecated:: nitrogen
+    .. deprecated:: Nitrogen
        Use :func:`get` instead
     Returns details for all updates that match the search criteria
 
@@ -246,15 +246,15 @@ def list_update(name, download=False, install=False):
         salt '*' win_wua.list_update 'Microsoft Camera Codec Pack'
     '''
     salt.utils.warn_until(
-        'Oxygen',
+        'Fluorine',
         'This function is replaced by \'get\' as of Salt Nitrogen. This'
-        'warning will be removed in Salt Oxygen')
+        'warning will be removed in Salt Fluorine.')
     return get(name, download, install)
 
 
 def get(name, download=False, install=False):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: Nitrogen
 
     Returns details for all updates that match the search criteria
 
@@ -348,7 +348,7 @@ def list_updates(software=True,
                  download=False,
                  install=False):
     '''
-    .. deprecated:: nitrogen
+    .. deprecated:: Nitrogen
        Use :func:`list` instead
 
     Returns a detailed list of available updates or a summary. If download or
@@ -462,9 +462,9 @@ def list_updates(software=True,
         salt '*' win_wua.list_updates categories=['Feature Packs','Windows 8.1'] summary=True
     '''
     salt.utils.warn_until(
-        'Oxygen',
+        'Fluorine',
         'This function is replaced by \'list\' as of Salt Nitrogen. This'
-        'warning will be removed in Salt Oxygen')
+        'warning will be removed in Salt Fluorine.')
     return list(software, drivers, summary, skip_installed, categories,
                 severities, download, install)
 
@@ -478,7 +478,7 @@ def list(software=True,
          download=False,
          install=False):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: Nitrogen
 
     Returns a detailed list of available updates or a summary. If download or
     install is True the same list will be downloaded and/or installed.
@@ -616,7 +616,7 @@ def list(software=True,
 
 def download_update(name):
     '''
-    .. deprecated:: oxygen
+    .. deprecated:: Nitrogen
        Use :func:`download` instead
 
     Downloads a single update.
@@ -642,15 +642,15 @@ def download_update(name):
 
     '''
     salt.utils.warn_until(
-        'Oxygen',
+        'Fluorine',
         'This function is replaced by \'download\' as of Salt Nitrogen. This'
-        'warning will be removed in Salt Oxygen')
+        'warning will be removed in Salt Fluorine.')
     return download(name)
 
 
 def download_updates(names):
     '''
-    .. deprecated:: oxygen
+    .. deprecated:: Nitrogen
        Use :func:`download` instead
 
     Downloads updates that match the list of passed identifiers. It's easier to
@@ -673,15 +673,16 @@ def download_updates(names):
         salt '*' win_wua.download guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB2131233']
     '''
     salt.utils.warn_until(
-        'Oxygen',
+        'Fluorine',
         'This function is replaced by \'download\' as of Salt Nitrogen. This'
-        'warning will be removed in Salt Oxygen')
+        'warning will be removed in Salt Fluorine.')
     return download(names)
 
 
 def download(names):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: Nitrogen
+
     Downloads updates that match the list of passed identifiers. It's easier to
     use this function by using list_updates and setting install=True.
 
@@ -720,7 +721,7 @@ def download(names):
 
 def install_update(name):
     '''
-    .. deprecated:: oxygen
+    .. deprecated:: Nitrogen
        Use :func:`install` instead
 
     Installs a single update
@@ -746,15 +747,15 @@ def install_update(name):
         salt '*' win_wua.install_update KB12312231
     '''
     salt.utils.warn_until(
-        'Oxygen',
+        'Fluorine',
         'This function is replaced by \'install\' as of Salt Nitrogen. This'
-        'warning will be removed in Salt Oxygen')
+        'warning will be removed in Salt Fluorine.')
     return install(name)
 
 
 def install_updates(names):
     '''
-    .. deprecated:: oxygen
+    .. deprecated:: Nitrogen
        Use :func:`install` instead
 
     Installs updates that match the list of identifiers. It may be easier to use
@@ -777,15 +778,15 @@ def install_updates(names):
         salt '*' win_wua.install_updates guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB12323211']
     '''
     salt.utils.warn_until(
-        'Oxygen',
+        'Fluorine',
         'This function is replaced by \'install\' as of Salt Nitrogen. This'
-        'warning will be removed in Salt Oxygen')
+        'warning will be removed in Salt Fluorine.')
     return install(names)
 
 
 def install(names):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: Nitrogen
 
     Installs updates that match the list of identifiers. It may be easier to use
     the list_updates function and set install=True.
@@ -825,7 +826,7 @@ def install(names):
 
 def uninstall(names):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: Nitrogen
 
     Uninstall updates.
 

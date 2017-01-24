@@ -15,7 +15,6 @@
 from __future__ import absolute_import, print_function
 import os
 import sys
-import types
 import signal
 import getpass
 import logging
@@ -586,6 +585,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
     def process_log_level(self):
         if not getattr(self.options, self._loglevel_config_setting_name_, None):
+            # Log level is not set via CLI, checking loaded configuration
             if self.config.get(self._loglevel_config_setting_name_, None):
                 # Is the regular log level setting set?
                 setattr(self.options,
@@ -593,7 +593,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                         self.config.get(self._loglevel_config_setting_name_)
                        )
             else:
-                # Nothing is set on the configuration? Let's use the cli tool
+                # Nothing is set on the configuration? Let's use the CLI tool
                 # defined default
                 setattr(self.options,
                         self._loglevel_config_setting_name_,
@@ -616,6 +616,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
     def process_log_file(self):
         if not getattr(self.options, self._logfile_config_setting_name_, None):
+            # Log file is not set via CLI, checking loaded configuration
             if self.config.get(self._logfile_config_setting_name_, None):
                 # Is the regular log file setting set?
                 setattr(self.options,
@@ -623,7 +624,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                         self.config.get(self._logfile_config_setting_name_)
                        )
             else:
-                # Nothing is set on the configuration? Let's use the cli tool
+                # Nothing is set on the configuration? Let's use the CLI tool
                 # defined default
                 setattr(self.options,
                         self._logfile_config_setting_name_,
@@ -635,6 +636,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
     def process_log_level_logfile(self):
         if not getattr(self.options, self._logfile_loglevel_config_setting_name_, None):
+            # Log file level is not set via CLI, checking loaded configuration
             if self.config.get(self._logfile_loglevel_config_setting_name_, None):
                 # Is the regular log file level setting set?
                 setattr(self.options,
@@ -642,14 +644,18 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                         self.config.get(self._logfile_loglevel_config_setting_name_)
                        )
             else:
-                # Nothing is set on the configuration? Let's use the cli tool
+                # Nothing is set on the configuration? Let's use the CLI tool
                 # defined default
                 setattr(self.options,
                         self._logfile_loglevel_config_setting_name_,
-                        self._default_logging_level_
+                        # From the console log level config setting
+                        self.config.get(
+                            self._loglevel_config_setting_name_,
+                            self._default_logging_level_
+                        )
                        )
                 if self._logfile_loglevel_config_setting_name_ in self.config:
-                    # Remove it from config so it inherits from log_level
+                    # Remove it from config so it inherits from log_level_logfile
                     self.config.pop(self._logfile_loglevel_config_setting_name_)
 
     def __setup_logfile_logger_config(self, *args):  # pylint: disable=unused-argument
@@ -659,7 +665,9 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             self.config.pop(self._logfile_loglevel_config_setting_name_)
 
         loglevel = getattr(self.options,
+                           # From the options setting
                            self._logfile_loglevel_config_setting_name_,
+                           # From the default setting
                            self._default_logging_level_
                            )
 
@@ -745,7 +753,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             if self.config['user'] != current_user:
                 # Yep, not the same user!
                 # Is the current user in ACL?
-                acl = self.config.get('publisher_acl') or self.config.get('client_acl', {})
+                acl = self.config.get('publisher_acl')
                 if salt.utils.check_whitelist_blacklist(current_user, whitelist=six.iterkeys(acl)):
                     # Yep, the user is in ACL!
                     # Let's write the logfile to its home directory instead.
@@ -889,9 +897,15 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # will go through the logging listener.
             return
 
+        # ensure that yaml stays valid with log output
+        if getattr(self.options, 'output', None) == 'yaml':
+            log_format = '# {0}'.format(self.config['log_fmt_console'])
+        else:
+            log_format = self.config['log_fmt_console']
+
         log.setup_console_logger(
             self.config['log_level'],
-            log_format=self.config['log_fmt_console'],
+            log_format=log_format,
             date_format=self.config['log_datefmt_console']
         )
         for name, level in six.iteritems(self.config.get('log_granular_levels', {})):
@@ -1014,58 +1028,6 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
 
     def shutdown(self, exitcode=0, exitmsg=None):
         self.exit(exitcode, exitmsg)
-
-
-class PidfileMixin(six.with_metaclass(MixInMeta, object)):
-    _mixin_prio_ = 40
-
-    def _mixin_setup(self):
-        salt.utils.warn_until(
-            'Nitrogen',
-            'Please stop sub-classing PidfileMix and instead subclass '
-            'DaemonMixIn which contains the same behavior. PidfileMixin '
-            'will be supported until Salt {version}.'
-        )
-        try:
-            self.add_option(
-                '--pid-file', dest='pidfile',
-                default=os.path.join(
-                    syspaths.PIDFILE_DIR, '{0}.pid'.format(self.get_prog_name())
-                ),
-                help=('Specify the location of the pidfile. Default: \'%default\'.')
-            )
-
-            # Since there was no colision with DaemonMixin, let's add the
-            # pidfile mixin methods. This is used using types.MethodType
-            # because if we had defined these at the class level, they would
-            # have overridden the exact same methods from the DaemonMixin.
-
-            def set_pidfile(self):
-                from salt.utils.process import set_pidfile
-                set_pidfile(self.config['pidfile'], self.config['user'])
-
-            self.set_pidfile = types.MethodType(set_pidfile, self)
-
-            def check_pidfile(self):
-                '''
-                Report whether a pidfile exists
-                '''
-                from salt.utils.process import check_pidfile
-                return check_pidfile(self.config['pidfile'])
-
-            self.check_pidfile = types.MethodType(check_pidfile, self)
-
-            def get_pidfile(self):
-                '''
-                Return a pid contained in a pidfile
-                '''
-                from salt.utils.process import get_pidfile
-                return get_pidfile(self.config['pidfile'])
-
-            self.get_pidfile = types.MethodType(get_pidfile, self)
-        except optparse.OptionConflictError:
-            # The option was already added by the DaemonMixin
-            pass
 
 
 class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
@@ -2036,9 +1998,16 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             help=('Dump the master configuration values')
         )
+        self.add_option(
+            '--preview-target',
+            dest='preview_target',
+            action='store_true',
+            default=False,
+            help=('Show the minions expected to match a target. Does not issue any command.')
+        )
 
     def _mixin_after_parsed(self):
-        if len(self.args) <= 1 and not self.options.doc:
+        if len(self.args) <= 1 and not self.options.doc and not self.options.preview_target:
             try:
                 self.print_help()
             except Exception:  # pylint: disable=broad-except
@@ -2054,6 +2023,10 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             cfg = config.master_config(self.get_config_file_path())
             sys.stdout.write(yaml.dump(cfg, default_flow_style=False))
             sys.exit(salt.defaults.exitcodes.EX_OK)
+
+        if self.options.preview_target:
+            # Insert dummy arg which won't be used
+            self.args.append('not_a_valid_command')
 
         if self.options.doc:
             # Include the target
@@ -2895,11 +2868,11 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Pass a JID to be used instead of generating one.'
         )
 
-        ports_group = optparse.OptionGroup(
-            self, 'Port Forwarding Options',
-            'Parameters for setting up SSH port forwarding.'
+        ssh_group = optparse.OptionGroup(
+            self, 'SSH Options',
+            'Parameters for the SSH client.'
         )
-        ports_group.add_option(
+        ssh_group.add_option(
             '--remote-port-forwards',
             dest='ssh_remote_port_forwards',
             help='Setup remote port forwarding using the same syntax as with '
@@ -2907,7 +2880,15 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
                  'forwarding definitions will be translated into multiple '
                  '-R parameters.'
         )
-        self.add_option_group(ports_group)
+        ssh_group.add_option(
+            '--ssh-option',
+            dest='ssh_options',
+            action='append',
+            help='Equivalent to the -o ssh command option. Passes options to '
+                 'the SSH client in the format used in the client configuration file. '
+                 'Can be used multiple times.'
+        )
+        self.add_option_group(ssh_group)
 
         auth_group = optparse.OptionGroup(
             self, 'Authentication Options',

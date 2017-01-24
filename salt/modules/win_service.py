@@ -92,9 +92,11 @@ def __virtual__():
     Only works on Windows systems with PyWin32 installed
     '''
     if not salt.utils.is_windows():
-        return (False, 'Module win_service: module only works on Windows.')
+        return False, 'Module win_service: module only works on Windows.'
+
     if not HAS_WIN32_MODS:
-        return (False, 'Module win_service: failed to load win32 modules')
+        return False, 'Module win_service: failed to load win32 modules'
+
     return __virtualname__
 
 
@@ -654,13 +656,15 @@ def modify(name,
     '''
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms681987(v=vs.85).aspx
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms681988(v-vs.85).aspx
-
     handle_scm = win32service.OpenSCManager(
         None, None, win32service.SC_MANAGER_CONNECT)
 
     try:
         handle_svc = win32service.OpenService(
-            handle_scm, name, win32service.SERVICE_ALL_ACCESS)
+            handle_scm,
+            name,
+            win32service.SERVICE_CHANGE_CONFIG |
+            win32service.SERVICE_QUERY_CONFIG)
     except pywintypes.error as exc:
         raise CommandExecutionError(
             'Failed To Open {0}: {1}'.format(name, exc[2]))

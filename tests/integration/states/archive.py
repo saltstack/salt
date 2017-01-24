@@ -36,10 +36,13 @@ ARCHIVE_TAR_SOURCE = 'http://localhost:{0}/custom.tar.gz'.format(PORT)
 UNTAR_FILE = os.path.join(ARCHIVE_DIR, 'custom/README')
 ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
-if '7' in platform.dist()[1]:
+
+REDHAT7 = False
+QUERY_OS = platform.dist()
+OS_VERSION = QUERY_OS[1]
+OS_FAMILY = QUERY_OS[0]
+if '7' in OS_VERSION and 'centos' in OS_FAMILY:
     REDHAT7 = True
-else:
-    REDHAT7 = False
 
 
 @skipIf(not REDHAT7, 'Only run on redhat7 for now due to hanging issues on other OS')

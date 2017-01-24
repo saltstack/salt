@@ -11,6 +11,7 @@ import time
 
 # Import Salt lobs
 import salt.loader
+import salt.syspaths
 from salt.payload import Serial
 
 
@@ -22,7 +23,7 @@ class Cache(object):
 
     :param cache:
         The name of the cache driver to use. This is the name of the python
-        module of the `salt.cache` package. Defult is `localfs`.
+        module of the `salt.cache` package. Default is `localfs`.
 
     :param serial:
         The module of `salt.serializers` package that should be used by the cache
@@ -47,8 +48,12 @@ class Cache(object):
     Key name is a string identifier of a data container (like a file inside a
     directory) which will hold the data.
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, cachedir=None):
         self.opts = opts
+        if cachedir is None:
+            self.cachedir = opts.get('cachedir', salt.syspaths.CACHE_DIR)
+        else:
+            self.cachedir = cachedir
         self.driver = opts['cache']
         self.serial = Serial(opts)
         self._modules = None
@@ -119,7 +124,10 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'store')
-        return self.modules[fun](bank, key, data)
+        try:
+            return self.modules[fun](bank, key, data, self.cachedir)
+        except TypeError:
+            return self.modules[fun](bank, key, data)
 
     def fetch(self, bank, key):
         '''
@@ -143,7 +151,10 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'fetch')
-        return self.modules[fun](bank, key)
+        try:
+            return self.modules[fun](bank, key, self.cachedir)
+        except TypeError:
+            return self.modules[fun](bank, key)
 
     def updated(self, bank, key):
         '''
@@ -167,7 +178,10 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'updated')
-        return self.modules[fun](bank, key)
+        try:
+            return self.modules[fun](bank, key, self.cachedir)
+        except TypeError:
+            return self.modules[fun](bank, key)
 
     def flush(self, bank, key=None):
         '''
@@ -188,7 +202,10 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'flush')
-        return self.modules[fun](bank, key=key)
+        try:
+            return self.modules[fun](bank, key=key, cachedir=self.cachedir)
+        except TypeError:
+            return self.modules[fun](bank, key=key)
 
     def list(self, bank):
         '''
@@ -207,7 +224,10 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'list')
-        return self.modules[fun](bank)
+        try:
+            return self.modules[fun](bank, self.cachedir)
+        except TypeError:
+            return self.modules[fun](bank)
 
     def contains(self, bank, key=None):
         '''
@@ -232,4 +252,7 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'contains')
-        return self.modules[fun](bank, key)
+        try:
+            return self.modules[fun](bank, key, self.cachedir)
+        except TypeError:
+            return self.modules[fun](bank, key)

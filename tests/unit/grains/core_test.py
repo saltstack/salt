@@ -417,6 +417,11 @@ PATCHLEVEL = 3
         osarch_mock = MagicMock(return_value="amd64")
         os_release_mock = MagicMock(return_value=os_release_map.get('os_release_file'))
 
+        if six.PY2:
+            built_in = '__builtin__'
+        else:
+            built_in = 'builtins'
+
         orig_import = __import__
 
         def _import_mock(name, *args):
@@ -433,7 +438,7 @@ PATCHLEVEL = 3
                 # Skip the init grain compilation (not pertinent)
                 with patch.object(os.path, 'exists', path_isfile_mock):
                     # Ensure that lsb_release fails to import
-                    with patch('__builtin__.__import__',
+                    with patch('{0}.__import__'.format(built_in),
                                side_effect=_import_mock):
                         # Skip all the /etc/*-release stuff (not pertinent)
                         with patch.object(os.path, 'isfile', path_isfile_mock):

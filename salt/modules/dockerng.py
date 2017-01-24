@@ -3559,7 +3559,8 @@ def build(path=None,
           rm=True,
           api_response=False,
           fileobj=None,
-          dockerfile=None):
+          dockerfile=None,
+          buildargs=None):
     '''
     Builds a docker image from a Dockerfile or a URL
 
@@ -3592,6 +3593,10 @@ def build(path=None,
         Dockefile is relative to the build path for the Docker container.
 
         .. versionadded:: develop
+
+    buildargs
+        A dictionary of build arguments provided to the docker build process.
+
 
     **RETURN DATA**
 
@@ -3639,7 +3644,8 @@ def build(path=None,
                                fileobj=fileobj,
                                rm=rm,
                                nocache=not cache,
-                               dockerfile=dockerfile)
+                               dockerfile=dockerfile,
+                               buildargs=buildargs)
     ret = {'Time_Elapsed': time.time() - time_started}
     _clear_context()
 
@@ -5887,11 +5893,19 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
     .. versionadded:: 2016.11.0
     '''
 
+    create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
+    for key in ('image', 'name', 'cmd', 'interactive', 'tty'):
+        try:
+            del create_kwargs[key]
+        except KeyError:
+            pass
+
     # start a new container
     ret = __salt__['dockerng.create'](image=base,
                                       name=name,
                                       cmd='sleep infinity',
-                                      interactive=True, tty=True)
+                                      interactive=True, tty=True,
+                                      **create_kwargs)
     id_ = ret['Id']
     try:
         __salt__['dockerng.start'](id_)

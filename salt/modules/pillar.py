@@ -8,7 +8,9 @@ from __future__ import absolute_import
 import collections
 
 # Import third party libs
+import copy
 import os
+import copy
 import yaml
 import salt.ext.six as six
 
@@ -16,7 +18,7 @@ import salt.ext.six as six
 import salt.pillar
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __proxyenabled__ = ['*']
 
@@ -25,7 +27,8 @@ def get(key,
         default=KeyError,
         merge=False,
         delimiter=DEFAULT_TARGET_DELIM,
-        saltenv=None):
+        saltenv=None,
+        pillarenv=None):
     '''
     .. versionadded:: 0.14
 
@@ -59,6 +62,12 @@ def get(key,
         .. versionadded:: 2014.7.0
 
     saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
+
+        .. versionadded:: Nitrogen
+
+    pillarenv
         If specified, this function will query the master to generate fresh
         pillar data on the fly, specifically from the requested pillar
         environment. Note that this can produce different pillar data than
@@ -84,12 +93,19 @@ def get(key,
         if default is KeyError:
             default = ''
     opt_merge_lists = __opts__.get('pillar_merge_lists', False)
-    pillar_dict = __pillar__ if saltenv is None else items(saltenv=saltenv)
+    pillar_dict = __pillar__ \
+        if all(x is None for x in (saltenv, pillarenv)) \
+        else items(saltenv=saltenv, pillarenv=pillarenv)
 
     if merge:
+        if not isinstance(default, dict):
+            raise SaltInvocationError(
+                'default must be a dictionary when merge=True'
+            )
         ret = salt.utils.traverse_dict_and_list(pillar_dict, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
+            default = copy.deepcopy(default)
             return salt.utils.dictupdate.update(default, ret, merge_lists=opt_merge_lists)
 
     ret = salt.utils.traverse_dict_and_list(pillar_dict,
@@ -118,12 +134,18 @@ def items(*args, **kwargs):
 
         .. versionadded:: 2015.5.0
 
-    saltenv
+    pillarenv
         Pass a specific pillar environment from which to compile pillar data.
-        If unspecified, the minion's :conf_minion:`environment` option is used,
-        and if that also is not specified then all configured pillar
+        If not specified, then the minion's :conf_minion:`pillarenv` option is
+        not used, and if that also is not specified then all configured pillar
         environments will be merged into a single pillar dictionary and
         returned.
+
+        .. versionadded:: 2016.11.2
+
+    saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
         .. versionadded:: Nitrogen
 
@@ -137,12 +159,22 @@ def items(*args, **kwargs):
     if args:
         return item(*args)
 
+    pillarenv = kwargs.get('pillarenv')
+    if pillarenv is None:
+        if __opts__.get('pillarenv_from_saltenv', False):
+            pillarenv = kwargs.get('saltenv') or __opts__['environment']
+        else:
+            pillarenv = __opts__.get('pillarenv')
+
+    opts = copy.copy(__opts__)
+    opts['pillarenv'] = pillarenv
     pillar = salt.pillar.get_pillar(
-        __opts__,
+        opts,
         __grains__,
-        __opts__['id'],
-        kwargs.get('saltenv') or __opts__['environment'],
-        pillar=kwargs.get('pillar'))
+        opts['id'],
+        saltenv=pillarenv,
+        pillar=kwargs.get('pillar'),
+        pillarenv=kwargs.get('pillarenv') or __opts__['pillarenv'])
 
     return pillar.compile_pillar()
 
@@ -223,18 +255,35 @@ def item(*args, **kwargs):
     Return one or more pillar entries
 
     pillar
-        if specified, allows for a dictionary of pillar data to be made
+        If specified, allows for a dictionary of pillar data to be made
         available to pillar and ext_pillar rendering. these pillar variables
         will also override any variables of the same name in pillar or
         ext_pillar.
 
         .. versionadded:: 2015.5.0
 
+    delimiter
+        Delimiter used to traverse nested dictionaries.
+
+        .. note::
+            This is different from :py:func:`pillar.get
+            <salt.modules.pillar.get>` in that no default value can be
+            specified. :py:func:`pillar.get <salt.modules.pillar.get>` should
+            probably still be used in most cases to retrieve nested pillar
+            values, as it is a bit more flexible. One reason to use this
+            function instead of :py:func:`pillar.get <salt.modules.pillar.get>`
+            however is when it is desirable to retrieve the values of more than
+            one key, since :py:func:`pillar.get <salt.modules.pillar.get>` can
+            only retrieve one key at a time.
+
+        .. versionadded:: 2015.8.0
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' pillar.item foo
+        salt '*' pillar.item foo:bar
         salt '*' pillar.item foo bar baz
     '''
     ret = {}

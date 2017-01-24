@@ -25,7 +25,7 @@ param(
     [switch]$Silent
 )
 
-Clear-Host
+# Clear-Host
 Write-Output "================================================================="
 Write-Output ""
 Write-Output "               Development Environment Installation"

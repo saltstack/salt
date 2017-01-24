@@ -142,7 +142,70 @@ def extracted(name,
     Ensure that an archive is extracted to a specific directory.
 
     .. important::
+        **Changes for 2016.11.0**
+
+        In earlier releases, this state would rely on the ``if_missing``
+        argument to determine whether or not the archive needed to be
+        extracted. When this argument was not passed, then the state would just
+        assume ``if_missing`` is the same as the ``name`` argument (i.e. the
+        parent directory into which the archive would be extracted).
+
+        This caused a number of annoyances. One such annoyance was the need to
+        know beforehand a path that would result from the extraction of the
+        archive, and setting ``if_missing`` to that directory, like so:
+
+        .. code-block:: yaml
+
+            extract_myapp:
+              archive.extracted:
+                - name: /var/www
+                - source: salt://apps/src/myapp-16.2.4.tar.gz
+                - user: www
+                - group: www
+                - if_missing: /var/www/myapp-16.2.4
+
+        If ``/var/www`` already existed, this would effectively make
+        ``if_missing`` a required argument, just to get Salt to extract the
+        archive.
+
+        Some users worked around this by adding the top-level directory of the
+        archive to the end of the ``name`` argument, and then used ``--strip``
+        or ``--strip-components`` to remove that top-level dir when extracting:
+
+        .. code-block:: yaml
+
+            extract_myapp:
+              archive.extracted:
+                - name: /var/www/myapp-16.2.4
+                - source: salt://apps/src/myapp-16.2.4.tar.gz
+                - user: www
+                - group: www
+                - tar_options: --strip-components=1
+
+        With the rewrite for 2016.11.0, these workarounds are no longer
+        necessary. ``if_missing`` is still a supported argument, but it is no
+        longer required. The equivalent SLS in 2016.11.0 would be:
+
+        .. code-block:: yaml
+
+            extract_myapp:
+              archive.extracted:
+                - name: /var/www
+                - source: salt://apps/src/myapp-16.2.4.tar.gz
+                - user: www
+                - group: www
+
+        Salt now uses a function called :py:func:`archive.list
+        <salt.modules.archive.list>` to get a list of files/directories in the
+        archive. Using this information, the state can now check the minion to
+        see if any paths are missing, and know whether or not the archive needs
+        to be extracted. This makes the ``if_missing`` argument unnecessary in
+        most use cases.
+
+    .. important::
         **ZIP Archive Handling**
+
+        *Note: this information applies to 2016.11.0 and later.*
 
         Salt has two different functions for extracting ZIP archives:
 
@@ -182,18 +245,6 @@ def extracted(name,
           is the only function that can be used to extract the archive.
           Therefore, if ``use_cmd_unzip`` is specified and set to ``False``,
           and ``options`` is also set, the state will not proceed.
-
-        - *Password-protected ZIP Archives* (only supported by
-          :py:func:`archive.unzip <salt.modules.archive.unzip>`) -
-          :py:func:`archive.cmd_unzip <salt.modules.archive.cmd_unzip>` is not
-          be permitted to extract password-protected ZIP archives, as
-          attempting to do so will cause the unzip command to block on user
-          input. The :py:func:`archive.is_encrypted
-          <salt.modules.archive.unzip>` function will be used to determine if
-          the archive is password-protected. If it is, then the ``password``
-          argument will be required for the state to proceed. If
-          ``use_cmd_unzip`` is specified and set to ``True``, then the state
-          will not proceed.
 
         - *Permissions* - Due to an `upstream bug in Python`_, permissions are
           not preserved when the zipfile_ module is used to extract an archive.
@@ -313,6 +364,11 @@ def extracted(name,
         **For ZIP archives only.** Password used for extraction.
 
         .. versionadded:: 2016.3.0
+        .. versionchanged:: 2016.11.0
+          The newly-added :py:func:`archive.is_encrypted
+          <salt.modules.archive.is_encrypted>` function will be used to
+          determine if the archive is password-protected. If it is, then the
+          ``password`` argument will be required for the state to proceed.
 
     options
         **For tar and zip archives only.**  This option can be used to specify
@@ -644,6 +700,14 @@ def extracted(name,
     urlparsed_source = _urlparse(source_match)
     source_hash_basename = urlparsed_source.path or urlparsed_source.netloc
 
+    source_is_local = urlparsed_source.scheme in ('', 'file')
+    if source_is_local:
+        # Get rid of "file://" from start of source_match
+        source_match = urlparsed_source.path
+        if not os.path.isfile(source_match):
+            ret['comment'] = 'Source file \'{0}\' does not exist'.format(source_match)
+            return ret
+
     valid_archive_formats = ('tar', 'rar', 'zip')
     if not archive_format:
         archive_format = salt.utils.files.guess_archive_type(source_hash_basename)
@@ -771,16 +835,19 @@ def extracted(name,
             )
             return ret
 
-    cached_source = os.path.join(
-        __opts__['cachedir'],
-        'files',
-        __env__,
-        re.sub(r'[:/\\]', '_', source_hash_basename),
-    )
+    if source_is_local:
+        cached_source = source_match
+    else:
+        cached_source = os.path.join(
+            __opts__['cachedir'],
+            'files',
+            __env__,
+            re.sub(r'[:/\\]', '_', source_hash_basename),
+        )
 
-    if os.path.isdir(cached_source):
-        # Prevent a traceback from attempting to read from a directory path
-        salt.utils.rm_rf(cached_source)
+        if os.path.isdir(cached_source):
+            # Prevent a traceback from attempting to read from a directory path
+            salt.utils.rm_rf(cached_source)
 
     if source_hash:
         try:
@@ -802,7 +869,8 @@ def extracted(name,
     else:
         source_sum = {}
 
-    if not os.path.isfile(cached_source):
+    concurrent = bool(__opts__.get('sudo_user'))
+    if not source_is_local and not os.path.isfile(cached_source):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = \
@@ -818,8 +886,18 @@ def extracted(name,
                                                source_hash_name=source_hash_name,
                                                makedirs=True,
                                                skip_verify=skip_verify,
-                                               saltenv=__env__)
+                                               saltenv=__env__,
+                                               concurrent=concurrent)
         log.debug('file.managed: {0}'.format(file_result))
+
+        # Prevent a traceback if errors prevented the above state from getting
+        # off the ground.
+        if isinstance(file_result, list):
+            try:
+                ret['comment'] = '\n'.join(file_result)
+            except TypeError:
+                ret['comment'] = '\n'.join([str(x) for x in file_result])
+            return ret
 
         # Get actual state result. The state.single return is a single-element
         # dictionary with the state's unique ID at the top level, and its value
@@ -931,7 +1009,7 @@ def extracted(name,
                           ))
         return ret
 
-    # Check to see if we need to extract the archive. Using os.stat() in a
+    # Check to see if we need to extract the archive. Using os.lstat() in a
     # try/except is considerably faster than using os.path.exists(), and we
     # already need to catch an OSError to cover edge cases where the minion is
     # running as a non-privileged user and is trying to check for the existence
@@ -946,7 +1024,7 @@ def extracted(name,
     if not if_missing_path_exists:
         if contents is None:
             try:
-                os.stat(if_missing)
+                os.lstat(if_missing)
                 extraction_needed = False
             except OSError as exc:
                 if exc.errno == errno.ENOENT:
@@ -959,12 +1037,15 @@ def extracted(name,
                     return ret
         else:
             incorrect_type = []
-            for path_list, func in ((contents['dirs'], stat.S_ISDIR),
-                                    (contents['files'], stat.S_ISREG)):
+            for path_list, func in \
+                    ((contents['dirs'], stat.S_ISDIR),
+                     (contents['files'], lambda x: not stat.S_ISLNK(x)
+                                         and not stat.S_ISDIR(x)),
+                     (contents['links'], stat.S_ISLNK)):
                 for path in path_list:
                     full_path = os.path.join(name, path)
                     try:
-                        path_mode = os.stat(full_path.rstrip(os.sep)).st_mode
+                        path_mode = os.lstat(full_path.rstrip(os.sep)).st_mode
                         if not func(path_mode):
                             incorrect_type.append(path)
                     except OSError as exc:
@@ -972,7 +1053,7 @@ def extracted(name,
                             extraction_needed = True
                         elif exc.errno != errno.ENOTDIR:
                             # In cases where a directory path was occupied by a
-                            # file instead, all os.stat() calls to files within
+                            # file instead, all os.lstat() calls to files within
                             # that dir will raise an ENOTDIR OSError. So we
                             # expect these and will only abort here if the
                             # error code is something else.
@@ -985,8 +1066,8 @@ def extracted(name,
                 )
                 ret['comment'] = (
                     'The below paths (relative to {0}) exist, but are the '
-                    'incorrect type (i.e. file instead of directory or '
-                    'vice-versa).'.format(name)
+                    'incorrect type (file instead of directory, symlink '
+                    'instead of file, etc.).'.format(name)
                 )
                 if __opts__['test'] and clean and contents is not None:
                     ret['result'] = None
@@ -1003,7 +1084,7 @@ def extracted(name,
                 if not (clean and contents is not None):
                     if not force:
                         ret['comment'] += (
-                            'To proceed with extraction, set \'force\' to '
+                            ' To proceed with extraction, set \'force\' to '
                             'True. Note that this will remove these paths '
                             'before extracting.{0}'.format(incorrect_paths)
                         )
@@ -1016,6 +1097,7 @@ def extracted(name,
                                 salt.utils.rm_rf(full_path.rstrip(os.sep))
                                 ret['changes'].setdefault(
                                     'removed', []).append(full_path)
+                                extraction_needed = True
                             except OSError as exc:
                                 if exc.errno != errno.ENOENT:
                                     errors.append(exc.__str__())
@@ -1223,12 +1305,19 @@ def extracted(name,
     enforce_failed = []
     if user or group:
         if enforce_ownership_on:
-            enforce_dirs = [enforce_ownership_on]
-            enforce_files = []
+            if os.path.isdir(enforce_ownership_on):
+                enforce_dirs = [enforce_ownership_on]
+                enforce_files = []
+                enforce_links = []
+            else:
+                enforce_dirs = []
+                enforce_files = [enforce_ownership_on]
+                enforce_links = []
         else:
             if contents is not None:
                 enforce_dirs = contents['top_level_dirs']
                 enforce_files = contents['top_level_files']
+                enforce_links = contents['top_level_links']
 
         recurse = []
         if user:
@@ -1257,7 +1346,8 @@ def extracted(name,
                                                       user=user,
                                                       group=group,
                                                       recurse=recurse,
-                                                      test=__opts__['test'])
+                                                      test=__opts__['test'],
+                                                      concurrent=concurrent)
                 try:
                     dir_result = dir_result[next(iter(dir_result))]
                 except AttributeError:
@@ -1280,14 +1370,14 @@ def extracted(name,
                             dir_result, dirname
                         )
 
-        for filename in enforce_files:
+        for filename in enforce_files + enforce_links:
             full_path = os.path.join(name, filename)
             try:
-                # Using os.stat instead of calling out to
+                # Using os.lstat instead of calling out to
                 # __salt__['file.stats'], since we may be doing this for a lot
-                # of files, and simply calling os.stat directly will speed
+                # of files, and simply calling os.lstat directly will speed
                 # things up a bit.
-                file_stat = os.stat(full_path)
+                file_stat = os.lstat(full_path)
             except OSError as exc:
                 if not __opts__['test']:
                     if exc.errno == errno.ENOENT:
@@ -1306,7 +1396,7 @@ def extracted(name,
                         ret['changes']['updated ownership'] = True
                     else:
                         try:
-                            os.chown(full_path, uid, gid)
+                            os.lchown(full_path, uid, gid)
                             ret['changes']['updated ownership'] = True
                         except OSError:
                             enforce_failed.append(filename)
@@ -1317,7 +1407,7 @@ def extracted(name,
                 ret['changes']['directories_created'] = [name]
             ret['changes']['extracted_files'] = files
             ret['comment'] = '{0} extracted to {1}'.format(source_match, name)
-            if not keep:
+            if not source_is_local and not keep:
                 log.debug('Cleaning cached source file %s', cached_source)
                 try:
                     os.remove(cached_source)
@@ -1332,7 +1422,6 @@ def extracted(name,
         else:
             ret['result'] = False
             ret['comment'] = 'Can\'t extract content of {0}'.format(source_match)
-
     else:
         ret['result'] = True
         if if_missing_path_exists:

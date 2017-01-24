@@ -116,8 +116,7 @@ def _get_repo_options_env(env):
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
     '''
     env_options = ''
@@ -159,8 +158,7 @@ def _get_repo_dists_env(env):
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
     '''
     # env key with tuple of control information for handling input env dictionary
@@ -237,8 +235,7 @@ def _create_pbuilders(env):
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
     '''
     home = os.path.expanduser('~')
@@ -611,7 +608,8 @@ def make_repo(repodir,
 
         except SaltInvocationError:
             raise SaltInvocationError(
-                'Public and Private key files associated with Pillar data and \'keyid\' {0} could not be found'
+                'Public and Private key files associated with Pillar data and \'keyid\' '
+                '{0} could not be found'
                 .format(keyid)
             )
 
@@ -626,7 +624,8 @@ def make_repo(repodir,
 
         if local_keyid is None:
             raise SaltInvocationError(
-                '\'keyid\' was not found in gpg keyring'
+                'The key ID \'{0}\' was not found in GnuPG keyring at \'{1}\''
+                .format(keyid, gnupghome)
             )
 
         _check_repo_sign_utils_support()

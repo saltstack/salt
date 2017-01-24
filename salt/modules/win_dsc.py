@@ -555,6 +555,7 @@ def set_lcm_config(config_mode=None,
 
         salt '*' dsc.set_lcm_config ApplyOnly
     '''
+    temp_dir = os.getenv('TEMP', '{0}\\temp'.format(os.getenv('WINDIR')))
     cmd = 'Configuration SaltConfig {'
     cmd += '    Node localhost {'
     cmd += '        LocalConfigurationManager {'
@@ -567,7 +568,7 @@ def set_lcm_config(config_mode=None,
             return error
         cmd += '            ConfigurationMode = "{0}";'.format(config_mode)
     if config_mode_freq:
-        if isinstance(config_mode_freq, int):
+        if not isinstance(config_mode_freq, int):
             SaltInvocationError('config_mode_freq must be an integer')
             return 'config_mode_freq must be an integer. Passed {0}'.\
                 format(config_mode_freq)
@@ -578,7 +579,7 @@ def set_lcm_config(config_mode=None,
                                 'or Pull')
         cmd += '            RefreshMode = "{0}";'.format(refresh_mode)
     if refresh_freq:
-        if isinstance(refresh_freq, int):
+        if not isinstance(refresh_freq, int):
             SaltInvocationError('refresh_freq must be an integer')
         cmd += '            RefreshFrequencyMins = {0};'.format(refresh_freq)
     if reboot_if_needed is not None:
@@ -620,19 +621,21 @@ def set_lcm_config(config_mode=None,
                                 'All')
         cmd += '            DebugMode = "{0}";'.format(debug_mode)
     if status_retention_days:
-        if isinstance(status_retention_days, int):
+        if not isinstance(status_retention_days, int):
             SaltInvocationError('status_retention_days must be an integer')
         cmd += '            StatusRetentionTimeInDays = {0};'.format(status_retention_days)
     cmd += '        }}};'
-    cmd += r'SaltConfig -OutputPath "C:\DSC\SaltConfig"'
+    cmd += r'SaltConfig -OutputPath "{0}\SaltConfig"'.format(temp_dir)
 
     # Execute Config to create the .mof
     _pshell(cmd)
 
     # Apply the config
-    cmd = r'Set-DscLocalConfigurationManager -Path "C:\DSC\SaltConfig"'
-    ret = _pshell(cmd)
-    if not ret:
+    cmd = r'Set-DscLocalConfigurationManager -Path "{0}\SaltConfig"' \
+          r''.format(temp_dir)
+    ret = __salt__['cmd.run_all'](cmd, shell='powershell', python_shell=True)
+    __salt__['file.remove'](r'{0}\SaltConfig'.format(temp_dir))
+    if not ret['retcode']:
         log.info('LCM config applied successfully')
         return True
     else:

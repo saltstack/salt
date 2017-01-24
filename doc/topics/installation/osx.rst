@@ -1,6 +1,8 @@
-====
-OS X
-====
+.. _macos-installation:
+
+=====
+macOS
+=====
 
 Installation from the Official SaltStack Repository
 ===================================================
@@ -37,7 +39,7 @@ Installation from MacPorts
 
 Installation from Pip
 =====================
-When only using the OS X system's pip, install this way:
+When only using the macOS system's pip, install this way:
 
 .. code-block:: bash
 
@@ -46,15 +48,15 @@ When only using the OS X system's pip, install this way:
 Salt-Master Customizations
 ==========================
 .. note::
-    Salt master on OS X is not tested or supported by SaltStack. See `SaltStack Platform Support <https://saltstack.com/product-support-lifecycle/>`_ for more information.
+    Salt master on macOS is not tested or supported by SaltStack. See `SaltStack Platform Support <https://saltstack.com/product-support-lifecycle/>`_ for more information.
 
-To run salt-master on OS X, sudo add this configuration option to the /etc/salt/master file:
+To run salt-master on macOS, sudo add this configuration option to the /etc/salt/master file:
 
 .. code-block:: bash
 
     max_open_files: 8192
 
-On versions previous to OS X 10.10 (Yosemite), increase the root user maxfiles limit:
+On versions previous to macOS 10.10 (Yosemite), increase the root user maxfiles limit:
 
 .. code-block:: bash
 
@@ -62,7 +64,7 @@ On versions previous to OS X 10.10 (Yosemite), increase the root user maxfiles l
 
 .. note::
 
-    On OS X 10.10 (Yosemite) and higher, maxfiles should not be adjusted. The
+    On macOS 10.10 (Yosemite) and higher, maxfiles should not be adjusted. The
     default limits are sufficient in all but the most extreme scenarios.
     Overriding these values with the setting below will cause system
     instability!
@@ -76,5 +78,5 @@ Now the salt-master should run without errors:
 Post-installation tasks
 =======================
 
-Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
+Now go to the :ref:`Configuring Salt<configuring-salt>` page.
 

@@ -1,3 +1,5 @@
+.. _pillar-walk-through:
+
 ==================
 Pillar Walkthrough
 ==================
@@ -5,7 +7,7 @@ Pillar Walkthrough
 .. note::
 
     This walkthrough assumes that the reader has already completed the initial
-    Salt :doc:`walkthrough </topics/tutorials/walkthrough>`.
+    Salt :ref:`walkthrough <tutorial-salt-walk-through>`.
 
 Pillars are tree-like structures of data defined on the Salt Master and passed
 through to minions. They allow confidential, targeted data to be securely sent
@@ -57,9 +59,16 @@ pillar data:
     Prior to version 0.16.2, this function is named ``pillar.data``. This
     function name is still supported for backwards compatibility.
 
-By default the contents of the master configuration file are loaded into
-pillar for all minions. This enables the master configuration file to
-be used for global configuration of minions.
+By default, the contents of the master configuration file are not loaded into
+pillar for all minions. This default is stored in the ``pillar_opts`` setting,
+which defaults to ``False``.
+
+The contents of the master configuration file can be made available to minion
+pillar files. This makes global configuration of services and systems very easy,
+but note that this may not be desired or appropriate if sensitive data is stored
+in the master's configuration file. To enable the master configuration file to be
+available to a minion's pillar files, set ``pillar_opts`` to ``True`` in the
+minion configuration file.
 
 Similar to the state tree, the pillar is comprised of sls files and has a top file.
 The default location for the pillar is in /srv/pillar.
@@ -344,7 +353,7 @@ information about an infrastructure is stored in a separate location.
 Reference information on pillar and the external pillar interface can be found
 in the Salt documentation:
 
-:doc:`Pillar </topics/pillar/index>`
+:ref:`Pillar <pillar>`
 
 Minion Config in Pillar
 =======================

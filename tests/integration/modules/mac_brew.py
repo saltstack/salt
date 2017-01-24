@@ -30,7 +30,7 @@ DEL_PKG = 'acme'
 
 
 @destructiveTest
-@skipIf(not salt.utils.is_darwin(), 'Test only applies to OS X')
+@skipIf(not salt.utils.is_darwin(), 'Test only applies to macOS')
 @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
 @skipIf(not salt.utils.which('brew'), 'This test requires the brew binary')
 class BrewModuleTest(integration.ModuleCase):

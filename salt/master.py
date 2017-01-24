@@ -400,7 +400,7 @@ class Master(SMaster):
         # Let's check to see how our max open files(ulimit -n) setting is
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
         if mof_h == resource.RLIM_INFINITY:
-            # Unclear what to do with infinity... OSX reports RLIM_INFINITY as
+            # Unclear what to do with infinity... macOS reports RLIM_INFINITY as
             # hard limit,but raising to anything above soft limit fails...
             mof_h = mof_s
         log.info(
@@ -433,7 +433,7 @@ class Master(SMaster):
                 )
             except ValueError:
                 # https://github.com/saltstack/salt/issues/1991#issuecomment-13025595
-                # A user under OSX reported that our 100000 default value is
+                # A user under macOS reported that our 100000 default value is
                 # still too high.
                 log.critical(
                     'Failed to raise max open files setting to {0}. If this '
@@ -1719,13 +1719,6 @@ class ClearFuncs(object):
                                    message=msg))
 
         name = self.loadauth.load_name(clear_load)
-        if not ((name in self.opts['external_auth'][clear_load['eauth']]) |
-                ('*' in self.opts['external_auth'][clear_load['eauth']])):
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
-                                   message=msg))
         if self.loadauth.time_auth(clear_load) is False:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
@@ -1965,15 +1958,7 @@ class ClearFuncs(object):
         '''
         extra = clear_load.get('kwargs', {})
 
-        if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
-            salt.utils.warn_until(
-                    'Nitrogen',
-                    'ACL rules should be configured with \'publisher_acl\' and '
-                    '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
-                    'This functionality will be removed in Salt Nitrogen.'
-                    )
-        publisher_acl = salt.acl.PublisherACL(
-                self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist'])
+        publisher_acl = salt.acl.PublisherACL(self.opts['publisher_acl_blacklist'])
 
         if publisher_acl.user_is_blacklisted(clear_load['user']) or \
                 publisher_acl.cmd_is_blacklisted(clear_load['fun']):
@@ -2177,7 +2162,7 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-                publisher_acl = self.opts['publisher_acl'] or self.opts['client_acl']
+                publisher_acl = self.opts['publisher_acl']
                 if self.opts['sudo_acl'] and publisher_acl:
                     publisher_acl = salt.utils.get_values_of_matching_keys(
                             publisher_acl,
@@ -2221,7 +2206,7 @@ class ClearFuncs(object):
                         return ''
                     # Build ACL matching the user name
                     acl = salt.utils.get_values_of_matching_keys(
-                            self.opts['publisher_acl'] or self.opts['client_acl'],
+                            self.opts['publisher_acl'],
                             clear_load['user'])
                     if not acl:
                         log.warning(

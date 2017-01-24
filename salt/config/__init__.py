@@ -224,6 +224,9 @@ VALID_OPTS = {
     # Force the minion into a single pillar root when it fetches pillar data from the master
     'pillarenv': str,
 
+    # Make the pillarenv always match the effective saltenv
+    'pillarenv_from_saltenv': bool,
+
     # Allows a user to provide an alternate name for top.sls
     'state_top': str,
 
@@ -508,14 +511,12 @@ VALID_OPTS = {
     # TODO unknown option!
     'auth_mode': int,
 
+    # listen queue size / backlog
+    'zmq_backlog': int,
+
     # Set the zeromq high water mark on the publisher interface.
     # http://api.zeromq.org/3-2:zmq-setsockopt
     'pub_hwm': int,
-
-    # ZMQ HWM for SaltEvent pub socket
-    'salt_event_pub_hwm': int,
-    # ZMQ HWM for EventPublisher pub socket
-    'event_publisher_pub_hwm': int,
 
     # IPC buffer size
     # Refs https://github.com/saltstack/salt/issues/34215
@@ -640,9 +641,7 @@ VALID_OPTS = {
     'syndic_failover': str,
     'syndic_forward_all_events': bool,
     'runner_dirs': list,
-    'client_acl': dict,
     'client_acl_verify': bool,
-    'client_acl_blacklist': dict,
     'publisher_acl': dict,
     'publisher_acl_blacklist': dict,
     'sudo_acl': bool,
@@ -939,6 +938,9 @@ VALID_OPTS = {
     'thin_extra_mods': str,
     'min_extra_mods': str,
 
+    # Default returners minion should use. List or comma-delimited string
+    'return': (str, list),
+
     # TLS/SSL connection options. This could be set to a dictionary containing arguments
     # corresponding to python ssl.wrap_socket method. For details see:
     # http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer
@@ -1000,6 +1002,7 @@ DEFAULT_MINION_OPTS = {
     'autoload_dynamic_modules': True,
     'environment': None,
     'pillarenv': None,
+    'pillarenv_from_saltenv': False,
     'pillar_opts': False,
     # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
     # are not used on the minion but are unavoidably in the code path
@@ -1194,10 +1197,6 @@ DEFAULT_MINION_OPTS = {
     'sudo_user': '',
     'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
     'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
-    # ZMQ HWM for SaltEvent pub socket - different for minion vs. master
-    'salt_event_pub_hwm': 2000,
-    # ZMQ HWM for EventPublisher pub socket - different for minion vs. master
-    'event_publisher_pub_hwm': 1000,
     'event_match_type': 'startswith',
     'minion_restart_command': [],
     'pub_ret': True,
@@ -1210,16 +1209,14 @@ DEFAULT_MINION_OPTS = {
     'multifunc_ordered': False,
     'beacons_before_connect': False,
     'scheduler_before_connect': False,
+    'cache': 'localfs',
 }
 
 DEFAULT_MASTER_OPTS = {
     'interface': '0.0.0.0',
     'publish_port': 4505,
+    'zmq_backlog': 1000,
     'pub_hwm': 1000,
-    # ZMQ HWM for SaltEvent pub socket - different for minion vs. master
-    'salt_event_pub_hwm': 2000,
-    # ZMQ HWM for EventPublisher pub socket - different for minion vs. master
-    'event_publisher_pub_hwm': 1000,
     'auth_mode': 1,
     'user': 'root',
     'worker_threads': 5,
@@ -1320,9 +1317,7 @@ DEFAULT_MASTER_OPTS = {
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'runner_dirs': [],
     'outputter_dirs': [],
-    'client_acl': {},
     'client_acl_verify': True,
-    'client_acl_blacklist': {},
     'publisher_acl': {},
     'publisher_acl_blacklist': {},
     'sudo_acl': False,
@@ -1528,6 +1523,7 @@ DEFAULT_CLOUD_OPTS = {
     'log_rotate_max_bytes': 0,
     'log_rotate_backup_count': 0,
     'bootstrap_delay': None,
+    'cache': 'localfs',
 }
 
 DEFAULT_API_OPTS = {
@@ -1565,25 +1561,24 @@ PROVIDER_CONFIG_DEFAULTS = {
 # <---- Salt Cloud Configuration Defaults ------------------------------------
 
 
-def _validate_file_roots(opts):
+def _validate_file_roots(file_roots):
     '''
     If the file_roots option has a key that is None then we will error out,
     just replace it with an empty list
     '''
-    if not isinstance(opts['file_roots'], dict):
+    if not isinstance(file_roots, dict):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
         return {'base': _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
-    for saltenv, dirs in six.iteritems(opts['file_roots']):
+    for saltenv, dirs in six.iteritems(file_roots):
         normalized_saltenv = six.text_type(saltenv)
         if normalized_saltenv != saltenv:
-            opts['file_roots'][normalized_saltenv] = \
-                opts['file_roots'].pop(saltenv)
+            file_roots[normalized_saltenv] = file_roots.pop(saltenv)
         if not isinstance(dirs, (list, tuple)):
-            opts['file_roots'][normalized_saltenv] = []
-        opts['file_roots'][normalized_saltenv] = \
-            _expand_glob_path(opts['file_roots'][normalized_saltenv])
-    return opts['file_roots']
+            file_roots[normalized_saltenv] = []
+        file_roots[normalized_saltenv] = \
+                _expand_glob_path(file_roots[normalized_saltenv])
+    return file_roots
 
 
 def _expand_glob_path(file_roots):
@@ -1693,13 +1688,17 @@ def _validate_opts(opts):
                            format_multi_opt(VALID_OPTS[key]))
             )
 
+    # Convert list to comma-delimited string for 'return' config option
+    if isinstance(opts.get('return'), list):
+        opts['return'] = ','.join(opts['return'])
+
     # RAET on Windows uses 'win32file.CreateMailslot()' for IPC. Due to this,
     # sock_dirs must start with '\\.\mailslot\' and not contain any colons.
     # We don't expect the user to know this, so we will fix up their path for
     # them if it isn't compliant.
     if (salt.utils.is_windows() and opts.get('transport') == 'raet' and
-             'sock_dir' in opts and
-             not opts['sock_dir'].startswith('\\\\.\\mailslot\\')):
+            'sock_dir' in opts and
+            not opts['sock_dir'].startswith('\\\\.\\mailslot\\')):
         opts['sock_dir'] = (
                 '\\\\.\\mailslot\\' + opts['sock_dir'].replace(':', ''))
 
@@ -1891,7 +1890,7 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
             if include:
                 opts.update(include_config(include, fn_, verbose))
 
-            salt.utils.dictupdate.update(configuration, opts)
+            salt.utils.dictupdate.update(configuration, opts, True, True)
 
     return configuration
 
@@ -2322,28 +2321,15 @@ def apply_cloud_config(overrides, defaults=None):
         for alias, details in six.iteritems(providers):
             if isinstance(details, list):
                 for detail in details:
-                    if 'provider' not in detail and 'driver' not in detail:
+                    if 'driver' not in detail:
                         raise salt.exceptions.SaltCloudConfigError(
                             'The cloud provider alias \'{0}\' has an entry '
-                            'missing the required setting of either '
-                            '\'provider\' or \'driver\'. Note that '
-                            '\'provider\' has been deprecated, so the '
-                            '\'driver\' notation should be used.'.format(
+                            'missing the required setting of \'driver\'.'.format(
                                 alias
                             )
                         )
-                    elif 'provider' in detail:
-                        salt.utils.warn_until(
-                            'Nitrogen',
-                            'The term \'provider\' is being deprecated in '
-                            'favor of \'driver\'. Support for \'provider\' '
-                            'will be removed in Salt Nitrogen. Please convert '
-                            'your cloud provider configuration files to use '
-                            '\'driver\'.'
-                        )
-                        driver = detail['provider']
-                    elif 'driver' in detail:
-                        driver = detail['driver']
+
+                    driver = detail['driver']
 
                     if ':' in driver:
                         # Weird, but...
@@ -2355,23 +2341,16 @@ def apply_cloud_config(overrides, defaults=None):
                     detail['provider'] = '{0}:{1}'.format(alias, driver)
                     config['providers'][alias][driver] = detail
             elif isinstance(details, dict):
-                if 'provider' not in details and 'driver' not in details:
+                if 'driver' not in details:
                     raise salt.exceptions.SaltCloudConfigError(
                         'The cloud provider alias \'{0}\' has an entry '
-                        'missing the required setting of either '
-                        '\'provider\' or \'driver\''.format(alias)
+                        'missing the required setting of \'driver\''.format(
+                            alias
+                        )
                     )
-                elif 'provider' in details:
-                    salt.utils.warn_until(
-                        'Nitrogen',
-                        'The term \'provider\' is being deprecated in favor '
-                        'of \'driver\' and support for \'provider\' will be '
-                        'removed in Salt Nitrogen. Please convert your cloud '
-                        'provider  configuration files to use \'driver\'.'
-                    )
-                    driver = details['provider']
-                elif 'driver' in details:
-                    driver = details['driver']
+
+                driver = details['driver']
+
                 if ':' in driver:
                     # Weird, but...
                     alias, driver = driver.split(':')
@@ -2414,11 +2393,6 @@ def old_to_new(opts):
 
         lprovider = provider.lower()
         if provider_config:
-            # Since using "provider: <provider-engine>" is deprecated, alias provider
-            # to use driver: "driver: <provider-engine>"
-            if 'provider' in provider_config:
-                provider_config['driver'] = provider_config.pop('provider')
-
             provider_config['provider'] = lprovider
             opts.setdefault('providers', {})
             # provider alias
@@ -2529,9 +2503,10 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
             vms.pop(profile)
             continue
 
-        extended = vms.get(extends).copy()
+        extended = deepcopy(vms.get(extends))
         extended.pop('profile')
-        extended.update(details)
+        # Merge extended configuration with base profile
+        extended = salt.utils.dictupdate.update(extended, details)
 
         if ':' not in extended['provider']:
             if extended['provider'] not in providers:
@@ -2638,19 +2613,14 @@ def apply_cloud_providers_config(overrides, defaults=None):
             # we won't be able to properly reference it.
             handled_providers = set()
             for details in val:
-                if 'provider' not in details and 'driver' not in details:
+                if 'driver' not in details:
                     if 'extends' not in details:
                         log.error(
                             'Please check your cloud providers configuration. '
-                            "There's no 'driver', 'provider', nor 'extends' "
-                            'definition referenced.'
+                            'There\'s no \'driver\' nor \'extends\' definition '
+                            'referenced.'
                         )
                     continue
-
-                # Since using "provider: <provider-engine>" is deprecated,
-                # alias provider to use driver: "driver: <provider-engine>"
-                if 'provider' in details:
-                    details['driver'] = details.pop('provider')
 
                 if details['driver'] in handled_providers:
                     log.error(
@@ -2667,17 +2637,6 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 handled_providers.add(details['driver'])
 
         for entry in val:
-            # Since using "provider: <provider-engine>" is deprecated, alias provider
-            # to use driver: "driver: <provider-engine>"
-            if 'provider' in entry:
-                salt.utils.warn_until(
-                    'Nitrogen',
-                    'The term \'provider\' is being deprecated in favor of '
-                    '\'driver\'. Support for \'provider\' will be removed in '
-                    'Salt Nitrogen. Please convert your cloud provider '
-                    'configuration files to use \'driver\'.'
-                )
-                entry['driver'] = entry.pop('provider')
 
             if 'driver' not in entry:
                 entry['driver'] = '-only-extendable-{0}'.format(ext_count)
@@ -2695,11 +2654,6 @@ def apply_cloud_providers_config(overrides, defaults=None):
         keep_looping = False
         for provider_alias, entries in six.iteritems(providers.copy()):
             for driver, details in six.iteritems(entries):
-                # Since using "provider: <provider-engine>" is deprecated,
-                # alias provider to use driver: "driver: <provider-engine>"
-                if 'provider' in details:
-                    details['driver'] = details.pop('provider')
-
                 # Set a holder for the defined profiles
                 providers[provider_alias][driver]['profiles'] = {}
 
@@ -2792,7 +2746,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 # Grab a copy of what should be extended
                 extended = providers.get(ext_alias).get(ext_driver).copy()
                 # Merge the data to extend with the details
-                extended.update(details)
+                extended = salt.utils.dictupdate.update(extended, details)
                 # Update the providers dictionary with the merged data
                 providers[alias][driver] = extended
                 # Update name of the driver, now that it's populated with extended information
@@ -2853,11 +2807,6 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
                     value.update(opts['profiles'][vm_['profile']][name].copy())
                 else:
                     value = deepcopy(opts['profiles'][vm_['profile']][name])
-
-        # Since using "provider: <provider-engine>" is deprecated, alias provider
-        # to use driver: "driver: <provider-engine>"
-        if 'provider' in vm_:
-            vm_['driver'] = vm_.pop('provider')
 
         # Let's get the value from the provider, if present.
         if ':' in vm_['driver']:
@@ -2997,6 +2946,8 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     if driver == 'linode' and profile_key.get('clonefrom', False):
         non_image_drivers.append('linode')
         non_size_drivers.append('linode')
+    elif driver == 'gce' and 'sourceImage' in str(vm_.get('ex_disks_gce_struct')):
+        non_image_drivers.append('gce')
 
     # If cloning on VMware, specifying image is not necessary.
     if driver == 'vmware' and 'image' not in list(profile_key.keys()):
@@ -3201,6 +3152,8 @@ def apply_minion_config(overrides=None,
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
+    opts['file_roots'] = _validate_file_roots(opts['file_roots'])
+    opts['pillar_roots'] = _validate_file_roots(opts['pillar_roots'])
     # Make sure ext_mods gets set if it is an untrue value
     # (here to catch older bad configs)
     opts['extension_modules'] = (
@@ -3357,7 +3310,8 @@ def apply_master_config(overrides=None, defaults=None):
     # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
-    opts['file_roots'] = _validate_file_roots(opts)
+    opts['file_roots'] = _validate_file_roots(opts['file_roots'])
+    opts['pillar_roots'] = _validate_file_roots(opts['pillar_roots'])
 
     if opts['file_ignore_regex']:
         # If file_ignore_regex was given, make sure it's wrapped in a list.
@@ -3495,17 +3449,23 @@ def api_config(path):
     Read in the Salt Master config file and add additional configs that
     need to be stubbed out for salt-api
     '''
-    # Let's grab a copy of salt's master opts
-    opts = client_config(path, defaults=DEFAULT_MASTER_OPTS)
-    # Let's override them with salt-api's required defaults
-    api_opts = DEFAULT_API_OPTS
-    api_opts.update({
+    # Let's grab a copy of salt-api's required defaults
+    opts = DEFAULT_API_OPTS
+
+    # Let's override them with salt's master opts
+    opts.update(client_config(path, defaults=DEFAULT_MASTER_OPTS))
+
+    # Let's set the pidfile and log_file values in opts to api settings
+    opts.update({
         'pidfile': opts.get('api_pidfile', DEFAULT_API_OPTS['api_pidfile']),
+        'log_file': opts.get('api_logfile', DEFAULT_API_OPTS['api_logfile']),
     })
-    opts.update(api_opts)
+
     prepend_root_dir(opts, [
         'api_pidfile',
         'api_logfile',
+        'log_file',
+        'pidfile'
     ])
     return opts
 

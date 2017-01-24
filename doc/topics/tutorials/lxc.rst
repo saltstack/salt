@@ -7,7 +7,7 @@ LXC Management with Salt
 .. note::
 
     This walkthrough assumes basic knowledge of Salt. To get up to speed, check
-    out the :doc:`Salt Walkthrough </topics/tutorials/walkthrough>`.
+    out the :ref:`Salt Walkthrough <tutorial-salt-walk-through>`.
 
 Dependencies
 ============
