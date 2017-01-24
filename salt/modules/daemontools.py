@@ -31,7 +31,7 @@ __func_alias__ = {
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'service'
+__virtualname__ = 'daemontools'
 
 VALID_SERVICE_DIRS = [
     '/service',

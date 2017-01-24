@@ -44,7 +44,7 @@ key_accept
 
 
 The functions from the proxy minion can be run from the salt commandline using
-the :doc:`salt.modules.nxos</ref/modules/all/salt.modules.nxos>` execution module.
+the :mod:`salt.modules.nxos<salt.modules.nxos>` execution module.
 
 .. note:
     If `multiprocessing: True` is set for the proxy minion config, each forked

@@ -51,6 +51,21 @@ intended to be used to deploy a file using ``contents_pillar`` with a
     files would not affected by the ``keep_newline`` configuration.  However,
     this module does not actually distinguish between binary and text files.
 
+.. versionchanged:: develop
+    Templating/rendering has been added. You can now specify a default render
+    pipeline and a black- and whitelist of (dis)allowed renderers.
+
+    .. code-block:: yaml
+
+        ext_pillar:
+          - file_tree:
+            root_dir: /path/to/root/directory
+            render_default: jinja|yaml
+            renderer_blacklist:
+              - gpg
+            renderer_whitelist:
+              - jinja
+              - yaml
 
 Assigning Pillar Data to Individual Hosts
 -----------------------------------------
@@ -154,11 +169,14 @@ from __future__ import absolute_import
 import fnmatch
 import logging
 import os
+import cStringIO
 
 # Import salt libs
+import salt.loader
 import salt.utils
 import salt.utils.dictupdate
 import salt.utils.minions
+import salt.template
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -192,11 +210,17 @@ def _check_newline(prefix, file_name, keep_newline):
     return True
 
 
-def _construct_pillar(top_dir, follow_dir_links, keep_newline=False):
+def _construct_pillar(top_dir,
+                      follow_dir_links,
+                      keep_newline=False,
+                      render_default=None,
+                      renderer_blacklist=None,
+                      renderer_whitelist=None):
     '''
     Construct pillar from file tree.
     '''
     pillar = {}
+    renderers = salt.loader.render(__opts__, __salt__)
 
     norm_top_dir = os.path.normpath(top_dir)
     for dir_path, dir_names, file_names in os.walk(
@@ -243,7 +267,15 @@ def _construct_pillar(top_dir, follow_dir_links, keep_newline=False):
                           file_path,
                           exc.strerror)
             else:
-                pillar_node[file_name] = contents
+                data = salt.template.compile_template_str(template=contents,
+                                                          renderers=renderers,
+                                                          default=render_default,
+                                                          blacklist=renderer_blacklist,
+                                                          whitelist=renderer_whitelist)
+                if isinstance(data, cStringIO.InputType):
+                    pillar_node[file_name] = data.getvalue()
+                else:
+                    pillar_node[file_name] = data
 
     return pillar
 
@@ -253,7 +285,10 @@ def ext_pillar(minion_id,
                root_dir=None,
                follow_dir_links=False,
                debug=False,
-               keep_newline=False):
+               keep_newline=False,
+               render_default=None,
+               renderer_blacklist=None,
+               renderer_whitelist=None):
     '''
     Compile pillar data for the specified minion ID
     '''
@@ -298,7 +333,10 @@ def ext_pillar(minion_id,
                         ngroup_pillar.update(
                             _construct_pillar(ngroup_dir,
                                               follow_dir_links,
-                                              keep_newline)
+                                              keep_newline,
+                                              render_default,
+                                              renderer_blacklist,
+                                              renderer_whitelist)
                         )
         else:
             if debug is True:
@@ -319,7 +357,12 @@ def ext_pillar(minion_id,
         log.error('file_tree: %s exists, but is not a directory', host_dir)
         return ngroup_pillar
 
-    host_pillar = _construct_pillar(host_dir, follow_dir_links, keep_newline)
+    host_pillar = _construct_pillar(host_dir,
+                                    follow_dir_links,
+                                    keep_newline,
+                                    render_default,
+                                    renderer_blacklist,
+                                    renderer_whitelist)
     return salt.utils.dictupdate.merge(ngroup_pillar,
                                        host_pillar,
                                        strategy='recurse')
