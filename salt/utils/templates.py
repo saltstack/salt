@@ -153,7 +153,7 @@ def wrap_tmpl_func(render_str):
             tmplstr = tmplsrc.read()
             tmplsrc.close()
         try:
-            output = render_str(tmplstr, context, tmplpath)
+            output = render_str(tmplstr, context, tmplpath).encode(SLS_ENCODING)
             if salt.utils.is_windows():
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
@@ -168,7 +168,7 @@ def wrap_tmpl_func(render_str):
             if to_str:  # then render as string
                 return dict(result=True, data=output)
             with tempfile.NamedTemporaryFile('wb', delete=False, prefix=salt.utils.files.TEMPFILE_PREFIX) as outf:
-                outf.write(SLS_ENCODER(output)[0])
+                outf.write(output)
                 # Note: If nothing is replaced or added by the rendering
                 #       function, then the contents of the output file will
                 #       be exactly the same as the input.
@@ -406,7 +406,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     if newline:
         output += '\n'
 
-    return output.encode(SLS_ENCODING)
+    return output
 
 
 def render_mako_tmpl(tmplstr, context, tmplpath=None):
