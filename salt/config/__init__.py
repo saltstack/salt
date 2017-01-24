@@ -1341,6 +1341,7 @@ DEFAULT_MASTER_OPTS = {
     'event_match_type': 'startswith',
     'runner_returns': True,
     'serial': 'msgpack',
+    'test': False,
     'state_verbose': True,
     'state_output': 'full',
     'state_output_diff': False,
