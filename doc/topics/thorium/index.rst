@@ -105,7 +105,7 @@ the key from the master when the minion has been gone for 60 seconds:
       key.timeout:
         - delete: 60
         - require:
-          - status: statreg
+          - status: startreg
 
 There are two stanzas in this formula, whose IDs are ``startreg`` and
 ``keydel``. The first stanza, ``startreg``, tells Thorium to keep track of
@@ -136,7 +136,7 @@ to function properly you will also need to enable the ``status`` beacon in the
 
     beacons:
       status:
-        interval: 10
+        - interval: 10
 
 This will cause the minion to use the status beacon to check in with the master
 every 10 seconds.
