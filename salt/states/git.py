@@ -1995,7 +1995,7 @@ def present(name,
 
 
 def detached(name,
-           ref,
+           rev,
            target=None,
            remote='origin',
            user=None,
@@ -2020,10 +2020,14 @@ def detached(name,
     name
         Address of the remote repository.
 
-    ref
+    rev
         The branch, tag, or commit ID to checkout after clone.
         If a branch or tag is specified it will be resolved to a commit ID
         and checked out.
+
+    ref
+        .. deprecated:: Nitrogen
+            Use ``rev`` instead.
 
     target
         Name of the target directory where repository is about to be cloned.
@@ -2092,6 +2096,7 @@ def detached(name,
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
+    ref = kwargs.pop('ref', None)
     kwargs = salt.utils.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
@@ -2099,21 +2104,30 @@ def detached(name,
             salt.utils.invalid_kwargs(kwargs, raise_exc=False)
         )
 
-    if not ref:
+    if ref is not None:
+        rev = ref
+        deprecation_msg = (
+            'The \'ref\' argument has been renamed to \'rev\' for '
+            'consistency. Please update your SLS to reflect this.'
+        )
+        ret.setdefault('warnings', []).append(deprecation_msg)
+        salt.utils.warn_until('Fluorine', deprecation_msg)
+
+    if not rev:
         return _fail(
             ret,
-            '\'{0}\' is not a valid value for the \'ref\' argument'.format(ref)
+            '\'{0}\' is not a valid value for the \'rev\' argument'.format(rev)
         )
 
     if not target:
         return _fail(
             ret,
-            '\'{0}\' is not a valid value for the \'target\' argument'.format(ref)
+            '\'{0}\' is not a valid value for the \'target\' argument'.format(rev)
         )
 
     # Ensure that certain arguments are strings to ensure that comparisons work
-    if not isinstance(ref, six.string_types):
-        ref = str(ref)
+    if not isinstance(rev, six.string_types):
+        rev = str(rev)
     if target is not None:
         if not isinstance(target, six.string_types):
             target = str(target)
@@ -2188,11 +2202,11 @@ def detached(name,
         return ret
 
     # Determine if supplied ref is a hash
-    remote_ref_type = 'ref'
+    remote_rev_type = 'ref'
     if len(ref) <= 40 \
-            and all(x in string.hexdigits for x in ref):
-        ref = ref.lower()
-        remote_ref_type = 'hash'
+            and all(x in string.hexdigits for x in rev):
+        rev = rev.lower()
+        remote_rev_type = 'hash'
 
     comments = []
     hash_exists_locally = False
@@ -2205,12 +2219,12 @@ def detached(name,
 
         local_commit_id = _get_local_rev_and_branch(target, user, password)[0]
 
-        if remote_ref_type is 'hash' \
+        if remote_rev_type is 'hash' \
                 and __salt__['git.describe'](target,
-                                             ref,
+                                             rev,
                                              user=user,
                                              password=password):
-            # The ref is a hash and it exists locally so skip to checkout
+            # The rev is a hash and it exists locally so skip to checkout
             hash_exists_locally = True
         else:
             # Check that remote is present and set to correct url
@@ -2376,13 +2390,13 @@ def detached(name,
 
     #get refs and checkout
     checkout_commit_id = ''
-    if remote_ref_type is 'hash':
-        if __salt__['git.describe'](target, ref, user=user, password=password):
-            checkout_commit_id = ref
+    if remote_rev_type is 'hash':
+        if __salt__['git.describe'](target, rev, user=user, password=password):
+            checkout_commit_id = rev
         else:
             return _fail(
                 ret,
-                'Ref does not exist: {0}'.format(ref)
+                'Revision \'{0}\' does not exist'.format(rev)
             )
     else:
         try:
@@ -2396,13 +2410,13 @@ def detached(name,
                 ignore_retcode=False)
 
             if 'refs/remotes/'+remote+'/'+ref in all_remote_refs:
-                checkout_commit_id = all_remote_refs['refs/remotes/'+remote+'/'+ref]
-            elif 'refs/tags/'+ref in all_remote_refs:
-                checkout_commit_id = all_remote_refs['refs/tags/'+ref]
+                checkout_commit_id = all_remote_refs['refs/remotes/' + remote + '/' + rev]
+            elif 'refs/tags/' + rev in all_remote_refs:
+                checkout_commit_id = all_remote_refs['refs/tags/' + rev]
             else:
                 return _fail(
                     ret,
-                    'Ref {0} does not exist'.format(ref)
+                    'Revision \'{0}\' does not exist'.format(rev)
                 )
 
         except CommandExecutionError as exc:
@@ -2425,7 +2439,7 @@ def detached(name,
             user=user,
             password=password)
         comments.append(
-            'Repository was reset to HEAD before checking out ref'
+            'Repository was reset to HEAD before checking out revision'
         )
 
     # TODO: implement clean function for git module and add clean flag
