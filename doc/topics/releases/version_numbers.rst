@@ -48,9 +48,9 @@ After the release is cut, new features would be worked on under the ``Xenon``
 code name and the process repeats itself.
 
 
-Version numberss, Git and salt --version
+Version numbers, Git and salt --version
 -------
-The salt version, for prorgammers, is based on `git describe` and presented to end users with `salt --version`.
+The salt version, for programmers, is based on `git describe` and presented to end-users with `salt --version`.
 
 Arguments for `git checkout`
   +------------+----------------------------------------------------------------------------+
