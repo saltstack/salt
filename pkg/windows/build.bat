@@ -1,5 +1,7 @@
 @echo off
-@echo Salt Windows Build Script
+@echo Salt Windows Build Script, which calls the other *.ps1 scripts.
+@echo    You may set SALTREPO_LOCAL_CACHE 
+@echo           and  SALTREPO_LOCAL_CACHE_PIP to permanent cache directories
 @echo ---------------------------------------------------------------------
 @echo.
 
