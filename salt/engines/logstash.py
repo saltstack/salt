@@ -19,7 +19,6 @@ them onto a logstash endpoint.
 # Import python libraries
 from __future__ import absolute_import
 import logging
-import json
 
 # Import salt libs
 import salt.utils.event
