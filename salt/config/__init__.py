@@ -238,7 +238,7 @@ VALID_OPTS = {
     'pillar_roots': dict,
 
     # The external pillars permitted to be used on-demand using pillar.ext
-    'on_demand_pillar': list,
+    'on_demand_ext_pillar': list,
 
     # The type of hashing algorithm to use when doing file comparisons
     'hash_type': str,
@@ -941,7 +941,7 @@ DEFAULT_MINION_OPTS = {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
                  salt.syspaths.SPM_PILLAR_PATH]
     },
-    'on_demand_pillar': ['libvirt', 'virtkey'],
+    'on_demand_ext_pillar': ['libvirt', 'virtkey'],
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
     'git_pillar_env': '',
@@ -1115,7 +1115,7 @@ DEFAULT_MASTER_OPTS = {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
                  salt.syspaths.SPM_PILLAR_PATH]
     },
-    'on_demand_pillar': ['libvirt', 'virtkey'],
+    'on_demand_ext_pillar': ['libvirt', 'virtkey'],
     'thorium_interval': 0.5,
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],

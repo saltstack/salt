@@ -666,7 +666,7 @@
 #ext_pillar_first: False
 
 # The external pillars permitted to be used on-demand using pillar.ext
-#on_demand_pillar:
+#on_demand_ext_pillar:
 #  - libvirt
 #  - virtkey
 

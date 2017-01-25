@@ -1454,10 +1454,10 @@ the pillar environments.
       prod:
         - /srv/pillar/prod
 
-.. conf_minion:: on_demand_pillar
+.. conf_minion:: on_demand_ext_pillar
 
-``on_demand_pillar``
---------------------
+``on_demand_ext_pillar``
+------------------------
 
 .. versionadded:: 2016.3.6,2016.11.3,Nitrogen
 
@@ -1469,7 +1469,7 @@ external pillars are permitted to be used on-demand using :py:func:`pillar.ext
 
 .. code-block:: yaml
 
-    on_demand_pillar:
+    on_demand_ext_pillar:
       - libvirt
       - virtkey
       - git

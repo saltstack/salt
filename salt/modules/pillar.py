@@ -306,8 +306,8 @@ def ext(external, pillar=None):
     '''
     .. versionchanged:: 2016.3.6,2016.11.3,Nitrogen
         The supported ext_pillar types are now tunable using the
-        :conf_master:`on_demand_pillar` config option. Earlier releases used a
-        hard-coded default.
+        :conf_master:`on_demand_ext_pillar` config option. Earlier releases
+        used a hard-coded default.
 
     Generate the pillar and apply an explicit external pillar
 

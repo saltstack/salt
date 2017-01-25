@@ -2282,10 +2282,10 @@ configuration is the same as :conf_master:`file_roots`:
       prod:
         - /srv/pillar/prod
 
-.. conf_master:: on_demand_pillar
+.. conf_master:: on_demand_ext_pillar
 
-``on_demand_pillar``
---------------------
+``on_demand_ext_pillar``
+------------------------
 
 .. versionadded:: 2016.3.6,2016.11.3,Nitrogen
 
@@ -2296,7 +2296,7 @@ The external pillars permitted to be used on-demand using :py:func:`pillar.ext
 
 .. code-block:: yaml
 
-    on_demand_pillar:
+    on_demand_ext_pillar:
       - libvirt
       - virtkey
       - git
