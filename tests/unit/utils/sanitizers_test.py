@@ -54,4 +54,4 @@ class SanitizersTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(ArgsTestCase, needs_daemon=False)
+    run_tests(SanitizersTestCase, needs_daemon=False)
