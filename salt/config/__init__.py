@@ -76,7 +76,7 @@ def _gather_buffer_space():
 
     Result is in bytes.
     '''
-    if HAS_PSUTIL:
+    if HAS_PSUTIL and psutil.version_info >= (0, 6, 0):
         # Oh good, we have psutil. This will be quick.
         total_mem = psutil.virtual_memory().total
     else:
