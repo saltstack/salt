@@ -121,9 +121,15 @@ VALID_OPTS = {
     # a master fingerprint with `salt-key -F master`
     'master_finger': str,
 
-    # Query dns server for a SRV entry for 'saltmaster' and use the response to connect
-    # to the discovered masters (needs: dig binary installed to work).
+    # Query dns server for a SRV entry and use the response to connect
+    # to the discovered masters (needs: dig, host, or nslookup binary installed
+    # to work).  You can set name in 'master_dns_discovery_name' or it'll default 
+    # to 'saltmaster' if unset.
     'master_dns_discovery': bool,
+
+    # Service name to look for with dns srv.  Defaults to 'saltmaster', useful if you
+    # have a single domain, but may have multiple data centers and separate masters.
+    'master_dns_discovery_name': str,
 
     # Domain that is used for dns discovery of salt master via SRV records. Only used
     # if 'master_dns_discovery' is true.
@@ -929,6 +935,9 @@ DEFAULT_MINION_OPTS = {
     'master_uri_format': 'default',
     'master_port': 4506,
     'master_finger': '',
+    'master_dns_discovery': False,
+    'master_dns_discovery_name': 'saltmaster',
+    'master_dns_discovery_domain': None,
     'master_shuffle': False,
     'master_alive_interval': 0,
     'master_failback': False,
