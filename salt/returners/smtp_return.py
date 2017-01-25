@@ -217,7 +217,8 @@ def returner(ret):
                                    input_data=template,
                                    **ret)
 
-    if HAS_GNUPG and gpgowner:
+    if gpgowner:
+        assert HAS_GNUPG, "gnupg is required in order to user gpgowner in smtp returner"
         gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
                         options=['--trust-model always'])
         encrypted_data = gpg.encrypt(content, to_addrs)
