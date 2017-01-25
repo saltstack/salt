@@ -661,7 +661,7 @@ class State(object):
         self._pillar_enc = pillar_enc
         self.opts['pillar'] = self._gather_pillar()
         self.state_con = context or {}
-        self.load_modules(proxy=proxy)
+        self.load_modules()
         self.active = set()
         self.mod_init = set()
         self.pre = {}
@@ -861,7 +861,8 @@ class State(object):
         if self.states_loader == 'thorium':
             self.states = salt.loader.thorium(self.opts, self.functions, {})  # TODO: Add runners
         else:
-            self.states = salt.loader.states(self.opts, self.functions, self.utils, self.serializers)
+            self.states = salt.loader.states(self.opts, self.functions, self.utils,
+                                             self.serializers, proxy=self.proxy)
 
     def load_modules(self, data=None, proxy=None):
         '''
@@ -871,7 +872,7 @@ class State(object):
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, self.state_con,
                                                  utils=self.utils,
-                                                 proxy=proxy)
+                                                 proxy=self.proxy)
         if isinstance(data, dict):
             if data.get('provider', False):
                 if isinstance(data['provider'], str):
@@ -911,7 +912,7 @@ class State(object):
                 log.error('Error encountered during module reload. Modules were not reloaded.')
             except TypeError:
                 log.error('Error encountered during module reload. Modules were not reloaded.')
-        self.load_modules(proxy=self.proxy)
+        self.load_modules()
         if not self.opts.get('local', False) and self.opts.get('multiprocessing', True):
             self.functions['saltutil.refresh_modules']()
 
@@ -3533,6 +3534,7 @@ class HighState(BaseHighState):
                            mocked=mocked,
                            loader=loader)
         self.matcher = salt.minion.Matcher(self.opts)
+        self.proxy = proxy
 
         # tracks all pydsl state declarations globally across sls files
         self._pydsl_all_decls = {}
