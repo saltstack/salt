@@ -1394,3 +1394,4 @@ def config_control(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
     return result, comment
 
 # <---- Configuration specific functions -------------------------------------------------------------------------------
+
