@@ -1930,11 +1930,6 @@ class Minion(MinionBase):
         elif tag.startswith('fire_master'):
             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
-        elif tag.startswith('__schedule_return'):
-            # reporting current connection with master
-            if data['schedule'].startswith(master_event(type='alive', master='')):
-                if data['return']:
-                    log.debug('Connected to master {0}'.format(data['schedule'].split(master_event(type='alive', master=''))[1]))
         elif tag.startswith(master_event(type='disconnected')) or tag.startswith(master_event(type='failback')):
             # if the master disconnect event is for a different master, raise an exception
             if tag.startswith(master_event(type='disconnected')) and data['master'] != self.opts['master']:
@@ -2057,6 +2052,10 @@ class Minion(MinionBase):
                     self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
                                              schedule=schedule)
         elif tag.startswith('__schedule_return'):
+            # reporting current connection with master
+            if data['schedule'].startswith(master_event(type='alive', master='')):
+                if data['return']:
+                    log.debug('Connected to master {0}'.format(data['schedule'].split(master_event(type='alive', master=''))[1]))
             self._return_pub(data, ret_cmd='_return', sync=False)
         elif tag.startswith('_salt_error'):
             if self.connected:
