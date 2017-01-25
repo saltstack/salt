@@ -46,8 +46,6 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
-    import platform
-    import salt.grains.core
 
 log = logging.getLogger(__name__)
 
@@ -76,10 +74,13 @@ def _gather_buffer_space():
 
     Result is in bytes.
     '''
-    if HAS_PSUTIL:
+    if HAS_PSUTIL and psutil.version_info >= (0, 6, 0):
         # Oh good, we have psutil. This will be quick.
         total_mem = psutil.virtual_memory().total
     else:
+        # Avoid loading core grains unless absolutely required
+        import platform
+        import salt.grains.core
         # We need to load up ``mem_total`` grain. Let's mimic required OS data.
         os_data = {'kernel': platform.system()}
         grains = salt.grains.core._memdata(os_data)
