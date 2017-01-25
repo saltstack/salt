@@ -45,11 +45,10 @@ def init(opts):
     Resource class
     '''
     log.debug('Opening connection to junos')
-    args = {"user"      : opts['proxy']['username'],
-            "host"      : opts['proxy']['host'],
-            "password"  : opts['proxy']['passwd']
-           }
-    optional_args= ['port',
+    args = { "host" : opts['proxy']['host'] }
+    optional_args= ['user',
+                    'password'
+                    'port',
                     'gather_facts', 
                     'mode',
                     'baud',
