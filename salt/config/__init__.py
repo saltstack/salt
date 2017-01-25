@@ -15,6 +15,7 @@ import codecs
 import logging
 from copy import deepcopy
 import types
+import platform
 
 # Import third party libs
 import yaml
@@ -40,14 +41,13 @@ import salt.utils.xdg
 import salt.exceptions
 from salt.utils.locales import sdecode
 import salt.defaults.exitcodes
+import salt.grains.core
 
 try:
     import psutil
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
-    import platform
-    import salt.grains.core
 
 log = logging.getLogger(__name__)
 
