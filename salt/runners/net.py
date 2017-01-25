@@ -70,6 +70,7 @@ Configuration
 .. versionadded:: Nitrogen
 '''
 
+from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
@@ -156,7 +157,7 @@ def _display_runner(rows, labels, title, display=_DEFAULT_DISPLAY):
             ret = salt.output.out_format(rows,
                                          net_runner_opts.get('outputter'),
                                          __opts__)
-        print ret
+        print(ret)
     else:
         return rows
 
@@ -776,7 +777,7 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
     '''
     if not addr:
         if display:
-            print 'Please type a valid MAC/IP Address / Device / Interface / VLAN'
+            print('Please type a valid MAC/IP Address / Device / Interface / VLAN')
         return {}
 
     device = ''
