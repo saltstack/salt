@@ -327,7 +327,7 @@
 
 # Grains cache expiration, in seconds. If the cache file is older than this
 # number of seconds then the grains cache will be dumped and fully re-populated
-# with fresh data. Defaults to 5 minutes. Will have no effect if 'grains_cache' 
+# with fresh data. Defaults to 5 minutes. Will have no effect if 'grains_cache'
 # is not enabled.
 # grains_cache_expiration: 300
 
