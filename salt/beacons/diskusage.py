@@ -66,6 +66,22 @@ def beacon(config):
             - 'c:\': 90%
             - 'd:\': 50%
 
+    Regular expressions can be used as mount points.
+
+    .. code-block:: yaml
+
+        beacons:
+          diskusage:
+            - '^\/(?!home).*$': 90%
+            - '^[a-zA-Z]:\$': 50%
+
+    The first one will match all mounted disks beginning with "/", except /home
+    The second one will match disks from A:\ to Z:\ on a Windows system
+
+    Note that if a regular expression are evaluated after static mount points,
+    which means that if a regular expression matches an other defined mount point,
+    it will override the previously defined threshold.
+
     '''
     parts = psutil.disk_partitions(all=False)
     ret = []
@@ -76,7 +92,7 @@ def beacon(config):
             _current_usage = psutil.disk_usage(mount)
         except OSError:
             # Ensure a valid mount point
-            log.error('{0} is not a valid mount point, try regex.'.format(mount))
+            log.warning('{0} is not a valid mount point, try regex.'.format(mount))
             for part in parts:
                 if re.match(mount, part.mountpoint):
                     row = {}
