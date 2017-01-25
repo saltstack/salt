@@ -72,7 +72,6 @@ def base64_decodestring(instr):
     return base64.decodestring(instr)
 
 
-
 def md5_digest(instr):
     '''
     Generate an md5 hash of a given string.

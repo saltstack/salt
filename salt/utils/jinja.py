@@ -42,6 +42,8 @@ GLOBAL_UUID = uuid.UUID('91633EBF-1C86-5E33-935A-28061F4B480E')
 
 # To dump OrderedDict objects as regular dicts. Used by the yaml
 # template filter.
+
+
 class OrderedDictDumper(yaml.Dumper):  # pylint: disable=W0232
     pass
 
@@ -307,7 +309,7 @@ def regex_match(txt, rgx, ignorecase=False, multiline=False):
 
 
 def regex_replace(txt, rgx, val, ignorecase=False, multiline=False):
-    '''
+    r'''
     Searches for a pattern and replaces with a sequence of characters.
 
     .. code-block:: jinja

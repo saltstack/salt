@@ -932,7 +932,7 @@ class TestCustomExtensions(TestCase):
 
     def test_regex_replace(self):
         '''Test the `regex_replace` Jinja filter.'''
-        rendered = render_jinja_tmpl("{{ 'lets replace spaces' | regex_replace('\s+', '__') }}",
+        rendered = render_jinja_tmpl(r"{{ 'lets replace spaces' | regex_replace('\s+', '__') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, u'lets__replace__spaces')
 
