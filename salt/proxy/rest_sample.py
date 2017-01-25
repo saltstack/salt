@@ -37,6 +37,7 @@ def __virtual__():
 # just put DETAILS['initialized'] = True here if nothing
 # else needs to be done.
 
+
 def init(opts):
     log.debug('rest_sample proxy init() called...')
     DETAILS['initialized'] = True
