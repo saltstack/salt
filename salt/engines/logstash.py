@@ -66,4 +66,4 @@ def start(host, port=5959, tag='salt/engine/logstash'):
     while True:
         event = event_bus.get_event()
         if event:
-            logstash_logger.info(tag, extra=json.dumps(event))
+            logstash_logger.info(tag, extra=event)
