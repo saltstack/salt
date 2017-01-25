@@ -901,7 +901,8 @@ class Single(object):
             opts_pkg['id'] = self.id
 
             retcode = 0
-            popts = copy.deepcopy(self.context['master_opts'])
+            popts = {}
+            popts.update(opts_pkg['__master_opts__'])
             popts.update(opts_pkg)
             pillar = salt.pillar.Pillar(
                     popts,
