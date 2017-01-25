@@ -199,18 +199,43 @@ def resolve_dns(opts, fallback=True):
     return ret
 
 
-def srv_lookup(name, protocol='TCP', domain=None):
+def srv_lookup_cmd(record_name):
+    """
+    Returns back a list that can be run by subprocess/etc. based on what's available on the system to do a lookup
+    :param record_name: (str) srv record to look up. '_saltmaster._tcp.example.com' for instance.
+    :return:
+    """
+    cmd = None
+    lookupcmds = {'host': ['-t', 'SRV', record_name],
+                  'nslookup': ['-query=SRV', record_name],
+                  'dig': ['+short', record_name, 'SRV']
+                  }
+
+    for i, k in six.iteritems(lookupcmds):
+        if salt.utils.which(i):
+            k.insert(0, salt.utils.which(i))
+            cmd = k
+            break
+    return cmd
+
+
+def srv_lookup(name, protocol='TCP', domain=None, **kwargs):
     if domain:
         domain = '.' + domain
-    record_name = '_{0}_._{1}{2}'.format(name, protocol.lower(), domain or '')
-    cmd = ['dig', '+short', record_name, 'SRV']
+    record_name = '_{0}._{1}{2}'.format(name, protocol.lower(), domain or '')
+
+    # Find which command we should be using to do lookup and pass it in
+    cmd = srv_lookup_cmd(record_name)
+
     try:
-        result = subprocess.check_output(cmd)
-    except subprocess.CalledProcessError as err:
-        raise err
-    else:
-        regex = re.compile('(?P<prio>\d+) (?P<weight>\d+) (?P<port>\d+) (?P<host>.+)')
-        return [match.groupdict() for match in regex.finditer(result)]
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
+        result = proc
+    except:
+        raise
+    regex = re.compile('(?P<prio>\d+) (?P<weight>\d+) (?P<port>\d+) (?P<host>.+)')
+    cmdout = [match.groupdict() for match in regex.finditer(result)]
+    # return sorted, by priority (lowest), then weight (highest) per SRV spec.
+    return sorted(cmdout, key=lambda x: (x['prio'], x['weight']))
 
 
 def prep_ip_port(opts):
