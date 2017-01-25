@@ -901,9 +901,9 @@ class Single(object):
             opts_pkg['id'] = self.id
 
             retcode = 0
-
+            popts = self.context['master_opts'].update(opts_pkg)
             pillar = salt.pillar.Pillar(
-                    opts_pkg,
+                    popts,
                     opts_pkg['grains'],
                     opts_pkg['id'],
                     opts_pkg.get('environment', 'base')
