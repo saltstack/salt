@@ -15,7 +15,6 @@ import codecs
 import logging
 from copy import deepcopy
 import types
-import platform
 
 # Import third party libs
 import yaml
@@ -41,7 +40,6 @@ import salt.utils.xdg
 import salt.exceptions
 from salt.utils.locales import sdecode
 import salt.defaults.exitcodes
-import salt.grains.core
 
 try:
     import psutil
@@ -80,6 +78,9 @@ def _gather_buffer_space():
         # Oh good, we have psutil. This will be quick.
         total_mem = psutil.virtual_memory().total
     else:
+        # Avoid loading core grains unless absolutely required
+        import platform
+        import salt.grains.core
         # We need to load up ``mem_total`` grain. Let's mimic required OS data.
         os_data = {'kernel': platform.system()}
         grains = salt.grains.core._memdata(os_data)
