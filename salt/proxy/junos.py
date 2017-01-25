@@ -47,7 +47,8 @@ def init(opts):
     log.debug('Opening connection to junos')
     thisproxy['conn'] = jnpr.junos.Device(user=opts['proxy']['username'],
                                           host=opts['proxy']['host'],
-                                          password=opts['proxy']['passwd'])
+                                          password=opts['proxy']['passwd'],
+                                          port=opts['proxy']['port'])
     thisproxy['conn'].open()
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
     thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
