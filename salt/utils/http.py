@@ -198,7 +198,7 @@ def query(url,
     log_url = sanitize_url(url_full, hide_fields)
 
     log.debug('Requesting URL {0} using {1} method'.format(log_url, method))
-    if method == 'POST':
+    if method == 'POST' and log.isEnabledFor(logging.TRACE):
         # Make sure no secret fields show up in logs
         if isinstance(data, dict):
             log_data = data.copy()
@@ -537,7 +537,7 @@ def query(url,
         log.trace(('Cannot Trace Log Response Text: {0}. This may be due to '
                   'incompatibilities between requests and logging.').format(exc))
 
-    if text_out is not None and os.path.exists(text_out):
+    if text_out is not None:
         with salt.utils.fopen(text_out, 'w') as tof:
             tof.write(result_text)
 

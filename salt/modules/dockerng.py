@@ -821,7 +821,11 @@ def _get_client(timeout=None):
                 raise CommandExecutionError(
                     'Docker machine {0} failed: {1}'.format(docker_machine, exc))
 
-        __context__['docker.client'] = docker.Client(**client_kwargs)
+        try:
+            __context__['docker.client'] = docker.Client(**client_kwargs)
+        except AttributeError:
+            # docker-py 2.0 renamed this client attribute
+            __context__['docker.client'] = docker.APIClient(**client_kwargs)
 
     # Set a new timeout if one was passed
     if timeout is not None and __context__['docker.client'].timeout != timeout:
