@@ -24,7 +24,7 @@ class KeychainTestCase(TestCase):
 
     def test_install_cert(self):
         '''
-            Test installing a certificate into the OSX keychain
+            Test installing a certificate into the macOS keychain
         '''
         expected = {
             'changes': {'installed': 'Friendly Name'},
@@ -47,7 +47,8 @@ class KeychainTestCase(TestCase):
 
     def test_installed_cert(self):
         '''
-            Test installing a certificate into the OSX keychain when it's already installed
+            Test installing a certificate into the macOS keychain when it's
+            already installed
         '''
         expected = {
             'changes': {},
@@ -72,7 +73,8 @@ class KeychainTestCase(TestCase):
 
     def test_uninstall_cert(self):
         '''
-            Test uninstalling a certificate into the OSX keychain when it's already installed
+            Test uninstalling a certificate into the macOS keychain when it's
+            already installed
         '''
         expected = {
             'changes': {'uninstalled': 'Friendly Name'},
@@ -95,7 +97,8 @@ class KeychainTestCase(TestCase):
 
     def test_uninstalled_cert(self):
         '''
-            Test uninstalling a certificate into the OSX keychain when it's not installed
+            Test uninstalling a certificate into the macOS keychain when it's
+            not installed
         '''
         expected = {
             'changes': {},
@@ -178,7 +181,8 @@ class KeychainTestCase(TestCase):
 
     def test_install_cert_salt_fileserver(self):
         '''
-            Test installing a certificate into the OSX keychain from the salt fileserver
+            Test installing a certificate into the macOS keychain from the salt
+            fileserver
         '''
         expected = {
             'changes': {'installed': 'Friendly Name'},
@@ -203,8 +207,8 @@ class KeychainTestCase(TestCase):
 
     def test_installed_cert_hash_different(self):
         '''
-            Test installing a certificate into the OSX keychain when it's already installed but
-            the certificate has changed
+            Test installing a certificate into the macOS keychain when it's
+            already installed but the certificate has changed
         '''
         expected = {
             'changes': {'installed': 'Friendly Name', 'uninstalled': 'Friendly Name'},

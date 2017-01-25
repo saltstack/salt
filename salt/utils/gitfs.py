@@ -680,7 +680,9 @@ class GitProvider(object):
         Resolve dynamically-set branch
         '''
         if self.branch == '__env__':
-            target = self.opts.get('environment') or 'base'
+            target = self.opts.get('pillarenv') \
+                or self.opts.get('environment') \
+                or 'base'
             return self.opts['{0}_base'.format(self.role)] \
                 if target == 'base' \
                 else target
@@ -2222,7 +2224,6 @@ class GitBase(object):
                             conf['ref'], []).append(key)
 
                 self.remotes.append(repo_obj)
-        repo_obj.mountpoint('frap')
 
         # Don't allow collisions in cachedir naming
         cachedir_map = {}

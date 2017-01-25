@@ -43,9 +43,14 @@ class RabbitmqTestCase(TestCase):
         '''
         Test if it return a list of users based off of rabbitmqctl user_list.
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\nguest\t[administrator, user]\n', 'stderr': ''})
+        mock_run = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': 'Listing users ...\nguest\t[administrator, user]\njustAnAdmin\t[administrator]\n',
+            'stderr': '',
+        })
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
+            self.assertDictEqual(rabbitmq.list_users(),
+                                 {'guest': ['administrator', 'user'], 'justAnAdmin': ['administrator']})
 
     # 'list_users_rabbitmq3' function tests: 1
 
@@ -53,9 +58,13 @@ class RabbitmqTestCase(TestCase):
         '''
         Test if it return a list of users based off of rabbitmqctl user_list.
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\nguest\t[administrator user]\n', 'stderr': ''})
+        mock_run = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': 'guest\t[administrator user]\r\nother\t[a b]\r\n',
+            'stderr': ''
+        })
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user'], 'other': ['a', 'b']})
 
     # 'list_users_with_warning_rabbitmq2' function tests: 1
 
@@ -87,26 +96,32 @@ class RabbitmqTestCase(TestCase):
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
             self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
 
-    # 'list_vhosts' function tests: 1
+    # 'list_vhosts' function tests: 2
 
     def test_list_vhosts(self):
         '''
         Test if it return a list of vhost based on rabbitmqctl list_vhosts.
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': '...\nsaltstack\n...', 'stderr': ''})
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': '/\nsaltstack\n...', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertListEqual(rabbitmq.list_vhosts(), ['...', 'saltstack', '...'])
+            self.assertListEqual(rabbitmq.list_vhosts(), ['/', 'saltstack', '...'])
+
+    def test_list_vhosts_with_warning(self):
+        '''
+        Test if it return a list of vhost based on rabbitmqctl list_vhosts even with a leading WARNING.
+        '''
+        rtn_stdout = '\n'.join([
+            'WARNING: ignoring /etc/rabbitmq/rabbitmq.conf -- location has moved to /etc/rabbitmq/rabbitmq-env.conf',
+            'Listing users ...',
+            '/',
+            'saltstack',
+            '...\n',
+        ])
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': rtn_stdout, 'stderr': ''})
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
+            self.assertListEqual(rabbitmq.list_vhosts(), ['/', 'saltstack', '...'])
 
     # 'user_exists' function tests: 2
-
-    def test_user_exists_negative(self):
-        '''
-        Negative test of whether rabbitmq-internal user exists based
-        on rabbitmqctl list_users.
-        '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\nsaltstack\t[administrator]\n...done', 'stderr': ''})
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertFalse(rabbitmq.user_exists('rabbit_user'))
 
     def test_user_exists(self):
         '''
@@ -117,7 +132,16 @@ class RabbitmqTestCase(TestCase):
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
             self.assertTrue(rabbitmq.user_exists('saltstack'))
 
-    # 'vhost_exists' function tests: 1
+    def test_user_exists_negative(self):
+        '''
+        Negative test of whether rabbitmq-internal user exists based
+        on rabbitmqctl list_users.
+        '''
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\nsaltstack\t[administrator]\n...done', 'stderr': ''})
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
+            self.assertFalse(rabbitmq.user_exists('salt'))
+
+    # 'vhost_exists' function tests: 2
 
     def test_vhost_exists(self):
         '''
@@ -127,6 +151,15 @@ class RabbitmqTestCase(TestCase):
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing vhosts ...\nsaltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
             self.assertTrue(rabbitmq.vhost_exists('saltstack'))
+
+    def test_vhost_exists_negative(self):
+        '''
+        Test if it return whether the vhost exists based
+        on rabbitmqctl list_vhosts.
+        '''
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing vhosts ...\nsaltstack', 'stderr': ''})
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
+            self.assertFalse(rabbitmq.vhost_exists('salt'))
 
     # 'add_user' function tests: 1
 
@@ -213,6 +246,22 @@ class RabbitmqTestCase(TestCase):
             self.assertDictEqual(rabbitmq.set_permissions('myvhost', 'myuser'),
                                  {'Permissions Set': 'saltstack'})
 
+    # 'list_permissions' function tests: 1
+
+    def test_list_permissions(self):
+        '''
+        Test if it lists permissions for a vhost
+        via rabbitmqctl list_permissions.
+        '''
+        mock_run = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': 'Listing stuff ...\nsaltstack\tsaltstack\t.*\t1\nguest\t0\tone\n...done',
+            'stderr': '',
+        })
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
+            self.assertDictEqual(rabbitmq.list_user_permissions('myuser'),
+                                 {'saltstack': ['saltstack', '.*', '1'], 'guest': ['0', 'one']})
+
     # 'list_user_permissions' function tests: 1
 
     def test_list_user_permissions(self):
@@ -220,10 +269,14 @@ class RabbitmqTestCase(TestCase):
         Test if it list permissions for a user
         via rabbitmqctl list_user_permissions.
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing stuff ...\nsaltstack\tsaltstack\n...done', 'stderr': ''})
+        mock_run = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': 'Listing stuff ...\nsaltstack\tsaltstack\t0\t1\nguest\t0\tone\n...done',
+            'stderr': '',
+        })
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
             self.assertDictEqual(rabbitmq.list_user_permissions('myuser'),
-                                 {'saltstack': ['saltstack']})
+                                 {'saltstack': ['saltstack', '0', '1'], 'guest': ['0', 'one']})
 
     # 'set_user_tags' function tests: 1
 
@@ -314,9 +367,9 @@ class RabbitmqTestCase(TestCase):
         '''
         Test if it returns queue details of the / virtual host
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\t0\nceleryev.234-234\t10', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertEqual(rabbitmq.list_queues(), 'saltstack')
+            self.assertDictEqual(rabbitmq.list_queues(), {'saltstack': ['0'], 'celeryev.234-234': ['10']})
 
     # 'list_queues_vhost' function tests: 1
 
@@ -324,10 +377,9 @@ class RabbitmqTestCase(TestCase):
         '''
         Test if it returns queue details of specified virtual host.
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\t0\nceleryev.234-234\t10', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertEqual(rabbitmq.list_queues_vhost('consumers'),
-                             'saltstack')
+            self.assertDictEqual(rabbitmq.list_queues_vhost('consumers'), {'saltstack': ['0'], 'celeryev.234-234': ['10']})
 
     # 'list_policies' function tests: 1
 
@@ -374,17 +426,75 @@ class RabbitmqTestCase(TestCase):
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
             self.assertFalse(rabbitmq.policy_exists('/', 'HA'))
 
-    # 'plugin_is_enabled' function tests: 1
+    # 'list_available_plugins' function tests: 2
 
-    def test_plugin_is_enabled(self):
+    def test_list_available_plugins(self):
         '''
-        Test if it return whether the plugin is enabled.
+        Test if it returns a list of plugins.
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\nsalt\nother', 'stderr': ''})
         mock_pkg = MagicMock(return_value='')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
                                             'pkg.version': mock_pkg}):
+            self.assertListEqual(rabbitmq.list_available_plugins(), ['saltstack', 'salt', 'other'])
+
+    def test_list_available_plugins_space_delimited(self):
+        '''
+        Test if it returns a list of plugins.
+        '''
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack salt other', 'stderr': ''})
+        mock_pkg = MagicMock(return_value='')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
+                                            'pkg.version': mock_pkg}):
+            self.assertListEqual(rabbitmq.list_available_plugins(), ['saltstack', 'salt', 'other'])
+
+    # 'list_enabled_plugins' function tests: 2
+
+    def test_list_enabled_plugins(self):
+        '''
+        Test if it returns a list of plugins.
+        '''
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\nsalt\nother', 'stderr': ''})
+        mock_pkg = MagicMock(return_value='')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
+                                            'pkg.version': mock_pkg}):
+            self.assertListEqual(rabbitmq.list_enabled_plugins(), ['saltstack', 'salt', 'other'])
+
+    def test_list_enabled_plugins_space_delimited(self):
+        '''
+        Test if it returns a list of plugins.
+        '''
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack salt other', 'stderr': ''})
+        mock_pkg = MagicMock(return_value='')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
+                                            'pkg.version': mock_pkg}):
+            self.assertListEqual(rabbitmq.list_enabled_plugins(), ['saltstack', 'salt', 'other'])
+
+    # 'plugin_is_enabled' function tests: 2
+
+    def test_plugin_is_enabled(self):
+        '''
+        Test if it returns true for an enabled plugin.
+        '''
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\nsalt\nother', 'stderr': ''})
+        mock_pkg = MagicMock(return_value='')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
+                                            'pkg.version': mock_pkg}):
+            self.assertTrue(rabbitmq.plugin_is_enabled('saltstack'))
             self.assertTrue(rabbitmq.plugin_is_enabled('salt'))
+            self.assertTrue(rabbitmq.plugin_is_enabled('other'))
+
+    def test_plugin_is_enabled_negative(self):
+        '''
+        Test if it returns false for a disabled plugin.
+        '''
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\nother', 'stderr': ''})
+        mock_pkg = MagicMock(return_value='')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
+                                            'pkg.version': mock_pkg}):
+            self.assertFalse(rabbitmq.plugin_is_enabled('salt'))
+            self.assertFalse(rabbitmq.plugin_is_enabled('stack'))
+            self.assertFalse(rabbitmq.plugin_is_enabled('random'))
 
     # 'enable_plugin' function tests: 1
 

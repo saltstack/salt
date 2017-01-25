@@ -48,7 +48,7 @@ minion pillar, grains, or local config file.
 
 .. note::
     The `inotify` beacon only works on OSes that have `inotify` kernel support.
-    Currently this excludes FreeBSD, Mac OS X, and Windows.
+    Currently this excludes FreeBSD, macOS, and Windows.
 
 Beacon Monitoring Interval
 --------------------------
@@ -209,7 +209,8 @@ Add the following to ``/srv/reactor/revert.sls``:
     revert-file:
       local.state.apply:
         - tgt: {{ data['data']['id'] }}
-        - mods: maintain_important_file
+        - arg:
+          - maintain_important_file
 
 .. note::
 

@@ -118,6 +118,12 @@ class CloudUtilsTestCase(TestCase):
             'fake_username')
         self.assertEqual(pw_in_keyring, 'fake_password_c8231')
 
+    def test_sftp_file_with_content_under_python3(self):
+        with self.assertRaises(Exception) as context:
+            cloud.sftp_file("/tmp/test", "ТЕСТ test content")
+        # we successful pass the place with os.write(tmpfd, ...
+        self.assertNotEqual("a bytes-like object is required, not 'str'", str(context.exception))
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(CloudUtilsTestCase, needs_daemon=False)

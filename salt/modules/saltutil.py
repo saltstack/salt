@@ -1172,6 +1172,7 @@ def runner(name, **kwargs):
     '''
     jid = kwargs.pop('__orchestration_jid__', None)
     saltenv = kwargs.pop('__env__', 'base')
+    full_return = kwargs.pop('full_return', False)
     kwargs = salt.utils.clean_kwargs(**kwargs)
 
     if 'master_job_cache' not in __opts__:
@@ -1195,7 +1196,10 @@ def runner(name, **kwargs):
             prefix='run'
         )
 
-    return rclient.cmd(name, kwarg=kwargs, print_event=False, full_return=True)
+    return rclient.cmd(name,
+                       kwarg=kwargs,
+                       print_event=False,
+                       full_return=full_return)
 
 
 def wheel(name, *args, **kwargs):

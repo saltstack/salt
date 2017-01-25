@@ -3559,7 +3559,8 @@ def build(path=None,
           rm=True,
           api_response=False,
           fileobj=None,
-          dockerfile=None):
+          dockerfile=None,
+          buildargs=None):
     '''
     Builds a docker image from a Dockerfile or a URL
 
@@ -3592,6 +3593,10 @@ def build(path=None,
         Dockefile is relative to the build path for the Docker container.
 
         .. versionadded:: develop
+
+    buildargs
+        A dictionary of build arguments provided to the docker build process.
+
 
     **RETURN DATA**
 
@@ -3639,7 +3644,8 @@ def build(path=None,
                                fileobj=fileobj,
                                rm=rm,
                                nocache=not cache,
-                               dockerfile=dockerfile)
+                               dockerfile=dockerfile,
+                               buildargs=buildargs)
     ret = {'Time_Elapsed': time.time() - time_started}
     _clear_context()
 
@@ -3799,7 +3805,7 @@ def dangling(prune=False, force=False):
     '''
     all_images = images(all=True)
     dangling_images = [x[:12] for x in _get_top_level_images(all_images)
-                       if '<none>:<none>' in all_images[x]['RepoTags']]
+                       if all_images[x]['RepoTags'] is None]
     if not prune:
         return dangling_images
 
@@ -5676,8 +5682,9 @@ def _prepare_trans_tar(name, mods=None, saltenv='base', pillar=None):
     refs = salt.client.ssh.state.lowstate_file_refs(chunks)
     _mk_fileclient()
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+        __opts__,
         __context__['cp.fileclient'],
-        chunks, refs, pillar=pillar, id_=name)
+        chunks, refs, pillar, name)
     return trans_tar
 
 
@@ -5886,11 +5893,19 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
     .. versionadded:: 2016.11.0
     '''
 
+    create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
+    for key in ('image', 'name', 'cmd', 'interactive', 'tty'):
+        try:
+            del create_kwargs[key]
+        except KeyError:
+            pass
+
     # start a new container
     ret = __salt__['dockerng.create'](image=base,
                                       name=name,
                                       cmd='sleep infinity',
-                                      interactive=True, tty=True)
+                                      interactive=True, tty=True,
+                                      **create_kwargs)
     id_ = ret['Id']
     try:
         __salt__['dockerng.start'](id_)

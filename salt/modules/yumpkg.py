@@ -413,34 +413,14 @@ def latest_version(*names, **kwargs):
     if len(names) == 0:
         return ''
 
-    # Initialize the return dict with empty strings, and populate namearch_map.
-    # namearch_map will provide a means of distinguishing between multiple
-    # matches for the same package name, for example a target of 'glibc' on an
-    # x86_64 arch would return both x86_64 and i686 versions.
-    #
-    # Note that the logic in the for loop below would place the osarch into the
-    # map for noarch packages, but those cases are accounted for when iterating
-    # through the 'yum list' results later on. If the match for that package is
-    # a noarch, then the package is assumed to be noarch, and the namearch_map
-    # is ignored.
-    ret = {}
-    namearch_map = {}
-    for name in names:
-        ret[name] = ''
-        try:
-            arch = name.rsplit('.', 1)[-1]
-            if arch not in salt.utils.pkg.rpm.ARCHES:
-                arch = __grains__['osarch']
-        except ValueError:
-            arch = __grains__['osarch']
-        namearch_map[name] = arch
-
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
 
     # Refresh before looking for the latest version available
     if refresh:
         refresh_db(**kwargs)
+
+    cur_pkgs = list_pkgs(versions_as_list=True)
 
     # Get available versions for specified package(s)
     cmd = [_yum(), '--quiet']
@@ -456,7 +436,6 @@ def latest_version(*names, **kwargs):
         if out['stderr']:
             # Check first if this is just a matter of the packages being
             # up-to-date.
-            cur_pkgs = list_pkgs()
             if not all([x in cur_pkgs for x in names]):
                 log.error(
                     'Problem encountered getting latest version for the '
@@ -473,13 +452,54 @@ def latest_version(*names, **kwargs):
             reverse=True
         )
 
+    def _check_cur(pkg):
+        if pkg.name in cur_pkgs:
+            for installed_version in cur_pkgs[pkg.name]:
+                # If any installed version is greater than the one found by
+                # yum/dnf list available, then it is not an upgrade.
+                if salt.utils.compare_versions(ver1=installed_version,
+                                               oper='>',
+                                               ver2=pkg.version,
+                                               cmp_func=version_cmp):
+                    return False
+            # pkg.version is greater than all installed versions
+            return True
+        else:
+            # Package is not installed
+            return True
+
+    ret = {}
     for name in names:
+        # Derive desired pkg arch (for arch-specific packages) based on the
+        # package name(s) passed to the function. On a 64-bit OS, "pkgame"
+        # would be assumed to match the osarch, while "pkgname.i686" would
+        # have an arch of "i686". This desired arch is then compared against
+        # the updates derived from _yum_pkginfo() above, so that we can
+        # distinguish an update for a 32-bit version of a package from its
+        # 64-bit counterpart.
+        try:
+            arch = name.rsplit('.', 1)[-1]
+            if arch not in salt.utils.pkg.rpm.ARCHES:
+                arch = __grains__['osarch']
+        except ValueError:
+            arch = __grains__['osarch']
+
+        # This loop will iterate over the updates derived by _yum_pkginfo()
+        # above, which have been sorted descendingly by version number,
+        # ensuring that the latest available version for the named package is
+        # examined first. The call to _check_cur() will ensure that a package
+        # seen by yum as "available" will only be detected as an upgrade if it
+        # has a version higher than all currently-installed versions of the
+        # package.
         for pkg in (x for x in updates if x.name == name):
-            if pkg.arch == 'noarch' or pkg.arch == namearch_map[name] \
+            # This if/or statement makes sure that we account for noarch
+            # packages as well as arch-specific packages.
+            if pkg.arch == 'noarch' or pkg.arch == arch \
                     or salt.utils.pkg.rpm.check_32(pkg.arch):
-                ret[name] = pkg.version
-                # no need to check another match, if there was one
-                break
+                if _check_cur(pkg):
+                    ret[name] = pkg.version
+                    # no need to check another match, if there was one
+                    break
         else:
             ret[name] = ''
 

@@ -39,7 +39,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         Get current settings
         '''
         if not salt.utils.is_darwin():
-            self.skipTest('Test only available on Mac OS X')
+            self.skipTest('Test only available on macOS')
 
         if not salt.utils.which('systemsetup'):
             self.skipTest('Test requires systemsetup binary')

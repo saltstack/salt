@@ -51,6 +51,7 @@ import salt.utils.atomicfile
 import salt.utils.find
 import salt.utils.filebuffer
 import salt.utils.files
+import salt.utils.locales
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, SaltInvocationError, get_error_message as _get_error_message
@@ -1683,17 +1684,15 @@ def line(path, content=None, match=None, mode=None, location=None,
     before = _regex_to_static(body, before)
     match = _regex_to_static(body, match)
 
-    if mode == 'delete':
+    if os.stat(path).st_size == 0 and mode in ('delete', 'replace'):
+        log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
+        body = ''
+    elif mode == 'delete':
         body = os.linesep.join([line for line in body.split(os.linesep) if line.find(match) < 0])
-
     elif mode == 'replace':
-        if os.stat(path).st_size == 0:
-            log.warning('Cannot find text to replace. File \'{0}\' is empty.'.format(path))
-            body = ''
-        else:
-            body = os.linesep.join([(_get_line_indent(file_line, content, indent)
-                                    if (file_line.find(match) > -1 and not file_line == content) else file_line)
-                                    for file_line in body.split(os.linesep)])
+        body = os.linesep.join([(_get_line_indent(file_line, content, indent)
+                                if (file_line.find(match) > -1 and not file_line == content) else file_line)
+                                for file_line in body.split(os.linesep)])
     elif mode == 'insert':
         if not location and not before and not after:
             raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
@@ -1864,7 +1863,8 @@ def replace(path,
     This is a pure Python implementation that wraps Python's :py:func:`~re.sub`.
 
     path
-        Filesystem path to the file to be edited
+        Filesystem path to the file to be edited. If a symlink is specified, it
+        will be resolved to its target.
 
     pattern
         A regular expression, to be matched using Python's
@@ -3167,6 +3167,25 @@ def access(path, mode):
         raise SaltInvocationError('Invalid mode specified.')
 
 
+def read(path, binary=False):
+    '''
+    .. versionadded:: Nitrogen
+
+    Return the content of the file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.read /path/to/file
+    '''
+    access_mode = 'r'
+    if binary is True:
+        access_mode += 'b'
+    with salt.utils.fopen(path, access_mode) as file_obj:
+        return file_obj.read()
+
+
 def readlink(path, canonicalize=False):
     '''
     .. versionadded:: 2014.1.0
@@ -3609,7 +3628,7 @@ def apply_template_on_contents(
             to_str=True,
             context=context_dict,
             saltenv=saltenv,
-            grains=__grains__,
+            grains=__opts__['grains'],
             pillar=__pillar__,
             salt=__salt__,
             opts=__opts__)['data'].encode('utf-8')
@@ -3778,7 +3797,7 @@ def get_managed(
                     context=context_dict,
                     salt=__salt__,
                     pillar=__pillar__,
-                    grains=__grains__,
+                    grains=__opts__['grains'],
                     opts=__opts__,
                     **kwargs)
             else:
@@ -4604,12 +4623,12 @@ def manage_file(name,
 
         # Only test the checksums on files with managed contents
         if source and not (not follow_symlinks and os.path.islink(real_name)):
-            name_sum = get_hash(real_name, source_sum['hash_type'])
+            name_sum = get_hash(real_name, source_sum.get('hash_type', __opts__.get('hash_type', 'md5')))
         else:
             name_sum = None
 
         # Check if file needs to be replaced
-        if source and (name_sum is None or source_sum['hsum'] != name_sum):
+        if source and (name_sum is None or source_sum.get('hsum', __opts__.get('hash_type', 'md5')) != name_sum):
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
@@ -4760,7 +4779,9 @@ def manage_file(name,
             ret['comment'] = 'File {0} updated'.format(name)
 
         elif not ret['changes'] and ret['result']:
-            ret['comment'] = u'File {0} is in the correct state'.format(name)
+            ret['comment'] = u'File {0} is in the correct state'.format(
+                salt.utils.locales.sdecode(name)
+            )
         if sfn:
             __clean_tmp(sfn)
         return ret
@@ -5331,8 +5352,8 @@ def list_backups(path, limit=None):
     '''
     .. versionadded:: 0.17.0
 
-    Lists the previous versions of a file backed up using Salt's :doc:`file
-    state backup </ref/states/backup_mode>` system.
+    Lists the previous versions of a file backed up using Salt's :ref:`file
+    state backup <file-state-backups>` system.
 
     path
         The path on the minion to check for backups
@@ -5402,8 +5423,8 @@ list_backup = salt.utils.alias_function(list_backups, 'list_backup')
 
 def list_backups_dir(path, limit=None):
     '''
-    Lists the previous versions of a directory backed up using Salt's :doc:`file
-    state backup </ref/states/backup_mode>` system.
+    Lists the previous versions of a directory backed up using Salt's :ref:`file
+    state backup <file-state-backups>` system.
 
     path
         The directory on the minion to check for backups
@@ -5466,7 +5487,7 @@ def restore_backup(path, backup_id):
     .. versionadded:: 0.17.0
 
     Restore a previous version of a file that was backed up using Salt's
-    :doc:`file state backup </ref/states/backup_mode>` system.
+    :ref:`file state backup <file-state-backups>` system.
 
     path
         The path on the minion to check for backups
@@ -5528,7 +5549,7 @@ def delete_backup(path, backup_id):
     .. versionadded:: 0.17.0
 
     Delete a previous version of a file that was backed up using Salt's
-    :doc:`file state backup </ref/states/backup_mode>` system.
+    :ref:`file state backup <file-state-backups>` system.
 
     path
         The path on the minion to check for backups

@@ -1,3 +1,5 @@
+.. _tutorial-multi-master-pki:
+
 =======================================
 Multi-Master-PKI Tutorial With Failover
 =======================================

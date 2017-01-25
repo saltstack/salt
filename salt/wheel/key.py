@@ -274,12 +274,15 @@ def key_str(match):
     return skey.key_str(match)
 
 
-def finger(match):
+def finger(match, hash_type=None):
     '''
     Return the matching key fingerprints. Returns a dictionary.
 
     match
         The key for with to retrieve the fingerprint.
+
+    hash_type
+        The hash algorithm used to calculate the fingerprint
 
     .. code-block:: python
 
@@ -287,8 +290,32 @@ def finger(match):
         {'minions': {'minion1': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
 
     '''
+    if hash_type is None:
+        hash_type = __opts__['hash_type']
+
     skey = get_key(__opts__)
-    return skey.finger(match)
+    return skey.finger(match, hash_type)
+
+
+def finger_master(hash_type=None):
+    '''
+    Return the fingerprint of the master's public key
+
+    hash_type
+        The hash algorithm used to calculate the fingerprint
+
+    .. code-block:: python
+
+        >>> wheel.cmd('key.finger_master')
+        {'local': {'master.pub': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
+    '''
+    keyname = 'master.pub'
+    if hash_type is None:
+        hash_type = __opts__['hash_type']
+
+    fingerprint = salt.utils.pem_finger(
+        os.path.join(__opts__['pki_dir'], keyname), sum_type=hash_type)
+    return {'local': {keyname: fingerprint}}
 
 
 def gen(id_=None, keysize=2048):

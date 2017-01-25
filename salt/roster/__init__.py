@@ -19,18 +19,42 @@ log = logging.getLogger(__name__)
 
 
 def get_roster_file(options):
-    if options.get('roster_file'):
-        template = options.get('roster_file')
-    elif 'config_dir' in options.get('__master_opts__', {}):
-        template = os.path.join(options['__master_opts__']['config_dir'],
-                                'roster')
-    elif 'config_dir' in options:
-        template = os.path.join(options['config_dir'], 'roster')
-    else:
-        template = os.path.join(salt.syspaths.CONFIG_DIR, 'roster')
+    '''
+    Find respective roster file.
+
+    :param options:
+    :return:
+    '''
+    template = None
+    # The __disable_custom_roster is always True if Salt SSH Client comes
+    # from Salt API. In that case no way to define own 'roster_file', instead
+    # this file needs to be chosen from already validated rosters
+    # (see /etc/salt/master config).
+    if options.get('__disable_custom_roster') and options.get('roster_file'):
+        roster = options.get('roster_file').strip('/')
+        for roster_location in options.get('rosters'):
+            r_file = os.path.join(roster_location, roster)
+            if os.path.isfile(r_file):
+                template = r_file
+                break
+        del options['roster_file']
+
+    if not template:
+        if options.get('roster_file'):
+            template = options.get('roster_file')
+        elif 'config_dir' in options.get('__master_opts__', {}):
+            template = os.path.join(options['__master_opts__']['config_dir'],
+                                    'roster')
+        elif 'config_dir' in options:
+            template = os.path.join(options['config_dir'], 'roster')
+        else:
+            template = os.path.join(salt.syspaths.CONFIG_DIR, 'roster')
 
     if not os.path.isfile(template):
         raise IOError('No roster file found')
+
+    if not os.access(template, os.R_OK):
+        raise IOError('Access denied to roster "{0}"'.format(template))
 
     return template
 

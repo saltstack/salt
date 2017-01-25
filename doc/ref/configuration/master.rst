@@ -41,7 +41,7 @@ The local interface to bind to.
 Default: ``False``
 
 Whether the master should listen for IPv6 connections. If this is set to True,
-the interface option must be adjusted too (for example: "interface: '::'")
+the interface option must be adjusted too (for example: ``interface: '::'``)
 
 .. code-block:: yaml
 
@@ -459,13 +459,27 @@ jobs dir.
 Default: ``True``
 
 The minion data cache is a cache of information about the minions stored on the
-master, this information is primarily the pillar and grains data. The data is
-cached in the Master cachedir under the name of the minion and used to
-predetermine what minions are expected to reply from executions.
+master, this information is primarily the pillar, grains and mine data. The data
+is cached via the cache subsystem in the Master cachedir under the name of the
+minion or in a supported database. The data is used to predetermine what minions
+are expected to reply from executions.
 
 .. code-block:: yaml
 
     minion_data_cache: True
+
+.. conf_master:: cache
+
+``cache``
+---------------------
+
+Default: ``localfs``
+
+Cache subsystem module to use for minion data cache.
+
+.. code-block:: yaml
+
+    cache: consul
 
 .. conf_master:: ext_job_cache
 
@@ -583,6 +597,31 @@ master event bus. The value is expressed in bytes.
 .. code-block:: yaml
 
     max_event_size: 1048576
+
+.. conf_master:: ping_on_rotate
+
+``ping_on_rotate``
+------------------
+
+.. versionadded:: 2014.7.0
+
+Default:  ``False``
+
+By default, the master AES key rotates every 24 hours. The next command
+following a key rotation will trigger a key refresh from the minion which may
+result in minions which do not respond to the first command after a key refresh.
+
+To tell the master to ping all minions immediately after an AES key refresh, set
+ping_on_rotate to ``True``. This should mitigate the issue where a minion does not
+appear to initially respond after a key is rotated.
+
+Note that ping_on_rotate may cause high load on the master immediately after
+the key rotation event as minions reconnect. Consider this carefully if this
+salt master is managing a large number of minions.
+
+.. code-black:: yaml
+
+    ping_on_rotate: False
 
 .. conf_master:: master_job_cache
 
@@ -718,6 +757,21 @@ Pass in an alternative location for the salt-ssh roster file.
 
     roster_file: /root/roster
 
+.. conf_master:: ssh_log_file
+
+``ssh_log_file``
+-------------------
+
+.. versionadded:: 2016.3.5
+
+Default: ``/var/log/salt/ssh``
+
+Specify the log file of the ``salt-ssh`` command.
+
+.. code-block:: yaml
+
+    ssh_log_file: /var/log/salt/ssh
+
 .. conf_master:: ssh_minion_opts
 
 ``ssh_minion_opts``
@@ -852,8 +906,7 @@ membership in the :conf_master:`autosign_file` and the
 Default: ``{}``
 
 Enable user accounts on the master to execute specific modules. These modules
-can be expressed as regular expressions. Note that client_acl option is
-deprecated by publisher_acl option and will be removed in future releases.
+can be expressed as regular expressions.
 
 .. code-block:: yaml
 
@@ -873,8 +926,7 @@ Blacklist users or modules
 
 This example would blacklist all non sudo users, including root from
 running any commands. It would also blacklist any use of the "cmd"
-module. Note that client_acl_blacklist option is deprecated by
-publisher_acl_blacklist option and will be removed in future releases.
+module.
 
 This is completely disabled by default.
 
@@ -1296,22 +1348,6 @@ Enable extra routines for YAML renderer used states containing UTF characters.
 
     yaml_utf8: False
 
-.. conf_master:: test
-
-``test``
---------
-
-Default: ``False``
-
-Set all state calls to only test if they are going to actually make changes
-or just post what changes are going to be made.
-
-.. code-block:: yaml
-
-    test: False
-
-.. conf_master:: runner_returns
-
 ``runner_returns``
 ------------------
 
@@ -1442,15 +1478,15 @@ on a large number of minions.
 ``hash_type``
 -------------
 
-Default: ``md5``
+Default: ``sha256``
 
 The hash_type is the hash to use when discovering the hash of a file on
-the master server. The default is md5, but sha1, sha224, sha256, sha384, and
+the master server. The default is sha256, but md5, sha1, sha224, sha384, and
 sha512 are also supported.
 
 .. code-block:: yaml
 
-    hash_type: md5
+    hash_type: sha256
 
 .. conf_master:: file_buffer_size
 
@@ -1671,7 +1707,6 @@ directories above the one specified will be ignored and the relative path will
     gitfs_root: somefolder/otherfolder
 
 .. versionchanged:: 2014.7.0
-
    Ability to specify gitfs roots on a per-remote basis was added. See
    :ref:`here <gitfs-per-remote-config>` for more info.
 
@@ -2390,7 +2425,7 @@ exposed.
       - 'mail\d+.mydomain.tld'
 
 
-.. _pillar-configuration:
+.. _pillar-configuration-master:
 
 Pillar Configuration
 ====================
@@ -2477,12 +2512,44 @@ There are additional details at :ref:`salt-pillars`
 Default: ``False``
 
 This option allows for external pillar sources to be evaluated before
-:conf_master:`pillar_roots`. This allows for targeting file system pillar from
-ext_pillar.
+:conf_master:`pillar_roots`. External pillar data is evaluated separately from
+:conf_master:`pillar_roots` pillar data, and then both sets of pillar data are
+merged into a single pillar dictionary, so the value of this config option will
+have an impact on which key "wins" when there is one of the same name in both
+the external pillar data and :conf_master:`pillar_roots` pillar data. By
+setting this option to ``True``, ext_pillar keys will be overridden by
+:conf_master:`pillar_roots`, while leaving it as ``False`` will allow
+ext_pillar keys to override those from :conf_master:`pillar_roots`.
+
+.. note::
+    For a while, this config option did not work as specified above, because of
+    a bug in Pillar compilation. This bug has been resolved in version 2016.3.4
+    and later.
 
 .. code-block:: yaml
 
     ext_pillar_first: False
+
+.. conf_minion:: pillarenv_from_saltenv
+
+``pillarenv_from_saltenv``
+--------------------------
+
+Default: ``False``
+
+When set to ``True``, the :conf_master:`pillarenv` value will assume the value
+of the effective saltenv when running states. This essentially makes ``salt-run
+pillar.show_pillar saltenv=dev`` equivalent to ``salt-run pillar.show_pillar
+saltenv=dev pillarenv=dev``. If :conf_master:`pillarenv` is set on the CLI, it
+will override this option.
+
+.. code-block:: yaml
+
+    pillarenv_from_saltenv: True
+
+.. note::
+    For salt remote execution commands this option should be set in the Minion
+    configuration instead.
 
 .. conf_master:: pillar_raise_on_missing
 
@@ -3011,15 +3078,16 @@ can be utilized:
 Syndic Server Settings
 ======================
 
-A Salt syndic is a Salt master used to pass commands from a higher Salt master to
-minions below the syndic. Using the syndic is simple. If this is a master that
-will have syndic servers(s) below it, set the "order_masters" setting to True.
+A Salt syndic is a Salt master used to pass commands from a higher Salt master
+to minions below the syndic. Using the syndic is simple. If this is a master
+that will have syndic servers(s) below it, set the ``order_masters`` setting to
+``True``.
 
 If this is a master that will be running a syndic daemon for passthrough the
-"syndic_master" setting needs to be set to the location of the master server.
+``syndic_master`` setting needs to be set to the location of the master server.
 
 Do not forget that, in other words, it means that it shares with the local minion
-its ID and PKI_DIR.
+its ID and PKI directory.
 
 .. conf_master:: order_masters
 
@@ -3041,9 +3109,13 @@ value must be set to True
 ``syndic_master``
 -----------------
 
-Default: ``''``
+.. versionchanged:: 2016.3.5,2016.11.1
 
-If this master will be running a salt-syndic to connect to a higher level
+    Set default higher level master address.
+
+Default: ``masterofmasters``
+
+If this master will be running the ``salt-syndic`` to connect to a higher level
 master, specify the higher level master with this configuration value.
 
 .. code-block:: yaml
@@ -3051,7 +3123,7 @@ master, specify the higher level master with this configuration value.
     syndic_master: masterofmasters
 
 You can optionally connect a syndic to multiple higher level masters by
-setting the 'syndic_master' value to a list:
+setting the ``syndic_master`` value to a list:
 
 .. code-block:: yaml
 
@@ -3059,7 +3131,7 @@ setting the 'syndic_master' value to a list:
       - masterofmasters1
       - masterofmasters2
 
-Each higher level master must be set up in a multimaster configuration.
+Each higher level master must be set up in a multi-master configuration.
 
 .. conf_master:: syndic_master_port
 
@@ -3068,7 +3140,7 @@ Each higher level master must be set up in a multimaster configuration.
 
 Default: ``4506``
 
-If this master will be running a salt-syndic to connect to a higher level
+If this master will be running the ``salt-syndic`` to connect to a higher level
 master, specify the higher level master port with this configuration value.
 
 .. code-block:: yaml
@@ -3080,28 +3152,28 @@ master, specify the higher level master port with this configuration value.
 ``syndic_pidfile``
 ------------------
 
-Default: ``salt-syndic.pid``
+Default: ``/var/run/salt-syndic.pid``
 
-If this master will be running a salt-syndic to connect to a higher level
+If this master will be running the ``salt-syndic`` to connect to a higher level
 master, specify the pidfile of the syndic daemon.
 
 .. code-block:: yaml
 
-    syndic_pidfile: syndic.pid
+    syndic_pidfile: /var/run/syndic.pid
 
 .. conf_master:: syndic_log_file
 
 ``syndic_log_file``
 -------------------
 
-Default: ``syndic.log``
+Default: ``/var/log/salt/syndic``
 
-If this master will be running a salt-syndic to connect to a higher level
-master, specify the log_file of the syndic daemon.
+If this master will be running the ``salt-syndic`` to connect to a higher level
+master, specify the log file of the syndic daemon.
 
 .. code-block:: yaml
 
-    syndic_log_file: salt-syndic.log
+    syndic_log_file: /var/log/salt-syndic.log
 
 .. conf_master:: syndic_failover
 
@@ -3120,6 +3192,36 @@ order will be used.
 .. code-block:: yaml
 
     syndic_failover: random
+
+.. conf_master:: syndic_wait
+
+``syndic_wait``
+---------------
+
+Default: ``5``
+
+The number of seconds for the salt client to wait for additional syndics to
+check in with their lists of expected minions before giving up.
+
+.. code-block:: yaml
+
+    syndic_wait: 5
+
+.. conf_master:: syndic_forward_all_events
+
+``syndic_forward_all_events``
+-------------------
+
+.. versionadded:: Nitrogen
+
+Default: ``False``
+
+Option on multi-syndic or single when connected to multiple masters to be able to
+send events to all connected masters.
+
+.. code-block:: yaml
+
+    syndic_forward_all_events: False
 
 
 Peer Publish Settings

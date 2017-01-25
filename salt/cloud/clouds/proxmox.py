@@ -509,11 +509,6 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     ret = {}
 
     __utils__['cloud.fire_event'](
@@ -678,7 +673,7 @@ def create_node(vm_, newid):
         newnode['hostname'] = vm_['name']
         newnode['ostemplate'] = vm_['image']
 
-        for prop in 'cpuunits', 'description', 'memory', 'onboot', 'net0', 'password', 'nameserver', 'swap', 'storage':
+        for prop in 'cpuunits', 'description', 'memory', 'onboot', 'net0', 'password', 'nameserver', 'swap', 'storage', 'rootfs':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 

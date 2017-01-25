@@ -2,8 +2,9 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import os
 import sys
+sys.modules['pkg_resources'] = None
+import os
 
 # Import Salt libs
 from salt.ext.six import string_types
@@ -56,6 +57,10 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             # Execution will not continue past this point
             # in batch mode.
             self._run_batch()
+            return
+
+        if self.options.preview_target:
+            self._preview_target()
             return
 
         if self.options.timeout <= 0:
@@ -192,6 +197,13 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         except (SaltInvocationError, EauthAuthenticationError, SaltClientError) as exc:
             ret = str(exc)
             self._output_ret(ret, '')
+
+    def _preview_target(self):
+        '''
+        Return a list of minions from a given target
+        '''
+        minion_list = self.local_client.gather_minions(self.config['tgt'], self.selected_target_option or 'glob')
+        self._output_ret(minion_list, self.config.get('output', 'nested'))
 
     def _run_batch(self):
         import salt.cli.batch

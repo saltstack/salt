@@ -1,3 +1,5 @@
+.. _proxy-minion-ssh-end-to-end-example:
+
 ========================================
 Salt Proxy Minion SSH End-to-End Example
 ========================================

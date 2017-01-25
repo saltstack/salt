@@ -106,4 +106,4 @@ more than one package name may be given at a time:
 Post-installation tasks
 =======================
 
-Now, go to the :doc:`Configuring Salt </ref/configuration/index>` page.
+Now, go to the :ref:`Configuring Salt <configuring-salt>` page.

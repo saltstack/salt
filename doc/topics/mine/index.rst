@@ -179,3 +179,7 @@ to add them to the pool of load balanced servers.
     {% endfor %}
 
     <...file contents snipped...>
+
+.. note::
+    The expr_form argument will be renamed to ``tgt_type`` in the Nitrogen
+    release of Salt.

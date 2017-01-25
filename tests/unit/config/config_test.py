@@ -18,17 +18,21 @@ import tempfile
 from salttesting import TestCase
 from salttesting.mock import MagicMock, patch
 from salttesting.helpers import ensure_in_syspath
-from salt.exceptions import CommandExecutionError
 
 ensure_in_syspath('../')
 
-# Import salt libs
+# Import Salt libs
 import salt.minion
 import salt.utils
 import salt.utils.network
 import integration
+from salt.syspaths import CONFIG_DIR
 from salt import config as sconfig
-from salt.exceptions import SaltCloudConfigError
+from salt.exceptions import (
+    CommandExecutionError,
+    SaltConfigurationError,
+    SaltCloudConfigError
+)
 
 # Import Third-Party Libs
 import yaml
@@ -63,6 +67,13 @@ def _unhandled_mock_read(filename):
     Raise an error because we should not be calling salt.utils.fopen()
     '''
     raise CommandExecutionError('Unhandled mock read for {0}'.format(filename))
+
+
+def _salt_configuration_error(filename):
+    '''
+    Raise an error to indicate error in the Salt configuration file
+    '''
+    raise SaltConfigurationError('Configuration error in {0}'.format(filename))
 
 
 class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
@@ -144,7 +155,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
             os.environ['SALT_MASTER_CONFIG'] = env_fpath
             # Should load from env variable, not the default configuration file.
-            config = sconfig.master_config('/etc/salt/master')
+            config = sconfig.master_config('{0}/master'.format(CONFIG_DIR))
             self.assertEqual(config['log_file'], env_fpath)
             os.environ.clear()
             os.environ.update(original_environ)
@@ -188,7 +199,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
             os.environ['SALT_MINION_CONFIG'] = env_fpath
             # Should load from env variable, not the default configuration file
-            config = sconfig.minion_config('/etc/salt/minion')
+            config = sconfig.minion_config('{0}/minion'.format(CONFIG_DIR))
             self.assertEqual(config['log_file'], env_fpath)
             os.environ.clear()
             os.environ.update(original_environ)
@@ -339,6 +350,118 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             # As proven by the assertion below, blah is True
             self.assertTrue(config['blah'])
         finally:
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
+    def test_master_file_roots_glob(self):
+        # Config file and stub file_roots.
+        fpath = tempfile.mktemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        try:
+            # Create some kown files.
+            for f in 'abc':
+                fpath = os.path.join(tempdir, f)
+                salt.utils.fopen(fpath, 'w').write(f)
+
+            salt.utils.fopen(fpath, 'w').write(
+                'file_roots:\n'
+                '  base:\n'
+                '    - {0}'.format(os.path.join(tempdir, '*'))
+            )
+            config = sconfig.master_config(fpath)
+            base = config['file_roots']['base']
+            self.assertEqual(set(base), set([
+                os.path.join(tempdir, 'a'),
+                os.path.join(tempdir, 'b'),
+                os.path.join(tempdir, 'c')
+            ]))
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
+    def test_master_pillar_roots_glob(self):
+        # Config file and stub pillar_roots.
+        fpath = tempfile.mktemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        try:
+            # Create some kown files.
+            for f in 'abc':
+                fpath = os.path.join(tempdir, f)
+                salt.utils.fopen(fpath, 'w').write(f)
+
+            salt.utils.fopen(fpath, 'w').write(
+                'pillar_roots:\n'
+                '  base:\n'
+                '    - {0}'.format(os.path.join(tempdir, '*'))
+            )
+            config = sconfig.master_config(fpath)
+            base = config['pillar_roots']['base']
+            self.assertEqual(set(base), set([
+                os.path.join(tempdir, 'a'),
+                os.path.join(tempdir, 'b'),
+                os.path.join(tempdir, 'c')
+            ]))
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
+    def test_minion_file_roots_glob(self):
+        # Config file and stub file_roots.
+        fpath = tempfile.mktemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        try:
+            # Create some kown files.
+            for f in 'abc':
+                fpath = os.path.join(tempdir, f)
+                salt.utils.fopen(fpath, 'w').write(f)
+
+            salt.utils.fopen(fpath, 'w').write(
+                'file_roots:\n'
+                '  base:\n'
+                '    - {0}'.format(os.path.join(tempdir, '*'))
+            )
+            config = sconfig.minion_config(fpath)
+            base = config['file_roots']['base']
+            self.assertEqual(set(base), set([
+                os.path.join(tempdir, 'a'),
+                os.path.join(tempdir, 'b'),
+                os.path.join(tempdir, 'c')
+            ]))
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
+    def test_minion_pillar_roots_glob(self):
+        # Config file and stub pillar_roots.
+        fpath = tempfile.mktemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        try:
+            # Create some kown files.
+            for f in 'abc':
+                fpath = os.path.join(tempdir, f)
+                salt.utils.fopen(fpath, 'w').write(f)
+
+            salt.utils.fopen(fpath, 'w').write(
+                'pillar_roots:\n'
+                '  base:\n'
+                '    - {0}'.format(os.path.join(tempdir, '*'))
+            )
+            config = sconfig.minion_config(fpath)
+            base = config['pillar_roots']['base']
+            self.assertEqual(set(base), set([
+                os.path.join(tempdir, 'a'),
+                os.path.join(tempdir, 'b'),
+                os.path.join(tempdir, 'c')
+            ]))
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
@@ -537,6 +660,33 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                           'provider': 'test-config:ec2'},
                'dev-instances': {'profile': 'dev-instances',
                                  'ssh_username': 'test_user',
+                                 'provider': 'test-config:ec2'}}
+        self.assertEqual(sconfig.apply_vm_profiles_config(providers,
+                                                          overrides,
+                                                          defaults=DEFAULT), ret)
+
+    def test_apply_vm_profiles_config_extend_override_success(self):
+        '''
+        Tests profile extends and recursively merges data elements
+        '''
+        self.maxDiff = None
+        providers = {'test-config': {'ec2': {'profiles': {}, 'driver': 'ec2'}}}
+        overrides = {'Fedora': {'image': 'test-image-2',
+                                'extends': 'dev-instances',
+                                'minion': {'grains': {'stage': 'experimental'}}},
+                     'conf_file': PATH,
+                     'dev-instances': {'ssh_username': 'test_user',
+                                       'provider': 'test-config',
+                                       'minion': {'grains': {'role': 'webserver'}}}}
+        ret = {'Fedora': {'profile': 'Fedora',
+                          'ssh_username': 'test_user',
+                          'image': 'test-image-2',
+                          'minion': {'grains': {'role': 'webserver',
+                                                'stage': 'experimental'}},
+                          'provider': 'test-config:ec2'},
+               'dev-instances': {'profile': 'dev-instances',
+                                 'ssh_username': 'test_user',
+                                 'minion': {'grains': {'role': 'webserver'}},
                                  'provider': 'test-config:ec2'}}
         self.assertEqual(sconfig.apply_vm_profiles_config(providers,
                                                           overrides,
@@ -904,6 +1054,50 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertIn('ec2-test', config['profiles'])
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
+
+    def test_include_config_without_errors(self):
+        '''
+        Tests that include_config function returns valid configuration
+        '''
+        include_file = 'minion.d/my.conf'
+        config_path = '/etc/salt/minion'
+        config_opts = {'id': 'myminion.example.com'}
+
+        with patch('glob.glob', MagicMock(return_value=include_file)):
+            with patch('salt.config._read_conf_file', MagicMock(return_value=config_opts)):
+                configuration = sconfig.include_config(include_file, config_path, verbose=False)
+
+        self.assertEqual(config_opts, configuration)
+
+    def test_include_config_with_errors(self):
+        '''
+        Tests that include_config function returns valid configuration even on errors
+        '''
+        include_file = 'minion.d/my.conf'
+        config_path = '/etc/salt/minion'
+        config_opts = {}
+
+        with patch('glob.glob', MagicMock(return_value=include_file)):
+            with patch('salt.config._read_conf_file', _salt_configuration_error):
+                configuration = sconfig.include_config(include_file, config_path, verbose=False)
+
+        self.assertEqual(config_opts, configuration)
+
+    def test_include_config_with_errors_exit(self):
+        '''
+        Tests that include_config exits on errors
+        '''
+        include_file = 'minion.d/my.conf'
+        config_path = '/etc/salt/minion'
+
+        with patch('glob.glob', MagicMock(return_value=include_file)):
+            with patch('salt.config._read_conf_file', _salt_configuration_error):
+                with self.assertRaises(SystemExit):
+                    sconfig.include_config(include_file,
+                                           config_path,
+                                           verbose=False,
+                                           exit_on_config_errors=True)
+
 
 if __name__ == '__main__':
     from integration import run_tests

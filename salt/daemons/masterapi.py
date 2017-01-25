@@ -12,6 +12,7 @@ import os
 import re
 import time
 import stat
+import msgpack
 
 # Import salt libs
 import salt.crypt
@@ -146,7 +147,12 @@ def clean_expired_tokens(opts):
         for token in filenames:
             token_path = os.path.join(dirpath, token)
             with salt.utils.fopen(token_path) as token_file:
-                token_data = serializer.loads(token_file.read())
+                try:
+                    token_data = serializer.loads(token_file.read())
+                except msgpack.UnpackValueError:
+                    # Bad token file or empty. Remove.
+                    os.remove(token_path)
+                    return
                 if 'expire' not in token_data or token_data.get('expire', 0) < time.time():
                     try:
                         os.remove(token_path)
@@ -234,14 +240,7 @@ def access_keys(opts):
     #       For now users pattern matching will not work for publisher_acl.
     users = []
     keys = {}
-    if opts['client_acl'] or opts['client_acl_blacklist']:
-        salt.utils.warn_until(
-                'Nitrogen',
-                'ACL rules should be configured with \'publisher_acl\' and '
-                '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
-                'This functionality will be removed in Salt Nitrogen.'
-                )
-    publisher_acl = opts['publisher_acl'] or opts['client_acl']
+    publisher_acl = opts['publisher_acl']
     acl_users = set(publisher_acl.keys())
     if opts.get('user'):
         acl_users.add(opts['user'])
@@ -746,12 +745,13 @@ class RemoteFuncs(object):
             return False
         if 'events' in load:
             for event in load['events']:
-                self.event.fire_event(event, event['tag'])  # old dup event
+                if 'data' in event:
+                    event_data = event['data']
+                else:
+                    event_data = event
+                self.event.fire_event(event_data, event['tag'])  # old dup event
                 if load.get('pretag') is not None:
-                    if 'data' in event:
-                        self.event.fire_event(event['data'], tagify(event['tag'], base=load['pretag']))
-                    else:
-                        self.event.fire_event(event, tagify(event['tag'], base=load['pretag']))
+                    self.event.fire_event(event_data, tagify(event['tag'], base=load['pretag']))
         else:
             tag = load['tag']
             self.event.fire_event(load, tag)
@@ -1323,16 +1323,7 @@ class LocalFuncs(object):
 
         # check blacklist/whitelist
         # Check if the user is blacklisted
-        if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
-            salt.utils.warn_until(
-                    'Nitrogen',
-                    'ACL rules should be configured with \'publisher_acl\' and '
-                    '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
-                    'This functionality will be removed in Salt Nitrogen.'
-                    )
-
-        publisher_acl = salt.acl.PublisherACL(
-                self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist'])
+        publisher_acl = salt.acl.PublisherACL(self.opts['publisher_acl_blacklist'])
         good = not publisher_acl.user_is_blacklisted(load['user']) and \
                 not publisher_acl.cmd_is_blacklisted(load['fun'])
 
@@ -1471,7 +1462,7 @@ class LocalFuncs(object):
                         )
                         return ''
                     acl = salt.utils.get_values_of_matching_keys(
-                            self.opts['publisher_acl'] or self.opts['client_acl'],
+                            self.opts['publisher_acl'],
                             load['user'])
                     if load['user'] not in acl:
                         log.warning(

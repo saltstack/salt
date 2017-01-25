@@ -116,8 +116,7 @@ def _get_repo_options_env(env):
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
     '''
     env_options = ''
@@ -159,8 +158,7 @@ def _get_repo_dists_env(env):
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
     '''
     # env key with tuple of control information for handling input env dictionary
@@ -237,8 +235,7 @@ def _create_pbuilders(env):
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
     '''
     home = os.path.expanduser('~')
@@ -560,6 +557,10 @@ def make_repo(repodir,
         salt '*' pkgbuild.make_repo /var/www/html
 
     '''
+    res = {'retcode': 1,
+            'stdout': '',
+            'stderr': 'initialization value'}
+
     SIGN_PROMPT_RE = re.compile(r'Enter passphrase: ', re.M)
     REPREPRO_SIGN_PROMPT_RE = re.compile(r'Passphrase: ', re.M)
 
@@ -607,7 +608,8 @@ def make_repo(repodir,
 
         except SaltInvocationError:
             raise SaltInvocationError(
-                'Public and Private key files associated with Pillar data and \'keyid\' {0} could not be found'
+                'Public and Private key files associated with Pillar data and \'keyid\' '
+                '{0} could not be found'
                 .format(keyid)
             )
 
@@ -622,7 +624,8 @@ def make_repo(repodir,
 
         if local_keyid is None:
             raise SaltInvocationError(
-                '\'keyid\' was not found in gpg keyring'
+                'The key ID \'{0}\' was not found in GnuPG keyring at \'{1}\''
+                .format(keyid, gnupghome)
             )
 
         _check_repo_sign_utils_support()
@@ -692,6 +695,9 @@ def make_repo(repodir,
                     except salt.utils.vt.TerminalException as err:
                         trace = traceback.format_exc()
                         log.error(error_msg, err, trace)
+                        res = {'retcode': 1,
+                                'stdout': '',
+                                'stderr': trace}
                     finally:
                         proc.close(terminate=True, kill=True)
 
@@ -753,13 +759,18 @@ def make_repo(repodir,
                 except salt.utils.vt.TerminalException as err:
                     trace = traceback.format_exc()
                     log.error(error_msg, err, trace)
+                    res = {'retcode': 1,
+                            'stdout': '',
+                            'stderr': trace}
                 finally:
                     proc.close(terminate=True, kill=True)
 
         if debfile.endswith('.deb'):
             cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedeb {0} {1}'.format(codename, abs_file)
-            __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
+            res = __salt__['cmd.run_all'](cmd, cwd=repodir, use_vt=True)
 
     if use_passphrase and local_keyid is not None:
         cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --forget {0}'.format(local_fingerprint)
-        __salt__['cmd.run'](cmd, runas=runas)
+        res = __salt__['cmd.run_all'](cmd, runas=runas)
+
+    return res

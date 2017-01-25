@@ -25,10 +25,7 @@ Module to provide Postgres compatibility to salt.
     automatically placed on the path. Add a configuration to the location
     of the postgres bin's path to the relevant minion for this module::
 
-        postgres.pg_bin: '/usr/pgsql-9.5/bin/'
-
-:note: Older versions of Salt had a bug where postgres.bins_dir was used
-    instead of postgres.pg_bin. You should upgrade this as soon as possible.
+        postgres.bins_dir: '/usr/pgsql-9.5/bin/'
 '''
 
 # This pylint error is popping up where there are no colons?
@@ -135,17 +132,7 @@ def _find_pg_binary(util):
 
     Helper function to locate various psql related binaries
     '''
-    pg_bin_dir = __salt__['config.option']('postgres.pg_bin')
-
-    if not pg_bin_dir:  # Fallback to incorrectly-documented setting
-        pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
-        if pg_bin_dir:
-            salt.utils.warn_until(
-                'Oxygen',
-                'Using \'postgres.bins_dir\' is not officially supported and '
-                'only exists as a workaround. Please replace this in your '
-                'configuration with \'postgres.pg_bin\'.')
-
+    pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
     util_bin = salt.utils.which(util)
     if not util_bin:
         if pg_bin_dir:
@@ -169,7 +156,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
         if not host or host.startswith('/'):
             if 'FreeBSD' in __grains__['os_family']:
                 runas = 'pgsql'
-            if 'OpenBSD' in __grains__['os_family']:
+            elif 'OpenBSD' in __grains__['os_family']:
                 runas = '_postgresql'
             else:
                 runas = 'postgres'
@@ -217,7 +204,7 @@ def _run_initdb(name,
     if runas is None:
         if 'FreeBSD' in __grains__['os_family']:
             runas = 'pgsql'
-        if 'OpenBSD' in __grains__['os_family']:
+        elif 'OpenBSD' in __grains__['os_family']:
             runas = '_postgresql'
         else:
             runas = 'postgres'

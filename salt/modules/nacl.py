@@ -93,6 +93,7 @@ multiline encrypted secrets from pillar in a state, use the following format to 
 creating extra whitespace at the beginning of each line in the cert file:
 
 .. code-block:: yaml
+
     secret.txt:
         file.managed:
             - template: jinja

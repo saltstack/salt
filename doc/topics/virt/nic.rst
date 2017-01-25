@@ -1,3 +1,5 @@
+.. _vm-nic-profiles:
+
 ================================
 Virtual Machine Network Profiles
 ================================

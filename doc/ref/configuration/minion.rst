@@ -40,7 +40,7 @@ Default: ``salt``
     master: salt
 
 The option can also be set to a list of masters, enabling
-:doc:`multi-master </topics/tutorials/multimaster>` mode.
+:ref:`multi-master <tutorial-multi-master>` mode.
 
 .. code-block:: yaml
 
@@ -456,26 +456,6 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 
     cache_jobs: False
 
-.. conf_minion:: minion_pillar_cache
-
-``minion_pillar_cache``
------------------------
-
-Default: ``False``
-
-The minion can locally cache rendered pillar data under
-:conf_minion:`cachedir`/pillar. This allows a temporarily disconnected minion
-to access previously cached pillar data by invoking salt-call with the --local
-and --pillar_root=:conf_minion:`cachedir`/pillar options. Before enabling this
-setting consider that the rendered pillar may contain security sensitive data.
-Appropriate access restrictions should be in place. By default the saved pillar
-data will be readable only by the user account running salt. By default this
-feature is disabled, to enable set minion_pillar_cache to ``True``.
-
-.. code-block:: yaml
-
-    minion_pillar_cache: False
-
 .. conf_minion:: grains
 
 ``grains``
@@ -628,7 +608,9 @@ The directory where Unix sockets will be kept.
 
 Default: ``''``
 
-Backup files replaced by file.managed and file.recurse under cachedir.
+Make backups of files replaced by ``file.managed`` and ``file.recurse`` state modules under
+:conf_minion:`cachedir` in ``file_backup`` subdirectory preserving original paths.
+Refer to :ref:`File State Backups documentation <file-state-backups>` for more details.
 
 .. code-block:: yaml
 
@@ -1192,8 +1174,8 @@ and/or having to install specific modules' dependencies in system libraries.
 Default: (empty)
 
 A module provider can be statically overwritten or extended for the minion via
-the ``providers`` option. This can be done :doc:`on an individual basis in an
-SLS file <../states/providers>`, or globally here in the minion config, like
+the ``providers`` option. This can be done :ref:`on an individual basis in an
+SLS file <state-providers>`, or globally here in the minion config, like
 below.
 
 .. code-block:: yaml
@@ -1217,6 +1199,20 @@ The default renderer used for local state executions
 .. code-block:: yaml
 
     renderer: yaml_jinja
+
+.. conf_master:: test
+
+``test``
+--------
+
+Default: ``False``
+
+Set all state calls to only test if they are going to actually make changes
+or just post what changes are going to be made.
+
+.. code-block:: yaml
+
+    test: False
 
 .. conf_minion:: state_verbose
 
@@ -1546,19 +1542,21 @@ is impacted.
 ``hash_type``
 -------------
 
-Default: ``md5``
+Default: ``sha256``
 
 The hash_type is the hash to use when discovering the hash of a file on the
-local fileserver. The default is md5, but sha1, sha224, sha256, sha384, and
+local fileserver. The default is sha256, but md5, sha1, sha224, sha384, and
 sha512 are also supported.
 
 .. code-block:: yaml
 
-    hash_type: md5
+    hash_type: sha256
 
 
-Pillar Settings
-===============
+.. _pillar-configuration-minion:
+
+Pillar Configuration
+====================
 
 .. conf_minion:: pillar_roots
 
@@ -1599,6 +1597,23 @@ the environment setting, but for pillar instead of states.
 
     pillarenv: None
 
+.. conf_minion:: pillarenv_from_saltenv
+
+``pillarenv_from_saltenv``
+--------------------------
+
+Default: ``False``
+
+When set to ``True``, the :conf_minion:`pillarenv` value will assume the value
+of the effective saltenv when running states. This essentially makes ``salt '*'
+state.sls mysls saltenv=dev`` equivalent to ``salt '*' state.sls mysls
+saltenv=dev pillarenv=dev``. If :conf_minion:`pillarenv` is set, either in the
+minion config file or via the CLI, it will override this option.
+
+.. code-block:: yaml
+
+    pillarenv_from_saltenv: True
+
 .. conf_minion:: pillar_raise_on_missing
 
 ``pillar_raise_on_missing``
@@ -1611,6 +1626,28 @@ Default: ``False``
 Set this option to ``True`` to force a ``KeyError`` to be raised whenever an
 attempt to retrieve a named value from pillar fails. When this option is set
 to ``False``, the failed attempt returns an empty string.
+
+.. conf_minion:: minion_pillar_cache
+
+``minion_pillar_cache``
+-----------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``False``
+
+The minion can locally cache rendered pillar data under
+:conf_minion:`cachedir`/pillar. This allows a temporarily disconnected minion
+to access previously cached pillar data by invoking salt-call with the --local
+and --pillar_root=:conf_minion:`cachedir`/pillar options. Before enabling this
+setting consider that the rendered pillar may contain security sensitive data.
+Appropriate access restrictions should be in place. By default the saved pillar
+data will be readable only by the user account running salt. By default this
+feature is disabled, to enable set minion_pillar_cache to ``True``.
+
+.. code-block:: yaml
+
+    minion_pillar_cache: False
 
 .. conf_minion:: file_recv_max_size
 

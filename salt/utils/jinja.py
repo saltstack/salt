@@ -62,7 +62,10 @@ class SaltCacheLoader(BaseLoader):
         self.saltenv = saltenv
         self.encoding = encoding
         if self.opts['file_roots'] is self.opts['pillar_roots']:
-            self.searchpath = opts['file_roots'][saltenv]
+            if saltenv not in self.opts['file_roots']:
+                self.searchpath = []
+            else:
+                self.searchpath = opts['file_roots'][saltenv]
         else:
             self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
@@ -375,7 +378,6 @@ class SerializerExtension(Extension, object):
         super(SerializerExtension, self).__init__(environment)
         self.environment.filters.update({
             'yaml': self.format_yaml,
-            'yaml_safe': self.format_yaml_safe,
             'json': self.format_json,
             'python': self.format_python,
             'load_yaml': self.load_yaml,
@@ -417,13 +419,6 @@ class SerializerExtension(Extension, object):
                              Dumper=OrderedDictDumper).strip()
         if yaml_txt.endswith('\n...'):
             yaml_txt = yaml_txt[:len(yaml_txt)-4]
-        return Markup(yaml_txt)
-
-    def format_yaml_safe(self, value, flow_style=True):
-        yaml_txt = yaml.safe_dump(value, default_flow_style=flow_style,
-                                  Dumper=OrderedDictDumper).strip()
-        if yaml_txt.endswith('\n...\n'):
-            yaml_txt = yaml_txt[:len(yaml_txt-5)]
         return Markup(yaml_txt)
 
     def format_python(self, value):

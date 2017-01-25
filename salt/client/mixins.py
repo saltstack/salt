@@ -396,6 +396,8 @@ class SyncClientMixin(object):
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
                 data['return'] = self.functions[fun](*args, **kwargs)
                 data['success'] = True
+                if 'data' in data['return']:
+                    data['success'] = salt.utils.check_state_result(data['return']['data'])
         except (Exception, SystemExit) as ex:
             if isinstance(ex, salt.exceptions.NotImplemented):
                 data['return'] = str(ex)

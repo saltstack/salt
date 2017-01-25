@@ -144,6 +144,50 @@ so either of the following versions for "Extract server package" works:
           - file: /usr/local/share/myapp.tar.xz
 
 
+Requisite overview
+~~~~~~~~~~~~~~~~~~
+
+
++------------+-------------------+---------------+------------+--------------------+
+| name       | state is only     | state is only | order      | comment            |
+|  of        | executed if       | executed if   |            |  or                |
+|            | target execution  | target has    | 1.target   |                    |
+|            |                   |               | 2.state    |                    |  
+| requisite  | result is         | changes       | (default)  | description        |
++============+===================+===============+============+====================+
+| require    | success           |               | default    | state will always  |
+|            |                   |               |            | execute unless     |
+|            |                   |               |            | target fails       |
++------------+-------------------+---------------+------------+--------------------+
+| watch      | success           |               | default    | like require,      |
+|            |                   |               |            | but adds additional|
+|            |                   |               |            | behaviour          |
+|            |                   |               |            | (mod_watch)        |
++------------+-------------------+---------------+------------+--------------------+
+| prereq     | success           | has changes   | switched   | like onchanges,    |
+|            |                   | (run          |            | except order       |
+|            |                   | individually  |            |                    |
+|            |                   | as dry-run)   |            |                    |
++------------+-------------------+---------------+------------+--------------------+
+| onchanges  | success           | has changes   | default    | execute state if   |
+|            |                   |               |            | target execution   |
+|            |                   |               |            | result is success  |
+|            |                   |               |            | and target has     |
+|            |                   |               |            | changes            |  
++------------+-------------------+---------------+------------+--------------------+
+| onfail     | failed            |               | default    | Only requisite     |
+|            |                   |               |            | where state exec.  |
+|            |                   |               |            | if target fails    |
++------------+-------------------+---------------+------------+--------------------+
+
+
+In this table, the following short form of terms is used:
+
+* **state** (= dependent state): state containing requisite 
+* **target** (= state target) : state referenced by requisite
+
+
+
 Direct Requisite and Requisite_in types
 ---------------------------------------
 
@@ -341,6 +385,8 @@ expects to deploy fresh code via the file.recurse call. The site-code
 deployment will only be executed if the graceful-down run completes
 successfully.
 
+.. _requisites-onfail:
+
 onfail
 ~~~~~~
 
@@ -376,6 +422,8 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
     ``onfail`` used AND logic. See `Issue #22370`_ for more information.
 
 .. _Issue #22370: https://github.com/saltstack/salt/issues/22370
+
+.. _requisites-onchanges:
 
 onchanges
 ~~~~~~~~~

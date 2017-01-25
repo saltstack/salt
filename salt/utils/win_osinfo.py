@@ -1,14 +1,32 @@
 # -*- coding: utf-8 -*-
 '''
-Get Versioning information from Windows
+Get Version information from Windows
 '''
 # http://stackoverflow.com/questions/32300004/python-ctypes-getting-0-with-getversionex-function
 from __future__ import absolute_import
 
+# Import Third Party Libs
 import ctypes
-from ctypes.wintypes import BYTE, WORD, DWORD, WCHAR
+try:
+    from ctypes.wintypes import BYTE, WORD, DWORD, WCHAR
+    HAS_WIN32 = True
+except (ImportError, ValueError):
+    HAS_WIN32 = False
 
-kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+if HAS_WIN32:
+    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+
+
+# Although utils are often directly imported, it is also possible to use the
+# loader.
+def __virtual__():
+    '''
+    Only load if Win32 Libraries are installed
+    '''
+    if not HAS_WIN32:
+        return False, 'This utility requires pywin32'
+
+    return 'win_osinfo'
 
 
 class OSVERSIONINFO(ctypes.Structure):
@@ -38,8 +56,9 @@ def errcheck_bool(result, func, args):
         raise ctypes.WinError(ctypes.get_last_error())
     return args
 
-kernel32.GetVersionExW.errcheck = errcheck_bool
-kernel32.GetVersionExW.argtypes = (ctypes.POINTER(OSVERSIONINFO),)
+if HAS_WIN32:
+    kernel32.GetVersionExW.errcheck = errcheck_bool
+    kernel32.GetVersionExW.argtypes = (ctypes.POINTER(OSVERSIONINFO),)
 
 
 def get_os_version_info():

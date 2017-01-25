@@ -95,6 +95,7 @@ class ZmqRet(multiprocessing.Process):
         except AttributeError:
             self.clients.setsockopt(zmq.SNDHWM, self.opts['rep_hwm'])
             self.clients.setsockopt(zmq.RCVHWM, self.opts['rep_hwm'])
+        self.clients.setsockopt(zmq.BACKLOG, self.opts['zmq_backlog'])
         self.workers = self.context.socket(zmq.DEALER)
         self.w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
@@ -182,6 +183,7 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
             if self.opts.value['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
                 # IPv6 sockets work for both IPv6 and IPv4 addresses
                 self.pub_sock.setsockopt(zmq.IPV4ONLY, 0)
+            self.pub_sock.setsockopt(zmq.BACKLOG, self.opts.get('zmq_backlog', 1000))
             self.pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts.value)
             log.info('Starting the Salt ZeroMQ Publisher on {0}'.format(self.pub_uri))
             self.pub_sock.bind(self.pub_uri)

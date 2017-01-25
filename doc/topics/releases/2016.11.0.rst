@@ -1,3 +1,5 @@
+.. _release-2016-11-0:
+
 ==============================================
 Salt 2016.11.0 Release Notes - Codename Carbon
 ==============================================
@@ -328,7 +330,7 @@ eAuth Changes
 
 - External auth modules' ``auth`` method can return an ACL list for the given
   username instead of ``True``. This list should be in the same format as
-  described in the :doc:`eAuth documentation </topics/eauth/index>`. It will be
+  described in the :ref:`eAuth documentation <acl-eauth>`. It will be
   used for the user instead of one set in master config.
 
   Example of the ``auth`` method return that allows a user to execute functions
@@ -342,15 +344,15 @@ eAuth Changes
        '@wheel',
        '@runner']
 
-- External auth is supported by :doc:`salt-run </ref/cli/salt-run>` and
-  :doc:`salt-key </ref/cli/salt-key>` now. Note that master must be started to
+- External auth is supported by :ref:`salt-run <salt-run>` and
+  :ref:`salt-key <salt-key>` now. Note that master must be started to
   use them with eAuth.
 
 External Module Packaging
 =========================
 
 Modules may now be packaged via entry-points in setuptools. See
-:doc:`external module packaging </topics/tutorials/packaging_modules>` tutorial
+:ref:`external module packaging <tutorial-packaging-modules>` tutorial
 for more information.
 
 Functionality Changes
@@ -375,6 +377,8 @@ Functionality Changes
   specifies the number of times a minion should attempt to contact a master to
   attempt a connection.  This allows better handling of occasional master
   downtime in a multi-master topology.
+- The default hash_type is now sha256 instead of md5. You will need to make sure both
+  your master and minion share the same hash_type.
 - Nodegroups consisting of a simple list of minion IDs can now also be declared
   as a yaml list. The below two examples are equivalent:
 
@@ -391,15 +395,29 @@ Functionality Changes
           - host2
           - host3
 
+New Azure ARM Cloud Driver
+==========================
+A new cloud driver has been added for Azure ARM, aka, the Azure Resource
+Manager. The older Azure driver is still required to work with the older Azure
+API. This new driver works with the newer ARM API, which is managed via the
+newer Azure Portal website.
+
+
 New Modules
 ===========
 
 Beacons
 -------
 
+- :mod:`salt.beacons.avahi_announce <salt.beacons.avahi_announce>`
 - :mod:`salt.beacons.bonjour_announce <salt.beacons.bonjour_announce>`
 - :mod:`salt.beacons.haproxy <salt.beacons.haproxy>`
 - :mod:`salt.beacons.status <salt.beacons.status>`
+
+Clouds
+------
+
+- :mod:`salt.cloud.clouds.azurearm <salt.cloud.clouds.azurearm>`
 
 Engines
 -------

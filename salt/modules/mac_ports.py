@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Support for MacPorts under Mac OSX.
+Support for MacPorts under macOS.
 
 This module has some caveats.
 

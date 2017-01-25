@@ -877,10 +877,8 @@ def _ps(osdata):
             '/proc/[0-9]*/status | sed -e \"s=/proc/\\([0-9]*\\)/.*=\\1=\")  '
             '| awk \'{ $7=\"\"; print }\''
         )
-    elif osdata['os_family'] == 'Debian':
-        grains['ps'] = 'ps -efHww'
     else:
-        grains['ps'] = 'ps -efH'
+        grains['ps'] = 'ps -efHww'
     return grains
 
 
@@ -1047,7 +1045,7 @@ def _windows_platform_data():
 
 def _osx_platform_data():
     '''
-    Additional data for Mac OS X systems
+    Additional data for macOS systems
     Returns: A dictionary containing values for the following:
         - model_name
         - boot_rom_version
@@ -1108,6 +1106,7 @@ _OS_NAME_MAP = {
     'scientific': 'ScientificLinux',
     'synology': 'Synology',
     'nilrt': 'NILinuxRT',
+    'nilrt-xfce': 'NILinuxRT-XFCE',
     'manjaro': 'Manjaro',
     'antergos': 'Antergos',
     'sles': 'SUSE',
@@ -1173,6 +1172,7 @@ _OS_FAMILY_MAP = {
     'Devuan': 'Debian',
     'antiX': 'Debian',
     'NILinuxRT': 'NILinuxRT',
+    'NILinuxRT-XFCE': 'NILinuxRT',
     'Void': 'Void',
 }
 
@@ -1321,7 +1321,7 @@ def os_data():
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     init_bin = salt.utils.which(init_cmdline[0])
                     if init_bin is not None and init_bin.endswith('bin/init'):
-                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'), six.b('runit'))
+                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
                         edge_len = max(len(x) for x in supported_inits) - 1
                         try:
                             buf_size = __opts__['file_buffer_size']
@@ -1351,6 +1351,8 @@ def os_data():
                             )
                     elif salt.utils.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
+                    elif init_cmdline == ['runit']:
+                        grains['init'] = 'runit'
                     else:
                         log.info(
                             'Could not determine init system from command line: ({0})'
@@ -1368,7 +1370,9 @@ def os_data():
                     key
                 )
                 grains[lsb_param] = value
-        except ImportError:
+        # Catch a NameError to workaround possible breakage in lsb_release
+        # See https://github.com/saltstack/salt/issues/37867
+        except (ImportError, NameError):
             # if the python library isn't available, default to regex
             if os.path.isfile('/etc/lsb-release'):
                 # Matches any possible format:

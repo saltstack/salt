@@ -1649,11 +1649,12 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         '''
-        start_time = datetime.datetime.now()
+        utc_start_time = datetime.datetime.utcnow()
+        local_start_time = utc_start_time - (datetime.datetime.utcnow() - datetime.datetime.now())
         log.info('Running state [{0}] at time {1}'.format(
             low['name'].strip() if isinstance(low['name'], str)
                 else low['name'],
-            start_time.time().isoformat())
+            local_start_time.time().isoformat())
         )
         errors = self.verify_data(low)
         if errors:
@@ -1791,13 +1792,17 @@ class State(object):
             low['__prereq__'] = False
             return ret
 
+        ret['__sls__'] = low.get('__sls__')
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
-        finish_time = datetime.datetime.now()
-        ret['start_time'] = start_time.time().isoformat()
-        delta = (finish_time - start_time)
+        utc_finish_time = datetime.datetime.utcnow()
+        timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
+        local_finish_time = utc_finish_time - timezone_delta
+        local_start_time = utc_start_time - timezone_delta
+        ret['start_time'] = local_start_time.time().isoformat()
+        delta = (utc_finish_time - utc_start_time)
         # duration in milliseconds.microseconds
         duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
         ret['duration'] = duration
@@ -1806,7 +1811,7 @@ class State(object):
             'Completed state [{0}] at time {1} duration_in_ms={2}'.format(
                 low['name'].strip() if isinstance(low['name'], str)
                     else low['name'],
-                finish_time.time().isoformat(),
+                local_finish_time.time().isoformat(),
                 duration
             )
         )
@@ -1905,7 +1910,7 @@ class State(object):
         Check if the low data chunk should send a failhard signal
         '''
         tag = _gen_tag(low)
-        if self.opts['test']:
+        if self.opts.get('test', False):
             return False
         if (low.get('failhard', False) or self.opts['failhard']
                 and tag in running):
@@ -2673,7 +2678,7 @@ class BaseHighState(object):
                     tops[saltenv].append({})
                     log.debug('No contents loaded for env: {0}'.format(saltenv))
 
-            if found > 1 and merging_strategy.startswith('merge'):
+            if found > 1 and merging_strategy == 'merge':
                 log.warning(
                     'top_file_merging_strategy is set to \'%s\' and '
                     'multiple top files were found. Merging order is not '
@@ -2993,8 +2998,15 @@ class BaseHighState(object):
                                     _filter_matches(match, data, _opts)
                             if isinstance(item, six.string_types):
                                 matches[saltenv].append(item)
+                            elif isinstance(item, dict):
+                                env_key, inc_sls = item.popitem()
+                                if env_key not in self.avail:
+                                    continue
+                                if env_key not in matches:
+                                    matches[env_key] = []
+                                matches[env_key].append(inc_sls)
                 _filter_matches(match, data, self.opts['nodegroups'])
-        ext_matches = self.client.ext_nodes()
+        ext_matches = self._ext_nodes()
         for saltenv in ext_matches:
             if saltenv in matches:
                 matches[saltenv] = list(
@@ -3003,6 +3015,14 @@ class BaseHighState(object):
                 matches[saltenv] = ext_matches[saltenv]
         # pylint: enable=cell-var-from-loop
         return matches
+
+    def _ext_nodes(self):
+        '''
+        Get results from an external node classifier.
+        Override it if the execution of the external node clasifier
+        needs customization.
+        '''
+        return self.client.ext_nodes()
 
     def load_dynamic(self, matches):
         '''

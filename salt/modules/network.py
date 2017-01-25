@@ -378,7 +378,7 @@ def _netstat_route_linux():
 
 def _netstat_route_freebsd():
     '''
-    Return netstat routing information for FreeBSD and OS X
+    Return netstat routing information for FreeBSD and macOS
     '''
     ret = []
     cmd = 'netstat -f inet -rn | tail -n+5'
@@ -1486,6 +1486,8 @@ def ifacestartswith(cidr):
     '''
     Retrieve the interface name from a specific CIDR
 
+    .. versionadded:: 2016.11.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -1500,13 +1502,18 @@ def ifacestartswith(cidr):
         if 'inet' in ifval:
             for inet in ifval['inet']:
                 if inet['address'][0:size] == pattern:
-                    intfnames.append(inet['label'])
+                    if 'label' in inet:
+                        intfnames.append(inet['label'])
+                    else:
+                        intfnames.append(ifname)
     return intfnames
 
 
 def iphexval(ip):
     '''
     Retrieve the interface name from a specific CIDR
+
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 

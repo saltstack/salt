@@ -25,6 +25,25 @@ import salt.pillar
 class PillarTestCase(TestCase):
 
     @patch('salt.pillar.compile_template')
+    def test_pillarenv_from_saltenv(self, compile_template):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': ['dev', 'base'],
+            'file_roots': ['dev', 'base'],
+            'extension_modules': '',
+            'pillarenv_from_saltenv': True
+        }
+        grains = {
+            'os': 'Ubuntu',
+        }
+        pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'dev')
+        self.assertEqual(pillar.opts['environment'], 'dev')
+        self.assertEqual(pillar.opts['pillarenv'], 'dev')
+
+    @patch('salt.pillar.compile_template')
     def test_malformed_pillar_sls(self, compile_template):
         opts = {
             'renderer': 'json',
@@ -135,7 +154,7 @@ class PillarTestCase(TestCase):
         self.assertEqual(pillar.compile_pillar()['ssh'], 'foo')
 
     def _setup_test_topfile_mocks(self, Matcher, get_file_client,
-            nodegroup_order, glob_order):
+                                  nodegroup_order, glob_order):
         # Write a simple topfile and two pillar state files
         self.top_file = tempfile.NamedTemporaryFile()
         s = '''

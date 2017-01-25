@@ -26,7 +26,7 @@ prefaced with a ``!``.
                    list_jobs:
                        cmd: jobs.list_jobs
                    list_commands:
-                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster
+                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
 
 :depends: slackclient
 '''
@@ -34,10 +34,10 @@ prefaced with a ``!``.
 # Import python libraries
 from __future__ import absolute_import
 import datetime
+import json
 import logging
 import time
 import re
-import json
 import yaml
 
 try:
@@ -193,6 +193,13 @@ def start(token,
                                     target = kwargs['target']
                                     del kwargs['target']
 
+                                # Check for tgt_type. Otherwise assume glob
+                                if 'tgt_type' not in kwargs:
+                                    tgt_type = 'glob'
+                                else:
+                                    tgt_type = kwargs['tgt_type']
+                                    del kwargs['tgt_type']
+
                                 ret = {}
 
                                 if cmd in runner_functions:
@@ -202,7 +209,7 @@ def start(token,
                                 # Default to trying to run as a client module.
                                 else:
                                     local = salt.client.LocalClient()
-                                    ret = local.cmd('{0}'.format(target), cmd, args, kwargs)
+                                    ret = local.cmd('{0}'.format(target), cmd, args, kwargs, tgt_type='{0}'.format(tgt_type))
 
                                 if ret:
                                     return_text = json.dumps(ret, sort_keys=True, indent=1)
@@ -224,5 +231,6 @@ def start(token,
                     else:
                         # Fire event to event bus
                         fire('{0}/{1}'.format(tag, _m['type']), _m)
+            time.sleep(1)
     else:
         raise UserWarning("Could not connect to slack")

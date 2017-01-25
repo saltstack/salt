@@ -495,9 +495,14 @@ def daemonize(redirect_out=True):
     # multiprocessing process attempts to access stdout or err.
     if redirect_out:
         with fopen('/dev/null', 'r+') as dev_null:
+            # Redirect python stdin/out/err
+            # and the os stdin/out/err which can be different
             os.dup2(dev_null.fileno(), sys.stdin.fileno())
             os.dup2(dev_null.fileno(), sys.stdout.fileno())
             os.dup2(dev_null.fileno(), sys.stderr.fileno())
+            os.dup2(dev_null.fileno(), 0)
+            os.dup2(dev_null.fileno(), 1)
+            os.dup2(dev_null.fileno(), 2)
 
 
 def daemonize_if(opts):
@@ -1657,7 +1662,7 @@ def is_linux():
 @real_memoize
 def is_darwin():
     '''
-    Simple function to return if a host is Darwin (OS X) or not
+    Simple function to return if a host is Darwin (macOS) or not
     '''
     return sys.platform.startswith('darwin')
 
@@ -1957,10 +1962,10 @@ def rm_rf(path):
             func(path)
         else:
             raise  # pylint: disable=E0704
-    if os.path.isdir(path):
-        shutil.rmtree(path, onerror=_onerror)
-    else:
+    if os.path.islink(path) or not os.path.isdir(path):
         os.remove(path)
+    else:
+        shutil.rmtree(path, onerror=_onerror)
 
 
 def option(value, default='', opts=None, pillar=None):
@@ -2335,7 +2340,7 @@ def kwargs_warn_until(kwargs,
     This function is used to help deprecate unused legacy ``**kwargs`` that
     were added to function parameters lists to preserve backwards compatibility
     when removing a parameter. See
-    :doc:`the deprecation development docs </topics/development/deprecations>`
+    :ref:`the deprecation development docs <deprecations>`
     for the modern strategy for deprecating a function parameter.
 
     :param kwargs: The caller's ``**kwargs`` argument value (a ``dict``).
@@ -2973,7 +2978,9 @@ def to_str(s, encoding=None):
         return s
     if six.PY3:
         if isinstance(s, (bytes, bytearray)):
-            return s.decode(encoding or __salt_system_encoding__)
+            # https://docs.python.org/3/howto/unicode.html#the-unicode-type
+            # replace error with U+FFFD, REPLACEMENT CHARACTER
+            return s.decode(encoding or __salt_system_encoding__, "replace")
         raise TypeError('expected str, bytes, or bytearray')
     else:
         if isinstance(s, bytearray):
@@ -3181,6 +3188,8 @@ def filter_by(lookup_dict,
     # lookup_dict keys
     for each in val if isinstance(val, list) else [val]:
         for key in sorted(lookup_dict):
+            if key not in six.string_types:
+                key = str(key)
             if fnmatch.fnmatchcase(each, key):
                 ret = lookup_dict[key]
                 break

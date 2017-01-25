@@ -159,8 +159,8 @@ def _replace_auth_key(
                     lines.append(line)
                     continue
                 key_ind = 1
-                if comps[0][:4:] not in ['ssh-', 'ecds']:
-                    key_ind = 2
+                while comps[key_ind - 1][:4:] not in ['ssh-', 'ecds'] and key_ind < len(comps):
+                    key_ind += 1
                 if comps[key_ind] == key:
                     lines.append(auth_line)
                 else:
@@ -1165,7 +1165,7 @@ def hash_known_hosts(user=None, config=None):
     origmode = os.stat(full).st_mode
     cmd = ['ssh-keygen', '-H', '-f', full]
     cmd_result = __salt__['cmd.run'](cmd, python_shell=False)
-    os.stat(full, origmode)
+    os.chmod(full, origmode)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0 and user:
         uinfo = __salt__['user.info'](user)

@@ -288,7 +288,8 @@ class IptablesTestCase(TestCase):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(iptables.__salt__, {'cmd.run': mock,
-                                            'file.write': mock}):
+                                            'file.write': mock,
+                                            'config.option': MagicMock(return_value=[])}):
             self.assertTrue(iptables.save(filename='/xyz', family='ipv4'))
 
     # 'check' function tests: 1

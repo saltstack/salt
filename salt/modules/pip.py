@@ -970,15 +970,40 @@ def freeze(bin_env=None,
     cwd
         Current working directory to run pip from
 
+    .. note::
+
+        If the version of pip available is older than 8.0.3, the list will not
+        include the packages pip, wheel, setuptools, or distribute even if they
+        are installed.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pip.freeze /home/code/path/to/virtualenv/
+
+    .. versionchanged:: 2016.11.2
+
+        The packages pip, wheel, setuptools, and distribute are included if the
+        installed pip is new enough.
     '''
     pip_bin = _get_pip_bin(bin_env)
 
     cmd = [pip_bin, 'freeze']
+
+    # Include pip, setuptools, distribute, wheel
+    min_version = '8.0.3'
+    cur_version = version(bin_env)
+    if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                       ver2=min_version):
+        logger.warning(
+            ('The version of pip installed is {0}, which is older than {1}. '
+             'The packages pip, wheel, setuptools, and distribute will not be '
+             'included in the output of pip.freeze').format(cur_version,
+                                                            min_version))
+    else:
+        cmd.append('--all')
+
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
@@ -998,30 +1023,31 @@ def list_(prefix=None,
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
 
+    .. note::
+
+        If the version of pip available is older than 8.0.3, the packages
+        wheel, setuptools, and distribute will not be reported by this function
+        even if they are installed. Unlike
+        :py:func:`pip.freeze <salt.modules.pip.freeze>`, this function always
+        reports the version of pip which is installed.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pip.list salt
+
+    .. versionchanged:: 2016.11.2
+
+        The packages wheel, setuptools, and distribute are included if the
+        installed pip is new enough.
     '''
     packages = {}
 
-    pip_bin = _get_pip_bin(bin_env)
-
-    cmd = [pip_bin, 'freeze']
-
-    cmd_kwargs = dict(runas=user, cwd=cwd, python_shell=False)
-    if bin_env and os.path.isdir(bin_env):
-        cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
-
-    if not prefix or prefix in ('p', 'pi', 'pip'):
+    if prefix is None or 'pip'.startswith(prefix):
         packages['pip'] = version(bin_env)
 
-    result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
-    if result['retcode'] > 0:
-        raise CommandExecutionError(result['stderr'])
-
-    for line in result['stdout'].splitlines():
+    for line in freeze(bin_env=bin_env, user=user, cwd=cwd):
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory
             # ignore comment lines
@@ -1044,6 +1070,7 @@ def list_(prefix=None,
                 packages[name] = version_
         else:
             packages[name] = version_
+
     return packages
 
 

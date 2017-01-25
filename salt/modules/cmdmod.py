@@ -757,8 +757,8 @@ def run(cmd,
 
     :param str cmd: The command to run. ex: ``ls -lart /home``
 
-    :param str cwd: The current working directory to execute the command in,
-      defaults to ``/root`` (``C:\`` in windows)
+    :param str cwd: The current working directory to execute the command in.
+      Defaults to the home directory of the user specified by ``runas``.
 
     :param str stdin: A string of standard input can be specified for the
       command to be run using the ``stdin`` parameter. This can be useful in cases
@@ -798,8 +798,7 @@ def run(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -968,8 +967,8 @@ def shell(cmd,
 
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
-    :param str cwd: The current working directory to execute the command in,
-      defaults to /root
+    :param str cwd: The current working directory to execute the command in.
+      Defaults to the home directory of the user specified by ``runas``.
 
     :param str stdin: A string of standard input can be specified for the
       command to be run using the ``stdin`` parameter. This can be useful in cases
@@ -1007,8 +1006,7 @@ def shell(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -1155,8 +1153,8 @@ def run_stdout(cmd,
 
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
-    :param str cwd: The current working directory to execute the command in,
-      defaults to /root
+    :param str cwd: The current working directory to execute the command in.
+      Defaults to the home directory of the user specified by ``runas``.
 
     :param str stdin: A string of standard input can be specified for the
       command to be run using the ``stdin`` parameter. This can be useful in cases
@@ -1193,8 +1191,7 @@ def run_stdout(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -1336,8 +1333,8 @@ def run_stderr(cmd,
 
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
-    :param str cwd: The current working directory to execute the command in,
-      defaults to /root
+    :param str cwd: The current working directory to execute the command in.
+      Defaults to the home directory of the user specified by ``runas``.
 
     :param str stdin: A string of standard input can be specified for the
       command to be run using the ``stdin`` parameter. This can be useful in cases
@@ -1375,8 +1372,7 @@ def run_stderr(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -1519,8 +1515,8 @@ def run_all(cmd,
 
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
-    :param str cwd: The current working directory to execute the command in,
-      defaults to /root
+    :param str cwd: The current working directory to execute the command in.
+      Defaults to the home directory of the user specified by ``runas``.
 
     :param str stdin: A string of standard input can be specified for the
       command to be run using the ``stdin`` parameter. This can be useful in cases
@@ -1558,8 +1554,7 @@ def run_all(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -1710,8 +1705,8 @@ def retcode(cmd,
 
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
-    :param str cwd: The current working directory to execute the command in,
-      defaults to /root
+    :param str cwd: The current working directory to execute the command in.
+      Defaults to the home directory of the user specified by ``runas``.
 
     :param str stdin: A string of standard input can be specified for the
       command to be run using the ``stdin`` parameter. This can be useful in cases
@@ -1749,8 +1744,7 @@ def retcode(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -1945,8 +1939,8 @@ def script(source,
       string containing spaces in YAML, you will need to doubly-quote it:
       "arg1 'arg two' arg3"
 
-    :param str cwd: The current working directory to execute the command in,
-      defaults to /root
+    :param str cwd: The current working directory to execute the command in.
+      Defaults to the home directory of the user specified by ``runas``.
 
     :param str stdin: A string of standard input can be specified for the
       command to be run using the ``stdin`` parameter. This can be useful in cases
@@ -1986,8 +1980,7 @@ def script(source,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -2173,8 +2166,8 @@ def script_retcode(source,
       string containing spaces in YAML, you will need to doubly-quote it:  "arg1
       'arg two' arg3"
 
-    :param str cwd: The current working directory to execute the command in,
-      defaults to /root
+    :param str cwd: The current working directory to execute the command in.
+      Defaults to the home directory of the user specified by ``runas``.
 
     :param str stdin: A string of standard input can be specified for the
       command to be run using the ``stdin`` parameter. This can be useful in cases
@@ -2212,8 +2205,7 @@ def script_retcode(source,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -2454,7 +2446,7 @@ def run_chroot(root,
         The command to run. ex: 'ls -lart /home'
 
     cwd
-        The current working directory to execute the command in, defaults to
+        The current working directory to execute the command in. defaults to
         /root
 
     stdin
@@ -2489,8 +2481,7 @@ def run_chroot(root,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -2673,7 +2664,7 @@ def shell_info(shell, list_modules=False):
     .. versionadded:: 2016.11.0
 
     Provides information about a shell or script languages which often use
-    ``#!``. The values returned are dependant on the shell or scripting
+    ``#!``. The values returned are dependent on the shell or scripting
     languages all return the ``installed``, ``path``, ``version``,
     ``version_raw``
 
@@ -2907,7 +2898,8 @@ def powershell(cmd,
 
     :param str cmd: The powershell command to run.
 
-    :param str cwd: The current working directory to execute the command in
+    :param str cwd: The current working directory to execute the command in.
+      Defaults to the home directory of the user specified by ``runas``.
 
     :param str stdin: A string of standard input can be specified for the
       command to be run using the ``stdin`` parameter. This can be useful in cases
@@ -2945,8 +2937,7 @@ def powershell(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -3093,8 +3084,8 @@ def run_bg(cmd,
 
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
-    :param str cwd: The current working directory to execute the command in,
-      defaults to `/root` (`C:\` in windows)
+    :param str cwd: The current working directory to execute the command in.
+      Defaults to the home directory of the user specified by ``runas``.
 
     :param str output_loglevel: Control the loglevel at which the output from
       the command is logged. Note that the command being run will still be logged
@@ -3132,8 +3123,7 @@ def run_bg(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':

@@ -28,7 +28,9 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres.language_create' in __salt__
+    if 'postgres.language_create' not in __salt__:
+        return (False, 'Unable to load postgres module.  Make sure `postgres.bins_dir` is set.')
+    return True
 
 
 def present(name,

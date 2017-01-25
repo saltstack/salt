@@ -735,10 +735,13 @@ class Schedule(object):
         '''
         Execute this method in a multiprocess or thread
         '''
-        if salt.utils.is_windows():
+        if salt.utils.is_windows() or self.opts.get('transport') == 'zeromq':
             # Since function references can't be pickled and pickling
             # is required when spawning new processes on Windows, regenerate
             # the functions and returners.
+            # This also needed for ZeroMQ transport to reset all functions
+            # context data that could keep paretns connections. ZeroMQ will
+            # hang on polling parents connections from the child process.
             self.functions = salt.loader.minion_mods(self.opts)
             self.returners = salt.loader.returners(self.opts, self.functions)
         ret = {'id': self.opts.get('id', 'master'),

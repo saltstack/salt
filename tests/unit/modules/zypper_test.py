@@ -74,7 +74,19 @@ class ZypperTestCase(TestCase):
         self.zypper_patcher_config = {
             '_get_configured_repos': Mock(side_effect=side_effect),
             '__zypper__': Mock(),
-            'get_repo': Mock(return_value={})
+            '_get_repo_info': Mock(
+                return_value={
+                    'keeppackages': False,
+                    'autorefresh': True,
+                    'enabled': False,
+                    'baseurl': self.new_repo_config['url'],
+                    'alias': self.new_repo_config['name'],
+                    'priority': 1,
+                    'type': 'rpm-md'
+                }
+            ),
+            'del_repo': Mock(),
+            'mod_repo': Mock(wraps=zypper.mod_repo)
         }
 
     def test_list_upgrades(self):
@@ -588,10 +600,42 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             'salt.modules.zypper', **self.zypper_patcher_config)
 
         with zypper_patcher:
-            self.assertEqual(zypper.mod_repo(name, **{'url': url}),
-                             {'comment': 'Specified arguments did not result in modification of repo'})
+            out = zypper.mod_repo(name, alias='new-alias')
+            self.assertEqual(
+                out['comment'],
+                'Specified arguments did not result in modification of repo')
             zypper.__zypper__.xml.call.assert_not_called()
             zypper.__zypper__.refreshable.xml.call.assert_not_called()
+
+    def test_repo_noadd_modbaseurl_ref(self):
+        '''
+        Test mod_repo detects the repo already exists,
+        no modification was requested and no refresh requested either
+
+        :return:
+        '''
+        url = self.new_repo_config['url']
+        name = self.new_repo_config['name']
+        self.zypper_patcher_config['_get_configured_repos'] = Mock(
+            **{'return_value.sections.side_effect': [[name], [], [], [name]]}
+        )
+        zypper_patcher = patch.multiple(
+            'salt.modules.zypper', **self.zypper_patcher_config)
+
+        with zypper_patcher:
+            params = {'baseurl': url + "-changed", 'enabled': False}
+            zypper.mod_repo(name, **params)
+            expected_params = {
+                'alias': 'mock-repo-name',
+                'autorefresh': True,
+                'baseurl': 'http://repo.url/some/path-changed',
+                'enabled': False,
+                'priority': 1,
+                'cache': False,
+                'keeppackages': False,
+                'type': 'rpm-md'}
+            assert zypper.mod_repo.call_count == 2
+            assert zypper.mod_repo.mock_calls[1] == call(name, **expected_params)
 
     def test_repo_add_mod_noref(self):
         '''

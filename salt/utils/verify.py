@@ -567,9 +567,6 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
                 # Owner
                 dacl.add_ace('S-1-3-4', 'grant', 'full_control',
                              'this_folder_subfolders_files')
-                # Users Group
-                dacl.add_ace('S-1-5-32-545', 'grant', 'read_execute',
-                             'this_folder_subfolders_files')
 
                 # Save the dacl to the object
                 dacl.save(path, True)

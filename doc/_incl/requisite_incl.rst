@@ -1,6 +1,6 @@
 **Before continuing** make sure you have a working Salt installation by
-following the :doc:`installation </topics/installation/index>` and the
-:doc:`configuration </ref/configuration/index>` instructions.
+following the :ref:`installation` and the
+:ref:`configuration <configuring-salt>` instructions.
 
 .. admonition:: Stuck?
 

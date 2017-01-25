@@ -920,11 +920,6 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
@@ -1053,7 +1048,13 @@ def create(vm_):
         try:
             private_ip = data['private_ips'][0]
         except KeyError:
-            private_ip = data['template']['nic']['ip']
+            try:
+                private_ip = data['template']['nic']['ip']
+            except KeyError:
+                # if IPv6 is used try this as last resort
+                # OpenNebula does not yet show ULA address here so take global
+                private_ip = data['template']['nic']['ip6_global']
+
             vm_['ssh_host'] = private_ip
 
     ssh_username = config.get_cloud_config_value(

@@ -210,8 +210,14 @@ def loadavg():
     .. code-block:: bash
 
         salt '*' status.loadavg
+
+        :raises CommandExecutionError: If the system cannot report loadaverages to Python
     '''
-    load_avg = os.getloadavg()
+    try:
+        load_avg = os.getloadavg()
+    except AttributeError:
+        # Some UNIX-based operating systems do not have os.getloadavg()
+        raise salt.exceptions.CommandExecutionError('status.loadavag is not available on your platform')
     return {'1-min': load_avg[0],
             '5-min': load_avg[1],
             '15-min': load_avg[2]}

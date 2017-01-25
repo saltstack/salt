@@ -4,8 +4,8 @@ Salt 2014.1.1 Release Notes
 
 :release: 2014-03-18
 
-Version 2014.1.1 is a bugfix release for :doc:`2014.1.0
-</topics/releases/2014.1.0>`.  The changes include:
+Version 2014.1.1 is a bugfix release for :ref:`2014.1.0
+<release-2014-1-0>`.  The changes include:
 
 - Various doc fixes, including up-to-date Salt Cloud installation documentation.
 - Renamed state.sls runner to state.orchestrate, to reduce confusion with the :mod:`state.sls <salt.modules.state.sls>` execution function

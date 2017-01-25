@@ -33,7 +33,7 @@ def __virtual__():
 
     if salt.utils.is_darwin():
         return (False, 'The timezone execution module failed to load: '
-                       'mac_timezone.py should replace this module on OS X.'
+                       'mac_timezone.py should replace this module on macOS.'
                        'There was a problem loading mac_timezone.py.')
 
     return __virtualname__

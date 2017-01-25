@@ -2453,7 +2453,7 @@ def describe_route_table(route_table_id=None, route_table_name=None,
 
     '''
 
-    salt.utils.warn_until('Nitrogen',
+    salt.utils.warn_until('Oxygen',
          'The \'describe_route_table\' method has been deprecated and '
          'replaced by \'describe_route_tables\'.'
     )

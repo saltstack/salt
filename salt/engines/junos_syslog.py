@@ -6,7 +6,8 @@ Junos Syslog Engine
 An engine that listen to syslog message from Junos devices,
 extract event information and generate message on SaltStack bus.
 
-One can customize the name of the topic. The event data consists of the following fields:
+One can customize the name of the topic.
+The event data consists of the following fields:
     a.  hostname
     b.  hostip
     c.  daemon
@@ -17,14 +18,17 @@ One can customize the name of the topic. The event data consists of the followin
     h.  message
     i.  pid
     j.  raw (the raw event data forwarded from the device)
-The topic can consist of any of the combination of above fields, but the topic has to start with ‘jnpr/syslog’
+The topic can consist of any of the combination of above fields,
+but the topic has to start with ‘jnpr/syslog’.
 So, we can have different combinations like:
 •   jnpr/syslog/hostip/daemon/event
 •   jnpr/syslog/daemon/severity
-The default topic is ‘jnpr/syslog/hostname/event’. The topic is to be specified in the configuration file.
+The default topic is ‘jnpr/syslog/hostname/event’.
+The topic is to be specified in the configuration file.
 
-The user can choose the type of data he/she wants of the event bus. Like, if one wants events pertaining to a
-particular daemon, he/she can specify that in the configuration file:
+The user can choose the type of data he/she wants of the event bus.
+Like, if one wants events pertaining to a particular daemon, he/she can
+specify that in the configuration file:
     daemon: mgd
 
 One can even have a list of daemons like:
@@ -48,7 +52,7 @@ This can be done via following configuration:
     set system syslog host <ip-of-the-salt-device> port 516 any any
 
 Here is a sample syslog event which is received from the junos device:
-    ' <30>May 29 05:18:12 bng-ui-vm-92 mspd[1492]: No chassis configuration found '
+  '<30>May 29 05:18:12 bng-ui-vm-9 mspd[1492]: No chassis configuration found'
 
 The source for parsing the syslog messages is taken from:
     https://gist.github.com/leandrosilva/3651640#file-xlog-py
@@ -63,8 +67,9 @@ import salt
 try:
     from twisted.internet.protocol import DatagramProtocol
     from twisted.internet import reactor, threads
-    from pyparsing import Word, alphas, Suppress, Combine, nums, string, Optional, \
-        Regex, Literal, OneOrMore, LineEnd, LineStart, StringEnd, delimitedList
+    from pyparsing import Word, alphas, Suppress, Combine, nums, string, \
+        Optional, Regex, Literal, OneOrMore, LineEnd, LineStart, StringEnd, \
+        delimitedList
     HAS_TWISTED_AND_PYPARSING = True
 except ImportError:
     HAS_TWISTED_AND_PYPARSING = False
@@ -100,7 +105,7 @@ class Parser(object):
                 ints,
                 ".",
                 combine=True) + Suppress(
-            ":"))
+                    ":"))
 
         # Received message
         rec_msg = Suppress(OneOrMore(word)) + Suppress(Literal("'"))
@@ -203,87 +208,119 @@ class Parser(object):
             payload["raw"] = line
             return payload
 
+
 class SyslogServerFactory(DatagramProtocol):
 
     def __init__(self, options):
         self.options = options
-        data = ["hostip", "priority", "severity", "facility", "timestamp", "hostname", "daemon", "pid", "message", "event"]
+        self.obj = Parser()
+        data = [
+            "hostip",
+            "priority",
+            "severity",
+            "facility",
+            "timestamp",
+            "hostname",
+            "daemon",
+            "pid",
+            "message",
+            "event"]
         if 'topic' in self.options:
-            self.title = 'jnpr/syslog'
+            # self.title = 'jnpr/syslog'
+            # To remove the stray '/', if not removed splitting the topic
+            # won't work properly. Eg: '/jnpr/syslog/event' won't be split
+            # properly if the starting '/' is not stripped
             self.options['topic'] = options['topic'].strip('/')
-            topics = options['topic'].rsplit("/")
+            topics = options['topic'].split("/")
+            self.title = topics
             if len(topics) < 2 or topics[0] != 'jnpr' or topics[1] != 'syslog':
                 log.debug(
-                    'The topic specified in configuration should start with "jnpr/syslog". Using the default topic.')
-                self.title = 'jnpr/syslog/hostname/event'
+                    'The topic specified in configuration should start with \
+                    "jnpr/syslog". Using the default topic.')
+                self.title = ['jnpr', 'syslog', 'hostname', 'event']
             else:
-                for x in range(2, len(topics)):
-                    if topics[x] not in data:
-                        log.debug('Please check the topic specified. Using the default topic.')
-                        self.title = 'jnpr/syslog/hostname/event'
+                for i in range(2, len(topics)):
+                    if topics[i] not in data:
+                        log.debug(
+                            'Please check the topic specified. \
+                              Only the following keywords can be specified \
+                               in the topic: hostip, priority, severity, \
+                                facility, timestamp, hostname, daemon, pid, \
+                                 message, event. Using the default topic.')
+                        self.title = ['jnpr', 'syslog', 'hostname', 'event']
                         break
+            # We are done processing the topic. All other arguments are the
+            # filters given by the user. While processing the filters we don't
+            # explicitly ignore the 'topic', but delete it here itself.
             del(self.options['topic'])
         else:
-            self.title = 'jnpr/syslog/hostname/event'
+            self.title = ['jnpr', 'syslog', 'hostname', 'event']
 
     def parseData(self, data, host, port, options):
         '''
-        This function will parse the raw syslog data, dynamically create the topic according to the topic
-        specified by the user (if specified) and decide whether to send the syslog data as an event on the master bus,
+        This function will parse the raw syslog data, dynamically create the
+        topic according to the topic specified by the user (if specified) and
+        decide whether to send the syslog data as an event on the master bus,
         based on the constraints given by the user.
 
         :param data: The raw syslog event data which is to be parsed.
         :param host: The IP of the host from where syslog is forwarded.
         :param port: Port of the junos device from which the data is sent
-        :param options: kwargs provided by the user in the master/minion configuration file.
-        :return: The result dictionary which contains the data and the topic, if the event is to be sent on the bus.
+        :param options: kwargs provided by the user in the configuration file.
+        :return: The result dictionary which contains the data and the topic,
+                 if the event is to be sent on the bus.
 
         '''
-        obj = Parser()
-        data = obj.parse(data)
+        data = self.obj.parse(data)
         data['hostip'] = host
-        log.debug('Junos Syslog - received {0} from {1}, sent from port {2}'.format(data, host, port))
+        log.debug(
+            'Junos Syslog - received {0} from {1}, \
+            sent from port {2}'.format(data, host, port))
 
         send_this_event = True
-        if options:
-            for key in options:
-                if key in data:
-                    if isinstance(options[key], (str, int)):
-                        if str(options[key]) != str(data[key]):
-                            send_this_event = False
-                            break
-                    elif isinstance(options[key], list):
-                        matched = False
-                        for x in options[key]:
-                            if str(x) == str(data[key]):
-                                matched = True
-                                break
-                        if not matched:
-                            send_this_event = False
+        for key in options:
+            if key in data:
+                if isinstance(options[key], (str, int)):
+                    if str(options[key]) != str(data[key]):
+                        send_this_event = False
+                        break
+                elif isinstance(options[key], list):
+                    for opt in options[key]:
+                        if str(opt) == str(data[key]):
                             break
                     else:
-                        raise Exception('Arguments in config not specified properly')
+                        send_this_event = False
+                        break
                 else:
-                    raise Exception('Please check the arguments given to junos engine in the configuration file')
+                    raise Exception(
+                        'Arguments in config not specified properly')
+            else:
+                raise Exception(
+                    'Please check the arguments given to junos engine in the\
+                     configuration file')
 
         if send_this_event:
-            if data['event']:
+            if 'event' in data:
                 topic = 'jnpr/syslog'
-                for x in range(2, len(self.title)):
-                    topic += '/' + str(data[self.title[x]])
-                log.debug('Junos Syslog - sending this event on the bus: {0} from {1}'.format(data, host))
-                result = {'send':True,'data': data, 'topic': topic}
-                return result
 
+            for i in range(2, len(self.title)):
+                topic += '/' + str(data[self.title[i]])
+                log.debug(
+                    'Junos Syslog - sending this event on the bus: \
+                    {0} from {1}'.format(data, host))
+                result = {'send': True, 'data': data, 'topic': topic}
+                return result
             else:
-                raise Exception('The incoming event data could not be parsed properly.')
+                raise Exception(
+                    'The incoming event data could not be parsed properly.')
         else:
-            result = {'send':False}
+            result = {'send': False}
             return result
 
     def send_event_to_salt(self, result):
         '''
-        This function identifies whether the engine is running on the master or the minion and sends the data to the master event bus accordingly.
+        This function identifies whether the engine is running on the master
+        or the minion and sends the data to the master event bus accordingly.
 
         :param result: It's a dictionary which has the final data and topic.
 
@@ -291,9 +328,14 @@ class SyslogServerFactory(DatagramProtocol):
         if result['send']:
             data = result['data']
             topic = result['topic']
+            # If the engine is run on master, get the event bus and send the
+            # parsed event.
             if __opts__['__role'] == 'master':
                 salt.utils.event.get_master_event(__opts__,
-                                                  __opts__['sock_dir']).fire_event(data, topic)
+                                                  __opts__['sock_dir']
+                                                  ).fire_event(data, topic)
+            # If the engine is run on minion, use the fire_master execution
+            # module to send event on the master bus.
             else:
                 __salt__['event.fire_master'](data=data, tag=topic)
 
@@ -304,9 +346,18 @@ class SyslogServerFactory(DatagramProtocol):
         '''
         log.error(err_msg.getErrorMessage)
 
-    def datagramReceived(self, data, (host, port)):
-        d = threads.deferToThread(self.parseData, data, host, port, self.options)
+    def datagramReceived(self, data, connection_details):
+        # This is dont to make the code autopep8 compliant
+        # Cannot specify the tuple directly as an argument of datagramReceived
+        (host, port) = connection_details
+        d = threads.deferToThread(
+            self.parseData,
+            data,
+            host,
+            port,
+            self.options)
         d.addCallbacks(self.send_event_to_salt, self.handle_error)
+
 
 def start(port=516, **kwargs):
 

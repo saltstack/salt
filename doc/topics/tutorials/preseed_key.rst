@@ -1,3 +1,5 @@
+.. _tutorial-preseed-key:
+
 ================================
 Preseed Minion with Accepted Key
 ================================

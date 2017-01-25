@@ -7,7 +7,7 @@ VMware Cloud Module
 
 The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 
-See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
+See :ref:`Getting started with VMware <cloud-getting-started-vmware>` to get started.
 
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 
@@ -126,6 +126,7 @@ import subprocess
 # Import salt libs
 import salt.utils
 import salt.utils.cloud
+import salt.utils.network
 import salt.utils.xmlutil
 import salt.utils.vmware
 from salt.exceptions import SaltCloudSystemExit
@@ -907,7 +908,16 @@ def _wait_for_ip(vm_ref, max_wait):
     max_wait_ip = max_wait
     vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_vmware_tools)
     if not vmware_tools_status:
-        return False
+        # VMware will only report the IP if VMware tools are installed. Try to
+        # determine the IP using DNS
+        vm_name = vm_ref.summary.config.name
+        resolved_ips = salt.utils.network.host_to_ips(vm_name)
+        log.debug("Timeout waiting for VMware tools. The name {0} resolved "
+                  "to {1}".format(vm_name, str(resolved_ips)))
+        if isinstance(resolved_ips, list) and len(resolved_ips):
+            return resolved_ips[0]
+        else:
+            return False
     time_counter = 0
     starttime = time.time()
     while time_counter < max_wait_ip:
@@ -2271,11 +2281,6 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
@@ -2351,6 +2356,9 @@ def create(vm_):
     )
     customization = config.get_cloud_config_value(
         'customization', vm_, __opts__, search_global=False, default=True
+    )
+    customization_spec = config.get_cloud_config_value(
+        'customization_spec', vm_, __opts__, search_global=False, default=None
     )
     win_password = config.get_cloud_config_value(
         'win_password', vm_, __opts__, search_global=False, default=None
@@ -2549,7 +2557,10 @@ def create(vm_):
                                          reloc_spec,
                                          template)
 
-        if customization and (devices and 'network' in list(devices.keys())):
+        if customization and customization_spec:
+            customization_spec = salt.utils.vmware.get_customizationspec_ref(si=si, customization_spec_name=customization_spec)
+            clone_spec.customization = customization_spec.spec
+        elif customization and (devices and 'network' in list(devices.keys())):
             global_ip = vim.vm.customization.GlobalIPSettings()
             if 'dns_servers' in list(vm_.keys()):
                 global_ip.dnsServerList = vm_['dns_servers']
@@ -2602,7 +2613,11 @@ def create(vm_):
             'event',
             'requesting instance',
             'salt/cloud/{0}/requesting'.format(vm_['name']),
-            args={'kwargs': vm_},
+            args={
+                'name': vm_['name'],
+                'profile': vm_['profile'],
+                'provider': vm_['driver'],
+            },
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )

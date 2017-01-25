@@ -23,7 +23,9 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres.schema_exists' in __salt__
+    if 'postgres.schema_exists' not in __salt__:
+        return (False, 'Unable to load postgres module.  Make sure `postgres.bins_dir` is set.')
+    return True
 
 
 def present(dbname, name,

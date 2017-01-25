@@ -140,8 +140,7 @@ def built(name,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
     results
         The names of the expected rpms that will be built
@@ -303,8 +302,8 @@ def repo(name,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other)
-            ``PyYAML`` idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            ``PyYAML`` idiosyncrasies can be found :ref:`here
+            <yaml-idiosyncrasies>`.
 
             Use of ``OPTIONS`` on some platforms, for example:
             ``ask-passphrase``, will require ``gpg-agent`` or similar to cache

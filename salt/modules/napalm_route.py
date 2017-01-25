@@ -68,7 +68,7 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def show(destination, protocol):
+def show(destination, protocol=None):
 
     '''
     Displays all details for a certain route learned via a specific protocol.

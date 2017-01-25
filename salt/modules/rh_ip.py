@@ -748,6 +748,18 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if 'clonenum_start' in opts:
         result['clonenum_start'] = opts['clonenum_start']
 
+    # If NetworkManager is available, we can control whether we use
+    # it or not
+    if 'nm_controlled' in opts:
+        if opts['nm_controlled'] in _CONFIG_TRUE:
+            result['nm_controlled'] = 'yes'
+        elif opts['nm_controlled'] in _CONFIG_FALSE:
+            result['nm_controlled'] = 'no'
+        else:
+            _raise_error_iface(iface, opts['nm_controlled'], valid)
+    else:
+        result['nm_controlled'] = 'no'
+
     return result
 
 

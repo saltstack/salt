@@ -5,10 +5,9 @@ Orchestrate Runner
 ==================
 
 Orchestration is accomplished in salt primarily through the :ref:`Orchestrate
-Runner <orchestrate-runner>`. Added in version 0.17.0, this Salt :doc:`Runner
-</ref/runners/index>` can use the full suite of :doc:`requisites
-</ref/states/requisites>` available in states, and can also execute
-states/functions using salt-ssh.
+Runner <orchestrate-runner>`. Added in version 0.17.0, this Salt :ref:`Runner
+<runners>` can use the full suite of :ref:`requisites` available in states,
+and can also execute states/functions using salt-ssh.
 
 The Orchestrate Runner
 ----------------------
@@ -20,7 +19,7 @@ The Orchestrate Runner
   The Orchestrate Runner (originally called the state.sls runner) offers all
   the functionality of the OverState, but with some advantages:
 
-  * All :doc:`requisites </ref/states/requisites>` available in states can be
+  * All :ref:`requisites` available in states can be
     used.
   * The states/functions will also work on salt-ssh minions.
 
@@ -171,16 +170,65 @@ To run a highstate, set ``highstate: True`` in your state config:
 
     salt-run state.orchestrate orch.web_setup
 
+Runner
+^^^^^^
+
+To execute another runner, use :mod:`salt.runner <salt.states.saltmod.runner>`.
+For example to use the ``cloud.profile`` runner in your orchestration state
+additional options to replace values in the configured profile, use this:
+
+.. code-block:: yaml
+
+    # /srv/salt/orch/deploy.sls
+    create_instance:
+      salt.runner:
+        - name: cloud.profile
+        - prof: cloud-centos
+        - provider: cloud
+        - instances:
+          - server1
+        - opts:
+            minion:
+              master: master1
+
+To get a more dynamic state, use jinja variables together with
+``inline pillar data``.
+Using the same example but passing on pillar data, the state would be like
+this.
+
+.. code-block:: yaml
+
+    # /srv/salt/orch/deploy.sls
+    {% set servers = salt['pillar.get']('servers', 'test') %}
+    {% set master = salt['pillat.get']('master', 'salt') %}
+    create_instance:
+      salt.runner:
+        - name: cloud.profile
+        - prof: cloud-centos
+        - provider: cloud
+        - instances:
+          - {{ servers }}
+        - opts:
+            minion:
+              master: {{ master }}
+
+To execute with pillar data.
+
+.. code-block:: bash
+
+    salt-run state.orch orch.deploy pillar='{"servers": "newsystem1",
+    "master": "mymaster"}'
+
 
 More Complex Orchestration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Many states/functions can be configured in a single file, which when combined
-with the full suite of :doc:`requisites </ref/states/requisites>`, can be used
+with the full suite of :ref:`requisites`, can be used
 to easily configure complex orchestration tasks. Additionally, the
 states/functions will be executed in the order in which they are defined,
-unless prevented from doing so by any :doc:`requisites
-</ref/states/requisites>`, as is the default in SLS files since 0.17.0.
+unless prevented from doing so by any :ref:`requisites`, as is the default in
+SLS files since 0.17.0.
 
 .. code-block:: yaml
 

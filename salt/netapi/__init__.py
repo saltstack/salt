@@ -98,18 +98,6 @@ class NetapiClient(object):
         local = salt.client.get_local_client(mopts=self.opts)
         return local.cmd(*args, **kwargs)
 
-    def local_batch(self, *args, **kwargs):
-        '''
-        Run :ref:`execution modules <all-salt.modules>` against batches of minions
-
-        Wraps :py:meth:`salt.client.LocalClient.cmd_batch`
-
-        :return: Returns the result from the exeuction module for each batch of
-            returns
-        '''
-        local = salt.client.get_local_client(mopts=self.opts)
-        return local.cmd_batch(*args, **kwargs)
-
     def local_subset(self, *args, **kwargs):
         '''
         Run :ref:`execution modules <all-salt.modules>` against subsets of minions
@@ -129,19 +117,9 @@ class NetapiClient(object):
 
         :return: Returns the result from the salt-ssh command
         '''
-        ssh_client = salt.client.ssh.client.SSHClient(mopts=self.opts)
+        ssh_client = salt.client.ssh.client.SSHClient(mopts=self.opts,
+                                                      disable_custom_roster=True)
         return ssh_client.cmd_sync(kwargs)
-
-    def ssh_async(self, fun, timeout=None, **kwargs):
-        '''
-        Run salt-ssh commands asynchronously
-
-        Wraps :py:meth:`salt.client.ssh.client.SSHClient.cmd_async`.
-
-        :return: Returns the JID to check for results on
-        '''
-        kwargs['fun'] = fun
-        return salt.client.ssh.client.cmd_async(kwargs)
 
     def runner(self, fun, timeout=None, **kwargs):
         '''

@@ -2,8 +2,7 @@
 Salt 2016.3.5 Release Notes
 ===========================
 
-Version 2016.3.5 is a bugfix release for :doc:`2016.3.0
-</topics/releases/2016.3.0>`.
+Version 2016.3.5 is a bugfix release for :ref:`2016.3.0 <release-2016-3-0>`.
 
 
 Improved Checksum Handling in :py:func:`file.managed <salt.states.file.managed>`, :py:func:`archive.extracted <salt.states.archive.extracted>` States

@@ -82,6 +82,38 @@ A map file can include grains and minion configuration options:
             cheese: more tasty
             omelet: with peppers
 
+Any top level data element from your profile may be overridden in the map file:
+
+.. code-block:: yaml
+
+    fedora_small:
+      - web1:
+        size: t2.micro
+      - web2:
+        size: t2.nano
+
+As of Salt Nitrogen, nested elements are merged, and can can be specified
+individually without having to repeat the complete definition for each top
+level data element. In this example a separate MAC is assigned to each VMware
+instance while inheriting device parameters for for disk and network
+configuration:
+
+.. code-block:: yaml
+
+    nyc-vm:
+      - db1:
+          devices:
+            network:
+              Network Adapter 1:
+                mac: '44:44:44:44:44:41'
+      - db2:
+          devices:
+            network:
+              Network Adapter 1:
+                mac: '44:44:44:44:44:42'
+
+
+
 A map file may also be used with the various query options:
 
 .. code-block:: bash
