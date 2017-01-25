@@ -48,6 +48,24 @@ class TimezoneSolarisModuleTest(integration.ModuleCase):
         self.assertIn(ret, timescale)
 
 
+class TimezoneWindowsModuleTest(integration.ModuleCase):
+    def setUp(self):
+        '''
+        Set up Solaris test environment
+        '''
+        ret_grain = self.run_function('grains.item', ['os_family'])
+        if 'Windows' not in ret_grain['os_family']:
+            self.skipTest('For Windows only')
+        super(TimezoneWindowsModuleTest, self).setUp()
+
+    def test_get_hwclock(self):
+        timescale = ['UTC', 'localtime']
+        ret = self.run_function('timezone.get_hwclock')
+        self.assertIn(ret, timescale)
+
+
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests([TimezoneLinuxModuleTest, TimezoneSolarisModuleTest])
+    run_tests([TimezoneLinuxModuleTest,
+               TimezoneSolarisModuleTest,
+               TimezoneWindowsModuleTest])
