@@ -129,13 +129,17 @@ def list_(bank, cachedir):
     if not os.path.isdir(base):
         return []
     try:
-        return os.listdir(base)
+        items = os.listdir(base)
     except OSError as exc:
         raise SaltCacheError(
             'There was an error accessing directory "{0}": {1}'.format(
                 base, exc
             )
         )
+    ret = []
+    for item in items:
+        ret.append(item.rstrip('.p'))
+    return ret
 
 
 getlist = list_
