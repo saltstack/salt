@@ -32,7 +32,7 @@ try:
     GROUP = dbus.Interface(BUS.get_object(avahi.DBUS_NAME, SERVER.EntryGroupNew()),
                            avahi.DBUS_INTERFACE_ENTRY_GROUP)
     HAS_DBUS = True
-except ImportError:
+except (ImportError, NameError):
     HAS_DBUS = False
 except DBusException:
     HAS_DBUS = False

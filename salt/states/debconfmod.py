@@ -34,9 +34,8 @@ set_file
             'ferm/enable': {'type': 'boolean', 'value': True}
 
 .. note::
-    Due to how PyYAML imports nested dicts (see :doc:`here
-    </topics/troubleshooting/yaml_idiosyncrasies>`), the values in the ``data``
-    dict must be indented four spaces instead of two.
+    Due to how PyYAML imports nested dicts (see :ref:`here <yaml-idiosyncrasies>`),
+    the values in the ``data`` dict must be indented four spaces instead of two.
 '''
 from __future__ import absolute_import
 import salt.ext.six as six
