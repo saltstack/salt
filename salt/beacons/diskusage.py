@@ -67,6 +67,7 @@ def beacon(config):
             - 'd:\': 50%
 
     '''
+    parts = psutil.disk_partitions(all=False)
     ret = []
     for mounts in config:
         mount = mounts.keys()[0]
@@ -75,7 +76,12 @@ def beacon(config):
             _current_usage = psutil.disk_usage(mount)
         except OSError:
             # Ensure a valid mount point
-            log.error('{0} is not a valid mount point, skipping.'.format(mount))
+            log.error('{0} is not a valid mount point, try regex.'.format(mount))
+            for part in parts:
+                if re.match(mount, part.mountpoint):
+                    row = {}
+                    row[part.mountpoint] = mounts[mount]
+                    config.append(row)
             continue
 
         current_usage = _current_usage.percent
