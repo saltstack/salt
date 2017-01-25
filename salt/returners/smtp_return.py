@@ -132,9 +132,7 @@ __virtualname__ = 'smtp'
 
 
 def __virtual__():
-    if HAS_GNUPG:
-        return __virtualname__
-    return False, 'Could not import smtp returner; gnupg is not installed.'
+    return __virtualname__
 
 
 def _get_options(ret=None):
