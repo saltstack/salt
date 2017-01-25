@@ -1317,8 +1317,11 @@ def _freebsd_remotes_on(port, which_end):
             continue  # ignore header
         if len(chunks) < 2:
             continue
-        local = chunks[5]
-        remote = chunks[6]
+        # sockstat -4 -c -p 4506 does this with high PIDs:
+        # USER     COMMAND    PID   FD PROTO  LOCAL ADDRESS         FOREIGN ADDRESS
+        # salt-master python2.781106 35 tcp4  192.168.12.34:4506    192.168.12.45:60143
+        local = chunks[-2]
+        remote = chunks[-1]
         lhost, lport = local.split(':')
         rhost, rport = remote.split(':')
         if which_end == 'local' and int(lport) != port:  # ignore if local port not port
