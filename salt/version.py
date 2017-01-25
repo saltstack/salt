@@ -613,12 +613,29 @@ def system_information():
         else:
             return ''
 
+    version = system_version()
+    release = platform.release()
+    if platform.win32_ver()[0]:
+        import win32api
+        if ((sys.version_info.major == 2 and sys.version_info >= (2, 7, 12)) or
+                (sys.version_info.major == 3 and sys.version_info >= (3, 5, 2))):
+            if win32api.GetVersionEx(1)[8] > 1:
+                server = {'Vista': '2008Server',
+                          '7': '2008ServerR2',
+                          '8': '2012Server',
+                          '8.1': '2012ServerR2',
+                          '10': '2016Server'}
+                release = server.get(platform.release(),
+                                     'UNKServer')
+                _, ver, sp, extra = platform.win32_ver()
+                version = ' '.join([release, ver, sp, extra])
+
     system = [
         ('system', platform.system()),
         ('dist', ' '.join(platform.dist())),
-        ('release', platform.release()),
+        ('release', release),
         ('machine', platform.machine()),
-        ('version', system_version()),
+        ('version', version),
     ]
 
     for name, attr in system:
