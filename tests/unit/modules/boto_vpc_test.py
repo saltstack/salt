@@ -517,8 +517,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests describing parameters via vpc id if vpc exist
         '''
-        # With moto 0.4.25 is_default is set to True. 0.4.24 and older, is_default is False
-        if _get_moto_version() >= LooseVersion('0.4.25'):
+        # With moto 0.4.25 through 0.4.30, is_default is set to True.
+        # 0.4.24 and older and 0.4.31 and newer, is_default is False
+        if LooseVersion('0.4.25') <= _get_moto_version() < LooseVersion('0.4.31'):
             is_default = True
         else:
             is_default = False

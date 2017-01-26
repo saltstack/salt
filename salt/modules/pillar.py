@@ -304,9 +304,39 @@ def raw(key=None):
 
 def ext(external, pillar=None):
     '''
+    .. versionchanged:: 2016.3.6,2016.11.3,Nitrogen
+        The supported ext_pillar types are now tunable using the
+        :conf_master:`on_demand_ext_pillar` config option. Earlier releases
+        used a hard-coded default.
+
     Generate the pillar and apply an explicit external pillar
 
-    CLI Example:
+
+    external
+        A single ext_pillar to add to the ext_pillar configuration. This must
+        be passed as a single section from the ext_pillar configuration (see
+        CLI examples below). For more complicated ``ext_pillar``
+        configurations, it can be helpful to use the Python shell to load YAML
+        configuration into a dictionary, and figure out
+
+        .. code-block:: python
+
+            >>> import yaml
+            >>> ext_pillar = yaml.safe_load("""
+            ... ext_pillar:
+            ...   - git:
+            ...     - issue38440 https://github.com/terminalmage/git_pillar:
+            ...       - env: base
+            ... """)
+            >>> ext_pillar
+            {'ext_pillar': [{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}]}
+            >>> ext_pillar['ext_pillar'][0]
+            {'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}
+
+        In the above example, the value to pass would be
+        ``{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}``.
+        Note that this would need to be quoted when passing on the CLI (as in
+        the CLI examples below).
 
     pillar : None
         If specified, allows for a dictionary of pillar data to be made
@@ -316,9 +346,13 @@ def ext(external, pillar=None):
 
         .. versionadded:: 2015.5.0
 
+    CLI Examples:
+
     .. code-block:: bash
 
         salt '*' pillar.ext '{libvirt: _}'
+        salt '*' pillar.ext "{'git': ['master https://github.com/myuser/myrepo']}"
+        salt '*' pillar.ext "{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}"
     '''
     if isinstance(external, six.string_types):
         external = yaml.safe_load(external)
