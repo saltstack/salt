@@ -218,17 +218,20 @@ def returner(ret):
                                    **ret)
 
     if gpgowner:
-        assert HAS_GNUPG, "gnupg is required in order to user gpgowner in smtp returner"
-        gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
-                        options=['--trust-model always'])
-        encrypted_data = gpg.encrypt(content, to_addrs)
-        if encrypted_data.ok:
-            log.debug('smtp_return: Encryption successful')
-            content = str(encrypted_data)
+        if HAS_GNUPG:
+            gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
+                            options=['--trust-model always'])
+            encrypted_data = gpg.encrypt(content, to_addrs)
+            if encrypted_data.ok:
+                log.debug('smtp_return: Encryption successful')
+                content = str(encrypted_data)
+            else:
+                log.error('smtp_return: Encryption failed, only an error message will be sent')
+                content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
+                    encrypted_data.status, encrypted_data.stderr)
         else:
-            log.error('smtp_return: Encryption failed, only an error message will be sent')
-            content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
-                encrypted_data.status, encrypted_data.stderr)
+            log.error("gnupg python module is required in order to user gpgowner in smtp returner ; ignoring gpgowner configuration for now")
+            
 
     if isinstance(content, six.moves.StringIO):
         content = content.read()
