@@ -695,6 +695,27 @@ class State(object):
         '''
         Whenever a state run starts, gather the pillar data fresh
         '''
+        if self._pillar_override:
+            if isinstance(self._pillar_override, dict):
+                decrypted = self._decrypt_pillar_override()
+            else:
+                decrypted = yamlloader.load(
+                    self._decrypt_pillar_override(),
+                    Loader=yamlloader.SaltYamlSafeLoader
+                )
+            if not isinstance(decrypted, dict):
+                if self._pillar_enc:
+                    msg = (
+                        'Decrypted pillar override data did not render to a '
+                        'dictionary'
+                    )
+                else:
+                    msg = 'Pillar override was not passed as a dictionary'
+                log.error(msg)
+                self._pillar_override = None
+            else:
+                self._pillar_override = decrypted
+
         pillar = salt.pillar.get_pillar(
                 self.opts,
                 self.opts['grains'],
@@ -703,40 +724,7 @@ class State(object):
                 pillar=self._pillar_override,
                 pillarenv=self.opts.get('pillarenv')
                 )
-        ret = pillar.compile_pillar()
-        if self._pillar_override:
-            merge_strategy = self.opts.get(
-                'pillar_source_merging_strategy',
-                'smart'
-            )
-            merge_lists = self.opts.get(
-                'pillar_merge_lists',
-                False
-            )
-            if isinstance(self._pillar_override, dict):
-                ret = salt.utils.dictupdate.merge(
-                    ret,
-                    self._decrypt_pillar_override(),
-                    strategy=merge_strategy,
-                    merge_lists=merge_lists
-                )
-            else:
-                decrypted = yamlloader.load(
-                    self._decrypt_pillar_override(),
-                    Loader=yamlloader.SaltYamlSafeLoader
-                )
-                if not isinstance(decrypted, dict):
-                    log.error(
-                        'Decrypted pillar data did not render to a dictionary'
-                    )
-                else:
-                    ret = salt.utils.dictupdate.merge(
-                        ret,
-                        decrypted,
-                        strategy=merge_strategy,
-                        merge_lists=merge_lists
-                    )
-        return ret
+        return pillar.compile_pillar()
 
     def _mod_init(self, low):
         '''
