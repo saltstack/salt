@@ -129,7 +129,6 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not data:
         data = None
 
-    response = None
     if method == 'PUT':
         if local_file:
             with salt.utils.fopen(local_file, 'r') as data:
@@ -147,6 +146,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
                                   data=data,
                                   verify=verify_ssl,
                                   stream=True)
+        response = result.content
     else:
         result = requests.request(method,
                                   requesturl,
