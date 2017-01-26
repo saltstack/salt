@@ -163,6 +163,20 @@ class LinuxLVMTestCase(TestCase):
                 with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
                     self.assertEqual(linux_lvm.pvcreate('A', metadatasize=1000), True)
 
+    def test_pvcreate_existing_pvs(self):
+        '''
+        Test a scenario when all the submitted devices are already LVM PVs.
+        '''
+        pvdisplay = MagicMock(return_value=True)
+        with patch('salt.modules.linux_lvm.pvdisplay', pvdisplay):
+            with patch.object(os.path, 'exists', return_value=True):
+                ret = {'stdout': 'saltines', 'stderr': 'cheese', 'retcode': 0, 'pid': '1337'}
+                cmd_mock = MagicMock(return_value=ret)
+                with patch.dict(linux_lvm.__salt__, {'cmd.run_all': cmd_mock}):
+                    self.assertEqual(linux_lvm.pvcreate('A', metadatasize=1000),
+                                     True)
+                    cmd_mock.assert_not_called()
+
     def test_pvremove(self):
         '''
         Tests for remove a physical device being used as an LVM physical volume
