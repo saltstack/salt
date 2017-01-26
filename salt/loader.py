@@ -292,11 +292,12 @@ def proxy(opts, functions=None, returners=None, whitelist=None):
     '''
     Returns the proxy module for this salt-proxy-minion
     '''
+    _utils = utils(opts)
     ret = LazyLoader(
         _module_dirs(opts, 'proxy'),
         opts,
         tag='proxy',
-        pack={'__salt__': functions, '__ret__': returners},
+        pack={'__salt__': functions, '__ret__': returners, '__utils__': _utils},
     )
 
     ret.pack['__proxy__'] = ret
