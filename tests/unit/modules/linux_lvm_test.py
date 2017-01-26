@@ -152,7 +152,10 @@ class LinuxLVMTestCase(TestCase):
 
         self.assertRaises(CommandExecutionError, linux_lvm.pvcreate, 'A')
 
-        pvdisplay = MagicMock(return_value=True)
+        # pvdisplay() would be called by pvcreate() twice: firstly to check
+        # whether a device is already initialized for use by LVM and then to
+        # ensure that the pvcreate executable did its job correctly.
+        pvdisplay = MagicMock(side_effect=[False, True])
         with patch('salt.modules.linux_lvm.pvdisplay', pvdisplay):
             with patch.object(os.path, 'exists', return_value=True):
                 ret = {'stdout': 'saltines', 'stderr': 'cheese', 'retcode': 0, 'pid': '1337'}
