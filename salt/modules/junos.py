@@ -10,6 +10,7 @@ import json
 
 # Import salt libraries
 from salt.utils import fopen
+import salt
 
 try:
     from lxml import etree
@@ -377,12 +378,15 @@ def install_config(path=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.install_config '/home/user/config.set' timeout=300
+        salt 'device_name' junos.install_config 'salt://templates/config.xml' timeout=300
 
 
     Options:
       * path: Path where the configuration file is present.
-      * kwargs: keyworded arguments taken by load fucntion of PyEZ
+      * update: This argument will decide if the configuration should 'overwrite', 'merge', or 'replace' existing
+      * configuration
+      * comment: A text string to be used when committing the configuration
+      * kwargs: keyworded arguments taken by load function of PyEZ
     '''
     conn = __proxy__['junos.conn']()
     ret = dict()
@@ -391,23 +395,43 @@ def install_config(path=None, **kwargs):
     if 'timeout' in kwargs:
         conn.timeout = kwargs['timeout']
 
-    if kwargs['template']:
-        options = {'template_path': path, 'template_vars': __pillar__['proxy']}
+    template_cached_path = salt.utils.mkstemp()
+    __salt__['cp.get_file'](path, template_cached_path)
+
+    options = {'path': template_cached_path}
+
+    if 'update' in kwargs:
+        valid_load_options = set(['merge', 'overwrite'])
+        if kwargs['update'] in valid_load_options:
+            options.update({kwargs['update']: True})
+
+    if path.endswith('xml'):
+        options["format"] = 'xml'
     else:
-        options = {'path': path}
+        options["format"] = 'text'
 
     try:
         conn.cu.load(**options)
-        conn.cu.pdiff()
+        config_diff = conn.cu.diff()
+        if config_diff is None:
+            ret['message'] = 'Configuration already exists'
+            ret['out'] = True
+            return ret
 
     except Exception as exception:
         ret['message'] = 'Could not load configuration due to : "{0}"'.format(
             exception)
         ret['out'] = False
+        return ret
 
     if conn.cu.commit_check():
         ret['message'] = 'Successfully loaded and committed!'
-        conn.cu.commit()
+
+        commit_options = {'comment': 'Updated by junos:install_config'}
+        if 'comment' in kwargs:
+            commit_options['comment'] = kwargs['comment']
+
+        conn.cu.commit(**commit_options)
     else:
         ret['message'] = 'Commit check failed.'
         ret['out'] = False
@@ -507,3 +531,4 @@ def file_copy(src=None, dest=None):
         ret['out'] = False
 
     return ret
+
