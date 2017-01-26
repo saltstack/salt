@@ -231,8 +231,6 @@ def returner(ret):
                     encrypted_data.status, encrypted_data.stderr)
         else:
             log.error("gnupg python module is required in order to user gpgowner in smtp returner ; ignoring gpgowner configuration for now")
-            
-
     if isinstance(content, six.moves.StringIO):
         content = content.read()
 
