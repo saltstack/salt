@@ -5181,9 +5181,6 @@ def serialize(name,
         else:
             ret['result'] = True
             ret['comment'] = 'The file {0} is in the correct state'.format(name)
-
-
-
         return ret
 
     return __salt__['file.manage_file'](name=name,
