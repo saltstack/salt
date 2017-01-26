@@ -70,7 +70,7 @@ To install fresh release of Salt minion on Jessie:
    .. code-block:: bash
 
        apt-get update
-       apt-get install python-zmq python-tornado/jessie-backports salt-common/stretch
+       apt-get install python-zmq python-systemd/jessie-backports python-tornado/jessie-backports salt-common/stretch
 
    **Raspbian**:
 
