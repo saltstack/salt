@@ -1,5 +1,7 @@
 @echo off
-@echo Salt Windows Build Script
+@echo Salt Windows Build Script, which calls the other *.ps1 scripts.
+@echo    You may set SALTREPO_LOCAL_CACHE 
+@echo           and  SALTREPO_LOCAL_CACHE_PIP to permanent cache directories
 @echo ---------------------------------------------------------------------
 @echo.
 
@@ -68,6 +70,9 @@ if not %errorLevel%==0 (
 @echo %0 :: Install Current Version of salt...
 @echo ---------------------------------------------------------------------
 "%PyDir%\python.exe" "%SrcDir%\setup.py" --quiet install --force
+if not %errorLevel%==0 (
+    goto eof
+)
 @echo.
 
 :: Build the Salt Package
