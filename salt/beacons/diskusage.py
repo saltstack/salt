@@ -43,7 +43,7 @@ def __validate__(config):
 
 
 def beacon(config):
-    '''
+    r'''
     Monitor the disk usage of the minion
 
     Specify thresholds for each disk and only emit a beacon if any of them are
