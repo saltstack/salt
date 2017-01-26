@@ -58,6 +58,22 @@
 # interval can be set to ping the top master with this interval, in seconds.
 #master_failback_interval: 0
 
+# Query dns server for a SRV entry and use the response to connect
+# to the discovered masters (needs: dig, host, or nslookup binary installed
+# to work).  You can set name in 'master_dns_discovery_name' or it'll default 
+# to 'saltmaster' if unset.
+#master_dns_discovery: False
+
+# Service name to look for with dns srv.  Defaults to 'saltmaster', can be
+# useful if you have a single domain, but may have multiple data centers
+# and separate masters. (optional)
+#master_dns_discovery_name: str
+
+# Domain that is used for dns discovery of salt master via SRV records. Only used
+# if 'master_dns_discovery' is true.  Not required, but if you have dns command
+# output problems, try setting this.
+#master_dns_discovery_domain: str
+
 # Set whether the minion should connect to the master via IPv6:
 #ipv6: False
 
