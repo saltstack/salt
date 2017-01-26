@@ -262,6 +262,15 @@ VALID_OPTS = {
     # The external pillars permitted to be used on-demand using pillar.ext
     'on_demand_ext_pillar': list,
 
+    # A map of glob paths to be used
+    'decrypt_pillar': list,
+
+    # Delimiter to use in path expressions for decrypt_pillar
+    'decrypt_pillar_delimiter': str,
+
+    # Default renderer for decrypt_pillar
+    'decrypt_pillar_renderer': str,
+
     # The type of hashing algorithm to use when doing file comparisons
     'hash_type': str,
 
@@ -1045,6 +1054,9 @@ DEFAULT_MINION_OPTS = {
                  salt.syspaths.SPM_PILLAR_PATH]
     },
     'on_demand_ext_pillar': ['libvirt', 'virtkey'],
+    'decrypt_pillar': [],
+    'decrypt_pillar_delimiter': ':',
+    'decrypt_pillar_renderer': 'gpg',
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
     'git_pillar_env': '',
@@ -1246,6 +1258,9 @@ DEFAULT_MASTER_OPTS = {
                  salt.syspaths.SPM_PILLAR_PATH]
     },
     'on_demand_ext_pillar': ['libvirt', 'virtkey'],
+    'decrypt_pillar': [],
+    'decrypt_pillar_delimiter': ':',
+    'decrypt_pillar_renderer': 'gpg',
     'thorium_interval': 0.5,
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
