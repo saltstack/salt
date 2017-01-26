@@ -71,22 +71,10 @@ def timeout(name, delete=0, reject=0):
                     reject_set.add(id_)
     for id_ in remove:
         keyapi.delete_key(id_)
-        try:
-            __reg__['status']['val'].pop(id_)
-        except KeyError:
-            pass
-        try:
-            __context__[ktr].pop(id_)
-        except KeyError:
-            pass
+        __reg__['status']['val'].pop(id_, None)
+        __context__[ktr].pop(id_, None)
     for id_ in reject_set:
         keyapi.reject(id_)
-        try:
-            __reg__['status']['val'].pop(id_)
-        except KeyError:
-            pass
-        try:
-            __context__[ktr].pop(id_)
-        except KeyError:
-            pass
+        __reg__['status']['val'].pop(id_, None)
+        __context__[ktr].pop(id_, None)
     return ret
