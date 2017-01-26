@@ -219,7 +219,7 @@ def get_system_time(utc_offset=None):
     timezone. To set the time based off of UTC use "'+0000'". Note: if being
     passed through the command line will need to be quoted twice to allow
     negative offsets.
-    :return: Returns the system time in HH:MM AM/PM format.
+    :return: Returns the system time in HH:MM:SS AM/PM format.
     :rtype: str
 
     CLI Example:
@@ -229,7 +229,7 @@ def get_system_time(utc_offset=None):
         salt '*' system.get_system_time
     '''
     offset_time = _get_offset_time(utc_offset)
-    return datetime.strftime(offset_time, "%I:%M %p")
+    return datetime.strftime(offset_time, "%I:%M:%S %p")
 
 
 def set_system_time(newtime, utc_offset=None):
