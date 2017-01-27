@@ -17,8 +17,6 @@ Management of Solaris Zones
 
     TODO:
     - zone.present (test mode)
-    - zone.detached (test mode)
-    - zone.attached (test mode)
 '''
 from __future__ import absolute_import
 
@@ -736,6 +734,88 @@ def absent(name, uninstall=False):
     else:
         ret['result'] = True
         ret['comment'] = 'Zone {0} does not exist.'.format(name)
+
+    return ret
+
+
+def attached(name, force=False):
+    '''
+    Ensure zone is attached
+
+    name : string
+        name of the zone
+    force : boolean
+        force attach the zone
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    zones = __salt__['zoneadm.list'](installed=True, configured=True)
+    if name in zones:
+        if zones[name]['state'] == 'configured':
+            if __opts__['test']:
+                res_attach = {'status': True}
+            else:
+                res_attach = __salt__['zoneadm.attach'](name, force)
+            ret['result'] = res_attach['status']
+            if ret['result']:
+                ret['changes'][name] = 'attached'
+                ret['comment'] = 'The zone {0} was attached.'.format(name)
+            else:
+                ret['comment'] = []
+                ret['comment'].append('Failed to attach zone {0}!'.format(name))
+                if 'message' in res_attach:
+                    ret['comment'].append(res_attach['message'])
+                ret['comment'] = "\n".join(ret['comment'])
+        else:
+            ret['result'] = True
+            ret['comment'] = 'zone {0} already attached.'.format(name)
+    else:
+        ret['result'] = False
+        ret['comment'] = 'zone {0} is not configured!'.format(name)
+
+    return ret
+
+
+def detached(name):
+    '''
+    Ensure zone is detached
+
+    name : string
+        name of the zone
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    zones = __salt__['zoneadm.list'](installed=True, configured=True)
+    if name in zones:
+        if zones[name]['state'] != 'configured':
+            if __opts__['test']:
+                res_detach = {'status': True}
+            else:
+                res_detach = __salt__['zoneadm.detach'](name)
+            ret['result'] = res_detach['status']
+            if ret['result']:
+                ret['changes'][name] = 'detached'
+                ret['comment'] = 'The zone {0} was detached.'.format(name)
+            else:
+                ret['comment'] = []
+                ret['comment'].append('Failed to detach zone {0}!'.format(name))
+                if 'message' in res_detach:
+                    ret['comment'].append(res_detach['message'])
+                ret['comment'] = "\n".join(ret['comment'])
+        else:
+            ret['result'] = True
+            ret['comment'] = 'zone {0} already detached.'.format(name)
+    else:
+        ret['result'] = False
+        ret['comment'] = 'zone {0} is not configured!'.format(name)
 
     return ret
 
