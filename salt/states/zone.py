@@ -18,6 +18,7 @@ Management of Solaris Zones
     TODO:
     - zone.present (test mode)
     - zone.absent (test mode)
+    - zone.import (test mode)
 
 '''
 from __future__ import absolute_import
@@ -30,6 +31,7 @@ import salt.utils
 import salt.utils.files
 import salt.utils.atomicfile
 from salt.modules.zonecfg import _parse_value
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -374,7 +376,8 @@ def booted(name):
             ret['comment'] = 'zone {0} already booted'.format(name)
         else:
             ## try and boot the zone
-            zoneadm_res = __salt__['zoneadm.boot'](name)
+            if not __opts__['test']:
+                zoneadm_res = __salt__['zoneadm.boot'](name)
             if __opts__['test'] or zoneadm_res['status']:
                 ret['result'] = True
                 ret['changes'][name] = 'booted'
@@ -425,7 +428,8 @@ def halted(name):
             ret['comment'] = 'zone {0} already halted'.format(name)
         else:
             ## try and halt the zone
-            zoneadm_res = __salt__['zoneadm.halt'](name)
+            if not __opts__['test']:
+                zoneadm_res = __salt__['zoneadm.halt'](name)
             if __opts__['test'] or zoneadm_res['status']:
                 ret['result'] = True
                 ret['changes'][name] = 'halted'
@@ -445,6 +449,122 @@ def halted(name):
                     'The zone {0} has a uuid of {1}, please use the zone name instead!'.format(
                         zone,
                         name,
+                    )
+                )
+
+        ret['result'] = False
+        ret['comment'] = "\n".join(ret['comment'])
+
+    return ret
+
+
+def export(name, path, replace=False):
+    '''
+    Export a zones configuration
+
+    name : string
+        name of the zone
+    path : string
+        path of file to export too.
+    replace : boolean
+        replace the file if it exists
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    zones = __salt__['zoneadm.list'](installed=True, configured=True)
+    if name in zones:
+        ## zone exists
+        if __opts__['test']:
+            ## pretend we did the correct thing
+            ret['result'] = True
+            ret['comment'] = 'Zone configartion for {0} exported to {1}'.format(
+                name,
+                path,
+            )
+            ret['changes'][name] = 'exported'
+            if __salt__['file.file_exists'](path) and not replace:
+                ret['result'] = False
+                ret['changes'] = {}
+                ret['comment'] = 'File {0} exists, zone configuration for {1} not exported.'.format(
+                    path,
+                    name,
+                )
+        else:
+            ## export and update file
+            cfg_tmp = salt.utils.files.mkstemp()
+            __salt__['zonecfg.export'](name, cfg_tmp)
+            if not __salt__['file.file_exists'](path):
+                ## move cfg_tmp to path
+                try:
+                    __salt__['file.move'](cfg_tmp, path)
+                except CommandExecutionError:
+                    if __salt__['file.file_exists'](cfg_tmp):
+                        __salt__['file.remove'](cfg_tmp)
+                    ret['result'] = False
+                    ret['comment'] = 'Unable to export zone configuration for {0} to {1}!'.format(
+                        name,
+                        path,
+                    )
+                else:
+                    ret['result'] = True
+                    ret['comment'] = 'Zone configuration for {0} was exported to {1}.'.format(
+                        name,
+                        path,
+                    )
+                    ret['changes'][name] = 'exported'
+            else:
+                cfg_diff = __salt__['file.get_diff'](path, cfg_tmp)
+                if not cfg_diff:
+                    ret['result'] = True
+                    ret['comment'] = 'Zone configuration for {0} was already exported to {1}.'.format(
+                        name,
+                        path
+                    )
+                    if __salt__['file.file_exists'](cfg_tmp):
+                        __salt__['file.remove'](cfg_tmp)
+                else:
+                    if replace:
+                        try:
+                            __salt__['file.move'](cfg_tmp, path)
+                        except CommandExecutionError:
+                            if __salt__['file.file_exists'](cfg_tmp):
+                                __salt__['file.remove'](cfg_tmp)
+                            ret['result'] = False
+                            ret['comment'] = 'Unable to be re-export zone configuration for {0} to {1}!'.format(
+                                name,
+                                path,
+                            )
+                        else:
+                            ret['result'] = True
+                            ret['comment'] = 'Zone configuration for {0} was re-exported to {1}.'.format(
+                                name,
+                                path,
+                            )
+                            ret['changes'][name] = 'exported'
+                    else:
+                        ret['result'] = False
+                        ret['comment'] = 'Zone configuration for {0} is different from the one exported to {1}!'.format(
+                            name,
+                            path
+                        )
+                        if __salt__['file.file_exists'](cfg_tmp):
+                            __salt__['file.remove'](cfg_tmp)
+    else:
+        ## zone does not exist
+        ret['comment'] = []
+        ret['comment'].append(
+            'The zone {0} does not exist.'.format(name)
+        )
+        for zone in zones:
+            if zones[zone]['uuid'] == name:
+                ret['comment'].append(
+                    'The zone {0} has a uuid of {1}, please use the zone name instead!'.format(
+                        name,
+                        path,
                     )
                 )
 
