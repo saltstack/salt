@@ -17,9 +17,8 @@ Management of Solaris Zones
 
     TODO:
     - zone.present (test mode)
-    - zone.absent (test mode)
-    - zone.import (test mode)
-
+    - zone.detached (test mode)
+    - zone.attached (test mode)
 '''
 from __future__ import absolute_import
 
@@ -671,6 +670,72 @@ def import_(name, path, mode='import', nodataset=False, brand_opts=None):
         ## zone exist
         ret['result'] = True
         ret['comment'] = 'Zone {0} already exists, not importing configuration.'.format(name)
+
+    return ret
+
+
+def absent(name, uninstall=False):
+    '''
+    Ensure a zone is absent
+
+    name : string
+        name of the zone
+    uninstall : boolean
+        when true, uninstall instead of detaching the zone first.
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    zones = __salt__['zoneadm.list'](installed=True, configured=True)
+    if name in zones:
+        if __opts__['test']:
+            ret['result'] = True
+            ret['changes'][name] = 'removed'
+            ret['comment'] = 'Zone {0} was removed.'.format(name)
+        else:
+            ret['result'] = True
+            if uninstall:
+                res_uninstall = __salt__['zoneadm.uninstall'](name)
+                ret['result'] = res_uninstall['status']
+                if ret['result']:
+                    ret['changes'][name] = 'uninstalled'
+                    ret['comment'] = 'The zone {0} was uninstalled.'.format(name)
+                else:
+                    ret['comment'] = []
+                    ret['comment'].append('Failed to uninstall zone {0}!'.format(name))
+                    if 'message' in res_uninstall:
+                        ret['comment'].append(res_uninstall['message'])
+                    ret['comment'] = "\n".join(ret['comment'])
+            else:
+                res_detach = __salt__['zoneadm.detach'](name)
+                ret['result'] = res_detach['status']
+                if ret['result']:
+                    ret['changes'][name] = 'detached'
+                    ret['comment'] = 'The zone {0} was detached.'.format(name)
+                else:
+                    ret['comment'] = []
+                    ret['comment'].append('Failed to detach zone {0}!'.format(name))
+                    if 'message' in res_detach:
+                        ret['comment'].append(res_detach['message'])
+                    ret['comment'] = "\n".join(ret['comment'])
+            if ret['result']:
+                res_delete = __salt__['zonecfg.delete'](name)
+                ret['result'] = res_delete['status']
+                if ret['result']:
+                    ret['changes'][name] = 'deleted'
+                    ret['comment'] = 'The zone {0} was delete.'.format(name)
+                else:
+                    ret['comment'] = []
+                    ret['comment'].append('Failed to delete zone {0}!'.format(name))
+                    if 'message' in res_delete:
+                        ret['comment'].append(res_delete['message'])
+                    ret['comment'] = "\n".join(ret['comment'])
+    else:
+        ret['result'] = True
+        ret['comment'] = 'Zone {0} does not exist.'.format(name)
 
     return ret
 
