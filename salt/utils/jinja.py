@@ -389,8 +389,8 @@ def lst_min(lst):
     '''
 
     if not isinstance(lst, collections.Hashable):
-        return float(min(lst))
-    return float(lst)
+        return min(lst)
+    return lst
 
 
 def lst_max(lst):
@@ -410,8 +410,8 @@ def lst_max(lst):
     '''
 
     if not isinstance(lst, collections.Hashable):
-        return float(max(lst))
-    return float(lst)
+        return max(lst)
+    return lst
 
 
 def lst_avg(lst):
