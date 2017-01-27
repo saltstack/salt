@@ -52,6 +52,7 @@ class SysModuleTest(integration.ModuleCase):
             'vsphere.get_service_instance_via_proxy',
             'vsphere.gets_service_instance_via_proxy',
             'vsphere.supports_proxies',
+            'vsphere.test_vcenter_connection',
             'vsphere.wraps',
             'yumpkg.expand_repo_def',
             'yumpkg5.expand_repo_def',
