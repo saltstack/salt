@@ -375,7 +375,7 @@ def booted(name):
         if zones[name]['state'] == 'running':
             ## zone is running
             ret['result'] = True
-            ret['comment'] = 'zone {0} already booted'.format(name)
+            ret['comment'] = 'Zone {0} already booted'.format(name)
         else:
             ## try and boot the zone
             if not __opts__['test']:
@@ -383,10 +383,10 @@ def booted(name):
             if __opts__['test'] or zoneadm_res['status']:
                 ret['result'] = True
                 ret['changes'][name] = 'booted'
-                ret['comment'] = 'zone {0} booted'.format(name)
+                ret['comment'] = 'Zone {0} booted'.format(name)
             else:
                 ret['result'] = False
-                ret['comment'] = 'failed to boot {0}'.format(name)
+                ret['comment'] = 'Failed to boot {0}'.format(name)
     else:
         ## zone does not exist
         ret['comment'] = []
@@ -427,7 +427,7 @@ def halted(name):
         if zones[name]['state'] != 'running':
             ## zone is not running
             ret['result'] = True
-            ret['comment'] = 'zone {0} already halted'.format(name)
+            ret['comment'] = 'Zone {0} already halted'.format(name)
         else:
             ## try and halt the zone
             if not __opts__['test']:
@@ -435,10 +435,10 @@ def halted(name):
             if __opts__['test'] or zoneadm_res['status']:
                 ret['result'] = True
                 ret['changes'][name] = 'halted'
-                ret['comment'] = 'zone {0} halted'.format(name)
+                ret['comment'] = 'Zone {0} halted'.format(name)
             else:
                 ret['result'] = False
-                ret['comment'] = 'failed to halt {0}'.format(name)
+                ret['comment'] = 'Failed to halt {0}'.format(name)
     else:
         ## zone does not exist
         ret['comment'] = []
