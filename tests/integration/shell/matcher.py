@@ -353,7 +353,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             '--config-dir {0} minion test.ping'.format(
                 config_dir
             ),
-            timeout=15,
+            timeout=60,
             catch_stderr=True,
             with_retcode=True
         )

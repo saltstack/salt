@@ -202,6 +202,15 @@ def __virtual__():
 
 
 def get_proxy_type():
+    '''
+    Returns the proxy type
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vsphere.get_proxy_type
+    '''
     return __pillar__['proxy']['proxytype']
 
 
@@ -250,7 +259,7 @@ def gets_service_instance_via_proxy(fn):
     the decorated function.
 
     Notes:
-        1. The decorated function must have a ``serviec_instance`` parameter
+        1. The decorated function must have a ``service_instance`` parameter
         or a ``**kwarg`` type argument (name of argument is not important);
         2. If the ``service_instance`` parameter is already defined, the value
         is passed through to the decorated function;
@@ -1825,6 +1834,8 @@ def test_vcenter_connection(service_instance=None):
     '''
     Checks if a connection is to a vCenter
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.test_vcenter_connection
@@ -1899,6 +1910,8 @@ def list_datacenters(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_datacenters 1.2.3.4 root bad-password
@@ -1932,6 +1945,8 @@ def list_clusters(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1967,6 +1982,8 @@ def list_datastore_clusters(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_datastore_clusters 1.2.3.4 root bad-password
@@ -2000,6 +2017,8 @@ def list_datastores(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2035,6 +2054,8 @@ def list_hosts(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_hosts 1.2.3.4 root bad-password
@@ -2068,6 +2089,8 @@ def list_resourcepools(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2103,6 +2126,8 @@ def list_networks(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_networks 1.2.3.4 root bad-password
@@ -2136,6 +2161,8 @@ def list_vms(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2171,6 +2198,8 @@ def list_folders(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_folders 1.2.3.4 root bad-password
@@ -2205,6 +2234,8 @@ def list_dvs(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_dvs 1.2.3.4 root bad-password
@@ -2238,6 +2269,8 @@ def list_vapps(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    CLI Example:
 
     .. code-block:: bash
 

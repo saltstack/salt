@@ -27,6 +27,7 @@ runner modules
     manage
     mine
     nacl
+    net
     network
     pagerduty
     pillar

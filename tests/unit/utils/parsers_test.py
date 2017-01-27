@@ -704,7 +704,9 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
         opts = {self.loglevel_config_setting_name: log_level,
                 self.logfile_config_setting_name: 'key_logfile',
                 'log_fmt_logfile': None,
-                'log_datefmt_logfile': None}
+                'log_datefmt_logfile': None,
+                'log_rotate_max_bytes': None,
+                'log_rotate_backup_count': None}
 
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):

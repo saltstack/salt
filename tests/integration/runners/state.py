@@ -109,7 +109,7 @@ class OrchEventTest(integration.ShellCase):
     Tests for orchestration events
     '''
     def setUp(self):
-        self.timeout = 15
+        self.timeout = 60
         self.master_d_dir = os.path.join(self.get_config_dir(), 'master.d')
         try:
             os.makedirs(self.master_d_dir)
