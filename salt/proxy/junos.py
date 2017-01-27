@@ -1,6 +1,39 @@
 # -*- coding: utf-8 -*-
 '''
-Interface with a Junos device via proxy-minion.
+Interface with a Junos device via proxy-minion. To connect to a junos device \
+via junos proxy, specify the host information in the pillar in '/srv/pillar/details.sls'
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: junos
+      host: <ip or dns name of host>
+      username: <username>
+      port: 830
+      password: <secret>
+
+In '/srv/pillar/top.sls' map the device details with the proxy name.
+
+.. code-block:: yaml
+
+    base:
+      'vmx':
+        - details
+
+After storing the device information in the pillar, configure the proxy \
+in '/etc/salt/proxy'
+
+.. code-block:: yaml
+
+    master: <ip or hostname of salt-master>
+
+Run the salt proxy via the following command:
+    
+.. code-block:: bash
+
+    salt-proxy --proxyid=vmx 
+
+
 '''
 
 # Import python libs
