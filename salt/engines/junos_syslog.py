@@ -342,13 +342,11 @@ class SyslogServerFactory(DatagramProtocol):
     def handle_error(self, err_msg):
         '''
         Log the error messages.
-
         '''
+        
         log.error(err_msg.getErrorMessage)
 
     def datagramReceived(self, data, connection_details):
-        # This is dont to make the code autopep8 compliant
-        # Cannot specify the tuple directly as an argument of datagramReceived
         (host, port) = connection_details
         d = threads.deferToThread(
             self.parseData,
@@ -361,7 +359,6 @@ class SyslogServerFactory(DatagramProtocol):
 
 def start(port=516, **kwargs):
 
-    options = kwargs
     log.info('Starting junos syslog engine (port {0})'.format(port))
-    reactor.listenUDP(port, SyslogServerFactory(options))
+    reactor.listenUDP(port, SyslogServerFactory(kwargs))
     reactor.run()
