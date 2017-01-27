@@ -93,6 +93,34 @@ def update(clear=False, mine_functions=None):
             - eth0
           disk.usage: []
 
+    This function accepts the following arguments:
+
+    clear: False
+        Boolean flag specifying whether updating will clear the existing
+        mines, or will update. Default: `False` (update).
+
+    mine_functions
+        Update the mine data on certain functions only.
+        This feature can be used when updating the mine for functions
+        that require refresh at different intervals than the rest of
+        the functions specified under `mine_functions` in the
+        minion/master config or pillar.
+        A potential use would be together with the `scheduler`, for example:
+
+        .. code-block:: yaml
+
+            schedule:
+              lldp_mine_update:
+                function: mine.update
+                kwargs:
+                    mine_functions:
+                      net.lldp: []
+                hours: 12
+
+        In the example above, the mine for `net.lldp` would be refreshed
+        every 12 hours, while  `network.ip_addrs` would continue to be updated
+        as specified in `mine_interval`.
+
     The function cache will be populated with information from executing these
     functions
 
