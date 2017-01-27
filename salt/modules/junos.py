@@ -120,9 +120,9 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
 
     .. code-block:: bash
 
-        salt 'device' junos.rpc 'get_config' 'text' '/var/log/config.txt' 'filter='<configuration><system/></configuration>'
+        salt 'device' junos.rpc 'get_config' dest='/var/log/config.txt' format='text' filter='<configuration><system/></configuration>'
 
-        salt 'device' junos.rpc 'get-interface-information' '/home/user/interface.log' interface_name='lo0' terse=True
+        salt 'device' junos.rpc 'get-interface-information' dest='/home/user/interface.xml' interface_name='lo0' terse=True
 
         salt 'device' junos.rpc 'get-chassis-inventory'
 
@@ -240,7 +240,7 @@ def set_hostname(hostname=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.set_hostname salt-device
+        salt 'device_name' junos.set_hostname hostname=salt-device
 
     Parameters:
      Required
@@ -417,7 +417,7 @@ def rollback(id=0, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.rollback
+        salt 'device_name' junos.rollback id=10
 
     Parameters:
       Optional
@@ -507,7 +507,7 @@ def diff(id=0):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.diff 3
+        salt 'device_name' junos.diff id=3
 
 
     Parameters:
@@ -537,9 +537,9 @@ def ping(dest_ip=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.ping '8.8.8.8' count=5
+        salt 'device_name' junos.ping dest_ip='8.8.8.8' count=5
 
-        salt 'device_name' junos.ping '8.8.8.8' ttl=1 rapid=True
+        salt 'device_name' junos.ping dest_ip='8.8.8.8' ttl=1 rapid=True
 
 
     Parameters:
@@ -610,11 +610,11 @@ def cli(command=None, format='text', **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.cli 'show system commit'
+        salt 'device_name' junos.cli command='show system commit'
 
-        salt 'device_name' junos.cli 'show version' timeout=40
+        salt 'device_name' junos.cli command='show version' timeout=40
 
-        salt 'device_name' junos.cli 'show system alarms' 'xml' dest=/home/user/cli_output.txt
+        salt 'device_name' junos.cli command='show system alarms' format='xml' dest=/home/user/cli_output.txt
 
 
     Parameters:
@@ -752,11 +752,11 @@ def install_config(path=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.install_config '/home/user/config.set' timeout=60
+        salt 'device_name' junos.install_config path='/home/user/config.set' timeout=60
 
-        salt 'device_name' junos.install_config '/home/user/replace_config.conf' replace=True comment='Committed via SaltStack'
+        salt 'device_name' junos.install_config path='/home/user/replace_config.conf' replace=True comment='Committed via SaltStack'
 
-        salt 'device_name' junos.install_config '/home/user/my_new_configuration.conf' timeout=300 diffs_file='/salt/confs/old_config.conf' overwrite=True
+        salt 'device_name' junos.install_config path='/home/user/my_new_configuration.conf' timeout=300 diffs_file='/salt/confs/old_config.conf' overwrite=True
 
 
     Parameters:
@@ -940,16 +940,15 @@ def install_os(path=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.install_os '/home/user/junos_image.tgz' reboot=True
+        salt 'device_name' junos.install_os path='/home/user/junos_image.tgz' reboot=True
 
-        salt 'device_name' junos.install_os '/home/user/junos_16_1.tgz' timeout=300
+        salt 'device_name' junos.install_os path='/home/user/junos_16_1.tgz' timeout=300
 
 
     Parameters:
       Required
         * path:
-          Path where the image file is present on the pro\
-          xy minion.
+          Path where the image file is present on the proxy minion.
       Optional
         * kwargs: keyworded arguments to be given such as timeout, reboot etc
             * timeout:
@@ -1019,7 +1018,7 @@ def file_copy(src=None, dest=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.file_copy /home/m2/info.txt info_copy.txt
+        salt 'device_name' junos.file_copy src=/home/m2/info.txt dest=info_copy.txt
 
 
     Parameters:
