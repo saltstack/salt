@@ -103,10 +103,6 @@ def facts():
         facts = conn.facts
         ret['message'] = json.dumps(facts)
         ret['out'] = True
-        if not facts:
-            ret[
-                'message'] = 'Could not gather facts because the device is not master.'
-            ret['out'] = False
     except Exception as exception:
         ret['message'] = 'Could not display facts due to "{0}"'.format(
             exception)
@@ -145,7 +141,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default= 30 seconds)
             * filter:
-              Only to be used with 'get-config' rpc to retrieve specific configuration.
+              Only to be used with 'get-config' rpc to get specific configuration.
             * terse:
               Amount of information you want.
             * interface_name:
@@ -257,8 +253,9 @@ def set_hostname(hostname=None, **kwargs):
             * comment:
               Provide a comment to the commit. (default = None)
             * confirm:
-              Provide time in minutes for commit confirmation.If this option is specified, the commit will be
-              rollbacked in the given time unless the commit is confirmed.
+              Provide time in minutes for commit confirmation. \
+              If this option is specified, the commit will be rollbacked in \
+              the given time unless the commit is confirmed.
 
     '''
     conn = __proxy__['junos.conn']()
@@ -336,21 +333,25 @@ def commit(**kwargs):
       Optional
         * kwargs: Keyworded arguments which can be provided like-
             * timeout:
-              Set NETCONF RPC timeout. Can be used for commands which take a while to execute. (default = 30 seconds)
+              Set NETCONF RPC timeout. Can be used for commands which take a \
+              while to execute. (default = 30 seconds)
             * comment:
               Provide a comment to the commit. (default = None)
             * confirm:
-              Provide time in minutes for commit confirmation. If this option is specified,
-              the commit will be rollbacked in the given time unless the commit is confirmed.
+              Provide time in minutes for commit confirmation. If this option \
+              is specified, the commit will be rollbacked in the given time \
+              unless the commit is confirmed.
             * sync:
-              On dual control plane systems, requests that the candidate configuration
-              on one control plane be copied to the other control plane,checked for correct syntax,
-              and committed on both Routing Engines. (default = False)
+              On dual control plane systems, requests that the candidate\
+              configuration on one control plane be copied to the other \
+              control plane,checked for correct syntax, and committed on \
+              both Routing Engines. (default = False)
             * force_sync:
-              On dual control plane systems, forces the candidate configuration
+              On dual control plane systems, force the candidate configuration
               on one control plane to be copied to the other control plane.
             * full:
-              When set to True requires all the daemons to check and evaluate the new configuration.
+              When set to True requires all the daemons to check and evaluate \
+              the new configuration.
             * detail:
               When true return commit detail.
 
@@ -429,8 +430,9 @@ def rollback(id=0, **kwargs):
             * comment:
               Provide a comment to the commit. (default = None)
             * confirm:
-              Provide time in minutes for commit confirmation. If this option is specified,
-              the commit will be rollbacked in the given time unless the commit is confirmed.
+              Provide time in minutes for commit confirmation. If this option \
+              is specified, the commit will be rollbacked in the given time \
+              unless the commit is confirmed.
             * diffs_file:
               Path to the file where any diffs will be written. (default = None)
 
@@ -550,9 +552,11 @@ def ping(dest_ip=None, **kwargs):
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
             * rapid:
-              Setting this to True executes ping at 100pps instead of 1pps. (default = False)
+              Setting this to True executes ping at 100pps instead of 1pps. \
+              (default = False)
             * ttl:
-              Maximum number of IP routers (IP hops) allowed between source and destination.
+              Maximum number of IP routers (IP hops) allowed between source \
+              and destination.
             * routing_instance:
               Name of the routing instance to use to send the ping.
             * interface:
@@ -599,8 +603,8 @@ def ping(dest_ip=None, **kwargs):
 
 def cli(command=None, format='text', **kwargs):
     '''
-    Executes the CLI commands and returns the output in specified format. (default is text)
-    The ouput can also be stored in a file.
+    Executes the CLI commands and returns the output in specified format. \
+    (default is text) The ouput can also be stored in a file.
 
     Usage:
 
@@ -619,13 +623,15 @@ def cli(command=None, format='text', **kwargs):
           The command that need to be executed on Junos CLI. (default = None)
       Optional
         * format:
-          Format in which to get the CLI output. (text or xml, default = 'text')
+          Format in which to get the CLI output. (text or xml, \
+            default = 'text')
         * kwargs: Keyworded arguments which can be provided like-
             * timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
             * dest:
-              The destination file where the CLI output can be stored. (default = None)
+              The destination file where the CLI output can be stored.\
+               (default = None)
 
     '''
     conn = __proxy__['junos.conn']()
@@ -675,7 +681,8 @@ def cli(command=None, format='text', **kwargs):
 def shutdown(**kwargs):
     '''
     Shut down (power off) or reboot a device running Junos OS.
-    This includes all Routing Engines in a Virtual Chassis or a dual Routing Engine system.
+    This includes all Routing Engines in a Virtual Chassis or a dual Routing \
+    Engine system.
 
     Usage:
 
@@ -755,9 +762,12 @@ def install_config(path=None, **kwargs):
     Parameters:
       Required
         * path:
-          Path where the configuration file is present. If the file has a '*.conf' extension,
-          the content is treated as text format. If the file has a '*.xml' extension,
-          the content is treated as XML format. If the file has a '*.set' extension,
+          Path where the configuration file is present. If the file has a \
+          '*.conf' extension,
+          the content is treated as text format. If the file has a '*.xml' \
+          extension,
+          the content is treated as XML format. If the file has a '*.set' \
+          extension,
           the content is treated as Junos OS 'set' commands.(default = None)
       Optional
         * kwargs: Keyworded arguments which can be provided like-
@@ -765,18 +775,22 @@ def install_config(path=None, **kwargs):
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
             * overwrite:
-              Set to True if you want this file is to completely replace the configuration file. (default = False)
+              Set to True if you want this file is to completely replace the\
+               configuration file. (default = False)
             * replace:
               Specify whether the configuration file uses "replace:" statements.
-              Those statements under the 'replace' tag will only be changed. (default = False)
+              Those statements under the 'replace' tag will only be changed.\
+               (default = False)
             * comment:
               Provide a comment to the commit. (default = None)
             * confirm:
               Provide time in minutes for commit confirmation.
-              If this option is specified, the commit will be rollbacked in the given time unless the commit is confirmed.
+              If this option is specified, the commit will be rollbacked in \
+              the given time unless the commit is confirmed.
             * diffs_file:
               Path to the file where the diff (difference in old configuration
-              and the newly commited configuration) will be stored. (default = None)
+              and the newly commited configuration) will be stored.\
+               (default = None)
 
     '''
     conn = __proxy__['junos.conn']()
@@ -785,7 +799,8 @@ def install_config(path=None, **kwargs):
 
     if path is None:
         ret[
-            'message'] = 'Please provide the absolute path where the configuration is present'
+            'message'] = 'Please provide the absolute path where the \
+            configuration is present'
         ret['out'] = False
         return ret
 
@@ -814,7 +829,8 @@ def install_config(path=None, **kwargs):
             return ret
         if 'template_vars' not in op:
             ret[
-                'message'] = 'Please provide jinja variable along with the jina template.'
+                'message'] = 'Please provide jinja variable along with the \
+                jina template.'
             ret['out'] = False
             return ret
         if not os.path.isfile(op['template_vars']):
@@ -916,7 +932,8 @@ def zeroize():
 
 def install_os(path=None, **kwargs):
     '''
-    Installs the given image on the device. After the installation is complete the device is rebooted,
+    Installs the given image on the device. After the installation is complete\
+     the device is rebooted,
     if reboot=True is given as a keyworded argument.
 
     Usage:
@@ -931,7 +948,8 @@ def install_os(path=None, **kwargs):
     Parameters:
       Required
         * path:
-          Path where the image file is present on the proxy minion.
+          Path where the image file is present on the pro\
+          xy minion.
       Optional
         * kwargs: keyworded arguments to be given such as timeout, reboot etc
             * timeout:
@@ -940,7 +958,8 @@ def install_os(path=None, **kwargs):
             * reboot:
               Whether to reboot after installation (default = False)
             * no_copy:
-              When True the software package will not be SCP’d to the device. (default = False)
+              When True the software package will not be SCP’d to the device. \
+              (default = False)
 
     '''
     conn = __proxy__['junos.conn']()
@@ -949,7 +968,8 @@ def install_os(path=None, **kwargs):
 
     if path is None:
         ret[
-            'message'] = 'Please provide the absolute path where the junos image is present.'
+            'message'] = 'Please provide the absolute path \
+            where the junos image is present.'
         ret['out'] = False
         return ret
     if not os.path.isfile(path):
@@ -981,7 +1001,8 @@ def install_os(path=None, **kwargs):
         try:
             rbt = conn.sw.reboot()
         except Exception as exception:
-            ret['message'] = 'Installation successful but reboot failed due to : "{0}"'.format(
+            ret['message'] = 'Installation successful but \
+            reboot failed due to : "{0}"'.format(
                 exception)
             ret['out'] = False
             return ret
@@ -1015,7 +1036,8 @@ def file_copy(src=None, dest=None, **kwargs):
 
     if src is None:
         ret[
-            'message'] = 'Please provide the absolute path of the file to be copied.'
+            'message'] = 'Please provide the absolute path \
+            of the file to be copied.'
         ret['out'] = False
         return ret
     if not os.path.isfile(src):
@@ -1025,7 +1047,8 @@ def file_copy(src=None, dest=None, **kwargs):
 
     if dest is None:
         ret[
-            'message'] = 'Please provide the absolute path of the destination where the file is to be copied.'
+            'message'] = 'Please provide the absolute path of\
+             the destination where the file is to be copied.'
         ret['out'] = False
         return ret
 
