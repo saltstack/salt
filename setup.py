@@ -396,7 +396,7 @@ class InstallPyCryptoWindowsWheel(Command):
             call_subprocess(call_arguments)
 
 def uri_to_resource(resource_file):
-    ### Returns the URI for a resouce 
+    ### Returns the URI for a resource 
     # The basic case is that the resource is on saltstack.com
     # It could be the case that the resource is cached.
     salt_uri = 'https://repo.saltstack.com/windows/dependencies/'  + resource_file
