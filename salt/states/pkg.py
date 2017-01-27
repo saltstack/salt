@@ -1909,7 +1909,7 @@ def latest(
     for pkg in desired_pkgs:
         if not avail.get(pkg):
             # Package either a) is up-to-date, or b) does not exist
-            if not cur[pkg]:
+            if not cur.get(pkg):
                 # Package does not exist
                 msg = 'No information found for \'{0}\'.'.format(pkg)
                 log.error(msg)
