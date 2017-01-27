@@ -2225,10 +2225,10 @@ def managed(name,
                 follow_symlinks,
                 skip_verify,
                 keep_mode,
-                win_owner,
-                win_perms,
-                win_deny_perms,
-                win_inheritance,
+                win_owner=win_owner,
+                win_perms=win_perms,
+                win_deny_perms=win_deny_perms,
+                win_inheritance=win_inheritance,
                 **kwargs)
         except Exception as exc:
             ret['changes'] = {}
