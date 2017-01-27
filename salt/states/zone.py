@@ -35,6 +35,11 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'import_': 'import',
+    'export_': 'export',
+}
+
 # Define the state's virtual name
 __virtualname__ = 'zone'
 
@@ -458,7 +463,7 @@ def halted(name):
     return ret
 
 
-def export(name, path, replace=False):
+def export_(name, path, replace=False):
     '''
     Export a zones configuration
 
@@ -570,6 +575,102 @@ def export(name, path, replace=False):
 
         ret['result'] = False
         ret['comment'] = "\n".join(ret['comment'])
+
+    return ret
+
+
+def import_(name, path, mode='import', nodataset=False, brand_opts=None):
+    '''
+    Import a zones configuration
+
+    name : string
+        name of the zone
+    path : string
+        path of the configuration file to import
+    mode : string
+        either import, install, or attach
+    nodataset : boolean
+        do not create a ZFS file system
+    brand_opts : boolean
+        brand specific options to pass
+
+    .. note::
+        The mode argument can be set to ``import``, ``install``, or ``attach``.
+        ``import``: will only import the configuration
+        ``install``: will import and then try to install the zone
+        ``attach``: will import and then try to attach of the zone
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    zones = __salt__['zoneadm.list'](installed=True, configured=True)
+    if name not in zones:
+        if __opts__['test']:
+            ret['result'] = True
+            ret['comment'] = 'Zone {0} was imported from {1}.'.format(
+                name,
+                path,
+            )
+            ret['changes'][name] = 'imported'
+        else:
+            if __salt__['file.file_exists'](path):
+                res_import = __salt__['zonecfg.import'](name, path)
+                if not res_import['status']:
+                    ret['result'] = False
+                    ret['comment'] = 'Unable to import zone configuration for {0}!'.format(name)
+                else:
+                    ret['result'] = True
+                    ret['changes'][name] = 'imported'
+                    ret['comment'] = 'Zone {0} was imported from {1}.'.format(
+                        name,
+                        path,
+                    )
+                    if mode.lower() == 'attach':
+                        res_attach = __salt__['zoneadm.attach'](name, False, brand_opts)
+                        ret['result'] = res_attach['status']
+                        if res_attach['status']:
+                            ret['changes'][name] = 'attached'
+                            ret['comment'] = 'Zone {0} was attached from {1}.'.format(
+                                name,
+                                path,
+                            )
+                        else:
+                            ret['comment'] = []
+                            ret['comment'].append('Failed to attach zone {0} from {1}!'.format(
+                                name,
+                                path,
+                            ))
+                            if 'message' in res_attach:
+                                ret['comment'].append(res_attach['message'])
+                            ret['comment'] = "\n".join(ret['comment'])
+                    if mode.lower() == 'install':
+                        res_install = __salt__['zoneadm.install'](name, nodataset, brand_opts)
+                        ret['result'] = res_install['status']
+                        if res_install['status']:
+                            ret['changes'][name] = 'installed'
+                            ret['comment'] = 'Zone {0} was installed from {1}.'.format(
+                                name,
+                                path,
+                            )
+                        else:
+                            ret['comment'] = []
+                            ret['comment'].append('Failed to install zone {0} from {1}!'.format(
+                                name,
+                                path,
+                            ))
+                            if 'message' in res_install:
+                                ret['comment'].append(res_install['message'])
+                            ret['comment'] = "\n".join(ret['comment'])
+            else:
+                ret['result'] = False
+                ret['comment'] = 'The file {0} does not exists, unable to import!'.format(path)
+    else:
+        ## zone exist
+        ret['result'] = True
+        ret['comment'] = 'Zone {0} already exists, not importing configuration.'.format(name)
 
     return ret
 
