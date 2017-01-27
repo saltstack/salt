@@ -57,6 +57,8 @@ Execution Module Changes
   above alongside the information on the new states which have been added to
   manage masking of systemd units.
 
+- The :mod:`system <salt.modules.system>` module changed the returned format
+  from "HH:MM AM/PM" to "HH:MM:SS AM/PM" for `get_system_time`.
 Master Configuration Additions
 ==============================
 
