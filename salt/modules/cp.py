@@ -373,6 +373,9 @@ def cache_file(path, saltenv='base'):
         salt '*' cp.cache_file salt://foo/bar.conf saltenv=config
         salt '*' cp.cache_file salt://foo/bar.conf?saltenv=config
 
+    If the path being cached is a ``salt://`` URI, and the path does not exist,
+    then ``False`` will be returned.
+
     .. note::
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.

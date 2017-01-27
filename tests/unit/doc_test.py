@@ -54,8 +54,9 @@ class DocTestCase(TestCase):
             if 'man' in key \
                 or key.endswith('doc_test.py') \
                 or key.endswith('doc/conf.py') \
+                or key.endswith('/conventions/documentation.rst') \
                 or key.endswith('doc/topics/releases/2016.11.2.rst') \
-                or key.endswith('/conventions/documentation.rst'):
+                or key.endswith('doc/topics/releases/2016.3.5.rst'):
                 continue
 
             # Set up test return dict

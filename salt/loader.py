@@ -288,7 +288,7 @@ def engines(opts, functions, runners, proxy=None):
     )
 
 
-def proxy(opts, functions=None, returners=None, whitelist=None):
+def proxy(opts, functions=None, returners=None, whitelist=None, utils=None):
     '''
     Returns the proxy module for this salt-proxy-minion
     '''
@@ -296,7 +296,7 @@ def proxy(opts, functions=None, returners=None, whitelist=None):
         _module_dirs(opts, 'proxy'),
         opts,
         tag='proxy',
-        pack={'__salt__': functions, '__ret__': returners},
+        pack={'__salt__': functions, '__ret__': returners, '__utils__': utils},
     )
 
     ret.pack['__proxy__'] = ret
@@ -304,7 +304,7 @@ def proxy(opts, functions=None, returners=None, whitelist=None):
     return ret
 
 
-def returners(opts, functions, whitelist=None, context=None):
+def returners(opts, functions, whitelist=None, context=None, proxy=None):
     '''
     Returns the returner modules
     '''
@@ -313,11 +313,11 @@ def returners(opts, functions, whitelist=None, context=None):
         opts,
         tag='returner',
         whitelist=whitelist,
-        pack={'__salt__': functions, '__context__': context},
+        pack={'__salt__': functions, '__context__': context, '__proxy__': proxy or {}},
     )
 
 
-def utils(opts, whitelist=None, context=None):
+def utils(opts, whitelist=None, context=None, proxy=proxy):
     '''
     Returns the utility modules
     '''
@@ -326,7 +326,7 @@ def utils(opts, whitelist=None, context=None):
         opts,
         tag='utils',
         whitelist=whitelist,
-        pack={'__context__': context},
+        pack={'__context__': context, '__proxy__': proxy or {}},
     )
 
 
@@ -456,7 +456,7 @@ def thorium(opts, functions, runners):
     return ret
 
 
-def states(opts, functions, utils, serializers, whitelist=None):
+def states(opts, functions, utils, serializers, whitelist=None, proxy=None):
     '''
     Returns the state modules
 
@@ -476,7 +476,7 @@ def states(opts, functions, utils, serializers, whitelist=None):
         _module_dirs(opts, 'states'),
         opts,
         tag='states',
-        pack={'__salt__': functions},
+        pack={'__salt__': functions, '__proxy__': proxy or {}},
         whitelist=whitelist,
     )
     ret.pack['__states__'] = ret
@@ -485,7 +485,7 @@ def states(opts, functions, utils, serializers, whitelist=None):
     return ret
 
 
-def beacons(opts, functions, context=None):
+def beacons(opts, functions, context=None, proxy=None):
     '''
     Load the beacon modules
 
@@ -497,8 +497,8 @@ def beacons(opts, functions, context=None):
         _module_dirs(opts, 'beacons'),
         opts,
         tag='beacons',
-        pack={'__context__': context, '__salt__': functions},
         virtual_funcs=['__validate__'],
+        pack={'__context__': context, '__salt__': functions, '__proxy__': proxy or {}},
     )
 
 
@@ -919,7 +919,7 @@ def netapi(opts):
     )
 
 
-def executors(opts, functions=None, context=None):
+def executors(opts, functions=None, context=None, proxy=None):
     '''
     Returns the executor modules
     '''
@@ -927,7 +927,7 @@ def executors(opts, functions=None, context=None):
         _module_dirs(opts, 'executors', 'executor'),
         opts,
         tag='executor',
-        pack={'__salt__': functions, '__context__': context or {}},
+        pack={'__salt__': functions, '__context__': context or {}, '__proxy__': proxy or {}},
     )
 
 
