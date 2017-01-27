@@ -364,6 +364,42 @@ def create_snapshot(config='root', snapshot_type='single', pre_number=None,
     return new_nr
 
 
+def delete_snapshot(snapshots_ids=None, config="root"):
+    '''
+    Deletes an snapshot
+
+    config
+        Configuration name. (Default: root)
+
+    snapshots_ids
+        List of the snapshots IDs to be deleted.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' snapper.delete_snapshot 54
+        salt '*' snapper.delete_snapshot config=root 54
+        salt '*' snapper.delete_snapshot config=root snapshots_ids=[54,55,56]
+    '''
+    if not snapshots_ids:
+        raise CommandExecutionError('Error: No snapshot ID has been provided')
+    try:
+        current_snapshots_ids = [x['id'] for x in list_snapshots(config)]
+        if not isinstance(snapshots_ids, list):
+            snapshots_ids = [snapshots_ids]
+        if not set(snapshots_ids).issubset(set(current_snapshots_ids)):
+            raise CommandExecutionError(
+                "Error: Snapshots '{0}' not found".format(", ".join(
+                    [str(x) for x in set(snapshots_ids).difference(
+                        set(current_snapshots_ids))]))
+            )
+        snapper.DeleteSnapshots(config, snapshots_ids)
+        return {config: {"ids": snapshots_ids, "status": "deleted"}}
+    except dbus.DBusException as exc:
+        raise CommandExecutionError(_dbus_exception_to_reason(exc, locals()))
+
+
 def _get_num_interval(config, num_pre, num_post):
     '''
     Returns numerical interval based on optionals num_pre, num_post values
