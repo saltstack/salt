@@ -5098,7 +5098,7 @@ def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
               'exit_status': response}
     if already_stopped:
         result['comment'] = 'Container \'{0}\' already stopped'.format(name)
-    if fail_on_exit_status and result['result']:
+    elif fail_on_exit_status and result['result']:
         result['result'] = result['exit_status'] == 0
     return result
 
