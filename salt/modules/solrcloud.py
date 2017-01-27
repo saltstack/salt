@@ -2,6 +2,8 @@
 '''
 Module for solrcloud configuration
 
+.. versionadded:: Nitrogen
+
 For now, module is limited to http-exposed API. It doesn't implement config upload via Solr zkCli
 '''
 from __future__ import absolute_import
@@ -419,8 +421,9 @@ def collection_create(collection_name, options=None, **kwargs):
 
 def collection_check_options(options):
     '''
-
     Check collections options
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -436,10 +439,11 @@ def collection_check_options(options):
 
 def collection_get_options(collection_name, **kwargs):
     '''
-
     Get collection options
 
     Additional parameters (kwargs) may be passed, they will be proxied to http.query
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -466,12 +470,13 @@ def collection_get_options(collection_name, **kwargs):
 
 def collection_set_options(collection_name, options, **kwargs):
     '''
-
     Change collection options
 
     Additional parameters (kwargs) may be passed, they will be proxied to http.query
 
     Note that not every parameter can be changed after collection creation
+
+    CLI Example:
 
     .. code-block:: bash
 
