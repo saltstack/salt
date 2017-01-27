@@ -96,9 +96,9 @@ variable in a Salt state.
 .. code-block:: yaml
 
    Create a file with contents from an environment variable:
-  file.managed:
-    - name: /tmp/hello
-    - contents: {{ salt['environ.get']('MYENVVAR') }}
+     file.managed:
+       - name: /tmp/hello
+       - contents: {{ salt['environ.get']('MYENVVAR') }}
 
 Error checking:
 
@@ -115,8 +115,7 @@ Error checking:
    {% else %}
 
    Fail - no environment passed in:
-     test:
-       A. fail_without_changes
+     test.fail_without_changes
 
    {% endif %}
 

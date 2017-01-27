@@ -226,15 +226,8 @@ def item(*args, **kwargs):
     '''
     .. versionadded:: 0.16.2
 
-    Return one or more pillar entries
-
-    pillar
-        If specified, allows for a dictionary of pillar data to be made
-        available to pillar and ext_pillar rendering. these pillar variables
-        will also override any variables of the same name in pillar or
-        ext_pillar.
-
-        .. versionadded:: 2015.5.0
+    Return one or more pillar entries from the :ref:`in-memory pillar data
+    <pillar-in-memory>`.
 
     delimiter
         Delimiter used to traverse nested dictionaries.
@@ -262,14 +255,14 @@ def item(*args, **kwargs):
     '''
     ret = {}
     default = kwargs.get('default', '')
-    delimiter = kwargs.get('delimiter', ':')
+    delimiter = kwargs.get('delimiter', DEFAULT_TARGET_DELIM)
 
     try:
         for arg in args:
             ret[arg] = salt.utils.traverse_dict_and_list(__pillar__,
-                                                        arg,
-                                                        default,
-                                                        delimiter)
+                                                         arg,
+                                                         default,
+                                                         delimiter)
     except KeyError:
         pass
 
