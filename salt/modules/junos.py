@@ -137,7 +137,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
           The format in which the rpc reply must be stored in file specified in the dest
           (used only when dest is specified) (default = xml)
         * kwargs: keyworded arguments taken by rpc call like-
-            * timeout:
+            * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default= 30 seconds)
             * filter:
@@ -170,10 +170,6 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
         log.warning(
             'Format ignored as it is only used for \
             output which is dumped in the file.')
-
-    if 'timeout' in op:
-        conn.timeout = op['timeout']
-        del op['timeout']
 
     write_response = ''
     try:
@@ -247,7 +243,7 @@ def set_hostname(hostname=None, **kwargs):
         * hostname: The name to be set. (default = None)
      Optional
         * kwargs: Keyworded arguments which can be provided like-
-            * timeout:
+            * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands
               which take a while to execute. (default = 30 seconds)
             * comment:
@@ -272,10 +268,6 @@ def set_hostname(hostname=None, **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
-
-    if 'timeout' in op:
-        conn.timeout = op['timeout']
-        del op['timeout']
 
     # Added to recent versions of JunOs
     # Use text format instead
@@ -324,15 +316,15 @@ def commit(**kwargs):
 
         salt 'device_name' junos.commit comment='Commiting via saltstack' detail=True
 
-        salt 'device_name' junos.commit timeout=60 confirm=10
+        salt 'device_name' junos.commit dev_timeout=60 confirm=10
 
-        salt 'device_name' junos.commit sync=True timeout=90
+        salt 'device_name' junos.commit sync=True dev_timeout=90
 
 
     Parameters:
       Optional
         * kwargs: Keyworded arguments which can be provided like-
-            * timeout:
+            * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which take a \
               while to execute. (default = 30 seconds)
             * comment:
@@ -367,10 +359,6 @@ def commit(**kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
-
-    if 'timeout' in op:
-        conn.timeout = op['timeout']
-        del op['timeout']
 
     detail = False
     if 'detail' in op and op['detail']:
@@ -424,7 +412,7 @@ def rollback(id=0, **kwargs):
         * id:
           The rollback id value [0-49]. (default = 0)
         * kwargs: Keyworded arguments which can be provided like-
-            * timeout:
+            * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
             * comment:
@@ -448,10 +436,6 @@ def rollback(id=0, **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
-
-    if 'timeout' in op:
-        conn.timeout = op['timeout']
-        del op['timeout']
 
     try:
         ret['out'] = conn.cu.rollback(id)
@@ -548,7 +532,7 @@ def ping(dest_ip=None, **kwargs):
           The IP which is to be pinged. (default = None)
       Optional
         * kwargs: Keyworded arguments which can be provided like-
-            * timeout:
+            * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
             * rapid:
@@ -581,10 +565,6 @@ def ping(dest_ip=None, **kwargs):
     else:
         op.update(kwargs)
 
-    if 'timeout' in op:
-        conn.timeout = op['timeout']
-        del op['timeout']
-
     if 'count' in op:
         op['count'] = str(op['count'])
     else:
@@ -612,7 +592,7 @@ def cli(command=None, format='text', **kwargs):
 
         salt 'device_name' junos.cli command='show system commit'
 
-        salt 'device_name' junos.cli command='show version' timeout=40
+        salt 'device_name' junos.cli command='show version' dev_timeout=40
 
         salt 'device_name' junos.cli command='show system alarms' format='xml' dest=/home/user/cli_output.txt
 
@@ -626,7 +606,7 @@ def cli(command=None, format='text', **kwargs):
           Format in which to get the CLI output. (text or xml, \
             default = 'text')
         * kwargs: Keyworded arguments which can be provided like-
-            * timeout:
+            * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
             * dest:
@@ -649,10 +629,6 @@ def cli(command=None, format='text', **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
-
-    if 'timeout' in op:
-        conn.timeout = op['timeout']
-        del op['timeout']
 
     try:
         result = conn.cli(command, format)
@@ -718,10 +694,6 @@ def shutdown(**kwargs):
     else:
         op.update(kwargs)
 
-    if 'timeout' in op:
-        conn.timeout = op['timeout']
-        del op['timeout']
-
     try:
         if 'reboot' in op and op['reboot']:
             shut = sw.reboot
@@ -752,11 +724,11 @@ def install_config(path=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.install_config path='/home/user/config.set' timeout=60
+        salt 'device_name' junos.install_config path='/home/user/config.set'
 
         salt 'device_name' junos.install_config path='/home/user/replace_config.conf' replace=True comment='Committed via SaltStack'
 
-        salt 'device_name' junos.install_config path='/home/user/my_new_configuration.conf' timeout=300 diffs_file='/salt/confs/old_config.conf' overwrite=True
+        salt 'device_name' junos.install_config path='/home/user/my_new_configuration.conf' dev_timeout=300 diffs_file='/salt/confs/old_config.conf' overwrite=True
 
 
     Parameters:
@@ -771,7 +743,7 @@ def install_config(path=None, **kwargs):
           the content is treated as Junos OS 'set' commands.(default = None)
       Optional
         * kwargs: Keyworded arguments which can be provided like-
-            * timeout:
+            * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
             * overwrite:
@@ -841,10 +813,6 @@ def install_config(path=None, **kwargs):
         op['template_vars'] = data
     else:
         op = {'path': path}
-
-    if 'timeout' in op:
-        conn.timeout = op['timeout']
-        del op['timeout']
 
     if 'replace' in op and op['replace']:
         op['merge'] = False
@@ -942,7 +910,7 @@ def install_os(path=None, **kwargs):
 
         salt 'device_name' junos.install_os path='/home/user/junos_image.tgz' reboot=True
 
-        salt 'device_name' junos.install_os path='/home/user/junos_16_1.tgz' timeout=300
+        salt 'device_name' junos.install_os path='/home/user/junos_16_1.tgz' dev_timeout=300
 
 
     Parameters:
@@ -950,8 +918,8 @@ def install_os(path=None, **kwargs):
         * path:
           Path where the image file is present on the proxy minion.
       Optional
-        * kwargs: keyworded arguments to be given such as timeout, reboot etc
-            * timeout:
+        * kwargs: keyworded arguments to be given such as dev_timeout, reboot etc
+            * dev_timeout:
               Set NETCONF RPC timeout. Can be used to RPCs which
               take a while to execute. (default = 30 seconds)
             * reboot:
@@ -983,10 +951,6 @@ def install_os(path=None, **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
-
-    if 'timeout' in op:
-        conn.timeout = op['timeout']
-        del op['timeout']
 
     try:
         install = conn.sw.install(path, progress=True)
@@ -1058,9 +1022,6 @@ def file_copy(src=None, dest=None, **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
-    if 'timeout' in op:
-        conn.timeout = op['timeout']
-        del op['timeout']
 
     try:
         with SCP(conn, progress=True) as scp:
