@@ -57,7 +57,6 @@ def init(opts):
     thisproxy['initialized'] = True
 
 
-
 def initialized():
     return thisproxy.get('initialized', False)
 
@@ -72,12 +71,18 @@ def proxytype():
     '''
     return 'junos'
 
+
 def grains():
     thisproxy['grains'] = copy.deepcopy(thisproxy['conn'].facts)
     if not thisproxy['grains']:
-        log.error('The device must be master to gather facts. Grains will not be populated by junos facts.')
+        log.error(
+            'The device must be master to gather facts. Grains will not be populated by junos facts.')
     if thisproxy['grains']['version_info']:
-        thisproxy['grains']['version_info'] = thisproxy['grains']['version_info'].v_dict
+        thisproxy[
+            'grains'][
+            'version_info'] = thisproxy[
+            'grains'][
+            'version_info'].v_dict
     return thisproxy['grains']
 
 
@@ -86,6 +91,7 @@ def ping():
     Ping?  Pong!
     '''
     return thisproxy['conn'].connected
+
 
 def shutdown(opts):
     '''
