@@ -846,19 +846,18 @@ def _assign_floating_ips(vm_, conn, kwargs):
                     pool = OpenStack_1_1_FloatingIpPool(
                         net['floating'], conn.connection
                     )
-                    for idx in [pool.create_floating_ip()]:
+                    for idx in pool.list_floating_ips():
                         if idx.node_id is None:
                             floating.append(idx)
                     if not floating:
-                        # Note(pabelanger): We have no available floating IPs.
-                        # For now, we raise an exception and exit.
-                        # A future enhancement might be to allow salt-cloud
-                        # to dynamically allocate new address but that might
-                        raise SaltCloudSystemExit(
-                            'Floating pool \'{0}\' does not have any more '
-                            'please create some more or use a different '
-                            'pool.'.format(net['floating'])
-                        )
+                        try:
+                            floating.append(pool.create_floating_ip())
+                        except Exception as e:
+                            raise SaltCloudSystemExit(
+                                'Floating pool \'{0}\' does not have any more '
+                                'please create some more or use a different '
+                                'pool.'.format(net['floating'])
+                            )
         # otherwise, attempt to obtain list without specifying pool
         # this is the same as 'nova floating-ip-list'
         elif ssh_interface(vm_) != 'private_ips':
@@ -874,15 +873,13 @@ def _assign_floating_ips(vm_, conn, kwargs):
                     if idx.node_id is None:
                         floating.append(idx)
                 if not floating:
-                    # Note(pabelanger): We have no available floating IPs.
-                    # For now, we raise an exception and exit.
-                    # A future enhancement might be to allow salt-cloud to
-                    # dynamically allocate new address but that might be
-                    # tricky to manage.
-                    raise SaltCloudSystemExit(
-                        'There are no more floating IP addresses '
-                        'available, please create some more'
-                    )
+                    try:
+                        floating.append(pool.create_floating_ip())
+                    except Exception as e:
+                        raise SaltCloudSystemExit(
+                            'There are no more floating IP addresses '
+                            'available, please create some more'
+                        )
             except Exception as e:
                 if str(e).startswith('404'):
                     pass
