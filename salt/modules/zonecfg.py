@@ -225,7 +225,8 @@ def create(zone, brand, zonepath, force=False):
         ret['message'] = _clean_message(ret['message'])
 
     ## cleanup config file
-    __salt__['file.remove'](cfg_file)
+    if __salt__['file.file_exists'](cfg_file):
+        __salt__['file.remove'](cfg_file)
 
     return ret
 
@@ -405,7 +406,8 @@ def _property(methode, zone, key, value):
             ret['message'] = _clean_message(ret['message'])
 
         ## cleanup config file
-        __salt__['file.remove'](cfg_file)
+        if __salt__['file.file_exists'](cfg_file):
+            __salt__['file.remove'](cfg_file)
 
     return ret
 
@@ -527,7 +529,8 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
             ret['message'] = _clean_message(ret['message'])
 
         ## cleanup config file
-        __salt__['file.remove'](cfg_file)
+        if __salt__['file.file_exists'](cfg_file):
+            __salt__['file.remove'](cfg_file)
 
     return ret
 
@@ -614,7 +617,8 @@ def remove_resource(zone, resource_type, resource_key, resource_value):
             ret['message'] = _clean_message(ret['message'])
 
         ## cleanup config file
-        __salt__['file.remove'](cfg_file)
+        if __salt__['file.file_exists'](cfg_file):
+            __salt__['file.remove'](cfg_file)
 
     return ret
 
