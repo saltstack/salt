@@ -372,9 +372,9 @@ def unique(lst):
     return lst
 
 
-def lst_min(lst):
+def lst_min(obj):
     '''
-    Returns the min value of a list.
+    Returns the min value.
 
     .. code-block:: jinja
 
@@ -387,15 +387,12 @@ def lst_min(lst):
 
         1
     '''
-
-    if not isinstance(lst, collections.Hashable):
-        return min(lst)
-    return lst
+    return min(obj)
 
 
-def lst_max(lst):
+def lst_max(obj):
     '''
-    Returns the max value of a list.
+    Returns the max value.
 
     .. code-block:: jinja
 
@@ -408,10 +405,7 @@ def lst_max(lst):
 
         4
     '''
-
-    if not isinstance(lst, collections.Hashable):
-        return max(lst)
-    return lst
+    return max(obj)
 
 
 def lst_avg(lst):
