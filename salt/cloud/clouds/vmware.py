@@ -2114,7 +2114,7 @@ def reset(name, call=None):
                 return ret
             try:
                 log.info('Resetting VM {0}'.format(name))
-                task = vm["object"].Reset()
+                task = vm["object"].ResetVM_Task()
                 salt.utils.vmware.wait_for_task(task, name, 'reset')
             except Exception as exc:
                 log.error(
