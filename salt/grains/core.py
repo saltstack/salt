@@ -2023,6 +2023,17 @@ def _hw_data(osdata):
             if serial is not None:
                 grains['serialnumber'] = serial
                 break
+    elif salt.utils.which_bin(['fw_printenv']) is not None:
+        # ARM Linux devices expose UBOOT env variables via fw_printenv
+        hwdata = {
+            'manufacturer': 'manufacturer',
+            'serialnumber': 'serial#',
+        }
+        for grain_name, cmd_key in six.iteritems(hwdata):
+            result = __salt__['cmd.run_all']('fw_printenv {0}'.format(cmd_key))
+            if result['retcode'] == 0:
+                uboot_keyval = result['stdout'].split('=')
+                grains[grain_name] = _clean_value(grain_name, uboot_keyval[1])
     elif osdata['kernel'] == 'FreeBSD':
         # On FreeBSD /bin/kenv (already in base system)
         # can be used instead of dmidecode
