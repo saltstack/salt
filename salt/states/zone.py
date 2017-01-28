@@ -156,7 +156,7 @@ def property_absent(name, property):
                 if ret['comment'] == '':
                     ret['comment'] = 'The property {0} did not get cleared!'.format(property)
         else:
-            ret['result'] = False
+            ret['result'] = True
             ret['comment'] = 'The property {0} does not exist!'.format(property)
     else:
         ## zone does not exist
@@ -735,37 +735,31 @@ def present(name, brand, zonepath, properties=None, resources=None):
                     for prop in properties:
                         if not isinstance(prop, OrderedDict) or len(prop) != 1:
                             log.warning('zone.present - failed to parse property: {0}'.format(prop))
+                            continue
                         for key, value in prop.items():
+                            log.debug('zone.present - setting property {0} to {1}'.format(key, value))
                             res_prop = __salt__['zonecfg.set_property'](name, key, value)
                             if not res_prop['status']:
                                 ret['result'] = False
                                 ret['comment'].append('Failed to set property {0}!'.format(prop))
-                for resource in resources:
-                    if isinstance(resource, OrderedDict):
-                        if len(resource) == 1:
-                            for k, v in resource.items():
-                                if isinstance(v, list):
-                                    value = {}
-                                    for prop in v:
-                                        value.update(dict(prop))
-                                    resource = k
-                                else:
-                                    resource = None
-                        else:
-                            resource = None
-                    else:
-                        resource = None
+                if isinstance(resources, list):
+                    for resource in resources:
+                        if not isinstance(prop, OrderedDict) or len(prop) != 1:
+                            log.warning('zone.present - failed to parse resource: {0}'.format(resource))
+                            continue
+                        for key, value in resource.items():
+                            resource_cfg = {}
+                            resource_cfg['zone'] = name
+                            resource_cfg['resource_type'] = key
+                            if isinstance(value, list):
+                                for respv in value:
+                                    resource_cfg.update(dict(respv))
 
-                    if resource:
-                        value['zone'] = name
-                        value['resource_type'] = resource
-                        log.info(value)
-                        res_resource = __salt__['zonecfg.add_resource'](**value)
-                        if not res_resource['status']:
-                            ret['result'] = False
-                            ret['comment'].append('Failed to add resource {0}!'.format(resource))
-                    else:
-                        log.warning('zone.present - some resources could not be parsed!')
+                            log.debug('zone.present - adding resource {0}'.format(resource_cfg))
+                            res_resource = __salt__['zonecfg.add_resource'](**resource_cfg)
+                            if not res_resource['status']:
+                                ret['result'] = False
+                                ret['comment'].append('Failed to add resource of type {0}!'.format(resource_cfg['resource_type']))
                 ret['comment'] = "\n".join(ret['comment'])
                 ret['changes'][name] = __salt__['zonecfg.info'](name, show_all=True)
             else:
