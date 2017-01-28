@@ -71,9 +71,6 @@ _zonecfg_resource_default_selectors = {
     'rctl': 'name',
     'attr': 'name',
     'dataset': 'name',
-    'dedicated-cpu': None,
-    'capped-cpu': None,
-    'capped-memory': None,
     'admin': 'user',
 }
 
@@ -624,6 +621,9 @@ def remove_resource(zone, resource_type, resource_key, resource_value):
     resource_value : string
         value for resource selection
 
+    .. note::
+        Set resource_selector to None for resource that do not require one.
+
     CLI Example:
 
     .. code-block:: bash
@@ -635,10 +635,14 @@ def remove_resource(zone, resource_type, resource_key, resource_value):
     # generate update script
     cfg_file = salt.utils.files.mkstemp()
     with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
-        fp_.write("remove {0} {1}={2}\n".format(resource_type, resource_key, _sanitize_value(resource_value)))
+        if resource_key:
+            fp_.write("remove {0} {1}={2}\n".format(resource_type, resource_key, _sanitize_value(resource_value)))
+        else:
+            fp_.write("remove {0}\n".format(resource_type))
 
     ## update property
     if cfg_file:
+        _dump_cfg(cfg_file)
         res = __salt__['cmd.run_all']('zonecfg -z {zone} -f {path}'.format(
             zone=zone,
             path=cfg_file,
