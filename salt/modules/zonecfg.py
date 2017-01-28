@@ -131,6 +131,8 @@ def _parse_value(value, reverse=False):
             return "".join(str(v) for v in new_value).replace(',)', ')')
         else:
             return value
+    elif isinstance(value, bool):
+        return 'true' if value else 'false'
     elif isinstance(value, str):
         # parse compacted notation to dict
         listparser = re.compile(r'''((?:[^,"']|"[^"]*"|'[^']*')+)''')
