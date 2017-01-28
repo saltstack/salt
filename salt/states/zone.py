@@ -698,6 +698,11 @@ def present(name, brand, zonepath, properties=None, resources=None):
         If the zone does not exist it will not be installed.
         You can use the ```zone.installed``` state for this.
 
+    .. warning::
+        Properties and resource will not be removed when they
+        are absent from the state! Use ```zone.property_absent```
+        and ```zone.resource_absent``` instead.
+
     '''
     ret = {'name': name,
            'changes': {},
@@ -712,12 +717,48 @@ def present(name, brand, zonepath, properties=None, resources=None):
 
     zones = __salt__['zoneadm.list'](installed=True, configured=True)
     if name in zones:
-        if __opts__['test']:
-            ## fake update
-            pass
+        ret['result'] = True
+        ret['changes'][name] = {}
+        ret['changes'][name]['properties'] = {}
+        ret['changes'][name]['resources'] = {}
+        ## retrieve current config
+        zonecfg = __salt__['zonecfg.info'](name, show_all=True)
+        ## update properties
+        # append brand and zonepath
+        properties.append(OrderedDict({"brand": brand}))
+        properties.append(OrderedDict({"zonepath": zonepath}))
+        ## add, update or clear properties
+        if isinstance(properties, list):
+            for prop in properties:
+                if not isinstance(prop, OrderedDict) or len(prop) != 1:
+                    log.warning('zone.present - failed to parse property: {0}'.format(prop))
+                    continue
+                for key, value in prop.items():
+                    if key not in zonecfg or zonecfg[key] != value:
+                        ## note: value is type of str, we cannot just do 'if not value:'
+                        zonecfg_res = {'status': True}
+                        if not __opts__['test']:
+                            if value:
+                                log.debug('zone.present - updating property {0} to {1}'.format(key, value))
+                                zonecfg_res = __salt__['zonecfg.set_property'](name, key, value)
+                            elif not value and prop in zonecfg:
+                                log.debug('zone.present - clearing property {0}'.format(key))
+                                zonecfg_res = __salt__['zonecfg.clear_property'](name, key)
+                        if not zonecfg_res['status']:
+                            ret['result'] = False
+                            log.error('zone.present - failed to update property {0} to {1}'.format(key, value))
+                        elif value:
+                            ret['changes'][name]['properties'][key] = value
+        ## generate comment
+        if len(ret['changes'][name]['properties']) > 0 or len(ret['changes'][name]['resources']) > 0:
+            ret['comment'] = 'The zone {0} was updated.'.format(name)
+            if len(ret['changes'][name]['properties']) == 0:
+                del ret['changes'][name]['properties']
+            if len(ret['changes'][name]['resources']) == 0:
+                del ret['changes'][name]['resources']
         else:
-            ## update
-            pass
+            ret['changes'] = {}
+            ret['comment'] = 'The zone {0} is up to date.'.format(name)
     else:
         if __opts__['test']:
             ## we pretend we created the zone
