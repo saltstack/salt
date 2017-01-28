@@ -100,6 +100,16 @@ def __virtual__():
     )
 
 
+def _cleanup_values(value):
+    '''Internal helper to cleanup values before parsing'''
+    if isinstance(value, OrderedDict):
+        for k, v in value.items():
+            if isinstance(v, dict):
+                value[k] = odict2dict(v)
+        return dict(value)
+    return value
+
+
 def _parse_value(value, reverse=False):
     '''Internal helper to parse some values for the info call'''
     if reverse:
