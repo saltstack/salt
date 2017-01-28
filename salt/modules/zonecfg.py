@@ -64,6 +64,19 @@ _zonecfg_resource_setters = {
     'admin': ['user', 'auths'],
 }
 
+_zonecfg_resource_default_selectors = {
+    'fs': 'dir',
+    'net': 'mac-addr',
+    'device': 'match',
+    'rctl': 'name',
+    'attr': 'name',
+    'dataset': 'name',
+    'dedicated-cpu': None,
+    'capped-cpu': None,
+    'capped-memory': None,
+    'admin': 'user',
+}
+
 
 @salt.utils.decorators.memoize
 def _is_globalzone():
@@ -501,7 +514,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
         ret['status'] = False
         ret['message'] = 'unknown methode {0}'.format(methode)
         return ret
-    if methode in ['update'] and resource_selector not in kwargs:
+    if methode in ['update'] and resource_selector and resource_selector not in kwargs:
         ret['status'] = False
         ret['message'] = 'resource selector {0} not found in parameters'.format(resource_selector)
         return ret
@@ -512,11 +525,14 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
         if methode in ['add']:
             fp_.write("add {0}\n".format(resource_type))
         elif methode in ['update']:
-            value = kwargs[resource_selector]
-            if isinstance(value, dict) or isinstance(value, list):
-                value = _sanitize_value(value)
-            value = str(value).lower() if isinstance(value, bool) else str(value)
-            fp_.write("select {0} {1}={2}\n".format(resource_type, resource_selector, _sanitize_value(value)))
+            if resource_selector:
+                value = kwargs[resource_selector]
+                if isinstance(value, dict) or isinstance(value, list):
+                    value = _sanitize_value(value)
+                value = str(value).lower() if isinstance(value, bool) else str(value)
+                fp_.write("select {0} {1}={2}\n".format(resource_type, resource_selector, _sanitize_value(value)))
+            else:
+                fp_.write("select {0}\n".format(resource_type))
         for k, v in six.iteritems(kwargs):
             if methode in ['update'] and k == resource_selector:
                 continue
@@ -582,6 +598,9 @@ def update_resource(zone, resource_type, resource_selector, **kwargs):
         unique resource identifier
     **kwargs : string|int|...
         resource properties
+
+    .. note::
+        Set resource_selector to None for resource that do not require one.
 
     CLI Example:
 
