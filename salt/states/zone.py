@@ -356,12 +356,14 @@ def resource_absent(name, resource_type, resource_selector_property, resource_se
     return ret
 
 
-def booted(name):
+def booted(name, single=False):
     '''
     Ensure zone is booted
 
     name : string
         name of the zone
+    single : boolean
+        boot in single usermode
 
     '''
     ret = {'name': name,
@@ -379,7 +381,7 @@ def booted(name):
         else:
             ## try and boot the zone
             if not __opts__['test']:
-                zoneadm_res = __salt__['zoneadm.boot'](name)
+                zoneadm_res = __salt__['zoneadm.boot'](name, single)
             if __opts__['test'] or zoneadm_res['status']:
                 ret['result'] = True
                 ret['changes'][name] = 'booted'
@@ -408,12 +410,14 @@ def booted(name):
     return ret
 
 
-def halted(name):
+def halted(name, graceful=True):
     '''
     Ensure zone is halted
 
     name : string
         name of the zone
+    graceful : boolean
+        use shutdown instead of halt if true
 
     '''
     ret = {'name': name,
@@ -431,7 +435,7 @@ def halted(name):
         else:
             ## try and halt the zone
             if not __opts__['test']:
-                zoneadm_res = __salt__['zoneadm.halt'](name)
+                zoneadm_res = __salt__['zoneadm.shutdown'](name) if graceful else __salt__['zoneadm.halt'](name)
             if __opts__['test'] or zoneadm_res['status']:
                 ret['result'] = True
                 ret['changes'][name] = 'halted'
@@ -453,8 +457,8 @@ def halted(name):
                         name,
                     )
                 )
-
-        ret['result'] = False
+        ## note: a non existing zone is not running, we do not consider this a failure
+        ret['result'] = True
         ret['comment'] = "\n".join(ret['comment'])
 
     return ret
@@ -672,6 +676,53 @@ def import_(name, path, mode='import', nodataset=False, brand_opts=None):
     return ret
 
 
+def present(name, brand, zonepath, **kwargs):
+    '''
+    Ensure a zone with certain properties and resouces
+
+    name : string
+        name of the zone
+    brand : string
+        brand of the zone
+    zonepath : string
+        path of the zone
+    **kwargs : string|int|...
+        aditional properties and resources for the zone
+
+    .. note::
+        If the zone does not exist it will not be installed.
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    # sanitize kwargs
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    #resource_selector_value = _parse_value(resource_selector_value)
+    for k, v in kwargs.items():
+        kwargs[k] = _parse_value(kwargs[k])
+
+    zones = __salt__['zoneadm.list'](installed=True, configured=True)
+    if name in zones:
+        if __opts__['test']:
+            ## fake update
+            pass
+        else:
+            ## update
+            pass
+    else:
+        if __opts__['test']:
+            ## fake create
+            pass
+        else:
+            ## create and install
+            pass
+
+    return ret
+
+
 def absent(name, uninstall=False):
     '''
     Ensure a zone is absent
@@ -814,7 +865,93 @@ def detached(name):
             ret['result'] = True
             ret['comment'] = 'zone {0} already detached.'.format(name)
     else:
+        ## note: a non existing zone is not attached, we do not consider this a failure
+        ret['result'] = True
+        ret['comment'] = 'zone {0} is not configured!'.format(name)
+
+    return ret
+
+
+def installed(name, nodataset=False, brand_opts=None):
+    '''
+    Ensure zone is installed
+
+    name : string
+        name of the zone
+    nodataset : boolean
+        do not create a ZFS file system
+    brand_opts : boolean
+        brand specific options to pass
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    zones = __salt__['zoneadm.list'](installed=True, configured=True)
+    if name in zones:
+        if zones[name]['state'] == 'configured':
+            if __opts__['test']:
+                res_install = {'status': True}
+            else:
+                res_install = __salt__['zoneadm.install'](name, nodataset, brand_opts)
+            ret['result'] = res_install['status']
+            if ret['result']:
+                ret['changes'][name] = 'installed'
+                ret['comment'] = 'The zone {0} was installed.'.format(name)
+            else:
+                ret['comment'] = []
+                ret['comment'].append('Failed to install zone {0}!'.format(name))
+                if 'message' in res_install:
+                    ret['comment'].append(res_install['message'])
+                ret['comment'] = "\n".join(ret['comment'])
+        else:
+            ret['result'] = True
+            ret['comment'] = 'zone {0} already installed.'.format(name)
+    else:
         ret['result'] = False
+        ret['comment'] = 'zone {0} is not configured!'.format(name)
+
+    return ret
+
+
+def uninstalled(name):
+    '''
+    Ensure zone is uninstalled
+
+    name : string
+        name of the zone
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    zones = __salt__['zoneadm.list'](installed=True, configured=True)
+    if name in zones:
+        if zones[name]['state'] != 'configured':
+            if __opts__['test']:
+                res_uninstall = {'status': True}
+            else:
+                res_uninstall = __salt__['zoneadm.uninstall'](name)
+            ret['result'] = res_uninstall['status']
+            if ret['result']:
+                ret['changes'][name] = 'uninstalled'
+                ret['comment'] = 'The zone {0} was uninstalled.'.format(name)
+            else:
+                ret['comment'] = []
+                ret['comment'].append('Failed to uninstall zone {0}!'.format(name))
+                if 'message' in res_uninstall:
+                    ret['comment'].append(res_uninstall['message'])
+                ret['comment'] = "\n".join(ret['comment'])
+        else:
+            ret['result'] = True
+            ret['comment'] = 'zone {0} already uninstalled.'.format(name)
+    else:
+        ## note: a non existing zone is not installed, we do not consider this a failure
+        ret['result'] = True
         ret['comment'] = 'zone {0} is not configured!'.format(name)
 
     return ret
