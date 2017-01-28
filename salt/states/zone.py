@@ -13,10 +13,6 @@ Management of Solaris Zones
 
     FIXME: add good example
 
-.. note::
-
-    TODO:
-    - zone.present (test mode)
 '''
 from __future__ import absolute_import
 
@@ -27,9 +23,10 @@ import logging
 import salt.utils
 import salt.utils.files
 import salt.utils.atomicfile
-from salt.modules.zonecfg import _parse_value
+from salt.modules.zonecfg import _parse_value, _zonecfg_resource_default_selectors
 from salt.exceptions import CommandExecutionError
 from salt.utils.odict import OrderedDict
+from salt.utils.dictupdate import merge as merge_dict
 
 log = logging.getLogger(__name__)
 
@@ -81,29 +78,25 @@ def property_present(name, property, value):
     if name in zones:
         ## zone exists
         zonecfg = __salt__['zonecfg.info'](name, show_all=True)
-        if property in zonecfg:
-            if zonecfg[property] != _parse_value(value):
-                if __opts__['test']:
-                    ret['result'] = True
-                else:
-                    # update property
-                    zonecfg_res = __salt__['zonecfg.set_property'](name, property, value)
-                    ret['result'] = zonecfg_res['status']
-                    if 'messages' in zonecfg_res:
-                        ret['comment'] = zonecfg_res['message']
-                if ret['result']:
-                    ret['changes'][property] = _parse_value(value)
-                    if ret['comment'] == '':
-                        ret['comment'] = 'The property {0} is was updated to {1}!'.format(property, value)
-                elif ret['comment'] == '':
-                    if ret['comment'] == '':
-                        ret['comment'] = 'The property {0} is was not updated to {1}!'.format(property, value)
-            else:
+        if property not in zonecfg or zonecfg[property] != _parse_value(value):
+            if __opts__['test']:
                 ret['result'] = True
-                ret['comment'] = 'The property {0} is already set to {1}!'.format(property, value)
+            else:
+                # update property
+                zonecfg_res = __salt__['zonecfg.set_property'](name, property, value)
+                ret['result'] = zonecfg_res['status']
+                if 'messages' in zonecfg_res:
+                    ret['comment'] = zonecfg_res['message']
+            if ret['result']:
+                ret['changes'][property] = _parse_value(value)
+                if ret['comment'] == '':
+                    ret['comment'] = 'The property {0} is was updated to {1}.'.format(property, value)
+            elif ret['comment'] == '':
+                if ret['comment'] == '':
+                    ret['comment'] = 'The property {0} is was not updated to {1}!'.format(property, value)
         else:
-            ret['result'] = False
-            ret['comment'] = 'The property {0} does not exist!'.format(property)
+            ret['result'] = True
+            ret['comment'] = 'The property {0} is already set to {1}.'.format(property, value)
     else:
         ## zone does not exist
         ret['result'] = False
@@ -181,9 +174,13 @@ def resource_present(name, resource_type, resource_selector_property, resource_s
     **kwargs : string|int|...
         resource properties
 
-    .. note::
-        both resource_selector_property and resource_selector_value must be provided, some properties
+    .. warning::
+        Both resource_selector_property and resource_selector_value must be provided, some properties
         like ```name``` are already reserved by salt in there states.
+
+    .. note::
+        You can set both resource_selector_property and resource_selector_value to None for
+        resources that do not require them.
 
     '''
     ret = {'name': name,
@@ -208,25 +205,35 @@ def resource_present(name, resource_type, resource_selector_property, resource_s
         zonecfg_kwargs['zone'] = name
         zonecfg_kwargs['resource_type'] = resource_type
         zonecfg_kwargs['resource_selector'] = resource_selector_property
-        zonecfg_kwargs[resource_selector_property] = resource_selector_value
+        if resource_selector_property:
+            zonecfg_kwargs[resource_selector_property] = resource_selector_value
 
         ## check update or add
         if resource_type in zonecfg:
             for resource in zonecfg[resource_type]:
-                if resource[resource_selector_property] == resource_selector_value:
+                if not resource_selector_property or resource[resource_selector_property] == resource_selector_value:
                     ret['result'] = True
-                    ret['comment'] = 'The {0} resource {1} is up to date.'.format(
-                        resource_type,
-                        resource_selector_value,
-                    )
+                    if resource_selector_property:
+                        ret['comment'] = 'the {0} resource {1} is up to date.'.format(
+                            resource_type,
+                            resource_selector_value,
+                        )
+                    else:
+                        ret['comment'] = 'the {0} resource is up to date.'.format(
+                            resource_type,
+                        )
 
                     ## check if update reauired
                     for key in kwargs:
-                        log.debug('key={0} value={1} current_value={2}'.format(
+                        log.debug('zone.resource_preent - key={0} value={1} current_value={2}'.format(
                             key,
-                            resource[key],
+                            resource[key] if key in resource else None,
                             _parse_value(kwargs[key]),
                         ))
+                        # note: something odd with ncpus property, we fix it here for now
+                        if key == 'ncpus' and key in kwargs:
+                            kwargs[key] = '{0:.2f}'.format(float(kwargs[key]))
+
                         if key not in resource:
                             ret['result'] = None
                         elif resource[key] != _parse_value(kwargs[key]):
@@ -244,18 +251,34 @@ def resource_present(name, resource_type, resource_selector_property, resource_s
                                 ret['comment'] = zonecfg_res['message']
 
                         if ret['result']:
+                            ret['changes'][resource_type] = {}
+                            if resource_selector_property:
+                                ret['changes'][resource_type][resource_selector_value] = {}
                             for key in kwargs if ret['result'] else []:
-                                ret['changes'][key] = _parse_value(kwargs[key])
+                                if resource_selector_property:
+                                    ret['changes'][resource_type][resource_selector_value][key] = _parse_value(kwargs[key])
+                                else:
+                                    ret['changes'][resource_type][key] = _parse_value(kwargs[key])
                             if ret['comment'] == '':
-                                ret['comment'] = 'The {0} resource {1} was updated.'.format(
+                                if resource_selector_property:
+                                    ret['comment'] = 'The {0} resource {1} was updated.'.format(
+                                        resource_type,
+                                        resource_selector_value,
+                                    )
+                                else:
+                                    ret['comment'] = 'The {0} resource was updated.'.format(
+                                        resource_type,
+                                    )
+                        elif ret['comment'] == '':
+                            if resource_selector_property:
+                                ret['comment'] = 'The {0} resource {1} was not updated.'.format(
                                     resource_type,
                                     resource_selector_value,
                                 )
-                        elif ret['comment'] == '':
-                            ret['comment'] = 'The {0} resource {1} was not updated.'.format(
-                                resource_type,
-                                resource_selector_value,
-                            )
+                            else:
+                                ret['comment'] = 'The {0} resource was not updated.'.format(
+                                    resource_type,
+                                )
         if ret['result'] is None:
             ## add
             if __opts__['test']:
@@ -270,8 +293,14 @@ def resource_present(name, resource_type, resource_selector_property, resource_s
                     ret['comment'] = zonecfg_res['message']
 
             if ret['result']:
+                ret['changes'][resource_type] = {}
+                if resource_selector_property:
+                    ret['changes'][resource_type][resource_selector_value] = {}
                 for key in kwargs if ret['result'] else []:
-                    ret['changes'][key] = _parse_value(kwargs[key])
+                    if resource_selector_property:
+                        ret['changes'][resource_type][resource_selector_value][key] = _parse_value(kwargs[key])
+                    else:
+                        ret['changes'][resource_type][key] = _parse_value(kwargs[key])
                 if ret['comment'] == '':
                     ret['comment'] = 'The {0} resource {1} was added.'.format(
                         resource_type,
@@ -303,9 +332,13 @@ def resource_absent(name, resource_type, resource_selector_property, resource_se
     resource_selector_value : string
         value for resource selection
 
-    .. note::
-        both resource_selector_property and resource_selector_value must be provided, some properties
+    .. warning::
+        Both resource_selector_property and resource_selector_value must be provided, some properties
         like ```name``` are already reserved by salt in there states.
+
+    .. note::
+        You can set both resource_selector_property and resource_selector_value to None for
+        resources that do not require them.
 
     '''
     ret = {'name': name,
@@ -314,7 +347,10 @@ def resource_absent(name, resource_type, resource_selector_property, resource_se
            'comment': ''}
 
     # sanitize input
-    resource_selector_value = _parse_value(resource_selector_value)
+    if resource_selector_property:
+        resource_selector_value = _parse_value(resource_selector_value)
+    else:
+        resource_selector_value = None
 
     zones = __salt__['zoneadm.list'](installed=True, configured=True)
     if name in zones:
@@ -322,20 +358,37 @@ def resource_absent(name, resource_type, resource_selector_property, resource_se
         zonecfg = __salt__['zonecfg.info'](name, show_all=True)
         if resource_type in zonecfg:
             for resource in zonecfg[resource_type]:
-                if resource[resource_selector_property] == resource_selector_value:
-                    if __opts__['test']:
-                        ret['result'] = True
+                if __opts__['test']:
+                    ret['result'] = True
+                elif not resource_selector_property:
+                    zonecfg_res = __salt__['zonecfg.remove_resource'](
+                        zone=name,
+                        resource_type=resource_type,
+                        resource_key=None,
+                        resource_value=None,
+                    )
+                    ret['result'] = zonecfg_res['status']
+                    if zonecfg_res['status']:
+                        ret['changes'][resource_type] = 'removed'
+                        if ret['comment'] == '':
+                            ret['comment'] = 'The {0} resource was removed.'.format(
+                                resource_type,
+                            )
+                    elif 'messages' in zonecfg_res:
+                        ret['comment'] = zonecfg_res['message']
                     else:
-                        zonecfg_res = __salt__['zonecfg.remove_resource'](
-                            zone=name,
-                            resource_type=resource_type,
-                            resource_key=resource_selector_property,
-                            resource_value=resource_selector_value,
+                        ret['comment'] = 'The {0} resource was not removed.'.format(
+                            resource_type,
                         )
-                        ret['result'] = zonecfg_res['status']
-                        if 'messages' in zonecfg_res:
-                            ret['comment'] = zonecfg_res['message']
-                    if ret['result']:
+                elif resource[resource_selector_property] == resource_selector_value:
+                    zonecfg_res = __salt__['zonecfg.remove_resource'](
+                        zone=name,
+                        resource_type=resource_type,
+                        resource_key=resource_selector_property,
+                        resource_value=resource_selector_value,
+                    )
+                    ret['result'] = zonecfg_res['status']
+                    if zonecfg_res['status']:
                         ret['changes'][resource_type] = {}
                         ret['changes'][resource_type][resource_selector_value] = 'removed'
                         if ret['comment'] == '':
@@ -343,6 +396,13 @@ def resource_absent(name, resource_type, resource_selector_property, resource_se
                                 resource_type,
                                 resource_selector_value,
                             )
+                    elif 'messages' in zonecfg_res:
+                        ret['comment'] = zonecfg_res['message']
+                    else:
+                        ret['comment'] = 'The {0} resource {1} was not removed.'.format(
+                            resource_type,
+                            resource_selector_value,
+                        )
 
             # resource already absent
             if ret['result'] is None:
@@ -698,114 +758,133 @@ def present(name, brand, zonepath, properties=None, resources=None):
         If the zone does not exist it will not be installed.
         You can use the ```zone.installed``` state for this.
 
+    .. note::
+        Default resource selectors:
+            - fs: dir
+            - net: mac-addr
+            - device: match
+            - rctl: name
+            - attr: name
+            - dataset: name
+            - admin: user
+
     .. warning::
         Properties and resource will not be removed when they
-        are absent from the state! Use ```zone.property_absent```
-        and ```zone.resource_absent``` instead.
+        are absent from the state!
+
+        For properties, simple set them to ```None```.
+
+        For resources, add the ```resource_prune``` property
+        and set it to ```True```. Also specify the
+        ```resource_selector_property``` if the default is not
+        the one you want.
 
     '''
     ret = {'name': name,
            'changes': {},
            'result': None,
-           'comment': ''}
+           'comment': []}
 
     ## sanitize defaults
     if not properties:
         properties = []
     if not resources:
         resources = []
+    properties.append(OrderedDict({"brand": brand}))
+    properties.append(OrderedDict({"zonepath": zonepath}))
 
     zones = __salt__['zoneadm.list'](installed=True, configured=True)
-    if name in zones:
+
+    ## test mode only has limited support
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'].append('Cannot determine of changes would happen to the zone {0}.'.format(name))
+
+    ## create zone if needed
+    if name not in zones:
+        if __opts__['test']:
+            ## we pretend we created the zone
+            res_create = {'status': True}
+            ret['comment'] = []
+        else:
+            ## create and install
+            res_create = __salt__['zonecfg.create'](name, brand, zonepath)
+        if res_create['status']:
+            ret['result'] = True
+            ret['changes'][name] = 'created'
+            ret['comment'].append('The zone {0} was created.'.format(name))
+
+    if not __opts__['test']:
         ret['result'] = True
-        ret['changes'][name] = {}
-        ret['changes'][name]['properties'] = {}
-        ret['changes'][name]['resources'] = {}
-        ## retrieve current config
-        zonecfg = __salt__['zonecfg.info'](name, show_all=True)
-        ## update properties
-        # append brand and zonepath
-        properties.append(OrderedDict({"brand": brand}))
-        properties.append(OrderedDict({"zonepath": zonepath}))
-        ## add, update or clear properties
         if isinstance(properties, list):
             for prop in properties:
                 if not isinstance(prop, OrderedDict) or len(prop) != 1:
                     log.warning('zone.present - failed to parse property: {0}'.format(prop))
                     continue
                 for key, value in prop.items():
-                    if key not in zonecfg or zonecfg[key] != value:
-                        ## note: value is type of str, we cannot just do 'if not value:'
-                        zonecfg_res = {'status': True}
-                        if not __opts__['test']:
-                            if value:
-                                log.debug('zone.present - updating property {0} to {1}'.format(key, value))
-                                zonecfg_res = __salt__['zonecfg.set_property'](name, key, value)
-                            elif not value and prop in zonecfg:
-                                log.debug('zone.present - clearing property {0}'.format(key))
-                                zonecfg_res = __salt__['zonecfg.clear_property'](name, key)
-                        if not zonecfg_res['status']:
-                            ret['result'] = False
-                            log.error('zone.present - failed to update property {0} to {1}'.format(key, value))
-                        elif value:
-                            ret['changes'][name]['properties'][key] = value
-        ## generate comment
-        if len(ret['changes'][name]['properties']) > 0 or len(ret['changes'][name]['resources']) > 0:
-            ret['comment'] = 'The zone {0} was updated.'.format(name)
-            if len(ret['changes'][name]['properties']) == 0:
-                del ret['changes'][name]['properties']
-            if len(ret['changes'][name]['resources']) == 0:
-                del ret['changes'][name]['resources']
-        else:
-            ret['changes'] = {}
-            ret['comment'] = 'The zone {0} is up to date.'.format(name)
-    else:
-        if __opts__['test']:
-            ## we pretend we created the zone
-            ret['result'] = True
-            ret['changes'][name] = 'created'
-            ret['comment'] = 'Zone {0} was created.'.format(name)
-        else:
-            ## create and install
-            res_create = __salt__['zonecfg.create'](name, brand, zonepath)
-            if res_create['status']:
-                ret['result'] = True
-                ret['comment'] = []
-                ret['comment'].append('The zone {0} was created.'.format(name))
-                if isinstance(properties, list):
-                    for prop in properties:
-                        if not isinstance(prop, OrderedDict) or len(prop) != 1:
-                            log.warning('zone.present - failed to parse property: {0}'.format(prop))
-                            continue
-                        for key, value in prop.items():
-                            log.debug('zone.present - setting property {0} to {1}'.format(key, value))
-                            res_prop = __salt__['zonecfg.set_property'](name, key, value)
-                            if not res_prop['status']:
-                                ret['result'] = False
-                                ret['comment'].append('Failed to set property {0}!'.format(prop))
-                if isinstance(resources, list):
-                    for resource in resources:
-                        if not isinstance(prop, OrderedDict) or len(prop) != 1:
-                            log.warning('zone.present - failed to parse resource: {0}'.format(resource))
-                            continue
-                        for key, value in resource.items():
-                            resource_cfg = {}
-                            resource_cfg['zone'] = name
-                            resource_cfg['resource_type'] = key
-                            if isinstance(value, list):
-                                for respv in value:
-                                    resource_cfg.update(dict(respv))
+                    res = None
+                    if not value:
+                        res = property_absent(name, key)
+                    elif value:
+                        res = property_present(name, key, value)
+                    if res:
+                        ret['result'] = ret['result'] if res['result'] else False
+                        ret['comment'].append(res['comment'])
+                        if len(res['changes']) > 0:
+                            if 'property' not in ret['changes']:
+                                ret['changes']['property'] = {}
+                            ret['changes']['property'] = merge_dict(ret['changes']['property'], res['changes'])
+        if isinstance(resources, list):
+            for resource in resources:
+                if not isinstance(prop, OrderedDict) or len(prop) != 1:
+                    log.warning('zone.present - failed to parse resource: {0}'.format(resource))
+                    continue
+                for key, value in resource.items():
+                    zonecfg = __salt__['zonecfg.info'](name, show_all=True)
+                    resource_cfg = {}
+                    resource_cfg['resource_type'] = key
+                    if isinstance(value, list):
+                        for respv in value:
+                            resource_cfg.update(dict(respv))
 
-                            log.debug('zone.present - adding resource {0}'.format(resource_cfg))
-                            res_resource = __salt__['zonecfg.add_resource'](**resource_cfg)
-                            if not res_resource['status']:
-                                ret['result'] = False
-                                ret['comment'].append('Failed to add resource of type {0}!'.format(resource_cfg['resource_type']))
-                ret['comment'] = "\n".join(ret['comment'])
-                ret['changes'][name] = __salt__['zonecfg.info'](name, show_all=True)
-            else:
-                ret['result'] = False
-                ret['comment'] = 'Failed to create zone {0}!'.format(name)
+                    resource_prune = False
+                    resource_selector_property = None
+                    if 'resource_prune' in resource_cfg:
+                        resource_prune = resource_cfg['resource_prune']
+                        del resource_cfg['resource_prune']
+                    if 'resource_selector_property' in resource_cfg:
+                        resource_selector_property = resource_cfg['resource_selector_property']
+                        del resource_cfg['resource_selector_property']
+                    if not resource_selector_property and key in _zonecfg_resource_default_selectors:
+                        resource_selector_property = _zonecfg_resource_default_selectors[key]
+
+                    res = None
+                    if resource_prune:
+                        res = resource_absent(
+                            name,
+                            resource_cfg['resource_type'],
+                            resource_selector_property=resource_selector_property,
+                            resource_selector_value=resource_cfg[resource_selector_property] if resource_selector_property else None,
+                        )
+                    else:
+                        resource_cfg['resource_selector_property'] = resource_selector_property
+                        if resource_selector_property in resource_cfg:
+                            resource_cfg['resource_selector_value'] = resource_cfg[resource_selector_property]
+                        else:
+                            resource_cfg['resource_selector_value'] = None
+                        resource_cfg['name'] = name  # we do this last because name can also be a attrib value
+                        res = resource_present(**resource_cfg)
+                        log.error(res)
+                    if res:
+                        ret['result'] = ret['result'] if res['result'] else False
+                        ret['comment'].append(res['comment'])
+                        if len(res['changes']) > 0:
+                            if 'resource' not in ret['changes']:
+                                ret['changes']['resource'] = {}
+                            ret['changes']['resource'] = merge_dict(ret['changes']['resource'], res['changes'])
+
+    if isinstance(ret['comment'], list):
+        ret['comment'] = "\n".join(ret['comment'])
 
     return ret
 
