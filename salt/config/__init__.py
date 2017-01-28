@@ -269,7 +269,10 @@ VALID_OPTS = {
     'decrypt_pillar_delimiter': str,
 
     # Default renderer for decrypt_pillar
-    'decrypt_pillar_renderer': str,
+    'decrypt_pillar_default': str,
+
+    # List of renderers available for decrypt_pillar
+    'decrypt_pillar_renderers': list,
 
     # The type of hashing algorithm to use when doing file comparisons
     'hash_type': str,
@@ -1056,7 +1059,8 @@ DEFAULT_MINION_OPTS = {
     'on_demand_ext_pillar': ['libvirt', 'virtkey'],
     'decrypt_pillar': [],
     'decrypt_pillar_delimiter': ':',
-    'decrypt_pillar_renderer': 'gpg',
+    'decrypt_pillar_default': 'gpg',
+    'decrypt_pillar_renderers': ['gpg'],
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
     'git_pillar_env': '',
@@ -1260,7 +1264,8 @@ DEFAULT_MASTER_OPTS = {
     'on_demand_ext_pillar': ['libvirt', 'virtkey'],
     'decrypt_pillar': [],
     'decrypt_pillar_delimiter': ':',
-    'decrypt_pillar_renderer': 'gpg',
+    'decrypt_pillar_default': 'gpg',
+    'decrypt_pillar_renderers': ['gpg'],
     'thorium_interval': 0.5,
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
