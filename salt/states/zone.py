@@ -29,6 +29,7 @@ import salt.utils.files
 import salt.utils.atomicfile
 from salt.modules.zonecfg import _parse_value
 from salt.exceptions import CommandExecutionError
+from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -145,7 +146,9 @@ def property_absent(name, property):
                 if 'messages' in zonecfg_res:
                     ret['comment'] = zonecfg_res['message']
             if ret['result']:
-                if zonecfg[property] != zonecfg_new[property]:
+                if property not in zonecfg_new:
+                    ret['changes'][property] = None
+                elif zonecfg[property] != zonecfg_new[property]:
                     ret['changes'][property] = zonecfg_new[property]
                 if ret['comment'] == '':
                     ret['comment'] = 'The property {0} was cleared!'.format(property)
@@ -676,7 +679,7 @@ def import_(name, path, mode='import', nodataset=False, brand_opts=None):
     return ret
 
 
-def present(name, brand, zonepath, **kwargs):
+def present(name, brand, zonepath, properties=None, resources=None):
     '''
     Ensure a zone with certain properties and resouces
 
@@ -686,11 +689,14 @@ def present(name, brand, zonepath, **kwargs):
         brand of the zone
     zonepath : string
         path of the zone
-    **kwargs : string|int|...
-        aditional properties and resources for the zone
+    properties : list of key-value pairs
+        dict of properties
+    resources : list of key-value pairs
+        dict of resources
 
     .. note::
         If the zone does not exist it will not be installed.
+        You can use the ```zone.installed``` state for this.
 
     '''
     ret = {'name': name,
@@ -698,11 +704,11 @@ def present(name, brand, zonepath, **kwargs):
            'result': None,
            'comment': ''}
 
-    # sanitize kwargs
-    kwargs = salt.utils.clean_kwargs(**kwargs)
-    #resource_selector_value = _parse_value(resource_selector_value)
-    for k, v in kwargs.items():
-        kwargs[k] = _parse_value(kwargs[k])
+    ## sanitize defaults
+    if not properties:
+        properties = []
+    if not resources:
+        resources = []
 
     zones = __salt__['zoneadm.list'](installed=True, configured=True)
     if name in zones:
@@ -714,11 +720,57 @@ def present(name, brand, zonepath, **kwargs):
             pass
     else:
         if __opts__['test']:
-            ## fake create
-            pass
+            ## we pretend we created the zone
+            ret['result'] = True
+            ret['changes'][name] = 'created'
+            ret['comment'] = 'Zone {0} was created.'.format(name)
         else:
             ## create and install
-            pass
+            res_create = __salt__['zonecfg.create'](name, brand, zonepath)
+            if res_create['status']:
+                ret['result'] = True
+                ret['comment'] = []
+                ret['comment'].append('The zone {0} was created.'.format(name))
+                if isinstance(properties, list):
+                    for prop in properties:
+                        if not isinstance(prop, OrderedDict) or len(prop) != 1:
+                            log.warning('zone.present - failed to parse property: {0}'.format(prop))
+                        for key, value in prop.items():
+                            res_prop = __salt__['zonecfg.set_property'](name, key, value)
+                            if not res_prop['status']:
+                                ret['result'] = False
+                                ret['comment'].append('Failed to set property {0}!'.format(prop))
+                for resource in resources:
+                    if isinstance(resource, OrderedDict):
+                        if len(resource) == 1:
+                            for k, v in resource.items():
+                                if isinstance(v, list):
+                                    value = {}
+                                    for prop in v:
+                                        value.update(dict(prop))
+                                    resource = k
+                                else:
+                                    resource = None
+                        else:
+                            resource = None
+                    else:
+                        resource = None
+
+                    if resource:
+                        value['zone'] = name
+                        value['resource_type'] = resource
+                        log.info(value)
+                        res_resource = __salt__['zonecfg.add_resource'](**value)
+                        if not res_resource['status']:
+                            ret['result'] = False
+                            ret['comment'].append('Failed to add resource {0}!'.format(resource))
+                    else:
+                        log.warning('zone.present - some resources could not be parsed!')
+                ret['comment'] = "\n".join(ret['comment'])
+                ret['changes'][name] = __salt__['zonecfg.info'](name, show_all=True)
+            else:
+                ret['result'] = False
+                ret['comment'] = 'Failed to create zone {0}!'.format(name)
 
     return ret
 
@@ -746,7 +798,8 @@ def absent(name, uninstall=False):
             ret['comment'] = 'Zone {0} was removed.'.format(name)
         else:
             ret['result'] = True
-            if uninstall:
+            if uninstall and zones[name]['state'] in ['running', 'installed']:
+                res_halt = __salt__['zoneadm.halt'](name)
                 res_uninstall = __salt__['zoneadm.uninstall'](name)
                 ret['result'] = res_uninstall['status']
                 if ret['result']:
@@ -758,7 +811,7 @@ def absent(name, uninstall=False):
                     if 'message' in res_uninstall:
                         ret['comment'].append(res_uninstall['message'])
                     ret['comment'] = "\n".join(ret['comment'])
-            else:
+            elif zones[name]['state'] == 'installed':
                 res_detach = __salt__['zoneadm.detach'](name)
                 ret['result'] = res_detach['status']
                 if ret['result']:
