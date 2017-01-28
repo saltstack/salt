@@ -17,6 +17,7 @@ import salt.ext.six as six
 # Import salt libs
 import salt.pillar
 import salt.utils
+import salt.utils.crypt
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -27,8 +28,8 @@ def get(key,
         default=KeyError,
         merge=False,
         delimiter=DEFAULT_TARGET_DELIM,
-        saltenv=None,
-        pillarenv=None):
+        pillarenv=None,
+        saltenv=None):
     '''
     .. versionadded:: 0.14
 
@@ -61,12 +62,6 @@ def get(key,
 
         .. versionadded:: 2014.7.0
 
-    saltenv
-        Included only for compatibility with
-        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
-
-        .. versionadded:: Nitrogen
-
     pillarenv
         If specified, this function will query the master to generate fresh
         pillar data on the fly, specifically from the requested pillar
@@ -80,6 +75,12 @@ def get(key,
         the need for the master to generate and send the minion fresh pillar
         data. This tradeoff in performance however allows for the use case
         where pillar data is desired only from a single environment.
+
+        .. versionadded:: Nitrogen
+
+    saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
         .. versionadded:: Nitrogen
 
@@ -127,12 +128,28 @@ def items(*args, **kwargs):
     currently loaded into the minion.
 
     pillar
-        if specified, allows for a dictionary of pillar data to be made
+        If specified, allows for a dictionary of pillar data to be made
         available to pillar and ext_pillar rendering. these pillar variables
         will also override any variables of the same name in pillar or
         ext_pillar.
 
         .. versionadded:: 2015.5.0
+
+    pillar_enc
+        If specified, the data passed in the ``pillar`` argument will be passed
+        through this renderer to decrypt it.
+
+        .. note::
+            This will decrypt on the minion side, so the specified renderer
+            must be set up on the minion for this to work. Alternatively,
+            pillar data can be decrypted master-side. For more information, see
+            the :ref:`Pillar Encryption <pillar-encryption>` documentation.
+            Pillar data that is decrypted master-side, is not decrypted until
+            the end of pillar compilation though, so minion-side decryption
+            will be necessary if the encrypted pillar data must be made
+            available in an decrypted state pillar/ext_pillar rendering.
+
+        .. versionadded:: Nitrogen
 
     pillarenv
         Pass a specific pillar environment from which to compile pillar data.
@@ -146,8 +163,6 @@ def items(*args, **kwargs):
     saltenv
         Included only for compatibility with
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
-
-        .. versionadded:: Nitrogen
 
     CLI Example:
 
@@ -164,17 +179,30 @@ def items(*args, **kwargs):
         if __opts__.get('pillarenv_from_saltenv', False):
             pillarenv = kwargs.get('saltenv') or __opts__['environment']
         else:
-            pillarenv = __opts__.get('pillarenv')
+            pillarenv = __opts__['pillarenv']
 
-    opts = copy.copy(__opts__)
-    opts['pillarenv'] = pillarenv
+    pillar_override = kwargs.get('pillar')
+    pillar_enc = kwargs.get('pillar_enc')
+
+    if pillar_override and pillar_enc:
+        try:
+            pillar_override = salt.utils.crypt.decrypt(
+                pillar_override,
+                pillar_enc,
+                translate_newlines=True,
+                opts=__opts__,
+                valid_rend=__opts__['decrypt_pillar_renderers'])
+        except Exception as exc:
+            raise CommandExecutionError(
+                'Failed to decrypt pillar override: {0}'.format(exc)
+            )
+
     pillar = salt.pillar.get_pillar(
-        opts,
+        __opts__,
         __grains__,
-        opts['id'],
-        saltenv=pillarenv,
-        pillar=kwargs.get('pillar'),
-        pillarenv=kwargs.get('pillarenv') or __opts__['pillarenv'])
+        __opts__['id'],
+        pillar=pillar_override,
+        pillarenv=pillarenv)
 
     return pillar.compile_pillar()
 
