@@ -100,48 +100,19 @@ def __virtual__():
     )
 
 
-def _cleanup_values(value):
-    '''Internal helper to cleanup values before parsing'''
-    if isinstance(value, OrderedDict):
-        for k, v in value.items():
-            if isinstance(v, dict):
-                value[k] = odict2dict(v)
-        return dict(value)
-    return value
+def _clean_message(message):
+    '''Internal helper to sanitize message output'''
+    message = message.replace('zonecfg: ', '')
+    message = message.splitlines()
+    for line in message:
+        if line.startswith('On line'):
+            message.remove(line)
+    return "\n".join(message)
 
 
-def _parse_value(value, reverse=False):
-    '''Internal helper to parse some values for the info call'''
-    if reverse:
-        # dump dict into compated
-        if isinstance(value, dict):
-            new_value = []
-            new_value.append('(')
-            for k, v in value.items():
-                new_value.append(k)
-                new_value.append('=')
-                new_value.append(v)
-                new_value.append(',')
-            new_value.append(')')
-            return "".join(str(v) for v in new_value).replace(',)', ')')
-        elif isinstance(value, list):
-            new_value = []
-            new_value.append('(')
-            for item in value:
-                if isinstance(item, OrderedDict):
-                    item = dict(item)
-                    for k, v in item.items():
-                        new_value.append(k)
-                        new_value.append('=')
-                        new_value.append(v)
-                else:
-                    new_value.append(item)
-                new_value.append(',')
-            new_value.append(')')
-            return "".join(str(v) for v in new_value).replace(',)', ')')
-        else:
-            return value
-    elif isinstance(value, bool):
+def _parse_value(value):
+    '''Internal helper for parsing configuration values into python values'''
+    if isinstance(value, bool):
         return 'true' if value else 'false'
     elif isinstance(value, str):
         # parse compacted notation to dict
@@ -176,22 +147,48 @@ def _parse_value(value, reverse=False):
                 return False
             else:
                 return value
-    elif isinstance(value, dict) or isinstance(value, list):
-        # make a round trip
-        return _parse_value(_parse_value(value, True))
     else:
-        # do not try to parse
         return value
 
 
-def _clean_message(message):
-    '''Internal helper to sanitize message output'''
-    message = message.replace('zonecfg: ', '')
-    message = message.splitlines()
-    for line in message:
-        if line.startswith('On line'):
-            message.remove(line)
-    return "\n".join(message)
+def _sanitize_value(value):
+    '''Internal helper for converting pythonic values to configuration file values'''
+    # dump dict into compated
+    if isinstance(value, dict):
+        new_value = []
+        new_value.append('(')
+        for k, v in value.items():
+            new_value.append(k)
+            new_value.append('=')
+            new_value.append(v)
+            new_value.append(',')
+        new_value.append(')')
+        return "".join(str(v) for v in new_value).replace(',)', ')')
+    elif isinstance(value, list):
+        new_value = []
+        new_value.append('(')
+        for item in value:
+            if isinstance(item, OrderedDict):
+                item = dict(item)
+                for k, v in item.items():
+                    new_value.append(k)
+                    new_value.append('=')
+                    new_value.append(v)
+            else:
+                new_value.append(item)
+            new_value.append(',')
+        new_value.append(')')
+        return "".join(str(v) for v in new_value).replace(',)', ')')
+    else:
+        ## note: we can't use shelx or pipes quote here because it makes zonecfg barf
+        return '"{0}"'.format(value) if ' ' in value else value
+
+
+def _dump_cfg(cfg_file):
+    '''Internal helper for debugging cfg files'''
+    if __salt__['file.file_exists'](cfg_file):
+        with salt.utils.fopen(cfg_file, 'r') as fp_:
+            log.debug("zonecfg - configuration file:\n{0}".format("".join(fp_.readlines())))
 
 
 def create(zone, brand, zonepath, force=False):
@@ -219,12 +216,14 @@ def create(zone, brand, zonepath, force=False):
     cfg_file = salt.utils.files.mkstemp()
     with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
         fp_.write("create -b -F\n" if force else "create -b\n")
-        fp_.write("set brand={0}\n".format(brand))
-        fp_.write("set zonepath={0}\n".format(zonepath))
+        fp_.write("set brand={0}\n".format(_sanitize_value(brand)))
+        fp_.write("set zonepath={0}\n".format(_sanitize_value(zonepath)))
 
     ## create
     if not __salt__['file.directory_exists'](zonepath):
         __salt__['file.makedirs_perms'](zonepath if zonepath[-1] == '/' else '{0}/'.format(zonepath), mode='0700')
+
+    _dump_cfg(cfg_file)
     res = __salt__['cmd.run_all']('zonecfg -z {zone} -f {cfg}'.format(
         zone=zone,
         cfg=cfg_file,
@@ -264,6 +263,7 @@ def create_from_template(zone, template):
     ret = {'status': True}
 
     ## create from template
+    _dump_cfg(template)
     res = __salt__['cmd.run_all']('zonecfg -z {zone} create -t {tmpl} -F'.format(
         zone=zone,
         tmpl=template,
@@ -358,6 +358,7 @@ def import_(zone, path):
     ret = {'status': True}
 
     ## create from file
+    _dump_cfg(path)
     res = __salt__['cmd.run_all']('zonecfg -z {zone} -f {path}'.format(
         zone=zone,
         path=path,
@@ -398,14 +399,15 @@ def _property(methode, zone, key, value):
         with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
             if methode == 'set':
                 if isinstance(value, dict) or isinstance(value, list):
-                    value = _parse_value(value, True)
+                    value = _sanitize_value(value)
                 value = str(value).lower() if isinstance(value, bool) else str(value)
-                fp_.write("{0} {1}={2}\n".format(methode, key, value))
+                fp_.write("{0} {1}={2}\n".format(methode, key, _sanitize_value(value)))
             elif methode == 'clear':
                 fp_.write("{0} {1}\n".format(methode, key))
 
     ## update property
     if cfg_file:
+        _dump_cfg(cfg_file)
         res = __salt__['cmd.run_all']('zonecfg -z {zone} -f {path}'.format(
             zone=zone,
             path=cfg_file,
@@ -439,7 +441,7 @@ def set_property(zone, key, value):
 
     .. code-block:: bash
 
-        salt '*' zonecfg.set_property deathscythe cpu_shares 100
+        salt '*' zonecfg.set_property deathscythe cpu-shares 100
     '''
     return _property(
         'set',
@@ -462,7 +464,7 @@ def clear_property(zone, key):
 
     .. code-block:: bash
 
-        salt '*' zonecfg.clear_property deathscythe cpu_shares
+        salt '*' zonecfg.clear_property deathscythe cpu-shares
     '''
     return _property(
         'clear',
@@ -494,7 +496,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
     kwargs = salt.utils.clean_kwargs(**kwargs)
     for k in kwargs:
         if isinstance(kwargs[k], dict) or isinstance(kwargs[k], list):
-            kwargs[k] = _parse_value(kwargs[k], True)
+            kwargs[k] = _sanitize_value(kwargs[k])
     if methode not in ['add', 'update']:
         ret['status'] = False
         ret['message'] = 'unknown methode {0}'.format(methode)
@@ -512,23 +514,24 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
         elif methode in ['update']:
             value = kwargs[resource_selector]
             if isinstance(value, dict) or isinstance(value, list):
-                value = _parse_value(value, True)
+                value = _sanitize_value(value)
             value = str(value).lower() if isinstance(value, bool) else str(value)
-            fp_.write("select {0} {1}={2}\n".format(resource_type, resource_selector, value))
+            fp_.write("select {0} {1}={2}\n".format(resource_type, resource_selector, _sanitize_value(value)))
         for k, v in six.iteritems(kwargs):
             if methode in ['update'] and k == resource_selector:
                 continue
             if isinstance(v, dict) or isinstance(v, list):
-                value = _parse_value(value, True)
+                value = _sanitize_value(value)
             value = str(v).lower() if isinstance(v, bool) else str(v)
             if k in _zonecfg_resource_setters[resource_type]:
-                fp_.write("set {0}={1}\n".format(k, value))
+                fp_.write("set {0}={1}\n".format(k, _sanitize_value(value)))
             else:
-                fp_.write("add {0} {1}\n".format(k, value))
+                fp_.write("add {0} {1}\n".format(k, _sanitize_value(value)))
         fp_.write("end\n")
 
     ## update property
     if cfg_file:
+        _dump_cfg(cfg_file)
         res = __salt__['cmd.run_all']('zonecfg -z {zone} -f {path}'.format(
             zone=zone,
             path=cfg_file,
@@ -613,7 +616,7 @@ def remove_resource(zone, resource_type, resource_key, resource_value):
     # generate update script
     cfg_file = salt.utils.files.mkstemp()
     with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
-        fp_.write("remove {0} {1}={2}\n".format(resource_type, resource_key, resource_value))
+        fp_.write("remove {0} {1}={2}\n".format(resource_type, resource_key, _sanitize_value(resource_value)))
 
     ## update property
     if cfg_file:
