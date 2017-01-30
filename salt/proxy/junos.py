@@ -110,12 +110,10 @@ def grains():
     if not thisproxy['grains']:
         log.error(
             'The device must be master to gather facts. Grains will not be populated by junos facts.')
-    if thisproxy['grains']['version_info']:
-        thisproxy[
-            'grains'][
-            'version_info'] = thisproxy[
-            'grains'][
-            'version_info'].v_dict
+
+    if 'version_info' in thisproxy['grains'] and thisproxy['grains']['version_info']:
+        thisproxy['grains']['version_info'] = thisproxy['grains']['version_info'].v_dict
+
     return thisproxy['grains']
 
 
