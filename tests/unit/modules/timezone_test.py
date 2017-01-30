@@ -19,6 +19,8 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import timezone
+import salt.ext.six as six
+import salt.utils
 
 # Globals
 timezone.__salt__ = {}
@@ -76,7 +78,10 @@ class TimezoneTestCase(TestCase):
 
     def create_tempfile_with_contents(self, contents):
         temp = NamedTemporaryFile(delete=False)
-        temp.write(contents)
+        if six.PY3:
+            temp.write(salt.utils.to_bytes(contents))
+        else:
+            temp.write(contents)
         temp.close()
         self.tempfiles.append(temp)
         return temp
