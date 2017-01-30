@@ -580,6 +580,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 os.remove(managed_files[typ])
 
     @destructiveTest
+    @skipIf(salt.utils.is_windows(), 'Windows does not support "mode" kwarg. Skipping.')
     def test_managed_check_cmd(self):
         '''
         Test file.managed passing a basic check_cmd kwarg. See Issue #38111.
