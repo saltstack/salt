@@ -168,6 +168,10 @@ import salt.utils
 # Import 3rd-party libs
 import salt.ext.six as six
 
+try:
+    from M2Crypto.RSA import RSAError
+except ImportError:
+    pass
 
 def __virtual__():
     '''
@@ -227,7 +231,7 @@ def _check_private_key(name, bits=2048, passphrase=None, new=False):
         try:
             current_bits = __salt__['x509.get_private_key_size'](
                 private_key=name, passphrase=passphrase)
-        except salt.exceptions.SaltInvocationError:
+        except (salt.exceptions.SaltInvocationError, RSAError):
             pass
 
     return current_bits == bits and not new
