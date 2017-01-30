@@ -158,6 +158,8 @@ class Swarm(object):
 
         self.confs = set()
 
+        random.seed(0)
+
     def _pki_dir(self):
         '''
         Create the shared pki directory
