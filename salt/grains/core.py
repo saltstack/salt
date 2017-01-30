@@ -370,7 +370,7 @@ def _sunos_cpudata():
     grains['cpuarch'] = __salt__['cmd.run']('isainfo -k')
     psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
     grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo, python_shell=True).splitlines())
-    kstat_info = 'kstat -p cpu_info:0:*:brand'
+    kstat_info = 'kstat -p cpu_info:*:*:brand'
     for line in __salt__['cmd.run'](kstat_info).splitlines():
         match = re.match(r'(\w+:\d+:\w+\d+:\w+)\s+(.+)', line)
         if match:
