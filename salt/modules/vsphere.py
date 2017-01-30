@@ -1733,6 +1733,8 @@ def list_clusters(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+   CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_clusters 1.2.3.4 root bad-password
@@ -1767,6 +1769,8 @@ def list_datastore_clusters(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+   CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_datastore_clusters 1.2.3.4 root bad-password
@@ -1799,6 +1803,8 @@ def list_datastores(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+   CLI Example:
 
     .. code-block:: bash
 
@@ -1833,6 +1839,8 @@ def list_hosts(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+   CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_hosts 1.2.3.4 root bad-password
@@ -1865,6 +1873,8 @@ def list_resourcepools(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1899,6 +1909,8 @@ def list_networks(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_networks 1.2.3.4 root bad-password
@@ -1931,6 +1943,8 @@ def list_vms(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1965,6 +1979,8 @@ def list_folders(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_folders 1.2.3.4 root bad-password
@@ -1998,6 +2014,8 @@ def list_dvs(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_dvs 1.2.3.4 root bad-password
@@ -2030,6 +2048,8 @@ def list_vapps(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    CLI Example:
 
     .. code-block:: bash
 
