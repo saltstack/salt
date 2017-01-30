@@ -7,7 +7,7 @@ Redis plugin for the Salt caching subsystem.
 
 .. versionadded:: Nitrogen
 
-As Redis provides a simple mecanism for very fast key-value store,
+As Redis provides a simple mechanism for very fast key-value store,
 in order to privde the necessary features for the Salt
 caching subsystem, the following conventions are used:
 
@@ -15,7 +15,7 @@ caching subsystem, the following conventions are used:
 ``$KEY_minions/alpha/stuff`` where ``minions/alpha`` is the bank name
 and ``stuff`` is the key name.
 - as the caching subsystem is organised as a tree, we need to store the
-caching path and identify the bank and it's offsprings.
+caching path and identify the bank and its offspring.
 At the same time, Redis is linear
 and we need to avoid doing ``keys <pattern>`` which is very inefficient
 as it goes through all the keys on the remote Redis server.
@@ -318,7 +318,7 @@ def flush(bank, key=None):
     '''
     Remove the key from the cache bank with all the key content. If no key is specified, remove
     the entire bank with all keys and sub-banks inside.
-    This function is using the Redis pipelining for best performances.
+    This function is using the Redis pipelining for best performance.
     However, when removing a whole bank,
     in order to re-create the tree, there are a couple of requests made. In total:
 
