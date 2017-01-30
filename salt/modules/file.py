@@ -1999,7 +1999,7 @@ def replace(path,
         )
 
     flags_num = _get_flags(flags)
-    cpattern = re.compile(str(pattern), flags_num)
+    cpattern = re.compile(salt.utils.to_bytes(pattern), flags_num)
     filesize = os.path.getsize(path)
     if bufsize == 'file':
         bufsize = filesize
@@ -2013,15 +2013,18 @@ def replace(path,
         pre_group = get_group(path)
         pre_mode = salt.utils.normalize_mode(get_mode(path))
 
-    # Avoid TypeErrors by forcing repl to be a string
-    repl = str(repl)
+    # Avoid TypeErrors by forcing repl to be bytearray related to mmap
+    # Replacement text may contains integer: 123 for example
+    repl = salt.utils.to_bytes(str(repl))
+    if not_found_content:
+        not_found_content = salt.utils.to_bytes(not_found_content)
 
     found = False
     temp_file = None
-    content = str(not_found_content) if not_found_content and \
+    content = salt.utils.to_str(not_found_content) if not_found_content and \
                                        (prepend_if_not_found or
                                         append_if_not_found) \
-                                     else repl
+                                     else salt.utils.to_str(repl)
 
     try:
         # First check the whole file, determine whether to make the replacement
@@ -2038,7 +2041,7 @@ def replace(path,
                                    access=mmap.ACCESS_READ)
             except (ValueError, mmap.error):
                 # size of file in /proc is 0, but contains data
-                r_data = "".join(r_file)
+                r_data = salt.utils.to_bytes("".join(r_file))
             if search_only:
                 # Just search; bail as early as a match is found
                 if re.search(cpattern, r_data):
@@ -2055,7 +2058,7 @@ def replace(path,
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, to avoid pre/appending the
                     # content if it was pre/appended in a previous run.
-                    if re.search('^{0}$'.format(re.escape(content)),
+                    if re.search(salt.utils.to_bytes('^{0}$'.format(re.escape(content))),
                                  r_data,
                                  flags=flags_num):
                         # Content was found, so set found.
@@ -2066,7 +2069,7 @@ def replace(path,
                 if show_changes or append_if_not_found or \
                    prepend_if_not_found:
                     orig_file = r_data.read(filesize).splitlines(True) \
-                        if hasattr(r_data, 'read') \
+                        if isinstance(r_data, mmap.mmap) \
                         else r_data.splitlines(True)
                     new_file = result.splitlines(True)
 
@@ -2105,7 +2108,7 @@ def replace(path,
                         result, nrepl = re.subn(cpattern, repl,
                                                 r_data, count)
                         try:
-                            w_file.write(result)
+                            w_file.write(salt.utils.to_str(result))
                         except (OSError, IOError) as exc:
                             raise CommandExecutionError(
                                 "Unable to write file '{0}'. Contents may "
@@ -2125,14 +2128,14 @@ def replace(path,
         if not_found_content is None:
             not_found_content = repl
         if prepend_if_not_found:
-            new_file.insert(0, not_found_content + '\n')
+            new_file.insert(0, not_found_content + b'\n')
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith('\n'):
-                    new_file[-1] += '\n'
-            new_file.append(not_found_content + '\n')
+                if not new_file[-1].endswith(b'\n'):
+                    new_file[-1] += b'\n'
+            new_file.append(not_found_content + b'\n')
         has_changes = True
         if not dry_run:
             try:
@@ -2145,7 +2148,7 @@ def replace(path,
             try:
                 fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
                 for line in new_file:
-                    fh_.write(line)
+                    fh_.write(salt.utils.to_str(line))
             finally:
                 fh_.close()
 
@@ -2191,7 +2194,9 @@ def replace(path,
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
     if show_changes:
-        return ''.join(difflib.unified_diff(orig_file, new_file))
+        orig_file_as_str = ''.join([salt.utils.to_str(x) for x in orig_file])
+        new_file_as_str = ''.join([salt.utils.to_str(x) for x in new_file])
+        return ''.join(difflib.unified_diff(orig_file_as_str, new_file_as_str))
 
     return has_changes
 
@@ -3636,7 +3641,9 @@ def apply_template_on_contents(
             grains=__opts__['grains'],
             pillar=__pillar__,
             salt=__salt__,
-            opts=__opts__)['data'].encode('utf-8')
+            opts=__opts__)['data']
+        if six.PY2:
+            contents = contents.encode('utf-8')
     else:
         ret = {}
         ret['result'] = False
