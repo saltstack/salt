@@ -1882,9 +1882,9 @@ class ClearFuncs(object):
                     'user': username}
 
             self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-            ret = self.wheel_.call_func(fun, **clear_load)
-            data['return'] = ret
-            data['success'] = True
+            ret = self.wheel_.call_func(fun, full_return=True, **clear_load)
+            data['return'] = ret['return']
+            data['success'] = ret['success']
             self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
             return {'tag': tag,
                     'data': data}

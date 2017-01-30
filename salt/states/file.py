@@ -5334,7 +5334,8 @@ def serialize(name,
               mode=None,
               backup='',
               makedirs=False,
-              show_diff=True,
+              show_diff=None,
+              show_changes=True,
               create=True,
               merge_if_exists=False,
               **kwargs):
@@ -5386,7 +5387,14 @@ def serialize(name,
         .. versionadded:: 2014.1.3
 
     show_diff
-        If set to False, the diff will not be shown.
+        DEPRECATED: Please use show_changes.
+
+        If set to ``False``, the diff will not be shown in the return data if
+        changes are made.
+
+    show_changes
+        Output a unified diff of the old file and the new file. If ``False``
+        return a boolean if any changes were made.
 
     create
         Default is True, if create is set to False then the file will only be
@@ -5518,6 +5526,14 @@ def serialize(name,
     # Make sure that any leading zeros stripped by YAML loader are added back
     mode = salt.utils.normalize_mode(mode)
 
+    if show_diff is not None:
+        show_changes = show_diff
+        msg = (
+            'The \'show_diff\' argument to the file.serialized state has been '
+            'deprecated, please use \'show_changes\' instead.'
+        )
+        salt.utils.warn_until('Oxygen', msg)
+
     if __opts__['test']:
         ret['changes'] = __salt__['file.check_managed_changes'](
             name=name,
@@ -5540,10 +5556,12 @@ def serialize(name,
             ret['result'] = None
             ret['comment'] = 'Dataset will be serialized and stored into {0}'.format(
                 name)
+
+            if not show_changes:
+                ret['changes']['diff'] = '<show_changes=False>'
         else:
             ret['result'] = True
             ret['comment'] = 'The file {0} is in the correct state'.format(name)
-
         return ret
 
     return __salt__['file.manage_file'](name=name,
@@ -5558,7 +5576,7 @@ def serialize(name,
                                         backup=backup,
                                         makedirs=makedirs,
                                         template=None,
-                                        show_changes=show_diff,
+                                        show_changes=show_changes,
                                         contents=contents)
 
 
