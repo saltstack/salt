@@ -848,6 +848,7 @@ def create_private_key(path=None,
 
 def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         path=None, text=False, signing_private_key=None,
+        signing_private_key_passphrase=None,
         signing_cert=None, revoked=None, include_expired=False,
         days_valid=100, digest=''):
     '''
@@ -865,6 +866,9 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
     signing_private_key:
         A path or string of the private key in PEM format that will be used
         to sign this crl. This is required.
+
+    signing_private_key_passphrase:
+        Passphrase to decrypt the private key.
 
     signing_cert:
         A certificate matching the private key that will be used to sign
@@ -969,7 +973,8 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
     cert = OpenSSL.crypto.load_certificate(
         OpenSSL.crypto.FILETYPE_PEM,
         get_pem_entry(signing_cert, pem_type='CERTIFICATE'))
-    signing_private_key = _text_or_file(signing_private_key)
+    signing_private_key = _get_private_key_obj(signing_private_key,
+                         passphrase=signing_private_key_passphrase).as_pem(cipher=None)
     key = OpenSSL.crypto.load_privatekey(
         OpenSSL.crypto.FILETYPE_PEM,
         get_pem_entry(signing_private_key))
