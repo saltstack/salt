@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Return salt data via mattermost
+
+.. versionadded:: Nitrogen
+
 The following fields can be set in the minion conf file::
 .. code-block:: yaml
     mattermost.hook (required)
