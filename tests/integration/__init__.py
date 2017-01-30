@@ -37,6 +37,8 @@ STATE_FUNCTION_RUNNING_RE = re.compile(
 INTEGRATION_TEST_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
+if os.name == 'nt':
+    INTEGRATION_TEST_DIR = INTEGRATION_TEST_DIR.replace('\\', '\\\\')
 CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
 
 # Import Salt Testing libs
