@@ -1584,8 +1584,15 @@ def create_csr(path=None, text=False, **kwargs):
     if 'public_key' not in kwargs:
         kwargs['public_key'] = kwargs['private_key']
 
+    if 'private_key_passphrase' not in kwargs:
+        kwargs['private_key_passphrase'] = None
     if 'public_key_passphrase' not in kwargs:
         kwargs['public_key_passphrase'] = None
+    if kwargs['public_key_passphrase'] and not kwargs['private_key_passphrase']:
+        kwargs['private_key_passphrase'] = kwargs['public_key_passphrase']
+    if kwargs['private_key_passphrase'] and not kwargs['public_key_passphrase']:
+        kwargs['public_key_passphrase'] = kwargs['private_key_passphrase']
+
     csr.set_pubkey(get_public_key(kwargs['public_key'],
                                   passphrase=kwargs['public_key_passphrase'], asObj=True))
 
@@ -1626,7 +1633,7 @@ def create_csr(path=None, text=False, **kwargs):
     csr.add_extensions(extstack)
 
     csr.sign(_get_private_key_obj(kwargs['private_key'],
-                                  passphrase=kwargs['public_key_passphrase']), kwargs['algorithm'])
+                                  passphrase=kwargs['private_key_passphrase']), kwargs['algorithm'])
 
     if path:
         return write_pem(
