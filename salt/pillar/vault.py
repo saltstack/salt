@@ -32,8 +32,8 @@ statically, as above, or as an environment variable:
 
 After the profile is created, edit the salt master config file and configure
 the external pillar system to use it. A path pointing to the needed vault key
-must also be specified so that vault knows where to look. Vault do not apply
-recursive list, so each required key need to be individually mapped.
+must also be specified so that vault knows where to look. Vault does not apply
+a recursive list, so each required key needs to be individually mapped.
 
 .. code-block:: yaml
 
@@ -41,14 +41,14 @@ recursive list, so each required key need to be individually mapped.
       - vault: myvault path=secret/salt
       - vault: myvault path=secret/another_key
 
-Also, on vault each key need to have all the key values pairs with the names you
+Each key needs to have all the key-value pairs with the names you
 require. Avoid naming every key 'password' as you they will collide:
 
 .. code-block:: bash
 
     $ vault write secret/salt auth=my_password master=127.0.0.1
 
-you can then use normal pillar requests to get each key pair directly from
+You can then use normal pillar requests to get each key pair directly from
 pillar root. Example:
 
 .. code-block:: bash
