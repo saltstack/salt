@@ -18,6 +18,7 @@ import random
 import tempfile
 import shutil
 import sys
+import hashlib
 
 # Import salt libs
 import salt
@@ -89,6 +90,12 @@ def parse():
         default=False,
         action='store_true',
         help='Each Minion claims a different version grain')
+    parser.add_option(
+        '--rand-machine-id',
+        dest='rand_machine_id',
+        default=False,
+        action='store_true',
+        help='Each Minion claims a different machine id grain')
     parser.add_option(
         '-k',
         '--keep-modules',
@@ -318,6 +325,8 @@ class MinionSwarm(Swarm):
             data['grains']['os'] = random.choice(OSES)
         if self.opts['rand_ver']:
             data['grains']['saltversion'] = random.choice(VERS)
+        if self.opts['rand_machine_id']:
+            data['grains']['machine_id'] = hashlib.md5(minion_id).hexdigest()
 
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)
