@@ -8,7 +8,6 @@ Module to provide icinga2 compatibility to salt.
 # Import python libs
 from __future__ import absolute_import
 import logging
-import os
 import subprocess
 
 # Import Salt libs
