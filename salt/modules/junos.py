@@ -4,8 +4,6 @@ Module to interact with Junos devices.
 '''
 
 # Import python libraries
-from __future__ import absolute_import
-from __future__ import print_function
 import logging
 import json
 import os
@@ -769,18 +767,6 @@ def install_config(path=None, **kwargs):
     ret = dict()
     ret['out'] = True
 
-    if path is None:
-        ret[
-            'message'] = 'Please provide the absolute path where the \
-            configuration is present'
-        ret['out'] = False
-        return ret
-
-    if not os.path.isfile(path):
-        ret['message'] = 'Invalid file path.'
-        ret['out'] = False
-        return ret
-
     op = dict()
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
@@ -794,33 +780,13 @@ def install_config(path=None, **kwargs):
         write_diff = op['diffs_file']
         del op['diffs_file']
 
-    if 'template_path' in op:
-        if not os.path.isfile(op['template_path']):
-            ret['message'] = 'Invlaid template path.'
-            ret['out'] = False
-            return ret
-        if 'template_vars' not in op:
-            ret[
-                'message'] = 'Please provide jinja variable along with the \
-                jina template.'
-            ret['out'] = False
-            return ret
-        if not os.path.isfile(op['template_vars']):
-            ret['message'] = 'Invlaid template_vars path.'
-            ret['out'] = False
-            return ret
-        data = yaml.load(open(op['template_vars']))
-        op['template_vars'] = data
-    else:
+    if path is not None:
         op = {'path': path}
-
     if 'replace' in op and op['replace']:
         op['merge'] = False
         del op['replace']
-    elif 'overwrite' in op and op['overwrite']:
-        load_params['overwrite'] = True
     elif 'overwrite' in op and not op['overwrite']:
-        load_params['merge'] = True
+        op['merge'] = True
         del op['overwrite']
 
     try:
