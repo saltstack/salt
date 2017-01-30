@@ -3500,7 +3500,8 @@ def _checkAllAdmxPolicies(policy_class,
             log.debug('returning non configured policies')
             not_configured_policies = ALL_CLASS_POLICY_XPATH(admx_policy_definitions, registry_class=policy_class)
             for policy_item in admx_policies:
-                not_configured_policies.remove(policy_item)
+                if policy_item in not_configured_policies:
+                    not_configured_policies.remove(policy_item)
 
             for not_configured_policy in not_configured_policies:
                 policy_vals[not_configured_policy.attrib['name']] = 'Not Configured'
@@ -3510,6 +3511,11 @@ def _checkAllAdmxPolicies(policy_class,
                             not_configured_policy.attrib['name'],
                             return_full_policy_names,
                             adml_policy_resources)
+                log.debug('building hierarchy for non-configured item {0}'.format(not_configured_policy.attrib['name']))
+                hierarchy[not_configured_policy.attrib['name']] = _build_parent_list(not_configured_policy,
+                                                                                     admx_policy_definitions,
+                                                                                     return_full_policy_names,
+                                                                                     adml_policy_resources)
         for admx_policy in admx_policies:
             this_key = None
             this_valuename = None
@@ -3822,7 +3828,7 @@ def _checkAllAdmxPolicies(policy_class,
                 policy_vals[full_names[policy_item]] = policy_vals.pop(policy_item)
                 unpathed_dict[full_names[policy_item]] = policy_item
         # go back and remove any "unpathed" policies that need a full path
-        for path_needed in pathed_dict.keys():
+        for path_needed in unpathed_dict.keys():
             # remove the item with the same full name and re-add it w/a path'd version
             full_path_list = hierarchy[unpathed_dict[path_needed]]
             full_path_list.reverse()
@@ -4939,9 +4945,9 @@ def set_computer_policy(name,
     pol = {}
     pol[name] = setting
     ret = set_(computer_policy=pol,
-              user_policy=None,
-              cumulative_rights_assignments=cumulative_rights_assignments,
-              adml_language=adml_language)
+               user_policy=None,
+               cumulative_rights_assignments=cumulative_rights_assignments,
+               adml_language=adml_language)
     return ret
 
 
@@ -4976,9 +4982,9 @@ def set_user_policy(name,
     pol = {}
     pol[name] = setting
     ret = set_(user_policy=pol,
-              computer_policy=None,
-              cumulative_rights_assignments=True,
-              adml_language=adml_language)
+               computer_policy=None,
+               cumulative_rights_assignments=True,
+               adml_language=adml_language)
     return ret
 
 
