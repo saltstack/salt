@@ -352,9 +352,20 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             # Turn on expensive tests execution
             os.environ['EXPENSIVE_TESTS'] = 'True'
 
+        import salt.utils
+        if salt.utils.is_windows():
+            import salt.utils.win_functions
+            current_user = salt.utils.win_functions.get_current_user()
+            if current_user == 'SYSTEM':
+                is_admin = True
+            else:
+                is_admin = salt.utils.win_functions.is_admin(current_user)
+        else:
+            is_admin = os.geteuid() == 0
+
         if self.options.coverage and any((
                     self.options.name,
-                    os.geteuid() != 0,
+                    is_admin,
                     not self.options.run_destructive)) \
                 and self._check_enabled_suites(include_unit=True):
             self.error(
