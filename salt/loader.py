@@ -28,6 +28,7 @@ import salt.utils.context
 import salt.utils.lazy
 import salt.utils.event
 import salt.utils.odict
+import time
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -36,6 +37,7 @@ import salt.modules.cmdmod
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import reload_module
+import traceback
 try:
     import pkg_resources
     HAS_PKG_RESOURCES = True
@@ -1062,7 +1064,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # names of modules that we don't have (errors, __virtual__, etc.)
         self.missing_modules = {}  # mapping of name -> error
         self.loaded_modules = {}  # mapping of module_name -> dict_of_functions
-        self.loaded_files = set()  # TODO: just remove them from file_mapping?
+        self.loaded_files = {}  # TODO: just remove them from file_mapping?
+        self.deferred_modules = {} # mapping of virtualname -> realname like pkg -> [pacman, apt]...
         self.static_modules = static_modules if static_modules else []
 
         if virtual_funcs is None:
@@ -1229,8 +1232,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         Clear the dict
         '''
+        
         super(LazyLoader, self).clear()  # clear the lazy loader
-        self.loaded_files = set()
+        self.loaded_files = {}
         self.missing_modules = {}
         self.loaded_modules = {}
         # if we have been loaded before, lets clear the file mapping since
@@ -1289,86 +1293,97 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 reload_module(submodule)
                 self._reload_submodules(submodule)
 
-    def _load_module(self, name):
+    def _load_module(self, name, requested_name=None):
         mod = None
         fpath, suffix = self.file_mapping[name]
-        self.loaded_files.add(name)
-        fpath_dirname = os.path.dirname(fpath)
-        try:
-            sys.path.append(fpath_dirname)
-            if suffix == '.pyx':
-                mod = pyximport.load_module(name, fpath, tempfile.gettempdir())
-            elif suffix == '.o':
-                top_mod = __import__(fpath, globals(), locals(), [])
-                comps = fpath.split('.')
-                if len(comps) < 2:
-                    mod = top_mod
+
+
+
+
+        # File loading
+        file_loaded = name in self.loaded_files
+        if file_loaded:
+            mod = self.loaded_files[name]
+
+        if not file_loaded:
+            fpath_dirname = os.path.dirname(fpath)
+            try:
+                sys.path.append(fpath_dirname)
+                if suffix == '.pyx':
+                    mod = pyximport.load_module(name, fpath, tempfile.gettempdir())
+                elif suffix == '.o':
+                    top_mod = __import__(fpath, globals(), locals(), [])
+                    comps = fpath.split('.')
+                    if len(comps) < 2:
+                        mod = top_mod
+                    else:
+                        mod = top_mod
+                        for subname in comps[1:]:
+                            mod = getattr(mod, subname)
+                elif suffix == '.zip':
+                    mod = zipimporter(fpath).load_module(name)
                 else:
-                    mod = top_mod
-                    for subname in comps[1:]:
-                        mod = getattr(mod, subname)
-            elif suffix == '.zip':
-                mod = zipimporter(fpath).load_module(name)
-            else:
-                desc = self.suffix_map[suffix]
-                # if it is a directory, we don't open a file
-                if suffix == '':
-                    mod = imp.load_module(
-                        '{0}.{1}.{2}.{3}'.format(
-                            self.loaded_base_name,
-                            self.mod_type_check(fpath),
-                            self.tag,
-                            name
-                        ), None, fpath, desc)
-                    # reload all submodules if necessary
-                    if not self.initial_load:
-                        self._reload_submodules(mod)
-                else:
-                    with salt.utils.fopen(fpath, desc[1]) as fn_:
+                    desc = self.suffix_map[suffix]
+                    # if it is a directory, we don't open a file
+                    if suffix == '':
                         mod = imp.load_module(
                             '{0}.{1}.{2}.{3}'.format(
                                 self.loaded_base_name,
                                 self.mod_type_check(fpath),
                                 self.tag,
                                 name
-                            ), fn_, fpath, desc)
+                            ), None, fpath, desc)
+                        # reload all submodules if necessary
+                        if not self.initial_load:
+                            self._reload_submodules(mod)
+                    else:
+                        with salt.utils.fopen(fpath, desc[1]) as fn_:
+                            mod = imp.load_module(
+                                '{0}.{1}.{2}.{3}'.format(
+                                    self.loaded_base_name,
+                                    self.mod_type_check(fpath),
+                                    self.tag,
+                                    name
+                                ), fn_, fpath, desc)
 
-        except IOError:
-            raise
-        except ImportError as exc:
-            if 'magic number' in str(exc):
-                error_msg = 'Failed to import {0} {1}. Bad magic number. If migrating from Python2 to Python3, remove all .pyc files and try again.'.format(self.tag, name)
-                log.warning(error_msg)
-                self.missing_modules[name] = error_msg
-            log.debug(
-                'Failed to import {0} {1}:\n'.format(
-                    self.tag, name
-                ),
-                exc_info=True
-            )
-            self.missing_modules[name] = exc
-            return False
-        except Exception as error:
-            log.error(
-                'Failed to import {0} {1}, this is due most likely to a '
-                'syntax error:\n'.format(
-                    self.tag, name
-                ),
-                exc_info=True
-            )
-            self.missing_modules[name] = error
-            return False
-        except SystemExit as error:
-            log.error(
-                'Failed to import {0} {1} as the module called exit()\n'.format(
-                    self.tag, name
-                ),
-                exc_info=True
-            )
-            self.missing_modules[name] = error
-            return False
-        finally:
-            sys.path.remove(fpath_dirname)
+            except IOError:
+                raise
+            except ImportError as exc:
+                if 'magic number' in str(exc):
+                    error_msg = 'Failed to import {0} {1}. Bad magic number. If migrating from Python2 to Python3, remove all .pyc files and try again.'.format(self.tag, name)
+                    log.warning(error_msg)
+                    self.missing_modules[name] = error_msg
+                log.debug(
+                    'Failed to import {0} {1}:\n'.format(
+                        self.tag, name
+                    ),
+                    exc_info=True
+                )
+                self.missing_modules[name] = exc
+                return False
+            except Exception as error:
+                log.error(
+                    'Failed to import {0} {1}, this is due most likely to a '
+                    'syntax error:\n'.format(
+                        self.tag, name
+                    ),
+                    exc_info=True
+                )
+                self.missing_modules[name] = error
+                return False
+            except SystemExit as error:
+                log.error(
+                    'Failed to import {0} {1} as the module called exit()\n'.format(
+                        self.tag, name
+                    ),
+                    exc_info=True
+                )
+                self.missing_modules[name] = error
+                return False
+            finally:
+                sys.path.remove(fpath_dirname)
+                self.loaded_files[name] = mod
+
 
         if hasattr(mod, '__opts__'):
             mod.__opts__.update(self.opts)
@@ -1379,10 +1394,29 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         for p_name, p_value in six.iteritems(self.pack):
             setattr(mod, p_name, p_value)
 
-        module_name = mod.__name__.rsplit('.', 1)[-1]
+        module_name = mod.__name__.rsplit('.', 1)[-1] # !! THIS IS EXACTLY THE SAME as 'name' - ALWAYS !!
 
+        virtual_name = getattr(mod, '__virtualname__', module_name)
+        # requested: pkg
+        # module_name: (!) pacman
+        # virtual_name: pkg
+        # true and pacman != pkg and 
+
+        if requested_name != None and (virtual_name != requested_name and module_name != requested_name):
+            # Not what we were looking for...so let's cache that for later...and totally don't load
+            # this handles both virtual_name != module_name and virtual_name == module_name
+            # so service = [service, systemd.....]
+            self.deferred_modules.setdefault(virtual_name, [])
+            self.deferred_modules[virtual_name].append(module_name)
+            return False
+
+        #log.info("xxx: loading module " + module_name + " and " + str(requested_name))
+        return self._load_module_finish(mod, module_name, requested_name)
+
+    def _load_module_finish(self, mod, module_name, requested_name):
         # Call a module's initialization method if it exists
         module_init = getattr(mod, '__init__', None)
+        name = module_name
         if inspect.isfunction(module_init):
             try:
                 module_init(self.opts)
@@ -1421,6 +1455,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     # If a module has information about why it could not be loaded, record it
                     self.missing_modules[module_name] = virtual_err
                     self.missing_modules[name] = virtual_err
+                if virtual_ret is not True:
                     return False
 
         # If this is a proxy minion then MOST modules cannot work. Therefore, require that
@@ -1504,12 +1539,32 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             raise KeyError
 
         def _inner_load(mod_name):
+            has_deferred = mod_name in self.deferred_modules
+            if has_deferred:
+                # Try again to load the modules, but with the right name :)
+                start_time = time.time()
+                for deferred in self.deferred_modules[mod_name]:
+                    if self._load_module(deferred, mod_name) and key in self._dict:
+                        return True
+
+            # else:
+              #  log.info("xxx: everything failed for " + mod_name)                    
+
+           # start_time = time.time()
+
             for name in self._iter_files(mod_name):
                 if name in self.loaded_files:
                     continue
+
                 # if we got what we wanted, we are done
-                if self._load_module(name) and key in self._dict:
-                    return True
+                self._load_module(name, mod_name)
+                # if key in self._dict:
+                #     return True
+                # This is commented out so it will cache all module names on FIRST CALL
+                #    return True
+            if key in self._dict:
+                return True
+
             return False
 
         # try to load the module
