@@ -104,6 +104,11 @@ def parse():
         help=('Run the minions with debug output of the swarm going to '
               'the terminal'))
     parser.add_option(
+        '--temp-dir',
+        dest='temp_dir',
+        default=None,
+        help='Place temporary files/directories here')
+    parser.add_option(
         '--no-clean',
         action='store_true',
         default=False,
@@ -142,15 +147,18 @@ class Swarm(object):
         self.opts = opts
         self.raet_port = 4550
 
-        # If given a root_dir, keep the tmp files there as well
-        if opts['root_dir']:
-            tmpdir = os.path.join(opts['root_dir'], 'tmp')
+        # If given a temp_dir, use it for temporary files
+        if opts['temp_dir']:
+            self.swarm_root = opts['temp_dir']
         else:
-            tmpdir = opts['root_dir']
-
-        self.swarm_root = tempfile.mkdtemp(
-            prefix='mswarm-root', suffix='.d',
-            dir=tmpdir)
+            # If given a root_dir, keep the tmp files there as well
+            if opts['root_dir']:
+                tmpdir = os.path.join(opts['root_dir'], 'tmp')
+            else:
+                tmpdir = opts['root_dir']
+            self.swarm_root = tempfile.mkdtemp(
+                prefix='mswarm-root', suffix='.d',
+                dir=tmpdir)
 
         if self.opts['transport'] == 'zeromq':
             self.pki = self._pki_dir()
