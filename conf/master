@@ -700,6 +700,11 @@
 # ext_pillar.
 #ext_pillar_first: False
 
+# The external pillars permitted to be used on-demand using pillar.ext
+#on_demand_ext_pillar:
+#  - libvirt
+#  - virtkey
+
 # The pillar_gitfs_ssl_verify option specifies whether to ignore ssl certificate
 # errors when contacting the pillar gitfs backend. You might want to set this to
 # false if you're using a git backend that uses a self-signed certificate but
