@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-
 '''
 NET Finder
 ==========
+
+.. versionadded:: Nitrogen
 
 A runner to find network details easily and fast.
 It's smart enough to know what you are looking for.
@@ -66,8 +67,6 @@ Configuration
               - jsrv
               - fxp0
             outputter: yaml
-
-.. versionadded:: Nitrogen
 '''
 
 from __future__ import print_function
@@ -78,20 +77,19 @@ from __future__ import unicode_literals
 import salt.output
 from salt.ext import six
 from salt.ext.six.moves import map
-from salt.exceptions import SaltSystemExit
 
 # Import third party libs
 try:
     from netaddr import IPNetwork  # netaddr is already required by napalm-base
     from netaddr.core import AddrFormatError
     from napalm_base import helpers as napalm_helpers
+    HAS_NAPALM_BASE = True
 except ImportError:
-    # sorry
-    raise SaltSystemExit('Please install napalm-base')
+    HAS_NAPALM_BASE = False
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # module properties
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 _DEFAULT_TARGET = '*'
 _DEFAULT_EXPR_FORM = 'glob'
@@ -100,16 +98,26 @@ _DEFAULT_IGNORE_INTF = []
 _DEFAULT_DISPLAY = True
 _DEFAULT_OUTPUTTER = 'table'
 
-# ----------------------------------------------------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
 # global variables
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 # will cache several details to avoid loading them several times from the mines.
 _CACHE = {}
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # helper functions -- will not be exported
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
+# Define the module's virtual name
+__virtualname__ = 'net'
+
+
+def __virtual__():
+    if HAS_NAPALM_BASE:
+        return __virtualname__
+    return (False, 'The napalm-base module could not be imported')
 
 
 def _get_net_runner_opts():
@@ -229,12 +237,18 @@ def _find_interfaces_mac(ip):  # pylint: disable=invalid-name
     return ('', '', '')
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # callable functions
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
-def interfaces(device=None, interface=None, title=None, pattern=None, ipnet=None, best=True, display=_DEFAULT_DISPLAY):
+def interfaces(device=None,
+               interface=None,
+               title=None,
+               pattern=None,
+               ipnet=None,
+               best=True,
+               display=_DEFAULT_DISPLAY):
     '''
     Search for interfaces details in the following mine functions:
 
@@ -416,7 +430,11 @@ def interfaces(device=None, interface=None, title=None, pattern=None, ipnet=None
     return _display_runner(rows, labels, title, display=display)
 
 
-def findarp(device=None, interface=None, mac=None, ip=None, display=_DEFAULT_DISPLAY):  # pylint: disable=invalid-name
+def findarp(device=None,
+            interface=None,
+            mac=None,
+            ip=None,
+            display=_DEFAULT_DISPLAY):  # pylint: disable=invalid-name
     '''
     Search for entries in the ARP tables using the following mine functions:
 
@@ -593,7 +611,12 @@ def findmac(device=None, mac=None, interface=None, vlan=None, display=_DEFAULT_D
     return _display_runner(rows, labels, title, display=display)
 
 
-def lldp(device=None, interface=None, title=None, pattern=None, chassis=None, display=_DEFAULT_DISPLAY):
+def lldp(device=None,
+         interface=None,
+         title=None,
+         pattern=None,
+         chassis=None,
+         display=_DEFAULT_DISPLAY):
     '''
     Search in the LLDP neighbors, using the following mine functions:
 
