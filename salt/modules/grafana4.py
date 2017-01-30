@@ -2,6 +2,8 @@
 '''
 Module for working with the Grafana v4 API
 
+.. versionadded:: Nitrogen
+
 :depends: requests
 
 :configuration: This module requires a configuration profile to be configured

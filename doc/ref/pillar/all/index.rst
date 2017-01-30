@@ -35,6 +35,7 @@ pillar modules
     nodegroups
     pepa
     pillar_ldap
+    postgres
     puppet
     reclass_adapter
     redismod
@@ -47,3 +48,5 @@ pillar modules
     varstack_pillar
     vault
     virtkey
+    vmware_pillar
+

@@ -20,6 +20,7 @@ beacon modules
     inotify
     journald
     load
+    log
     memusage
     network_info
     network_settings

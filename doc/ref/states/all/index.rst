@@ -26,6 +26,7 @@ state modules
     beacon
     bigip
     blockdev
+    boto3_eleasticache
     boto_apigateway
     boto_asg
     boto_cfn
@@ -42,6 +43,7 @@ state modules
     boto_iam
     boto_iam_role
     boto_iot
+    boto_kinesis
     boto_kms
     boto_lambda
     boto_lc
@@ -91,20 +93,28 @@ state modules
     gnomedesktop
     gpg
     grafana
+    grafana4_dashboard
+    grafana4_datasource
+    grafana4_org
+    grafana4_user
     grafana_dashboard
     grafana_datasource
     grains
     group
+    heat
     hg
     hipchat
     host
     htpasswd
     http
+    icinga2
     ifttt
     incron
     influxdb08_database
     influxdb08_user
+    influxdb_continuous_query
     influxdb_database
+    influxdb_retention_policy
     influxdb_user
     infoblox
     ini_manage
@@ -124,6 +134,7 @@ state modules
     libcloud_dns
     linux_acl
     locale
+    logrotate
     lvm
     lvs_server
     lvs_service
@@ -215,6 +226,7 @@ state modules
     smartos
     smtp
     snapper
+    solrcloud
     splunk
     splunk_search
     sqlite3
@@ -260,6 +272,7 @@ state modules
     win_snmp
     win_system
     win_update
+    win_wua
     winrepo
     x509
     xmpp
