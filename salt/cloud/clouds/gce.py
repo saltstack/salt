@@ -445,6 +445,7 @@ def __get_network(conn, vm_):
         default='default', search_global=False)
     return conn.ex_get_network(network)
 
+
 def __get_subnetwork(vm_):
     '''
     Get configured subnetwork.
@@ -454,6 +455,7 @@ def __get_subnetwork(vm_):
         default='default', search_global=False)
 
     return ex_subnetwork
+
 
 def __get_ssh_interface(vm_):
     '''
