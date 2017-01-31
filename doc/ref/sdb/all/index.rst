@@ -13,6 +13,7 @@ sdb modules
     confidant
     consul
     couchdb
+    env
     etcd_db
     keyring_db
     memcached
