@@ -73,14 +73,16 @@ def facts_refresh():
     ret = dict()
     ret['out'] = True
     try:
-        __salt__['saltutil.sync_grains']()
-    except Exception as exception:
-        log.error('Grains could not be updated due to "{0}"'.format(exception))
-    try:
-        ret['message'] = conn.facts_refresh()
+        conn.facts_refresh()
+        # Earlier it was ret['message']
+        ret['facts'] = json.dumps(conn.facts)
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
+    try:
+        __salt__['saltutil.sync_grains']()
+    except Exception as exception:
+        log.error('Grains could not be updated due to "{0}"'.format(exception))
 
     return ret
 
@@ -101,7 +103,7 @@ def facts():
     ret = dict()
     try:
         facts = conn.facts
-        ret['message'] = json.dumps(facts)
+        ret['facts'] = json.dumps(facts)
         ret['out'] = True
     except Exception as exception:
         ret['message'] = 'Could not display facts due to "{0}"'.format(
@@ -183,7 +185,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
                 cmd.replace('-',
                             '_'))(filter_reply,
                                   options=op)
-            ret['message'] = jxmlease.parse(etree.tostring(xml_reply))
+            ret['rpc-reply'] = jxmlease.parse(etree.tostring(xml_reply))
             write_response = etree.tostring(xml_reply)
 
             if dest is not None and format != 'xml':
@@ -202,7 +204,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
                 log.warning(
                     'Filter ignored as it is only used with "get-config" rpc')
             xml_reply = getattr(conn.rpc, cmd.replace('-', '_'))(**op)
-            ret['message'] = jxmlease.parse(etree.tostring(xml_reply))
+            ret['rpc-reply'] = jxmlease.parse(etree.tostring(xml_reply))
             write_response = etree.tostring(xml_reply)
 
             if dest is not None and format != 'xml':
