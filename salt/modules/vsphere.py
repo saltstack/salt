@@ -1915,6 +1915,7 @@ def list_datacenters(host, username, password, protocol=None, port=None):
     .. code-block:: bash
 
         salt '*' vsphere.list_datacenters 1.2.3.4 root bad-password
+
     '''
     service_instance = salt.utils.vmware.get_service_instance(host=host,
                                                               username=username,
@@ -1951,6 +1952,7 @@ def list_clusters(host, username, password, protocol=None, port=None):
     .. code-block:: bash
 
         salt '*' vsphere.list_clusters 1.2.3.4 root bad-password
+
     '''
     service_instance = salt.utils.vmware.get_service_instance(host=host,
                                                               username=username,
@@ -2274,6 +2276,7 @@ def list_vapps(host, username, password, protocol=None, port=None):
 
     .. code-block:: bash
 
+        # List vapps from all minions
         salt '*' vsphere.list_vapps 1.2.3.4 root bad-password
     '''
     service_instance = salt.utils.vmware.get_service_instance(host=host,
