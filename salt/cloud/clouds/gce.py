@@ -445,6 +445,15 @@ def __get_network(conn, vm_):
         default='default', search_global=False)
     return conn.ex_get_network(network)
 
+def __get_subnetwork(vm_):
+    '''
+    Get configured subnetwork.
+    '''
+    ex_subnetwork = config.get_cloud_config_value(
+        'subnetwork', vm_, __opts__,
+        default='default', search_global=False)
+
+    return ex_subnetwork
 
 def __get_ssh_interface(vm_):
     '''
@@ -2226,6 +2235,7 @@ def request_instance(vm_):
         'image': __get_image(conn, vm_),
         'location': __get_location(conn, vm_),
         'ex_network': __get_network(conn, vm_),
+        'ex_subnetwork': __get_subnetwork(vm_),
         'ex_tags': __get_tags(vm_),
         'ex_metadata': __get_metadata(vm_),
     }
