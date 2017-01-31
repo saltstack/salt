@@ -185,7 +185,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
                 cmd.replace('-',
                             '_'))(filter_reply,
                                   options=op)
-            ret['rpc-reply'] = jxmlease.parse(etree.tostring(xml_reply))
+            ret['rpc_reply'] = jxmlease.parse(etree.tostring(xml_reply))
             write_response = etree.tostring(xml_reply)
 
             if dest is not None and format != 'xml':
@@ -204,7 +204,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
                 log.warning(
                     'Filter ignored as it is only used with "get-config" rpc')
             xml_reply = getattr(conn.rpc, cmd.replace('-', '_'))(**op)
-            ret['rpc-reply'] = jxmlease.parse(etree.tostring(xml_reply))
+            ret['rpc_reply'] = jxmlease.parse(etree.tostring(xml_reply))
             write_response = etree.tostring(xml_reply)
 
             if dest is not None and format != 'xml':
