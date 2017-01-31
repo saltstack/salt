@@ -159,8 +159,7 @@ execution modules
     http
     ifttt
     ilo
-    img
-    incinga2
+    icinga2
     incron
     influx
     influx08

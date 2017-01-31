@@ -26,7 +26,7 @@ state modules
     beacon
     bigip
     blockdev
-    boto3_eleasticache
+    boto3_elasticache
     boto_apigateway
     boto_asg
     boto_cfn
