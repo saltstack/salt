@@ -336,7 +336,7 @@ def _parse_settings_bond_1(opts, iface, bond_def):
 
     if 'primary' in opts:
         bond.update({'primary': opts['primary']})
-        
+
     return bond
 
 
@@ -509,7 +509,7 @@ def _parse_settings_bond_5(opts, iface, bond_def):
 
     if 'primary' in opts:
         bond.update({'primary': opts['primary']})
-        
+
     return bond
 
 
@@ -548,7 +548,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
 
     if 'primary' in opts:
         bond.update({'primary': opts['primary']})
-        
+
     return bond
 
 
