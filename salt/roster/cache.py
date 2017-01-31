@@ -49,6 +49,7 @@ from __future__ import absolute_import
 
 # Python
 import re
+import logging
 
 # Salt libs
 import salt.utils.minions
@@ -56,12 +57,7 @@ import salt.cache
 from salt._compat import ipaddress
 import salt.ext.six as six
 
-# Debug & Logging
-import logging
-#import pprint
-
 log = logging.getLogger(__name__)
-#ppr = pprint.PrettyPrinter(indent=2).pprint
 
 
 def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
