@@ -513,6 +513,22 @@ def sync_utils(saltenv=None, refresh=True):
         refresh_modules()
     return ret
 
+def list_extmods():
+    '''
+    .. versionadded:: Nitrogen
+
+    List Salt modules which have been synced externally
+    '''
+    ret = {}
+    ext_dir = os.path.join(__opts__['cachedir'], 'extmods')
+    mod_types = os.listdir(ext_dir)
+    for mod_type in mod_types:
+        ret[mod_type] = set()
+        for _, _, files in os.walk(os.path.join(ext_dir, mod_type)):
+            for file in files:
+                ret[mod_type].add(file.split('.')[0])
+        ret[mod_type] = list(ret[mod_type])
+    return ret
 
 def sync_log_handlers(saltenv=None, refresh=True):
     '''
