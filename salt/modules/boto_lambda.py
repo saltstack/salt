@@ -73,7 +73,7 @@ Connection module for Amazon Lambda
 
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
+# pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import
@@ -97,11 +97,12 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=import-error
 try:
-    #pylint: disable=unused-import
+    # pylint: disable=unused-import
     import boto
     import boto3
-    #pylint: enable=unused-import
+    # pylint: enable=unused-import
     from botocore.exceptions import ClientError
+    from botocore import __version__ as found_botocore_version
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
@@ -117,9 +118,11 @@ def __virtual__():
     '''
     required_boto_version = '2.8.0'
     required_boto3_version = '1.2.5'
+    required_botocore_version = '1.5.2'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
+    # botocore version >= 1.5.2 is required due to lambda environment variables
     if not HAS_BOTO:
         return (False, 'The boto_lambda module could not be loaded: '
                 'boto libraries not found')
@@ -129,6 +132,9 @@ def __virtual__():
     elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
         return (False, 'The boto_lambda module could not be loaded: '
                 'boto version {0} or later must be installed.'.format(required_boto3_version))
+    elif _LooseVersion(found_botocore_version) < _LooseVersion(required_botocore_version):
+        return (False, 'The boto_apigateway module could not be loaded: '
+                'botocore version {0} or later must be installed.'.format(required_botocore_version))
     else:
         return True
 
@@ -140,8 +146,7 @@ def __init__(opts):
 
 
 def _find_function(name,
-               region=None, key=None, keyid=None, profile=None):
-
+                   region=None, key=None, keyid=None, profile=None):
     '''
     Given function name, find and return matching Lambda information.
     '''
@@ -155,7 +160,7 @@ def _find_function(name,
 
 
 def function_exists(FunctionName, region=None, key=None,
-           keyid=None, profile=None):
+                    keyid=None, profile=None):
     '''
     Given a function name, check to see if the given function name exists.
 
@@ -172,7 +177,7 @@ def function_exists(FunctionName, region=None, key=None,
 
     try:
         func = _find_function(FunctionName,
-                             region=region, key=key, keyid=keyid, profile=profile)
+                              region=region, key=key, keyid=keyid, profile=profile)
         return {'exists': bool(func)}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
@@ -201,9 +206,21 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
                     S3Bucket=None, S3Key=None, S3ObjectVersion=None,
                     Description="", Timeout=3, MemorySize=128, Publish=False,
                     WaitForRole=False, RoleRetries=5,
-            region=None, key=None, keyid=None, profile=None, VpcConfig=None):
+                    region=None, key=None, keyid=None, profile=None,
+                    VpcConfig=None, Environment=None):
     '''
     Given a valid config, create a function.
+
+    Environment
+        The parent object that contains your environment's configuration
+        settings.  This is a dictionary of the form:
+        {
+            'Variables': {
+                'VariableName': 'VariableValue'
+            }
+        }
+
+        .. versionadded:: Nitrogen
 
     Returns {created: true} if the function was created and returns
     {created: False} if the function was not created.
@@ -216,29 +233,32 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
 
     '''
 
-    role_arn = _get_role_arn(Role, region=region, key=key, keyid=keyid, profile=profile)
+    role_arn = _get_role_arn(Role, region=region, key=key,
+                             keyid=keyid, profile=profile)
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if ZipFile:
             if S3Bucket or S3Key or S3ObjectVersion:
                 raise SaltInvocationError('Either ZipFile must be specified, or '
-                                'S3Bucket and S3Key must be provided.')
+                                          'S3Bucket and S3Key must be provided.')
             code = {
-               'ZipFile': _filedata(ZipFile),
+                'ZipFile': _filedata(ZipFile),
             }
         else:
             if not S3Bucket or not S3Key:
                 raise SaltInvocationError('Either ZipFile must be specified, or '
-                                'S3Bucket and S3Key must be provided.')
+                                          'S3Bucket and S3Key must be provided.')
             code = {
-               'S3Bucket': S3Bucket,
-               'S3Key': S3Key,
+                'S3Bucket': S3Bucket,
+                'S3Key': S3Key,
             }
             if S3ObjectVersion:
                 code['S3ObjectVersion'] = S3ObjectVersion
         kwargs = {}
         if VpcConfig is not None:
             kwargs['VpcConfig'] = VpcConfig
+        if Environment is not None:
+            kwargs['Environment'] = Environment
         if WaitForRole:
             retrycount = RoleRetries
         else:
@@ -246,20 +266,23 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
         for retry in range(retrycount, 0, -1):
             try:
                 func = conn.create_function(FunctionName=FunctionName, Runtime=Runtime, Role=role_arn, Handler=Handler,
-                                   Code=code, Description=Description, Timeout=Timeout, MemorySize=MemorySize,
-                                   Publish=Publish, **kwargs)
+                                            Code=code, Description=Description, Timeout=Timeout, MemorySize=MemorySize,
+                                            Publish=Publish, **kwargs)
             except ClientError as e:
                 if retry > 1 and e.response.get('Error', {}).get('Code') == 'InvalidParameterValueException':
-                    log.info('Function not created but IAM role may not have propagated, will retry')
+                    log.info(
+                        'Function not created but IAM role may not have propagated, will retry')
                     # exponential backoff
-                    time.sleep((2 ** (RoleRetries - retry)) + (random.randint(0, 1000) / 1000))
+                    time.sleep((2 ** (RoleRetries - retry)) +
+                               (random.randint(0, 1000) / 1000))
                     continue
                 else:
                     raise
             else:
                 break
         if func:
-            log.info('The newly created function name is {0}'.format(func['FunctionName']))
+            log.info('The newly created function name is {0}'.format(
+                func['FunctionName']))
 
             return {'created': True, 'name': func['FunctionName']}
         else:
@@ -287,7 +310,8 @@ def delete_function(FunctionName, Qualifier=None, region=None, key=None, keyid=N
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if Qualifier:
-            conn.delete_function(FunctionName=FunctionName, Qualifier=Qualifier)
+            conn.delete_function(
+                FunctionName=FunctionName, Qualifier=Qualifier)
         else:
             conn.delete_function(FunctionName=FunctionName)
         return {'deleted': True}
@@ -296,7 +320,7 @@ def delete_function(FunctionName, Qualifier=None, region=None, key=None, keyid=N
 
 
 def describe_function(FunctionName, region=None, key=None,
-             keyid=None, profile=None):
+                      keyid=None, profile=None):
     '''
     Given a function name describe its properties.
 
@@ -312,11 +336,11 @@ def describe_function(FunctionName, region=None, key=None,
 
     try:
         func = _find_function(FunctionName,
-                             region=region, key=key, keyid=keyid, profile=profile)
+                              region=region, key=key, keyid=keyid, profile=profile)
         if func:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
-                'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
-                'LastModified', 'VpcConfig')
+                    'CodeSize', 'Description', 'Timeout', 'MemorySize',
+                    'FunctionArn', 'LastModified', 'VpcConfig', 'Environment')
             return {'function': dict([(k, func.get(k)) for k in keys])}
         else:
             return {'function': None}
@@ -325,11 +349,23 @@ def describe_function(FunctionName, region=None, key=None,
 
 
 def update_function_config(FunctionName, Role=None, Handler=None,
-            Description=None, Timeout=None, MemorySize=None,
-            region=None, key=None, keyid=None, profile=None, VpcConfig=None,
-            WaitForRole=False, RoleRetries=5):
+                           Description=None, Timeout=None, MemorySize=None,
+                           region=None, key=None, keyid=None, profile=None,
+                           VpcConfig=None, WaitForRole=False, RoleRetries=5,
+                           Environment=None):
     '''
     Update the named lambda function to the configuration.
+
+    Environment
+        The parent object that contains your environment's configuration
+        settings.  This is a dictionary of the form:
+        {
+            'Variables': {
+                'VariableName': 'VariableValue'
+            }
+        }
+
+        .. versionadded:: Nitrogen
 
     Returns {updated: true} if the function was updated and returns
     {updated: False} if the function was not updated.
@@ -347,7 +383,8 @@ def update_function_config(FunctionName, Role=None, Handler=None,
                'Description': Description,
                'Timeout': Timeout,
                'MemorySize': MemorySize,
-               'VpcConfig': VpcConfig}
+               'VpcConfig': VpcConfig,
+               'Environment': Environment}
 
     for val, var in six.iteritems(options):
         if var:
@@ -366,9 +403,11 @@ def update_function_config(FunctionName, Role=None, Handler=None,
                 r = conn.update_function_configuration(**args)
             except ClientError as e:
                 if retry > 1 and e.response.get('Error', {}).get('Code') == 'InvalidParameterValueException':
-                    log.info('Function not updated but IAM role may not have propagated, will retry')
+                    log.info(
+                        'Function not updated but IAM role may not have propagated, will retry')
                     # exponential backoff
-                    time.sleep((2 ** (RoleRetries - retry)) + (random.randint(0, 1000) / 1000))
+                    time.sleep((2 ** (RoleRetries - retry)) +
+                               (random.randint(0, 1000) / 1000))
                     continue
                 else:
                     raise
@@ -376,8 +415,8 @@ def update_function_config(FunctionName, Role=None, Handler=None,
                 break
         if r:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
-                'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
-                'LastModified', 'VpcConfig')
+                    'CodeSize', 'Description', 'Timeout', 'MemorySize',
+                    'FunctionArn', 'LastModified', 'VpcConfig', 'Environment')
             return {'updated': True, 'function': dict([(k, r.get(k)) for k in keys])}
         else:
             log.warning('Function was not updated')
@@ -387,8 +426,8 @@ def update_function_config(FunctionName, Role=None, Handler=None,
 
 
 def update_function_code(FunctionName, ZipFile=None, S3Bucket=None, S3Key=None,
-            S3ObjectVersion=None, Publish=False,
-            region=None, key=None, keyid=None, profile=None):
+                         S3ObjectVersion=None, Publish=False,
+                         region=None, key=None, keyid=None, profile=None):
     '''
     Upload the given code to the named lambda function.
 
@@ -408,14 +447,14 @@ def update_function_code(FunctionName, ZipFile=None, S3Bucket=None, S3Key=None,
         if ZipFile:
             if S3Bucket or S3Key or S3ObjectVersion:
                 raise SaltInvocationError('Either ZipFile must be specified, or '
-                                'S3Bucket and S3Key must be provided.')
+                                          'S3Bucket and S3Key must be provided.')
             r = conn.update_function_code(FunctionName=FunctionName,
-                                   ZipFile=_filedata(ZipFile),
-                                   Publish=Publish)
+                                          ZipFile=_filedata(ZipFile),
+                                          Publish=Publish)
         else:
             if not S3Bucket or not S3Key:
                 raise SaltInvocationError('Either ZipFile must be specified, or '
-                                'S3Bucket and S3Key must be provided.')
+                                          'S3Bucket and S3Key must be provided.')
             args = {
                 'S3Bucket': S3Bucket,
                 'S3Key': S3Key,
@@ -423,11 +462,11 @@ def update_function_code(FunctionName, ZipFile=None, S3Bucket=None, S3Key=None,
             if S3ObjectVersion:
                 args['S3ObjectVersion'] = S3ObjectVersion
             r = conn.update_function_code(FunctionName=FunctionName,
-                                   Publish=Publish, **args)
+                                          Publish=Publish, **args)
         if r:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
-                'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
-                'LastModified', 'VpcConfig')
+                    'CodeSize', 'Description', 'Timeout', 'MemorySize',
+                    'FunctionArn', 'LastModified', 'VpcConfig', 'Environment')
             return {'updated': True, 'function': dict([(k, r.get(k)) for k in keys])}
         else:
             log.warning('Function was not updated')
@@ -462,15 +501,15 @@ def add_permission(FunctionName, StatementId, Action, Principal, SourceArn=None,
             if locals()[key] is not None:
                 kwargs[key] = str(locals()[key])
         conn.add_permission(FunctionName=FunctionName, StatementId=StatementId,
-                                   Action=Action, Principal=str(Principal),
-                                   **kwargs)
+                            Action=Action, Principal=str(Principal),
+                            **kwargs)
         return {'updated': True}
     except ClientError as e:
         return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 def remove_permission(FunctionName, StatementId, Qualifier=None,
-                   region=None, key=None, keyid=None, profile=None):
+                      region=None, key=None, keyid=None, profile=None):
     '''
     Remove a permission from a lambda function.
 
@@ -491,7 +530,7 @@ def remove_permission(FunctionName, StatementId, Qualifier=None,
         if Qualifier is not None:
             kwargs['Qualifier'] = Qualifier
         conn.remove_permission(FunctionName=FunctionName, StatementId=StatementId,
-                                   **kwargs)
+                               **kwargs)
         return {'updated': True}
     except ClientError as e:
         return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
@@ -521,7 +560,7 @@ def get_permissions(FunctionName, Qualifier=None,
         # The get_policy call is not symmetric with add/remove_permissions. So
         # massage it until it is, for better ease of use.
         policy = conn.get_policy(FunctionName=FunctionName,
-                                   **kwargs)
+                                 **kwargs)
         policy = policy.get('Policy', {})
         if isinstance(policy, six.string_types):
             policy = json.loads(policy)
@@ -540,9 +579,11 @@ def get_permissions(FunctionName, Qualifier=None,
                 'Principal': principal,
             }
             if 'ArnLike' in condition:
-                permission['SourceArn'] = condition['ArnLike'].get('AWS:SourceArn')
+                permission['SourceArn'] = condition[
+                    'ArnLike'].get('AWS:SourceArn')
             if 'StringEquals' in condition:
-                permission['SourceAccount'] = condition['StringEquals'].get('AWS:SourceAccount')
+                permission['SourceAccount'] = condition[
+                    'StringEquals'].get('AWS:SourceAccount')
             permissions[statement.get('Sid')] = permission
         return {'permissions': permissions}
     except ClientError as e:
@@ -553,7 +594,7 @@ def get_permissions(FunctionName, Qualifier=None,
 
 
 def list_function_versions(FunctionName,
-            region=None, key=None, keyid=None, profile=None):
+                           region=None, key=None, keyid=None, profile=None):
     '''
     List the versions available for the given function.
 
@@ -572,7 +613,7 @@ def list_function_versions(FunctionName,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         vers = []
         for ret in salt.utils.boto3.paged_call(conn.list_versions_by_function,
-                                 FunctionName=FunctionName):
+                                               FunctionName=FunctionName):
             vers.extend(ret['Versions'])
         if not bool(vers):
             log.warning('No versions found')
@@ -582,7 +623,7 @@ def list_function_versions(FunctionName,
 
 
 def create_alias(FunctionName, Name, FunctionVersion, Description="",
-            region=None, key=None, keyid=None, profile=None):
+                 region=None, key=None, keyid=None, profile=None):
     '''
     Given a valid config, create an alias to a function.
 
@@ -599,9 +640,10 @@ def create_alias(FunctionName, Name, FunctionVersion, Description="",
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         alias = conn.create_alias(FunctionName=FunctionName, Name=Name,
-                                   FunctionVersion=FunctionVersion, Description=Description)
+                                  FunctionVersion=FunctionVersion, Description=Description)
         if alias:
-            log.info('The newly created alias name is {0}'.format(alias['Name']))
+            log.info(
+                'The newly created alias name is {0}'.format(alias['Name']))
 
             return {'created': True, 'name': alias['Name']}
         else:
@@ -635,8 +677,7 @@ def delete_alias(FunctionName, Name, region=None, key=None, keyid=None, profile=
 
 
 def _find_alias(FunctionName, Name, FunctionVersion=None,
-               region=None, key=None, keyid=None, profile=None):
-
+                region=None, key=None, keyid=None, profile=None):
     '''
     Given function name and alias name, find and return matching alias information.
     '''
@@ -656,7 +697,7 @@ def _find_alias(FunctionName, Name, FunctionVersion=None,
 
 
 def alias_exists(FunctionName, Name, region=None, key=None,
-           keyid=None, profile=None):
+                 keyid=None, profile=None):
     '''
     Given a function name and alias name, check to see if the given alias exists.
 
@@ -673,14 +714,14 @@ def alias_exists(FunctionName, Name, region=None, key=None,
 
     try:
         alias = _find_alias(FunctionName, Name,
-                             region=region, key=key, keyid=keyid, profile=profile)
+                            region=region, key=key, keyid=keyid, profile=profile)
         return {'exists': bool(alias)}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
 
 def describe_alias(FunctionName, Name, region=None, key=None,
-             keyid=None, profile=None):
+                   keyid=None, profile=None):
     '''
     Given a function name and alias name describe the properties of the alias.
 
@@ -696,7 +737,7 @@ def describe_alias(FunctionName, Name, region=None, key=None,
 
     try:
         alias = _find_alias(FunctionName, Name,
-                             region=region, key=key, keyid=keyid, profile=profile)
+                            region=region, key=key, keyid=keyid, profile=profile)
         if alias:
             keys = ('AliasArn', 'Name', 'FunctionVersion', 'Description')
             return {'alias': dict([(k, alias.get(k)) for k in keys])}
@@ -707,7 +748,7 @@ def describe_alias(FunctionName, Name, region=None, key=None,
 
 
 def update_alias(FunctionName, Name, FunctionVersion=None, Description=None,
-            region=None, key=None, keyid=None, profile=None):
+                 region=None, key=None, keyid=None, profile=None):
     '''
     Update the named alias to the configuration.
 
@@ -741,8 +782,8 @@ def update_alias(FunctionName, Name, FunctionVersion=None, Description=None,
 
 
 def create_event_source_mapping(EventSourceArn, FunctionName, StartingPosition,
-            Enabled=True, BatchSize=100,
-            region=None, key=None, keyid=None, profile=None):
+                                Enabled=True, BatchSize=100,
+                                region=None, key=None, keyid=None, profile=None):
     '''
     Identifies a stream as an event source for a Lambda function. It can be
     either an Amazon Kinesis stream or an Amazon DynamoDB stream. AWS Lambda
@@ -766,7 +807,8 @@ def create_event_source_mapping(EventSourceArn, FunctionName, StartingPosition,
                                                BatchSize=BatchSize,
                                                StartingPosition=StartingPosition)
         if obj:
-            log.info('The newly created event source mapping ID is {0}'.format(obj['UUID']))
+            log.info(
+                'The newly created event source mapping ID is {0}'.format(obj['UUID']))
 
             return {'created': True, 'id': obj['UUID']}
         else:
@@ -777,7 +819,7 @@ def create_event_source_mapping(EventSourceArn, FunctionName, StartingPosition,
 
 
 def get_event_source_mapping_ids(EventSourceArn, FunctionName,
-           region=None, key=None, keyid=None, profile=None):
+                                 region=None, key=None, keyid=None, profile=None):
     '''
     Given an event source and function name, return a list of mapping IDs
 
@@ -793,28 +835,29 @@ def get_event_source_mapping_ids(EventSourceArn, FunctionName,
     try:
         mappings = []
         for maps in salt.utils.boto3.paged_call(conn.list_event_source_mappings,
-                                               EventSourceArn=EventSourceArn,
-                                               FunctionName=FunctionName):
-            mappings.extend([mapping['UUID'] for mapping in maps['EventSourceMappings']])
+                                                EventSourceArn=EventSourceArn,
+                                                FunctionName=FunctionName):
+            mappings.extend([mapping['UUID']
+                             for mapping in maps['EventSourceMappings']])
         return mappings
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
 
 def _get_ids(UUID=None, EventSourceArn=None, FunctionName=None,
-                                region=None, key=None, keyid=None, profile=None):
+             region=None, key=None, keyid=None, profile=None):
     if UUID:
         if EventSourceArn or FunctionName:
             raise SaltInvocationError('Either UUID must be specified, or '
-                                'EventSourceArn and FunctionName must be provided.')
+                                      'EventSourceArn and FunctionName must be provided.')
         return [UUID]
     else:
         if not EventSourceArn or not FunctionName:
             raise SaltInvocationError('Either UUID must be specified, or '
-                                'EventSourceArn and FunctionName must be provided.')
+                                      'EventSourceArn and FunctionName must be provided.')
         return get_event_source_mapping_ids(EventSourceArn=EventSourceArn,
                                             FunctionName=FunctionName,
-                       region=region, key=key, keyid=keyid, profile=profile)
+                                            region=region, key=key, keyid=keyid, profile=profile)
 
 
 def delete_event_source_mapping(UUID=None, EventSourceArn=None, FunctionName=None,
@@ -834,7 +877,7 @@ def delete_event_source_mapping(UUID=None, EventSourceArn=None, FunctionName=Non
 
     '''
     ids = _get_ids(UUID, EventSourceArn=EventSourceArn,
-                         FunctionName=FunctionName)
+                   FunctionName=FunctionName)
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         for id in ids:
@@ -845,8 +888,8 @@ def delete_event_source_mapping(UUID=None, EventSourceArn=None, FunctionName=Non
 
 
 def event_source_mapping_exists(UUID=None, EventSourceArn=None,
-           FunctionName=None,
-           region=None, key=None, keyid=None, profile=None):
+                                FunctionName=None,
+                                region=None, key=None, keyid=None, profile=None):
     '''
     Given an event source mapping ID or an event source ARN and FunctionName,
     check whether the mapping exists.
@@ -873,8 +916,8 @@ def event_source_mapping_exists(UUID=None, EventSourceArn=None,
 
 
 def describe_event_source_mapping(UUID=None, EventSourceArn=None,
-           FunctionName=None,
-           region=None, key=None, keyid=None, profile=None):
+                                  FunctionName=None,
+                                  region=None, key=None, keyid=None, profile=None):
     '''
     Given an event source mapping ID or an event source ARN and FunctionName,
     obtain the current settings of that mapping.
@@ -890,7 +933,7 @@ def describe_event_source_mapping(UUID=None, EventSourceArn=None,
     '''
 
     ids = _get_ids(UUID, EventSourceArn=EventSourceArn,
-                         FunctionName=FunctionName)
+                   FunctionName=FunctionName)
     if len(ids) < 1:
         return {'event_source_mapping': None}
 
@@ -910,8 +953,8 @@ def describe_event_source_mapping(UUID=None, EventSourceArn=None,
 
 
 def update_event_source_mapping(UUID,
-            FunctionName=None, Enabled=None, BatchSize=None,
-            region=None, key=None, keyid=None, profile=None):
+                                FunctionName=None, Enabled=None, BatchSize=None,
+                                region=None, key=None, keyid=None, profile=None):
     '''
     Update the event source mapping identified by the UUID.
 
