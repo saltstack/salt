@@ -75,7 +75,7 @@ def facts_refresh():
     try:
         conn.facts_refresh()
         # Earlier it was ret['message']
-        ret['facts'] = json.dumps(conn.facts)
+        ret['facts'] = conn.facts
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
@@ -102,8 +102,7 @@ def facts():
     conn = __proxy__['junos.conn']()
     ret = dict()
     try:
-        facts = conn.facts
-        ret['facts'] = json.dumps(facts)
+        ret['facts'] = conn.facts
         ret['out'] = True
     except Exception as exception:
         ret['message'] = 'Could not display facts due to "{0}"'.format(
