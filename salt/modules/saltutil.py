@@ -518,6 +518,12 @@ def list_extmods():
     .. versionadded:: Nitrogen
 
     List Salt modules which have been synced externally
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.list_extmods
     '''
     ret = {}
     ext_dir = os.path.join(__opts__['cachedir'], 'extmods')
