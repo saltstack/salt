@@ -1702,6 +1702,7 @@ def list_datacenters(host, username, password, protocol=None, port=None):
     .. code-block:: bash
 
         salt '*' vsphere.list_datacenters 1.2.3.4 root bad-password
+
     '''
     service_instance = salt.utils.vmware.get_service_instance(host=host,
                                                               username=username,
@@ -1732,9 +1733,12 @@ def list_clusters(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+   CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_clusters 1.2.3.4 root bad-password
+
     '''
     service_instance = salt.utils.vmware.get_service_instance(host=host,
                                                               username=username,
@@ -1764,6 +1768,8 @@ def list_datastore_clusters(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+   CLI Example:
 
     .. code-block:: bash
 
@@ -1798,6 +1804,8 @@ def list_datastores(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+   CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_datastores 1.2.3.4 root bad-password
@@ -1830,6 +1838,8 @@ def list_hosts(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+   CLI Example:
 
     .. code-block:: bash
 
@@ -1864,6 +1874,8 @@ def list_resourcepools(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_resourcepools 1.2.3.4 root bad-password
@@ -1896,6 +1908,8 @@ def list_networks(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1930,6 +1944,8 @@ def list_vms(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_vms 1.2.3.4 root bad-password
@@ -1962,6 +1978,8 @@ def list_folders(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1996,6 +2014,8 @@ def list_dvs(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_dvs 1.2.3.4 root bad-password
@@ -2029,8 +2049,11 @@ def list_vapps(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    CLI Example:
+
     .. code-block:: bash
 
+        # List vapps from all minions
         salt '*' vsphere.list_vapps 1.2.3.4 root bad-password
     '''
     service_instance = salt.utils.vmware.get_service_instance(host=host,
