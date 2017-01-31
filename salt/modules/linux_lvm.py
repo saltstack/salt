@@ -229,7 +229,7 @@ def pvcreate(devices, override=True, **kwargs):
         elif not override:
             raise CommandExecutionError('Device "{0}" is already an LVM physical volume.'.format(device))
 
-    if not cmd[1:]:
+    if not cmd[2:]:
         # All specified devices are already LVM volumes
         return True
 
