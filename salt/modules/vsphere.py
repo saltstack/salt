@@ -368,7 +368,7 @@ def disconnect(service_instance):
     service_instance
         Service instance (vim.ServiceInstance)
 
-    CLI Example: 
+    CLI Example:
 
         See note above.
     '''
