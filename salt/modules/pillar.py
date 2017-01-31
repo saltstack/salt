@@ -57,7 +57,9 @@ def get(key,
         .. versionadded:: 2014.7.0
 
     delimiter
-        Specify an alternate delimiter to use when traversing a nested dict
+        Specify an alternate delimiter to use when traversing a nested dict.
+        This is useful for when the desired key contains a colon. See CLI
+        example below for usage.
 
         .. versionadded:: 2014.7.0
 
@@ -88,6 +90,7 @@ def get(key,
     .. code-block:: bash
 
         salt '*' pillar.get pkg:apache
+        salt '*' pillar.get abc::def|ghi delimiter='|'
     '''
     if not __opts__.get('pillar_raise_on_missing'):
         if default is KeyError:
