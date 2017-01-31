@@ -55,11 +55,10 @@ import salt.utils.minions
 import salt.cache
 from salt._compat import ipaddress
 import salt.ext.six as six
-from salt.utils.odict import OrderedDict
 
 # Debug & Logging
 import logging
-import pprint
+#import pprint
 
 log = logging.getLogger(__name__)
 #ppr = pprint.PrettyPrinter(indent=2).pprint
@@ -130,7 +129,7 @@ def _load_minion(minion_id, cache):
     data_minion, grains, pillar = salt.utils.minions.get_minion_data(minion_id, __opts__)
 
     if minion_id != data_minion:
-        log.error('Asked for minion {}, got {}'.format(minion_id, data_minion))
+        log.error('Asked for minion {0}, got {1}'.format(minion_id, data_minion))
         raise LookupError
 
     if not grains:
