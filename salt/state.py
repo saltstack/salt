@@ -937,7 +937,9 @@ class State(object):
             self.opts['pillar'] = self._gather_pillar()
             _reload_modules = True
 
-        if not ret['changes'] and not data.get('force_reload_modules', False):
+        if not ret['changes']:
+            if data.get('force_reload_modules', False):
+                self.module_refresh()
             return
 
         if data.get('reload_modules', False) or _reload_modules:
