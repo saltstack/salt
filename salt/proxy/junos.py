@@ -110,11 +110,9 @@ def proxytype():
 def grains():
     thisproxy['grains'] = copy.deepcopy(thisproxy['conn'].facts)
     if not thisproxy['grains']:
-        log.error(
-            'The device must be master to gather facts. Grains will not be populated by junos facts.')
-        
-    if 'version_info' in thisproxy['grains'] and thisproxy['grains']['version_info']:
-        thisproxy['grains']['version_info'] = thisproxy['grains']['version_info'].v_dict
+        log.debug(
+            ' Grains will not be populated by junos facts \
+            as the device returned an empty facts dictionary.')
 
     return thisproxy['grains']
 
