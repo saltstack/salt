@@ -9,7 +9,7 @@ from __future__ import print_function
 import logging
 import json
 import os
-import yaml
+import salt
 
 # Import salt libraries
 from salt.utils import fopen
@@ -725,11 +725,11 @@ def install_config(path=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.install_config path='/home/user/config.set'
+        salt 'device_name' junos.install_config path='salt://production/network/routers/config.set'
 
-        salt 'device_name' junos.install_config path='/home/user/replace_config.conf' replace=True comment='Committed via SaltStack'
+        salt 'device_name' junos.install_config path='salt://templates/replace_config.conf' replace=True comment='Committed via SaltStack'
 
-        salt 'device_name' junos.install_config path='/home/user/my_new_configuration.conf' dev_timeout=300 diffs_file='/salt/confs/old_config.conf' overwrite=True
+        salt 'device_name' junos.install_config path='salt://my_new_configuration.conf' dev_timeout=300 diffs_file='/salt/confs/old_config.conf' overwrite=True
 
 
     Parameters:
@@ -771,14 +771,21 @@ def install_config(path=None, **kwargs):
     ret['out'] = True
 
     if path is None:
-        ret[
-            'message'] = 'Please provide the absolute path where the \
+        ret['message'] = 'Please provide the salt path where the \
             configuration is present'
         ret['out'] = False
         return ret
 
-    if not os.path.isfile(path):
+    template_cached_path = salt.utils.files.mkstemp()
+    __salt__['cp.get_template'](path, template_cached_path)
+
+    if not os.path.isfile(template_cached_path):
         ret['message'] = 'Invalid file path.'
+        ret['out'] = False
+        return ret
+
+    if os.path.getsize(template_cached_path) == 0:
+        ret['message'] = 'Template failed to render'
         ret['out'] = False
         return ret
 
@@ -795,33 +802,25 @@ def install_config(path=None, **kwargs):
         write_diff = op['diffs_file']
         del op['diffs_file']
 
-    if 'template_path' in op:
-        if not os.path.isfile(op['template_path']):
-            ret['message'] = 'Invlaid template path.'
-            ret['out'] = False
-            return ret
-        if 'template_vars' not in op:
-            ret[
-                'message'] = 'Please provide jinja variable along with the \
-                jina template.'
-            ret['out'] = False
-            return ret
-        if not os.path.isfile(op['template_vars']):
-            ret['message'] = 'Invlaid template_vars path.'
-            ret['out'] = False
-            return ret
-        data = yaml.load(open(op['template_vars']))
-        op['template_vars'] = data
-    else:
-        op = {'path': path}
+    op['path'] = template_cached_path
+
+    if 'format' not in op:
+        if path.endswith('set'):
+            template_format = 'set'
+        elif path.endswith('xml'):
+            template_format = 'xml'
+        else:
+            template_format = 'text'
+
+        op['format'] = template_format
 
     if 'replace' in op and op['replace']:
         op['merge'] = False
         del op['replace']
     elif 'overwrite' in op and op['overwrite']:
-        load_params['overwrite'] = True
+        op['overwrite'] = True
     elif 'overwrite' in op and not op['overwrite']:
-        load_params['merge'] = True
+        op['merge'] = True
         del op['overwrite']
 
     try:
@@ -830,18 +829,26 @@ def install_config(path=None, **kwargs):
     except Exception as exception:
         ret['message'] = 'Could not load configuration due to : "{0}"'.format(
             exception)
+        ret['format'] = template_format
         ret['out'] = False
         return ret
 
+    finally:
+        salt.utils.safe_rm(template_cached_path)
+
     try:
+        config_diff = conn.cu.diff()
+        if config_diff is None:
+            ret['message'] = 'Configuration already applied!'
+            ret['out'] = True
+            return ret
+
         if write_diff:
-            diff = conn.cu.diff()
-            if diff is not None:
+            if config_diff is not None:
                 with fopen(write_diff, 'w') as fp:
-                    fp.write(diff)
+                    fp.write(config_diff)
     except Exception as exception:
-        ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
-            exception)
+        ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(exception)
         ret['out'] = False
         return ret
 
