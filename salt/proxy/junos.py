@@ -28,10 +28,10 @@ in '/etc/salt/proxy'
     master: <ip or hostname of salt-master>
 
 Run the salt proxy via the following command:
-    
+
 .. code-block:: bash
 
-    salt-proxy --proxyid=vmx 
+    salt-proxy --proxyid=vmx
 
 
 '''
@@ -87,6 +87,8 @@ def init(opts):
     thisproxy['conn'].open()
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
     thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
+    thisproxy['conn'].facts['version_info'] = dict(
+        thisproxy['conn'].facts['version_info'])
     thisproxy['initialized'] = True
 
 
@@ -108,14 +110,9 @@ def proxytype():
 def grains():
     thisproxy['grains'] = copy.deepcopy(thisproxy['conn'].facts)
     if not thisproxy['grains']:
-        log.error(
-            'The device must be master to gather facts. Grains will not be populated by junos facts.')
-    if thisproxy['grains']['version_info']:
-        thisproxy[
-            'grains'][
-            'version_info'] = thisproxy[
-            'grains'][
-            'version_info'].v_dict
+        log.debug(
+            'Grains not populated with junos facts \
+             as the device returned am empty dictionary.')
     return thisproxy['grains']
 
 
