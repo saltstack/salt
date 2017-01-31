@@ -34,18 +34,29 @@ class LinuxLVMTestCase(TestCase):
         '''
         Tests LVM version info from lvm version
         '''
-        mock = MagicMock(return_value='Library version : 1')
+        mock = MagicMock(return_value=
+                             '  LVM version:     2.02.168(2) (2016-11-30)\n'
+                             '  Library version: 1.03.01 (2016-11-30)\n'
+                             '  Driver version:  4.35.0\n'
+                        )
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
-            self.assertEqual(linux_lvm.version(), '1')
+            self.assertEqual(linux_lvm.version(), '2.02.168(2) (2016-11-30)')
 
     def test_fullversion(self):
         '''
         Tests all version info from lvm version
         '''
-        mock = MagicMock(return_value='Library version : 1')
+        mock = MagicMock(return_value=
+                             '  LVM version:     2.02.168(2) (2016-11-30)\n'
+                             '  Library version: 1.03.01 (2016-11-30)\n'
+                             '  Driver version:  4.35.0\n'
+                        )
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
             self.assertDictEqual(linux_lvm.fullversion(),
-                                 {'Library version': '1'})
+                                 {'LVM version': '2.02.168(2) (2016-11-30)',
+                                  'Library version': '1.03.01 (2016-11-30)',
+                                  'Driver version': '4.35.0',
+                                 })
 
     def test_pvdisplay(self):
         '''
