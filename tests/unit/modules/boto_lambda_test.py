@@ -119,9 +119,10 @@ def _has_required_boto():
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto3_version))
+@skipIf(_has_required_boto() is False,
+        ('The boto3 module must be greater than or equal to version {0}, '
+         'and botocore must be greater than or equal to {1}'.format(
+             required_boto3_version, required_botocore_version)))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoLambdaTestCaseBase(TestCase):
     conn = None
@@ -148,7 +149,8 @@ class BotoLambdaTestCaseBase(TestCase):
 class TempZipFile(object):
 
     def __enter__(self):
-        with NamedTemporaryFile(suffix='.zip', prefix='salt_test_', delete=False) as tmp:
+        with NamedTemporaryFile(
+                suffix='.zip', prefix='salt_test_', delete=False) as tmp:
             to_write = '###\n'
             if six.PY3:
                 to_write = salt.utils.to_bytes(to_write)
@@ -208,12 +210,13 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             with TempZipFile() as zipfile:
                 self.conn.create_function.return_value = function_ret
-                lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
-                                                                     Runtime='python2.7',
-                                                                     Role='myrole',
-                                                                     Handler='file.method',
-                                                                     ZipFile=zipfile,
-                                                                     **conn_parameters)
+                lambda_creation_result = boto_lambda.create_function(
+                    FunctionName='testfunction',
+                    Runtime='python2.7',
+                    Role='myrole',
+                    Handler='file.method',
+                    ZipFile=zipfile,
+                    **conn_parameters)
 
         self.assertTrue(lambda_creation_result['created'])
 
@@ -223,13 +226,14 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             self.conn.create_function.return_value = function_ret
-            lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
-                                                                 Runtime='python2.7',
-                                                                 Role='myrole',
-                                                                 Handler='file.method',
-                                                                 S3Bucket='bucket',
-                                                                 S3Key='key',
-                                                                 **conn_parameters)
+            lambda_creation_result = boto_lambda.create_function(
+                FunctionName='testfunction',
+                Runtime='python2.7',
+                Role='myrole',
+                Handler='file.method',
+                S3Bucket='bucket',
+                S3Key='key',
+                **conn_parameters)
 
         self.assertTrue(lambda_creation_result['created'])
 
@@ -240,11 +244,12 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             with self.assertRaisesRegexp(SaltInvocationError,
                                          'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
-                lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
-                                                                     Runtime='python2.7',
-                                                                     Role='myrole',
-                                                                     Handler='file.method',
-                                                                     **conn_parameters)
+                lambda_creation_result = boto_lambda.create_function(
+                    FunctionName='testfunction',
+                    Runtime='python2.7',
+                    Role='myrole',
+                    Handler='file.method',
+                    **conn_parameters)
 
     def test_that_when_creating_a_function_with_zipfile_and_s3_raises_a_salt_invocation_error(self):
         '''
@@ -254,14 +259,15 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
             with self.assertRaisesRegexp(SaltInvocationError,
                                          'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
                 with TempZipFile() as zipfile:
-                    lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
-                                                                         Runtime='python2.7',
-                                                                         Role='myrole',
-                                                                         Handler='file.method',
-                                                                         ZipFile=zipfile,
-                                                                         S3Bucket='bucket',
-                                                                         S3Key='key',
-                                                                         **conn_parameters)
+                    lambda_creation_result = boto_lambda.create_function(
+                        FunctionName='testfunction',
+                        Runtime='python2.7',
+                        Role='myrole',
+                        Handler='file.method',
+                        ZipFile=zipfile,
+                        S3Bucket='bucket',
+                        S3Key='key',
+                        **conn_parameters)
 
     def test_that_when_creating_a_function_fails_the_create_function_method_returns_error(self):
         '''
@@ -271,12 +277,13 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
             self.conn.create_function.side_effect = ClientError(
                 error_content, 'create_function')
             with TempZipFile() as zipfile:
-                lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
-                                                                     Runtime='python2.7',
-                                                                     Role='myrole',
-                                                                     Handler='file.method',
-                                                                     ZipFile=zipfile,
-                                                                     **conn_parameters)
+                lambda_creation_result = boto_lambda.create_function(
+                    FunctionName='testfunction',
+                    Runtime='python2.7',
+                    Role='myrole',
+                    Handler='file.method',
+                    ZipFile=zipfile,
+                    **conn_parameters)
         self.assertEqual(lambda_creation_result.get('error', {}).get(
             'message'), error_message.format('create_function'))
 
@@ -367,7 +374,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
             with TempZipFile() as zipfile:
                 self.conn.update_function_code.return_value = function_ret
                 result = boto_lambda.update_function_code(
-                    FunctionName=function_ret['FunctionName'], ZipFile=zipfile, **conn_parameters)
+                    FunctionName=function_ret['FunctionName'],
+                    ZipFile=zipfile, **conn_parameters)
 
         self.assertTrue(result['updated'])
 
@@ -377,10 +385,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             self.conn.update_function_code.return_value = function_ret
-            result = boto_lambda.update_function_code(FunctionName='testfunction',
-                                                      S3Bucket='bucket',
-                                                      S3Key='key',
-                                                      **conn_parameters)
+            result = boto_lambda.update_function_code(
+                FunctionName='testfunction',
+                S3Bucket='bucket',
+                S3Key='key',
+                **conn_parameters)
 
         self.assertTrue(result['updated'])
 
@@ -389,10 +398,13 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegexp(SaltInvocationError,
-                                         'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
-                result = boto_lambda.update_function_code(FunctionName='testfunction',
-                                                          **conn_parameters)
+            with self.assertRaisesRegexp(
+                SaltInvocationError,
+                ('Either ZipFile must be specified, or S3Bucket '
+                 'and S3Key must be provided.')):
+                result = boto_lambda.update_function_code(
+                    FunctionName='testfunction',
+                    **conn_parameters)
 
     def test_that_when_updating_function_code_fails_the_update_function_method_returns_error(self):
         '''
@@ -401,10 +413,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             self.conn.update_function_code.side_effect = ClientError(
                 error_content, 'update_function_code')
-            result = boto_lambda.update_function_code(FunctionName='testfunction',
-                                                      S3Bucket='bucket',
-                                                      S3Key='key',
-                                                      **conn_parameters)
+            result = boto_lambda.update_function_code(
+                FunctionName='testfunction',
+                S3Bucket='bucket',
+                S3Key='key',
+                **conn_parameters)
         self.assertEqual(result.get('error', {}).get('message'),
                          error_message.format('update_function_code'))
 
@@ -415,8 +428,9 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             self.conn.list_versions_by_function.return_value = {
                 'Versions': [function_ret]}
-            result = boto_lambda.list_function_versions(FunctionName='testfunction',
-                                                        **conn_parameters)
+            result = boto_lambda.list_function_versions(
+                FunctionName='testfunction',
+                **conn_parameters)
 
         self.assertTrue(result['Versions'])
 
@@ -426,8 +440,9 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             self.conn.list_versions_by_function.return_value = {'Versions': []}
-            result = boto_lambda.list_function_versions(FunctionName='testfunction',
-                                                        **conn_parameters)
+            result = boto_lambda.list_function_versions(
+                FunctionName='testfunction',
+                **conn_parameters)
         self.assertFalse(result['Versions'])
 
     def test_that_when_listing_function_versions_fails_the_list_function_versions_method_returns_error(self):
@@ -437,8 +452,9 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             self.conn.list_versions_by_function.side_effect = ClientError(
                 error_content, 'list_versions_by_function')
-            result = boto_lambda.list_function_versions(FunctionName='testfunction',
-                                                        **conn_parameters)
+            result = boto_lambda.list_function_versions(
+                FunctionName='testfunction',
+                **conn_parameters)
         self.assertEqual(result.get('error', {}).get('message'),
                          error_message.format('list_versions_by_function'))
 
@@ -695,8 +711,10 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         tests Deleting a mapping without identifier
         '''
-        with self.assertRaisesRegexp(SaltInvocationError,
-                                     'Either UUID must be specified, or EventSourceArn and FunctionName must be provided.'):
+        with self.assertRaisesRegexp(
+            SaltInvocationError,
+            ('Either UUID must be specified, or EventSourceArn '
+             'and FunctionName must be provided.')):
             result = boto_lambda.delete_event_source_mapping(**conn_parameters)
 
     def test_that_when_deleting_an_event_source_mapping_fails_the_delete_event_source_mapping_method_returns_false(self):
