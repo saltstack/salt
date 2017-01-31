@@ -5,6 +5,26 @@ Salt 2016.3.5 Release Notes
 Version 2016.3.5 is a bugfix release for :ref:`2016.3.0 <release-2016-3-0>`.
 
 
+Security Fixes
+==============
+
+CVE-2017-5192: local_batch client external authentication not respected
+
+The ``LocalClient.cmd_batch()`` method client does not accept ``external_auth``
+credentials and so access to it from salt-api has been removed for now. This
+vulnerability allows code execution for already-authenticated users and is only
+in effect when running salt-api as the ``root`` user.
+
+CVE-2017-5200: Salt-api allows arbitrary command execution on a salt-master via
+Salt's ssh_client
+
+Users of Salt-API and salt-ssh could execute a command on the salt master via a
+hole when both systems were enabled.
+
+We recommend everyone on the 2016.3 branch upgrade to a patched release as soon
+as possible.
+
+
 Improved Checksum Handling in :py:func:`file.managed <salt.states.file.managed>`, :py:func:`archive.extracted <salt.states.archive.extracted>` States
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -21,7 +41,7 @@ A more detailed explanation of this functionality can be found in the
 section for the new ``source_hash_name`` argument.
 
 Changes for v2016.3.4..v2016.3.5
---------------------------------------
+--------------------------------
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
