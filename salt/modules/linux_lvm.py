@@ -223,7 +223,6 @@ def pvcreate(devices, override=True, **kwargs):
     for device in devices:
         if not os.path.exists(device):
             raise CommandExecutionError('{0} does not exist'.format(device))
-        # Verify pvcreate was successful
         if not pvdisplay(device):
             cmd.append(device)
         elif not override:
