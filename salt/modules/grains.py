@@ -91,7 +91,9 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
 
 
     :param delimiter:
-        Specify an alternate delimiter to use when traversing a nested dict
+        Specify an alternate delimiter to use when traversing a nested dict.
+        This is useful for when the desired key contains a colon. See CLI
+        example below for usage.
 
         .. versionadded:: 2014.7.0
 
@@ -105,6 +107,7 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
     .. code-block:: bash
 
         salt '*' grains.get pkg:apache
+        salt '*' grains.get abc::def|ghi delimiter='|'
     '''
     if ordered is True:
         grains = __grains__
