@@ -493,7 +493,7 @@ class LocalClient(object):
                               'sys.list_functions',
                               tgt_type=tgt_type,
                               **kwargs)
-        minions = minion_ret.keys()
+        minions = list(minion_ret)
         random.shuffle(minions)
         f_tgt = []
         for minion in minions:

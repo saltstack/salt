@@ -400,7 +400,7 @@
 # Pass in an alternative location for the salt-ssh roster file
 #roster_file: /etc/salt/roster
 
-# Define a location for roster files so they can be chosen when using Salt API.
+# Define locations for roster files so they can be chosen when using Salt API.
 # An administrator can place roster files into these locations. Then when
 # calling Salt API, parameter 'roster_file' should contain a relative path to
 # these locations. That is, "roster_file=/foo/roster" will be resolved as
@@ -699,6 +699,11 @@
 # before file system pillar. This allows for targeting file system pillar from
 # ext_pillar.
 #ext_pillar_first: False
+
+# The external pillars permitted to be used on-demand using pillar.ext
+#on_demand_ext_pillar:
+#  - libvirt
+#  - virtkey
 
 # The pillar_gitfs_ssl_verify option specifies whether to ignore ssl certificate
 # errors when contacting the pillar gitfs backend. You might want to set this to

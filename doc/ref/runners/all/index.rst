@@ -11,6 +11,7 @@ runner modules
     :template: autosummary.rst.tmpl
 
     asam
+    bgp
     cache
     cloud
     ddns
@@ -27,6 +28,7 @@ runner modules
     manage
     mine
     nacl
+    net
     network
     pagerduty
     pillar

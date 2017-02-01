@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import datetime
 import os
+import subprocess
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -66,12 +67,55 @@ class SystemModuleTest(integration.ModuleCase):
         result = self._set_time(self._orig_time, "+0000")
         self.assertTrue(result, msg="Unable to restore time properly")
 
-    def _same_times(self, t1, t2, seconds_diff=2):
+    def _same_times(self, t1, t2, seconds_diff=30):
         '''
         Helper function to check if two datetime objects
         are close enough to the same time.
         '''
         return abs(t1 - t2) < datetime.timedelta(seconds=seconds_diff)
+
+    def _hwclock_has_compare(self):
+        '''
+        Some builds of hwclock don't include the `--compare` function
+        needed to test hw/sw clock synchronization. Returns false on
+        systems where it's not present so that we can skip the
+        comparison portion of the test.
+        '''
+        res = self.run_function('cmd.run_all', cmd='hwclock -h')
+        return res['retcode'] == 0 and res['stdout'].find('--compare') > 0
+
+    def _test_hwclock_sync(self):
+        '''
+        Check that hw and sw clocks are sync'd.
+        '''
+        if not self.run_function('system._has_settable_hwclock'):
+            return None
+        if not self._hwclock_has_compare():
+            return None
+
+        rpipeFd, wpipeFd = os.pipe()
+        with os.fdopen(rpipeFd, "r") as rpipe:
+            with os.fdopen(wpipeFd, "w") as wpipe:
+                with open(os.devnull, "r") as nulFd:
+                    p = subprocess.Popen(args=['hwclock', '--compare'],
+                        stdin=nulFd, stdout=wpipeFd, stderr=subprocess.PIPE)
+
+                    # read header
+                    rpipe.readline()
+
+                    # read first time comparison
+                    timeCompStr = rpipe.readline()
+
+                    # stop
+                    p.terminate()
+
+                    timeComp = timeCompStr.split()
+                    hwTime = float(timeComp[0])
+                    swTime = float(timeComp[1])
+                    diff = abs(hwTime - swTime)
+
+                    self.assertTrue(diff <= 2.0,
+                        msg=("hwclock difference too big: " + str(timeCompStr)))
 
     def _save_machine_info(self):
         if os.path.isfile('/etc/machine-info'):
@@ -96,7 +140,7 @@ class SystemModuleTest(integration.ModuleCase):
         t2 = datetime.datetime.strptime(res, self.fmt_str)
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(t1, t2))
-        self.assertTrue(self._same_times(t1, t2), msg=msg)
+        self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
 
     def test_get_system_date_time_utc(self):
         '''
@@ -108,7 +152,7 @@ class SystemModuleTest(integration.ModuleCase):
         t2 = datetime.datetime.strptime(res, self.fmt_str)
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(t1, t2))
-        self.assertTrue(self._same_times(t1, t2), msg=msg)
+        self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
@@ -128,6 +172,7 @@ class SystemModuleTest(integration.ModuleCase):
                .format(time_now, cmp_time))
         self.assertTrue(result and self._same_times(time_now, cmp_time),
                         msg=msg)
+        self._test_hwclock_sync()
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
@@ -146,6 +191,7 @@ class SystemModuleTest(integration.ModuleCase):
                .format(time_now, cmp_time))
         self.assertTrue(result)
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
+        self._test_hwclock_sync()
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
@@ -169,6 +215,7 @@ class SystemModuleTest(integration.ModuleCase):
                .format(time_now, cmp_time))
         self.assertTrue(result)
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
+        self._test_hwclock_sync()
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
@@ -191,6 +238,7 @@ class SystemModuleTest(integration.ModuleCase):
                .format(time_now, cmp_time))
         self.assertTrue(result)
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
+        self._test_hwclock_sync()
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
@@ -209,6 +257,7 @@ class SystemModuleTest(integration.ModuleCase):
 
         self.assertTrue(result)
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
+        self._test_hwclock_sync()
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
@@ -227,6 +276,7 @@ class SystemModuleTest(integration.ModuleCase):
 
         self.assertTrue(result)
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
+        self._test_hwclock_sync()
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_get_computer_desc(self):
@@ -260,6 +310,15 @@ class SystemModuleTest(integration.ModuleCase):
 
         self.assertTrue(ret)
         self.assertIn(desc, computer_desc)
+
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_has_hwclock(self):
+        '''
+        Verify platform has a settable hardware clock, if possible.
+        '''
+        if self.run_function('grains.get', ['os_family']) == 'NILinuxRT':
+            self.assertTrue(self.run_function('system._has_settable_hwclock'))
+            self.assertTrue(self._hwclock_has_compare())
 
 if __name__ == '__main__':
     from integration import run_tests

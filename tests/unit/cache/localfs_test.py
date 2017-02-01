@@ -241,7 +241,7 @@ class LocalFSTest(TestCase):
 
         # Now test the return of the list function
         with patch.dict(localfs.__opts__, {'cachedir': tmp_dir}):
-            self.assertEqual(localfs.list_(bank='bank', cachedir=tmp_dir), ['key.p'])
+            self.assertEqual(localfs.list_(bank='bank', cachedir=tmp_dir), ['key'])
 
     # 'contains' function tests: 1
 

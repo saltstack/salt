@@ -79,7 +79,7 @@ class Shell(object):
         self.mods = mods
         self.identities_only = identities_only
         self.remote_port_forwards = remote_port_forwards
-        self.ssh_options = ssh_options
+        self.ssh_options = '' if ssh_options is None else ssh_options
 
     def get_error(self, errstr):
         '''
@@ -333,10 +333,11 @@ class Shell(object):
             self.exec_cmd('mkdir -p {0}'.format(os.path.dirname(remote)))
 
         # scp needs [<ipv6}
-        if ':' in self.host:
-            self.host = '[{0}]'.format(self.host)
+        host = self.host
+        if ':' in host:
+            host = '[{0}]'.format(host)
 
-        cmd = '{0} {1}:{2}'.format(local, self.host, remote)
+        cmd = '{0} {1}:{2}'.format(local, host, remote)
         cmd = self._cmd_str(cmd, ssh='scp')
 
         logmsg = 'Executing command: {0}'.format(cmd)

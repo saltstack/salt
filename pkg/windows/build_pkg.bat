@@ -69,7 +69,7 @@ If NOT Exist "%PreDir%" mkdir "%PreDir%"
 :: Check for 64 bit by finding the Program Files (x86) directory
 Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
 Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
-If Exist "C:\Program Files (x86)" (
+If Defined ProgramFiles(x86) (
     bitsadmin /transfer "VCRedist 2008 MFC AMD64" "%Url64%" "%PreDir%\vcredist.exe"
 ) Else (
     bitsadmin /transfer "VCRedist 2008 MFC x86" "%Url32%" "%PreDir%\vcredist.exe"

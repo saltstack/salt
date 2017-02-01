@@ -80,7 +80,7 @@ def _mine_get(load, opts):
     return ret
 
 
-def update(clear=False):
+def update(clear=False, mine_functions=None):
     '''
     Execute the configured functions and send the data back up to the master.
     The functions to be executed are merged from the master config, pillar and
@@ -93,6 +93,34 @@ def update(clear=False):
             - eth0
           disk.usage: []
 
+    This function accepts the following arguments:
+
+    clear: False
+        Boolean flag specifying whether updating will clear the existing
+        mines, or will update. Default: `False` (update).
+
+    mine_functions
+        Update the mine data on certain functions only.
+        This feature can be used when updating the mine for functions
+        that require refresh at different intervals than the rest of
+        the functions specified under `mine_functions` in the
+        minion/master config or pillar.
+        A potential use would be together with the `scheduler`, for example:
+
+        .. code-block:: yaml
+
+            schedule:
+              lldp_mine_update:
+                function: mine.update
+                kwargs:
+                    mine_functions:
+                      net.lldp: []
+                hours: 12
+
+        In the example above, the mine for `net.lldp` would be refreshed
+        every 12 hours, while  `network.ip_addrs` would continue to be updated
+        as specified in `mine_interval`.
+
     The function cache will be populated with information from executing these
     functions
 
@@ -102,9 +130,17 @@ def update(clear=False):
 
         salt '*' mine.update
     '''
-    m_data = __salt__['config.merge']('mine_functions', {})
-    # If we don't have any mine functions configured, then we should just bail out
-    if not m_data:
+    m_data = {}
+    if not mine_functions:
+        m_data = __salt__['config.merge']('mine_functions', {})
+        # If we don't have any mine functions configured, then we should just bail out
+        if not m_data:
+            return
+    elif mine_functions and isinstance(mine_functions, list):
+        m_data = dict((fun, {}) for fun in mine_functions)
+    elif mine_functions and isinstance(mine_functions, dict):
+        m_data = mine_functions
+    else:
         return
 
     data = {}

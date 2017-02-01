@@ -350,6 +350,139 @@ def _check_user(user, group):
     return err
 
 
+def _gen_recurse_managed_files(
+        name,
+        source,
+        keep_symlinks=False,
+        include_pat=None,
+        exclude_pat=None,
+        maxdepth=None,
+        include_empty=False,
+        **kwargs):
+    '''
+    Generate the list of files managed by a recurse state
+    '''
+
+    # Process symlinks and return the updated filenames list
+    def process_symlinks(filenames, symlinks):
+        for lname, ltarget in six.iteritems(symlinks):
+            if not salt.utils.check_include_exclude(
+                    os.path.relpath(lname, srcpath), include_pat, exclude_pat):
+                continue
+            srelpath = os.path.relpath(lname, srcpath)
+            # Check for max depth
+            if maxdepth is not None:
+                srelpieces = srelpath.split('/')
+                if not srelpieces[-1]:
+                    srelpieces = srelpieces[:-1]
+                if len(srelpieces) > maxdepth + 1:
+                    continue
+            # Check for all paths that begin with the symlink
+            # and axe it leaving only the dirs/files below it.
+            # This needs to use list() otherwise they reference
+            # the same list.
+            _filenames = list(filenames)
+            for filename in _filenames:
+                if filename.startswith(lname):
+                    log.debug('** skipping file ** {0}, it intersects a '
+                              'symlink'.format(filename))
+                    filenames.remove(filename)
+            # Create the symlink along with the necessary dirs.
+            # The dir perms/ownership will be adjusted later
+            # if needed
+            managed_symlinks.add((srelpath, ltarget))
+
+            # Add the path to the keep set in case clean is set to True
+            keep.add(os.path.join(name, srelpath))
+        vdir.update(keep)
+        return filenames
+
+    managed_files = set()
+    managed_directories = set()
+    managed_symlinks = set()
+    keep = set()
+    vdir = set()
+
+    srcpath, senv = salt.utils.url.parse(source)
+    if senv is None:
+        senv = __env__
+    if not srcpath.endswith(os.sep):
+        # we're searching for things that start with this *directory*.
+        # use '/' since #master only runs on POSIX
+        srcpath = srcpath + os.sep
+    fns_ = __salt__['cp.list_master'](senv, srcpath)
+
+    # If we are instructed to keep symlinks, then process them.
+    if keep_symlinks:
+        # Make this global so that emptydirs can use it if needed.
+        symlinks = __salt__['cp.list_master_symlinks'](senv, srcpath)
+        fns_ = process_symlinks(fns_, symlinks)
+
+    for fn_ in fns_:
+        if not fn_.strip():
+            continue
+
+        # fn_ here is the absolute (from file_roots) source path of
+        # the file to copy from; it is either a normal file or an
+        # empty dir(if include_empty==true).
+
+        relname = sdecode(os.path.relpath(fn_, srcpath))
+        if relname.startswith('..'):
+            continue
+
+        # Check for maxdepth of the relative path
+        if maxdepth is not None:
+            # Since paths are all master, just use POSIX separator
+            relpieces = relname.split('/')
+            # Handle empty directories (include_empty==true) by removing the
+            # the last piece if it is an empty string
+            if not relpieces[-1]:
+                relpieces = relpieces[:-1]
+            if len(relpieces) > maxdepth + 1:
+                continue
+
+        # Check if it is to be excluded. Match only part of the path
+        # relative to the target directory
+        if not salt.utils.check_include_exclude(
+                relname, include_pat, exclude_pat):
+            continue
+        dest = os.path.join(name, relname)
+        dirname = os.path.dirname(dest)
+        keep.add(dest)
+
+        if dirname not in vdir:
+            # verify the directory perms if they are set
+            managed_directories.add(dirname)
+            vdir.add(dirname)
+
+        src = salt.utils.url.create(fn_, saltenv=senv)
+        managed_files.add((dest, src))
+
+    if include_empty:
+        mdirs = __salt__['cp.list_master_dirs'](senv, srcpath)
+        for mdir in mdirs:
+            if not salt.utils.check_include_exclude(
+                    os.path.relpath(mdir, srcpath), include_pat, exclude_pat):
+                continue
+            mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
+            # Check for symlinks that happen to point to an empty dir.
+            if keep_symlinks:
+                islink = False
+                for link in symlinks:
+                    if mdir.startswith(link, 0):
+                        log.debug('** skipping empty dir ** {0}, it intersects'
+                                  ' a symlink'.format(mdir))
+                        islink = True
+                        break
+                if islink:
+                    continue
+
+            managed_directories.add(mdest)
+            keep.add(mdest)
+
+    return managed_files, managed_directories, managed_symlinks, keep
+
+
 def _gen_keep_files(name, require, walk_d=None):
     '''
     Generate the list of files that need to be kept when a dir based function
@@ -406,9 +539,14 @@ def _gen_keep_files(name, require, walk_d=None):
                 # another state.
                 if low['name'] == comp['file'] or low['__id__'] == comp['file']:
                     fn = low['name']
+                    fun = low['fun']
                     if os.path.isdir(fn):
                         if _is_child(fn, name):
-                            if walk_d:
+                            if fun == 'recurse':
+                                fkeep = _gen_recurse_managed_files(**low)[3]
+                                log.debug('Keep from {0}: {1}'.format(fn, fkeep))
+                                keep.update(fkeep)
+                            elif walk_d:
                                 walk_ret = set()
                                 _process_by_walk_d(fn, walk_ret)
                                 keep.update(walk_ret)
@@ -416,6 +554,7 @@ def _gen_keep_files(name, require, walk_d=None):
                                 keep.update(_process(fn))
                     else:
                         keep.add(fn)
+    log.debug('Files to keep from required states: {0}'.format(list(keep)))
     return list(keep)
 
 
@@ -2086,10 +2225,10 @@ def managed(name,
                 follow_symlinks,
                 skip_verify,
                 keep_mode,
-                win_owner,
-                win_perms,
-                win_deny_perms,
-                win_inheritance,
+                win_owner=win_owner,
+                win_perms=win_perms,
+                win_deny_perms=win_deny_perms,
+                win_inheritance=win_inheritance,
                 **kwargs)
         except Exception as exc:
             ret['changes'] = {}
@@ -3025,126 +3164,34 @@ def recurse(name,
             require=None)
         merge_ret(path, _ret)
 
-    # Process symlinks and return the updated filenames list
-    def process_symlinks(filenames, symlinks):
-        for lname, ltarget in six.iteritems(symlinks):
-            if not salt.utils.check_include_exclude(
-                    os.path.relpath(lname, srcpath), include_pat, exclude_pat):
-                continue
-            srelpath = os.path.relpath(lname, srcpath)
-            # Check for max depth
-            if maxdepth is not None:
-                srelpieces = srelpath.split('/')
-                if not srelpieces[-1]:
-                    srelpieces = srelpieces[:-1]
-                if len(srelpieces) > maxdepth + 1:
-                    continue
-            # Check for all paths that begin with the symlink
-            # and axe it leaving only the dirs/files below it.
-            # This needs to use list() otherwise they reference
-            # the same list.
-            _filenames = list(filenames)
-            for filename in _filenames:
-                if filename.startswith(lname):
-                    log.debug('** skipping file ** {0}, it intersects a '
-                              'symlink'.format(filename))
-                    filenames.remove(filename)
-            # Create the symlink along with the necessary dirs.
-            # The dir perms/ownership will be adjusted later
-            # if needed
-            _ret = symlink(os.path.join(name, srelpath),
-                           ltarget,
-                           makedirs=True,
-                           force=force_symlinks,
-                           user=user,
-                           group=group,
-                           mode=sym_mode)
-            if not _ret:
-                continue
-            merge_ret(os.path.join(name, srelpath), _ret)
-            # Add the path to the keep set in case clean is set to True
-            keep.add(os.path.join(name, srelpath))
-        vdir.update(keep)
-        return filenames
+    mng_files, mng_dirs, mng_symlinks, keep = _gen_recurse_managed_files(
+        name,
+        source,
+        keep_symlinks,
+        include_pat,
+        exclude_pat,
+        maxdepth,
+        include_empty)
 
-    keep = set()
-    vdir = set()
-    if not srcpath.endswith('/'):
-        # we're searching for things that start with this *directory*.
-        # use '/' since #master only runs on POSIX
-        srcpath = srcpath + '/'
-    fns_ = __salt__['cp.list_master'](senv, srcpath)
-    # If we are instructed to keep symlinks, then process them.
-    if keep_symlinks:
-        # Make this global so that emptydirs can use it if needed.
-        symlinks = __salt__['cp.list_master_symlinks'](senv, srcpath)
-        fns_ = process_symlinks(fns_, symlinks)
-    for fn_ in fns_:
-        if not fn_.strip():
+    for srelpath, ltarget in mng_symlinks:
+        _ret = symlink(os.path.join(name, srelpath),
+                       ltarget,
+                       makedirs=True,
+                       force=force_symlinks,
+                       user=user,
+                       group=group,
+                       mode=sym_mode)
+        if not _ret:
             continue
-
-        # fn_ here is the absolute (from file_roots) source path of
-        # the file to copy from; it is either a normal file or an
-        # empty dir(if include_empty==true).
-
-        relname = sdecode(os.path.relpath(fn_, srcpath))
-        if relname.startswith('..'):
-            continue
-
-        # Check for maxdepth of the relative path
-        if maxdepth is not None:
-            # Since paths are all master, just use POSIX separator
-            relpieces = relname.split('/')
-            # Handle empty directories (include_empty==true) by removing the
-            # the last piece if it is an empty string
-            if not relpieces[-1]:
-                relpieces = relpieces[:-1]
-            if len(relpieces) > maxdepth + 1:
-                continue
-
-        # Check if it is to be excluded. Match only part of the path
-        # relative to the target directory
-        if not salt.utils.check_include_exclude(
-                relname, include_pat, exclude_pat):
-            continue
-        dest = os.path.join(name, relname)
-        dirname = os.path.dirname(dest)
-        keep.add(dest)
-
-        if dirname not in vdir:
-            # verify the directory perms if they are set
-            manage_directory(dirname)
-            vdir.add(dirname)
-
-        src = salt.utils.url.create(fn_, saltenv=senv)
+        merge_ret(os.path.join(name, srelpath), _ret)
+    for dirname in mng_dirs:
+        manage_directory(dirname)
+    for dest, src in mng_files:
         manage_file(dest, src)
 
-    if include_empty:
-        mdirs = __salt__['cp.list_master_dirs'](senv, srcpath)
-        for mdir in mdirs:
-            if not salt.utils.check_include_exclude(
-                    os.path.relpath(mdir, srcpath), include_pat, exclude_pat):
-                continue
-            mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
-            # Check for symlinks that happen to point to an empty dir.
-            if keep_symlinks:
-                islink = False
-                for link in symlinks:
-                    if mdir.startswith(link, 0):
-                        log.debug('** skipping empty dir ** {0}, it intersects'
-                                  ' a symlink'.format(mdir))
-                        islink = True
-                        break
-                if islink:
-                    continue
-
-            manage_directory(mdest)
-            keep.add(mdest)
-
-    keep = list(keep)
     if clean:
         # TODO: Use directory(clean=True) instead
-        keep += _gen_keep_files(name, require)
+        keep.update(_gen_keep_files(name, require))
         removed = _clean_dir(name, list(keep), exclude_pat)
         if removed:
             if __opts__['test']:
@@ -5287,7 +5334,8 @@ def serialize(name,
               mode=None,
               backup='',
               makedirs=False,
-              show_diff=True,
+              show_diff=None,
+              show_changes=True,
               create=True,
               merge_if_exists=False,
               **kwargs):
@@ -5339,7 +5387,14 @@ def serialize(name,
         .. versionadded:: 2014.1.3
 
     show_diff
-        If set to False, the diff will not be shown.
+        DEPRECATED: Please use show_changes.
+
+        If set to ``False``, the diff will not be shown in the return data if
+        changes are made.
+
+    show_changes
+        Output a unified diff of the old file and the new file. If ``False``
+        return a boolean if any changes were made.
 
     create
         Default is True, if create is set to False then the file will only be
@@ -5471,6 +5526,14 @@ def serialize(name,
     # Make sure that any leading zeros stripped by YAML loader are added back
     mode = salt.utils.normalize_mode(mode)
 
+    if show_diff is not None:
+        show_changes = show_diff
+        msg = (
+            'The \'show_diff\' argument to the file.serialized state has been '
+            'deprecated, please use \'show_changes\' instead.'
+        )
+        salt.utils.warn_until('Oxygen', msg)
+
     if __opts__['test']:
         ret['changes'] = __salt__['file.check_managed_changes'](
             name=name,
@@ -5493,10 +5556,12 @@ def serialize(name,
             ret['result'] = None
             ret['comment'] = 'Dataset will be serialized and stored into {0}'.format(
                 name)
+
+            if not show_changes:
+                ret['changes']['diff'] = '<show_changes=False>'
         else:
             ret['result'] = True
             ret['comment'] = 'The file {0} is in the correct state'.format(name)
-
         return ret
 
     return __salt__['file.manage_file'](name=name,
@@ -5511,7 +5576,7 @@ def serialize(name,
                                         backup=backup,
                                         makedirs=makedirs,
                                         template=None,
-                                        show_changes=show_diff,
+                                        show_changes=show_changes,
                                         contents=contents)
 
 

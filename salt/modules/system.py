@@ -157,6 +157,28 @@ def _date_bin_set_datetime(new_date):
     return True
 
 
+def _has_settable_hwclock():
+    '''
+    Returns True if the system has a harware clock capable of being
+    set from software.
+    '''
+    if salt.utils.which_bin(['hwclock']) is not None:
+        res = __salt__['cmd.run_all'](['hwclock', '--test', '--systohc'], python_shell=False)
+        return res['retcode'] == 0
+    return False
+
+
+def _swclock_to_hwclock():
+    '''
+    Set hardware clock to value of software clock.
+    '''
+    res = __salt__['cmd.run_all'](['hwclock', '--systohc'], python_shell=False)
+    if res['retcode'] != 0:
+        msg = 'hwclock failed to set hardware clock from software clock: {0}'.format(res['stderr'])
+        raise CommandExecutionError(msg)
+    return True
+
+
 def _try_parse_datetime(time_str, fmts):
     '''
     Attempts to parse the input time_str as a date.
@@ -219,7 +241,7 @@ def get_system_time(utc_offset=None):
     timezone. To set the time based off of UTC use "'+0000'". Note: if being
     passed through the command line will need to be quoted twice to allow
     negative offsets.
-    :return: Returns the system time in HH:MM AM/PM format.
+    :return: Returns the system time in HH:MM:SS AM/PM format.
     :rtype: str
 
     CLI Example:
@@ -229,7 +251,7 @@ def get_system_time(utc_offset=None):
         salt '*' system.get_system_time
     '''
     offset_time = _get_offset_time(utc_offset)
-    return datetime.strftime(offset_time, "%I:%M %p")
+    return datetime.strftime(offset_time, "%I:%M:%S %p")
 
 
 def set_system_time(newtime, utc_offset=None):
@@ -307,6 +329,9 @@ def set_system_date_time(years=None,
     current system year will be used. (Used by set_system_date and
     set_system_time)
 
+    Updates hardware clock, if present, in addition to software
+    (kernel) clock.
+
     :param int years: Years digit, ie: 2015
     :param int months: Months digit: 1 - 12
     :param int days: Days digit: 1 - 31
@@ -350,7 +375,15 @@ def set_system_date_time(years=None,
     except ValueError as err:
         raise SaltInvocationError(err.message)
 
-    return _date_bin_set_datetime(new_datetime)
+    if not _date_bin_set_datetime(new_datetime):
+        return False
+
+    if _has_settable_hwclock():
+        # Now that we've successfully set the software clock, we should
+        # update hardware clock for time to persist though reboot.
+        return _swclock_to_hwclock()
+
+    return True
 
 
 def get_system_date(utc_offset=None):
@@ -512,8 +545,35 @@ def set_computer_desc(desc):
                 lines.append(new_line)
             # time to write our changes to the file
             mach_info.seek(0, 0)
+            mach_info.truncate()
             mach_info.write(''.join(lines))
             mach_info.write('\n')
             return True
     except IOError:
         return False
+
+
+def set_computer_name(hostname):
+    '''
+    Modify hostname.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_conputer_name master.saltstack.com
+    '''
+    return __salt__['network.mod_hostname'](hostname)
+
+
+def get_computer_name():
+    '''
+    Get hostname.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.get_hostname
+    '''
+    return __salt__['network.get_hostname']()
