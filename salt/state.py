@@ -2590,7 +2590,7 @@ class BaseHighState(object):
                     tops[saltenv].append({})
                     log.debug('No contents loaded for env: {0}'.format(saltenv))
 
-            if found > 1 and merging_strategy == 'merge':
+            if found > 1 and merging_strategy == 'merge' and not self.opts.get('env_order', None):
                 log.warning(
                     'top_file_merging_strategy is set to \'%s\' and '
                     'multiple top files were found. Merging order is not '
