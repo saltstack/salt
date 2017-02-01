@@ -1342,7 +1342,7 @@ def sls_id(
         )
 
     try:
-        st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc, proxy=__proxy__)
+        st_ = salt.state.HighState(opts, pillar=pillar, pillar_enc=pillar_enc, proxy=__proxy__)
     except NameError:
         st_ = salt.state.HighState(opts)
     if isinstance(mods, six.string_types):
