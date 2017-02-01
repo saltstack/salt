@@ -48,8 +48,6 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
-    import platform
-    import salt.grains.core
 
 log = logging.getLogger(__name__)
 
@@ -78,10 +76,13 @@ def _gather_buffer_space():
 
     Result is in bytes.
     '''
-    if HAS_PSUTIL:
+    if HAS_PSUTIL and psutil.version_info >= (0, 6, 0):
         # Oh good, we have psutil. This will be quick.
         total_mem = psutil.virtual_memory().total
     else:
+        # Avoid loading core grains unless absolutely required
+        import platform
+        import salt.grains.core
         # We need to load up ``mem_total`` grain. Let's mimic required OS data.
         os_data = {'kernel': platform.system()}
         grains = salt.grains.core._memdata(os_data)
@@ -257,6 +258,9 @@ VALID_OPTS = {
 
     # A map of saltenvs and fileserver backend locations
     'pillar_roots': dict,
+
+    # The external pillars permitted to be used on-demand using pillar.ext
+    'on_demand_ext_pillar': list,
 
     # The type of hashing algorithm to use when doing file comparisons
     'hash_type': str,
@@ -1040,6 +1044,7 @@ DEFAULT_MINION_OPTS = {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
                  salt.syspaths.SPM_PILLAR_PATH]
     },
+    'on_demand_ext_pillar': ['libvirt', 'virtkey'],
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
     'git_pillar_env': '',
@@ -1240,6 +1245,7 @@ DEFAULT_MASTER_OPTS = {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
                  salt.syspaths.SPM_PILLAR_PATH]
     },
+    'on_demand_ext_pillar': ['libvirt', 'virtkey'],
     'thorium_interval': 0.5,
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
@@ -1385,6 +1391,7 @@ DEFAULT_MASTER_OPTS = {
     'event_match_type': 'startswith',
     'runner_returns': True,
     'serial': 'msgpack',
+    'test': False,
     'state_verbose': True,
     'state_output': 'full',
     'state_output_diff': False,

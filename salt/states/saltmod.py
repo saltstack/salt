@@ -662,7 +662,9 @@ def runner(name, **kwargs):
                                       **kwargs)
 
     runner_return = out.get('return')
-    if 'success' in out and not out['success']:
+    if isinstance(runner_return, dict) and 'Error' in runner_return:
+        out['success'] = False
+    if not out.get('success', True):
         ret = {
             'name': name,
             'result': False,

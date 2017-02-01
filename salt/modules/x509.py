@@ -1419,6 +1419,9 @@ def create_certificate(
     # If neither public_key or csr are included, this cert is self-signed
     if 'public_key' not in kwargs and 'csr' not in kwargs:
         kwargs['public_key'] = kwargs['signing_private_key']
+        if 'signing_private_key_passphrase' in kwargs:
+            kwargs['public_key_passphrase'] = kwargs[
+                'signing_private_key_passphrase']
 
     csrexts = {}
     if 'csr' in kwargs:

@@ -579,6 +579,28 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             for typ in managed_files:
                 os.remove(managed_files[typ])
 
+    @destructiveTest
+    @skipIf(salt.utils.is_windows(), 'Windows does not support "mode" kwarg. Skipping.')
+    def test_managed_check_cmd(self):
+        '''
+        Test file.managed passing a basic check_cmd kwarg. See Issue #38111.
+        '''
+        ret = self.run_state(
+            'file.managed',
+            name='/tmp/sudoers',
+            user='root',
+            group='root',
+            mode=440,
+            check_cmd='visudo -c -s -f'
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertInSaltComment('Empty file', ret)
+        self.assertEqual(ret['file_|-/tmp/sudoers_|-/tmp/sudoers_|-managed']['changes'],
+                         {'new': 'file /tmp/sudoers created', 'mode': '0440'})
+
+        # Clean Up File
+        os.remove('/tmp/sudoers')
+
     def test_directory(self):
         '''
         file.directory

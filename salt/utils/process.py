@@ -702,8 +702,17 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
 def default_signals(*signals):
     old_signals = {}
     for signum in signals:
-        old_signals[signum] = signal.getsignal(signum)
-        signal.signal(signum, signal.SIG_DFL)
+        try:
+            signal.signal(signum, signal.SIG_DFL)
+            old_signals[signum] = signal.getsignal(signum)
+        except ValueError as exc:
+            # This happens when a netapi module attempts to run a function
+            # using wheel_async, because the process trying to register signals
+            # will not be the main PID.
+            log.trace(
+                'Failed to register signal for signum %d: %s',
+                signum, exc
+            )
 
     # Do whatever is needed with the reset signals
     yield

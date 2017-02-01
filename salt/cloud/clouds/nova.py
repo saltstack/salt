@@ -298,7 +298,7 @@ def get_conn():
     kwargs['project_id'] = vm_['tenant']
     kwargs['auth_url'] = vm_['identity_url']
     kwargs['region_name'] = vm_['compute_region']
-    kwargs['use_keystoneauth'] = vm_['use_keystoneauth']
+    kwargs['use_keystoneauth'] = vm_.get('use_keystoneauth', False)
 
     if 'password' in vm_:
         kwargs['password'] = vm_['password']
