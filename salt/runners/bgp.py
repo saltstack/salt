@@ -33,12 +33,12 @@ Configuration
     By default the following options can be configured on the master.
     They are not necessary, but available in case the user has different requirements.
 
-    target: '*'
+    tgt: '*'
         From what minions will collect the mine data.
         Default: `*` (will collect mine data from all minions)
 
-    expr_form: 'glob'
-        Minion matching expression form. Default: `glob`.
+    tgt_type: 'glob'
+        The type of ``tgt``. Default: `glob`.
 
     return_fields
         What fields to return in the output.
@@ -72,8 +72,8 @@ Configuration
 
         runners:
           bgp:
-            target: 'edge*'
-            expr_form: 'glob'
+            tgt: 'edge*'
+            tgt_type: 'glob'
             return_fields:
                 - up
                 - connection_state
@@ -155,9 +155,9 @@ def _get_bgp_runner_opts():
     '''
     Return the bgp runner options.
     '''
-    runner_opts = __opts__.get('runners', {}).get('net.find', {})
+    runner_opts = __opts__.get('runners', {}).get('bgp', {})
     return {
-        'tgt': runner_opts.get('target', _DEFAULT_TARGET),
+        'tgt': runner_opts.get('tgt', _DEFAULT_TARGET),
         'tgt_type': runner_opts.get('tgt_type', _DEFAULT_EXPR_FORM),
         'display': runner_opts.get('display', _DEFAULT_DISPLAY),
         'return_fields': _DEFAULT_INCLUDED_FIELDS + runner_opts.get('return_fields', _DEFAULT_RETURN_FIELDS),
@@ -222,6 +222,9 @@ def neighbors(*asns, **kwargs):
     *asns
         A list of AS numbers to search for.
         The runner will return only the neighbors of these AS numbers.
+
+    device
+        Filter by device name (minion ID).
 
     ip
         Search BGP neighbor using the IP address.

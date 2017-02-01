@@ -11,6 +11,7 @@ runner modules
     :template: autosummary.rst.tmpl
 
     asam
+    bgp
     cache
     cloud
     ddns
