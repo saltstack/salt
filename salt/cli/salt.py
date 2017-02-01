@@ -402,7 +402,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         if isinstance(ret, str):
             self.exit(2, '{0}\n'.format(ret))
         for host in ret:
-            if isinstance(ret[host], string_types) and ret[host].startswith("Minion did not return"):
+            if isinstance(ret[host], string_types) \
+                    and (ret[host].startswith("Minion did not return")
+                         or ret[host] == 'VALUE TRIMMED'):
                 continue
             for fun in ret[host]:
                 if fun not in docs and ret[host][fun]:

@@ -31,6 +31,7 @@ state modules
     boto_cfn
     boto_cloudtrail
     boto_cloudwatch_alarm
+    boto_cloudwatch_event
     boto_cognitoidentity
     boto_datapipeline
     boto_dynamodb
@@ -53,13 +54,16 @@ state modules
     boto_vpc
     bower
     cabal
+    ceph
     chef
     chocolatey
     chronos_job
+    cisconso
     cloud
     cmd
     composer
     cron
+    csf
     cyg
     ddns
     debconfmod
@@ -73,6 +77,7 @@ state modules
     environ
     eselect
     etcd_mod
+    ethtool
     esxi
     event
     file
@@ -97,6 +102,8 @@ state modules
     http
     ifttt
     incron
+    influxdb08_database
+    influxdb08_user
     influxdb_database
     influxdb_user
     infoblox
@@ -114,6 +121,7 @@ state modules
     kmod
     layman
     ldap
+    libcloud_dns
     linux_acl
     locale
     lvm
@@ -180,6 +188,7 @@ state modules
     powerpath
     probes
     process
+    proxy
     pushover
     pyenv
     pyrax_queues
@@ -222,6 +231,7 @@ state modules
     sysrc
     telemetry_alert
     test
+    testinframod
     timezone
     tls
     tomcat
@@ -239,12 +249,15 @@ state modules
     win_dns_client
     win_firewall
     win_iis
+    win_lgpo
     win_license
     win_network
     win_path
+    win_pki
     win_powercfg
     win_servermanager
     win_smtp_server
+    win_snmp
     win_system
     win_update
     winrepo

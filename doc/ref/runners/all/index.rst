@@ -11,6 +11,7 @@ runner modules
     :template: autosummary.rst.tmpl
 
     asam
+    auth
     bgp
     cache
     cloud
@@ -18,6 +19,7 @@ runner modules
     doc
     drac
     error
+    event
     f5
     fileserver
     git_pillar
@@ -38,6 +40,7 @@ runner modules
     salt
     saltutil
     sdb
+    smartos_vmadm
     search
     spacewalk
     ssh
@@ -46,4 +49,5 @@ runner modules
     test
     thin
     virt
+    vistara
     winrepo

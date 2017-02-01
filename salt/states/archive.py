@@ -869,7 +869,6 @@ def extracted(name,
     else:
         source_sum = {}
 
-    concurrent = bool(__opts__.get('sudo_user'))
     if not source_is_local and not os.path.isfile(cached_source):
         if __opts__['test']:
             ret['result'] = None
@@ -879,15 +878,14 @@ def extracted(name,
 
         log.debug('%s is not in cache, downloading it', source_match)
 
-        file_result = __salt__['state.single']('file.managed',
-                                               cached_source,
-                                               source=source_match,
-                                               source_hash=source_hash,
-                                               source_hash_name=source_hash_name,
-                                               makedirs=True,
-                                               skip_verify=skip_verify,
-                                               saltenv=__env__,
-                                               concurrent=concurrent)
+        file_result = __states__['file.managed'](cached_source,
+                                                 source=source_match,
+                                                 source_hash=source_hash,
+                                                 source_hash_name=source_hash_name,
+                                                 makedirs=True,
+                                                 skip_verify=skip_verify,
+                                                 env=__env__)
+
         log.debug('file.managed: {0}'.format(file_result))
 
         # Prevent a traceback if errors prevented the above state from getting
@@ -1341,13 +1339,11 @@ def extracted(name,
                     dirname,
                     ' (dry-run only)' if __opts__['test'] else ''
                 )
-                dir_result = __salt__['state.single']('file.directory',
-                                                      full_path,
-                                                      user=user,
-                                                      group=group,
-                                                      recurse=recurse,
-                                                      test=__opts__['test'],
-                                                      concurrent=concurrent)
+                dir_result = __states__['file.directory'](full_path,
+                                                          user=user,
+                                                          group=group,
+                                                          recurse=recurse,
+                                                          test=__opts__['test'])
                 try:
                     dir_result = dir_result[next(iter(dir_result))]
                 except AttributeError:
