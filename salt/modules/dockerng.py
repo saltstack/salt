@@ -333,8 +333,8 @@ __func_alias__ = {
 }
 
 # Minimum supported versions
-MIN_DOCKER = (1, 6, 0)
-MIN_DOCKER_PY = (1, 4, 0)
+MIN_DOCKER = (1, 9, 0)
+MIN_DOCKER_PY = (1, 6, 0)
 
 VERSION_RE = r'([\d.]+)'
 
