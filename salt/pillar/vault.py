@@ -30,21 +30,38 @@ statically, as above, or as an environment variable:
 
     $ export VAULT_TOKEN=0123456789abcdef
 
-After the profile is created, configure the external pillar system to use it.
-A path must also be specified so that vault knows where to look.
+After the profile is created, edit the salt master config file and configure
+the external pillar system to use it. A path pointing to the needed vault key
+must also be specified so that vault knows where to look. Vault does not apply
+a recursive list, so each required key needs to be individually mapped.
 
 .. code-block:: yaml
 
     ext_pillar:
-      - vault: my_vault_config path=secret/salt
+      - vault: myvault path=secret/salt
+      - vault: myvault path=secret/another_key
+
+Each key needs to have all the key-value pairs with the names you
+require. Avoid naming every key 'password' as you they will collide:
+
+.. code-block:: bash
+
+    $ vault write secret/salt auth=my_password master=127.0.0.1
+
+You can then use normal pillar requests to get each key pair directly from
+pillar root. Example:
+
+.. code-block:: bash
+
+    $ salt-ssh '*' pillar.get auth
 
 Using these configuration profiles, multiple vault sources may also be used:
 
 .. code-block:: yaml
 
     ext_pillar:
-      - vault: my_vault_config
-      - vault: my_other_vault_config
+      - vault: myvault path=secret/salt
+      - vault: my_other_vault path=secret/root
 '''
 
 # import python libs
