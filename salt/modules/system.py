@@ -157,6 +157,28 @@ def _date_bin_set_datetime(new_date):
     return True
 
 
+def _has_settable_hwclock():
+    '''
+    Returns True if the system has a harware clock capable of being
+    set from software.
+    '''
+    if salt.utils.which_bin(['hwclock']) is not None:
+        res = __salt__['cmd.run_all'](['hwclock', '--test', '--systohc'], python_shell=False)
+        return res['retcode'] == 0
+    return False
+
+
+def _swclock_to_hwclock():
+    '''
+    Set hardware clock to value of software clock.
+    '''
+    res = __salt__['cmd.run_all'](['hwclock', '--systohc'], python_shell=False)
+    if res['retcode'] != 0:
+        msg = 'hwclock failed to set hardware clock from software clock: {0}'.format(res['stderr'])
+        raise CommandExecutionError(msg)
+    return True
+
+
 def _try_parse_datetime(time_str, fmts):
     '''
     Attempts to parse the input time_str as a date.
@@ -307,6 +329,9 @@ def set_system_date_time(years=None,
     current system year will be used. (Used by set_system_date and
     set_system_time)
 
+    Updates hardware clock, if present, in addition to software
+    (kernel) clock.
+
     :param int years: Years digit, ie: 2015
     :param int months: Months digit: 1 - 12
     :param int days: Days digit: 1 - 31
@@ -350,7 +375,15 @@ def set_system_date_time(years=None,
     except ValueError as err:
         raise SaltInvocationError(err.message)
 
-    return _date_bin_set_datetime(new_datetime)
+    if not _date_bin_set_datetime(new_datetime):
+        return False
+
+    if _has_settable_hwclock():
+        # Now that we've successfully set the software clock, we should
+        # update hardware clock for time to persist though reboot.
+        return _swclock_to_hwclock()
+
+    return True
 
 
 def get_system_date(utc_offset=None):
