@@ -355,7 +355,7 @@ For example, making the call:
 
 .. code-block:: yaml
 
-    {%- set logged = salt.log.error('testing jinja logging') -%}
+    {%- do salt.log.error('testing jinja logging') -%}
 
 Will insert the following message in the minion logs:
 
