@@ -270,13 +270,14 @@ class Pillar(object):
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
                  pillar=None, pillarenv=None, rend=None):
         self.minion_id = minion_id
+        self.ext = ext
         if pillarenv is None:
             if opts.get('pillarenv_from_saltenv', False):
                 opts['pillarenv'] = saltenv
         # Store the file_roots path so we can restore later. Issue 5449
         self.actual_file_roots = opts['file_roots']
         # use the local file client
-        self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, ext=ext, pillarenv=pillarenv)
+        self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, pillarenv=pillarenv)
         self.saltenv = saltenv
         self.client = salt.fileclient.get_file_client(self.opts, True)
 
@@ -318,16 +319,39 @@ class Pillar(object):
             else:
                 log.error('Pillar data must be a dictionary')
 
-    def __valid_ext(self, ext):
+    def __valid_on_demand_ext_pillar(self, opts):
         '''
         Check to see if the on demand external pillar is allowed
         '''
-        if not isinstance(ext, dict):
-            return {}
-        valid = set(('libvirt', 'virtkey'))
-        if any(key not in valid for key in ext):
-            return {}
-        return ext
+        if not isinstance(self.ext, dict):
+            log.error(
+                'On-demand pillar %s is not formatted as a dictionary',
+                self.ext
+            )
+            return False
+
+        on_demand = opts.get('on_demand_ext_pillar', [])
+        try:
+            invalid_on_demand = set([x for x in self.ext if x not in on_demand])
+        except TypeError:
+            # Prevent traceback when on_demand_ext_pillar option is malformed
+            log.error(
+                'The \'on_demand_ext_pillar\' configuration option is '
+                'malformed, it should be a list of ext_pillar module names'
+            )
+            return False
+
+        if invalid_on_demand:
+            log.error(
+                'The following ext_pillar modules are not allowed for '
+                'on-demand pillar data: %s. Valid on-demand ext_pillar '
+                'modules are: %s. The valid modules can be adjusted by '
+                'setting the \'on_demand_ext_pillar\' config option.',
+                ', '.join(sorted(invalid_on_demand)),
+                ', '.join(on_demand),
+            )
+            return False
+        return True
 
     def __gen_opts(self, opts_in, grains, saltenv=None, ext=None, pillarenv=None):
         '''
@@ -351,11 +375,11 @@ class Pillar(object):
             opts['state_top'] = salt.utils.url.create(opts['state_top'][1:])
         else:
             opts['state_top'] = salt.utils.url.create(opts['state_top'])
-        if self.__valid_ext(ext):
+        if self.ext and self.__valid_on_demand_ext_pillar(opts):
             if 'ext_pillar' in opts:
-                opts['ext_pillar'].append(ext)
+                opts['ext_pillar'].append(self.ext)
             else:
-                opts['ext_pillar'] = [ext]
+                opts['ext_pillar'] = [self.ext]
         return opts
 
     def _get_envs(self):
@@ -742,6 +766,21 @@ class Pillar(object):
         '''
         if errors is None:
             errors = []
+        try:
+            # Make sure that on-demand git_pillar is fetched before we try to
+            # compile the pillar data. git_pillar will fetch a remote when
+            # the git ext_pillar() func is run, but only for masterless.
+            if self.ext and 'git' in self.ext \
+                    and self.opts.get('__role') != 'minion':
+                # Avoid circular import
+                import salt.utils.gitfs
+                from salt.pillar.git_pillar import PER_REMOTE_OVERRIDES
+                git_pillar = salt.utils.gitfs.GitPillar(self.opts)
+                git_pillar.init_remotes(self.ext['git'], PER_REMOTE_OVERRIDES)
+                git_pillar.fetch_remotes()
+        except TypeError:
+            # Handle malformed ext_pillar
+            pass
         if 'ext_pillar' not in self.opts:
             return pillar, errors
         if not isinstance(self.opts['ext_pillar'], list):

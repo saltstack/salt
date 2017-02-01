@@ -31,7 +31,7 @@ class Depends(object):
     cause the function to be unloaded (or replaced)
     '''
     # kind -> Dependency -> list of things that depend on it
-    dependency_dict = defaultdict(lambda: defaultdict(set))
+    dependency_dict = defaultdict(lambda: defaultdict(dict))
 
     def __init__(self, *dependencies, **kwargs):
         '''
@@ -72,11 +72,11 @@ class Depends(object):
             frame = inspect.stack()[1][0]
             # due to missing *.py files under esky we cannot use inspect.getmodule
             # module name is something like salt.loaded.int.modules.test
-            kind = frame.f_globals['__name__'].rsplit('.', 2)[1]
+            _, kind, mod_name = frame.f_globals['__name__'].rsplit('.', 2)
+            fun_name = function.__name__
             for dep in self.dependencies:
-                self.dependency_dict[kind][dep].add(
-                    (frame, function, self.fallback_function)
-                )
+                self.dependency_dict[kind][dep][(mod_name, fun_name)] = \
+                        (frame, self.fallback_function)
         except Exception as exc:
             log.error('Exception encountered when attempting to inspect frame in '
                       'dependency decorator: {0}'.format(exc))
@@ -90,46 +90,44 @@ class Depends(object):
         It will modify the "functions" dict and remove/replace modules that
         are missing dependencies.
         '''
-        for dependency, dependent_set in six.iteritems(cls.dependency_dict[kind]):
-            # check if dependency is loaded
-            for frame, func, fallback_function in dependent_set:
-                # check if you have the dependency
+        for dependency, dependent_dict in six.iteritems(cls.dependency_dict[kind]):
+            for (mod_name, func_name), (frame, fallback_function) in six.iteritems(dependent_dict):
+                # check if dependency is loaded
                 if dependency is True:
                     log.trace(
                         'Dependency for {0}.{1} exists, not unloading'.format(
-                            frame.f_globals['__name__'].split('.')[-1],
-                            func.__name__,
+                            mod_name,
+                            func_name
                         )
                     )
                     continue
-
+                # check if you have the dependency
                 if dependency in frame.f_globals \
                         or dependency in frame.f_locals:
                     log.trace(
                         'Dependency ({0}) already loaded inside {1}, '
                         'skipping'.format(
                             dependency,
-                            frame.f_globals['__name__'].split('.')[-1]
+                            mod_name
                         )
                     )
                     continue
                 log.trace(
                     'Unloading {0}.{1} because dependency ({2}) is not '
                     'imported'.format(
-                        frame.f_globals['__name__'],
-                        func,
+                        mod_name,
+                        func_name,
                         dependency
                     )
                 )
-                # if not, unload dependent_set
+                # if not, unload the function
                 if frame:
                     try:
-                        func_name = frame.f_globals['__func_alias__'][func.__name__]
+                        func_name = frame.f_globals['__func_alias__'][func_name]
                     except (AttributeError, KeyError):
-                        func_name = func.__name__
+                        pass
 
-                    mod_key = '{0}.{1}'.format(frame.f_globals['__name__'].split('.')[-1],
-                                               func_name)
+                    mod_key = '{0}.{1}'.format(mod_name, func_name)
 
                     # if we don't have this module loaded, skip it!
                     if mod_key not in functions:

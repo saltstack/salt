@@ -117,7 +117,7 @@ class LinuxLVMTestCase(TestCase):
                                         'Volume Group Size (kB)': 'L',
                                         'Volume Group Status': 'C'}})
 
-    def test__lvdisplay(self):
+    def test_lvdisplay(self):
         '''
         Return information about the logical volume(s)
         '''

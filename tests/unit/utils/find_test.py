@@ -15,6 +15,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.ext.six as six
 import salt.utils
 import salt.utils.find
 
@@ -122,11 +123,19 @@ class TestFind(TestCase):
 
         min_size, max_size = salt.utils.find._parse_size('+1m')
         self.assertEqual(min_size, 1048576)
-        self.assertEqual(max_size, sys.maxint)
+        # sys.maxint has been removed in Python3. Use maxsize instead.
+        if six.PY3:
+            self.assertEqual(max_size, sys.maxsize)
+        else:
+            self.assertEqual(max_size, sys.maxint)
 
         min_size, max_size = salt.utils.find._parse_size('+1M')
         self.assertEqual(min_size, 1048576)
-        self.assertEqual(max_size, sys.maxint)
+        # sys.maxint has been removed in Python3. Use maxsize instead.
+        if six.PY3:
+            self.assertEqual(max_size, sys.maxsize)
+        else:
+            self.assertEqual(max_size, sys.maxint)
 
     def test_option_requires(self):
         option = salt.utils.find.Option()

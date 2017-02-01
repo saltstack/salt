@@ -265,3 +265,7 @@ The ``git`` state had the following changes:
 The ``glusterfs`` state had the following function removed:
 
   - ``created``: Please use ``volume_present`` instead.
+
+The ``openvswitch_port`` state had the following change:
+
+  - The ``type`` option was removed from the ``present`` function. Please use ``tunnel_type`` instead.
