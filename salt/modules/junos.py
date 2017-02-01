@@ -4,8 +4,6 @@ Module to interact with Junos devices.
 '''
 
 # Import python libraries
-from __future__ import absolute_import
-from __future__ import print_function
 import logging
 import json
 import os
@@ -121,9 +119,9 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
 
     .. code-block:: bash
 
-        salt 'device' junos.rpc 'get_config' dest='/var/log/config.txt' format='text' filter='<configuration><system/></configuration>'
+        salt 'device' junos.rpc 'get_config' '/var/log/config.txt' 'text' filter='<configuration><system/></configuration>'
 
-        salt 'device' junos.rpc 'get-interface-information' dest='/home/user/interface.xml' interface_name='lo0' terse=True
+        salt 'device' junos.rpc 'get-interface-information' '/home/user/interface.xml' interface_name='lo0' terse=True
 
         salt 'device' junos.rpc 'get-chassis-inventory'
 
@@ -166,7 +164,6 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
-
     if dest is None and format != 'xml':
         log.warning(
             'Format ignored as it is only used for \
@@ -237,7 +234,7 @@ def set_hostname(hostname=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.set_hostname hostname=salt-device
+        salt 'device_name' junos.set_hostname salt-device
 
     Parameters:
      Required
@@ -406,7 +403,7 @@ def rollback(id=0, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.rollback id=10
+        salt 'device_name' junos.rollback 10
 
     Parameters:
       Optional
@@ -492,7 +489,7 @@ def diff(id=0):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.diff id=3
+        salt 'device_name' junos.diff 3
 
 
     Parameters:
@@ -522,9 +519,9 @@ def ping(dest_ip=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.ping dest_ip='8.8.8.8' count=5
+        salt 'device_name' junos.ping '8.8.8.8' count=5
 
-        salt 'device_name' junos.ping dest_ip='8.8.8.8' ttl=1 rapid=True
+        salt 'device_name' junos.ping '8.8.8.8' ttl=1 rapid=True
 
 
     Parameters:
@@ -591,11 +588,11 @@ def cli(command=None, format='text', **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.cli command='show system commit'
+        salt 'device_name' junos.cli 'show system commit'
 
-        salt 'device_name' junos.cli command='show version' dev_timeout=40
+        salt 'device_name' junos.cli 'show version' dev_timeout=40
 
-        salt 'device_name' junos.cli command='show system alarms' format='xml' dest=/home/user/cli_output.txt
+        salt 'device_name' junos.cli 'show system alarms' format='xml' dest=/home/user/cli_output.txt
 
 
     Parameters:
@@ -725,11 +722,11 @@ def install_config(path=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.install_config path='salt://production/network/routers/config.set'
+        salt 'device_name' junos.install_config 'salt://production/network/routers/config.set'
 
-        salt 'device_name' junos.install_config path='salt://templates/replace_config.conf' replace=True comment='Committed via SaltStack'
+        salt 'device_name' junos.install_config 'salt://templates/replace_config.conf' replace=True comment='Committed via SaltStack'
 
-        salt 'device_name' junos.install_config path='salt://my_new_configuration.conf' dev_timeout=300 diffs_file='/salt/confs/old_config.conf' overwrite=True
+        salt 'device_name' junos.install_config 'salt://my_new_configuration.conf' dev_timeout=300 diffs_file='/salt/confs/old_config.conf' overwrite=True
 
 
     Parameters:
@@ -916,9 +913,9 @@ def install_os(path=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.install_os path='/home/user/junos_image.tgz' reboot=True
+        salt 'device_name' junos.install_os '/home/user/junos_image.tgz' reboot=True
 
-        salt 'device_name' junos.install_os path='/home/user/junos_16_1.tgz' dev_timeout=300
+        salt 'device_name' junos.install_os '/home/user/junos_16_1.tgz' dev_timeout=300
 
 
     Parameters:
@@ -961,7 +958,7 @@ def install_os(path=None, **kwargs):
         op.update(kwargs)
 
     try:
-        install = conn.sw.install(path, progress=True)
+        conn.sw.install(path, progress=True)
         ret['message'] = 'Installed the os.'
     except Exception as exception:
         ret['message'] = 'Installation failed due to : "{0}"'.format(exception)
@@ -970,7 +967,7 @@ def install_os(path=None, **kwargs):
 
     if 'reboot' in op and op['reboot'] is True:
         try:
-            rbt = conn.sw.reboot()
+            conn.sw.reboot()
         except Exception as exception:
             ret['message'] = 'Installation successful but \
             reboot failed due to : "{0}"'.format(
@@ -990,7 +987,7 @@ def file_copy(src=None, dest=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.file_copy src=/home/m2/info.txt dest=info_copy.txt
+        salt 'device_name' junos.file_copy /home/m2/info.txt info_copy.txt
 
 
     Parameters:
