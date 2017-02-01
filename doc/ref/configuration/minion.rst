@@ -31,7 +31,8 @@ Minion Primary Configuration
 
 Default: ``salt``
 
-The hostname or ipv4 of the master.
+The hostname or IP address of the master. See :conf_minion:`ipv6` for IPv6
+connections to the master.
 
 Default: ``salt``
 
@@ -76,6 +77,17 @@ The option can can also be set to a list of masters, enabling
         master_type: failover
 
 .. conf_minion:: master_type
+
+``ipv6``
+--------
+
+Default: ``False``
+
+Whether the master should be connected over IPv6.
+
+.. code-block:: yaml
+
+    ipv6: True
 
 ``master_type``
 ---------------
