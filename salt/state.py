@@ -2509,8 +2509,7 @@ class BaseHighState(object):
         env_order = self.opts.get('env_order', [])
         client_envs = self.client.envs()
         if env_order and client_envs:
-            client_env_list = self.client.envs()
-            env_intersection = set(env_order).intersection(client_env_list)
+            env_intersection = set(env_order).intersection(client_envs)
             final_list = []
             for ord_env in env_order:
                 if ord_env in env_intersection and ord_env not in final_list:
