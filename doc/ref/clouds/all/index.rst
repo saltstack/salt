@@ -26,6 +26,7 @@ Full list of Salt Cloud modules
     opennebula
     openstack
     parallels
+    profitbricks
     proxmox
     pyrax
     qingcloud
@@ -36,3 +37,4 @@ Full list of Salt Cloud modules
     softlayer_hw
     virtualbox
     vmware
+    vultrpy
