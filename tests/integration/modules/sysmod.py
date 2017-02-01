@@ -2,7 +2,10 @@
 
 # Import python libs
 from __future__ import absolute_import
+import logging
 import re
+
+log = logging.getLogger(__name__)
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
