@@ -6,7 +6,7 @@ State modules to interact with Junos devices.
 State module to connect the junos devices connected via a junos proxy.
 Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos proxy.
 '''
-from __future__ import absolute_import
+
 import logging
 
 log = logging.getLogger()
@@ -48,7 +48,6 @@ def rpc(name, dest=None, format='xml', args=None, **kwargs):
               Name of the interface whose information you want.
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
-
     if args is not None:
         ret['changes'] = __salt__['junos.rpc'](
             name,
