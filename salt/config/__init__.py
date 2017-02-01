@@ -1747,12 +1747,8 @@ def prepend_root_dir(opts, path_options):
     'root_dir' option.
     '''
     root_dir = os.path.abspath(opts['root_dir'])
-    root_opt = opts['root_dir']
-    if root_opt.endswith(os.sep):
-        root_opt = root_opt.rstrip(os.sep)
-    def_root_dir = salt.syspaths.ROOT_DIR
-    if def_root_dir.endswith(os.sep):
-        def_root_dir = def_root_dir.rstrip(os.sep)
+    root_opt = opts['root_dir'].rstrip(os.sep)
+    def_root_dir = salt.syspaths.ROOT_DIR.rstrip(os.sep)
     for path_option in path_options:
         if path_option in opts:
             path = opts[path_option]
