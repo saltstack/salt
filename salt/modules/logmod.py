@@ -19,8 +19,6 @@ CLI Example:
 .. code-block:: bash
 
     salt '*' log.error 'Please dont do that, this module is not for CLI use!'
-
-However, please note that it will not log the message when executed from the CLI.
 '''
 from __future__ import absolute_import
 
@@ -36,55 +34,37 @@ def __virtual__():
     return __virtualname__
 
 
-def debug(message, **kwargs):
+def debug(message):
     '''Log message at level DEBUG.'''
-    if not kwargs:
-        # log only when not executed from the CLI
-        log.debug(message)
-        return True
-    return False
+    log.debug(message)
+    return True
 
 
-def info(message, **kwargs):
+def info(message):
     '''Log message at level INFO.'''
-    if not kwargs:
-        # log only when not executed from the CLI
-        log.info(message)
-        return True
-    return False
+    log.info(message)
+    return True
 
 
-def warning(message, **kwargs):
+def warning(message):
     '''Log message at level WARNING.'''
-    if not kwargs:
-        # log only when not executed from the CLI
-        log.warning(message)
-        return True
-    return False
+    log.warning(message)
+    return True
 
 
-def error(message, **kwargs):
+def error(message):
     '''Log message at level ERROR.'''
-    if not kwargs:
-        # log only when not executed from the CLI
-        log.error(message)
-        return True
-    return False
+    log.error(message)
+    return True
 
 
-def critical(message, **kwargs):
+def critical(message):
     '''Log message at level CRITICAL.'''
-    if not kwargs:
-        # log only when not executed from the CLI
-        log.critical(message)
-        return True
-    return False
+    log.critical(message)
+    return True
 
 
-def exception(message, **kwargs):
+def exception(message):
     '''Log message at level EXCEPTION.'''
-    if not kwargs:
-        # log only when not executed from the CLI
-        log.exception(message)
-        return True
-    return False
+    log.exception(message)
+    return True
