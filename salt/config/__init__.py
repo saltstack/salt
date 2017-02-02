@@ -1766,6 +1766,7 @@ def prepend_root_dir(opts, path_options):
             # Prepending the root dir
             opts[path_option] = salt.utils.path_join(root_dir, path)
 
+
 def insert_system_path(opts, paths):
     '''
     Inserts path into python path taking into consideration 'root_dir' option.
