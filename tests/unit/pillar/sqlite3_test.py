@@ -522,7 +522,7 @@ class SQLite3PillarTestCase(TestCase):
                                      ['a', 'b', 'c', 'f', 'g', 2],
                                      ['a', 'z', 'h', 'y', 'j', 3],
                                      ['a', 'z', 'h', 'y', 'k', 4]])
-        self.assertEqual(
+        self.assertEqual(sorted(
             {'a': [
                   {'c': [
                       {'e': 1},
@@ -533,8 +533,8 @@ class SQLite3PillarTestCase(TestCase):
                       {'j': 3, 'k': 4}
                       ]
                   }
-            ]},
-             return_data.result
+            ]}),
+             sorted(return_data.result)
         )
 
     def test_302_process_results_with_lists_consecutive(self):
@@ -547,7 +547,7 @@ class SQLite3PillarTestCase(TestCase):
                                      ['a', 'b', 'c', 'f', 'g', 2],
                                      ['a', 'z', 'h', 'y', 'j', 3],
                                      ['a', 'z', 'h', 'y', 'k', 4]])
-        self.assertEqual(
+        self.assertEqual(sorted(
             {'a': [
                   [[
                       {'e': 1},
@@ -558,8 +558,8 @@ class SQLite3PillarTestCase(TestCase):
                       {'j': 3, 'k': 4}
                       ]
                   ]
-            ]},
-             return_data.result
+            ]}),
+             sorted(return_data.result)
         )
 
 
