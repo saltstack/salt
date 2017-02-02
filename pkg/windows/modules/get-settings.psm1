@@ -4,7 +4,7 @@ Function Get-Settings {
     Param()
 
     Begin
-        {Write-Verbose "$($MyInvocation.MyCommand.Name):: Function started"} 
+        {Write-Verbose "$($MyInvocation.MyCommand.Name):: Function started"}
 
     Process
     {
@@ -20,7 +20,14 @@ Function Get-Settings {
             "ScriptsDir"  = "C:\Python27\Scripts"
             "DownloadDir" = "$env:Temp\DevSalt"
             }
+        # The script deletes the DownLoadDir (above) for each install.
+        # You may want to set an environment variable SALTREPO_LOCAL_CACHE, a cache which lives as long as you decide.
+        if ( [bool]$Env:SALTREPO_LOCAL_CACHE ) {
+          $Settings.Set_Item("DownloadDir", "$Env:SALTREPO_LOCAL_CACHE")
+        }
+
         $ini.Add("Settings", $Settings)
+        Write-Verbose "DownloadDir === $($ini['Settings']['DownloadDir']) ==="
 
         # Prerequisite software
         $Prerequisites = @{
