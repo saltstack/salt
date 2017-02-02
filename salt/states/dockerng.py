@@ -55,7 +55,6 @@ from salt.modules.dockerng import (
 # pylint: enable=no-name-in-module,import-error
 import salt.utils
 import salt.ext.six as six
-from salt.ext.six.moves import zip
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -440,7 +439,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 modified_data = []
                 log.error("data: {}, actual: {}".format(data, actual_data))
                 for index, device_info in enumerate(data):
-                    data_device_info = dict(list(zip(keys, device_info.split(':'))))
+                    data_device_info = dict(list(six.zip(keys, device_info.split(':'))))
                     try:
                         actual_data_device_info = actual_data[index]
                     except IndexError:
