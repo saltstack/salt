@@ -76,7 +76,7 @@ The option can can also be set to a list of masters, enabling
           - address2
         master_type: failover
 
-.. conf_minion:: master_type
+.. conf_minion:: ipv6
 
 ``ipv6``
 --------
@@ -88,6 +88,8 @@ Whether the master should be connected over IPv6.
 .. code-block:: yaml
 
     ipv6: True
+
+.. conf_minion:: master_type
 
 ``master_type``
 ---------------
