@@ -37,8 +37,7 @@ Run the salt proxy via the following command:
 '''
 
 # Import python libs
-from __future__ import absolute_import
-from __future__ import print_function
+
 import logging
 import copy
 
@@ -111,7 +110,7 @@ def grains():
     thisproxy['grains'] = copy.deepcopy(thisproxy['conn'].facts)
     if not thisproxy['grains']:
         log.debug(
-            ' Grains will not be populated by junos facts \
+            'Grains will not be populated by junos facts \
             as the device returned an empty facts dictionary.')
 
     return thisproxy['grains']

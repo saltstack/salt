@@ -840,10 +840,12 @@ def install_config(path=None, **kwargs):
             ret['out'] = True
             return ret
 
-        if write_diff:
-            if config_diff is not None:
-                with fopen(write_diff, 'w') as fp:
+        if write_diff and config_diff is not None:
+                diff_cached_path = salt.utils.files.mkstemp()
+                with fopen(diff_cached_path, 'w') as fp:
                     fp.write(config_diff)
+                __salt__['cp.push'](diff_cached_path, upload_path=write_diff, remove_source=True)
+
     except Exception as exception:
         ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(exception)
         ret['out'] = False
@@ -940,14 +942,24 @@ def install_os(path=None, **kwargs):
 
     if path is None:
         ret[
-            'message'] = 'Please provide the absolute path \
+            'message'] = 'Please provide the salt path \
             where the junos image is present.'
         ret['out'] = False
         return ret
-    if not os.path.isfile(path):
-        ret['message'] = 'Invalid file path'
+
+    image_cached_path = salt.utils.files.mkstemp()
+    __salt__['cp.get_template'](path, image_cached_path)
+
+    if not os.path.isfile(image_cached_path):
+        ret['message'] = 'Invalid image path.'
         ret['out'] = False
         return ret
+
+    if os.path.getsize(image_cached_path) == 0:
+        ret['message'] = 'Failed to copy image'
+        ret['out'] = False
+        return ret
+    path = image_cached_path
 
     op = dict()
     if '__pub_arg' in kwargs:
@@ -964,6 +976,8 @@ def install_os(path=None, **kwargs):
         ret['message'] = 'Installation failed due to : "{0}"'.format(exception)
         ret['out'] = False
         return ret
+    finally:
+        salt.utils.safe_rm(image_cached_path)
 
     if 'reboot' in op and op['reboot'] is True:
         try:
