@@ -646,18 +646,18 @@ def crl_managed(name,
     new_comp.pop('Next Update')
 
     file_args, kwargs = _get_file_args(name, **kwargs)
-    new_crl = False
+    new_crl_created = False
     if (current_comp == new_comp and
             current_days_remaining > days_remaining and
             __salt__['x509.verify_crl'](name, signing_cert)):
         file_args['contents'] = __salt__[
             'x509.get_pem_entry'](name, pem_type='X509 CRL')
     else:
-        new_crl = True
+        new_crl_created = True
         file_args['contents'] = new_crl
 
     ret = __states__['file.managed'](**file_args)
-    if new_crl:
+    if new_crl_created:
         ret['changes'] = {'Old': current, 'New': __salt__[
             'x509.read_crl'](crl=new_crl)}
     return ret
