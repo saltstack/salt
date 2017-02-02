@@ -1244,7 +1244,7 @@ class LocalClient(object):
                     continue
 
                 if 'return' in raw['data']['return'] and \
-                    raw['data']['return']['return'] == {}
+                    raw['data']['return']['return'] == {}:
                     continue
 
                 # if we didn't originally target the minion, lets add it to the list
