@@ -1752,7 +1752,8 @@ def prepend_root_dir(opts, path_options):
     for path_option in path_options:
         if path_option in opts:
             path = opts[path_option]
-            if path == def_root_dir or path.startswith(def_root_dir + os.sep):
+            # When running testsuite, salt.syspaths.ROOT_DIR is often empty
+            if def_root_dir != '' and (path == def_root_dir or path.startswith(def_root_dir + os.sep)):
                 # Remove the default root dir so we can add the override
                 path = path[len(def_root_dir):]
             elif path == root_opt or path.startswith(root_opt + os.sep):
@@ -1764,7 +1765,6 @@ def prepend_root_dir(opts, path_options):
                 continue
             # Prepending the root dir
             opts[path_option] = salt.utils.path_join(root_dir, path)
-
 
 def insert_system_path(opts, paths):
     '''
