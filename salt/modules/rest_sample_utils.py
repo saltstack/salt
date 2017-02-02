@@ -30,6 +30,5 @@ def get_test_string():
     .. code-block:: bash
 
         salt 'rest-sample-proxy' rest_sample.get_test_string
-
     '''
     return __proxy__['rest_sample.test_from_state']()

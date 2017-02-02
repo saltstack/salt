@@ -3221,15 +3221,17 @@ class ProxyMinion(Minion):
         # we do a sync_all here in case proxy code was installed by
         # SPM or was manually placed in /srv/salt/_modules etc.
         self.functions['saltutil.sync_all'](saltenv=self.opts['environment'])
+        # Pull in the utils
+        self.utils = salt.loader.utils(self.opts)
 
         # Pull in the utils
         self.utils = salt.loader.utils(self.opts)
 
         # Then load the proxy module
-        self.proxy = salt.loader.proxy(self.opts)
+        self.proxy = salt.loader.proxy(self.opts, utils=self.utils)
 
         # And re-load the modules so the __proxy__ variable gets injected
-        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
+        self._setup_core()
         self.functions.pack['__proxy__'] = self.proxy
         self.proxy.pack['__salt__'] = self.functions
         self.proxy.pack['__ret__'] = self.returners
@@ -3258,29 +3260,35 @@ class ProxyMinion(Minion):
 
         self.opts['grains'] = salt.loader.grains(self.opts, proxy=self.proxy)
 
-        self.serial = salt.payload.Serial(self.opts)
-        self.mod_opts = self._prep_mod_opts()
-        self.matcher = Matcher(self.opts, self.functions)
-        self.beacons = salt.beacons.Beacon(self.opts, self.functions)
-        uid = salt.utils.get_uid(user=self.opts.get('user', None))
-        self.proc_dir = get_proc_dir(self.opts['cachedir'], uid=uid)
+        self.setup_beacons()
 
-        self.schedule = salt.utils.schedule.Schedule(
-            self.opts,
-            self.functions,
-            self.returners)
+        if self.connected and self.opts['pillar']:
+            # The pillar has changed due to the connection to the master.
+            # Reload the functions so that they can use the new pillar data.
+            self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
+            if hasattr(self, 'schedule'):
+                self.schedule.functions = self.functions
+                self.schedule.returners = self.returners
+
+        if not hasattr(self, 'schedule'):
+            self.schedule = salt.utils.schedule.Schedule(
+                self.opts,
+                self.functions,
+                self.returners,
+                cleanup=[master_event(type='alive')],
+                proxy=self.proxy)
 
         # add default scheduling jobs to the minions scheduler
         if self.opts['mine_enabled'] and 'mine.update' in self.functions:
             self.schedule.add_job({
                 '__mine_interval':
-                    {
-                        'function': 'mine.update',
-                        'minutes': self.opts['mine_interval'],
-                        'jid_include': True,
-                        'maxrunning': 2,
-                        'return_job': self.opts.get('mine_return_job', False)
-                    }
+                {
+                    'function': 'mine.update',
+                    'minutes': self.opts['mine_interval'],
+                    'jid_include': True,
+                    'maxrunning': 2,
+                    'return_job': self.opts.get('mine_return_job', False)
+                }
             }, persist=True)
             log.info('Added mine.update to scheduler')
         else:
@@ -3288,19 +3296,21 @@ class ProxyMinion(Minion):
 
         # add master_alive job if enabled
         if (self.opts['transport'] != 'tcp' and
-                self.opts['master_alive_interval'] > 0):
+                self.opts['master_alive_interval'] > 0 and
+                self.connected):
             self.schedule.add_job({
                 master_event(type='alive', master=self.opts['master']):
-                    {
-                        'function': 'status.master',
-                        'seconds': self.opts['master_alive_interval'],
-                        'jid_include': True,
-                        'maxrunning': 1,
-                        'return_job': False,
-                        'kwargs': {'master': self.opts['master'],
-                                   'connected': True}
-                    }
+                {
+                    'function': 'status.master',
+                    'seconds': self.opts['master_alive_interval'],
+                    'jid_include': True,
+                    'maxrunning': 1,
+                    'return_job': False,
+                    'kwargs': {'master': self.opts['master'],
+                               'connected': True}
+                }
             }, persist=True)
+
             if self.opts['master_failback'] and \
                     'master_list' in self.opts and \
                     self.opts['master'] != self.opts['master_list'][0]:
@@ -3315,11 +3325,34 @@ class ProxyMinion(Minion):
                         'kwargs': {'master': self.opts['master_list'][0]}
                     }
                 }, persist=True)
+
             else:
                 self.schedule.delete_job(master_event(type='failback'), persist=True)
         else:
             self.schedule.delete_job(master_event(type='alive', master=self.opts['master']), persist=True)
             self.schedule.delete_job(master_event(type='failback'), persist=True)
+
+        # proxy keepalive
+        proxy_alive_fn = fq_proxyname+'.alive'
+        if proxy_alive_fn in self.proxy and 'status.proxy_reconnect' in self.functions and \
+           ('proxy_keep_alive' not in self.opts or ('proxy_keep_alive' in self.opts and self.opts['proxy_keep_alive'])):
+            # if `proxy_keep_alive` is either not specified, either set to False does not retry reconnecting
+            self.schedule.add_job({
+                '__proxy_keepalive':
+                {
+                    'function': 'status.proxy_reconnect',
+                    'minutes': self.opts.get('proxy_keep_alive_interval', 1),  # by default, check once per minute
+                    'jid_include': True,
+                    'maxrunning': 1,
+                    'return_job': False,
+                    'kwargs': {
+                        'proxy_name': fq_proxyname
+                    }
+                }
+            }, persist=True)
+            self.schedule.enable_schedule()
+        else:
+            self.schedule.delete_job('__proxy_keepalive', persist=True)
 
         #  Sync the grains here so the proxy can communicate them to the master
         self.functions['saltutil.sync_grains'](saltenv=self.opts['environment'])

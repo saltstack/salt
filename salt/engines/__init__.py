@@ -21,12 +21,12 @@ def start_engines(opts, proc_mgr, proxy=None):
     '''
     Fire up the configured engines!
     '''
-    utils = salt.loader.utils(opts)
+    utils = salt.loader.utils(opts, proxy=proxy)
     if opts['__role'] == 'master':
         runners = salt.loader.runner(opts, utils=utils)
     else:
         runners = []
-    funcs = salt.loader.minion_mods(opts, utils=utils)
+    funcs = salt.loader.minion_mods(opts, utils=utils, proxy=proxy)
     engines = salt.loader.engines(opts, funcs, runners, proxy=proxy)
 
     engines_opt = opts.get('engines', [])

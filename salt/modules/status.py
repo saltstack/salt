@@ -14,6 +14,7 @@ import fnmatch
 import collections
 import copy
 import time
+import logging
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -28,6 +29,8 @@ from salt.utils.minion import connected_masters as _connected_masters
 from salt.utils.network import host_to_ips as _host_to_ips
 from salt.ext.six.moves import zip
 from salt.exceptions import CommandExecutionError
+
+log = logging.getLogger(__file__)
 
 __virtualname__ = 'status'
 __opts__ = {}
@@ -1113,6 +1116,46 @@ def ping_master(master):
         event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
 
     return result
+
+
+def proxy_reconnect(proxy_name, opts=None):
+    '''
+    Forces proxy minion reconnection when not alive.
+
+    proxy_name
+        The virtual name of the proxy module.
+
+    opts: None
+        Opts dictionary.
+    '''
+
+    if not opts:
+        opts = __opts__
+
+    if 'proxy' not in opts:
+        return False  # fail
+
+    proxy_keepalive_fn = proxy_name+'.alive'
+    if proxy_keepalive_fn not in __proxy__:
+        return False  # fail
+
+    is_alive = __proxy__[proxy_keepalive_fn](opts)
+    if not is_alive:
+        minion_id = opts.get('proxyid', '') or opts.get('id', '')
+        log.info('{minion_id} ({proxy_name} proxy) is down. Restarting.'.format(
+                minion_id=minion_id,
+                proxy_name=proxy_name
+            )
+        )
+        __proxy__[proxy_name+'.shutdown'](opts)  # safely close connection
+        __proxy__[proxy_name+'.init'](opts)  # reopen connection
+        log.debug('Restarted {minion_id} ({proxy_name} proxy)!'.format(
+                minion_id=minion_id,
+                proxy_name=proxy_name
+            )
+        )
+
+    return True  # success
 
 
 def time_(format='%A, %d. %B %Y %I:%M%p'):

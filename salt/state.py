@@ -861,7 +861,7 @@ class State(object):
         Read the state loader value and loadup the correct states subsystem
         '''
         if self.states_loader == 'thorium':
-            self.states = salt.loader.thorium(self.opts, self.functions, {})  # TODO: Add runners
+            self.states = salt.loader.thorium(self.opts, self.functions, {})  # TODO: Add runners, proxy?
         else:
             self.states = salt.loader.states(self.opts, self.functions, self.utils,
                                              self.serializers, proxy=self.proxy)
