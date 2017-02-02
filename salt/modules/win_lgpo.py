@@ -52,6 +52,7 @@ from salt.exceptions import SaltInvocationError
 import salt.utils.dictupdate as dictupdate
 from salt.ext.six import string_types
 from salt.ext.six.moves import range
+from salt.ext.six import StringIO
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'
@@ -109,7 +110,7 @@ try:
     VALUE_LIST_XPATH = etree.XPath('.//*[local-name() = "valueList"]')
     ENUM_ITEM_DISPLAY_NAME_XPATH = etree.XPath('.//*[local-name() = "item" and @*[local-name() = "displayName" = $display_name]]')
     ADMX_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "name"] = $policy_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class)]')
-    ADML_SEARCH_XPATH = etree.XPath('//*[text() = $policy_name and @*[local-name() = "id"]]')
+    ADML_SEARCH_XPATH = etree.XPath('//*[starts-with(text(), $policy_name) and @*[local-name() = "id"]]')
     ADMX_DISPLAYNAME_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "displayName"] = $display_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class) ]')
     PRESENTATION_ANCESTOR_XPATH = etree.XPath('ancestor::*[local-name() = "presentation"]')
     TEXT_ELEMENT_XPATH = etree.XPath('.//*[local-name() = "text"]')
@@ -2319,7 +2320,9 @@ class _policy_info(object):
                                             'GroupPolicy', 'User',
                                             'Registry.pol'),
                 'hive': 'HKEY_USERS',
-                'lgpo_section': 'User Configuration'
+                'lgpo_section': 'User Configuration',
+                'gpt_extension_location': 'gPCUserExtensionNames',
+                'gpt_extension_guid': '[{35378EAC-683F-11D2-A89A-00C04FBBCFA2}{D02B1F73-3407-48AE-BA88-E8213C6761F1}]'
             },
             'Machine': {
                 'policy_path': os.path.join(os.getenv('WINDIR'), 'System32',
@@ -2327,9 +2330,13 @@ class _policy_info(object):
                                             'Registry.pol'),
                 'hive': 'HKEY_LOCAL_MACHINE',
                 'lgpo_section': 'Computer Configuration',
+                'gpt_extension_location': 'gPCMachineExtensionNames',
+                'gpt_extension_guid': '[{35378EAC-683F-11D2-A89A-00C04FBBCFA2}{D02B1F72-3407-48AE-BA88-E8213C6761F1}]'
             },
         }
         self.reg_pol_header = u'\u5250\u6765\x01\x00'
+        self.gpt_ini_path = os.path.join(os.getenv('WINDIR'), 'System32',
+                                         'GroupPolicy', 'gpt.ini')
 
     @classmethod
     def _notEmpty(cls, val, **kwargs):
@@ -2471,7 +2478,8 @@ class _policy_info(object):
         '''
         minimum = 0
         maximum = 1
-        if isinstance(string_types, val):
+
+        if isinstance(val, string_types):
             if val.lower() == 'not defined':
                 return True
             else:
@@ -2676,6 +2684,19 @@ def _updatePolicyElements(policy_item, regkey):
     return policy_item
 
 
+def _remove_unicode_encoding(xml_file):
+    '''
+    attempts to remove the "encoding='unicode'" from an xml file
+    as lxml does not support that on a windows node currently
+    see issue #38100
+    '''
+    with open(xml_file, 'rb') as f:
+        xml_content = f.read()
+    modified_xml = re.sub(r' encoding=[\'"]+unicode[\'"]+', '', xml_content.decode('utf-16'), count=1)
+    xmltree = lxml.etree.parse(StringIO(modified_xml))
+    return xmltree
+
+
 def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                               display_language='en-US'):
     '''
@@ -2701,7 +2722,17 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
             for t_admfile in files:
                 admfile = os.path.join(root, t_admfile)
                 parser = lxml.etree.XMLParser(remove_comments=True)
-                xmltree = lxml.etree.parse(admfile, parser=parser)
+                # see issue #38100
+                try:
+                    xmltree = lxml.etree.parse(admfile, parser=parser)
+                except lxml.etree.XMLSyntaxError:
+                    try:
+                        xmltree = _remove_unicode_encoding(admfile)
+                    except Exception:
+                        msg = ('A error was found while processing admx file {0},'
+                               ' all policies from this file will be unavailable via this module')
+                        log.error(msg.format(admfile))
+                        continue
                 namespaces = xmltree.getroot().nsmap
                 namespace_string = ''
                 if None in namespaces:
@@ -2752,7 +2783,17 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                         raise SaltInvocationError(msg.format(display_language,
                                                              display_language_fallback,
                                                              t_admfile))
-                xmltree = lxml.etree.parse(adml_file)
+                try:
+                    xmltree = lxml.etree.parse(adml_file)
+                except lxml.etree.XMLSyntaxError:
+                    # see issue #38100
+                    try:
+                        xmltree = _remove_unicode_encoding(adml_file)
+                    except Exception:
+                        msg = ('An error was found while processing adml file {0}, all policy'
+                               ' languange data from this file will be unavailable via this module')
+                        log.error(msg.format(adml_file))
+                        continue
                 if None in namespaces:
                     namespaces['None'] = namespaces[None]
                     namespaces.pop(None)
@@ -3270,6 +3311,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
         elif etree.QName(element).localname == 'decimal':
             # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
             this_vtype = 'REG_DWORD'
+            requested_val = this_element_value
             if this_element_value is not None:
                 temp_val = ''
                 for v in struct.unpack('2H', struct.pack('I', int(this_element_value))):
@@ -3280,13 +3322,14 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
                     this_vtype = 'REG_SZ'
-                    if this_element_value is not None:
-                        this_element_value = str(this_element_value)
+                    if requested_val is not None:
+                        this_element_value = str(requested_val)
             if check_deleted:
                 this_vtype = 'REG_SZ'
         elif etree.QName(element).localname == 'longDecimal':
             # https://msdn.microsoft.com/en-us/library/dn606015(v=vs.85).aspx
             this_vtype = 'REG_QWORD'
+            requested_val = this_element_value
             if this_element_value is not None:
                 temp_val = ''
                 for v in struct.unpack('4H', struct.pack('I', int(this_element_value))):
@@ -3297,8 +3340,8 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
                     this_vtype = 'REG_SZ'
-                    if this_element_value is not None:
-                        this_element_value = str(this_element_value)
+                    if requested_val is not None:
+                        this_element_value = str(requested_val)
         elif etree.QName(element).localname == 'text':
             # https://msdn.microsoft.com/en-us/library/dn605969(v=vs.85).aspx
             this_vtype = 'REG_SZ'
@@ -3913,17 +3956,98 @@ def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
     return None
 
 
-def _write_regpol_data(data_to_write, policy_file_path):
+def _write_regpol_data(data_to_write,
+                       policy_file_path,
+                       gpt_ini_path,
+                       gpt_extension,
+                       gpt_extension_guid):
     '''
     helper function to actually write the data to a Registry.pol file
+
+    also updates/edits the gpt.ini file to include the ADM policy extensions
+    to let the computer know user and/or machine registry policy files need
+    to be processed
+
+    data_to_write: data to write into the user/machine registry.pol file
+    policy_file_path: path to the registry.pol file
+    gpt_ini_path: path to gpt.ini file
+    gpt_extension: gpt extension list name from _policy_info class for this registry class gpt_extension_location
+    gpt_extension_guid: admx registry extension guid for the class
     '''
     try:
         if data_to_write:
             reg_pol_header = u'\u5250\u6765\x01\x00'
+            if not os.path.exists(policy_file_path):
+                ret = __salt__['file.makedirs'](policy_file_path)
             with open(policy_file_path, 'wb') as pol_file:
                 if not data_to_write.startswith(reg_pol_header):
                     pol_file.write(reg_pol_header.encode('utf-16-le'))
                 pol_file.write(data_to_write.encode('utf-16-le'))
+            try:
+                gpt_ini_data = ''
+                if os.path.exists(gpt_ini_path):
+                    with open(gpt_ini_path, 'rb') as gpt_file:
+                        gpt_ini_data = gpt_file.read()
+                if not _regexSearchRegPolData(r'\[General\]\r\n', gpt_ini_data):
+                    gpt_ini_data = '[General]\r\n' + gpt_ini_data
+                if _regexSearchRegPolData(r'{0}='.format(re.escape(gpt_extension)), gpt_ini_data):
+                    # ensure the line contains the ADM guid
+                    gpt_ext_loc = re.search(r'^{0}=.*\r\n'.format(re.escape(gpt_extension)),
+                                            gpt_ini_data,
+                                            re.IGNORECASE | re.MULTILINE)
+                    gpt_ext_str = gpt_ini_data[gpt_ext_loc.start():gpt_ext_loc.end()]
+                    if not _regexSearchRegPolData(r'{0}'.format(re.escape(gpt_extension_guid)),
+                                                  gpt_ext_str):
+                        gpt_ext_str = gpt_ext_str.split('=')
+                        gpt_ext_str[1] = gpt_extension_guid + gpt_ext_str[1]
+                        gpt_ext_str = '='.join(gpt_ext_str)
+                        gpt_ini_data = gpt_ini_data[0:gpt_ext_loc.start()] + gpt_ext_str + gpt_ini_data[gpt_ext_loc.end():]
+                else:
+                    general_location = re.search(r'^\[General\]\r\n',
+                                                 gpt_ini_data,
+                                                 re.IGNORECASE | re.MULTILINE)
+                    gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+                            gpt_ini_data[general_location.start():general_location.end()],
+                            gpt_extension, gpt_extension_guid,
+                            gpt_ini_data[general_location.end():])
+                # https://technet.microsoft.com/en-us/library/cc978247.aspx
+                if _regexSearchRegPolData(r'Version=', gpt_ini_data):
+                    version_loc = re.search(r'^Version=.*\r\n',
+                                            gpt_ini_data,
+                                            re.IGNORECASE | re.MULTILINE)
+                    version_str = gpt_ini_data[version_loc.start():version_loc.end()]
+                    version_str = version_str.split('=')
+                    version_nums = struct.unpack('>2H', struct.pack('>I', int(version_str[1])))
+                    if gpt_extension.lower() == 'gPCMachineExtensionNames'.lower():
+                        version_nums = (version_nums[0], version_nums[1] + 1)
+                    elif gpt_extension.lower() == 'gPCUserExtensionNames'.lower():
+                        version_nums = (version_nums[0] + 1, version_nums[1])
+                    version_num = int("{0}{1}".format(str(version_nums[0]).zfill(4),
+                                                      str(version_nums[1]).zfill(4)), 16)
+                    gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+                            gpt_ini_data[0:version_loc.start()],
+                            'Version', version_num,
+                            gpt_ini_data[version_loc.end():])
+                else:
+                    general_location = re.search(r'^\[General\]\r\n',
+                                                 gpt_ini_data,
+                                                 re.IGNORECASE | re.MULTILINE)
+                    if gpt_extension.lower() == 'gPCMachineExtensionNames'.lower():
+                        version_nums = (0, 1)
+                    elif gpt_extension.lower() == 'gPCUserExtensionNames'.lower():
+                        version_nums = (1, 0)
+                    gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+                            gpt_ini_data[general_location.start():general_location.end()],
+                            'Version',
+                            int("{0}{1}".format(str(version_nums[0]).zfill(4), str(version_nums[1]).zfill(4)), 16),
+                            gpt_ini_data[general_location.end():])
+                if gpt_ini_data:
+                    with open(gpt_ini_path, 'wb') as gpt_file:
+                        gpt_file.write(gpt_ini_data)
+            except Exception as e:
+                msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(
+                        gpt_ini_path, e)
+                raise CommandExecutionError(msg)
     except Exception as e:
         msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(policy_file_path, e)
         raise CommandExecutionError(msg)
@@ -4307,7 +4431,11 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                                         enabled_value_string,
                                                         existing_data,
                                                         append_only=True)
-        _write_regpol_data(existing_data, policy_data.admx_registry_classes[registry_class]['policy_path'])
+        _write_regpol_data(existing_data,
+                           policy_data.admx_registry_classes[registry_class]['policy_path'],
+                           policy_data.gpt_ini_path,
+                           policy_data.admx_registry_classes[registry_class]['gpt_extension_location'],
+                           policy_data.admx_registry_classes[registry_class]['gpt_extension_guid'])
     except Exception as e:
         log.error('Unhandled exception {0} occurred while attempting to write Adm Template Policy File'.format(e))
         return False
@@ -4319,34 +4447,36 @@ def _getScriptSettingsFromIniFile(policy_info):
     helper function to parse/read a GPO Startup/Shutdown script file
     '''
     _existingData = _read_regpol_file(policy_info['ScriptIni']['IniPath'])
-    _existingData = _existingData.split('\r\n')
-    script_settings = {}
-    this_section = None
-    for eLine in _existingData:
-        if eLine.startswith('[') and eLine.endswith(']'):
-            this_section = eLine.replace('[', '').replace(']', '')
-            log.debug('adding section {0}'.format(this_section))
-            if this_section:
-                script_settings[this_section] = {}
+    if _existingData:
+        _existingData = _existingData.split('\r\n')
+        script_settings = {}
+        this_section = None
+        for eLine in _existingData:
+            if eLine.startswith('[') and eLine.endswith(']'):
+                this_section = eLine.replace('[', '').replace(']', '')
+                log.debug('adding section {0}'.format(this_section))
+                if this_section:
+                    script_settings[this_section] = {}
+            else:
+                if '=' in eLine:
+                    log.debug('working with config line {0}'.format(eLine))
+                    eLine = eLine.split('=')
+                    if this_section in script_settings:
+                        script_settings[this_section][eLine[0]] = eLine[1]
+        if 'SettingName' in policy_info['ScriptIni']:
+            log.debug('Setting Name is in policy_info')
+            if policy_info['ScriptIni']['SettingName'] in script_settings[policy_info['ScriptIni']['Section']]:
+                log.debug('the value is set in the file')
+                return script_settings[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName']]
+            else:
+                return None
+        elif policy_info['ScriptIni']['Section'] in script_settings:
+            log.debug('no setting name')
+            return script_settings[policy_info['ScriptIni']['Section']]
         else:
-            if '=' in eLine:
-                log.debug('working with config line {0}'.format(eLine))
-                eLine = eLine.split('=')
-                if this_section in script_settings:
-                    script_settings[this_section][eLine[0]] = eLine[1]
-    if 'SettingName' in policy_info['ScriptIni']:
-        log.debug('Setting Name is in policy_info')
-        if policy_info['ScriptIni']['SettingName'] in script_settings[policy_info['ScriptIni']['Section']]:
-            log.debug('the value is set in the file')
-            return script_settings[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName']]
-        else:
+            log.debug('broad else')
             return None
-    elif policy_info['ScriptIni']['Section'] in script_settings:
-        log.debug('no setting name')
-        return script_settings[policy_info['ScriptIni']['Section']]
-    else:
-        log.debug('broad else')
-        return None
+    return None
 
 
 def _writeGpoScript(psscript=False):
@@ -4457,6 +4587,9 @@ def _lookup_admin_template(policy_name,
             suggested_policies = ''
             if len(adml_search_results) > 1:
                 multiple_adml_entries = True
+                for adml_search_result in adml_search_results:
+                    if not adml_search_result.attrib['text'].strip() == policy_name:
+                        adml_search_results.remove(adml_search_result)
             for adml_search_result in adml_search_results:
                 dmsg = 'found an ADML entry matching the string! {0} -- {1}'
                 log.debug(dmsg.format(adml_search_result.tag,
@@ -4803,7 +4936,7 @@ def set_computer_policy(name,
     '''
     pol = {}
     pol[name] = setting
-    ret = set(computer_policy=pol,
+    ret = set_(computer_policy=pol,
               user_policy=None,
               cumulative_rights_assignments=cumulative_rights_assignments,
               adml_language=adml_language)
@@ -4840,7 +4973,7 @@ def set_user_policy(name,
     '''
     pol = {}
     pol[name] = setting
-    ret = set(user_policy=pol,
+    ret = set_(user_policy=pol,
               computer_policy=None,
               cumulative_rights_assignments=True,
               adml_language=adml_language)
