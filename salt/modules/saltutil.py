@@ -513,6 +513,7 @@ def sync_utils(saltenv=None, refresh=True):
         refresh_modules()
     return ret
 
+
 def list_extmods():
     '''
     .. versionadded:: Nitrogen
@@ -535,6 +536,7 @@ def list_extmods():
                 ret[mod_type].add(fh_.split('.')[0])
         ret[mod_type] = list(ret[mod_type])
     return ret
+
 
 def sync_log_handlers(saltenv=None, refresh=True):
     '''
