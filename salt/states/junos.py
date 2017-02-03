@@ -33,6 +33,9 @@ def rpc(name, dest=None, format='xml', args=None, **kwargs):
       Optional
         * dest:
           Destination file where the rpc ouput is stored. (default = None)
+          Note that the file will be stored on the proxy minion. To push the
+          files to the master use the salt's following execution module: \
+            :py:func:`cp.push <salt.modules.cp.push>`
         * format:
           The format in which the rpc reply must be stored in file specified in the dest
           (used only when dest is specified) (default = xml)
@@ -255,11 +258,11 @@ def install_config(name, **kwargs):
 
     .. code-block:: yaml
 
-            /home/user/config.set:
+            salt://configs/interface.set:
               junos:
                 - install_config
                 - timeout: 100
-                - diffs_file: 'home/user/diff'
+                - diffs_file: 'var/log/diff'
 
     Parameters:
       Required
@@ -291,8 +294,10 @@ def install_config(name, **kwargs):
               the given time unless the commit is confirmed.
             * diffs_file:
               Path to the file where the diff (difference in old configuration
-              and the newly commited configuration) will be stored.\
-               (default = None)
+              and the commited configuration) will be stored.(default = None)
+              Note that the file will be stored on the proxy minion. To push the
+              files to the master use the salt's following execution module: \
+              :py:func:`cp.push <salt.modules.cp.push>`
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     ret['changes'] = __salt__['junos.install_config'](name, **kwargs)
@@ -322,7 +327,7 @@ def install_os(name, **kwargs):
 
     .. code-block:: yaml
 
-            /home/user/junos_image.tgz:
+            salt://images/junos_image.tgz:
               junos:
                 - install_os
                 - timeout: 100

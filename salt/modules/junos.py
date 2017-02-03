@@ -73,7 +73,8 @@ def facts_refresh():
     try:
         conn.facts_refresh()
         # Earlier it was ret['message']
-        ret['facts'] = conn.facts
+        facts = dict(conn.facts)
+        ret['facts'] = facts
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
@@ -100,7 +101,8 @@ def facts():
     conn = __proxy__['junos.conn']()
     ret = dict()
     try:
-        ret['facts'] = conn.facts
+        facts = dict(conn.facts)
+        ret['facts'] = facts
         ret['out'] = True
     except Exception as exception:
         ret['message'] = 'Could not display facts due to "{0}"'.format(
@@ -132,6 +134,10 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
       Optional
         * dest:
           Destination file where the rpc ouput is stored. (default = None)
+          Note that the file will be stored on the proxy minion. To push the
+          files to the master use the salt's following execution module: \
+            :py:func:`cp.push <salt.modules.cp.push>`
+
         * format:
           The format in which the rpc reply must be stored in file specified in the dest
           (used only when dest is specified) (default = xml)
@@ -169,60 +175,65 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
             'Format ignored as it is only used for \
             output which is dumped in the file.')
 
-    write_response = ''
-    try:
-        if cmd in ['get-config', 'get_config']:
-            filter_reply = None
-            if 'filter' in op:
-                filter_reply = etree.XML(op['filter'])
-                del op['filter']
-            xml_reply = getattr(
+    if cmd in ['get-config', 'get_config']:
+        filter_reply = None
+        if 'filter' in op:
+            filter_reply = etree.XML(op['filter'])
+            del op['filter']
+
+        op.update({'format': format})
+        try:
+            reply = getattr(
                 conn.rpc,
                 cmd.replace('-',
                             '_'))(filter_reply,
                                   options=op)
-            ret['rpc_reply'] = jxmlease.parse(etree.tostring(xml_reply))
-            write_response = etree.tostring(xml_reply)
+        except Exception as exception:
+            ret['message'] = 'RPC execution failed due to "{0}"'.format(
+                exception)
+            ret['out'] = False
+            return ret
 
-            if dest is not None and format != 'xml':
-                op.update({'format': format})
-                rpc_reply = getattr(
-                    conn.rpc,
-                    cmd.replace('-',
-                                '_'))(filter_reply,
-                                      options=op)
-                if format == 'json':
-                    write_response = json.dumps(rpc_reply, indent=1)
-                else:
-                    write_response = rpc_reply.text
+        if format == 'text':
+            ret['rpc_reply'] = reply.text
+            write_response = reply.text
+        elif format == 'json':
+            ret['rpc_reply'] = reply
+            write_response = json.dumps(reply, indent=1)
         else:
-            if 'filter' in op:
-                log.warning(
-                    'Filter ignored as it is only used with "get-config" rpc')
-            xml_reply = getattr(conn.rpc, cmd.replace('-', '_'))(**op)
-            ret['rpc_reply'] = jxmlease.parse(etree.tostring(xml_reply))
-            write_response = etree.tostring(xml_reply)
+            ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
+            write_response = etree.tostring(reply)
+    else:
+        if 'filter' in op:
+            log.warning(
+                'Filter ignored as it is only used with "get-config" rpc')
 
-            if dest is not None and format != 'xml':
-                rpc_reply = getattr(
-                    conn.rpc,
-                    cmd.replace('-',
-                                '_'))({'format': format},
-                                      **op)
-                if format == 'json':
-                    write_response = json.dumps(rpc_reply, indent=1)
-                else:
-                    write_response = rpc_reply.text
+        try:
+            reply = getattr(
+                conn.rpc,
+                cmd.replace('-',
+                            '_'))({'format': format},
+                                  **op)
+        except Exception as exception:
+            ret['message'] = 'RPC execution failed due to "{0}"'.format(
+                exception)
+            ret['out'] = False
+            return ret
 
-    except Exception as exception:
-        ret['message'] = 'Execution failed due to "{0}"'.format(exception)
-        ret['out'] = False
-        return ret
+        if format == 'text':
+            ret['rpc_reply'] = reply.text
+            write_response = reply.text
+        elif format == 'json':
+            ret['rpc_reply'] = reply
+            write_response = json.dumps(reply, indent=1)
+        else:
+            ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
+            write_response = etree.tostring(reply)
 
-    if dest is not None:
+    if dest:
         with fopen(dest, 'w') as fp:
             fp.write(write_response)
-
+            
     return ret
 
 
@@ -471,8 +482,8 @@ def rollback(id=0, **kwargs):
             ret['out'] = True
         except Exception as exception:
             ret['out'] = False
-            ret['message'] = 'Rollback successful but commit failed with error "{0}"'.format(
-                exception)
+            ret['message'] = 'Rollback successful but commit \
+            failed with error "{0}"'.format(exception)
             return ret
     else:
         ret['out'] = False
@@ -759,8 +770,10 @@ def install_config(path=None, **kwargs):
               the given time unless the commit is confirmed.
             * diffs_file:
               Path to the file where the diff (difference in old configuration
-              and the newly commited configuration) will be stored.\
-               (default = None)
+              and the commited configuration) will be stored.(default = None)
+              Note that the file will be stored on the proxy minion. To push the
+              files to the master use the salt's following execution module: \
+              :py:func:`cp.push <salt.modules.cp.push>`
 
     '''
     conn = __proxy__['junos.conn']()
@@ -841,13 +854,12 @@ def install_config(path=None, **kwargs):
             return ret
 
         if write_diff and config_diff is not None:
-                diff_cached_path = salt.utils.files.mkstemp()
-                with fopen(diff_cached_path, 'w') as fp:
-                    fp.write(config_diff)
-                __salt__['cp.push'](diff_cached_path, upload_path=write_diff, remove_source=True)
+            with fopen(write_diff, 'w') as fp:
+                fp.write(config_diff)
 
     except Exception as exception:
-        ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(exception)
+        ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
+            exception)
         ret['out'] = False
         return ret
 
@@ -869,8 +881,8 @@ def install_config(path=None, **kwargs):
             conn.cu.commit(**commit_params)
             ret['message'] = 'Successfully loaded and committed!'
         except Exception as exception:
-            ret['message'] = 'Commit check successful but commit failed with "{0}"'.format(
-                exception)
+            ret['message'] = 'Commit check successful but \
+            commit failed with "{0}"'.format(exception)
             ret['out'] = False
             return ret
     else:
@@ -915,9 +927,9 @@ def install_os(path=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.install_os '/home/user/junos_image.tgz' reboot=True
+        salt 'device_name' junos.install_os 'salt://images/junos_image.tgz' reboot=True
 
-        salt 'device_name' junos.install_os '/home/user/junos_16_1.tgz' dev_timeout=300
+        salt 'device_name' junos.install_os 'salt://junos_16_1.tgz' dev_timeout=300
 
 
     Parameters:
@@ -973,7 +985,7 @@ def install_os(path=None, **kwargs):
         conn.sw.install(path, progress=True)
         ret['message'] = 'Installed the os.'
     except Exception as exception:
-        ret['message'] = 'Installation failed due to : "{0}"'.format(exception)
+        ret['message'] = 'Installation failed due to: "{0}"'.format(exception)
         ret['out'] = False
         return ret
     finally:
