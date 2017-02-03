@@ -44,12 +44,11 @@ __virtualname__ = 'zabbix'
 
 def __virtual__():
     '''
-    Only load the module if Zabbix server is installed
+    Check whether zabbix_server or zabbix_agent are installed.
     '''
-    if salt.utils.which('zabbix_server'):
+    if salt.utils.which('zabbix_server') or salt.utils.which('zabbix_agent'):
         return __virtualname__
     return (False, 'The zabbix execution module cannot be loaded: zabbix not installed.')
-
 
 def _frontend_url():
     '''
@@ -800,7 +799,7 @@ def usergroup_list(**connection_args):
         return False
 
 
-def host_create(host, groups, interfaces, **connection_args):
+def host_create(host, groups, interfaces, templates, **connection_args):
     '''
     Create new host.
     NOTE: This function accepts all standard host properties: keyword argument names differ depending on your
@@ -811,6 +810,7 @@ def host_create(host, groups, interfaces, **connection_args):
     :param host: technical name of the host
     :param groups: groupids of host groups to add the host to
     :param interfaces: interfaces to be created for the host
+    :param templates: templateids of templates which host should be added to
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
@@ -843,6 +843,10 @@ def host_create(host, groups, interfaces, **connection_args):
             if not isinstance(interfaces, list):
                 interfaces = [interfaces]
             params['interfaces'] = interfaces
+            # Templates
+            if not isinstance(templates, list):
+                templates = [templates]
+            params['templates'] = templates
             params = _params_extend(params, _ignore_name=True, **connection_args)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
             return ret['result']['hostids']
@@ -1474,12 +1478,6 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
 
     Returns:
         Array with convenient template details, False if no template found or on failure.
-
-    CLI Example:
-    .. code-block:: bash
-
-        salt '*' zabbix.template_get name='Template OS Linux'
-        salt '*' zabbix.template_get templateids="['10050', '10001']"
     '''
     conn_args = _login(**connection_args)
     try:
@@ -1499,3 +1497,68 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
             raise KeyError
     except KeyError:
         return False
+
+
+def template_exists(templateids=None, groupids=None, hostids=None, **connection_args):
+    '''
+    Checks if template that matches the given filter criteria exists.
+
+    :param templateids: template IDs
+    :param groupids: host group IDs
+    :param hostids: host IDs
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: True if at least one host group exists, False if not or on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.template exists templateids=1
+    '''
+    conn_args = _login(**connection_args)
+    try:
+        if conn_args:
+            # support only from Zabbix 2.5 onwards
+            if not templateids:
+                templateids = None
+            if not groupids:
+                groupids = None
+            if not hostids:
+                hostids = None
+            ret = template_get(templateids, groupids, hostids, **connection_args)
+            return bool(ret)
+        else:
+            raise KeyError
+    except KeyError:
+        return False
+
+
+def template_list(**connection_args):
+    '''
+    Retrieve all templates.
+
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Array with details about host groups, False on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.template_list
+    '''
+    conn_args = _login(**connection_args)
+    try:
+        if conn_args:
+            method = 'template.get'
+            params = {"output": "extend", }
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']
+        else:
+            raise KeyError
+    except KeyError:
+        return False
+
