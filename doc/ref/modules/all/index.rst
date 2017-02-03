@@ -1,4 +1,4 @@
-.. _all-salt_modules:
+.. _all-salt.modules:
 
 =================
 execution modules

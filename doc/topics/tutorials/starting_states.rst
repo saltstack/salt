@@ -348,7 +348,7 @@ gives you a `"Pythonic"`_ interface to building state data.
     They can also be used in :mod:`file.managed <salt.states.file.managed>`
     states, making file management much more dynamic and flexible. Some
     examples for using templates in managed files can be found in the
-    documentation for the :ref:`file state <salt.states.file>`, as well as the
+    documentation for the :mod:`file state <salt.states.file>`, as well as the
     :ref:`MooseFS example<jinja-example-moosefs>` below.
 
 

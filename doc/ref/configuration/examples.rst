@@ -1,3 +1,5 @@
+.. _configuration-file-examples:
+
 ===========================
 Configuration file examples
 ===========================

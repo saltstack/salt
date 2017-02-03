@@ -25,7 +25,7 @@ modules is that the defined functions always return a JSON serializable
 object.
 
 For a list of all built in execution modules, click :ref:`here
-<all-salt_modules>`
+<all-salt.modules>`
 
 For information on writing execution modules, see :ref:`this page
 <writing-execution-modules>`.

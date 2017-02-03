@@ -6,7 +6,7 @@ High Availability Features in Salt
 
 Salt supports several features for high availability and fault tolerance.
 Brief documentation for these features is listed alongside their configuration
-parameters in :ref:`Configuration file examples <configuration/examples>`.
+parameters in :ref:`Configuration file examples <configuration-file-examples>`.
 
 Multimaster
 ===========

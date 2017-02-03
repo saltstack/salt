@@ -22,7 +22,7 @@ refreshed on a very limited basis and are largely static data. Mines are
 designed to replace slow peer publishing calls when Minions need data from
 other Minions. Rather than having a Minion reach out to all the other Minions
 for a piece of data, the Salt Mine, running on the Master, can collect it from
-all the Minions every :ref:`mine-interval`, resulting in
+all the Minions every :ref:`mine_interval`, resulting in
 almost fresh data at any given time, with much less overhead.
 
 Mine Functions

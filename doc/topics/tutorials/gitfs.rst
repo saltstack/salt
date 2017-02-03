@@ -67,7 +67,8 @@ be used to install it:
 
 
 If pygit2_ is not packaged for the platform on which the Master is running, the
-pygit2_ website has installation instructions here__. Keep in mind however that
+pygit2_ website has installation instructions
+`here <pygit2-install-instructions>`_. Keep in mind however that
 following these instructions will install libgit2_ and pygit2_ without system
 packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
 <pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
@@ -80,26 +81,26 @@ advisable as several other applications depend on it, so on older LTS linux
 releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
 While these are not packaged in the official repositories for Debian and
 Ubuntu, SaltStack is actively working on adding packages for these to our
-repositories_. The progress of this effort can be tracked here__.
+repositories_. The progress of this effort can be tracked `here <salt-pack-70>`_.
 
 .. warning::
-    pygit2_ is actively developed and :ref:`frequently makes
-    non-backwards-compatible API changes <pygit2-version-policy>`, even in
+    pygit2_ is actively developed and `frequently makes
+    non-backwards-compatible API changes <pygit2-version-policy>`_, even in
     minor releases. It is not uncommon for pygit2_ upgrades to result in errors
     in Salt. Please take care when upgrading pygit2_, and pay close attention
     to the changelog_, keeping an eye out for API changes. Errors can be
-    reported on the :ref:`SaltStack issue tracker <saltstack-issue-tracker>`.
+    reported on the `SaltStack issue tracker <saltstack-issue-tracker>`_.
 
 .. _pygit2-version-policy: http://www.pygit2.org/install.html#version-numbers
 .. _changelog: https://github.com/libgit2/pygit2#changelog
 .. _saltstack-issue-tracker: https://github.com/saltstack/salt/issues
-.. __: http://www.pygit2.org/install.html
+.. _pygit2-install-instructions: http://www.pygit2.org/install.html
 .. _libgit2: https://libgit2.github.com/
 .. _libssh2: http://www.libssh2.org/
 .. _python-cffi: https://pypi.python.org/pypi/cffi
 .. _libffi: http://sourceware.org/libffi/
 .. _repositories: https://repo.saltstack.com
-.. __: https://github.com/saltstack/salt-pack/issues/70
+.. _salt-pack-70: https://github.com/saltstack/salt-pack/issues/70
 
 GitPython
 ---------
@@ -931,7 +932,7 @@ the minion is running.
 
 .. _`post-receive hook`: http://www.git-scm.com/book/en/Customizing-Git-Git-Hooks#Server-Side-Hooks
 
-.. _git-as-ext_pillar
+.. _git-as-ext_pillar:
 
 Using Git as an External Pillar Source
 ======================================
