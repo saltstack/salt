@@ -116,7 +116,7 @@ def mode(name):
         return ret
 
     oldmode, mode = mode, __salt__['selinux.setenforce'](tmode)
-    if mode == tmode:
+    if mode == tmode or (tmode == 'Disabled' and __salt__['selinux.getconfig']() == tmode):
         ret['result'] = True
         ret['comment'] = 'SELinux has been set to {0} mode'.format(tmode)
         ret['changes'] = {'old': oldmode,
