@@ -4621,7 +4621,7 @@ def inspect_network(network_id):
 
 @_api_version(1.21)
 @_client_version('1.5.0')
-def connect_container_to_network(container, network_id):
+def connect_container_to_network(container, network_id, ipv4_address=None):
     '''
     Connect container to network.
 
@@ -4631,6 +4631,9 @@ def connect_container_to_network(container, network_id):
     network_id
         ID of network
 
+    ipv4_address
+        The IPv4 address to connect to the container
+
     CLI Example:
 
     .. code-block:: bash
@@ -4639,7 +4642,8 @@ def connect_container_to_network(container, network_id):
     '''
     response = _client_wrapper('connect_container_to_network',
                                container,
-                               network_id)
+                               network_id,
+                               ipv4_address)
     _clear_context()
     # Only non-error return case is a True return, so just return the response
     return response
