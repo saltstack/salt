@@ -239,7 +239,6 @@ def _check_private_key(name, bits=2048, passphrase=None,
             if not overwrite:
                 raise salt.exceptions.CommandExecutionError(
                     'The provided passphrase cannot decrypt the private key.')
-            pass
 
     return current_bits == bits and not new
 
