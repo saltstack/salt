@@ -1091,6 +1091,8 @@ DEFAULT_MINION_OPTS = {
     'render_dirs': [],
     'outputter_dirs': [],
     'utils_dirs': [],
+    'publisher_acl': {},
+    'publisher_acl_blacklist': {},
     'providers': {},
     'clean_dynamic_modules': True,
     'open_mode': False,
