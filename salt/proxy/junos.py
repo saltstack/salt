@@ -86,8 +86,6 @@ def init(opts):
     thisproxy['conn'].open()
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
     thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
-    thisproxy['conn'].facts['version_info'] = dict(
-        thisproxy['conn'].facts['version_info'])
     thisproxy['initialized'] = True
 
 
@@ -108,7 +106,9 @@ def proxytype():
 
 def grains():
     thisproxy['grains'] = copy.deepcopy(thisproxy['conn'].facts)
-    if not thisproxy['grains']:
+    if thisproxy['grains']:
+        thisproxy['grains']['version_info'] = dict(thisproxy['grains']['version_info'])
+    else:
         log.debug(
             'Grains will not be populated by junos facts \
             as the device returned an empty facts dictionary.')
