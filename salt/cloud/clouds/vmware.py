@@ -644,8 +644,6 @@ def _manage_devices(devices, vm=None, container_ref=None):
                                      ' Using existing disk size.')
                             size_kb = device.capacityInKB
 
-                        log.debug('device capacity is {0}'.format(device.capacityInKB))
-                        log.debug('specified capacity is {0}'.format(size_kb))
                         if device.capacityInKB < size_kb:
                             # expand the disk
                             disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
