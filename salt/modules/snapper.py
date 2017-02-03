@@ -400,6 +400,59 @@ def delete_snapshot(snapshots_ids=None, config="root"):
         raise CommandExecutionError(_dbus_exception_to_reason(exc, locals()))
 
 
+def modify_snapshot(snapshot_id=None,
+                    description=None,
+                    userdata=None,
+                    cleanup=None,
+                    config="root"):
+    '''
+    Modify attributes of an existing snapshot.
+
+    config
+        Configuration name. (Default: root)
+
+    snapshot_id
+        ID of the snapshot to be modified.
+
+    cleanup
+        Change the cleanup method of the snapshot. (str)
+
+    description
+        Change the description of the snapshot. (str)
+
+    userdata
+        Change the userdata dictionary of the snapshot. (dict)
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' snapper.modify_snapshot 54 description="my snapshot description"
+        salt '*' snapper.modify_snapshot 54 description="my snapshot description"
+        salt '*' snapper.modify_snapshot 54 userdata='{"foo": "bar"}'
+        salt '*' snapper.modify_snapshot snapshot_id=54 cleanup="number"
+    '''
+    if not snapshot_id:
+        raise CommandExecutionError('Error: No snapshot ID has been provided')
+
+    snapshot = get_snapshot(config=config, number=snapshot_id)
+    try:
+        # Updating only the explicitely provided attributes by the user 
+        updated_opts = {
+            'description': description if description != None else snapshot['description'],
+            'cleanup': cleanup if cleanup != None else snapshot['cleanup'],
+            'userdata': userdata if userdata != None else snapshot['userdata'],
+        }
+        snapper.SetSnapshot(config,
+                            snapshot_id,
+                            updated_opts['description'],
+                            updated_opts['cleanup'],
+                            updated_opts['userdata'])
+        return get_snapshot(config=config, number=snapshot_id)
+    except dbus.DBusException as exc:
+        raise CommandExecutionError(_dbus_exception_to_reason(exc, locals()))
+
+
 def _get_num_interval(config, num_pre, num_post):
     '''
     Returns numerical interval based on optionals num_pre, num_post values
