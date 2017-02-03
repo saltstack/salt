@@ -363,14 +363,14 @@ def create_snapshot(config='root', snapshot_type='single', pre_number=None,
     cleanup_algorithm
         Set the cleanup algorithm for the snapshot.
 
-        number
-            Deletes old snapshots when a certain number of snapshots
-            is reached.
-        timeline
-            Deletes old snapshots but keeps a number of hourly,
-            daily, weekly, monthly and yearly snapshots.
-        empty-pre-post
-            Deletes pre/post snapshot pairs with empty diffs.
+    number
+        Deletes old snapshots when a certain number of snapshots
+        is reached.
+    timeline
+        Deletes old snapshots but keeps a number of hourly,
+        daily, weekly, monthly and yearly snapshots.
+    empty-pre-post
+        Deletes pre/post snapshot pairs with empty diffs.
     userdata
         Set userdata for the snapshot (key-value pairs).
 
@@ -491,7 +491,7 @@ def modify_snapshot(snapshot_id=None,
 
     snapshot = get_snapshot(config=config, number=snapshot_id)
     try:
-        # Updating only the explicitely provided attributes by the user 
+        # Updating only the explicitely provided attributes by the user
         updated_opts = {
             'description': description if description != None else snapshot['description'],
             'cleanup': cleanup if cleanup != None else snapshot['cleanup'],
