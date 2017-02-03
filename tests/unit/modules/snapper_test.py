@@ -202,6 +202,26 @@ class SnapperTestCase(TestCase):
         self.assertEqual(snapper.status_to_string(128), ["extended attributes changed"])
         self.assertEqual(snapper.status_to_string(256), ["ACL info changed"])
 
+    @patch('salt.modules.snapper.snapper.CreateConfig', MagicMock())
+    @patch('salt.modules.snapper.snapper.GetConfig', MagicMock(return_value=DBUS_RET['ListConfigs'][0]))
+    def test_create_config(self):
+        opts = {
+            'name': 'testconfig',
+            'subvolume': '/foo/bar/',
+            'fstype': 'btrfs',
+            'template': 'mytemplate',
+            'extra_opts': {"NUMBER_CLEANUP": False},
+        }
+        with patch('salt.modules.snapper.set_config', MagicMock()) as set_config_mock:
+            self.assertEqual(snapper.create_config(**opts), DBUS_RET['ListConfigs'][0])
+            set_config_mock.assert_called_with("testconfig", **opts['extra_opts'])
+
+        with patch('salt.modules.snapper.set_config', MagicMock()) as set_config_mock:
+            del opts['extra_opts']
+            self.assertEqual(snapper.create_config(**opts), DBUS_RET['ListConfigs'][0])
+            assert not set_config_mock.called
+            self.assertRaises(CommandExecutionError, snapper.create_config)
+
     @patch('salt.modules.snapper.snapper.CreateSingleSnapshot', MagicMock(return_value=1234))
     @patch('salt.modules.snapper.snapper.CreatePreSnapshot', MagicMock(return_value=1234))
     @patch('salt.modules.snapper.snapper.CreatePostSnapshot', MagicMock(return_value=1234))
