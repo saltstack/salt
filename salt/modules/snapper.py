@@ -493,9 +493,9 @@ def modify_snapshot(snapshot_id=None,
     try:
         # Updating only the explicitely provided attributes by the user
         updated_opts = {
-            'description': description if description != None else snapshot['description'],
-            'cleanup': cleanup if cleanup != None else snapshot['cleanup'],
-            'userdata': userdata if userdata != None else snapshot['userdata'],
+            'description': description if description is not None else snapshot['description'],
+            'cleanup': cleanup if cleanup is not None else snapshot['cleanup'],
+            'userdata': userdata if userdata is not None else snapshot['userdata'],
         }
         snapper.SetSnapshot(config,
                             snapshot_id,
