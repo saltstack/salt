@@ -290,6 +290,60 @@ def get_config(name='root'):
         )
 
 
+def create_config(name=None,
+                  subvolume=None,
+                  fstype=None,
+                  template=None,
+                  extra_opts=None):
+    '''
+    Creates a new Snapper configuration
+
+    name
+        Name of the new Snapper configuration.
+    subvolume
+        Path to the related subvolume.
+    fstype
+        Filesystem type of the subvolume.
+    template
+        Configuration template to use. (Default: default)
+    extra_opts
+        Extra Snapper configuration opts dictionary. It will override the values provided
+        by the given template (if any).
+
+    CLI example:
+
+    .. code-block:: bash
+
+      salt '*' snapper.create_config name=myconfig subvolume=/foo/bar/ fstype=btrfs
+      salt '*' snapper.create_config name=myconfig subvolume=/foo/bar/ fstype=btrfs template="default"
+      salt '*' snapper.create_config name=myconfig subvolume=/foo/bar/ fstype=btrfs extra_opts='{"NUMBER_CLEANUP": False}'
+    '''
+    def raise_arg_error(argname):
+        raise CommandExecutionError(
+            'You must provide a "{0}" for the new configuration'.format(argname)
+        )
+
+    if not name:
+        raise_arg_error("name")
+    if not subvolume:
+        raise_arg_error("subvolume")
+    if not fstype:
+        raise_arg_error("fstype")
+    if not template:
+        template = ""
+
+    try:
+        snapper.CreateConfig(name, subvolume, fstype, template)
+        if extra_opts:
+            set_config(name, **extra_opts)
+        return get_config(name)
+    except dbus.DBusException as exc:
+        raise CommandExecutionError(
+            'Error encountered while creating the new configuration: {0}'
+            .format(_dbus_exception_to_reason(exc, locals()))
+        )
+
+
 def create_snapshot(config='root', snapshot_type='single', pre_number=None,
                     description=None, cleanup_algorithm='number', userdata=None,
                     **kwargs):
