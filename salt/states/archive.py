@@ -343,7 +343,6 @@ def extracted(name,
             __env__,
             '{0}.{1}'.format(re.sub('[:/\\\\]', '_', if_missing), archive_format))
 
-    concurrent = bool(__opts__.get('sudo_user'))
     if not source_is_local and not os.path.isfile(filename):
         if __opts__['test']:
             ret['result'] = None
@@ -357,15 +356,12 @@ def extracted(name,
 
         log.debug('%s is not in cache, downloading it', source_match)
 
-        file_result = __salt__['state.single']('file.managed',
-                                               filename,
-                                               source=source_match,
-                                               source_hash=source_hash,
-                                               makedirs=True,
-                                               skip_verify=skip_verify,
-                                               saltenv=__env__,
-                                               source_hash_name=source_hash_name,
-                                               concurrent=concurrent)
+        file_result = __states__['file.managed'](filename,
+                                                 source=source_match,
+                                                 source_hash=source_hash,
+                                                 makedirs=True,
+                                                 skip_verify=skip_verify,
+                                                 source_hash_name=source_hash_name)
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
         try:
@@ -525,12 +521,10 @@ def extracted(name,
                 recurse.append('user')
             if group:
                 recurse.append('group')
-            dir_result = __salt__['state.single']('file.directory',
-                                                  if_missing,
-                                                  user=user,
-                                                  group=group,
-                                                  recurse=recurse,
-                                                  concurrent=concurrent)
+            dir_result = __states__['file.directory'](if_missing,
+                                                      user=user,
+                                                      group=group,
+                                                      recurse=recurse)
             log.debug('file.directory: %s', dir_result)
         elif os.path.isfile(if_missing):
             log.debug('if_missing (%s) is a file, not enforcing user/group '

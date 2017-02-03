@@ -4,20 +4,24 @@ Tests for the archive state
 '''
 # Import python libs
 from __future__ import absolute_import
+import errno
+import logging
 import os
-import shutil
+import socket
 import threading
 import tornado.ioloop
 import tornado.web
 
 # Import Salt Testing libs
-from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 import salt.utils
+
+# Setup logging
+log = logging.getLogger(__name__)
 
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 if salt.utils.is_windows():
@@ -32,11 +36,10 @@ ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
 
-class SetupWebServer(TestCase):
+class ArchiveTest(integration.ModuleCase,
+                  integration.SaltReturnAssertsMixIn):
     '''
-    Setup and Teardown of Web Server
-    Only need to set this up once not
-    before all tests
+    Validate the archive state
     '''
     @classmethod
     def webserver(cls):
@@ -51,34 +54,46 @@ class SetupWebServer(TestCase):
 
     @classmethod
     def setUpClass(cls):
+        '''
+        start tornado app on thread
+        and wait till its running
+        '''
         cls.server_thread = threading.Thread(target=cls.webserver)
         cls.server_thread.daemon = True
         cls.server_thread.start()
+        # check if tornado app is up
+        port_closed = True
+        while port_closed:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            result = sock.connect_ex(('127.0.0.1', PORT))
+            if result == 0:
+                port_closed = False
 
     @classmethod
     def tearDownClass(cls):
         tornado.ioloop.IOLoop.instance().stop()
         cls.server_thread.join()
 
+    def setUp(self):
+        self._clear_archive_dir()
 
-class ArchiveTest(SetupWebServer,
-                  integration.ModuleCase,
-                  integration.SaltReturnAssertsMixIn):
-    '''
-    Validate the archive state
-    '''
-    def _check_ext_remove(self, dir, file):
+    def tearDown(self):
+        self._clear_archive_dir()
+
+    @staticmethod
+    def _clear_archive_dir():
+        try:
+            salt.utils.rm_rf(ARCHIVE_DIR)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                raise
+
+    def _check_extracted(self, path):
         '''
         function to check if file was extracted
-        and remove the directory.
         '''
-        # check to see if it extracted
-        check_dir = os.path.isfile(file)
-        self.assertTrue(check_dir)
-
-        # wipe away dir. Can't do this in teardown
-        # because it needs to be wiped before each test
-        shutil.rmtree(dir)
+        log.debug('Checking for extracted file: %s', path)
+        self.assertTrue(os.path.isfile(path))
 
     def test_archive_extracted_skip_verify(self):
         '''
@@ -89,7 +104,7 @@ class ArchiveTest(SetupWebServer,
                              skip_verify=True)
         self.assertSaltTrueReturn(ret)
 
-        self._check_ext_remove(ARCHIVE_DIR, UNTAR_FILE)
+        self._check_extracted(UNTAR_FILE)
 
     def test_archive_extracted_with_source_hash(self):
         '''
@@ -102,7 +117,7 @@ class ArchiveTest(SetupWebServer,
                              source_hash=ARCHIVE_TAR_HASH)
         self.assertSaltTrueReturn(ret)
 
-        self._check_ext_remove(ARCHIVE_DIR, UNTAR_FILE)
+        self._check_extracted(UNTAR_FILE)
 
 
 if __name__ == '__main__':
