@@ -229,6 +229,23 @@ class SnapperTestCase(TestCase):
         self.assertRaises(CommandExecutionError, snapper.delete_snapshot, snapshots_ids=1)
         self.assertRaises(CommandExecutionError, snapper.delete_snapshot, snapshots_ids=[1, 2])
 
+    @patch('salt.modules.snapper.snapper.SetSnapshot', MagicMock())
+    def test_modify_snapshot(self):
+        _ret = {
+            'userdata': {'userdata2': 'uservalue2'},
+            'description': 'UPDATED DESCRIPTION', 'timestamp': 1457006571,
+            'cleanup': 'number', 'user': 'root', 'type': 'pre', 'id': 42
+        }
+        _opts = {
+            'config': 'root',
+            'snapshot_id': 42,
+            'cleanup': 'number',
+            'description': 'UPDATED DESCRIPTION',
+            'userdata': {'userdata2': 'uservalue2'},
+        }
+        with patch('salt.modules.snapper.get_snapshot', MagicMock(side_effect=[DBUS_RET['ListSnapshots'][0], _ret])):
+            self.assertDictEqual(snapper.modify_snapshot(**_opts), _ret)
+
     @patch('salt.modules.snapper._get_last_snapshot', MagicMock(return_value={'id': 42}))
     def test__get_num_interval(self):
         self.assertEqual(snapper._get_num_interval(config=None, num_pre=None, num_post=None), (42, 0))  # pylint: disable=protected-access
