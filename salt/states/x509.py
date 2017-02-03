@@ -348,7 +348,6 @@ def csr_managed(name,
         old = __salt__['x509.read_csr'](name)
     except salt.exceptions.SaltInvocationError:
         old = '{0} is not a valid csr.'.format(name)
-        pass
 
     file_args, kwargs = _get_file_args(name, **kwargs)
     file_args['contents'] = __salt__['x509.create_csr'](text=True, **kwargs)
