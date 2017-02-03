@@ -361,7 +361,6 @@ def extracted(name,
                                                  source_hash=source_hash,
                                                  makedirs=True,
                                                  skip_verify=skip_verify,
-                                                 saltenv=__env__,
                                                  source_hash_name=source_hash_name)
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
