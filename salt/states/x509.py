@@ -173,6 +173,7 @@ try:
 except ImportError:
     pass
 
+
 def __virtual__():
     '''
     only load this module if the corresponding execution module is loaded
@@ -225,14 +226,20 @@ def _get_file_args(name, **kwargs):
     return file_args, extra_args
 
 
-def _check_private_key(name, bits=2048, passphrase=None, new=False):
+def _check_private_key(name, bits=2048, passphrase=None,
+                       overwrite=False, new=False):
     current_bits = 0
     if os.path.isfile(name):
         try:
             current_bits = __salt__['x509.get_private_key_size'](
                 private_key=name, passphrase=passphrase)
-        except (salt.exceptions.SaltInvocationError, RSAError):
+        except salt.exceptions.SaltInvocationError:
             pass
+        except RSAError:
+            if overwrite:
+                pass
+            raise salt.exceptions.CommandExecutionError(
+                'The provided passphrase cannot decrypt the private key.')
 
     return current_bits == bits and not new
 
@@ -242,6 +249,7 @@ def private_key_managed(name,
                         passphrase=None,
                         cipher='aes_128_cbc',
                         new=False,
+                        overwrite=False,
                         verbose=True,
                         **kwargs):
     '''
@@ -262,6 +270,9 @@ def private_key_managed(name,
     new:
         Always create a new key. Defaults to False.
         Combining new with :mod:`prereq <salt.states.requsities.preqreq>`, or when used as part of a `managed_private_key` can allow key rotation whenever a new certificiate is generated.
+
+    overwrite:
+        Overwrite an existing private key if the provided passphrase cannot decrypt it.
 
     verbose:
         Provide visual feedback on stdout, dots while key is generated.
@@ -290,7 +301,7 @@ def private_key_managed(name,
     '''
     file_args, kwargs = _get_file_args(name, **kwargs)
     new_key = False
-    if _check_private_key(name, bits, passphrase, new):
+    if _check_private_key(name, bits, passphrase, overwrite, new):
         file_args['contents'] = __salt__['x509.get_pem_entry'](
             name, pem_type='RSA PRIVATE KEY')
     else:
@@ -414,6 +425,7 @@ def certificate_managed(name,
         private_key_args = {
             'name': name,
             'new': False,
+            'overwrite': False,
             'bits': 2048,
             'passphrase': None,
             'cipher': 'aes_128_cbc',
@@ -429,6 +441,7 @@ def certificate_managed(name,
         if _check_private_key(private_key_args['name'],
                               private_key_args['bits'],
                               private_key_args['passphrase'],
+                              private_key_args['overwrite'],
                               private_key_args['new']):
             private_key = __salt__['x509.get_pem_entry'](
                 private_key_args['name'], pem_type='RSA PRIVATE KEY')
