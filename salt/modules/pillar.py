@@ -11,6 +11,7 @@ import collections
 import copy
 import os
 import copy
+import logging
 import yaml
 import salt.ext.six as six
 
@@ -21,6 +22,8 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __proxyenabled__ = ['*']
+
+log = logging.getLogger(__name__)
 
 
 def get(key,
@@ -101,15 +104,25 @@ def get(key,
         else items(saltenv=saltenv, pillarenv=pillarenv)
 
     if merge:
-        if not isinstance(default, dict):
-            raise SaltInvocationError(
-                'default must be a dictionary when merge=True'
-            )
-        ret = salt.utils.traverse_dict_and_list(pillar_dict, key, {}, delimiter)
-        if isinstance(ret, collections.Mapping) and \
-                isinstance(default, collections.Mapping):
-            default = copy.deepcopy(default)
-            return salt.utils.dictupdate.update(default, ret, merge_lists=opt_merge_lists)
+        if default is None:
+            log.debug('pillar.get: default is None, skipping merge')
+        else:
+            if not isinstance(default, dict):
+                raise SaltInvocationError(
+                    'default must be a dictionary or None when merge=True'
+                )
+            ret = salt.utils.traverse_dict_and_list(
+                pillar_dict,
+                key,
+                {},
+                delimiter)
+            if isinstance(ret, collections.Mapping) and \
+                    isinstance(default, collections.Mapping):
+                default = copy.deepcopy(default)
+                return salt.utils.dictupdate.update(
+                    default,
+                    ret,
+                    merge_lists=opt_merge_lists)
 
     ret = salt.utils.traverse_dict_and_list(pillar_dict,
                                             key,
