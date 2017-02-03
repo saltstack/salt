@@ -18,7 +18,7 @@ def __virtual__():
     return 'zabbix.host_create' in __salt__
 
 
-def present(host, groups, interfaces, **kwargs):
+def present(host, groups, interfaces, templates=None, **kwargs):
     '''
     Ensures that the host exists, eventually creates new host.
     NOTE: please use argument visible_name instead of name to not mess with name from salt sls. This function accepts
@@ -125,16 +125,17 @@ def present(host, groups, interfaces, **kwargs):
 
     interfaces_formated = _interface_format(interfaces)
 
-    host_exists = __salt__['zabbix.host_exists'](host)
+    host_exists = __salt__['zabbix.host_exists'](host, **kwargs)
 
     if host_exists:
-        host = __salt__['zabbix.host_get'](name=host)[0]
+        host = __salt__['zabbix.host_get'](name=host, **kwargs)[0]
         hostid = host['hostid']
 
         update_hostgroups = False
         update_interfaces = False
+        update_templates = False
 
-        hostgroups = __salt__['zabbix.hostgroup_get'](hostids=hostid)
+        hostgroups = __salt__['zabbix.hostgroup_get'](hostids=hostid, **kwargs)
         cur_hostgroups = list()
 
         for hostgroup in hostgroups:
@@ -143,7 +144,25 @@ def present(host, groups, interfaces, **kwargs):
         if set(groups) != set(cur_hostgroups):
             update_hostgroups = True
 
-        hostinterfaces = __salt__['zabbix.hostinterface_get'](hostids=hostid)
+        hosttemplates = __salt__['zabbix.template_get'](hostids=hostid, **kwargs)
+        cur_templates = list()
+
+        if not hosttemplates and not templates is None:
+            update_templates = True
+        elif not hosttemplates and templates is None:
+            update_templates = False
+        elif not hosttemplates:
+            update_templates = True
+        else:
+            for template in hosttemplates:
+                cur_templates.append(int(template['templateid']))
+            try:
+                if set(templates) != set(cur_templates):
+                    update_templates = True
+            except TypeError:
+                update_templates = True
+
+        hostinterfaces = __salt__['zabbix.hostinterface_get'](hostids=hostid, **kwargs)
 
         if hostinterfaces:
             hostinterfaces = sorted(hostinterfaces, key=lambda k: k['main'])
@@ -163,7 +182,7 @@ def present(host, groups, interfaces, **kwargs):
     # Dry run, test=true mode
     if __opts__['test']:
         if host_exists:
-            if update_hostgroups or update_interfaces:
+            if update_hostgroups or update_interfaces or update_templates:
                 ret['result'] = None
                 ret['comment'] = comment_host_updated
             else:
@@ -179,19 +198,28 @@ def present(host, groups, interfaces, **kwargs):
 
     if host_exists:
         ret['result'] = True
-        if update_hostgroups or update_interfaces:
+        if update_hostgroups or update_interfaces or update_templates:
 
             if update_hostgroups:
-                hostupdate = __salt__['zabbix.host_update'](hostid, groups=groups)
+                hostupdate = __salt__['zabbix.host_update'](hostid, groups=groups, **kwargs)
                 ret['changes']['groups'] = str(groups)
                 if 'error' in hostupdate:
                     error.append(hostupdate['error'])
+
+            if update_templates:
+                if templates is None:
+                    templates = ()
+                templateupdate = __salt__['zabbix.host_update'](hostid, templates=templates, **kwargs)
+                ret['changes']['templates'] = str(templates)
+                if 'error' in templateupdate:
+                    error.append(templateupdate['error'])
+
             if update_interfaces:
                 if hostinterfaces:
                     for interface in hostinterfaces:
                         __salt__['zabbix.hostinterface_delete'](interfaceids=interface['interfaceid'])
 
-                hostid = __salt__['zabbix.host_get'](name=host)[0]['hostid']
+                hostid = __salt__['zabbix.host_get'](name=host, **kwargs)[0]['hostid']
 
                 for interface in interfaces_formated:
                     updatedint = __salt__['zabbix.hostinterface_create'](hostid=hostid,
@@ -212,7 +240,9 @@ def present(host, groups, interfaces, **kwargs):
         else:
             ret['comment'] = comment_host_exists
     else:
-        host_create = __salt__['zabbix.host_create'](host, groups, interfaces_formated, **kwargs)
+        if templates is None:
+            templates = ()
+        host_create = __salt__['zabbix.host_create'](host, groups, interfaces_formated, templates, **kwargs)
 
         if 'error' not in host_create:
             ret['result'] = True
@@ -231,7 +261,7 @@ def present(host, groups, interfaces, **kwargs):
     return ret
 
 
-def absent(name):
+def absent(name, **kwargs):
     """
     Ensures that the host does not exists, eventually deletes host.
 
@@ -259,7 +289,7 @@ def absent(name):
                                    }
                             }
 
-    host_exists = __salt__['zabbix.host_exists'](name)
+    host_exists = __salt__['zabbix.host_exists'](name, **kwargs)
 
     # Dry run, test=true mode
     if __opts__['test']:
@@ -271,7 +301,7 @@ def absent(name):
             ret['comment'] = comment_host_deleted
         return ret
 
-    host_get = __salt__['zabbix.host_get'](name)
+    host_get = __salt__['zabbix.host_get'](name, **kwargs)
 
     if not host_get:
         ret['result'] = True
@@ -279,7 +309,7 @@ def absent(name):
     else:
         try:
             hostid = host_get[0]['hostid']
-            host_delete = __salt__['zabbix.host_delete'](hostid)
+            host_delete = __salt__['zabbix.host_delete'](hostid, **kwargs)
         except KeyError:
             host_delete = False
 
