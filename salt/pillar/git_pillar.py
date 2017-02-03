@@ -392,6 +392,12 @@ def ext_pillar(minion_id, repo, pillar_dirs):
             False
         )
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
+            # If pillarenv is set, only grab pillars with that match pillarenv
+            if opts['pillarenv'] and env != opts['pillarenv']:
+                log.debug(
+                    "Env '{0}' does not match pillarenv '{1}' - skipping pillar".format(env, opts['pillarenv'])
+                )
+                continue
             log.debug(
                 'git_pillar is processing pillar SLS from {0} for pillar '
                 'env \'{1}\''.format(pillar_dir, env)
