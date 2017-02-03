@@ -9,9 +9,104 @@ Management of Solaris Zones
 
 .. versionadded:: nitrogen
 
+Bellow are some examples of how to use this state.
+Lets start with creating a zone and installing it.
+
 .. code-block:: yaml
 
-    FIXME: add good example
+    omipkg1_configuration:
+      zone.present:
+        - name: omipkg1
+        - brand: ipkg
+        - zonepath: /zones/omipkg1
+        - properties:
+          - autoboot: true
+          - ip-type: exclusive
+          - cpu-shares: 50
+        - resources:
+          - attr:
+            - name: owner
+            - value: Jorge Schrauwen
+            - type: string
+          - attr:
+            - name: description
+            - value: OmniOS ipkg zone for testing
+            - type: string
+          - capped-memory:
+            - physical: 64M
+    omipkg1_installation:
+      zone.installed:
+        - name: omipkg1
+        - require:
+            - zone: omipkg1_configuration
+    omipkg1_running:
+      zone.booted:
+        - name: omipkg1
+        - require:
+            - zone: omipkg1_installation
+
+A zone without network access is not very useful. We could update
+the zone.present state in the example above to add a network interface
+or we could use a seperate state for this.
+
+.. code-block:: yaml
+
+    omipkg1_network:
+      zone.resource_present:
+        - name: omipkg1
+        - resource_type: net
+        - resource_selector_property: mac-addr
+        - resource_selector_value: "02:08:20:a2:a3:10"
+        - physical: znic1
+        - require:
+            - zone: omipkg1_configuration
+
+Since this is a single tenant system having the owner attribute is pointless.
+Let's remove that attribute.
+
+.. note::
+    The following state run the omipkg1_configuration state will add it again!
+    If the entire configuration is managed it would be better to add resource_prune
+    and optionally the resource_selector_property properties to the resource.
+
+.. code-block:: yaml
+
+    omipkg1_strip_owner:
+      zone.resource_present:
+        - name: omipkg1
+        - resource_type: attr
+        - resource_selector_property: name
+        - resource_selector_value: owner
+        - require:
+            - zone: omipkg1_configuration
+
+Let's bump the zone's CPU shares a bit.
+
+.. note::
+    The following state run the omipkg1_configuration state will set it to 50 again.
+    Update the entire zone configuration is managed you should update it there instead.
+
+.. code-block:: yaml
+
+    omipkg1_more_cpu:
+      zone.property_present:
+        - name: omipkg1
+        - property: cpu-shares
+        - value: 100
+
+Or we can remove the limit altogether!
+
+.. note::
+    The following state run the omipkg1_configuration state will set it to 50 again.
+    Update the entire zone configuration is managed you should set the
+    property to None (nothing after the :) instead.
+
+.. code-block:: yaml
+
+    omipkg1_no_cpu:
+      zone.property_absent:
+        - name: omipkg1
+        - property: cpu-shares
 
 '''
 from __future__ import absolute_import
@@ -404,13 +499,13 @@ def resource_absent(name, resource_type, resource_selector_property, resource_se
                             resource_selector_value,
                         )
 
-            # resource already absent
-            if ret['result'] is None:
-                ret['result'] = True
-                ret['comment'] = 'The {0} resource {1} was absent.'.format(
-                    resource_type,
-                    resource_selector_value,
-                )
+        # resource already absent
+        if ret['result'] is None:
+            ret['result'] = True
+            ret['comment'] = 'The {0} resource {1} was absent.'.format(
+                resource_type,
+                resource_selector_value,
+            )
     else:
         ## zone does not exist
         ret['result'] = False
@@ -874,7 +969,6 @@ def present(name, brand, zonepath, properties=None, resources=None):
                             resource_cfg['resource_selector_value'] = None
                         resource_cfg['name'] = name  # we do this last because name can also be a attrib value
                         res = resource_present(**resource_cfg)
-                        log.error(res)
                     if res:
                         ret['result'] = ret['result'] if res['result'] else False
                         ret['comment'].append(res['comment'])
