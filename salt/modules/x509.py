@@ -974,7 +974,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         OpenSSL.crypto.FILETYPE_PEM,
         get_pem_entry(signing_cert, pem_type='CERTIFICATE'))
     signing_private_key = _get_private_key_obj(signing_private_key,
-                         passphrase=signing_private_key_passphrase).as_pem(cipher=None)
+                                               passphrase=signing_private_key_passphrase).as_pem(cipher=None)
     key = OpenSSL.crypto.load_privatekey(
         OpenSSL.crypto.FILETYPE_PEM,
         get_pem_entry(signing_private_key))
@@ -1593,9 +1593,11 @@ def create_csr(path=None, text=False, **kwargs):
         kwargs['private_key_passphrase'] = None
     if 'public_key_passphrase' not in kwargs:
         kwargs['public_key_passphrase'] = None
-    if kwargs['public_key_passphrase'] and not kwargs['private_key_passphrase']:
+    if kwargs['public_key_passphrase'] and not kwargs[
+            'private_key_passphrase']:
         kwargs['private_key_passphrase'] = kwargs['public_key_passphrase']
-    if kwargs['private_key_passphrase'] and not kwargs['public_key_passphrase']:
+    if kwargs['private_key_passphrase'] and not kwargs[
+            'public_key_passphrase']:
         kwargs['public_key_passphrase'] = kwargs['private_key_passphrase']
 
     csr.set_pubkey(get_public_key(kwargs['public_key'],
@@ -1618,6 +1620,9 @@ def create_csr(path=None, text=False, **kwargs):
         if extval.startswith('critical '):
             critical = True
             extval = extval[9:]
+
+        if extname == 'subjectKeyIdentifier' and 'hash' in extval:
+            extval = extval.replace('hash', _get_pubkey_hash(csr))
 
         if extname == 'subjectAltName':
             extval = extval.replace('IP Address', 'IP')

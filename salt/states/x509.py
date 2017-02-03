@@ -227,7 +227,7 @@ def _get_file_args(name, **kwargs):
 
 
 def _check_private_key(name, bits=2048, passphrase=None,
-                       overwrite=False, new=False):
+                       new=False, overwrite=False):
     current_bits = 0
     if os.path.isfile(name):
         try:
@@ -236,10 +236,10 @@ def _check_private_key(name, bits=2048, passphrase=None,
         except salt.exceptions.SaltInvocationError:
             pass
         except RSAError:
-            if overwrite:
-                pass
-            raise salt.exceptions.CommandExecutionError(
-                'The provided passphrase cannot decrypt the private key.')
+            if not overwrite:
+                raise salt.exceptions.CommandExecutionError(
+                    'The provided passphrase cannot decrypt the private key.')
+            pass
 
     return current_bits == bits and not new
 
@@ -301,7 +301,8 @@ def private_key_managed(name,
     '''
     file_args, kwargs = _get_file_args(name, **kwargs)
     new_key = False
-    if _check_private_key(name, bits, passphrase, overwrite, new):
+    if _check_private_key(
+            name, bits=bits, passphrase=passphrase, new=new, overwrite=overwrite):
         file_args['contents'] = __salt__['x509.get_pem_entry'](
             name, pem_type='RSA PRIVATE KEY')
     else:
@@ -344,7 +345,12 @@ def csr_managed(name,
              - L: Salt Lake City
              - keyUsage: 'critical dataEncipherment'
     '''
-    old = __salt__['x509.read_csr'](name)
+    try:
+        old = __salt__['x509.read_csr'](name)
+    except salt.exceptions.SaltInvocationError:
+        old = '{0} is not a valid csr.'.format(name)
+        pass
+
     file_args, kwargs = _get_file_args(name, **kwargs)
     file_args['contents'] = __salt__['x509.create_csr'](text=True, **kwargs)
 
@@ -439,10 +445,10 @@ def certificate_managed(name,
             private_key_args['new'] = False
 
         if _check_private_key(private_key_args['name'],
-                              private_key_args['bits'],
-                              private_key_args['passphrase'],
-                              private_key_args['overwrite'],
-                              private_key_args['new']):
+                              bits=private_key_args['bits'],
+                              passphrase=private_key_args['passphrase'],
+                              new=private_key_args['new'],
+                              overwrite=private_key_args['overwrite']):
             private_key = __salt__['x509.get_pem_entry'](
                 private_key_args['name'], pem_type='RSA PRIVATE KEY')
         else:
@@ -568,6 +574,7 @@ def certificate_managed(name,
 
 def crl_managed(name,
                 signing_private_key,
+                signing_private_key_passphrase=None,
                 signing_cert=None,
                 revoked=None,
                 days_valid=100,
@@ -584,6 +591,9 @@ def crl_managed(name,
     signing_private_key:
         The private key that will be used to sign this crl. This is
         usually your CA's private key.
+
+    signing_private_key_passphrase:
+        Passphrase to decrypt the private key.
 
     signing_cert:
         The certificate of the authority that will be used to sign this crl.
@@ -654,7 +664,7 @@ def crl_managed(name,
     else:
         current = '{0} does not exist.'.format(name)
 
-    new_crl = __salt__['x509.create_crl'](text=True, signing_private_key=signing_private_key,
+    new_crl = __salt__['x509.create_crl'](text=True, signing_private_key=signing_private_key, signing_private_key_passphrase=signing_private_key_passphrase,
                                           signing_cert=signing_cert, revoked=revoked, days_valid=days_valid, digest=digest, include_expired=include_expired)
 
     new = __salt__['x509.read_crl'](crl=new_crl)
