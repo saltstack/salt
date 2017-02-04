@@ -104,7 +104,7 @@ def _srvmgr(cmd, return_json=False):
     if ret['retcode'] != 0:
         msg = 'Unable to execute command: {0}\nError: {1}' \
               ''.format(cmd, ret['stderr'])
-        raise CommandExecutionError(msg)
+        log.error(msg)
 
     return ret
 
