@@ -1154,7 +1154,7 @@ def _error_detail(data, item):
     '''
     err = item['errorDetail']
     if 'code' in err:
-        msg = '{1}: {2}'.format(
+        msg = '{0}: {1}'.format(
             item['errorDetail']['code'],
             item['errorDetail']['message'],
         )
