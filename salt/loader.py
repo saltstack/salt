@@ -836,6 +836,9 @@ def sdb(opts, functions=None, whitelist=None, utils=None):
     '''
     Make a very small database call
     '''
+    if utils is None:
+        utils = {}
+
     return LazyLoader(
         _module_dirs(opts, 'sdb'),
         opts,
