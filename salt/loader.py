@@ -832,7 +832,7 @@ def queues(opts):
     )
 
 
-def sdb(opts, functions=None, whitelist=None):
+def sdb(opts, functions=None, whitelist=None, utils=None):
     '''
     Make a very small database call
     '''
@@ -840,7 +840,11 @@ def sdb(opts, functions=None, whitelist=None):
         _module_dirs(opts, 'sdb'),
         opts,
         tag='sdb',
-        pack={'__sdb__': functions},
+        pack={
+            '__sdb__': functions,
+            '__opts__': opts,
+            '__utils__': utils,
+        },
         whitelist=whitelist,
     )
 

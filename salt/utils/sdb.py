@@ -36,7 +36,8 @@ def sdb_get(uri, opts):
     fun = '{0}.get'.format(profile['driver'])
     query = uri[indx+1:]
 
-    loaded_db = salt.loader.sdb(opts, fun)
+    utils = salt.loader.utils(opts)
+    loaded_db = salt.loader.sdb(opts, fun, utils=utils)
     return loaded_db[fun](query, profile=profile)
 
 
@@ -67,7 +68,8 @@ def sdb_set(uri, value, opts):
     fun = '{0}.set'.format(profile['driver'])
     query = uri[indx+1:]
 
-    loaded_db = salt.loader.sdb(opts, fun)
+    utils = salt.loader.utils(opts)
+    loaded_db = salt.loader.sdb(opts, fun, utils=utils)
     return loaded_db[fun](query, value, profile=profile)
 
 
@@ -98,5 +100,6 @@ def sdb_delete(uri, opts):
     fun = '{0}.delete'.format(profile['driver'])
     query = uri[indx+1:]
 
-    loaded_db = salt.loader.sdb(opts, fun)
+    utils = salt.loader.utils(opts)
+    loaded_db = salt.loader.sdb(opts, fun, utils=utils)
     return loaded_db[fun](query, profile=profile)
