@@ -67,7 +67,7 @@ def _list_certs(certificatestore='My'):
     pscmd.append(r"Get-ChildItem -Path '{0}' | Select-Object".format(cert_path))
     pscmd.append(' DnsNameList, SerialNumber, Subject, Thumbprint, Version')
 
-    cmd_ret = _srvmgr(cmd=str().join(pscmd), as_json=True)
+    cmd_ret = _srvmgr(cmd=str().join(pscmd), return_json=True)
 
     try:
         items = json.loads(cmd_ret['stdout'], strict=False)
@@ -86,14 +86,14 @@ def _list_certs(certificatestore='My'):
     return ret
 
 
-def _srvmgr(cmd, as_json=False):
+def _srvmgr(cmd, return_json=False):
     '''
     Execute a function from the WebAdministration PS module.
     '''
     if isinstance(cmd, list):
         cmd = ' '.join(cmd)
 
-    if as_json:
+    if return_json:
         cmd = 'ConvertTo-Json -Compress -Depth 4 -InputObject @({0})' \
               ''.format(cmd)
 
@@ -127,7 +127,7 @@ def list_sites():
               'applicationPool, Bindings, ID, Name, PhysicalPath, State']
     keep_keys = ('certificateHash', 'certificateStoreName', 'protocol', 'sslFlags')
 
-    cmd_ret = _srvmgr(cmd=ps_cmd, as_json=True)
+    cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
     try:
         items = json.loads(cmd_ret['stdout'], strict=False)
@@ -644,7 +644,7 @@ def list_apppools():
     ps_cmd.append(r"| ForEach-Object { $_.Value } | Where-Object { $_ -ne '/' }")
     ps_cmd.append('} }')
 
-    cmd_ret = _srvmgr(cmd=ps_cmd, as_json=True)
+    cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
     try:
         items = json.loads(cmd_ret['stdout'], strict=False)
@@ -826,14 +826,14 @@ def get_container_setting(name, container, settings):
         ps_cmd.append(r'$Property = $Null;')
 
     # Validate the setting names that were passed in.
-    cmd_ret = _srvmgr(cmd=ps_cmd_validate, as_json=True)
+    cmd_ret = _srvmgr(cmd=ps_cmd_validate, return_json=True)
 
     if cmd_ret['retcode'] != 0:
         message = 'One or more invalid property names were specified for the provided container.'
         raise SaltInvocationError(message)
 
     ps_cmd.append('$Settings')
-    cmd_ret = _srvmgr(cmd=ps_cmd, as_json=True)
+    cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
     try:
         items = json.loads(cmd_ret['stdout'], strict=False)
@@ -949,7 +949,7 @@ def list_apps(site):
     ps_cmd.append(r"@{ Name='protocols'; Expression={ @( $_.enabledProtocols.Split(',')")
     ps_cmd.append(r"| Foreach-Object { $_.Trim() } ) } }")
 
-    cmd_ret = _srvmgr(cmd=ps_cmd, as_json=True)
+    cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
     try:
         items = json.loads(cmd_ret['stdout'], strict=False)
@@ -1109,7 +1109,7 @@ def list_vdirs(site, app=_DEFAULT_APP):
               '|', "Select-Object PhysicalPath, @{ Name = 'name';",
               r"Expression = { $_.path.Split('/')[-1] } }"]
 
-    cmd_ret = _srvmgr(cmd=ps_cmd, as_json=True)
+    cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
     try:
         items = json.loads(cmd_ret['stdout'], strict=False)
