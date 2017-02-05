@@ -136,6 +136,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       size: n1-standard-1
       location: europe-west1-b
       network: default
+      subnetwork: default
       tags: '["one", "two", "three"]'
       metadata: '{"one": "1", "2": "two"}'
       use_persistent_disk: True
@@ -180,6 +181,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       size: n1-standard-1
       location: europe-west1-b
       network: default
+      subnetwork: default
       tags: '["one", "two", "three"]'
       metadata: '{"one": "1", "2": "two"}'
       use_persistent_disk: True
@@ -213,6 +215,13 @@ Use this setting to define the network resource for the instance.
 All GCE projects contain a network named 'default' but it's possible
 to use this setting to create instances belonging to a different
 network resource.
+
+subnetwork
+----------
+
+Custom non-legacy network resources have subnetworks.
+the 'default' network has a 'default' subnetwork.
+Set a subnetwork when using custom network resources. Required.
 
 tags
 ----
@@ -300,6 +309,7 @@ key in your cloud profile. The following example enables the bigquery scope.
     size: f1-micro
     location: us-central1-a
     network: default
+    subnetwork: default
     tags: '["one", "two", "three"]'
     metadata: '{"one": "1", "2": "two",
                 "sshKeys": ""}'
