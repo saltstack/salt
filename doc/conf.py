@@ -165,6 +165,11 @@ MOCK_MODULES = [
     'pyroute2.ipdb',
     'avahi',
     'dbus',
+    'twisted',
+    'twisted.internet',
+    'twisted.internet.protocol',
+    'twisted.internet.protocol.DatagramProtocol',
+    'msgpack',
 ]
 
 for mod_name in MOCK_MODULES:

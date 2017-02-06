@@ -175,13 +175,12 @@ class Parser(object):
             payload["raw"] = line
             return payload
 
-obj = Parser()
-
 
 class Echo(DatagramProtocol):  # pylint: disable=W0232
 
     def datagramReceived(self, data, connection_details):
         (host, port) = connection_details
+        obj = Parser()
         data = obj.parse(data)
         log.debug('Junos Syslog - received {0} from {1}:{2}'.format(data, host, port))
 
@@ -190,7 +189,7 @@ class Echo(DatagramProtocol):  # pylint: disable=W0232
                 data['hostname'], data['event'])
             data['port'] = port
 
-            fire_master = salt.utils.event.get_master_event(
+            salt.utils.event.get_master_event(
                 __opts__,
                 __opts__['sock_dir']).fire_event(data, topic)
             # Do nothing if the syslog do not contain events

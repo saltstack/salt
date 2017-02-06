@@ -19,4 +19,7 @@ sdb modules
     memcached
     rest
     sqlite3
+    tism
     vault
+    yaml
+

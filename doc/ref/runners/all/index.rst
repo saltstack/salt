@@ -28,6 +28,7 @@ runner modules
     launchd
     lxc
     manage
+    mattermost
     mine
     nacl
     net

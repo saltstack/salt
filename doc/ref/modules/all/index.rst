@@ -24,6 +24,7 @@ execution modules
     apache
     apcups
     apf
+    apk
     aptpkg
     archive
     artifactory
@@ -37,6 +38,7 @@ execution modules
     bigip
     blockdev
     bluez
+    boto3_elasticache
     boto_apigateway
     boto_asg
     boto_cfn
@@ -47,11 +49,13 @@ execution modules
     boto_datapipeline
     boto_dynamodb
     boto_ec2
+    boto_efs
     boto_elasticache
     boto_elasticsearch_domain
     boto_elb
     boto_iam
     boto_iot
+    boto_kinesis
     boto_kms
     boto_lambda
     boto_rds
@@ -123,6 +127,7 @@ execution modules
     file
     firewalld
     freebsd_sysctl
+    freebsd_update
     freebsdjail
     freebsdkmod
     freebsdpkg
@@ -138,6 +143,7 @@ execution modules
     glusterfs
     gnomedesktop
     gpg
+    grafana4
     grains
     groupadd
     grub_legacy
@@ -145,6 +151,7 @@ execution modules
     hadoop
     haproxyconn
     hashutil
+    heat
     hg
     hipchat
     hosts
@@ -152,7 +159,7 @@ execution modules
     http
     ifttt
     ilo
-    img
+    icinga2
     incron
     influx
     influx08
@@ -218,6 +225,7 @@ execution modules
     makeconf
     marathon
     match
+    mattermost
     mdadm
     mdata
     memcached
@@ -235,6 +243,11 @@ execution modules
     nacl
     nagios
     nagios_rpc
+    namecheap_dns
+    namecheap_domains
+    namecheap_ns
+    namecheap_ssl
+    namecheap_users
     napalm_bgp
     napalm_network
     napalm_ntp
@@ -354,6 +367,7 @@ execution modules
     solarisips
     solarispkg
     solr
+    solrcloud
     splunk
     splunk_search
     sqlite3
