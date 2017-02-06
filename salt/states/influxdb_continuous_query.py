@@ -3,6 +3,8 @@
 Management of Influxdb continuous queries
 =========================================
 
+.. versionadded:: Nitrogen
+
 (compatible with InfluxDB version 0.9+)
 '''
 

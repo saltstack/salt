@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
 States for solrcloud alias and collection configuration
-'''
-from __future__ import absolute_import
 
+.. versionadded:: Nitrogen
+
+'''
+
+# Import Python libs
+from __future__ import absolute_import
 import json
 
 
