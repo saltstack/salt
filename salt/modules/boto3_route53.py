@@ -47,6 +47,7 @@ Execution module for Amazon Route53 written against Boto 3
 
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
+#pylint: disable=E0611
 
 # Import Python libs
 from __future__ import absolute_import
@@ -56,7 +57,7 @@ import time
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
-from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -243,7 +244,7 @@ def get_hosted_zones_by_domain(Name, region=None, key=None, keyid=None, profile=
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     zones = [z for z in _collect_results(conn.list_hosted_zones, 'HostedZones', {})
-            if z['Name'] == Name ]
+            if z['Name'] == Name]
     ret = []
     for z in zones:
         ret += get_hosted_zone(Id=z['Id'], region=region, key=key, keyid=keyid, profile=profile)
@@ -832,12 +833,8 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
     }
 
     '''
-    if HostedZoneId and Name:
-        raise SaltInvocationError('Only one of either HostZoneId or Name may '
-                                  'be provided. Got "%s" and "%s"' % (HostedZoneId, Name))
     if not _exactly_one((HostedZoneId, Name)):
-        raise SaltInvocationError('Exactly one of either HostZoneId or Name must '
-                                  'be provided.')
+        raise SaltInvocationError('Exactly one of either HostZoneId or Name must be provided.')
     if Name:
         args = {'Name': Name, 'region': region, 'key': key, 'keyid': keyid,
                 'profile': profile}
