@@ -1059,14 +1059,14 @@ def _netbsd_remotes_on(port, which_end):
 
     $ sudo sockstat -4 -n
     USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
-    root    python2.7   1456    29  tcp4   *.4505           *.*
-    root    python2.7   1445    17  tcp4   *.4506           *.*
-    root    python2.7   1294    14  tcp4   127.0.0.1.11813  127.0.0.1.4505
-    root    python2.7   1294    41  tcp4   127.0.0.1.61115  127.0.0.1.4506
+    root    python2.7   1456    29  tcp    *.4505           *.*
+    root    python2.7   1445    17  tcp    *.4506           *.*
+    root    python2.7   1294    14  tcp    127.0.0.1.11813  127.0.0.1.4505
+    root    python2.7   1294    41  tcp    127.0.0.1.61115  127.0.0.1.4506
 
     $ sudo sockstat -4 -c -n -p 4506
     USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
-    root    python2.7   1294    41  tcp4   127.0.0.1.61115  127.0.0.1.4506
+    root    python2.7   1294    41  tcp    127.0.0.1.61115  127.0.0.1.4506
     '''
 
     port = int(port)
@@ -1085,7 +1085,7 @@ def _netbsd_remotes_on(port, which_end):
         chunks = line.split()
         if not chunks:
             continue
-        # ['root', 'python2.7', '1456', '37', 'tcp4',
+        # ['root', 'python2.7', '1456', '37', 'tcp',
         #  '127.0.0.1.4505-', '127.0.0.1.55703']
         # print chunks
         if 'COMMAND' in chunks[1]:
