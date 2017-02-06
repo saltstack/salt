@@ -437,7 +437,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             if data:
                 keys = ['PathOnHost', 'PathInContainer', 'CgroupPermissions']
                 modified_data = []
-                log.error("data: {}, actual: {}".format(data, actual_data))
+                log.error("data: {0}, actual: {1}".format(data, actual_data))
                 for index, device_info in enumerate(data):
                     data_device_info = dict(list(six.zip(keys, device_info.split(':'))))
                     try:
