@@ -60,18 +60,19 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
 '''
+# keep lint from choking
+#pylint: disable=W0106
+#pylint: disable=E1320
 
 # Import Python Libs
 from __future__ import absolute_import
-import json
 import uuid
 
 # Import Salt Libs
 import salt.utils.dictupdate as dictupdate
 from salt.utils import SaltInvocationError, exactly_one
 import logging
-log = logging.getLogger(__name__)
-
+log = logging.getLogger(__name__)  #pylint: disable=W1699
 
 def __virtual__():
     '''
@@ -104,24 +105,24 @@ def _to_aws_encoding(instring):
                                                '+', ',', '/', ':', ';', '<', '=', '>', '?', '@',
                                                '[', ']', '^', '`', '{', '|', '}', '~']
     acceptable_points_which_must_be_octalized = [ord(c) for c in
-                                                 printable_ascii_which_must_be_octalized ]
-    acceptable_points_which_must_be_octalized += range(0, 33)     # 0-32 inclusive
-    acceptable_points_which_must_be_octalized += range(127, 256)  # 127-255 inclusive
+                                                 printable_ascii_which_must_be_octalized]
+    acceptable_points_which_must_be_octalized += list(range(0, 33))     # 0-32 inclusive
+    acceptable_points_which_must_be_octalized += list(range(127, 256))  # 127-255 inclusive
     # ^^^ This, BTW, is incompatible with punycode as far as I can tell, since unicode only aligns
     # with ASCII for the first 127 code-points...  Oh well.
     for char in instring:
         point = ord(char)
-        octal = '\{:03o}'.format(point)
-        if point in range(65, 91):      # ASCII A-Z is 65-90 inclusive
-            point += 32                 # Convert to lowercase
-            outlist += [chr(point)]     # This is safe, since ASCII and unicode agree in this range
-        elif point in range(97, 123):   # a-z is 97-122 inclusive
+        octal = r'\{:03o}'.format(point)
+        if point in list(range(65, 91)):      # ASCII A-Z is 65-90 inclusive
+            point += 32                       # Convert to lowercase
+            outlist += [chr(point)]           # This is safe, since ASCII and unicode agree in this range
+        elif point in list(range(97, 123)):   # a-z is 97-122 inclusive
             outlist += [char]
-        elif point in range(48, 58):    # 0-9 is 48-57 inclusive
+        elif point in list(range(48, 58)):    # 0-9 is 48-57 inclusive
             outlist += [char]
-        elif point in (45, 46, 95):     # ASCII hyphen, period and underscore, respectively
+        elif point in (45, 46, 95):           # ASCII hyphen, period and underscore, respectively
             outlist += [char]
-        elif point == 92:               # Backslash is used for octal escapes
+        elif point == 92:                     # Backslash is used for octal escapes
             outlist += [char]
         elif point in acceptable_points_which_must_be_octalized:
             outlist += [octal]
@@ -211,7 +212,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
             VPCName = v.get('VPCName')
             VPCRegion = v.get('VPCRegion')
             VPCs = __salt__['boto_vpc.describe_vpcs'](vpc_id=VPCId, name=VPCName, region=region,
-                    key=key, keyid=keyid, profile=profile).get( 'vpcs', [])
+                    key=key, keyid=keyid, profile=profile).get('vpcs', [])
             if VPCRegion and VPCs:
                 VPCs = [v for v in VPCs if v['region'] == VPCRegion]
             if not VPCs:
@@ -303,7 +304,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
             msg = 'Route 53 {} hosted zone {} comment successfully updated'.format('private' if
                     PrivateZone else 'public', Name)
             log.info(msg)
-            ret['comment'] = '  '.join(ret['comment'], msg)
+            ret['comment'] = '  '.join([ret['comment'], msg])
             ret['changes']['old'] = zone
             ret['changes']['new'] = dictupdate.update(ret['changes']['new'], r)
         else:
@@ -340,7 +341,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
             msg = 'Route 53 {} hosted zone {} associated VPCs successfully updated'.format('private'
                     if PrivateZone else 'public', Name)
             log.info(msg)
-            ret['comment'] = '  '.join(ret['comment'], msg)
+            ret['comment'] = '  '.join([ret['comment'], msg])
         else:
             ret['comment'] = 'Update of Route 53 {} hosted zone {} associated VPCs failed'.format(
                     'private' if PrivateZone else 'public', Name)
@@ -592,50 +593,50 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
     # Convert any magic RR values to something AWS will understand, and otherwise clean them up.
     fixed_rrs = []
     for rr in ResourceRecords:
-      if rr.startswith('magic:'):
-        fields = rr.split(':')
-        if fields[1] == 'ec2_instance_tag':
-            if len(fields) != 5:
-                log.warning("Invalid magic RR value seen: '{}'.  Passing as-is.".format(rr))
-                fixed_rrs += [rr]
-                continue
-            tag_name = fields[2]
-            tag_value = fields[3]
-            instance_attr = fields[4]
-            good_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
-            r = __salt__['boto_ec2.find_instances'](tags={tag_name: tag_value}, return_objs=True,
-                                                    in_states=good_states, region=region, key=key,
-                                                    keyid=keyid, profile=profile)
-            if len(r) < 1:
-                ret['comment'] = 'No EC2 instance with tag {} == {} found'.format(tag_name,
-                        tag_value)
-                log.error(ret['comment'])
-                ret['result'] = False
-                return ret
-            if len(r) > 1:
-                ret['comment'] = 'Multiple EC2 instances with tag {} == {} found'.format(tag_name,
-                        tag_value)
-                log.error(ret['comment'])
-                ret['result'] = False
-                return ret
-            instance = r[0]
-            res = getattr(instance, instance_attr, None)
-            if res:
-                log.debug('Found {} {} for instance {}'.format(instance_attr, res, instance.id))
-                fixed_rrs += [res]
+        if rr.startswith('magic:'):
+            fields = rr.split(':')
+            if fields[1] == 'ec2_instance_tag':
+                if len(fields) != 5:
+                    log.warning("Invalid magic RR value seen: '{}'.  Passing as-is.".format(rr))
+                    fixed_rrs += [rr]
+                    continue
+                tag_name = fields[2]
+                tag_value = fields[3]
+                instance_attr = fields[4]
+                good_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+                r = __salt__['boto_ec2.find_instances'](
+                        tags={tag_name: tag_value}, return_objs=True, in_states=good_states,
+                        region=region, key=key, keyid=keyid, profile=profile)
+                if len(r) < 1:
+                    ret['comment'] = 'No EC2 instance with tag {} == {} found'.format(tag_name,
+                            tag_value)
+                    log.error(ret['comment'])
+                    ret['result'] = False
+                    return ret
+                if len(r) > 1:
+                    ret['comment'] = 'Multiple EC2 instances with tag {} == {} found'.format(
+                            tag_name, tag_value)
+                    log.error(ret['comment'])
+                    ret['result'] = False
+                    return ret
+                instance = r[0]
+                res = getattr(instance, instance_attr, None)
+                if res:
+                    log.debug('Found {} {} for instance {}'.format(instance_attr, res, instance.id))
+                    fixed_rrs += [res]
+                else:
+                    ret['comment'] = 'Attribute {} not found on instance {}'.format(instance_attr,
+                            instance.id)
+                    log.error(ret['comment'])
+                    ret['result'] = False
+                    return ret
             else:
-                ret['comment'] = 'Attribute {} not found on instance {}'.format(instance_attr,
-                        instance.id)
+                ret['comment'] = ('Unknown RR magic value seen: {}.  Please extend the '
+                                  'boto3_route53 state module to add support for your preferred '
+                                  'incantation.'.format(fields[1]))
                 log.error(ret['comment'])
                 ret['result'] = False
                 return ret
-        else:
-            ret['comment'] = ('Unknown RR magic value seen: {}.  Please extend the boto3_route53 '
-                              'state module to add support for your preferred incantation.'.format(
-                              fields[1]))
-            log.error(ret['comment'])
-            ret['result'] = False
-            return ret
     ResourceRecords = [{'Value': _to_aws_encoding(rr)} for rr in sorted(fixed_rrs)]
 
     recordsets = __salt__['boto3_route53.get_resource_records'](HostedZoneId=HostedZoneId,
@@ -705,7 +706,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
             ret['comment'] = 'Route 53 resource record {} with type {} {}.'.format(Name,
                     Type, 'created' if create else 'updated')
             log.info(ret['comment'])
-            if created:
+            if create:
                 ret['changes']['old'] = None
             else:
                 ret['changes']['old'] = rrset
