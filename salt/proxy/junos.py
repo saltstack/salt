@@ -58,8 +58,9 @@ def init(opts):
                     'ssh_config',
                     'normalize'
                    ]
+    proxy_keys = opts['proxy'].keys()
     for arg in optional_args:
-        if arg in opts['proxy'].keys():
+        if arg in proxy_keys:
             args[arg] = opts['proxy'][arg]
 
     thisproxy['conn'] = jnpr.junos.Device(**args)
