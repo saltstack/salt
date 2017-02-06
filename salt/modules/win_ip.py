@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import socket
 import time
 
 # Import salt libs
@@ -61,9 +60,9 @@ def _interface_configs():
 
         if ':' not in line:
             if current_ip_list:
-                current_ip_list.append( line )
+                current_ip_list.append(line)
             else:
-                log.warning( 'Cannot parse "{0}"'.format(line) )
+                log.warning('Cannot parse "{0}"'.format(line))
             continue
 
         key, val = line.split(':', 1)
@@ -74,10 +73,10 @@ def _interface_configs():
         if ('dns servers' in lkey) or ('wins servers' in lkey):
             current_ip_list = []
             current_iface[key] = current_ip_list
-            current_ip_list.append( val )
+            current_ip_list.append(val)
 
         elif 'ip address' in lkey:
-            current_iface.setdefault( 'ip_addrs', [] ).append( {key:val} )
+            current_iface.setdefault('ip_addrs', []).append({key:val})
 
         elif 'subnet prefix' in lkey:
             subnet, _, netmask = val.split(' ', 2)
