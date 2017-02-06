@@ -229,21 +229,37 @@ def list_(name,
         Password-protected ZIP archives can still be listed by zipfile, so
         there is no reason to invoke the unzip command.
         '''
-        dirs = []
+        dirs = set()
         files = []
         links = []
         try:
             with contextlib.closing(zipfile.ZipFile(cached)) as zip_archive:
                 for member in zip_archive.infolist():
-                    mode = member.external_attr >> 16
                     path = member.filename
-                    if stat.S_ISLNK(mode):
-                        links.append(path)
-                    elif stat.S_ISDIR(mode):
-                        dirs.append(path)
+                    if salt.utils.is_windows():
+                        if path.endswith('/'):
+                            # zipfile.ZipInfo objects on windows use forward
+                            # slash at end of the directory name.
+                            dirs.add(path)
+                        else:
+                            files.append(path)
                     else:
-                        files.append(path)
-            return dirs, files, links
+                        mode = member.external_attr >> 16
+                        if stat.S_ISLNK(mode):
+                            links.append(path)
+                        elif stat.S_ISDIR(mode):
+                            dirs.add(path)
+                        else:
+                            files.append(path)
+
+                for path in files:
+                    # ZIP files created on Windows do not add entries
+                    # to the archive for directories. So, we'll need to
+                    # manually add them.
+                    dirname = ''.join(path.rpartition('/')[:2])
+                    if dirname:
+                        dirs.add(dirname)
+            return list(dirs), files, links
         except zipfile.BadZipfile:
             raise CommandExecutionError('{0} is not a ZIP file'.format(name))
 
@@ -377,10 +393,15 @@ def list_(name,
                 item.sort()
 
         if verbose:
-            ret = {'dirs': dirs, 'files': files, 'links': links}
-            ret['top_level_dirs'] = [x for x in dirs if x.count('/') == 1]
-            ret['top_level_files'] = [x for x in files if x.count('/') == 0]
-            ret['top_level_links'] = [x for x in links if x.count('/') == 0]
+            ret = {'dirs': sorted(dirs),
+                   'files': sorted(files),
+                   'links': sorted(links)}
+            ret['top_level_dirs'] = [x for x in ret['dirs']
+                                     if x.count('/') == 1]
+            ret['top_level_files'] = [x for x in ret['files']
+                                      if x.count('/') == 0]
+            ret['top_level_links'] = [x for x in ret['links']
+                                      if x.count('/') == 0]
         else:
             ret = sorted(dirs + files + links)
         return ret
