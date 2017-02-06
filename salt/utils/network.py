@@ -1057,14 +1057,14 @@ def _netbsd_remotes_on(port, which_end):
     Parses output of shell 'sockstat' (NetBSD)
     to get connections
 
-    $ sudo sockstat -4
+    $ sudo sockstat -4 -n
     USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
     root    python2.7   1456    29  tcp4   *.4505           *.*
     root    python2.7   1445    17  tcp4   *.4506           *.*
     root    python2.7   1294    14  tcp4   127.0.0.1.11813  127.0.0.1.4505
     root    python2.7   1294    41  tcp4   127.0.0.1.61115  127.0.0.1.4506
 
-    $ sudo sockstat -4 -c -p 4506
+    $ sudo sockstat -4 -c -n -p 4506
     USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
     root    python2.7   1294    41  tcp4   127.0.0.1.61115  127.0.0.1.4506
     '''
@@ -1073,7 +1073,7 @@ def _netbsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        cmd = salt.utils.shlex_split('sockstat -4 -c -p {0}'.format(port))
+        cmd = salt.utils.shlex_split('sockstat -4 -c -n -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
