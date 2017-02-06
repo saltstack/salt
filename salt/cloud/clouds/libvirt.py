@@ -348,11 +348,10 @@ def create(vm_):
 
             domain_xml = ElementTree.fromstring(xml)
             domain_xml.find('./name').text = name
-            if domain_xml.find('./description'):
-                description = domain_xml.find('./description')            
-            else:
-                description = ElementTree.SubElement(domain_elem, 'description')
-                domain_xml.insert(0, description)
+            if domain_xml.find('./description') == None:
+                description_elem = ElementTree.Element('description')
+                domain_xml.insert(0, description_elem)
+            description = domain_xml.find('./description')
             description.text = "Cloned from {0}".format(base)
             domain_xml.remove(domain_xml.find('./uuid'))
 
