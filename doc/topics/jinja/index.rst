@@ -345,6 +345,24 @@ in the current Jinja context.
 
     Context is: {{ show_full_context() }}
 
+Logs
+----
+
+.. versionadded:: Nitrogen
+
+Yes, in Salt, one is able to debug a complex Jinja template using the logs.
+For example, making the call:
+
+.. code-block:: yaml
+
+    {%- do salt.log.error('testing jinja logging') -%}
+
+Will insert the following message in the minion logs:
+
+.. code-block:: text
+
+    2017-02-01 01:24:40,728 [salt.module.logmod][ERROR   ][3779] testing jinja logging
+
 Custom Execution Modules
 ========================
 
