@@ -72,7 +72,8 @@ import uuid
 import salt.utils.dictupdate as dictupdate
 from salt.utils import SaltInvocationError, exactly_one
 import logging
-log = logging.getLogger(__name__)  #pylint: disable=W1699
+log = logging.getLogger(__name__)  # pylint: disable=W1699
+
 
 def __virtual__():
     '''

@@ -46,8 +46,7 @@ Execution module for Amazon Route53 written against Boto 3
 '''
 
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
-#pylint: disable=E0611
+#pylint: disable=E0602,W0106
 
 # Import Python libs
 from __future__ import absolute_import
@@ -58,7 +57,6 @@ import time
 import salt.utils.boto3
 import salt.utils.compat
 from salt.exceptions import SaltInvocationError
-
 log = logging.getLogger(__name__)
 
 # Import third party libs
