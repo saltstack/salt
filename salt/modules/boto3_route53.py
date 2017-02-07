@@ -841,9 +841,9 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
         if not zone:
             log.error("Couldn't resolve domain name {0} to a hosted zone ID.".format(Name))
             return []
-        Id = zone[0]['HostedZone']['Id']
+        HostedZoneId = zone[0]['HostedZone']['Id']
 
-    args = {'HostedZoneId': Id, 'ChangeBatch': ChangeBatch}
+    args = {'HostedZoneId': HostedZoneId, 'ChangeBatch': ChangeBatch}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     tries = 20  # A bit more headroom
     while tries:
@@ -857,5 +857,5 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
                 retries -= 1
                 continue
             log.error('Failed to apply requested changes to the hosted zone {0}: {1}'.format(
-                    Name or Id, str(e)))
+                    Name or HostedZoneId, str(e)))
     return False

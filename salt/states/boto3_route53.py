@@ -137,7 +137,7 @@ def _from_aws_encoding(string):  # XXX TODO
 
 
 def hosted_zone_present(name, Name=None, PrivateZone=False,
-                        CallerReference=None, Comment=None, VPCs=None,
+                        CallerReference=None, Comment='', VPCs=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
     Ensure a hosted zone exists with the given attributes.
@@ -638,6 +638,8 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                 log.error(ret['comment'])
                 ret['result'] = False
                 return ret
+        else:
+            fixed_rrs += [rr]
     ResourceRecords = [{'Value': rr} for rr in sorted(fixed_rrs)]
 
     recordsets = __salt__['boto3_route53.get_resource_records'](HostedZoneId=HostedZoneId,
@@ -651,6 +653,8 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
 
     create = False
     update = False
+    updatable = ['SetIdentifier', 'Weight', 'Region', 'GeoLocation', 'Failover', 'TTL',
+                 'AliasTarget', 'HealthCheckId', 'TrafficPolicyInstanceId']
     if not recordsets:
         create = True
         if __opts__['test']:
@@ -663,16 +667,14 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         log.error(ret['comment'])
         ret['result'] = False
         return ret
-    rrset = recordsets[0]
-
-    updatable = ['SetIdentifier', 'Weight', 'Region', 'GeoLocation', 'Failover', 'TTL',
-                 'AliasTarget', 'HealthCheckId', 'TrafficPolicyInstanceId']
-    for u in updatable:
-        if locals().get(u) != rrset.get(u):
+    else:
+        rrset = recordsets[0]
+        for u in updatable:
+            if locals().get(u) != rrset.get(u):
+                update = True
+                break
+        if ResourceRecords != sorted(rrset.get('ResourceRecords'), key=lambda x: x['Value']):
             update = True
-            break
-    if ResourceRecords != sorted(rrset.get('ResourceRecords'), key=lambda x: x['Value']):
-        update = True
 
     if not create or update:
         ret['comment'] = ('Route 53 resource record {} with type {} is already in the desired state.'
