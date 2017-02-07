@@ -433,6 +433,23 @@ def _compare(actual, create_kwargs, defaults_from_image):
             if data != actual_data:
                 ret.update({item: {'old': actual_data, 'new': data}})
             continue
+        elif item == 'devices':
+            if data:
+                keys = ['PathOnHost', 'PathInContainer', 'CgroupPermissions']
+                modified_data = []
+                for index, device_info in enumerate(data):
+                    data_device_info = dict(list(six.zip(keys, device_info.split(':'))))
+                    try:
+                        actual_data_device_info = actual_data[index]
+                    except IndexError:
+                        continue
+                    for key, value in actual_data_device_info.items():
+                        data_device_info[key] = data_device_info.get(key, value)
+                    modified_data.append(data_device_info)
+                data = modified_data
+            if data != actual_data:
+                ret.update({item: {'old': actual_data, 'new': data}})
+                continue
         elif item in ('cmd', 'command', 'entrypoint'):
             if (actual_data is None and item not in create_kwargs and
                     _image_get(config['image_path'])):
