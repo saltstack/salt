@@ -76,7 +76,7 @@ def _interface_configs():
             current_ip_list.append(val)
 
         elif 'ip address' in lkey:
-            current_iface.setdefault('ip_addrs', []).append({key: val})
+            current_iface.setdefault('ip_addrs', []).append({key:val})  # pylint: disable=E8231
 
         elif 'subnet prefix' in lkey:
             subnet, _, netmask = val.split(' ', 2)
