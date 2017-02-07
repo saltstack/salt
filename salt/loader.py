@@ -1416,8 +1416,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # It default's of course to the found callable attribute name
             # if no alias is defined.
             funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
+            try:
+                full_funcname = '.'.join((module_name, funcname))
+            except TypeError:
+                full_funcname = '{0}.{1}'.format(module_name, funcname)
             # Save many references for lookups
-            self._dict['{0}.{1}'.format(module_name, funcname)] = func
+            self._dict[full_funcname] = func
             setattr(mod_dict, funcname, func)
             mod_dict[funcname] = func
             self._apply_outputter(func, mod)
