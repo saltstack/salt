@@ -322,7 +322,7 @@ except ImportError:
     HAS_GITPYTHON = False
 # pylint: enable=import-error
 
-PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify')
+PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify', 'refspecs')
 
 # Set up logging
 log = logging.getLogger(__name__)
