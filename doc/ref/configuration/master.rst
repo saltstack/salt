@@ -1726,13 +1726,13 @@ Walkthrough <gitfs-per-remote-config>`.
 Optional parameter used to specify the provider to be used for gitfs. More
 information can be found in the :ref:`GitFS Walkthrough <gitfs-dependencies>`.
 
-Must be one of the following: ``pygit2``, ``gitpython``, or ``dulwich``. If
-unset, then each will be tried in that same order, and the first one with a
-compatible version installed will be the provider that is used.
+Must be either ``pygit2`` or ``gitpython``. If unset, then each will be tried
+in that same order, and the first one with a compatible version installed will
+be the provider that is used.
 
 .. code-block:: yaml
 
-    gitfs_provider: dulwich
+    gitfs_provider: gitpython
 
 .. conf_master:: gitfs_ssl_verify
 

@@ -26,21 +26,17 @@ Branches and tags become Salt fileserver environments.
 Installing Dependencies
 =======================
 
-Beginning with version 2014.7.0, both pygit2_ and Dulwich_ are supported as
-alternatives to GitPython_. The desired provider can be configured using the
-:conf_master:`gitfs_provider` parameter in the master config file.
-
-If :conf_master:`gitfs_provider` is not configured, then Salt will prefer
-pygit2_ if a suitable version is available, followed by GitPython_ and
-Dulwich_.
+Both pygit2_ and GitPython_ are supported Python interfaces to git. If
+compatible versions of both are installed, pygit2_ will preferred. In these
+cases, GitPython_ can be forced using the :conf_master:`gitfs_provider`
+parameter in the master config file.
 
 .. note::
     It is recommended to always run the most recent version of any the below
-    dependencies. Certain features of gitfs may not be available without
+    dependencies. Certain features of GitFS may not be available without
     the most recent version of the chosen library.
 
 .. _pygit2: https://github.com/libgit2/pygit2
-.. _Dulwich: https://www.samba.org/~jelmer/dulwich/
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 
 pygit2
@@ -157,49 +153,6 @@ install GitPython`` (or ``easy_install GitPython``) as root.
             - name: 'GitPython < 2.0.9'
 
 
-Dulwich
--------
-
-Dulwich 0.9.4 or newer is required to use Dulwich as backend for gitfs.
-
-Dulwich is available in EPEL, and can be easily installed on the master using
-yum:
-
-.. code-block:: bash
-
-    # yum install python-dulwich
-
-For APT-based distros such as Ubuntu and Debian:
-
-.. code-block:: bash
-
-    # apt-get install python-dulwich
-
-.. important::
-
-    If switching to Dulwich from GitPython/pygit2, or switching from
-    GitPython/pygit2 to Dulwich, it is necessary to clear the gitfs cache to
-    avoid unpredictable behavior. This is probably a good idea whenever
-    switching to a new :conf_master:`gitfs_provider`, but it is less important
-    when switching between GitPython and pygit2.
-
-    Beginning in version 2015.5.0, the gitfs cache can be easily cleared using
-    the :mod:`fileserver.clear_cache <salt.runners.fileserver.clear_cache>`
-    runner.
-
-    .. code-block:: bash
-
-        salt-run fileserver.clear_cache backend=git
-
-    If the Master is running an earlier version, then the cache can be cleared
-    by removing the ``gitfs`` and ``file_lists/gitfs`` directories (both paths
-    relative to the master cache directory, usually
-    ``/var/cache/salt/master``).
-
-    .. code-block:: bash
-
-        rm -rf /var/cache/salt/master{,/file_lists}/gitfs
-
 Simple Configuration
 ====================
 
@@ -233,14 +186,6 @@ master:
 
    Information on how to authenticate to SSH remotes can be found :ref:`here
    <gitfs-authentication>`.
-
-   .. note::
-
-       Dulwich does not recognize ``ssh://`` URLs, ``git+ssh://`` must be used
-       instead. Salt version 2015.5.0 and later will automatically add the
-       ``git+`` to the beginning of these URLs before fetching, but earlier
-       Salt versions will fail to fetch unless the URL is specified using
-       ``git+ssh://``.
 
 3. Restart the master to load the new configuration.
 

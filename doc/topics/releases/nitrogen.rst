@@ -99,6 +99,7 @@ numbers like ``1.2.34-5.el7``. An example of the usage for this would be:
 
 - The :mod:`system <salt.modules.system>` module changed the returned format
   from "HH:MM AM/PM" to "HH:MM:SS AM/PM" for `get_system_time`.
+
 Master Configuration Additions
 ==============================
 
@@ -142,6 +143,7 @@ General Deprecations
 --------------------
 
 - Removed support for aliasing ``cmd.run`` to ``cmd.shell``.
+- Removed support for Dulwich from :ref:`GitFS <tutorial-gitfs>`.
 - Beacon configurations should be lists instead of dictionaries.
 - The ``PidfileMixin`` has been removed. Please use ``DaemonMixIn`` instead.
 - The ``use_pending`` argument was removed from the ``salt.utils.event.get_event``

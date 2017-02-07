@@ -195,7 +195,6 @@ dpkg
 DRS
 dryrun
 dst
-dulwich
 dumpe
 dvh
 eauth
