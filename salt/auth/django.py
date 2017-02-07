@@ -120,7 +120,9 @@ def auth(username, password):
     '''
     Simple Django auth
     '''
-    sys.path.append(__opts__['django_auth_path'])
+    django_auth_path = __opts__['django_auth_path']
+    if django_auth_path not in sys.path:
+        sys.path.append(django_auth_path)
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', __opts__['django_auth_settings'])
 
     django_auth_setup()
