@@ -932,6 +932,10 @@ VALID_OPTS = {
     # Note: to set enum arguments values like `cert_reqs` and `ssl_version` use constant names
     # without ssl module prefix: `CERT_REQUIRED` or `PROTOCOL_SSLv23`.
     'ssl': (dict, type(None)),
+
+    # django auth
+    'django_auth_path': str,
+    'django_auth_settings': str,
 }
 
 # default configurations
@@ -1442,6 +1446,8 @@ DEFAULT_MASTER_OPTS = {
     'cache': 'localfs',
     'thin_extra_mods': '',
     'ssl': None,
+    'django_auth_path': '',
+    'django_auth_settings': '',
 }
 
 
