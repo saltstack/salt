@@ -348,7 +348,11 @@ def create(vm_):
 
             domain_xml = ElementTree.fromstring(xml)
             domain_xml.find('./name').text = name
-            domain_xml.find('./description').text = "Cloned from {0}".format(base)
+            if domain_xml.find('./description') is None:
+                description_elem = ElementTree.Element('description')
+                domain_xml.insert(0, description_elem)
+            description = domain_xml.find('./description')
+            description.text = "Cloned from {0}".format(base)
             domain_xml.remove(domain_xml.find('./uuid'))
 
             for iface_xml in domain_xml.findall('./devices/interface'):
@@ -368,7 +372,7 @@ def create(vm_):
                 if agent_xml.find("""./target[@type='virtio'][@name='org.qemu.guest_agent.0']""") is not None:
                     source_element = agent_xml.find("""./source[@mode='bind']""")
                     # see if there is a path element that needs rewriting
-                    if 'path' in source_element.attrib:
+                    if source_element and 'path' in source_element.attrib:
                         path = source_element.attrib['path']
                         new_path = path.replace('/domain-{0}/'.format(base), '/domain-{0}/'.format(name))
                         log.debug("Rewriting agent socket path to {0}".format(new_path))
