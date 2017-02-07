@@ -135,6 +135,14 @@ release cycle (two major releases after this one), those who are using the
 :ref:`netapi module <all-netapi-modules>`) are encouraged to update their code
 to use ``tgt_type``.
 
+Custom Refspecs in GitFS / git_pillar / winrepo
+===============================================
+
+It is now possible to specify the refspecs to use when fetching from remote
+repositores for GitFS, git_pillar, and winrepo. More information on how this
+feature works can be found :ref:`here <gitfs-custom-refspecs>` in the GitFS
+Walkthrough. The git_pillar and winrepo versions of this feature work the same
+as their GitFS counterpart.
 
 Deprecations
 ============
