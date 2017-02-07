@@ -196,6 +196,13 @@ class GitLockError(SaltException):
         self.strerror = strerror
 
 
+class GitRemoteError(SaltException):
+    '''
+    Used by GitFS to denote a problem with the existence of the "origin" remote
+    or part of its configuration
+    '''
+
+
 class SaltInvocationError(SaltException, TypeError):
     '''
     Used when the wrong number of arguments are sent to modules or invalid
