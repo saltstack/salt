@@ -512,6 +512,7 @@ def set_computer_desc(desc):
                 lines.append(new_line)
             # time to write our changes to the file
             mach_info.seek(0, 0)
+            mach_info.truncate()
             mach_info.write(''.join(lines))
             mach_info.write('\n')
             return True

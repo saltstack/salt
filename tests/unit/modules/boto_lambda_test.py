@@ -37,6 +37,7 @@ import os
 try:
     import boto3
     from botocore.exceptions import ClientError
+    from botocore import __version__ as found_botocore_version
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -51,17 +52,19 @@ if 'SuSE' in platform.dist():
 # which was added in boto 2.8.0
 # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
 required_boto3_version = '1.2.1'
+required_botocore_version = '1.5.2'
 
 region = 'us-east-1'
 access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
-conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
+conn_parameters = {'region': region, 'key': access_key,
+                   'keyid': secret_key, 'profile': {}}
 error_message = 'An error occurred (101) when calling the {0} operation: Test-defined error'
 error_content = {
-  'Error': {
-    'Code': 101,
-    'Message': "Test-defined error"
-  }
+    'Error': {
+        'Code': 101,
+        'Message': "Test-defined error"
+    }
 }
 function_ret = dict(FunctionName='testfunction',
                     Runtime='python2.7',
@@ -74,7 +77,8 @@ function_ret = dict(FunctionName='testfunction',
                     CodeSize=199,
                     FunctionArn='arn:lambda:us-east-1:1234:Something',
                     LastModified='yes',
-                    VpcConfig=None)
+                    VpcConfig=None,
+                    Environment=None)
 alias_ret = dict(AliasArn='arn:lambda:us-east-1:1234:Something',
                  Name='testalias',
                  FunctionVersion='3',
@@ -108,14 +112,17 @@ def _has_required_boto():
         return False
     elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
         return False
+    elif LooseVersion(found_botocore_version) < LooseVersion(required_botocore_version):
+        return False
     else:
         return True
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto3_version))
+@skipIf(_has_required_boto() is False,
+        ('The boto3 module must be greater than or equal to version {0}, '
+         'and botocore must be greater than or equal to {1}'.format(
+             required_boto3_version, required_botocore_version)))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoLambdaTestCaseBase(TestCase):
     conn = None
@@ -127,7 +134,8 @@ class BotoLambdaTestCaseBase(TestCase):
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
-        conn_parameters['key'] = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(50))
+        conn_parameters['key'] = ''.join(random.choice(
+            string.ascii_lowercase + string.digits) for _ in range(50))
 
         self.patcher = patch('boto3.session.Session')
         self.addCleanup(self.patcher.stop)
@@ -139,8 +147,10 @@ class BotoLambdaTestCaseBase(TestCase):
 
 
 class TempZipFile(object):
+
     def __enter__(self):
-        with NamedTemporaryFile(suffix='.zip', prefix='salt_test_', delete=False) as tmp:
+        with NamedTemporaryFile(
+                suffix='.zip', prefix='salt_test_', delete=False) as tmp:
             to_write = '###\n'
             if six.PY3:
                 to_write = salt.utils.to_bytes(to_write)
@@ -166,7 +176,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         Tests checking lambda function existence when the lambda function already exists
         '''
         self.conn.list_functions.return_value = {'Functions': [function_ret]}
-        func_exists_result = boto_lambda.function_exists(FunctionName=function_ret['FunctionName'], **conn_parameters)
+        func_exists_result = boto_lambda.function_exists(
+            FunctionName=function_ret['FunctionName'], **conn_parameters)
 
         self.assertTrue(func_exists_result['exists'])
 
@@ -175,7 +186,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         Tests checking lambda function existence when the lambda function does not exist
         '''
         self.conn.list_functions.return_value = {'Functions': [function_ret]}
-        func_exists_result = boto_lambda.function_exists(FunctionName='myfunc', **conn_parameters)
+        func_exists_result = boto_lambda.function_exists(
+            FunctionName='myfunc', **conn_parameters)
 
         self.assertFalse(func_exists_result['exists'])
 
@@ -183,10 +195,13 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         Tests checking lambda function existence when boto returns an error
         '''
-        self.conn.list_functions.side_effect = ClientError(error_content, 'list_functions')
-        func_exists_result = boto_lambda.function_exists(FunctionName='myfunc', **conn_parameters)
+        self.conn.list_functions.side_effect = ClientError(
+            error_content, 'list_functions')
+        func_exists_result = boto_lambda.function_exists(
+            FunctionName='myfunc', **conn_parameters)
 
-        self.assertEqual(func_exists_result.get('error', {}).get('message'), error_message.format('list_functions'))
+        self.assertEqual(func_exists_result.get('error', {}).get(
+            'message'), error_message.format('list_functions'))
 
     def test_that_when_creating_a_function_from_zipfile_succeeds_the_create_function_method_returns_true(self):
         '''
@@ -195,12 +210,13 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             with TempZipFile() as zipfile:
                 self.conn.create_function.return_value = function_ret
-                lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
-                                                    Runtime='python2.7',
-                                                    Role='myrole',
-                                                    Handler='file.method',
-                                                    ZipFile=zipfile,
-                                                    **conn_parameters)
+                lambda_creation_result = boto_lambda.create_function(
+                    FunctionName='testfunction',
+                    Runtime='python2.7',
+                    Role='myrole',
+                    Handler='file.method',
+                    ZipFile=zipfile,
+                    **conn_parameters)
 
         self.assertTrue(lambda_creation_result['created'])
 
@@ -210,13 +226,14 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             self.conn.create_function.return_value = function_ret
-            lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
-                                                    Runtime='python2.7',
-                                                    Role='myrole',
-                                                    Handler='file.method',
-                                                    S3Bucket='bucket',
-                                                    S3Key='key',
-                                                    **conn_parameters)
+            lambda_creation_result = boto_lambda.create_function(
+                FunctionName='testfunction',
+                Runtime='python2.7',
+                Role='myrole',
+                Handler='file.method',
+                S3Bucket='bucket',
+                S3Key='key',
+                **conn_parameters)
 
         self.assertTrue(lambda_creation_result['created'])
 
@@ -226,12 +243,13 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             with self.assertRaisesRegexp(SaltInvocationError,
-                                     'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
-                lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
-                                                    Runtime='python2.7',
-                                                    Role='myrole',
-                                                    Handler='file.method',
-                                                    **conn_parameters)
+                                         'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
+                lambda_creation_result = boto_lambda.create_function(
+                    FunctionName='testfunction',
+                    Runtime='python2.7',
+                    Role='myrole',
+                    Handler='file.method',
+                    **conn_parameters)
 
     def test_that_when_creating_a_function_with_zipfile_and_s3_raises_a_salt_invocation_error(self):
         '''
@@ -239,31 +257,35 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             with self.assertRaisesRegexp(SaltInvocationError,
-                                   'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
+                                         'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
                 with TempZipFile() as zipfile:
-                    lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
-                                                    Runtime='python2.7',
-                                                    Role='myrole',
-                                                    Handler='file.method',
-                                                    ZipFile=zipfile,
-                                                    S3Bucket='bucket',
-                                                    S3Key='key',
-                                                    **conn_parameters)
+                    lambda_creation_result = boto_lambda.create_function(
+                        FunctionName='testfunction',
+                        Runtime='python2.7',
+                        Role='myrole',
+                        Handler='file.method',
+                        ZipFile=zipfile,
+                        S3Bucket='bucket',
+                        S3Key='key',
+                        **conn_parameters)
 
     def test_that_when_creating_a_function_fails_the_create_function_method_returns_error(self):
         '''
         tests False function not created.
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            self.conn.create_function.side_effect = ClientError(error_content, 'create_function')
+            self.conn.create_function.side_effect = ClientError(
+                error_content, 'create_function')
             with TempZipFile() as zipfile:
-                lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
-                                                    Runtime='python2.7',
-                                                    Role='myrole',
-                                                    Handler='file.method',
-                                                    ZipFile=zipfile,
-                                                    **conn_parameters)
-        self.assertEqual(lambda_creation_result.get('error', {}).get('message'), error_message.format('create_function'))
+                lambda_creation_result = boto_lambda.create_function(
+                    FunctionName='testfunction',
+                    Runtime='python2.7',
+                    Role='myrole',
+                    Handler='file.method',
+                    ZipFile=zipfile,
+                    **conn_parameters)
+        self.assertEqual(lambda_creation_result.get('error', {}).get(
+            'message'), error_message.format('create_function'))
 
     def test_that_when_deleting_a_function_succeeds_the_delete_function_method_returns_true(self):
         '''
@@ -271,8 +293,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             result = boto_lambda.delete_function(FunctionName='testfunction',
-                                                    Qualifier=1,
-                                                    **conn_parameters)
+                                                 Qualifier=1,
+                                                 **conn_parameters)
 
         self.assertTrue(result['deleted'])
 
@@ -281,9 +303,10 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests False function not deleted.
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            self.conn.delete_function.side_effect = ClientError(error_content, 'delete_function')
+            self.conn.delete_function.side_effect = ClientError(
+                error_content, 'delete_function')
             result = boto_lambda.delete_function(FunctionName='testfunction',
-                                                    **conn_parameters)
+                                                 **conn_parameters)
         self.assertFalse(result['deleted'])
 
     def test_that_when_describing_function_it_returns_the_dict_of_properties_returns_true(self):
@@ -293,7 +316,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         self.conn.list_functions.return_value = {'Functions': [function_ret]}
 
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            result = boto_lambda.describe_function(FunctionName=function_ret['FunctionName'], **conn_parameters)
+            result = boto_lambda.describe_function(
+                FunctionName=function_ret['FunctionName'], **conn_parameters)
 
         self.assertEqual(result, {'function': function_ret})
 
@@ -303,7 +327,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         self.conn.list_functions.return_value = {'Functions': []}
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            result = boto_lambda.describe_function(FunctionName='testfunction', **conn_parameters)
+            result = boto_lambda.describe_function(
+                FunctionName='testfunction', **conn_parameters)
 
         self.assertFalse(result['function'])
 
@@ -311,8 +336,10 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         Tests describing parameters failure
         '''
-        self.conn.list_functions.side_effect = ClientError(error_content, 'list_functions')
-        result = boto_lambda.describe_function(FunctionName='testfunction', **conn_parameters)
+        self.conn.list_functions.side_effect = ClientError(
+            error_content, 'list_functions')
+        result = boto_lambda.describe_function(
+            FunctionName='testfunction', **conn_parameters)
         self.assertTrue('error' in result)
 
     def test_that_when_updating_a_function_succeeds_the_update_function_method_returns_true(self):
@@ -321,7 +348,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             self.conn.update_function_config.return_value = function_ret
-            result = boto_lambda.update_function_config(FunctionName=function_ret['FunctionName'], Role='myrole', **conn_parameters)
+            result = boto_lambda.update_function_config(
+                FunctionName=function_ret['FunctionName'], Role='myrole', **conn_parameters)
 
         self.assertTrue(result['updated'])
 
@@ -330,11 +358,13 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests False function not updated.
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            self.conn.update_function_configuration.side_effect = ClientError(error_content, 'update_function')
+            self.conn.update_function_configuration.side_effect = ClientError(
+                error_content, 'update_function')
             result = boto_lambda.update_function_config(FunctionName='testfunction',
-                                                    Role='myrole',
-                                                    **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('update_function'))
+                                                        Role='myrole',
+                                                        **conn_parameters)
+        self.assertEqual(result.get('error', {}).get('message'),
+                         error_message.format('update_function'))
 
     def test_that_when_updating_function_code_from_zipfile_succeeds_the_update_function_method_returns_true(self):
         '''
@@ -343,7 +373,9 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             with TempZipFile() as zipfile:
                 self.conn.update_function_code.return_value = function_ret
-                result = boto_lambda.update_function_code(FunctionName=function_ret['FunctionName'], ZipFile=zipfile, **conn_parameters)
+                result = boto_lambda.update_function_code(
+                    FunctionName=function_ret['FunctionName'],
+                    ZipFile=zipfile, **conn_parameters)
 
         self.assertTrue(result['updated'])
 
@@ -353,10 +385,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             self.conn.update_function_code.return_value = function_ret
-            result = boto_lambda.update_function_code(FunctionName='testfunction',
-                                                    S3Bucket='bucket',
-                                                    S3Key='key',
-                                                    **conn_parameters)
+            result = boto_lambda.update_function_code(
+                FunctionName='testfunction',
+                S3Bucket='bucket',
+                S3Key='key',
+                **conn_parameters)
 
         self.assertTrue(result['updated'])
 
@@ -365,31 +398,39 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegexp(SaltInvocationError,
-                                     'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
-                result = boto_lambda.update_function_code(FunctionName='testfunction',
-                                                    **conn_parameters)
+            with self.assertRaisesRegexp(
+                SaltInvocationError,
+                ('Either ZipFile must be specified, or S3Bucket '
+                 'and S3Key must be provided.')):
+                result = boto_lambda.update_function_code(
+                    FunctionName='testfunction',
+                    **conn_parameters)
 
     def test_that_when_updating_function_code_fails_the_update_function_method_returns_error(self):
         '''
         tests False function not updated.
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            self.conn.update_function_code.side_effect = ClientError(error_content, 'update_function_code')
-            result = boto_lambda.update_function_code(FunctionName='testfunction',
-                                                    S3Bucket='bucket',
-                                                    S3Key='key',
-                                                    **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('update_function_code'))
+            self.conn.update_function_code.side_effect = ClientError(
+                error_content, 'update_function_code')
+            result = boto_lambda.update_function_code(
+                FunctionName='testfunction',
+                S3Bucket='bucket',
+                S3Key='key',
+                **conn_parameters)
+        self.assertEqual(result.get('error', {}).get('message'),
+                         error_message.format('update_function_code'))
 
     def test_that_when_listing_function_versions_succeeds_the_list_function_versions_method_returns_true(self):
         '''
         tests True function versions listed.
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            self.conn.list_versions_by_function.return_value = {'Versions': [function_ret]}
-            result = boto_lambda.list_function_versions(FunctionName='testfunction',
-                                                    **conn_parameters)
+            self.conn.list_versions_by_function.return_value = {
+                'Versions': [function_ret]}
+            result = boto_lambda.list_function_versions(
+                FunctionName='testfunction',
+                **conn_parameters)
 
         self.assertTrue(result['Versions'])
 
@@ -399,8 +440,9 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             self.conn.list_versions_by_function.return_value = {'Versions': []}
-            result = boto_lambda.list_function_versions(FunctionName='testfunction',
-                                                    **conn_parameters)
+            result = boto_lambda.list_function_versions(
+                FunctionName='testfunction',
+                **conn_parameters)
         self.assertFalse(result['Versions'])
 
     def test_that_when_listing_function_versions_fails_the_list_function_versions_method_returns_error(self):
@@ -408,10 +450,13 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests False function versions error.
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            self.conn.list_versions_by_function.side_effect = ClientError(error_content, 'list_versions_by_function')
-            result = boto_lambda.list_function_versions(FunctionName='testfunction',
-                                                    **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('list_versions_by_function'))
+            self.conn.list_versions_by_function.side_effect = ClientError(
+                error_content, 'list_versions_by_function')
+            result = boto_lambda.list_function_versions(
+                FunctionName='testfunction',
+                **conn_parameters)
+        self.assertEqual(result.get('error', {}).get('message'),
+                         error_message.format('list_versions_by_function'))
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -423,15 +468,17 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
     '''
     TestCase for salt.modules.boto_lambda module aliases
     '''
+
     def test_that_when_creating_an_alias_succeeds_the_create_alias_method_returns_true(self):
         '''
         tests True alias created.
         '''
         self.conn.create_alias.return_value = alias_ret
         result = boto_lambda.create_alias(FunctionName='testfunction',
-                                                    Name=alias_ret['Name'],
-                                                    FunctionVersion=alias_ret['FunctionVersion'],
-                                                    **conn_parameters)
+                                          Name=alias_ret['Name'],
+                                          FunctionVersion=alias_ret[
+                                              'FunctionVersion'],
+                                          **conn_parameters)
 
         self.assertTrue(result['created'])
 
@@ -439,12 +486,15 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         '''
         tests False alias not created.
         '''
-        self.conn.create_alias.side_effect = ClientError(error_content, 'create_alias')
+        self.conn.create_alias.side_effect = ClientError(
+            error_content, 'create_alias')
         result = boto_lambda.create_alias(FunctionName='testfunction',
-                                                    Name=alias_ret['Name'],
-                                                    FunctionVersion=alias_ret['FunctionVersion'],
-                                                    **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('create_alias'))
+                                          Name=alias_ret['Name'],
+                                          FunctionVersion=alias_ret[
+                                              'FunctionVersion'],
+                                          **conn_parameters)
+        self.assertEqual(result.get('error', {}).get(
+            'message'), error_message.format('create_alias'))
 
     def test_that_when_deleting_an_alias_succeeds_the_delete_alias_method_returns_true(self):
         '''
@@ -460,7 +510,8 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         '''
         tests False alias not deleted.
         '''
-        self.conn.delete_alias.side_effect = ClientError(error_content, 'delete_alias')
+        self.conn.delete_alias.side_effect = ClientError(
+            error_content, 'delete_alias')
         result = boto_lambda.delete_alias(FunctionName='testfunction',
                                           Name=alias_ret['Name'],
                                           **conn_parameters)
@@ -491,12 +542,14 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         '''
         Tests checking lambda alias existence when boto returns an error
         '''
-        self.conn.list_aliases.side_effect = ClientError(error_content, 'list_aliases')
+        self.conn.list_aliases.side_effect = ClientError(
+            error_content, 'list_aliases')
         result = boto_lambda.alias_exists(FunctionName='testfunction',
                                           Name=alias_ret['Name'],
                                           **conn_parameters)
 
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('list_aliases'))
+        self.assertEqual(result.get('error', {}).get(
+            'message'), error_message.format('list_aliases'))
 
     def test_that_when_describing_alias_it_returns_the_dict_of_properties_returns_true(self):
         '''
@@ -525,7 +578,8 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         '''
         Tests describing parameters failure
         '''
-        self.conn.list_aliases.side_effect = ClientError(error_content, 'list_aliases')
+        self.conn.list_aliases.side_effect = ClientError(
+            error_content, 'list_aliases')
         result = boto_lambda.describe_alias(FunctionName='testfunction',
                                             Name=alias_ret['Name'],
                                             **conn_parameters)
@@ -547,11 +601,13 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         '''
         tests False alias not updated.
         '''
-        self.conn.update_alias.side_effect = ClientError(error_content, 'update_alias')
+        self.conn.update_alias.side_effect = ClientError(
+            error_content, 'update_alias')
         result = boto_lambda.update_alias(FunctionName='testfunction',
                                           Name=alias_ret['Name'],
                                           **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('update_alias'))
+        self.assertEqual(result.get('error', {}).get(
+            'message'), error_message.format('update_alias'))
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -563,16 +619,17 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
     '''
     TestCase for salt.modules.boto_lambda module mappings
     '''
+
     def test_that_when_creating_a_mapping_succeeds_the_create_event_source_mapping_method_returns_true(self):
         '''
         tests True mapping created.
         '''
         self.conn.create_event_source_mapping.return_value = event_source_mapping_ret
         result = boto_lambda.create_event_source_mapping(
-                      EventSourceArn=event_source_mapping_ret['EventSourceArn'],
-                      FunctionName=event_source_mapping_ret['FunctionArn'],
-                      StartingPosition='LATEST',
-                      **conn_parameters)
+            EventSourceArn=event_source_mapping_ret['EventSourceArn'],
+            FunctionName=event_source_mapping_ret['FunctionArn'],
+            StartingPosition='LATEST',
+            **conn_parameters)
 
         self.assertTrue(result['created'])
 
@@ -580,12 +637,13 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         tests False mapping not created.
         '''
-        self.conn.create_event_source_mapping.side_effect = ClientError(error_content, 'create_event_source_mapping')
+        self.conn.create_event_source_mapping.side_effect = ClientError(
+            error_content, 'create_event_source_mapping')
         result = boto_lambda.create_event_source_mapping(
-                      EventSourceArn=event_source_mapping_ret['EventSourceArn'],
-                      FunctionName=event_source_mapping_ret['FunctionArn'],
-                      StartingPosition='LATEST',
-                      **conn_parameters)
+            EventSourceArn=event_source_mapping_ret['EventSourceArn'],
+            FunctionName=event_source_mapping_ret['FunctionArn'],
+            StartingPosition='LATEST',
+            **conn_parameters)
         self.assertEqual(result.get('error', {}).get('message'),
                          error_message.format('create_event_source_mapping'))
 
@@ -593,11 +651,12 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         tests True mapping ids listed.
         '''
-        self.conn.list_event_source_mappings.return_value = {'EventSourceMappings': [event_source_mapping_ret]}
+        self.conn.list_event_source_mappings.return_value = {
+            'EventSourceMappings': [event_source_mapping_ret]}
         result = boto_lambda.get_event_source_mapping_ids(
-                      EventSourceArn=event_source_mapping_ret['EventSourceArn'],
-                      FunctionName=event_source_mapping_ret['FunctionArn'],
-                      **conn_parameters)
+            EventSourceArn=event_source_mapping_ret['EventSourceArn'],
+            FunctionName=event_source_mapping_ret['FunctionArn'],
+            **conn_parameters)
 
         self.assertTrue(result)
 
@@ -605,31 +664,34 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         tests False no mapping ids listed.
         '''
-        self.conn.list_event_source_mappings.return_value = {'EventSourceMappings': []}
+        self.conn.list_event_source_mappings.return_value = {
+            'EventSourceMappings': []}
         result = boto_lambda.get_event_source_mapping_ids(
-                      EventSourceArn=event_source_mapping_ret['EventSourceArn'],
-                      FunctionName=event_source_mapping_ret['FunctionArn'],
-                      **conn_parameters)
+            EventSourceArn=event_source_mapping_ret['EventSourceArn'],
+            FunctionName=event_source_mapping_ret['FunctionArn'],
+            **conn_parameters)
         self.assertFalse(result)
 
     def test_that_when_listing_event_source_mapping_ids_fails_the_get_event_source_mapping_ids_method_returns_error(self):
         '''
         tests False mapping ids error.
         '''
-        self.conn.list_event_source_mappings.side_effect = ClientError(error_content, 'list_event_source_mappings')
+        self.conn.list_event_source_mappings.side_effect = ClientError(
+            error_content, 'list_event_source_mappings')
         result = boto_lambda.get_event_source_mapping_ids(
-                      EventSourceArn=event_source_mapping_ret['EventSourceArn'],
-                      FunctionName=event_source_mapping_ret['FunctionArn'],
-                      **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('list_event_source_mappings'))
+            EventSourceArn=event_source_mapping_ret['EventSourceArn'],
+            FunctionName=event_source_mapping_ret['FunctionArn'],
+            **conn_parameters)
+        self.assertEqual(result.get('error', {}).get('message'),
+                         error_message.format('list_event_source_mappings'))
 
     def test_that_when_deleting_an_event_source_mapping_by_UUID_succeeds_the_delete_event_source_mapping_method_returns_true(self):
         '''
         tests True mapping deleted.
         '''
         result = boto_lambda.delete_event_source_mapping(
-                                          UUID=event_source_mapping_ret['UUID'],
-                                          **conn_parameters)
+            UUID=event_source_mapping_ret['UUID'],
+            **conn_parameters)
         self.assertTrue(result['deleted'])
 
     @skipIf(True, 'This appears to leak memory and crash the unit test suite')
@@ -637,28 +699,32 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         tests True mapping deleted.
         '''
-        self.conn.list_event_source_mappings.return_value = {'EventSourceMappings': [event_source_mapping_ret]}
+        self.conn.list_event_source_mappings.return_value = {
+            'EventSourceMappings': [event_source_mapping_ret]}
         result = boto_lambda.delete_event_source_mapping(
-                             EventSourceArn=event_source_mapping_ret['EventSourceArn'],
-                             FunctionName=event_source_mapping_ret['FunctionArn'],
-                             **conn_parameters)
+            EventSourceArn=event_source_mapping_ret['EventSourceArn'],
+            FunctionName=event_source_mapping_ret['FunctionArn'],
+            **conn_parameters)
         self.assertTrue(result['deleted'])
 
     def test_that_when_deleting_an_event_source_mapping_without_identifier_the_delete_event_source_mapping_method_raises_saltinvocationexception(self):
         '''
         tests Deleting a mapping without identifier
         '''
-        with self.assertRaisesRegexp(SaltInvocationError,
-                                     'Either UUID must be specified, or EventSourceArn and FunctionName must be provided.'):
+        with self.assertRaisesRegexp(
+            SaltInvocationError,
+            ('Either UUID must be specified, or EventSourceArn '
+             'and FunctionName must be provided.')):
             result = boto_lambda.delete_event_source_mapping(**conn_parameters)
 
     def test_that_when_deleting_an_event_source_mapping_fails_the_delete_event_source_mapping_method_returns_false(self):
         '''
         tests False mapping not deleted.
         '''
-        self.conn.delete_event_source_mapping.side_effect = ClientError(error_content, 'delete_event_source_mapping')
+        self.conn.delete_event_source_mapping.side_effect = ClientError(
+            error_content, 'delete_event_source_mapping')
         result = boto_lambda.delete_event_source_mapping(UUID=event_source_mapping_ret['UUID'],
-                                          **conn_parameters)
+                                                         **conn_parameters)
         self.assertFalse(result['deleted'])
 
     def test_that_when_checking_if_an_event_source_mapping_exists_and_the_event_source_mapping_exists_the_event_source_mapping_exists_method_returns_true(self):
@@ -668,8 +734,8 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         self.conn.get_event_source_mapping.return_value = event_source_mapping_ret
         result = boto_lambda.event_source_mapping_exists(
-                                          UUID=event_source_mapping_ret['UUID'],
-                                          **conn_parameters)
+            UUID=event_source_mapping_ret['UUID'],
+            **conn_parameters)
         self.assertTrue(result['exists'])
 
     def test_that_when_checking_if_an_event_source_mapping_exists_and_the_event_source_mapping_does_not_exist_the_event_source_mapping_exists_method_returns_false(self):
@@ -679,19 +745,21 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         self.conn.get_event_source_mapping.return_value = None
         result = boto_lambda.event_source_mapping_exists(
-                                          UUID='other_UUID',
-                                          **conn_parameters)
+            UUID='other_UUID',
+            **conn_parameters)
         self.assertFalse(result['exists'])
 
     def test_that_when_checking_if_an_event_source_mapping_exists_and_boto3_returns_an_error_the_event_source_mapping_exists_method_returns_error(self):
         '''
         Tests checking lambda event_source_mapping existence when boto returns an error
         '''
-        self.conn.get_event_source_mapping.side_effect = ClientError(error_content, 'list_event_source_mappings')
+        self.conn.get_event_source_mapping.side_effect = ClientError(
+            error_content, 'list_event_source_mappings')
         result = boto_lambda.event_source_mapping_exists(
-                                          UUID=event_source_mapping_ret['UUID'],
-                                          **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('list_event_source_mappings'))
+            UUID=event_source_mapping_ret['UUID'],
+            **conn_parameters)
+        self.assertEqual(result.get('error', {}).get('message'),
+                         error_message.format('list_event_source_mappings'))
 
     def test_that_when_describing_event_source_mapping_it_returns_the_dict_of_properties_returns_true(self):
         '''
@@ -699,9 +767,10 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         self.conn.get_event_source_mapping.return_value = event_source_mapping_ret
         result = boto_lambda.describe_event_source_mapping(
-                                          UUID=event_source_mapping_ret['UUID'],
-                                          **conn_parameters)
-        self.assertEqual(result, {'event_source_mapping': event_source_mapping_ret})
+            UUID=event_source_mapping_ret['UUID'],
+            **conn_parameters)
+        self.assertEqual(
+            result, {'event_source_mapping': event_source_mapping_ret})
 
     def test_that_when_describing_event_source_mapping_it_returns_the_dict_of_properties_returns_false(self):
         '''
@@ -709,18 +778,19 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         self.conn.get_event_source_mapping.return_value = None
         result = boto_lambda.describe_event_source_mapping(
-                                          UUID=event_source_mapping_ret['UUID'],
-                                          **conn_parameters)
+            UUID=event_source_mapping_ret['UUID'],
+            **conn_parameters)
         self.assertFalse(result['event_source_mapping'])
 
     def test_that_when_describing_event_source_mapping_on_client_error_it_returns_error(self):
         '''
         Tests describing parameters failure
         '''
-        self.conn.get_event_source_mapping.side_effect = ClientError(error_content, 'get_event_source_mapping')
+        self.conn.get_event_source_mapping.side_effect = ClientError(
+            error_content, 'get_event_source_mapping')
         result = boto_lambda.describe_event_source_mapping(
-                                          UUID=event_source_mapping_ret['UUID'],
-                                          **conn_parameters)
+            UUID=event_source_mapping_ret['UUID'],
+            **conn_parameters)
         self.assertTrue('error' in result)
 
     def test_that_when_updating_an_event_source_mapping_succeeds_the_update_event_source_mapping_method_returns_true(self):
@@ -729,9 +799,9 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         self.conn.update_event_source_mapping.return_value = event_source_mapping_ret
         result = boto_lambda.update_event_source_mapping(
-                                          UUID=event_source_mapping_ret['UUID'],
-                                          FunctionName=event_source_mapping_ret['FunctionArn'],
-                                          **conn_parameters)
+            UUID=event_source_mapping_ret['UUID'],
+            FunctionName=event_source_mapping_ret['FunctionArn'],
+            **conn_parameters)
 
         self.assertTrue(result['updated'])
 
@@ -739,12 +809,14 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         tests False event_source_mapping not updated.
         '''
-        self.conn.update_event_source_mapping.side_effect = ClientError(error_content, 'update_event_source_mapping')
+        self.conn.update_event_source_mapping.side_effect = ClientError(
+            error_content, 'update_event_source_mapping')
         result = boto_lambda.update_event_source_mapping(
-                                          UUID=event_source_mapping_ret['UUID'],
-                                          FunctionName=event_source_mapping_ret['FunctionArn'],
-                                          **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('update_event_source_mapping'))
+            UUID=event_source_mapping_ret['UUID'],
+            FunctionName=event_source_mapping_ret['FunctionArn'],
+            **conn_parameters)
+        self.assertEqual(result.get('error', {}).get('message'),
+                         error_message.format('update_event_source_mapping'))
 
 
 if __name__ == '__main__':

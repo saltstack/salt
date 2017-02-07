@@ -103,11 +103,17 @@ def _available_services():
                         plist = plistlib.readPlistFromBytes(
                             salt.utils.to_bytes(plist_xml))
 
-                available_services[plist.Label.lower()] = {
-                    'filename': filename,
-                    'file_path': true_path,
-                    'plist': plist,
-                }
+                try:
+                    available_services[plist.Label.lower()] = {
+                        'filename': filename,
+                        'file_path': true_path,
+                        'plist': plist,
+                    }
+                except AttributeError:
+                    # As of MacOS 10.12 there might be plist files without Label key
+                    # in the searched directories. As these files do not represent
+                    # services, thay are not added to the list.
+                    pass
 
     return available_services
 

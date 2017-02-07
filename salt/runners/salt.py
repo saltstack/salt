@@ -35,7 +35,9 @@ from __future__ import print_function
 import logging
 
 # import salt libs
+import salt.client
 from salt.loader import minion_mods, utils
+from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -65,3 +67,48 @@ def cmd(fun, *args, **kwargs):
     return minion_mods(
         __opts__,
         utils=utils(__opts__)).get(fun)(*args, **kws)
+
+
+def execute(tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            tgt_type='glob',
+            ret='',
+            jid='',
+            kwarg=None,
+            **kwargs):
+    '''
+    Execute `fun` on all minions matched by `tgt` and `tgt_type`.
+    Parameter `fun` is the name of execution module function to call.
+
+    This function should mainly be used as a helper for runner modules,
+    in order to avoid redundant code.
+    For example, when inside a runner one needs to execute a certain function
+    on arbitrary groups of minions, only has to:
+
+    .. code-block:: python
+
+        ret1 = __salt__['salt.execute']('*', 'mod.fun')
+        ret2 = __salt__['salt.execute']('my_nodegroup', 'mod2.fun2', tgt_type='nodegroup')
+
+    .. versionadded:: Nitrogen
+    '''
+    client = salt.client.get_local_client(__opts__['conf_file'])
+    try:
+        ret = client.cmd(tgt,
+                         fun,
+                         arg=arg,
+                         timeout=timeout or __opts__['timeout'],
+                         tgt_type=tgt_type,  # no warn_until, as this is introduced only in Nitrogen
+                         ret=ret,
+                         jid=jid,
+                         kwarg=kwarg,
+                         **kwargs)
+    except SaltClientError as client_error:
+        log.error('Error while executing {fun} on {tgt} ({tgt_type})'.format(fun=fun,
+                                                                             tgt=tgt,
+                                                                             tgt_type=tgt_type))
+        log.error(client_error)
+        return {}
+    return ret
