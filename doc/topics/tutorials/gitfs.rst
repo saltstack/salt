@@ -75,7 +75,7 @@ libraries to be present before libgit2_ is built. On some Debian-based distros
 ``pkg-config`` is also required to link libgit2_ with libssh2.
 .. note::
     If you are receiving the error "Unsupported URL Protocol" in the Salt Master
-    log when making a connection using SSH, review the libssh2 details listed 
+    log when making a connection using SSH, review the libssh2 details listed
     above.
 
 Additionally, version 0.21.0 of pygit2 introduced a dependency on python-cffi_,
@@ -316,7 +316,6 @@ is executed. For example:
     cache directory (``/var/cache/salt/master/gitfs``) before restarting the
     salt-master service.
 
-
 .. _gitfs-per-remote-config:
 
 Per-remote Configuration Parameters
@@ -336,6 +335,7 @@ configured gitfs remotes):
 * :conf_master:`gitfs_pubkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_privkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_passphrase` (**pygit2 only**, new in 2014.7.0)
+* :conf_master:`gitfs_refspecs` (new in Nitrogen)
 
 These parameters can now be overridden on a per-remote basis. This allows for a
 tremendous amount of customization. Here's some example usage:
@@ -372,7 +372,8 @@ tremendous amount of customization. Here's some example usage:
 
     2. Per-remote configuration parameters are named like the global versions,
        with the ``gitfs_`` removed from the beginning. The exception being the
-       ``name`` parameter which is only available to per-remote configurations.
+       ``name`` and ``saltenv`` parameters, which are only available to
+       per-remote configurations.
 
 In the example configuration above, the following is true:
 
@@ -454,10 +455,62 @@ Given the above configuration, the following is true:
    ``salt`` directory (and its subdirectories).
 
 
+.. _gitfs-custom-refspecs:
+
+Custom Refspecs
+===============
+
+.. versionadded:: Nitrogen
+
+GitFS will by default fetch remote branches and tags. However, sometimes it can
+be useful to fetch custom refs (such as those created for `GitHub pull
+requests`__). To change the refspecs GitFS fetches, use the
+:conf_master:`gitfs_refspecs` config option:
+
+.. __: https://help.github.com/articles/checking-out-pull-requests-locally/
+
+.. code-block:: yaml
+
+    gitfs_refspecs:
+      - '+refs/heads/*:refs/remotes/origin/*'
+      - '+refs/tags/*:refs/tags/*'
+      - '+refs/pull/*/head:refs/remotes/origin/pr/*'
+      - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
+In the above example, in addition to fetching remote branches and tags,
+GitHub's custom refs for pull requests and merged pull requests will also be
+fetched. These special ``head`` refs represent the head of the branch which is
+requesting to be merged, and the ``merge`` refs represent the result of the
+base branch after the merge.
+
+.. important::
+    When using custom refspecs, the destination of the fetched refs *must* be
+    under ``refs/remotes/origin/``, preferably in a subdirectory like in the
+    example above. These custom refspecs will map as environment names using
+    their relative path underneath ``refs/remotes/origin/``. For example,
+    assuming the configuration above, the head branch for pull request 12345
+    would map to fileserver environment ``pr/12345`` (slash included).
+
+Refspecs can be configured on a :ref:`per-remote basis
+<gitfs-per-remote-config>`. For example, the below configuration would only
+alter the default refspecs for the *second* GitFS remote. The first remote
+would only fetch branches and tags (the default).
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - https://domain.tld/foo.git
+      - https://domain.tld/bar.git:
+        - refspecs:
+          - '+refs/heads/*:refs/remotes/origin/*'
+          - '+refs/tags/*:refs/tags/*'
+          - '+refs/pull/*/head:refs/remotes/origin/pr/*'
+          - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
 Configuration Order of Precedence
 =================================
 
-The order of precedence for gitfs configuration is as follows (each level
+The order of precedence for GitFS configuration is as follows (each level
 overrides all levels below it):
 
 1. Per-saltenv configuration (defined under a per-remote ``saltenv``
@@ -592,7 +645,7 @@ master, each configured git remote will be searched.
 Branches, Environments, and Top Files
 =====================================
 
-When using the gitfs backend, branches, and tags will be mapped to environments
+When using the GitFS backend, branches, and tags will be mapped to environments
 using the branch/tag name as an identifier.
 
 There is one exception to this rule: the ``master`` branch is implicitly mapped
@@ -913,8 +966,9 @@ steps to this process:
          #!/usr/bin/env sh
          sudo -u root salt-call event.fire_master update salt/fileserver/gitfs/update
 
-4. If using sudo in the git hook (above), the policy must be changed to permit all users to fire the event.
-   Add the following policy to the sudoers file on the git server.
+4. If using sudo in the git hook (above), the policy must be changed to permit
+   all users to fire the event.  Add the following policy to the sudoers file
+   on the git server.
 
    .. code-block:: bash
 
@@ -930,8 +984,8 @@ by this reactor.
 Similarly, the tag name ``salt/fileserver/gitfs/update`` can be replaced by
 anything, so long as the usage is consistent.
 
-The ``root`` user name in the hook script and sudo policy should be changed to match the user under which 
-the minion is running.
+The ``root`` user name in the hook script and sudo policy should be changed to
+match the user under which the minion is running.
 
 .. _`post-receive hook`: http://www.git-scm.com/book/en/Customizing-Git-Git-Hooks#Server-Side-Hooks
 
