@@ -1127,6 +1127,10 @@ def proxy_reconnect(proxy_name, opts=None):
 
     opts: None
         Opts dictionary.
+
+    CLI Example:
+
+        salt '*' status.proxy_reconnect rest_sample
     '''
 
     if not opts:
