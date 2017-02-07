@@ -1534,7 +1534,7 @@ def subdict_match(data,
     return False
 
 
-def traverse_dict(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
+def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Traverse a dict using a colon-delimited (or otherwise delimited, using the
     'delimiter' param) target string. The target 'foo:bar:baz' will return
@@ -1550,7 +1550,7 @@ def traverse_dict(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
     return data
 
 
-def traverse_dict_and_list(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
+def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Traverse a dict or list using a colon-delimited (or otherwise delimited,
     using the 'delimiter' param) target string. The target 'foo:bar:0' will

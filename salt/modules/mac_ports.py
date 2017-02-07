@@ -387,7 +387,6 @@ def refresh_db():
     .. code-block:: bash
 
         salt mac pkg.refresh_db
-
     '''
     cmd = ['port', 'selfupdate']
     return salt.utils.mac_utils.execute_return_success(cmd)

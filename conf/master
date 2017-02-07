@@ -695,6 +695,28 @@
 #  - hiera: /etc/hiera.yaml
 #  - cmd_yaml: cat /etc/salt/yaml
 
+
+# A list of paths to be recursively decrypted during pillar compilation.
+# Entries in this list can be formatted either as a simple string, or as a
+# key/value pair, with the key being the pillar location, and the value being
+# the renderer to use for pillar decryption. If the former is used, the
+# renderer specified by decrypt_pillar_default will be used.
+#decrypt_pillar:
+#  - 'foo:bar': gpg
+#  - 'lorem:ipsum:dolor'
+
+# The delimiter used to distinguish nested data structures in the
+# decrypt_pillar option.
+#decrypt_pillar_delimiter: ':'
+
+# The default renderer used for decryption, if one is not specified for a given
+# pillar key in decrypt_pillar.
+#decrypt_pillar_default: gpg
+
+# List of renderers which are permitted to be used for pillar decryption.
+#decrypt_pillar_renderers:
+#  - gpg
+
 # The ext_pillar_first option allows for external pillar sources to populate
 # before file system pillar. This allows for targeting file system pillar from
 # ext_pillar.

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Module for managing logrotate.
+
+.. versionadded:: Nitrogen
+
 '''
 
 # Import python libs

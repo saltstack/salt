@@ -1243,6 +1243,10 @@ class LocalClient(object):
                 if raw['data']['return'] == {}:
                     continue
 
+                if 'return' in raw['data']['return'] and \
+                    raw['data']['return']['return'] == {}:
+                    continue
+
                 # if we didn't originally target the minion, lets add it to the list
                 if raw['data']['id'] not in minions:
                     minions.add(raw['data']['id'])

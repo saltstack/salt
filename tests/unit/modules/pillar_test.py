@@ -93,6 +93,21 @@ class PillarModuleTestCase(TestCase):
         self.assertEqual({'l2': {'l3': 42}}, res)
         self.assertEqual({'l2': {'l3': 43}}, default)
 
+    def test_pillar_get_default_merge_regression_39062(self):
+        '''
+        Confirm that we do not raise an exception if default is None and
+        merge=True.
+
+        See https://github.com/saltstack/salt/issues/39062 for more info.
+        '''
+        pillarmod.__opts__ = {}
+        pillarmod.__pillar__ = {'foo': 'bar'}
+
+        self.assertEqual(
+            pillarmod.get(key='foo', default=None, merge=True),
+            'bar',
+        )
+
 
 # gracinet: not sure this is really useful, but other test modules have this as well
 if __name__ == '__main__':

@@ -31,6 +31,7 @@ import salt.loader
 import salt.minion
 import salt.pillar
 import salt.fileclient
+import salt.utils.crypt
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.url
@@ -39,7 +40,6 @@ from salt.utils import immutabletypes
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import (
     SaltException,
-    SaltInvocationError,
     SaltRenderError,
     SaltReqTimeoutError
 )
@@ -111,8 +111,6 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     ])
 
 STATE_INTERNAL_KEYWORDS = STATE_REQUISITE_KEYWORDS.union(STATE_REQUISITE_IN_KEYWORDS).union(STATE_RUNTIME_KEYWORDS)
-
-VALID_PILLAR_ENC = ('gpg',)
 
 
 def _odict_hashable(self):
@@ -655,11 +653,6 @@ class State(object):
                 pillar_enc = pillar_enc.lower()
             except AttributeError:
                 pillar_enc = str(pillar_enc).lower()
-            if pillar_enc not in VALID_PILLAR_ENC:
-                raise SaltInvocationError(
-                    'Invalid pillar encryption type. Valid types are: {0}'
-                    .format(', '.join(VALID_PILLAR_ENC))
-                )
         self._pillar_enc = pillar_enc
         self.opts['pillar'] = self._gather_pillar()
         self.state_con = context or {}
@@ -673,70 +666,48 @@ class State(object):
         self.inject_globals = {}
         self.mocked = mocked
 
-    def _decrypt_pillar_override(self):
-        '''
-        Decrypt CLI pillar overrides
-        '''
-        if not self._pillar_enc:
-            decrypt = None
-        else:
-            # Pillar data must be gathered before the modules are loaded, since
-            # it will be packed into each loaded function. Thus, we will not
-            # have access to the functions and must past an empty dict here.
-            decrypt = salt.loader.render(
-                self.opts,
-                {}).get(self._pillar_enc)
-        try:
-            return decrypt(self._pillar_override, translate_newlines=True)
-        except TypeError:
-            return self._pillar_override
-
     def _gather_pillar(self):
         '''
         Whenever a state run starts, gather the pillar data fresh
         '''
+        if self._pillar_override:
+            if self._pillar_enc:
+                try:
+                    self._pillar_override = salt.utils.crypt.decrypt(
+                        self._pillar_override,
+                        self._pillar_enc,
+                        translate_newlines=True,
+                        renderers=getattr(self, 'rend', None),
+                        opts=self.opts,
+                        valid_rend=self.opts['decrypt_pillar_renderers'])
+                except Exception as exc:
+                    log.error('Failed to decrypt pillar override: %s', exc)
+
+            if isinstance(self._pillar_override, six.string_types):
+                # This can happen if an entire pillar dictionary was passed as
+                # a single encrypted string. The override will have been
+                # decrypted above, and should now be a stringified dictionary.
+                # Use the YAML loader to convert that to a Python dictionary.
+                try:
+                    self._pillar_override = yamlloader.load(
+                        self._pillar_override,
+                        Loader=yamlloader.SaltYamlSafeLoader)
+                except Exception as exc:
+                    log.error('Failed to load CLI pillar override')
+                    log.exception(exc)
+
+            if not isinstance(self._pillar_override, dict):
+                log.error('Pillar override was not passed as a dictionary')
+                self._pillar_override = None
+
         pillar = salt.pillar.get_pillar(
                 self.opts,
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['environment'],
                 pillar=self._pillar_override,
-                pillarenv=self.opts.get('pillarenv')
-                )
-        ret = pillar.compile_pillar()
-        if self._pillar_override:
-            merge_strategy = self.opts.get(
-                'pillar_source_merging_strategy',
-                'smart'
-            )
-            merge_lists = self.opts.get(
-                'pillar_merge_lists',
-                False
-            )
-            if isinstance(self._pillar_override, dict):
-                ret = salt.utils.dictupdate.merge(
-                    ret,
-                    self._decrypt_pillar_override(),
-                    strategy=merge_strategy,
-                    merge_lists=merge_lists
-                )
-            else:
-                decrypted = yamlloader.load(
-                    self._decrypt_pillar_override(),
-                    Loader=yamlloader.SaltYamlSafeLoader
-                )
-                if not isinstance(decrypted, dict):
-                    log.error(
-                        'Decrypted pillar data did not render to a dictionary'
-                    )
-                else:
-                    ret = salt.utils.dictupdate.merge(
-                        ret,
-                        decrypted,
-                        strategy=merge_strategy,
-                        merge_lists=merge_lists
-                    )
-        return ret
+                pillarenv=self.opts.get('pillarenv'))
+        return pillar.compile_pillar()
 
     def _mod_init(self, low):
         '''
@@ -861,7 +832,7 @@ class State(object):
         Read the state loader value and loadup the correct states subsystem
         '''
         if self.states_loader == 'thorium':
-            self.states = salt.loader.thorium(self.opts, self.functions, {})  # TODO: Add runners
+            self.states = salt.loader.thorium(self.opts, self.functions, {})  # TODO: Add runners, proxy?
         else:
             self.states = salt.loader.states(self.opts, self.functions, self.utils,
                                              self.serializers, proxy=self.proxy)
@@ -937,12 +908,14 @@ class State(object):
             self.opts['pillar'] = self._gather_pillar()
             _reload_modules = True
 
+        if not ret['changes']:
+            if data.get('force_reload_modules', False):
+                self.module_refresh()
+            return
+
         if data.get('reload_modules', False) or _reload_modules:
             # User explicitly requests a reload
             self.module_refresh()
-            return
-
-        if not ret['changes']:
             return
 
         if data['state'] == 'file':

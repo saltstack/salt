@@ -1330,8 +1330,19 @@ def sls_id(
     opts['environment'] = saltenv
     if pillarenv is not None:
         opts['pillarenv'] = pillarenv
+
+    pillar = kwargs.get('pillar')
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar is not None \
+            and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
+        )
+
     try:
-        st_ = salt.state.HighState(opts, proxy=__proxy__)
+        st_ = salt.state.HighState(opts, pillar=pillar, pillar_enc=pillar_enc, proxy=__proxy__)
     except NameError:
         st_ = salt.state.HighState(opts)
     if isinstance(mods, six.string_types):

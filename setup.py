@@ -395,7 +395,28 @@ class InstallPyCryptoWindowsWheel(Command):
         with indent_log():
             call_subprocess(call_arguments)
 
+def uri_to_resource(resource_file):
+    ### Returns the URI for a resource 
+    # The basic case is that the resource is on saltstack.com
+    # It could be the case that the resource is cached.
+    salt_uri = 'https://repo.saltstack.com/windows/dependencies/'  + resource_file
+    if os.getenv('SALTREPO_LOCAL_CACHE') == None:
+        # if environment variable not set, return the basic case
+        return salt_uri
+    if not os.path.isdir(os.getenv('SALTREPO_LOCAL_CACHE')):
+        # if environment variable is not a directory, return the basic case
+        return salt_uri
+    cached_resource = os.path.join(os.getenv('SALTREPO_LOCAL_CACHE'), resource_file)
+    cached_resource = cached_resource.replace('/', '\\')
+    if not os.path.isfile(cached_resource):
+        # if file does not exist, return the basic case    
+        return salt_uri
+    if os.path.getsize(cached_resource) == 0:
+        # if file has zero size, return the basic case        
+        return salt_uri            
+    return cached_resource
 
+            
 class InstallCompiledPyYaml(Command):
 
     description = 'Install PyYAML on Windows'
@@ -405,6 +426,7 @@ class InstallCompiledPyYaml(Command):
 
     def finalize_options(self):
         pass
+        
 
     def run(self):
         if getattr(self.distribution, 'salt_installing_pyyaml_windows', None) is None:
@@ -417,11 +439,11 @@ class InstallCompiledPyYaml(Command):
         call_arguments = ['easy_install', '-Z']
         if platform_bits == '64bit':
             call_arguments.append(
-                'https://repo.saltstack.com/windows/dependencies/64/PyYAML-3.11.win-amd64-py2.7.exe'
+                uri_to_resource('64/PyYAML-3.11.win-amd64-py2.7.exe')
             )
         else:
             call_arguments.append(
-                'https://repo.saltstack.com/windows/dependencies/32/PyYAML-3.11.win32-py2.7.exe'
+                uri_to_resource('32/PyYAML-3.11.win32-py2.7.exe')
             )
         with indent_log():
             call_subprocess(call_arguments)

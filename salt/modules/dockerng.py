@@ -28,13 +28,13 @@ to replace references to ``dockerng`` with ``docker``.
 Installation Prerequisites
 --------------------------
 
-This execution module requires at least version 1.4.0 of both docker-py_ and
-Docker_. docker-py can easily be installed using :py:func:`pip.install
-<salt.modules.pip.install>`:
+This execution module requires at least version 1.6.0 of docker-py_ and
+version 1.9.0 of Docker_. docker-py can easily be installed using
+:py:func:`pip.install <salt.modules.pip.install>`:
 
 .. code-block:: bash
 
-    salt myminion pip.install docker-py>=1.4.0
+    salt myminion pip.install docker-py>=1.6.0
 
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 .. _Docker: https://www.docker.com/
@@ -333,8 +333,8 @@ __func_alias__ = {
 }
 
 # Minimum supported versions
-MIN_DOCKER = (1, 6, 0)
-MIN_DOCKER_PY = (1, 4, 0)
+MIN_DOCKER = (1, 9, 0)
+MIN_DOCKER_PY = (1, 6, 0)
 
 VERSION_RE = r'([\d.]+)'
 
@@ -4621,7 +4621,7 @@ def inspect_network(network_id):
 
 @_api_version(1.21)
 @_client_version('1.5.0')
-def connect_container_to_network(container, network_id):
+def connect_container_to_network(container, network_id, ipv4_address=None):
     '''
     Connect container to network.
 
@@ -4631,6 +4631,9 @@ def connect_container_to_network(container, network_id):
     network_id
         ID of network
 
+    ipv4_address
+        The IPv4 address to connect to the container
+
     CLI Example:
 
     .. code-block:: bash
@@ -4639,7 +4642,8 @@ def connect_container_to_network(container, network_id):
     '''
     response = _client_wrapper('connect_container_to_network',
                                container,
-                               network_id)
+                               network_id,
+                               ipv4_address)
     _clear_context()
     # Only non-error return case is a True return, so just return the response
     return response

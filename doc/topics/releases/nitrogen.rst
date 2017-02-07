@@ -36,6 +36,14 @@ that indefinite and runtime masks can co-exist for the same unit:
 
 These new ``runtime`` arguments default to ``False``.
 
+Pillar Encryption
+=================
+
+Beginning in 2016.3.0 the CLI pillar data passed to several functions could
+conditionally be passed through a renderer to be decrypted. This functionality
+has now been extended to pillar SLS files as well. See :ref:`here
+<pillar-encryption>` for detailed documentation on this feature.
+
 Grains Changes
 ==============
 

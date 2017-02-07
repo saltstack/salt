@@ -356,7 +356,6 @@ class SyslogServerFactory(DatagramProtocol):
             self.options)
         d.addCallbacks(self.send_event_to_salt, self.handle_error)
 
-
 def start(port=516, **kwargs):
 
     log.info('Starting junos syslog engine (port {0})'.format(port))

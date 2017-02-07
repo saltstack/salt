@@ -351,6 +351,13 @@ the keyword ``pass`` if there is no shutdown logic required.
 be defined in the proxymodule. The code for ``ping`` should contact the
 controlled device and make sure it is really available.
 
+``alive(opts)``: Another optional function, it is used together with the
+``proxy_keep_alive`` option (default: ``True``). This function should
+return a boolean value corresponding to the state of the connection.
+If the connection is down, will try to restart (``shutdown``
+followed by ``init``). The polling frequency is controlled using
+the ``proxy_keep_alive_interval`` option, in minutes.
+
 ``grains()``: Rather than including grains in /srv/salt/_grains or in
 the standard install directories for grains, grains can be computed and
 returned by this function.  This function will be called automatically
@@ -404,6 +411,9 @@ and status; "package" installation, and a ping.
         return True
 
 
+    def _complicated_function_that_determines_if_alive():
+        return True
+
     # Every proxy module needs an 'init', though you can
     # just put DETAILS['initialized'] = True here if nothing
     # else needs to be done.
@@ -418,6 +428,16 @@ and status; "package" installation, and a ping.
         # Make sure the REST URL ends with a '/'
         if not DETAILS['url'].endswith('/'):
             DETAILS['url'] += '/'
+
+    def alive(opts):
+        '''
+        This function returns a flag with the connection state.
+        It is very useful when the proxy minion establishes the communication
+        via a channel that requires a more elaborated keep-alive mechanism, e.g.
+        NETCONF over SSH.
+        '''
+        log.debug('rest_sample proxy alive() called...')
+        return _complicated_function_that_determines_if_alive()
 
 
     def initialized():

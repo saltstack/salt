@@ -262,6 +262,18 @@ VALID_OPTS = {
     # The external pillars permitted to be used on-demand using pillar.ext
     'on_demand_ext_pillar': list,
 
+    # A map of glob paths to be used
+    'decrypt_pillar': list,
+
+    # Delimiter to use in path expressions for decrypt_pillar
+    'decrypt_pillar_delimiter': str,
+
+    # Default renderer for decrypt_pillar
+    'decrypt_pillar_default': str,
+
+    # List of renderers available for decrypt_pillar
+    'decrypt_pillar_renderers': list,
+
     # The type of hashing algorithm to use when doing file comparisons
     'hash_type': str,
 
@@ -548,6 +560,14 @@ VALID_OPTS = {
     # but this was the default pre 2015.8.2.  This should default to
     # False in 2016.3.0
     'add_proxymodule_to_opts': bool,
+
+    # Poll the connection state with the proxy minion
+    # If enabled, this option requires the function `alive`
+    # to be implemented in the proxy module
+    'proxy_keep_alive': bool,
+
+    # Frequency of the proxy_keep_alive, in minutes
+    'proxy_keep_alive_interval': int,
     'git_pillar_base': str,
     'git_pillar_branch': str,
     'git_pillar_env': str,
@@ -1045,6 +1065,10 @@ DEFAULT_MINION_OPTS = {
                  salt.syspaths.SPM_PILLAR_PATH]
     },
     'on_demand_ext_pillar': ['libvirt', 'virtkey'],
+    'decrypt_pillar': [],
+    'decrypt_pillar_delimiter': ':',
+    'decrypt_pillar_default': 'gpg',
+    'decrypt_pillar_renderers': ['gpg'],
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
     'git_pillar_env': '',
@@ -1083,6 +1107,8 @@ DEFAULT_MINION_OPTS = {
     'render_dirs': [],
     'outputter_dirs': [],
     'utils_dirs': [],
+    'publisher_acl': {},
+    'publisher_acl_blacklist': {},
     'providers': {},
     'clean_dynamic_modules': True,
     'open_mode': False,
@@ -1246,6 +1272,10 @@ DEFAULT_MASTER_OPTS = {
                  salt.syspaths.SPM_PILLAR_PATH]
     },
     'on_demand_ext_pillar': ['libvirt', 'virtkey'],
+    'decrypt_pillar': [],
+    'decrypt_pillar_delimiter': ':',
+    'decrypt_pillar_default': 'gpg',
+    'decrypt_pillar_renderers': ['gpg'],
     'thorium_interval': 0.5,
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
@@ -1501,6 +1531,8 @@ DEFAULT_PROXY_MINION_OPTS = {
     'proxy_merge_grains_in_module': True,
     'append_minionid_config_dirs': ['cachedir', 'pidfile'],
     'default_include': 'proxy.d/*.conf',
+    'proxy_keep_alive': True,  # by default will try to keep alive the connection
+    'proxy_keep_alive_interval': 1  # frequency of the proxy keepalive in minutes
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -1909,11 +1941,22 @@ def prepend_root_dir(opts, path_options):
     '''
     root_dir = os.path.abspath(opts['root_dir'])
     root_opt = opts['root_dir'].rstrip(os.sep)
+    def_root_dir = salt.syspaths.ROOT_DIR.rstrip(os.sep)
     for path_option in path_options:
         if path_option in opts:
             path = opts[path_option]
-            if path == root_opt or path.startswith(root_opt + os.sep):
+            # When running testsuite, salt.syspaths.ROOT_DIR is often empty
+            if def_root_dir != '' and (path == def_root_dir or path.startswith(def_root_dir + os.sep)):
+                # Remove the default root dir so we can add the override
+                path = path[len(def_root_dir):]
+            elif path == root_opt or path.startswith(root_opt + os.sep):
+                # Remove relative root dir so we can add the absolute root dir
                 path = path[len(root_opt):]
+            elif os.path.isabs(path_option):
+                # Absolute path (not default or overriden root_dir)
+                # No prepending required
+                continue
+            # Prepending the root dir
             opts[path_option] = salt.utils.path_join(root_dir, path)
 
 
