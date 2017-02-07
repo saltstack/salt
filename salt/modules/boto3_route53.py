@@ -57,7 +57,7 @@ import time
 import salt.utils.boto3
 import salt.utils.compat
 from salt.exceptions import SaltInvocationError
-log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)  # pylint: disable=W1699
 
 # Import third party libs
 try:

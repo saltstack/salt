@@ -101,29 +101,26 @@ def _to_aws_encoding(instring):
     REALLY need this, just embed '\056' directly in your strings.  I can't promise it won't break
     your DNS out in the real world though.
     '''
-    outlist = []
-    printable_ascii_which_must_be_octalized = ['!', '"', '#', '$', '%', '&', "'", '(', ')', '*',
-                                               '+', ',', '/', ':', ';', '<', '=', '>', '?', '@',
-                                               '[', ']', '^', '`', '{', '|', '}', '~']
-    acceptable_points_which_must_be_octalized = [ord(c) for c in
-                                                 printable_ascii_which_must_be_octalized]
-    acceptable_points_which_must_be_octalized += list(range(0, 33))     # 0-32 inclusive
-    acceptable_points_which_must_be_octalized += list(range(127, 256))  # 127-255 inclusive
+    instring = instring.lower()                                           # Always lowercase
+    send_as_is_get_the_same_back = list(range(97, 123))                   # a-z is 97-122 inclusive
+    send_as_is_get_the_same_back += [ord(n) for n in ['0', '1', '2', '3', '4', '5', '6', '7', '8',
+                                                      '9', '-', '_', '.']]
+    send_as_is_get_octal_back = [ord(n) for n in ['!', '"', '#', '$', '%', '&', "'", '(', ')', '*',
+                                                  '+', ',', '/', '\\', ':', ';', '<', '=', '>', '?',
+                                                  '@', '[', ']', '^', '`', '{', '|', '}']]
+    # Non-printable ASCII - AWS claims it's valid in DNS entries... YMMV
+    acceptable_points_which_must_be_octalized = list(range(0, 33))        # 0-32 inclusive
+    # "Extended ASCII" stuff
+    acceptable_points_which_must_be_octalized += list(range(127, 256))    # 127-255 inclusive
     # ^^^ This, BTW, is incompatible with punycode as far as I can tell, since unicode only aligns
     # with ASCII for the first 127 code-points...  Oh well.
+    outlist = []
     for char in instring:
         point = ord(char)
-        octal = r'\{:03o}'.format(point)
-        if point in list(range(65, 91)):      # ASCII A-Z is 65-90 inclusive
-            point += 32                       # Convert to lowercase
-            outlist += [chr(point)]           # This is safe, since ASCII and unicode agree in this range
-        elif point in list(range(97, 123)):   # a-z is 97-122 inclusive
+        octal = '\\{:03o}'.format(point)
+        if point in send_as_is_get_the_same_back:
             outlist += [char]
-        elif point in list(range(48, 58)):    # 0-9 is 48-57 inclusive
-            outlist += [char]
-        elif point in (45, 46, 95):           # ASCII hyphen, period and underscore, respectively
-            outlist += [char]
-        elif point == 92:                     # Backslash is used for octal escapes
+        elif point in send_as_is_get_octal_back:
             outlist += [char]
         elif point in acceptable_points_which_must_be_octalized:
             outlist += [octal]
@@ -191,7 +188,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
     Name = Name if Name else name
     Name = _to_aws_encoding(Name)
 
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {'old': {}, 'new': {}}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}}
 
     if not PrivateZone and VPCs:
         raise SaltInvocationError("Parameter 'VPCs' is invalid when creating a public zone.")
@@ -307,7 +304,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
             log.info(msg)
             ret['comment'] = '  '.join([ret['comment'], msg])
             ret['changes']['old'] = zone
-            ret['changes']['new'] = dictupdate.update(ret['changes']['new'], r)
+            ret['changes']['new'] = dictupdate.update(ret['changes'].get('new', {}), r)
         else:
             ret['comment'] = 'Update of Route 53 {} hosted zone {} comment failed'.format('private'
                     if PrivateZone else 'public', Name)
@@ -370,6 +367,7 @@ def hosted_zone_absent(name, Name=None, PrivateZone=False,
 
     '''
     Name = Name if Name else name
+    Name = _to_aws_encoding(Name)
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -575,6 +573,8 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
     '''
     Name = Name if Name else name
+    Name = _to_aws_encoding(Name)
+
     if Type is None:
         raise SaltInvocationError("'Type' is a required parameter when adding or updating"
                                   "resource records.")
@@ -624,7 +624,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                 res = getattr(instance, instance_attr, None)
                 if res:
                     log.debug('Found {} {} for instance {}'.format(instance_attr, res, instance.id))
-                    fixed_rrs += [res]
+                    fixed_rrs += [_to_aws_encoding(res)]
                 else:
                     ret['comment'] = 'Attribute {} not found on instance {}'.format(instance_attr,
                             instance.id)
@@ -638,7 +638,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                 log.error(ret['comment'])
                 ret['result'] = False
                 return ret
-    ResourceRecords = [{'Value': _to_aws_encoding(rr)} for rr in sorted(fixed_rrs)]
+    ResourceRecords = [{'Value': rr} for rr in sorted(fixed_rrs)]
 
     recordsets = __salt__['boto3_route53.get_resource_records'](HostedZoneId=HostedZoneId,
             StartRecordName=Name, StartRecordType=Type, region=region, key=key, keyid=keyid,
@@ -766,6 +766,8 @@ def rr_absent(name, HostedZoneId=None, DomainName=None, PrivateZone=False,
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
     '''
     Name = Name if Name else name
+    Name = _to_aws_encoding(Name)
+
     if Type is None:
         raise SaltInvocationError("'Type' is a required parameter when deleting resource records.")
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
