@@ -348,7 +348,7 @@ def create(vm_):
 
             domain_xml = ElementTree.fromstring(xml)
             domain_xml.find('./name').text = name
-            if domain_xml.find('./description') == None:
+            if domain_xml.find('./description') is None:
                 description_elem = ElementTree.Element('description')
                 domain_xml.insert(0, description_elem)
             description = domain_xml.find('./description')
