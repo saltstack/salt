@@ -78,11 +78,26 @@ def init(opts):
     '''
     opts['multiprocessing'] = False
     log.debug('Opening connection to junos')
-    port = opts['proxy'].get('port', 830)
-    thisproxy['conn'] = jnpr.junos.Device(user=opts['proxy']['username'],
-                                          host=opts['proxy']['host'],
-                                          password=opts['proxy']['passwd'],
-                                          port=port)
+
+    args = { "host" : opts['proxy']['host'] }
+    optional_args= ['user',
+                    'password'
+                    'port',
+                    'gather_facts', 
+                    'mode',
+                    'baud',
+                    'attempts',
+                    'auto_probe',
+                    'ssh_private_key',
+                    'ssh_config',
+                    'normalize'
+                   ]
+    proxy_keys = opts['proxy'].keys()
+    for arg in optional_args:
+        if arg in proxy_keys:
+            args[arg] = opts['proxy'][arg]
+
+    thisproxy['conn'] = jnpr.junos.Device(**args)
     thisproxy['conn'].open()
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
     thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
