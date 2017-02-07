@@ -188,7 +188,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
     Name = Name if Name else name
     Name = _to_aws_encoding(Name)
 
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     if not PrivateZone and VPCs:
         raise SaltInvocationError("Parameter 'VPCs' is invalid when creating a public zone.")
