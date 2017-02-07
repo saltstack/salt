@@ -460,3 +460,36 @@ See implementation details in `salttesting.helpers` for details.
 
 `@with_system_user_and_group` -- Creates and optionally destroys a system user and group
 within a test case.  See implementation details in `salttesting.helpers` for details.
+
+Testing Custom Modules
+~~~~~~~~~~~~~~~~~~~~~~
+
+It is possible to test custom Salt states and modules using the full power of the Salt
+test framework. This enables teams that have invested heavily in customized modules
+for Salt to have access to a full testing and acceptance framework, including
+support for integration tests with a running Salt master and minion.
+
+To test custom modules, place the tests in a directory anywhere on the filesystem.
+
+.. note::
+    
+    All directories must be structured as Python packages. This means that each directory,
+    including the top-level directory for tests, must contain an `__init__.py` file. This
+    file may be empty. Any directories which do not contain this file will not be searched
+    for tests.
+
+To include custom tests in a full run of all of Salt's functionality, simply pass the 
+``--customdir`` flag. For example, to include tests present in `/tmp/mytests`, pass
+``--customdir=/tmp/mytests``.
+
+To run *only* custom tests, pass both the ``--customdir=`` flag and the ``--custom`` flag.
+
+This capability isn't useful for much withou the ability to add custom modules. To do so,
+create a `ext/` directory below the directory specified by `customdir`.
+
+Inside that directory, one can add all modular subsystems available to salt and they will
+be automatically copied to to the appropriate locations in the master/minion configurations.
+
+As always, you can view these configurations by running the test suite with ``--no-clean``
+and examining the daemon configurations present in the `salt-tests-tmpdir` directory.
+

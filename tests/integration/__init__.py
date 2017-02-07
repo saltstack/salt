@@ -337,7 +337,7 @@ def run_tests(*test_cases, **kwargs):
             transport = None
             if needs_daemon:
                 transport = self.options.transport
-            TestDaemon.transplant_configs(transport=transport)
+            TestDaemon.transplant_configs(transport=transport, ext=self.options.customdir)
 
         def run_testcase(self, testcase, needs_daemon=True):  # pylint: disable=W0221
             if needs_daemon:
@@ -1029,7 +1029,7 @@ class TestDaemon(object):
         return RUNTIME_CONFIGS['runtime_client']
 
     @classmethod
-    def transplant_configs(cls, transport='zeromq'):
+    def transplant_configs(cls, transport='zeromq', ext=None):
         if os.path.isdir(TMP_CONF_DIR):
             shutil.rmtree(TMP_CONF_DIR)
         os.makedirs(TMP_CONF_DIR)
@@ -1072,6 +1072,7 @@ class TestDaemon(object):
         minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
         minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
         minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+        minion_opts['module_dirs'] = [os.path.join(ext, 'ext', 'modules')]
 
         # This sub_minion also connects to master
         sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
@@ -1082,6 +1083,7 @@ class TestDaemon(object):
         sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
         sub_minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
         sub_minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+        sub_minion_opts['module_dirs'] = [os.path.join(ext, 'ext', 'modules')]
 
         # This is the master of masters
         syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
@@ -1144,7 +1146,12 @@ class TestDaemon(object):
                     ),
                     new_extension_modules_path
                 )
-            opts_dict['extension_modules'] = os.path.join(opts_dict['root_dir'], 'extension_modules')
+                if ext:
+                    ext_dir = os.path.join(ext, 'ext')
+                    for dir in os.listdir(ext_dir):
+                        print('Copying {0} to {1}'.format(os.path.join(ext_dir, dir), os.path.join(new_extension_modules_path, dir)))
+                        shutil.copytree(os.path.join(ext_dir, dir), os.path.join(new_extension_modules_path, dir))
+                opts_dict['extension_modules'] = os.path.join(opts_dict['root_dir'], 'extension_modules')
 
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):

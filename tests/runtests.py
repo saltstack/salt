@@ -124,12 +124,18 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         Return a set of all test suites except unit and cloud provider tests
         unless requested
         '''
+        if self.options.custom:
+            if not self.options.customdir:
+                raise Exception('Since the `custom` flag has been set, please pass `customdir` as well')
+            if not os.path.exists(self.options.customdir):
+                raise OSError('Could not find custom test directory: {0}'.format(self.options.customdir))
+            TEST_SUITES['custom'] = {'display_name': 'Custom',
+                'path': self.options.customdir}
         suites = set(TEST_SUITES.keys())
         if not include_unit:
             suites -= set(['unit'])
         if not include_cloud_provider:
             suites -= set(['cloud_provider'])
-
         return suites
 
     def _check_enabled_suites(self, include_unit=False, include_cloud_provider=False):
@@ -170,6 +176,22 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Do not run any tests. Simply start the daemons.'
+        )
+        self.add_option(
+            '--custom',
+            default=False,
+            action='store_true',
+            help='Addtional directories to scan for tests'
+        )
+        self.add_option(
+            '--customdir',
+            default='',
+            help='Directory to scan for additional tests. (Requires that --custom also be set)'
+        )
+        self.add_option(
+            '--customroot',
+            default='',
+            help='Additional directories to append to Salt file roots for master/minion'
         )
         self.output_options_group.add_option(
             '--no-colors',
@@ -387,7 +409,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         )
 
         # Transplant configuration
-        TestDaemon.transplant_configs(transport=self.options.transport)
+        TestDaemon.transplant_configs(transport=self.options.transport, ext=self.options.customdir)
 
     def post_execution_cleanup(self):
         SaltCoverageTestingParser.post_execution_cleanup(self)
@@ -398,8 +420,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         '''
         Run an integration test suite
         '''
-        full_path = os.path.join(TEST_DIR, path)
-        return self.run_suite(full_path, display_name)
+        # If the path is full-qualified, it's not a part of the main suite
+        if os.path.isabs(path):
+            full_path = path
+        else:
+            full_path = os.path.join(TEST_DIR, path)
+        return self.run_suite(full_path, display_name, additional_test_dirs=[self.options.customdir])
 
     def start_daemons_only(self):
         if not salt.utils.is_windows():
