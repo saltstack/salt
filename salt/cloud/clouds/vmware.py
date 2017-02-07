@@ -672,6 +672,12 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         if device.capacityInKB < size_kb:
                             # expand the disk
                             disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
+                        elif device.capacityInKB > size_kb:
+                            raise SaltCloudSystemExit(
+                                'The specified disk size is smaller than the '
+                                'size of the disk image. It must be equal to '
+                                'or greater than the disk image'
+                            )
 
                         if 'mode' in devices['disk'][device.deviceInfo.label]:
                             if devices['disk'][device.deviceInfo.label]['mode'] \

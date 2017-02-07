@@ -47,6 +47,7 @@ class SelinuxTestCase(TestCase):
         mock_pr = MagicMock(side_effect=['Permissive', 'Enforcing'])
         with patch.dict(selinux.__salt__,
                         {'selinux.getenforce': mock_en,
+                         'selinux.getconfig': mock_en,
                          'selinux.setenforce': mock_pr}):
             comt = ('SELinux is already in Enforcing mode')
             ret = {'name': 'Enforcing', 'comment': comt, 'result': True, 'changes': {}}

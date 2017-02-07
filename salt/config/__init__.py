@@ -988,6 +988,10 @@ VALID_OPTS = {
     # Controls whether the scheduler is set up before a connection
     # to the master is attempted.
     'scheduler_before_connect': bool,
+
+    # django auth
+    'django_auth_path': str,
+    'django_auth_settings': str,
 }
 
 # default configurations
@@ -1517,6 +1521,8 @@ DEFAULT_MASTER_OPTS = {
     'thin_extra_mods': '',
     'min_extra_mods': '',
     'ssl': None,
+    'django_auth_path': '',
+    'django_auth_settings': '',
 }
 
 
