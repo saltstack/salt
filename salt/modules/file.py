@@ -1598,7 +1598,6 @@ def line(path, content, match=None, mode=None, location=None,
     elif mode == 'ensure':
         after = after and after.strip()
         before = before and before.strip()
-        content = content and content.strip()
 
         if before and after:
             _assert_occurrence(body, before, 'before')
