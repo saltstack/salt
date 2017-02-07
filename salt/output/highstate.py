@@ -179,7 +179,7 @@ def _format_host(host, data):
         # Verify that the needed data is present
         data_tmp = {}
         for tname, info in six.iteritems(data):
-            if isinstance(info, dict) and '__run_num__' not in info:
+            if isinstance(info, dict) and info and '__run_num__' not in info:
                 err = (u'The State execution failed to record the order '
                        'in which all states were executed. The state '
                        'return missing data is:')
