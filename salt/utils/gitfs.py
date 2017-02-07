@@ -25,7 +25,12 @@ import salt.utils.itertools
 import salt.utils.url
 import salt.fileserver
 from salt.utils.process import os_is_running as pid_exists
-from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
+from salt.exceptions import (
+    FileserverConfigError,
+    GitLockError,
+    GitRemoteError,
+    get_error_message
+)
 from salt.utils.event import tagify
 
 # Import third party libs
@@ -124,6 +129,8 @@ def enforce_types(key, val):
         'env_blacklist': 'stringlist',
         'gitfs_env_whitelist': 'stringlist',
         'gitfs_env_blacklist': 'stringlist',
+        'refspecs': 'stringlist',
+        'gitfs_refspecs': 'stringlist',
     }
 
     if key not in non_string_params:
@@ -410,6 +417,12 @@ class GitProvider(object):
                 return strip_sep(getattr(self, '_' + name))
         setattr(cls, name, _getconf)
 
+    def add_refspecs(self, *refspecs):
+        '''
+        This function must be overridden in a sub-class
+        '''
+        raise NotImplementedError()
+
     def check_root(self):
         '''
         Check if the relative root path exists in the checked-out copy of the
@@ -430,10 +443,34 @@ class GitProvider(object):
 
     def clean_stale_refs(self):
         '''
-        Not all providers need stale refs to be cleaned manually. Override this
-        function in a sub-class if this is needed.
+        Remove stale refs so that they are no longer seen as fileserver envs
         '''
-        return []
+        cleaned = []
+        cmd_str = 'git remote prune origin'
+        cmd = subprocess.Popen(
+            shlex.split(cmd_str),
+            close_fds=not salt.utils.is_windows(),
+            cwd=self.repo.workdir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        output = cmd.communicate()[0]
+        if cmd.returncode != 0:
+            log.warning(
+                'Failed to prune stale branches for %s remote \'%s\'. '
+                'Output from \'%s\' follows:\n%s',
+                self.role, self.id, cmd_str, output
+            )
+        else:
+            marker = ' * [pruned] '
+            for line in salt.utils.itertools.split(output, '\n'):
+                if line.startswith(marker):
+                    cleaned.append(line[len(marker):].strip())
+            if cleaned:
+                log.debug(
+                    '%s pruned the following stale refs: %s',
+                    self.role, ', '.join(cleaned)
+                )
+        return cleaned
 
     def clear_lock(self, lock_type='update'):
         '''
@@ -475,6 +512,56 @@ class GitProvider(object):
             log.debug(msg)
             success.append(msg)
         return success, failed
+
+    def configure_refspecs(self):
+        '''
+        Ensure that the configured refspecs are set
+        '''
+        try:
+            refspecs = set(self.get_refspecs())
+        except (git.exc.GitCommandError, GitRemoteError) as exc:
+            log.error(
+                'Failed to get refspecs for %s remote \'%s\': %s',
+                self.role,
+                self.id,
+                exc
+            )
+            return
+
+        desired_refspecs = set(self.refspecs)
+        to_delete = refspecs - desired_refspecs if refspecs else set()
+        if to_delete:
+            # There is no native unset support in Pygit2, and GitPython just
+            # wraps the CLI anyway. So we'll just use the git CLI to
+            # --unset-all the config value. Then, we will add back all
+            # configured refspecs. This is more foolproof than trying to remove
+            # specific refspecs, as removing specific ones necessitates
+            # formulating a regex to match, and the fact that slashes and
+            # asterisks are in refspecs complicates this.
+            cmd_str = 'git config --unset-all remote.origin.fetch'
+            cmd = subprocess.Popen(
+                shlex.split(cmd_str),
+                close_fds=not salt.utils.is_windows(),
+                cwd=self.repo.workdir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT)
+            output = cmd.communicate()[0]
+            if cmd.returncode != 0:
+                log.error(
+                    'Failed to unset git config value for %s remote \'%s\'. '
+                    'Output from \'%s\' follows:\n%s',
+                    self.role, self.id, cmd_str, output
+                )
+                return
+            # Since we had to remove all refspecs, we now need to add all
+            # desired refspecs to achieve the desired configuration.
+            to_add = desired_refspecs
+        else:
+            # We didn't need to delete any refspecs, so we'll only need to add
+            # the desired refspecs that aren't currently configured.
+            to_add = desired_refspecs - refspecs
+
+        self.add_refspecs(*to_add)
 
     def fetch(self):
         '''
@@ -688,6 +775,12 @@ class GitProvider(object):
                 else target
         return self.branch
 
+    def get_refspecs(self):
+        '''
+        This function must be overridden in a sub-class
+        '''
+        raise NotImplementedError()
+
     def get_tree(self, tgt_env):
         '''
         This function must be overridden in a sub-class
@@ -733,6 +826,23 @@ class GitPython(GitProvider):
         self.provider = 'gitpython'
         GitProvider.__init__(self, opts, remote, per_remote_defaults,
                              per_remote_only, override_params, cache_root, role)
+
+    def add_refspecs(self, *refspecs):
+        '''
+        Add the specified refspecs to the "origin" remote
+        '''
+        for refspec in refspecs:
+            try:
+                self.repo.git.config('--add', 'remote.origin.fetch', refspec)
+                log.debug(
+                    'Added refspec \'%s\' to %s remote \'%s\'',
+                    refspec, self.role, self.id
+                )
+            except git.exc.GitCommandError as exc:
+                log.error(
+                    'Failed to add refspec \'%s\' to %s remote \'%s\': %s',
+                    refspec, self.role, self.id, exc
+                )
 
     def checkout(self):
         '''
@@ -801,24 +911,6 @@ class GitPython(GitProvider):
         )
         return None
 
-    def clean_stale_refs(self):
-        '''
-        Clean stale local refs so they don't appear as fileserver environments
-        '''
-        cleaned = []
-        for ref in self.repo.remotes[0].stale_refs:
-            if ref.name.startswith('refs/tags/'):
-                # Work around GitPython bug affecting removal of tags
-                # https://github.com/gitpython-developers/GitPython/issues/260
-                self.repo.git.tag('-d', ref.name[10:])
-            else:
-                ref.delete(self.repo, ref)
-            cleaned.append(ref)
-        if cleaned:
-            log.debug('{0} cleaned the following stale refs: {1}'
-                      .format(self.role, cleaned))
-        return cleaned
-
     def init_remote(self):
         '''
         Initialize/attach to a remote using GitPython. Return a boolean
@@ -843,11 +935,6 @@ class GitPython(GitProvider):
         if not self.repo.remotes:
             try:
                 self.repo.create_remote('origin', self.url)
-                # Ensure tags are also fetched
-                self.repo.git.config('--add',
-                                     'remote.origin.fetch',
-                                     '+refs/tags/*:refs/tags/*')
-                self.repo.git.config('http.sslVerify', self.ssl_verify)
             except os.error:
                 # This exception occurs when two processes are trying to write
                 # to the git config at once, go ahead and pass over it since
@@ -855,6 +942,19 @@ class GitPython(GitProvider):
                 pass
             else:
                 new = True
+
+        try:
+            ssl_verify = self.repo.git.config('--get', 'http.sslVerify')
+        except git.exc.GitCommandError:
+            ssl_verify = ''
+        desired_ssl_verify = str(self.ssl_verify).lower()
+        if ssl_verify != desired_ssl_verify:
+            self.repo.git.config('http.sslVerify', desired_ssl_verify)
+
+        # Ensure that refspecs for the "origin" remote are set up as configured
+        if hasattr(self, 'refspecs'):
+            self.configure_refspecs()
+
         return new
 
     def dir_list(self, tgt_env):
@@ -904,27 +1004,23 @@ class GitPython(GitProvider):
         for fetchinfo in fetch_results:
             if fetchinfo.old_commit is not None:
                 log.debug(
-                    '{0} has updated \'{1}\' for remote \'{2}\' '
-                    'from {3} to {4}'.format(
-                        self.role,
-                        fetchinfo.name,
-                        self.id,
-                        fetchinfo.old_commit.hexsha[:7],
-                        fetchinfo.commit.hexsha[:7]
-                    )
+                    '%s has updated \'%s\' for remote \'%s\' '
+                    'from %s to %s',
+                    self.role,
+                    fetchinfo.name,
+                    self.id,
+                    fetchinfo.old_commit.hexsha[:7],
+                    fetchinfo.commit.hexsha[:7]
                 )
                 new_objs = True
             elif fetchinfo.flags in (fetchinfo.NEW_TAG,
                                      fetchinfo.NEW_HEAD):
                 log.debug(
-                    '{0} has fetched new {1} \'{2}\' for remote \'{3}\' '
-                    .format(
-                        self.role,
-                        'tag' if fetchinfo.flags == fetchinfo.NEW_TAG
-                            else 'head',
-                        fetchinfo.name,
-                        self.id
-                    )
+                    '%s has fetched new %s \'%s\' for remote \'%s\'',
+                    self.role,
+                    'tag' if fetchinfo.flags == fetchinfo.NEW_TAG else 'head',
+                    fetchinfo.name,
+                    self.id
                 )
                 new_objs = True
 
@@ -1006,6 +1102,13 @@ class GitPython(GitProvider):
             return blob, blob.hexsha, blob.mode
         return None, None, None
 
+    def get_refspecs(self):
+        '''
+        Return the configured refspecs
+        '''
+        refspecs = self.repo.git.config('--get-all', 'remote.origin.fetch')
+        return [x.strip() for x in refspecs.splitlines()]
+
     def get_tree(self, tgt_env):
         '''
         Return a git.Tree object if the branch/tag/SHA is found, otherwise None
@@ -1048,6 +1151,27 @@ class Pygit2(GitProvider):
             distutils.version.LooseVersion('0.23.2')
         GitProvider.__init__(self, opts, remote, per_remote_defaults,
                              per_remote_only, override_params, cache_root, role)
+
+    def add_refspecs(self, *refspecs):
+        '''
+        Add the specified refspecs to the "origin" remote
+        '''
+        for refspec in refspecs:
+            try:
+                self.repo.config.set_multivar(
+                    'remote.origin.fetch',
+                    'FOO',
+                    refspec
+                )
+                log.debug(
+                    'Added refspec \'%s\' to %s remote \'%s\'',
+                    refspec, self.role, self.id
+                )
+            except Exception as exc:
+                log.error(
+                    'Failed to add refspec \'%s\' to %s remote \'%s\': %s',
+                    refspec, self.role, self.id, exc
+                )
 
     def checkout(self):
         '''
@@ -1161,9 +1285,8 @@ class Pygit2(GitProvider):
                             # Shouldn't happen, but log an error if it does
                             log.error(
                                 'pygit2 was unable to resolve branch name from '
-                                'HEAD ref \'{0}\' in {1} remote \'{2}\''.format(
-                                    head_ref, self.role, self.id
-                                )
+                                'HEAD ref \'%s\' in %s remote \'%s\'',
+                                head_ref, self.role, self.id
                             )
                             return None
                         remote_head = 'refs/remotes/origin/' + branch_name
@@ -1222,18 +1345,14 @@ class Pygit2(GitProvider):
             raise
         except Exception as exc:
             log.error(
-                'Failed to checkout {0} from {1} remote \'{2}\': {3}'.format(
-                    tgt_ref,
-                    self.role,
-                    self.id,
-                    exc
-                ),
+                'Failed to checkout %s from %s remote \'%s\': %s',
+                tgt_ref, self.role, self.id, exc,
                 exc_info_on_loglevel=logging.DEBUG
             )
             return None
         log.error(
-            'Failed to checkout {0} from {1} remote \'{2}\': remote ref '
-            'does not exist'.format(tgt_ref, self.role, self.id)
+            'Failed to checkout %s from %s remote \'%s\': remote ref '
+            'does not exist', tgt_ref, self.role, self.id
         )
         return None
 
@@ -1245,55 +1364,10 @@ class Pygit2(GitProvider):
             log.debug(
                 'pygit2 does not support detecting stale refs for '
                 'authenticated remotes, saltenvs will not reflect '
-                'branches/tags removed from remote \'{0}\''
-                .format(self.id)
+                'branches/tags removed from remote \'%s\'', self.id
             )
             return []
-        if local_refs is None:
-            local_refs = self.repo.listall_references()
-        remote_refs = []
-        cmd_str = 'git ls-remote origin'
-        cmd = subprocess.Popen(
-            shlex.split(cmd_str),
-            close_fds=not salt.utils.is_windows(),
-            cwd=self.repo.workdir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
-        output = cmd.communicate()[0]
-        if cmd.returncode != 0:
-            log.warning(
-                'Failed to list remote references for {0} remote \'{1}\'. '
-                'Output from \'{2}\' follows:\n{3}'.format(
-                    self.role,
-                    self.id,
-                    cmd_str,
-                    output
-                )
-            )
-            return []
-        for line in salt.utils.itertools.split(output, '\n'):
-            try:
-                # Rename heads to match the remote ref names from
-                # pygit2.Repository.listall_references()
-                remote_refs.append(
-                    line.split()[-1].replace(b'refs/heads/',
-                                             b'refs/remotes/origin/')
-                )
-            except IndexError:
-                continue
-        cleaned = []
-        if remote_refs:
-            for ref in local_refs:
-                if ref.startswith('refs/heads/'):
-                    # Local head, ignore it
-                    continue
-                elif ref not in remote_refs:
-                    self.repo.lookup_reference(ref).delete()
-                    cleaned.append(ref)
-        if cleaned:
-            log.debug('{0} cleaned the following stale refs: {1}'
-                      .format(self.role, cleaned))
-        return cleaned
+        return super(Pygit2, self).clean_stale_refs()
 
     def init_remote(self):
         '''
@@ -1329,17 +1403,6 @@ class Pygit2(GitProvider):
         if not self.repo.remotes:
             try:
                 self.repo.create_remote('origin', self.url)
-                # Ensure tags are also fetched
-                self.repo.config.set_multivar(
-                    'remote.origin.fetch',
-                    'FOO',
-                    '+refs/tags/*:refs/tags/*'
-                )
-                self.repo.config.set_multivar(
-                    'http.sslVerify',
-                    '',
-                    str(self.ssl_verify).lower()
-                )
             except os.error:
                 # This exception occurs when two processes are trying to write
                 # to the git config at once, go ahead and pass over it since
@@ -1347,6 +1410,20 @@ class Pygit2(GitProvider):
                 pass
             else:
                 new = True
+
+        try:
+            ssl_verify = self.repo.config.get_bool('http.sslVerify')
+        except KeyError:
+            ssl_verify = None
+        if ssl_verify != self.ssl_verify:
+            self.repo.config.set_multivar('http.sslVerify',
+                                          '',
+                                          str(self.ssl_verify).lower())
+
+        # Ensure that refspecs for the "origin" remote are set up as configured
+        if hasattr(self, 'refspecs'):
+            self.configure_refspecs()
+
         return new
 
     def dir_list(self, tgt_env):
@@ -1423,10 +1500,10 @@ class Pygit2(GitProvider):
             if 'unsupported url protocol' in exc_str \
                     and isinstance(self.credentials, pygit2.Keypair):
                 log.error(
-                    'Unable to fetch SSH-based {0} remote \'{1}\'. '
+                    'Unable to fetch SSH-based %s remote \'%s\'. '
                     'You may need to add ssh:// to the repo string or '
                     'libgit2 must be compiled with libssh2 to support '
-                    'SSH authentication.'.format(self.role, self.id),
+                    'SSH authentication.', self.role, self.id,
                     exc_info_on_loglevel=logging.DEBUG
                 )
             elif 'authentication required but no callback set' in exc_str:
@@ -1451,13 +1528,11 @@ class Pygit2(GitProvider):
             received_objects = fetch_results.received_objects
         if received_objects != 0:
             log.debug(
-                '{0} received {1} objects for remote \'{2}\''
-                .format(self.role, received_objects, self.id)
+                '%s received %s objects for remote \'%s\'',
+                self.role, received_objects, self.id
             )
         else:
-            log.debug(
-                '{0} remote \'{1}\' is up-to-date'.format(self.role, self.id)
-            )
+            log.debug('%s remote \'%s\' is up-to-date', self.role, self.id)
         refs_post = self.repo.listall_references()
         cleaned = self.clean_stale_refs(local_refs=refs_post)
         return bool(received_objects or refs_pre != refs_post or cleaned)
@@ -1553,6 +1628,14 @@ class Pygit2(GitProvider):
             return blob, blob.hex, mode
         return None, None, None
 
+    def get_refspecs(self):
+        '''
+        Return the configured refspecs
+        '''
+        if not [x for x in self.repo.config if x.startswith('remote.origin.')]:
+            raise GitRemoteError('\'origin\' remote not not present')
+        return list(self.repo.config.get_multivar('remote.origin.fetch'))
+
     def get_tree(self, tgt_env):
         '''
         Return a pygit2.Tree object if the branch/tag/SHA is found, otherwise
@@ -1640,8 +1723,8 @@ class Pygit2(GitProvider):
             if user == address:
                 # No '@' sign == no user. This is a problem.
                 log.critical(
-                    'Keypair specified for {0} remote \'{1}\', but remote URL '
-                    'is missing a username'.format(self.role, self.id)
+                    'Keypair specified for %s remote \'%s\', but remote URL '
+                    'is missing a username', self.role, self.id
                 )
                 failhard(self.role)
 
@@ -1680,15 +1763,13 @@ class Pygit2(GitProvider):
             if password_ok:
                 if transport == 'http' and not self.insecure_auth:
                     log.critical(
-                        'Invalid configuration for {0} remote \'{1}\'. '
+                        'Invalid configuration for %s remote \'%s\'. '
                         'Authentication is disabled by default on http '
-                        'remotes. Either set {0}_insecure_auth to True in the '
+                        'remotes. Either set %s_insecure_auth to True in the '
                         'master configuration file, set a per-remote config '
                         'option named \'insecure_auth\' to True, or use https '
-                        'or ssh-based authentication.'.format(
-                            self.role,
-                            self.id
-                        )
+                        'or ssh-based authentication.',
+                        self.role, self.id, self.role
                     )
                     failhard(self.role)
                 self.credentials = pygit2.UserPass(self.user, self.password)
@@ -1699,8 +1780,8 @@ class Pygit2(GitProvider):
                 _incomplete_auth(missing_auth)
         else:
             log.critical(
-                'Invalid configuration for {0} remote \'{1}\'. Unsupported '
-                'transport \'{2}\'.'.format(self.role, self.id, transport)
+                'Invalid configuration for %s remote \'%s\'. Unsupported '
+                'transport \'%s\'.', self.role, self.id, transport
             )
             failhard(self.role)
 
