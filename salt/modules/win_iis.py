@@ -876,6 +876,56 @@ def remove_apppool(name):
     return True
 
 
+def stop_apppool(name):
+    '''
+    Stop an IIS application pool.
+
+    ..versionadded:: Nitrogen
+
+    Args:
+        name (str): The name of the App Pool to stop.
+
+    Returns:
+        bool: True if successful, otherwise False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.stop_apppool name='MyTestPool'
+    '''
+    ps_cmd = ['Stop-WebAppPool', r"'{0}'".format(name)]
+
+    cmd_ret = _srvmgr(ps_cmd)
+
+    return cmd_ret['retcode'] == 0
+
+
+def start_apppool(name):
+    '''
+    Start an IIS application pool.
+
+    ..versionadded:: Nitrogen
+
+    Args:
+        name (str): The name of the App Pool to start.
+
+    Returns:
+        bool: True if successful, otherwise False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.start_apppool name='MyTestPool'
+    '''
+    ps_cmd = ['Start-WebAppPool', r"'{0}'".format(name)]
+
+    cmd_ret = _srvmgr(ps_cmd)
+
+    return cmd_ret['retcode'] == 0
+
+
 def restart_apppool(name):
     '''
     Restart an IIS application pool.
