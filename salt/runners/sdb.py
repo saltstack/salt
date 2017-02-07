@@ -24,7 +24,7 @@ def get(uri):
 
         salt '*' sdb.get sdb://mymemcached/foo
     '''
-    return salt.utils.sdb.sdb_get(uri, __opts__)
+    return salt.utils.sdb.sdb_get(uri, __opts__, __utils__)
 
 
 def set_(uri, value):
@@ -39,7 +39,7 @@ def set_(uri, value):
 
         salt '*' sdb.set sdb://mymemcached/foo bar
     '''
-    return salt.utils.sdb.sdb_set(uri, value, __opts__)
+    return salt.utils.sdb.sdb_set(uri, value, __opts__, __utils__)
 
 
 def delete(uri):
@@ -54,4 +54,4 @@ def delete(uri):
 
         salt '*' sdb.delete sdb://mymemcached/foo
     '''
-    return salt.utils.sdb.sdb_delete(uri, __opts__)
+    return salt.utils.sdb.sdb_delete(uri, __opts__, __utils__)
