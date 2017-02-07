@@ -645,25 +645,25 @@ def diassociate_vpc_from_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
     return False
 
 
-def create_vpc_association_authorization(*args, **kwargs):
-    '''
-    unimplemented
-    '''
-    pass
+#def create_vpc_association_authorization(*args, **kwargs):
+#    '''
+#    unimplemented
+#    '''
+#    pass
 
 
-def delete_vpc_association_authorization(*args, **kwargs):
-    '''
-    unimplemented
-    '''
-    pass
+#def delete_vpc_association_authorization(*args, **kwargs):
+#    '''
+#    unimplemented
+#    '''
+#    pass
 
 
-def list_vpc_association_authorizations(*args, **kwargs):
-    '''
-    unimplemented
-    '''
-    pass
+#def list_vpc_association_authorizations(*args, **kwargs):
+#    '''
+#    unimplemented
+#    '''
+#    pass
 
 
 def delete_hosted_zone(Id, region=None, key=None, keyid=None, profile=None):
@@ -786,13 +786,17 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
                                 PrivateZone=None, ChangeBatch=None,
                                 region=None, key=None, keyid=None, profile=None):
     '''
-    Ugh!!!  Not gonna try to reproduce this mess in here - just pass what we get to AWS and let it
-    decide if it's valid or not... :)
+    Ugh!!!  Not gonna try to reproduce and validatethis mess in here - just pass what we get to AWS
+    and let it decide if it's valid or not...
 
-    See the `AWS Route53 API docs`__ as well as the `Boto3 documentation`__ for all the ugly details...
+    See the `AWS Route53 API docs`__ as well as the `Boto3 documentation`__ for all the details...
 
     .. __: https://docs.aws.amazon.com/Route53/latest/APIReference/API_ChangeResourceRecordSets.html
     .. __: http://boto3.readthedocs.io/en/latest/reference/services/route53.html#Route53.Client.change_resource_record_sets
+
+    The syntax for a ChangeBatch parameter is as follows, but note that the permutations of allowed
+    parameters and combinations thereof are quite varied, so perusal of the above linked docs is
+    highly recommended for any non-trival configurations.
 
     .. code-block:: json
     ChangeBatch={
@@ -830,6 +834,24 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
         ]
     }
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        foo='{
+               "Name": "my-cname.example.org.",
+               "TTL": 600,
+               "Type": "CNAME",
+               "ResourceRecords": [
+                 {
+                   "Value": "my-host.example.org"
+                 }
+               ]
+             }'
+        foo=`echo $foo`  # Remove newlines
+        salt myminion boto3_route53.change_resource_record_sets DomainName=example.org. \
+                keyid=A1234567890ABCDEF123 key=xblahblahblah \
+                ChangeBatch="{'Changes': [{'Action': 'UPSERT', 'ResourceRecordSet': $foo}]}"
     '''
     if not _exactly_one((HostedZoneId, Name)):
         raise SaltInvocationError('Exactly one of either HostZoneId or Name must be provided.')
