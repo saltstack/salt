@@ -2,6 +2,8 @@
 '''
 Manage Grafana v4.0 orgs
 
+.. versionadded:: Nitrogen
+
 Token auth setup
 
 .. code-block:: yaml

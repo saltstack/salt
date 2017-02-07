@@ -22,7 +22,7 @@ import logging
 log = logging.getLogger(__name__)
 
 # Salt lib
-import salt.utils
+import salt.utils.napalm
 
 # ----------------------------------------------------------------------------------------------------------------------
 # grains properties
@@ -36,6 +36,7 @@ __proxyenabled__ = ['napalm']
 # ----------------------------------------------------------------------------------------------------------------------
 
 GRAINS_CACHE = {}
+DEVICE_CACHE = {}
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -43,39 +44,58 @@ GRAINS_CACHE = {}
 
 
 def __virtual__():
-    try:
-        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'napalm':
-            return __virtualname__
-    except KeyError:
-        pass
-
-    return False
+    '''
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
+    '''
+    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helpers
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def _retrieve_grains(proxy):
+def _retrieve_grains(proxy=None):
     '''
     Retrieves the grains from the network device if not cached already.
     '''
 
     global GRAINS_CACHE
+    global DEVICE_CACHE
 
     if not GRAINS_CACHE:
-        GRAINS_CACHE = proxy['napalm.grains']()
+        if proxy and salt.utils.napalm.is_proxy(__opts__):
+            # if proxy var passed and is NAPALM-type proxy minion
+            GRAINS_CACHE = proxy['napalm.get_grains']()
+            if 'napalm.get_device' in proxy:
+                DEVICE_CACHE = proxy['napalm.get_device']()
+        elif not proxy and salt.utils.napalm.is_minion(__opts__):
+            # if proxy var not passed and is running in a straight minion
+            DEVICE_CACHE = salt.utils.napalm.get_device(__opts__)
+            GRAINS_CACHE = salt.utils.napalm.call(
+                DEVICE_CACHE,
+                'get_facts',
+                **{}
+            )
 
     return GRAINS_CACHE
 
 
-def _get_grain(proxy, name):
+def _get_grain(name, proxy=None):
     '''
     Retrieves the grain value from the cached dictionary.
     '''
-    grains = _retrieve_grains(proxy)
+    grains = _retrieve_grains(proxy=proxy)
     if grains.get('result', False) and grains.get('out', {}):
         return grains.get('out').get(name)
+
+
+def _get_device_grain(name):
+    '''
+    Retrieves device-specific grains.
+    '''
+    if not DEVICE_CACHE:
+        return
+    return DEVICE_CACHE.get(name.upper())
 
 # ----------------------------------------------------------------------------------------------------------------------
 # actual grains
@@ -94,11 +114,10 @@ def getos():
 
         salt -G 'os:junos' test.ping
     '''
-    # we have this in the pillar
-    return {'os': __pillar__.get('proxy', {}).get('driver', '')}
+    return {'os': _get_device_grain('driver_name')}
 
 
-def version(proxy):
+def version(proxy=None):
     '''
     Returns the OS version.
 
@@ -123,11 +142,10 @@ def version(proxy):
         edge01.muc01:
             MX240
     '''
-    if proxy:
-        return {'version': _get_grain(proxy, 'os_version')}
+    return {'version': _get_grain('os_version', proxy=proxy)}
 
 
-def model(proxy):
+def model(proxy=None):
     '''
     Returns the network device chassis model.
 
@@ -139,11 +157,10 @@ def model(proxy):
 
         salt -G 'model:MX480' net.traceroute 8.8.8.8
     '''
-    if proxy:
-        return {'model': _get_grain(proxy, 'model')}
+    return {'model': _get_grain('model', proxy=proxy)}
 
 
-def serial(proxy):
+def serial(proxy=None):
     '''
     Returns the chassis serial number.
 
@@ -168,11 +185,10 @@ def serial(proxy):
         edge01.mrs01:
             FOXW00F004
     '''
-    if proxy:
-        return {'serial': _get_grain(proxy, 'serial_number')}
+    return {'serial': _get_grain('serial_number', proxy=proxy)}
 
 
-def vendor(proxy):
+def vendor(proxy=None):
     '''
     Returns the network device vendor.
 
@@ -184,11 +200,10 @@ def vendor(proxy):
 
         salt -G 'vendor:cisco' net.cli "shut"
     '''
-    if proxy:
-        return {'vendor': _get_grain(proxy, 'vendor')}
+    return {'vendor': _get_grain('vendor', proxy=proxy)}
 
 
-def uptime(proxy):
+def uptime(proxy=None):
     '''
     Returns the uptime in seconds.
 
@@ -198,11 +213,10 @@ def uptime(proxy):
 
         salt -G 'uptime<3600' test.ping
     '''
-    if proxy:
-        return {'uptime': _get_grain(proxy, 'uptime')}
+    return {'uptime': _get_grain('uptime', proxy=proxy)}
 
 
-def interfaces(proxy):
+def interfaces(proxy=None):
     '''
     Returns the complete interfaces list of the network device.
 
@@ -231,5 +245,75 @@ def interfaces(proxy):
         edge01.kix01:
             True
     '''
-    if proxy:
-        return {'interfaces': _get_grain(proxy, 'interface_list')}
+    return {'interfaces': _get_grain('interface_list', proxy=proxy)}
+
+
+def username(proxy=None):
+    '''
+    Return the username
+
+    CLI Example - select all devices using `foobar` as username for connection:
+
+    .. code-block:: bash
+
+        salt -G 'username:foobar' test.ping
+
+    Output:
+
+    .. code-block::yaml
+
+        device1:
+            True
+        device2:
+            True
+    '''
+    if proxy and salt.utils.napalm.is_proxy(__opts__):
+        # only if proxy will override the username
+        # otherwise will use the default Salt grains
+        return {'username': _get_device_grain('username')}
+
+
+def hostname(proxy=None):
+    '''
+    Return the hostname as configured on the device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'device*' grains.get hostname
+
+    Output:
+
+    .. code-block:: yaml
+
+        device1:
+            edge01.yyz01
+        device2:
+            edge01.bjm01
+        device3:
+            edge01.flw01
+    '''
+    return {'hostname': _get_grain('hostname', proxy=proxy)}
+
+
+def optional_args():
+    '''
+    Return the connection optional args.
+
+    CLI Example - select all devices connection via port 1234:
+
+    .. code-block:: bash
+
+        salt -G 'optional_args:port:1234' test.ping
+
+    Output:
+
+    .. code-block:: yaml
+
+        device1:
+            True
+        device2:
+            True
+    '''
+    return {'optional_args': _get_device_grain('optional_args')}

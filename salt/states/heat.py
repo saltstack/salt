@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Management of Heat
-=======================================
+==================
+
+.. versionadded:: Nitrogen
 
 :depends:   - heat Python module
 :configuration: See :py:mod:`salt.modules.heat` for setup instructions.
