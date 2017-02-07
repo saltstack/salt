@@ -13,6 +13,7 @@ import hmac
 import salt.exceptions
 import salt.ext.six as six
 import salt.utils
+import salt.utils.hashutils
 
 if six.PY2:
     import StringIO
@@ -92,11 +93,7 @@ def base64_b64encode(instr):
 
         salt '*' hashutil.base64_b64encode 'get salted'
     '''
-    if six.PY3:
-        b = salt.utils.to_bytes(instr)
-        b64 = base64.b64encode(b)
-        return salt.utils.to_str(b64)
-    return base64.b64encode(instr)
+    return salt.utils.hashutils.base64_b64encode(instr)
 
 
 def base64_b64decode(instr):
@@ -111,14 +108,7 @@ def base64_b64decode(instr):
 
         salt '*' hashutil.base64_b64decode 'Z2V0IHNhbHRlZA=='
     '''
-    if six.PY3:
-        b = salt.utils.to_bytes(instr)
-        data = base64.b64decode(b)
-        try:
-            return salt.utils.to_str(data)
-        except UnicodeDecodeError:
-            return data
-    return base64.b64decode(instr)
+    return salt.utils.hashutils.base64_b64decode(instr)
 
 
 def base64_encodestring(instr):
@@ -137,11 +127,7 @@ def base64_encodestring(instr):
 
         salt '*' hashutil.base64_encodestring 'get salted'
     '''
-    if six.PY3:
-        b = salt.utils.to_bytes(instr)
-        b64 = base64.encodebytes(b)
-        return salt.utils.to_str(b64)
-    return base64.encodestring(instr)
+    return salt.utils.hashutils.base64_encodestring(instr)
 
 
 def base64_encodefile(fname):
@@ -190,14 +176,7 @@ def base64_decodestring(instr):
         salt '*' hashutil.base64_decodestring instr='Z2V0IHNhbHRlZAo='
 
     '''
-    if six.PY3:
-        b = salt.utils.to_bytes(instr)
-        data = base64.decodebytes(b)
-        try:
-            return salt.utils.to_str(data)
-        except UnicodeDecodeError:
-            return data
-    return base64.decodestring(instr)
+    return salt.utils.hashutils.base64_decodestring(instr)
 
 
 def base64_decodefile(instr, outfile):
@@ -232,10 +211,7 @@ def md5_digest(instr):
 
         salt '*' hashutil.md5_digest 'get salted'
     '''
-    if six.PY3:
-        b = salt.utils.to_bytes(instr)
-        return hashlib.md5(b).hexdigest()
-    return hashlib.md5(instr).hexdigest()
+    return salt.utils.hashutils.md5_digest(instr)
 
 
 def sha256_digest(instr):
@@ -250,10 +226,7 @@ def sha256_digest(instr):
 
         salt '*' hashutil.sha256_digest 'get salted'
     '''
-    if six.PY3:
-        b = salt.utils.to_bytes(instr)
-        return hashlib.sha256(b).hexdigest()
-    return hashlib.sha256(instr).hexdigest()
+    return salt.utils.hashutils.sha256_digest(instr)
 
 
 def sha512_digest(instr):
@@ -268,10 +241,7 @@ def sha512_digest(instr):
 
         salt '*' hashutil.sha512_digest 'get salted'
     '''
-    if six.PY3:
-        b = salt.utils.to_bytes(instr)
-        return hashlib.sha512(b).hexdigest()
-    return hashlib.sha512(instr).hexdigest()
+    return salt.utils.hashutils.sha512_digest(instr)
 
 
 def hmac_signature(string, shared_secret, challenge_hmac):
@@ -288,17 +258,7 @@ def hmac_signature(string, shared_secret, challenge_hmac):
 
         salt '*' hashutil.hmac_signature 'get salted' 'shared secret' 'eBWf9bstXg+NiP5AOwppB5HMvZiYMPzEM9W5YMm/AmQ='
     '''
-    if six.PY3:
-        msg = salt.utils.to_bytes(string)
-        key = salt.utils.to_bytes(shared_secret)
-        challenge = salt.utils.to_bytes(challenge_hmac)
-    else:
-        msg = string
-        key = shared_secret
-        challenge = challenge_hmac
-    hmac_hash = hmac.new(key, msg, hashlib.sha256)
-    valid_hmac = base64.b64encode(hmac_hash.digest())
-    return valid_hmac == challenge
+    return salt.utils.hashutils.hmac_signature(string, shared_secret, challenge_hmac)
 
 
 def github_signature(string, shared_secret, challenge_hmac):
