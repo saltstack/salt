@@ -37,7 +37,7 @@ def envs(backend=None, sources=False, outputter=None):
         salt-run fileserver.envs git
     '''
     fileserver = salt.fileserver.Fileserver(__opts__)
-    output = fileserver.envs(back=backend, sources=sources)
+    output = sorted(fileserver.envs(back=backend, sources=sources))
 
     if outputter:
         salt.utils.warn_until(
