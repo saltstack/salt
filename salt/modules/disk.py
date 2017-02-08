@@ -75,9 +75,7 @@ def usage(args=None):
         return {}
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
-    elif __grains__['kernel'] == 'OpenBSD':
-        cmd = 'df -kP'
-    elif __grains__['kernel'] == 'AIX':
+    elif __grains__['kernel'] == 'OpenBSD' or  __grains__['kernel'] == 'AIX':
         cmd = 'df -kP'
     else:
         cmd = 'df'
@@ -200,9 +198,7 @@ def percent(args=None):
     '''
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
-    elif __grains__['kernel'] == 'OpenBSD':
-        cmd = 'df -kP'
-    elif __grains__['kernel'] == 'AIX':
+    elif __grains__['kernel'] == 'OpenBSD' or __grains__['kernel'] == 'AIX':
         cmd = 'df -kP'
     else:
         cmd = 'df'
@@ -479,7 +475,7 @@ def fstype(device):
     if salt.utils.which('df'):
         # the fstype was not set on the block device, so inspect the filesystem
         # itself for its type
-        if __grains__['kernel'] == 'AIX' and os.stat('/usr/sysv/bin/df'):
+        if __grains__['kernel'] == 'AIX' and os.path.isfile('/usr/sysv/bin/df'):
             df_out = __salt__['cmd.run']('/usr/sysv/bin/df -n {0}'.format(device)).split()
             if len(df_out) > 2:
                 fs_type = df_out[2]
