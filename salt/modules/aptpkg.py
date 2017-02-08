@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import fnmatch
 import os
 import re
 import logging
@@ -38,6 +39,7 @@ import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
+import salt.utils.itertools
 import salt.utils.systemd
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -716,11 +718,13 @@ def install(name=None,
             if reinstall and cver \
                     and salt.utils.compare_versions(ver1=version_num,
                                                     oper='==',
-                                                    ver2=cver):
+                                                    ver2=cver,
+                                                    cmp_func=version_cmp):
                 to_reinstall[pkgname] = pkgstr
             elif not cver or salt.utils.compare_versions(ver1=version_num,
                                                          oper='>=',
-                                                         ver2=cver):
+                                                         ver2=cver,
+                                                         cmp_func=version_cmp):
                 targets.append(pkgstr)
             else:
                 downgrade.append(pkgstr)
@@ -1577,6 +1581,75 @@ def _consolidate_repo_sources(sources):
         except OSError:
             pass
     return sources
+
+
+def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
+    '''
+    .. versionadded:: Nitrogen
+
+    Returns all available packages. Optionally, package names (and name globs)
+    can be passed and the results will be filtered to packages matching those
+    names.
+
+    This function can be helpful in discovering the version or repo to specify
+    in a :mod:`pkg.installed <salt.states.pkg.installed>` state.
+
+    The return data will be a dictionary mapping package names to a list of
+    version numbers, ordered from newest to oldest. For example:
+
+    .. code-block:: python
+
+        {
+            'bash': ['4.3-14ubuntu1.1',
+                     '4.3-14ubuntu1'],
+            'nginx': ['1.10.0-0ubuntu0.16.04.4',
+                      '1.9.15-0ubuntu1']
+        }
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_repo_pkgs
+        salt '*' pkg.list_repo_pkgs foo bar baz
+    '''
+    out = __salt__['cmd.run_all'](
+        ['apt-cache', 'dump'],
+        output_loglevel='trace',
+        ignore_retcode=True,
+        python_shell=False
+    )
+
+    ret = {}
+    pkg_name = None
+    skip_pkg = False
+    new_pkg = re.compile('^Package: (.+)')
+    for line in salt.utils.itertools.split(out['stdout'], '\n'):
+        try:
+            cur_pkg = new_pkg.match(line).group(1)
+        except AttributeError:
+            pass
+        else:
+            if cur_pkg != pkg_name:
+                pkg_name = cur_pkg
+                if args:
+                    for arg in args:
+                        if fnmatch.fnmatch(pkg_name, arg):
+                            skip_pkg = False
+                            break
+                    else:
+                        # Package doesn't match any of the passed args, skip it
+                        skip_pkg = True
+                else:
+                    # No args passed, we're getting all packages
+                    skip_pkg = False
+                continue
+        if not skip_pkg:
+            comps = line.strip().split(None, 1)
+            if comps[0] == 'Version:':
+                ret.setdefault(pkg_name, []).append(comps[1])
+
+    return ret
 
 
 def list_repos():

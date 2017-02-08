@@ -76,6 +76,7 @@ state module
 # Import python libs
 from __future__ import absolute_import
 import errno
+import fnmatch
 import logging
 import os
 import re
@@ -191,11 +192,15 @@ def _fulfills_version_spec(versions, oper, desired_version,
         if isinstance(versions, dict) and 'version' in versions:
             versions = versions['version']
     for ver in versions:
-        if salt.utils.compare_versions(ver1=ver,
-                                       oper=oper,
-                                       ver2=desired_version,
-                                       cmp_func=cmp_func,
-                                       ignore_epoch=ignore_epoch):
+        if oper == '==':
+            if fnmatch.fnmatch(ver, desired_version):
+                return True
+
+        elif salt.utils.compare_versions(ver1=ver,
+                                         oper=oper,
+                                         ver2=desired_version,
+                                         cmp_func=cmp_func,
+                                         ignore_epoch=ignore_epoch):
             return True
     return False
 
@@ -748,19 +753,18 @@ def installed(
 
         .. code-block:: bash
 
-            # salt myminion pkg.list_repo_pkgs httpd
+            # salt myminion pkg.list_repo_pkgs bash
             myminion:
-                ----------
-                base:
-                    |_
-                      ----------
-                      httpd:
-                          2.2.15-29.el6.centos
-                updates:
-                    |_
-                      ----------
-                      httpd:
-                          2.2.15-30.el6.centos
+            ----------
+                bash:
+                    - 4.2.46-21.el7_3
+                    - 4.2.46-20.el7_2
+
+        This function was first added for :mod:`pkg.list_repo_pkgs
+        <salt.modules.yumpkg.list_repo_pkgs>` in 2014.1.0, and was expanded to
+        :py:func:`Debian/Ubuntu <salt.modules.aptpkg.list_repo_pkgs>` and
+        :py:func:`Arch Linux <salt.modules.pacman.list_repo_pkgs>`-based
+        distros in the Nitrogen release.
 
         The version strings returned by either of these functions can be used
         as version specifiers in pkg states.
@@ -779,6 +783,21 @@ def installed(
 
         If the version given is the string ``latest``, the latest available
         package version will be installed à la ``pkg.latest``.
+
+        **WILDCARD VERSIONS**
+
+        As of the Nitrogen release, this state now supports wildcards in
+        package versions for Debian/Ubuntu, RHEL/CentOS, Arch Linux, and their
+        derivatives. Using wildcards can be useful for packages where the
+        release name is built into the version in some way, such as for
+        RHEL/CentOS which typically has version numbers like ``1.2.34-5.el7``.
+        An example of the usage for this would be:
+
+        .. code-block:: yaml
+
+            mypkg:
+              pkg.installed:
+                - version: '1.2.34*'
 
     :param bool refresh:
         This parameter controls whether or not the package repo database is

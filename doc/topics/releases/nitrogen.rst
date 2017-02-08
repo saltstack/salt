@@ -64,6 +64,38 @@ Execution Module Changes
   <salt.modules.systemd>` module have changed. These changes are described
   above alongside the information on the new states which have been added to
   manage masking of systemd units.
+- The :py:func:`pkg.list_repo_pkgs <salt.modules.yumpkg.list_repo_pkgs>`
+  function for yum/dnf-based distros has had its default output format changed.
+  In prior releases, results would be organized by repository. Now, the default
+  for each package will be a simple list of versions. To get the old behavior,
+  pass ``byrepo=True`` to the function.
+- A ``pkg.list_repo_pkgs`` function has been added for both
+  :py:func:`Debian/Ubuntu <salt.modules.aptpkg.list_repo_pkgs>` and
+  :py:func:`Arch Linux <salt.modules.pacman.list_repo_pkgs>`-based distros.
+
+Wildcard Versions in :py:func:`pkg.installed <salt.states.pkg.installed>` States
+================================================================================
+
+The :py:func:`pkg.installed <salt.states.pkg.installed>` state now supports
+wildcards in package versions, for the following platforms:
+
+- Debian/Ubuntu
+- RHEL/CentOS
+- Arch Linux
+
+This support also extends to any derivatives of these distros, which use the
+:mod:`aptpkg <salt.modules.aptpkg>`, :mod:`yumpkg <salt.modules.yumpkg>`, or
+:mod:`pacman <salt.modules.pacman>` providers for the ``pkg`` virtual module.
+
+Using wildcards can be useful for packages where the release name is built into
+the version in some way, such as for RHEL/CentOS which typically has version
+numbers like ``1.2.34-5.el7``. An example of the usage for this would be:
+
+.. code-block:: yaml
+
+    mypkg:
+      pkg.installed:
+        - version: '1.2.34*'
 
 - The :mod:`system <salt.modules.system>` module changed the returned format
   from "HH:MM AM/PM" to "HH:MM:SS AM/PM" for `get_system_time`.

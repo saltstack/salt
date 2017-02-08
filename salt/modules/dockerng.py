@@ -566,6 +566,9 @@ VALID_CREATE_OPTS = {
             'Config': {},
         }
     },
+    'devices': {
+        'path': 'HostConfig:Devices',
+    },
 }
 
 
@@ -1874,6 +1877,20 @@ def _validate_input(kwargs,
                 'log_config[\'config\'] must be of type \'dict\''
             )
 
+    def _valid_devices():  # pylint: disable=unused-variable
+        '''
+        Must be a list of devices
+        '''
+        if kwargs.get('devices') is None:
+            return
+
+        try:
+            _valid_stringlist('devices')
+        except SaltInvocationError:
+            raise SaltInvocationError(
+                'devices must be a comma-separated list or Python list'
+            )
+
     def _valid_labels():  # pylint: disable=unused-variable
         '''
         Must be a dict or a list of strings
@@ -3087,6 +3104,14 @@ def create(image,
                      Type: json-file
                      Config:
                        max-file: '10'``
+
+    devices
+        List of host devices to expose within the container
+
+        Example: ``devices:
+                     - /dev/net/tun
+                     - /dev/xvda1:/dev/xvda1
+                     - /dev/xvdb1:/dev/xvdb1:r``
 
     **RETURN DATA**
 

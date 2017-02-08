@@ -17,8 +17,16 @@ import salt.utils
 import salt.utils.validate.net
 import salt.exceptions
 # Import third party libs
-import pyconnman
-import dbus
+try:
+    import pyconnman
+    HAS_PYCONNMAN = True
+except ImportError:
+    HAS_PYCONNMAN = False
+try:
+    import dbus
+    HAS_DBUS = True
+except ImportError:
+    HAS_DBUS = False
 
 
 # Define the module's virtual name
@@ -32,6 +40,10 @@ def __virtual__():
     '''
     Confine this module to NI Linux Real-Time based distros
     '''
+    if not HAS_PYCONNMAN:
+        return False, 'The python package pyconnman is not installed'
+    if not HAS_DBUS:
+        return False, 'The python DBus package is not installed'
     if __grains__['os_family'] == 'NILinuxRT':
         try:
             state = _get_state

@@ -698,7 +698,6 @@ class SMinion(MinionBase):
         # Below, when pillar data is compiled, we will update this dict with
         # the compiled pillar data.
         self.opts['pillar'] = {}
-
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.serializers = salt.loader.serializers(self.opts)
@@ -721,8 +720,7 @@ class SMinion(MinionBase):
             self.opts['id'],
             self.opts['environment'],
             pillarenv=self.opts.get('pillarenv'),
-            funcs=self.functions,
-            rend=self.rend,
+            funcs=self.functions
         ).compile_pillar()
 
         # Update the existing (empty) pillar dict with the compiled pillar
