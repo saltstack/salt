@@ -114,7 +114,7 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None):
                     ret.append('{0}.{1}'.format(form, relname))
 
         touched = bool(ret)
-        if opts.get('clean_dynamic_modules', True):
+        if opts['clean_dynamic_modules'] is True:
             current = set(_listdir_recursively(mod_dir))
             for fn_ in current - remote:
                 full = os.path.join(mod_dir, fn_)

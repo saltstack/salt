@@ -1522,6 +1522,7 @@ DEFAULT_MASTER_OPTS = {
     'min_extra_mods': '',
     'ssl': None,
     'extmod_whitelist': {},
+    'clean_dynamic_modules': True,
 }
 
 
