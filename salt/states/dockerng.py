@@ -1579,6 +1579,29 @@ def running(name,
             docker-py 1.7.0 or newer.
 
         .. versionadded:: 2016.11.0
+
+    log_config
+        Set container's logging driver and options to override the Docker
+        daemon default logging driver. Requires Docker 1.6 or newer.
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - log_config:
+                    Type: syslog
+                    Config:
+                      syslog-address: tcp://192.168.0.42
+                      syslog-facility: daemon
+
+        .. note::
+
+            The logging driver feature was improved in Docker 1.13 introducing
+            option name changes. Please see Docker's
+            `Configure logging drivers`_ documentation for more information.
+
+        .. _`Configure logging drivers`: https://docs.docker.com/engine/admin/logging/overview/
     '''
     ret = {'name': name,
            'changes': {},
