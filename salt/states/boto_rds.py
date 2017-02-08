@@ -490,21 +490,17 @@ def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
 
     exists = __salt__['boto_rds.subnet_group_exists'](name=name, tags=tags, region=region, key=key,
                                                       keyid=keyid, profile=profile)
-    if not exists:
+    if not exists.get('exists'):
         if __opts__['test']:
             ret['comment'] = 'Subnet group {0} is set to be created.'.format(name)
             ret['result'] = None
             return ret
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to create {0} subnet group.'.format(r['error']['message'])
-            return ret
         created = __salt__['boto_rds.create_subnet_group'](name=name,
-                                                     description=description,
-                                                     subnet_ids=subnet_ids,
-                                                     tags=tags, region=region,
-                                                     key=key, keyid=keyid,
-                                                     profile=profile)
+                                                           description=description,
+                                                           subnet_ids=subnet_ids,
+                                                           tags=tags, region=region,
+                                                           key=key, keyid=keyid,
+                                                           profile=profile)
 
         if not created:
             ret['result'] = False
@@ -513,6 +509,7 @@ def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
         ret['changes']['old'] = None
         ret['changes']['new'] = name
         ret['comment'] = 'Subnet {0} created.'.format(name)
+        return ret
     else:
         ret['comment'] = 'Subnet {0} present.'.format(name)
 
@@ -673,7 +670,7 @@ def parameter_present(name, db_parameter_group_family, description, parameters=N
            'changes': {}
            }
     res = __salt__['boto_rds.parameter_group_exists'](name=name, tags=tags, region=region, key=key,
-                                                         keyid=keyid, profile=profile)
+                                                      keyid=keyid, profile=profile)
     if not res.get('exists'):
         if __opts__['test']:
             ret['comment'] = 'Parameter group {0} is set to be created.'.format(name)
