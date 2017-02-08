@@ -3098,12 +3098,26 @@ def create(image,
         Example: ``pid_mode=host``
 
     log_config
-        Set container's log driver and options
+        Set container's logging driver and options to override the Docker
+        daemon default logging driver. Requires Docker 1.6 or newer.
 
-        Example: ``log_conf:
-                     Type: json-file
-                     Config:
-                       max-file: '10'``
+        Example:
+
+        .. code-block:: yaml
+
+            log_config:
+                Type: syslog
+                Config:
+                    syslog-address: tcp://192.168.0.42
+                    syslog-facility: daemon
+
+        .. note::
+
+            The logging driver feature was improved in Docker 1.13 introducing
+            option name changes. Please see Docker's
+            `Configure logging drivers`_ documentation for more information.
+
+        .. _`Configure logging drivers`: https://docs.docker.com/engine/admin/logging/overview/
 
     devices
         List of host devices to expose within the container
