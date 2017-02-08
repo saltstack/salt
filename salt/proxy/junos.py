@@ -81,6 +81,7 @@ def init(opts):
 
     args = { "host" : opts['proxy']['host'] }
     optional_args= ['user',
+                    'username',
                     'password'
                     'port',
                     'gather_facts', 
@@ -92,6 +93,9 @@ def init(opts):
                     'ssh_config',
                     'normalize'
                    ]
+
+    if 'username' in opts['proxy'].keys():
+        opts['proxy']['user'] = opts['proxy'].pop('username')
     proxy_keys = opts['proxy'].keys()
     for arg in optional_args:
         if arg in proxy_keys:
