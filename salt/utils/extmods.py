@@ -92,7 +92,7 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None):
             for fn_ in cache:
                 relpath = os.path.relpath(fn_, local_cache_dir)
                 relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
-                if extmod_whitelist and relname not in extmod_whitelist[form]:
+                if extmod_whitelist and form in extmod_whitelist and relname not in extmod_whitelist[form]:
                     continue
                 remote.add(relpath)
                 dest = os.path.join(mod_dir, relpath)
