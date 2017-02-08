@@ -93,13 +93,13 @@ def init(opts):
                     'ssh_config',
                     'normalize'
                    ]
+
+    if 'username' in opts['proxy'].keys():
+        opts['proxy']['user'] = opts['proxy'].pop('username')
     proxy_keys = opts['proxy'].keys()
     for arg in optional_args:
         if arg in proxy_keys:
-            if arg == 'username':
-                args['user'] = opts['proxy'][arg]
-            else:
-                args[arg] = opts['proxy'][arg]
+            args[arg] = opts['proxy'][arg]
 
     thisproxy['conn'] = jnpr.junos.Device(**args)
     thisproxy['conn'].open()
