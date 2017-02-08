@@ -1639,8 +1639,6 @@ def export_roles(path_prefix='/', region=None, key=None, keyid=None, profile=Non
     Get all IAM role details. Produces results that can be used to create an
     sls file.
 
-    .. versionadded:: 2016.3.0
-
     CLI Example:
 
         salt-call boto_iam.export_roles --out=txt | sed "s/local: //" > iam_roles.sls
