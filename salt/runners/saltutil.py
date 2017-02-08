@@ -48,6 +48,7 @@ def sync_all(saltenv='base', extmod_whitelist=None):
     ret['queues'] = sync_queues(saltenv=saltenv, extmod_whitelist=extmod_whitelist)
     ret['pillar'] = sync_pillar(saltenv=saltenv, extmod_whitelist=extmod_whitelist)
     ret['utils'] = sync_utils(saltenv=saltenv, extmod_whitelist=extmod_whitelist)
+    ret['sdb'] = sync_sdb(saltenv=saltenv, extmod_whitelist=extmod_whitelist)
     return ret
 
 
@@ -311,3 +312,25 @@ def sync_utils(saltenv='base', extmod_whitelist=None):
         salt-run saltutil.sync_utils
     '''
     return salt.utils.extmods.sync(__opts__, 'utils', saltenv=saltenv, extmod_whitelist=extmod_whitelist)[0]
+
+
+def sync_sdb(saltenv='base', extmod_whitelist=None):
+    '''
+    .. versionadded:: Nitrogen
+
+    Sync utils modules from ``salt://_sdb`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run saltutil.sync_sdb
+    '''
+    return salt.utils.extmods.sync(__opts__, 'sdb', saltenv=saltenv, extmod_whitelist=extmod_whitelist)[0]
