@@ -81,6 +81,7 @@ def init(opts):
 
     args = { "host" : opts['proxy']['host'] }
     optional_args= ['user',
+                    'username',
                     'password'
                     'port',
                     'gather_facts', 
@@ -95,7 +96,10 @@ def init(opts):
     proxy_keys = opts['proxy'].keys()
     for arg in optional_args:
         if arg in proxy_keys:
-            args[arg] = opts['proxy'][arg]
+            if arg == 'username':
+                args['user'] = opts['proxy'][arg]
+            else:
+                args[arg] = opts['proxy'][arg]
 
     thisproxy['conn'] = jnpr.junos.Device(**args)
     thisproxy['conn'].open()

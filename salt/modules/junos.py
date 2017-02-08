@@ -72,12 +72,13 @@ def facts_refresh():
     ret['out'] = True
     try:
         conn.facts_refresh()
-        # Earlier it was ret['message']
-        facts = dict(conn.facts)
-        ret['facts'] = facts
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
+    facts = conn.facts
+    facts['version_info'] = dict(facts['version_info'])
+    # Earlier it was ret['message']
+    ret['facts'] = facts
     try:
         __salt__['saltutil.sync_grains']()
     except Exception as exception:
@@ -101,7 +102,8 @@ def facts():
     conn = __proxy__['junos.conn']()
     ret = dict()
     try:
-        facts = dict(conn.facts)
+        facts = conn.facts
+        facts['version_info'] = dict(facts['version_info'])
         ret['facts'] = facts
         ret['out'] = True
     except Exception as exception:
@@ -135,12 +137,11 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
         * dest:
           Destination file where the rpc ouput is stored. (default = None)
           Note that the file will be stored on the proxy minion. To push the
-          files to the master use the salt's following execution module: \
-            :py:func:`cp.push <salt.modules.cp.push>`
-
+          files to the master use the salt's following execution module:
+          :py:func:`cp.push <salt.modules.cp.push>`
         * format:
-          The format in which the rpc reply must be stored in file specified in the dest
-          (used only when dest is specified) (default = xml)
+          The format in which the rpc reply is received from the device.
+          (default = xml)
         * kwargs: keyworded arguments taken by rpc call like-
             * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which
@@ -195,14 +196,14 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
             return ret
 
         if format == 'text':
+            # Earlier it was ret['message']
             ret['rpc_reply'] = reply.text
-            write_response = reply.text
         elif format == 'json':
+            # Earlier it was ret['message']
             ret['rpc_reply'] = reply
-            write_response = json.dumps(reply, indent=1)
         else:
+            # Earlier it was ret['message']
             ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
-            write_response = etree.tostring(reply)
     else:
         if 'filter' in op:
             log.warning(
@@ -221,16 +222,22 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
             return ret
 
         if format == 'text':
+            # Earlier it was ret['message']
             ret['rpc_reply'] = reply.text
-            write_response = reply.text
         elif format == 'json':
+            # Earlier it was ret['message']
             ret['rpc_reply'] = reply
-            write_response = json.dumps(reply, indent=1)
         else:
+            # Earlier it was ret['message']
             ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
-            write_response = etree.tostring(reply)
 
     if dest:
+        if format == 'text':
+            write_response = reply.text
+        elif format == 'json':
+            write_response = json.dumps(reply, indent=1)
+        else:
+            write_response = etree.tostring(reply)
         with fopen(dest, 'w') as fp:
             fp.write(write_response)
             
@@ -603,7 +610,7 @@ def cli(command=None, format='text', **kwargs):
 
         salt 'device_name' junos.cli 'show version' dev_timeout=40
 
-        salt 'device_name' junos.cli 'show system alarms' format='xml' dest=/home/user/cli_output.txt
+        salt 'device_name' junos.cli 'show system alarms' 'xml' dest=/home/user/cli_output.txt
 
 
     Parameters:
@@ -625,6 +632,12 @@ def cli(command=None, format='text', **kwargs):
     '''
     conn = __proxy__['junos.conn']()
 
+    # Cases like salt 'device_name' junos.cli 'show system alarms' ''
+    # In this case the format becomes '' (empty string). And reply is sent in xml
+    # We want the format to default to text.
+    if not format:
+        format = 'text'
+
     ret = dict()
     if command is None:
         ret['message'] = 'Please provide the CLI command to be executed.'
@@ -640,24 +653,21 @@ def cli(command=None, format='text', **kwargs):
         op.update(kwargs)
 
     try:
-        result = conn.cli(command, format)
+        result = conn.cli(command, format, warning=False)
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
         return ret
 
-    if format == 'xml':
-        ret['message'] = jxmlease.parse(etree.tostring(result))
-    else:
+    if format == 'text':
         ret['message'] = result
+    else:
+        result = etree.tostring(result)
+        ret['message'] = jxmlease.parse(result)
 
     if 'dest' in op and op['dest'] is not None:
-        if format == 'text':
-            write_response = result
-        else:
-            write_response = etree.tostring(result)
         with fopen(op['dest'], 'w') as fp:
-            fp.write(write_response)
+            fp.write(result)
 
     ret['out'] = True
     return ret
