@@ -267,6 +267,7 @@ import difflib
 import itertools
 import logging
 import os
+import re
 import shutil
 import sys
 import traceback
