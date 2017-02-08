@@ -1448,6 +1448,10 @@ enabled and can be disabled by changing this value to ``False``.
 
     clean_dynamic_modules: True
 
+.. note::
+
+    If ``extmod_whitelist`` is specified, modules which are not whitelisted will also be cleaned here.
+
 .. conf_minion:: environment
 
 ``environment``
