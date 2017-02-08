@@ -106,6 +106,7 @@ Cloud Provider Specifics
         Getting Started With Aliyun <aliyun>
         Getting Started With Azure <azure>
         Getting Started With Azure Arm <azurearm>
+        Getting Started With CloudStack <cloudstack>
         Getting Started With DigitalOcean <digitalocean>
         Getting Started With Dimension Data <dimensiondata>
         Getting Started With EC2 <aws>
