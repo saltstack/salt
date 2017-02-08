@@ -735,7 +735,7 @@ Pass in an alternative location for the salt-ssh roster file.
 .. conf_master:: ssh_log_file
 
 ``ssh_log_file``
--------------------
+----------------
 
 .. versionadded:: 2016.3.5
 

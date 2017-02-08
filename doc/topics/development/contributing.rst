@@ -418,3 +418,4 @@ and bug resolution. See the :ref:`Labels and Milestones
 .. _'Git resources`: https://help.github.com/articles/good-resources-for-learning-git-and-github/
 .. _`Closing issues via commit message`: https://help.github.com/articles/closing-issues-via-commit-messages
 .. _`git format-patch`: https://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
+.. _salt-users: https://groups.google.com/forum/#!forum/salt-users
