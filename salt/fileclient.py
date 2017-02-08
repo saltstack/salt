@@ -531,10 +531,12 @@ class Client(object):
                 )
         if url_data.scheme == 'ftp':
             try:
-                ftp = ftplib.FTP(url_data.hostname)
-                ftp.login()
+                ftp = ftplib.FTP()
+                ftp.connect(url_data.hostname, url_data.port)
+                ftp.login(url_data.username, url_data.password)
                 with salt.utils.fopen(dest, 'wb') as fp_:
                     ftp.retrbinary('RETR {0}'.format(url_data.path), fp_.write)
+                ftp.quit()
                 return dest
             except Exception as exc:
                 raise MinionError('Could not retrieve {0} from FTP server. Exception: {1}'.format(url, exc))
