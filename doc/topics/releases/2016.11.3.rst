@@ -6,7 +6,7 @@ Version 2016.11.3 is a bugfix release for :ref:`2016.11.0 <release-2016-11-0>`.
 
 
 Changes for v2016.11.2..v2016.11.3
-----------------------------------------------------------------
+----------------------------------
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
@@ -691,7 +691,7 @@ Changes:
   * f8a6863 Merge pull request `#39087`_ from lomeroe/`bp-37375`_
   * c3aaa53 _in_range_inclusive class method incorrectly called isinstance
 
-  * ce263f9 set_computer_policy and set_user_policy call "set" by the original function name (set) instead of the aliased function name set_
+  * ce263f9 set_computer_policy and set_user_policy call "set" by the original function name (set) instead of the aliased function name ``set_``
 
   * ff7d74b correct tool extension guid for user registry policies
 

@@ -1796,7 +1796,7 @@ Changes:
 - **PR** `#37447`_: (*rallytime*) Cast ip_protocol rule as a str() in boto_secgroup.present
   @ *2016-11-04T04:03:45Z*
 
-  - **ISSUE** `#36961`_: (*nullify005*) boto_secgroup assumes a string when checking ip_protocol validity when not tcp|udp|all|-1
+  - **ISSUE** `#36961`_: (*nullify005*) boto_secgroup assumes a string when checking ip_protocol validity when not ``tcp|udp|all|-1``
     | refs: `#37447`_
   * 651e0f7 Merge pull request `#37447`_ from rallytime/`fix-36961`_
   * 6b930ac Cast ip_protocol rule as a str() in boto_secgroup.present
