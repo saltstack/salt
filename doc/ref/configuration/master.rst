@@ -277,6 +277,7 @@ Valid options:
   - queues
   - pillar
   - utils
+  - sdb
 
 .. conf_master:: module_dirs
 
