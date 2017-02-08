@@ -6,7 +6,7 @@ cope with scale.
 .. note::
     :mod:`returners.postgres <salt.returners.postgres>` is also available if
     you are not using PostgreSQL as a :ref:`master job cache
-    <external-master-cache>`.  These two modules provide different
+    <external-job-cache>`.  These two modules provide different
     functionality so you should compare each to see which module best suits
     your particular needs.
 
