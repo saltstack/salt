@@ -988,6 +988,9 @@ VALID_OPTS = {
     # Controls whether the scheduler is set up before a connection
     # to the master is attempted.
     'scheduler_before_connect': bool,
+
+    # Whitelist specific modules to be synced
+    'extmod_whitelist': dict,
 }
 
 # default configurations
@@ -1241,6 +1244,7 @@ DEFAULT_MINION_OPTS = {
     'beacons_before_connect': False,
     'scheduler_before_connect': False,
     'cache': 'localfs',
+    'extmod_whitelist': {},
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1517,6 +1521,7 @@ DEFAULT_MASTER_OPTS = {
     'thin_extra_mods': '',
     'min_extra_mods': '',
     'ssl': None,
+    'extmod_whitelist': {},
 }
 
 

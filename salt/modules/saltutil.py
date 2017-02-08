@@ -90,7 +90,7 @@ def _get_top_file_envs():
         return envs
 
 
-def _sync(form, saltenv=None):
+def _sync(form, saltenv=None, extmod_whitelist=None):
     '''
     Sync the given directory in the given environment
     '''
@@ -98,7 +98,7 @@ def _sync(form, saltenv=None):
         saltenv = _get_top_file_envs()
     if isinstance(saltenv, six.string_types):
         saltenv = saltenv.split(',')
-    ret, touched = salt.utils.extmods.sync(__opts__, form, saltenv=saltenv)
+    ret, touched = salt.utils.extmods.sync(__opts__, form, saltenv=saltenv, extmod_whitelist=extmod_whitelist)
     # Dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
@@ -180,7 +180,7 @@ def update(version=None):
     return ret
 
 
-def sync_beacons(saltenv=None, refresh=True):
+def sync_beacons(saltenv=None, refresh=True, extmod_whitelist=None):
     '''
     .. versionadded:: 2015.5.1
 
@@ -203,13 +203,13 @@ def sync_beacons(saltenv=None, refresh=True):
         salt '*' saltutil.sync_beacons saltenv=dev
         salt '*' saltutil.sync_beacons saltenv=base,dev
     '''
-    ret = _sync('beacons', saltenv)
+    ret = _sync('beacons', saltenv, extmod_whitelist)
     if refresh:
         refresh_beacons()
     return ret
 
 
-def sync_sdb(saltenv=None):
+def sync_sdb(saltenv=None, extmod_whitelist=None):
     '''
     .. versionadded:: 2015.5.8,2015.8.3
 
@@ -231,11 +231,11 @@ def sync_sdb(saltenv=None):
         salt '*' saltutil.sync_sdb saltenv=dev
         salt '*' saltutil.sync_sdb saltenv=base,dev
     '''
-    ret = _sync('sdb', saltenv)
+    ret = _sync('sdb', saltenv, extmod_whitelist)
     return ret
 
 
-def sync_modules(saltenv=None, refresh=True):
+def sync_modules(saltenv=None, refresh=True, extmod_whitelist=None):
     '''
     .. versionadded:: 0.10.0
 
