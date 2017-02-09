@@ -687,7 +687,6 @@ def shutdown(**kwargs):
 
 
     Parameters:
-
       Optional
         * kwargs:
             * shutdown:
