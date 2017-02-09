@@ -722,3 +722,19 @@ def default_signals(*signals):
         signal.signal(signum, old_signals[signum])
 
     del old_signals
+
+
+@contextlib.contextmanager
+def handle_signal(signum, handler):
+    old_signal = 0
+    try:
+        old_signal = signal.signal(signum, handler)
+    except ValueError as exc:
+        log.trace(
+            'Failed to register signal for signum %d: %s',
+            signum, exc
+        )
+
+    yield
+
+    signal.signal(signum, old_signal)

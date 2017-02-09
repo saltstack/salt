@@ -2,10 +2,12 @@
 '''For running command line executables with a timeout'''
 from __future__ import absolute_import
 
+import signal
 import subprocess
 import threading
 import salt.exceptions
 from salt.ext import six
+from salt.utils.process import handle_signal
 
 
 class TimedProc(object):
@@ -55,9 +57,19 @@ class TimedProc(object):
         wait for subprocess to terminate and return subprocess' return code.
         If timeout is reached, throw TimedProcTimeoutError
         '''
+        def cleanup(signum, sigframe):
+            if not self.process:
+                return
+            if self.process.stdout:
+                self.process.stdout.close()
+            if self.process.stderr:
+                self.process.stderr.close()
+            self.process.poll()
+
         def receive():
             if self.with_communicate:
-                self.stdout, self.stderr = self.process.communicate(input=self.stdin)
+                with handle_signal(signal.SIGCHLD, cleanup):
+                    self.stdout, self.stderr = self.process.communicate(input=self.stdin)
             elif self.wait:
                 self.process.wait()
 
