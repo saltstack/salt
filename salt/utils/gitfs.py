@@ -1611,6 +1611,11 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
     '''
     def __init__(self, opts, remote, per_remote_defaults,
                  override_params, cache_root, role='gitfs'):
+        salt.utils.warn_until(
+            'Nitrogen',
+            'Dulwich will no longer be supported for {0} beginning in the '
+            'Nitrogen release of Salt.'.format(role)
+        )
         self.get_env_refs = lambda refs: [
             x for x in refs if re.match('refs/(remotes|tags)', x)
             and not x.endswith('^{}')
