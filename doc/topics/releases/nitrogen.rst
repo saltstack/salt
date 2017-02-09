@@ -99,6 +99,7 @@ numbers like ``1.2.34-5.el7``. An example of the usage for this would be:
 
 - The :mod:`system <salt.modules.system>` module changed the returned format
   from "HH:MM AM/PM" to "HH:MM:SS AM/PM" for `get_system_time`.
+
 Master Configuration Additions
 ==============================
 
@@ -134,6 +135,14 @@ release cycle (two major releases after this one), those who are using the
 :ref:`netapi module <all-netapi-modules>`) are encouraged to update their code
 to use ``tgt_type``.
 
+Custom Refspecs in GitFS / git_pillar / winrepo
+===============================================
+
+It is now possible to specify the refspecs to use when fetching from remote
+repositores for GitFS, git_pillar, and winrepo. More information on how this
+feature works can be found :ref:`here <gitfs-custom-refspecs>` in the GitFS
+Walkthrough. The git_pillar and winrepo versions of this feature work the same
+as their GitFS counterpart.
 
 Deprecations
 ============
@@ -142,6 +151,7 @@ General Deprecations
 --------------------
 
 - Removed support for aliasing ``cmd.run`` to ``cmd.shell``.
+- Removed support for Dulwich from :ref:`GitFS <tutorial-gitfs>`.
 - Beacon configurations should be lists instead of dictionaries.
 - The ``PidfileMixin`` has been removed. Please use ``DaemonMixIn`` instead.
 - The ``use_pending`` argument was removed from the ``salt.utils.event.get_event``

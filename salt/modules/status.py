@@ -1126,7 +1126,7 @@ def proxy_reconnect(proxy_name, opts=None):
         The virtual name of the proxy module.
 
     opts: None
-        Opts dictionary.
+        Opts dictionary. Not intended for CLI usage.
 
     CLI Example:
 

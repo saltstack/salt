@@ -36,6 +36,8 @@ gitfs.__opts__ = {'cachedir': '/tmp/gitfs_test_cache',
                   'gitfs_privkey': '',
                   'gitfs_pubkey': '',
                   'gitfs_passphrase': '',
+                  'gitfs_refspecs': ['+refs/heads/*:refs/remotes/origin/*',
+                                     '+refs/tags/*:refs/tags/*'],
                   'gitfs_ssl_verify': True
 }
 
