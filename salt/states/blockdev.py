@@ -161,9 +161,10 @@ def formatted(name, fs_type='ext4', force=False, **kwargs):
 
     __salt__['disk.format_'](name, fs_type, force=force, **kwargs)
     
-    # Repeat lsblk check up to 10 times with 3s sleeping between each
-    # to avoid lsblk failing although mkfs has succeeded
-    # see https://github.com/saltstack/salt/issues/25775
+    # Repeat fstype check up to 10 times with 3s sleeping between each
+    # to avoid detection failing although mkfs has succeeded
+    # see https://github.com/saltstack/salt/issues/25775i
+    # This retry maybe superfluous - switching to blkid
     for i in range(10):
 
         log.info('Check blk fstype attempt %s of 10', str(i+1))
