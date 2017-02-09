@@ -103,7 +103,7 @@ class CommandExecutionError(SaltException):
         self.error = exc_str_prefix = message
         self.info = info
         if self.info:
-            if len(exc_str_prefix) > 0:
+            if exc_str_prefix:
                 if exc_str_prefix[-1] not in '.?!':
                     exc_str_prefix += '.'
                 exc_str_prefix += ' '
