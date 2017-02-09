@@ -8,6 +8,7 @@ Discover all instances of unittest.TestCase in this directory.
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
+import sys
 import time
 
 # Import salt libs
@@ -385,6 +386,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             branch=True,
             source=[os.path.join(SALT_ROOT, 'salt')],
         )
+
+        # Print out which version of python this test suite is running on
+        print(' * Python Version: {0}'.format(' '.join(sys.version.split())))
 
         # Transplant configuration
         TestDaemon.transplant_configs(transport=self.options.transport)
