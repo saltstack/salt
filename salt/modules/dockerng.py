@@ -5917,13 +5917,31 @@ def sls(name, mods=None, saltenv='base', **kwargs):
 
 
 def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
-              **kwargs):
+              dryrun=False, **kwargs):
     '''
     Build a docker image using the specified sls modules and base image.
 
     For example, if your master defines the states ``web`` and ``rails``, you
     can build a docker image inside myminion that results of applying those
     states by doing:
+
+    base
+        the base image
+
+    mods
+        the state modules to execute during build
+
+    saltenv
+        the salt environment to use
+
+    dryrun: False
+        when set to True the container will not be commited at the end of
+        the build. The dryrun succeed also when the state contains errors.
+
+    **RETURN DATA**
+
+    A dictionary with the ID of the new container. In case of a dryrun,
+    the state result is returned and the container gets removed.
 
     CLI Example:
 
@@ -5957,9 +5975,12 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
         # Now execute the state into the container
         ret = __salt__['dockerng.sls'](id_, mods, saltenv, **kwargs)
         # fail if the state was not successful
-        if not salt.utils.check_state_result(ret):
+        if not dryrun and not salt.utils.check_state_result(ret):
             raise CommandExecutionError(ret)
     finally:
         __salt__['dockerng.stop'](id_)
 
+    if dryrun:
+        __salt__['dockerng.rm'](id_)
+        return ret
     return __salt__['dockerng.commit'](id_, name)
