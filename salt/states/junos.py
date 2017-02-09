@@ -6,6 +6,7 @@ State modules to interact with Junos devices.
 State module to connect the junos devices connected via a junos proxy.
 Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos proxy.
 '''
+from __future__ import absolute_import
 
 import logging
 
