@@ -716,25 +716,13 @@ def ip_bracket(addr):
     return addr
 
 
-def dns_check(addr, safe=False, ipv6=None):
+def dns_check(addr, port, safe=False, ipv6=None):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception. Obeys system preference for IPv4/6 address resolution.
+    Tries to connect to the address before considering it useful.
     '''
     error = False
-
-    # Detect IPv6 support if it is not forced by trying to connect
-    # to the give address over IPv6.
-    if ipv6 is None:
-        s = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-        try:
-            s.connect((addr, 0))
-            s.close()
-
-            ipv6 = True
-        except:
-            ipv6 = False
-
     try:
         # issue #21397: force glibc to re-read resolv.conf
         if HAS_RESINIT:
@@ -747,9 +735,22 @@ def dns_check(addr, safe=False, ipv6=None):
         else:
             addr = False
             for h in hostnames:
-                if h[0] == socket.AF_INET or (h[0] == socket.AF_INET6 and ipv6):
-                    addr = ip_bracket(h[4][0])
+                if h[0] == socket.AF_INET and ipv6 is True:
+                    continue
+                if h[0] == socket.AF_INET6 and ipv6 is False:
+                    continue
+
+                candidate_addr = ip_bracket(h[4][0])
+
+                s = socket.socket(h[0], socket.SOCK_DGRAM)
+                try:
+                    s.connect((candidate_addr.strip('[]'), port))
+                    s.close()
+
+                    addr = candidate_addr
                     break
+                except:
+                    pass
             if not addr:
                 error = True
     except TypeError:
