@@ -35,7 +35,7 @@ def __virtual__():
     This only works if we have access to nix-env
     '''
     nixhome = os.path.join(os.path.expanduser('~{0}'.format(__opts__['user'])), '.nix-profile/bin/')
-    if salt.utils.which(os.path.join(nixhome, 'nix-env')) and salt.utils.which(os.path.join(nixhome, 'nix-store')):
+    if salt.utils.which(os.path.join(nixhome, 'nix-env')) and salt.utils.which(os.path.join(nixhome, 'nix-collect-garbage')):
         return True
     else:
         return (False, "The `nix` binaries required cannot be found or are not installed. (`nix-store` and `nix-env`)")
