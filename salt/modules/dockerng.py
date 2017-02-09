@@ -5807,7 +5807,9 @@ def call(name, function, *args, **kwargs):
         raise CommandExecutionError('Missing function parameter')
 
     # move salt into the container
-    thin_path = salt.utils.thin.gen_thin(__opts__['cachedir'])
+    thin_path = salt.utils.thin.gen_thin(__opts__['cachedir'],
+                                         extra_mods=__salt__['config.option']("thin_extra_mods", ''),
+                                         so_mods=__salt__['config.option']("thin_so_mods", ''))
     with io.open(thin_path, 'rb') as file:
         _client_wrapper('put_archive', name, thin_dest_path, file)
     try:
