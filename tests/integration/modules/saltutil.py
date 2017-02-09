@@ -67,7 +67,7 @@ class SaltUtilSyncModuleTest(integration.ModuleCase):
     '''
 
     def setUp(self):
-        whitelist = {'modules': [],}
+        whitelist = {'modules': [], }
         self.run_function('saltutil.sync_all', extmod_whitelist=whitelist)
 
     def tearDown(self):
