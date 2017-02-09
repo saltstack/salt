@@ -248,9 +248,8 @@ def create_site(name, sourcepath, apppool='', hostheader='',
 
     ps_cmd = ['New-Item',
               '-Path', r"'{0}'".format(site_path),
-              r" -physicalPath '{0}';".format(sourcepath),
-              '-Bindings',
-              "@{{ protocol='{0}'; bindingInformation='{1}' }};"
+              '-PhysicalPath', r"'{0}'".format(sourcepath),
+              '-Bindings', "@{{ protocol='{0}'; bindingInformation='{1}' }};"
               "".format(protocol, binding_info)]
 
     if apppool:
@@ -263,7 +262,7 @@ def create_site(name, sourcepath, apppool='', hostheader='',
 
         ps_cmd.extend(['Set-ItemProperty',
                        '-Path', "'{0}'".format(site_path),
-                       '-Name', 'applicationPool',
+                       '-Name', 'ApplicationPool',
                        '-Value', "'{0}'".format(apppool)])
 
     cmd_ret = _srvmgr(ps_cmd)
@@ -274,6 +273,44 @@ def create_site(name, sourcepath, apppool='', hostheader='',
         raise CommandExecutionError(msg)
 
     log.debug('Site created successfully: {0}'.format(name))
+    return True
+
+
+def modify_site(name, source_path=None, app_pool=None):
+    site_path = r'IIS:\Sites\{0}'.format(name)
+    current_sites = list_sites()
+
+    if name not in current_sites:
+        log.debug("Site '{0}' not defined.".format(name))
+        return False
+
+    ps_cmd = list()
+
+    if source_path:
+        ps_cmd.extend(['Set-ItemProperty',
+                       '-Path', r"'{0}'".format(site_path),
+                       '-Name', 'PhysicalPath',
+                       '-Value', r"'{0}'".format(source_path)])
+
+    if app_pool:
+
+        # If ps_cmd isn't empty, we need to add a semi-colon to run two commands
+        if ps_cmd:
+            ps_cmd.append(';')
+
+        ps_cmd.extend(['Set-ItemProperty',
+                       '-Path', r"'{0}'".format(site_path),
+                       '-Name', 'ApplicationPool',
+                       '-Value', r"'{0}'".format(app_pool)])
+
+    cmd_ret = _srvmgr(ps_cmd)
+
+    if cmd_ret['retcode'] != 0:
+        msg = 'Unable to modify site: {0}\nError: {1}' \
+              ''.format(name, cmd_ret['stderr'])
+        raise CommandExecutionError(msg)
+
+    log.debug('Site modified successfully: {0}'.format(name))
     return True
 
 
@@ -419,7 +456,8 @@ def list_bindings(site):
     return ret
 
 
-def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http', sslflags=0):
+def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
+                   sslflags=0):
     '''
     Create an IIS Web Binding.
 
@@ -489,6 +527,66 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
 
     log.error('Unable to create binding: {0}'.format(site))
     return False
+
+
+def modify_binding(site, binding, hostheader=None, ipaddress=None, port=None,
+                   sslflags=None):
+
+    if sslflags is not None and sslflags not in _VALID_SSL_FLAGS:
+        message = ("Invalid sslflags '{0}' specified. Valid sslflags range:"
+                   ' {1}..{2}').format(sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1])
+        raise SaltInvocationError(message)
+
+    current_sites = list_sites()
+
+    if site not in current_sites:
+        log.debug("Site '{0}' not defined.".format(site))
+        return False
+
+    current_bindings = list_bindings(site)
+
+    if binding not in current_bindings:
+        log.debug("Binding '{0}' not defined.".format(binding))
+        return False
+
+    # Split out the binding so we can insert new ones
+    # Use the existing value if not passed
+    i, p, h = binding.split(':')
+    new_binding = ':'.join([ipaddress if ipaddress is not None else i,
+                            str(port) if port is not None else str(p),
+                            hostheader if hostheader is not None else h])
+
+    if new_binding != binding:
+        ps_cmd = ['Set-WebBinding',
+                  '-Name', "'{0}'".format(site),
+                  '-BindingInformation', "'{0}'".format(binding),
+                  '-PropertyName', 'BindingInformation',
+                  '-Value', "'{0}'".format(new_binding)]
+
+        cmd_ret = _srvmgr(ps_cmd)
+
+        if cmd_ret['retcode'] != 0:
+            msg = 'Unable to modify binding: {0}\nError: {1}' \
+                  ''.format(binding, cmd_ret['stderr'])
+            raise CommandExecutionError(msg)
+
+    if sslflags is not None and \
+            sslflags != current_sites[site]['bindings'][binding]['sslflags']:
+        ps_cmd = ['Set-WebBinding',
+                  '-Name', "'{0}'".format(site),
+                  '-BindingInformation', "'{0}'".format(new_binding),
+                  '-PropertyName', 'sslflags',
+                  '-Value', "'{0}'".format(sslflags)]
+
+        cmd_ret = _srvmgr(ps_cmd)
+
+        if cmd_ret['retcode'] != 0:
+            msg = 'Unable to modify binding SSL Flags: {0}\nError: {1}' \
+                  ''.format(sslflags, cmd_ret['stderr'])
+            raise CommandExecutionError(msg)
+
+    log.debug('Binding modified successfully: {0}'.format(binding))
+    return True
 
 
 def remove_binding(site, hostheader='', ipaddress='*', port=80):
@@ -1422,3 +1520,89 @@ def remove_vdir(name, site, app=_DEFAULT_APP):
 
     log.error('Unable to remove virtual directory: {0}'.format(name))
     return False
+
+
+def list_backups():
+
+    ret = dict()
+
+    ps_cmd = ['Get-WebConfigurationBackup',
+              '|',
+              'Select Name, CreationDate,',
+              '@{N="FormattedDate"; E={$_.CreationDate.ToString("G")}}', ]
+
+    cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
+
+    try:
+        items = json.loads(cmd_ret['stdout'], strict=False)
+    except ValueError:
+        raise CommandExecutionError('Unable to parse return data as Json.')
+
+    for item in items:
+        if item['FormattedDate']:
+            ret[item['Name']] = item['FormattedDate']
+        else:
+            ret[item['Name']] = item['CreationDate']
+
+    if not ret:
+        log.warning('No backups found in output: {0}'.format(cmd_ret))
+
+    return ret
+
+
+def create_backup(name):
+
+    if name in list_backups():
+        raise CommandExecutionError('Backup already present: {0}'.format(name))
+
+    ps_cmd = ['Backup-WebConfiguration',
+              '-Name', "'{0}'".format(name)]
+
+    cmd_ret = _srvmgr(ps_cmd)
+
+    if cmd_ret['retcode'] != 0:
+        msg = 'Unable to backup web configuration: {0}\nError: {1}' \
+              ''.format(name, cmd_ret['stderr'])
+        raise CommandExecutionError(msg)
+
+    return name in list_backups()
+
+
+def remove_backup(name):
+
+    if name not in list_backups():
+        log.debug('Backup already removed: {0}'.format(name))
+        return True
+
+    ps_cmd = ['Remove-WebConfigurationBackup',
+              '-Name', "'{0}'".format(name)]
+
+    cmd_ret = _srvmgr(ps_cmd)
+
+    if cmd_ret['retcode'] != 0:
+        msg = 'Unable to remove web configuration: {0}\nError: {1}' \
+              ''.format(name, cmd_ret['stderr'])
+        raise CommandExecutionError(msg)
+
+    return name not in list_backups()
+
+
+def list_worker_processes(apppool):
+    ps_cmd = ['Get-ChildItem',
+              r"'IIS:\AppPools\{0}\WorkerProcesses'".format(pool)]
+
+    cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
+
+    try:
+        items = json.loads(cmd_ret['stdout'], strict=False)
+    except ValueError:
+        raise CommandExecutionError('Unable to parse return data as Json.')
+
+    ret = dict()
+    for item in items:
+        ret[item['processId']] = item['appPoolName']
+
+    if not ret:
+        log.warning('No backups found in output: {0}'.format(cmd_ret))
+
+    return ret
