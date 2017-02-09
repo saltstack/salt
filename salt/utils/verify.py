@@ -160,11 +160,12 @@ def verify_files(files, user):
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         try:
-            try:
-                os.makedirs(dirname)
-            except OSError as err:
-                if err.errno != errno.EEXIST:
-                    raise
+            if dirname:
+                try:
+                    os.makedirs(dirname)
+                except OSError as err:
+                    if err.errno != errno.EEXIST:
+                        raise
             if not os.path.isfile(fn_):
                 with salt.utils.fopen(fn_, 'w+') as fp_:
                     fp_.write('')
