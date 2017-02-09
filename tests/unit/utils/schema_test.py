@@ -9,8 +9,6 @@ import copy
 import json
 import yaml
 
-from distutils.version import LooseVersion
-
 from distutils.version import LooseVersion as _LooseVersion
 
 # Import Salt Testing Libs
