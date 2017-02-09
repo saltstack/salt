@@ -2,15 +2,12 @@
 '''
 Module to interact with Junos devices.
 '''
+from __future__ import absolute_import
 
 # Import python libraries
 import logging
 import json
 import os
-import salt
-
-# Import salt libraries
-from salt.utils import fopen
 
 try:
     from lxml import etree
@@ -31,6 +28,11 @@ try:
     HAS_JUNOS = True
 except ImportError:
     HAS_JUNOS = False
+
+# Import salt libraries
+from salt.utils import fopen
+from salt.utils import files
+from salt.utils import safe_rm
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -75,15 +77,14 @@ def facts_refresh():
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
-    facts = conn.facts
-    facts['version_info'] = dict(facts['version_info'])
+    new_facts = conn.facts
+    new_facts['version_info'] = dict(new_facts['version_info'])
     # Earlier it was ret['message']
     ret['facts'] = facts
     try:
         __salt__['saltutil.sync_grains']()
     except Exception as exception:
         log.error('Grains could not be updated due to "{0}"'.format(exception))
-
     return ret
 
 
@@ -110,7 +111,6 @@ def facts():
         ret['message'] = 'Could not display facts due to "{0}"'.format(
             exception)
         ret['out'] = False
-
     return ret
 
 
@@ -240,7 +240,6 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
             write_response = etree.tostring(reply)
         with fopen(dest, 'w') as fp:
             fp.write(write_response)
-            
     return ret
 
 
@@ -318,7 +317,6 @@ def set_hostname(hostname=None, **kwargs):
         ret['out'] = False
         ret[
             'message'] = 'Successfully loaded host-name but pre-commit check failed.'
-
     return ret
 
 
@@ -409,7 +407,6 @@ def commit(**kwargs):
         ret['out'] = False
         ret['message'] = 'Pre-commit check failed.'
         conn.cu.rollback()
-
     return ret
 
 
@@ -495,7 +492,6 @@ def rollback(id=0, **kwargs):
     else:
         ret['out'] = False
         ret['message'] = 'Rollback succesfull but pre-commit check failed.'
-
     return ret
 
 
@@ -696,7 +692,7 @@ def shutdown(**kwargs):
             * reboot:
               Whether to reboot instead of shutdown. (default=False)
             * at:
-              Specify time for reboot. (To be used only if reboot=yes)
+              Specify time for reboot. (To be used only if reboot=True)
             * in_min:
               Specify delay in minutes for shutdown
 
@@ -730,7 +726,6 @@ def shutdown(**kwargs):
     except Exception as exception:
         ret['message'] = 'Could not poweroff/reboot.'
         ret['out'] = False
-
     return ret
 
 
@@ -796,7 +791,7 @@ def install_config(path=None, **kwargs):
         ret['out'] = False
         return ret
 
-    template_cached_path = salt.utils.files.mkstemp()
+    template_cached_path = files.mkstemp()
     __salt__['cp.get_template'](path, template_cached_path)
 
     if not os.path.isfile(template_cached_path):
@@ -854,7 +849,7 @@ def install_config(path=None, **kwargs):
         return ret
 
     finally:
-        salt.utils.safe_rm(template_cached_path)
+        safe_rm(template_cached_path)
 
     try:
         config_diff = conn.cu.diff()
@@ -899,7 +894,6 @@ def install_config(path=None, **kwargs):
         ret['message'] = 'Loaded configuration but commit check failed.'
         ret['out'] = False
         conn.cu.rollback()
-
     return ret
 
 
@@ -969,7 +963,7 @@ def install_os(path=None, **kwargs):
         ret['out'] = False
         return ret
 
-    image_cached_path = salt.utils.files.mkstemp()
+    image_cached_path = files.mkstemp()
     __salt__['cp.get_template'](path, image_cached_path)
 
     if not os.path.isfile(image_cached_path):
@@ -999,7 +993,7 @@ def install_os(path=None, **kwargs):
         ret['out'] = False
         return ret
     finally:
-        salt.utils.safe_rm(image_cached_path)
+        safe_rm(image_cached_path)
 
     if 'reboot' in op and op['reboot'] is True:
         try:
@@ -1011,7 +1005,6 @@ def install_os(path=None, **kwargs):
             ret['out'] = False
             return ret
         ret['message'] = 'Successfully installed and rebooted!'
-
     return ret
 
 
@@ -1073,5 +1066,4 @@ def file_copy(src=None, dest=None, **kwargs):
     except Exception as exception:
         ret['message'] = 'Could not copy file : "{0}"'.format(exception)
         ret['out'] = False
-
     return ret
