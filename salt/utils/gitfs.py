@@ -3005,6 +3005,9 @@ class GitPillar(GitBase):
         Checkout the targeted branches/tags from the git_pillar remotes
         '''
         self.pillar_dirs = {}
+        linkdir = os.path.join(self.cache_root, 'links')
+        if not os.path.isdir(linkdir):
+            os.makedirs(linkdir)
         for repo in self.remotes:
             cachedir = self.do_checkout(repo)
             if cachedir is not None:
@@ -3014,7 +3017,17 @@ class GitPillar(GitBase):
                 else:
                     base_branch = self.opts['{0}_base'.format(self.role)]
                     env = 'base' if repo.branch == base_branch else repo.branch
-                self.pillar_dirs[cachedir] = env
+                if repo.mountpoint:
+                    lcachedir = os.path.join(linkdir, repo.hash)
+                    if not os.path.isdir(lcachedir):
+                        os.makedirs(lcachedir)
+                    lcachelink = os.path.join(lcachedir, repo.mountpoint.lstrip('/'))
+                    if not os.path.islink(lcachelink):
+                        os.symlink(cachedir, lcachelink)
+                    self.pillar_dirs[lcachedir] = env
+                else:
+                    self.pillar_dirs[cachedir] = env
+
 
     def update(self):
         '''
