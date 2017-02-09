@@ -56,6 +56,10 @@ the repo's URL. Configuration details can be found below.
 Configuring git_pillar for Salt releases before 2015.8.0
 ========================================================
 
+.. note::
+    This legacy configuration for git_pillar will no longer be supported as of
+    the **Oxygen** release of Salt.
+
 For Salt releases earlier than :ref:`2015.8.0 <release-2015-8-0>`,
 GitPython is the only supported provider for git_pillar. Individual
 repositories can be configured under the :conf_master:`ext_pillar`
@@ -540,6 +544,14 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
     '''
     Support pre-Beryllium config schema
     '''
+    salt.utils.warn_until(
+        'Oxygen',
+        'The git ext_pillar configuration is deprecated. Please refer to the '
+        'documentation at '
+        'https://docs.saltstack.com/en/latest/ref/pillar/all/salt.pillar.git_pillar.html '
+        'for more information. This configuration will no longer be supported '
+        'as of the Oxygen release of Salt.'
+    )
     if pillar_dirs is None:
         return
     # split the branch, repo name and optional extra (key=val) parameters.
