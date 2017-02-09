@@ -681,16 +681,23 @@ def shutdown(**kwargs):
 
         salt 'device_name' junos.shutdown reboot=True
 
-        salt 'device_name' junos.shutdown in_min=10
+        salt 'device_name' junos.shutdown shutdown=True in_min=10
 
-        salt 'device_name' junos.shutdown
+        salt 'device_name' junos.shutdown shutdown=True
 
 
     Parameters:
+
       Optional
         * kwargs:
+            * shutdown:
+              Set this to true if you want to shutdown the machine.
+              (default=False, this is a safety mechanism so that the user does
+              not accidentally shutdown the junos device.)
             * reboot:
               Whether to reboot instead of shutdown. (default=False)
+              Note that either one of the above arguments has to be specified
+              (shutdown or reboot) for this function to work.
             * at:
               Specify time for reboot. (To be used only if reboot=True)
             * in_min:
@@ -708,12 +715,21 @@ def shutdown(**kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
+    if 'shutdown' not in op and 'reboot' not in op:
+        ret['message'] = \
+            'Provide either one of the arguments: shutdown or reboot.'
+        ret['out'] = False
+        return ret
 
     try:
         if 'reboot' in op and op['reboot']:
             shut = sw.reboot
-        else:
+        elif 'shutdown' in op and op['shutdown']:
             shut = sw.poweroff
+        else:
+            ret['message'] = 'Nothing to be done.'
+            ret['out'] = False
+            return ret
 
         if 'in_min' in op:
             shut(in_min=op['in_min'])
@@ -724,7 +740,7 @@ def shutdown(**kwargs):
         ret['message'] = 'Successfully powered off/rebooted.'
         ret['out'] = True
     except Exception as exception:
-        ret['message'] = 'Could not poweroff/reboot.'
+        ret['message'] = 'Could not poweroff/reboot beacause "{0}"'.format(exception)
         ret['out'] = False
     return ret
 
