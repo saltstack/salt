@@ -1358,7 +1358,8 @@ class TestDaemon(object):
         Clean out the tmp files
         '''
         def remove_readonly(func, path, excinfo):
-            os.chmod(path, stat.S_IWRITE)
+            # Give full permissions to owner
+            os.chmod(path, stat.S_IRWXU)
             func(path)
 
         for dirname in (TMP, TMP_STATE_TREE, TMP_PRODENV_STATE_TREE):
