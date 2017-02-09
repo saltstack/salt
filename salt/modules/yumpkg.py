@@ -39,6 +39,7 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=n
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import zip
+from salt.utils import scm
 
 try:
     import yum
@@ -2291,6 +2292,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
     return 'Repo {0} has been removed from {1}'.format(repo, repofile)
 
 
+@scm.pkg(__file__)
 def mod_repo(repo, basedir=None, **kwargs):
     '''
     Modify one or more values for a repo. If the repo does not exist, it will
