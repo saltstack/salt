@@ -289,6 +289,9 @@ def _run(cmd,
 
     log_callback = _check_cb(log_callback)
 
+    if runas is None and '__context__' in globals():
+        runas = __context__.get('runas')
+
     # Set the default working directory to the home directory of the user
     # salt-minion is running as. Defaults to home directory of user under which
     # the minion is running.

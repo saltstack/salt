@@ -91,6 +91,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'reload_modules',
     'reload_grains',
     'reload_pillar',
+    'runas',
     'fire_event',
     'saltenv',
     'use',
@@ -1647,6 +1648,8 @@ class State(object):
             return ret
         else:
             ret = {'result': False, 'name': low['name'], 'changes': {}}
+
+        self.state_con['runas'] = low.get('runas', None)
 
         if not low.get('__prereq__'):
             log.info(
