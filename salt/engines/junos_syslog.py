@@ -306,8 +306,8 @@ class SyslogServerFactory(DatagramProtocol):
                     log.debug(
                         'Junos Syslog - sending this event on the bus: \
                         {0} from {1}'.format(data, host))
-                    result = {'send': True, 'data': data, 'topic': topic}
-                    return result
+                result = {'send': True, 'data': data, 'topic': topic}
+                return result
             else:
                 raise Exception(
                     'The incoming event data could not be parsed properly.')
