@@ -410,7 +410,7 @@ sets up and listens to the minions event bus, instead of to the masters.
 The biggest difference is that you have to use the caller method on the
 Reactor, which is the equivalent of salt-call, to run your commands.
 
-:ref:`Reactor Engine setup<salt.engines.reactor>`
+:mod:`Reactor Engine setup <salt.engines.reactor>`
 
 .. code-block:: yaml
 

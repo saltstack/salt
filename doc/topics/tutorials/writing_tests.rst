@@ -8,7 +8,7 @@ Salt's Test Suite: An Introduction
 
     This tutorial makes a couple of assumptions. The first assumption is that
     you have a basic knowledge of Salt. To get up to speed, check out the
-    :ref:`Salt Walkthrough </topics/tutorials/walkthrough>`.
+    :ref:`Salt Walkthrough <tutorial-salt-walk-through>`.
 
     The second assumption is that your Salt development environment is already
     configured and that you have a basic understanding of contributing to the

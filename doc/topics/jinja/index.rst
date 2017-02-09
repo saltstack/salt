@@ -1,4 +1,4 @@
-.. _jinja:
+.. _understanding-jinja:
 
 ===================
 Understanding Jinja

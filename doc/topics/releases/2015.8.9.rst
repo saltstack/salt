@@ -297,7 +297,7 @@ Changes:
 
 - **PR** `#32425`_: (*cachedout*) Fix salt-cloud parallel provisioning
 
-* 51fb2ac FreeBSD supports packages in format java/openjdk7 so the prior commit broke that functionality. Check freebsd/pkg`#1409`_ for more info.
+* 51fb2ac FreeBSD supports packages in format java/openjdk7 so the prior commit broke that functionality. Check freebsd/pkg #1409 for more info.
 
 * 709410a Improve git_pillar documentation/logging
 
@@ -325,7 +325,7 @@ Changes:
 
 - **PR** `#32321`_: (*abednarik*) Better message when minion fail to start
 
-- **PR** `#32345`_: (*nmadhok*) [2015.8] Check if profile key exists in vm_ dict
+- **PR** `#32345`_: (*nmadhok*) [2015.8] Check if profile key exists in ``vm_`` dict
 
 - **PR** `#32343`_: (*Ferbla*) Fixed win_wua example documentation
 
@@ -467,15 +467,21 @@ Changes:
 
 - **PR** `#31912`_: (*jfindlay*) log.mixins: remove extermporaneous .record
 
+.. _`#14277`: https://github.com/saltstack/salt/issues/14277
+.. _`#23714`: https://github.com/saltstack/salt/issues/23714
+.. _`#24237`: https://github.com/saltstack/salt/issues/24237
 .. _`#26518`: https://github.com/saltstack/salt/pull/26518
 .. _`#26648`: https://github.com/saltstack/salt/pull/26648
 .. _`#26676`: https://github.com/saltstack/salt/pull/26676
+.. _`#28262`: https://github.com/saltstack/salt/issues/28262
 .. _`#28639`: https://github.com/saltstack/salt/pull/28639
+.. _`#28706`: https://github.com/saltstack/salt/issues/28706
 .. _`#29322`: https://github.com/saltstack/salt/pull/29322
 .. _`#30824`: https://github.com/saltstack/salt/pull/30824
 .. _`#31139`: https://github.com/saltstack/salt/pull/31139
 .. _`#31162`: https://github.com/saltstack/salt/pull/31162
 .. _`#31164`: https://github.com/saltstack/salt/pull/31164
+.. _`#31270`: https://github.com/saltstack/salt/issues/31270
 .. _`#31364`: https://github.com/saltstack/salt/pull/31364
 .. _`#31382`: https://github.com/saltstack/salt/pull/31382
 .. _`#31598`: https://github.com/saltstack/salt/pull/31598
@@ -778,6 +784,7 @@ Changes:
 .. _`#33224`: https://github.com/saltstack/salt/pull/33224
 .. _`#33236`: https://github.com/saltstack/salt/pull/33236
 .. _`#33237`: https://github.com/saltstack/salt/pull/33237
+.. _`#33238`: https://github.com/saltstack/salt/issues/33238
 .. _`#33239`: https://github.com/saltstack/salt/pull/33239
 .. _`#33244`: https://github.com/saltstack/salt/pull/33244
 .. _`#33245`: https://github.com/saltstack/salt/pull/33245
@@ -789,5 +796,6 @@ Changes:
 .. _`#33274`: https://github.com/saltstack/salt/pull/33274
 .. _`#33293`: https://github.com/saltstack/salt/pull/33293
 .. _`#33294`: https://github.com/saltstack/salt/pull/33294
+.. _`#33299`: https://github.com/saltstack/salt/issues/33299
 .. _`#33300`: https://github.com/saltstack/salt/pull/33300
 .. _`#33305`: https://github.com/saltstack/salt/pull/33305
