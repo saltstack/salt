@@ -82,7 +82,8 @@ def init(opts):
     args = {"host": opts['proxy']['host']}
     optional_args = ['user',
                      'username',
-                     'password'
+                     'password',
+                     'passwd',
                      'port',
                      'gather_facts',
                      'mode',
