@@ -160,8 +160,7 @@ def formatted(name, fs_type='ext4', force=False, **kwargs):
         return ret
 
     __salt__['disk.format_'](name, fs_type, force=force, **kwargs)
-    current_fs = __salt__['disk.fstype'](name)
-
+    
     # Repeat lsblk check up to 10 times with 3s sleeping between each
     # to avoid lsblk failing although mkfs has succeeded
     # see https://github.com/saltstack/salt/issues/25775
@@ -193,5 +192,5 @@ def _checkblk(name):
     Check if the blk exists and return its fstype if ok
     '''
 
-    blk = __salt__['cmd.run']('lsblk -o fstype {0}'.format(name)).splitlines()
-    return '' if len(blk) == 1 else blk[1]
+    blk = __salt__['cmd.run']('blkid -o value -s TYPE {0}'.format(name))
+    return '' if not blk else blk
