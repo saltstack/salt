@@ -632,6 +632,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.islink(sym_dir):
                 os.unlink(sym_dir)
 
+    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     def test_directory_max_depth(self):
         '''
