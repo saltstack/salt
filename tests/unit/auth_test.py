@@ -5,6 +5,7 @@
 
 # Import pytohn libs
 from __future__ import absolute_import
+import sys
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
@@ -66,6 +67,7 @@ class LoadAuthTestCase(TestCase):
             format_call_mock.assert_has_calls((expected_ret,), any_order=True)
 
 
+@skipIf(sys.platform.startswith('openbsd'), 'OpenBSD does not use PAM')
 @patch('zmq.Context', MagicMock())
 @patch('salt.payload.Serial.dumps', MagicMock())
 @patch('salt.master.tagify', MagicMock())
@@ -495,6 +497,7 @@ class MasterACLTestCase(integration.ModuleCase):
         self.assertEqual(fire_event_mock.mock_calls, [])
 
 
+@skipIf(sys.platform.startswith('openbsd'), 'OpenBSD does not use PAM')
 class AuthACLTestCase(integration.ModuleCase):
     '''
     A class to check various aspects of the publisher ACL system
