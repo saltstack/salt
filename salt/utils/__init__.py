@@ -749,7 +749,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
 
                     addr = candidate_addr
                     break
-                except:
+                except Exception:
                     pass
             if not addr:
                 error = True
