@@ -5,7 +5,7 @@ Return data to a postgresql server
 .. note::
     :mod:`returners.postgres_local_cache <salt.returners.postgres_local_cache>`
     is recommended instead of this module when using PostgreSQL as a
-    :ref:`master job cache <external-master-cache>`. These two modules
+    :ref:`master job cache <external-job-cache>`. These two modules
     provide different functionality so you should compare each to see which
     module best suits your particular needs.
 
