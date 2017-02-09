@@ -1197,6 +1197,38 @@ below.
     providers:
       service: systemd
 
+``extmod_whitelist``
+--------------------
+
+.. versionadded:: Nitrogen
+
+By using this dictionary, the modules that are synced to the minion's extmod cache using `saltutil.sync_*`can be
+limited.  If nothing is set to a specific type, then all modules are accepted.  To block all modules of a specific type,
+whitelist an empty list.
+
+.. code-block:: yaml
+
+    extmod_whitelist:
+      modules:
+        - custom_module
+      engines:
+        - custom_engine
+      pillars: []
+
+Valid options:
+  - beacons
+  - sdb
+  - modules
+  - states
+  - grains
+  - renderers
+  - returners
+  - proxy
+  - engines
+  - output
+  - utils
+  - pillar
+
 
 Top File Settings
 =================
@@ -1415,6 +1447,10 @@ enabled and can be disabled by changing this value to ``False``.
 .. code-block:: yaml
 
     clean_dynamic_modules: True
+
+.. note::
+
+    If ``extmod_whitelist`` is specified, modules which are not whitelisted will also be cleaned here.
 
 .. conf_minion:: environment
 
