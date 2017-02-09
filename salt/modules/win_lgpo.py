@@ -1372,6 +1372,351 @@ class _policy_info(object):
                             },
                         }
                     },
+                    'EnableInstallerDetection': {
+                        'Policy': 'User Account Control: Detect application '
+                                  'installations and prompt for elevation',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'EnableInstallerDetection',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'ValidateAdminCodeSignatures': {
+                        'Policy': 'User Account Control: Only elevate '
+                                  'executables that are signed and validated',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'ValidateAdminCodeSignatures',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableSecureUIAPaths': {
+                        'Policy': 'User Account Control: Only elevate UIAccess '
+                                  'applicaitons that are installed in secure '
+                                  'locations',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'EnableSecureUIAPaths',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableLUA': {
+                        'Policy': 'User Account Control: Run all administrators '
+                                  'in Admin Approval Mode',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'EnableLUA',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'PromptOnSecureDesktop': {
+                        'Policy': 'User Account Control: Switch to the secure '
+                                  'desktop when prompting for elevation',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'PromptOnSecureDesktop',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableVirtualization': {
+                        'Policy': 'User Account Control: Virtualize file and '
+                                  'registry write failures to per-user '
+                                  'locations',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'EnableVirtualization',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'PasswordExpiryWarning': {
+                        'Policy': 'Interactive logon: Prompt user to change '
+                                  'password before expiration',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 999}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\'
+                                    'CurrentVersion\\Winlogon',
+                            'Value': 'PasswordExpiryWarning',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'MaxDevicePasswordFailedAttempts': {
+                        'Policy': 'Interactive logon: Machine account lockout '
+                                  'threshold',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 999}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\policies\\system',
+                            'Value': 'MaxDevicePasswordFailedAttempts',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'InactivityTimeoutSecs': {
+                        'Policy': 'Interactive logon: Machine inactivity limit',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 599940}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\policies\\system',
+                            'Value': 'InactivityTimeoutSecs',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'legalnoticetext': {
+                        'Policy': 'Interactive logon: Message text for users '
+                                  'attempting to log on',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\policies\\system',
+                            'Value': 'legalnoticetext',
+                            'Type': 'REG_SZ',
+                        },
+                    },
+                    'legalnoticecaption': {
+                        'Policy': 'Interactive logon: Message title for users '
+                                  'attempting to log on',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\policies\\system',
+                            'Value': 'legalnoticecaption',
+                            'Type': 'REG_SZ',
+                        },
+                    },
+                    'DontDisplayLockedUserId': {
+                        'Policy': 'Interactive logon: Display user information '
+                                  'when the session is locked',
+                        'Settings': self.locked_session_user_info.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\policies\\system',
+                            'Value': 'DontDisplayLockedUserId',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.locked_session_user_info,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.locked_session_user_info,
+                                'value_lookup': True,
+                            },
+                        }
+                    },
+                    'ScForceOption': {
+                        'Policy': 'Interactive logon: Require smart card',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'ScForceOption',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'Client_RequireSecuritySignature': {
+                        'Policy': 'Microsoft network client: Digitally sign '
+                                  'communications (always)',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanWorkstation\\Parameters',
+                            'Value': 'RequireSecuritySignature',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'Client_EnableSecuritySignature': {
+                        'Policy': 'Microsoft network client: Digitally sign '
+                                  'communications (if server agrees)',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanWorkstation\\Parameters',
+                            'Value': 'EnableSecuritySignature',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnablePlainTextPassword': {
+                        'Policy': 'Microsoft network client: Send unencrypted '
+                                  'password to third-party SMB servers',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanWorkstation\\Parameters',
+                            'Value': 'EnablePlainTextPassword',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'AutoDisconnect': {
+                        'Policy': 'Microsoft network server: Amount of idle '
+                                  'time required before suspending session',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 99999}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'AutoDisconnect',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'EnableS4U2SelfForClaims': {
+                        'Policy': 'Microsoft network server: Attempt S4U2Self '
+                                  'to obtain claim information',
+                        'Settings': self.s4u2self_options.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'EnableS4U2SelfForClaims',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.s4u2self_options,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.s4u2self_options,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'Server_RequireSecuritySignature': {
+                        'Policy': 'Microsoft network server: Digitally sign '
+                                  'communications (always)',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'RequireSecuritySignature',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'Server_EnableSecuritySignature': {
+                        'Policy': 'Microsoft network server: Digitally sign '
+                                  'communications (if client agrees)',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'EnableSecuritySignature',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableForcedLogoff': {
+                        'Policy': 'Microsoft network server: Disconnect clients '
+                                  'when logon hours expire',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'EnableForcedLogoff',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'SmbServerNameHardeningLevel': {
+                        'Policy': 'Microsoft network server: Server SPN target '
+                                  'name validation level',
+                        'Settings': self.smb_server_name_hardening_levels.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'SmbServerNameHardeningLevel',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.smb_server_name_hardening_levels,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.smb_server_name_hardening_levels,
+                                'value_lookup': True,
+                            },
+                        }
+                    },
                     'FullPrivilegeAuditing': {
                         'Policy': 'Audit: Audit the use of Backup and Restore '
                                   'privilege',
@@ -2478,6 +2823,7 @@ class _policy_info(object):
         '''
         minimum = 0
         maximum = 1
+
         if isinstance(val, string_types):
             if val.lower() == 'not defined':
                 return True
