@@ -279,13 +279,6 @@ def managed(name, ppa=None, **kwargs):
                           'intended.')
         return ret
 
-    if 'enabled' in kwargs:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The `enabled` argument has been deprecated in favor of '
-            '`disabled`.'
-        )
-
     repo = name
     if __grains__['os'] in ('Ubuntu', 'Mint'):
         if ppa is not None:
@@ -299,23 +292,11 @@ def managed(name, ppa=None, **kwargs):
     elif __grains__['os_family'].lower() in ('redhat', 'suse'):
         if 'humanname' in kwargs:
             kwargs['name'] = kwargs.pop('humanname')
-        _val = lambda x: '1' if salt.utils.is_true(x) else '0'
-        if 'disabled' in kwargs:
-            if 'enabled' in kwargs:
-                ret['result'] = False
-                ret['comment'] = 'Only one of enabled/disabled is permitted'
-                return ret
-            _reverse = lambda x: '1' if x == '0' else '0'
-            kwargs['enabled'] = _reverse(_val(kwargs.pop('disabled')))
-        elif 'enabled' in kwargs:
-            kwargs['enabled'] = _val(kwargs['enabled'])
         if 'name' not in kwargs:
             # Fall back to the repo name if humanname not provided
             kwargs['name'] = repo
 
-    # Replace 'enabled' from kwargs with 'disabled'
-    enabled = kwargs.pop('enabled', True)
-    kwargs['disabled'] = not salt.utils.is_true(enabled)
+    kwargs['disabled'] = salt.utils.is_true(kwargs.pop('disabled', False))
 
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
