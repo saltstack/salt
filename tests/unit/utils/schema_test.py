@@ -9,9 +9,7 @@ import copy
 import json
 import yaml
 
-from distutils.version import LooseVersion
-
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion as _LooseVersion
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -27,10 +25,10 @@ try:
     import jsonschema
     import jsonschema.exceptions
     HAS_JSONSCHEMA = True
-    JSONSCHEMA_VERSION = jsonschema.__version__
+    JSONSCHEMA_VERSION = _LooseVersion(jsonschema.__version__)
 except ImportError:
-    JSONSCHEMA_VERSION = ''
     HAS_JSONSCHEMA = False
+    JSONSCHEMA_VERSION = _LooseVersion('0')
 
 
 # pylint: disable=unused-import
@@ -754,8 +752,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
-    @skipIf(HAS_JSONSCHEMA and LooseVersion(jsonschema.__version__) <= LooseVersion('2.5.0'), 'Requires jsonschema 2.5.0 or greater')
+    @skipIf(JSONSCHEMA_VERSION <= _LooseVersion('2.5.0'), 'Requires jsonschema 2.5.0 or greater')
     def test_ipv4_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.IPv4Item(title='Item', description='Item description')
@@ -1707,7 +1704,14 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': {'color': 'green', 'sides': 4, 'surfaces': 4}}, TestConf.serialize())
-        self.assertIn('Additional properties are not allowed', excinfo.exception.message)
+        if JSONSCHEMA_VERSION < _LooseVersion('2.6.0'):
+            self.assertIn(
+                'Additional properties are not allowed',
+                excinfo.exception.message)
+        else:
+            self.assertIn(
+                '\'surfaces\' does not match any of the regexes',
+                excinfo.exception.message)
 
         class TestConf(schema.Schema):
             item = schema.DictItem(
