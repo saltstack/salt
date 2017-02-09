@@ -995,6 +995,10 @@ VALID_OPTS = {
 
     # Whitelist specific modules to be synced
     'extmod_whitelist': dict,
+
+    # django auth
+    'django_auth_path': str,
+    'django_auth_settings': str,
 }
 
 # default configurations
@@ -1533,6 +1537,8 @@ DEFAULT_MASTER_OPTS = {
     'ssl': None,
     'extmod_whitelist': {},
     'clean_dynamic_modules': True,
+    'django_auth_path': '',
+    'django_auth_settings': '',
 }
 
 

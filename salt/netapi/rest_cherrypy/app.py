@@ -1686,16 +1686,19 @@ class Login(LowDataAdapter):
         try:
             eauth = self.opts.get('external_auth', {}).get(token['eauth'], {})
 
-            # Get sum of '*' perms, user-specific perms, and group-specific perms
-            perms = eauth.get(token['name'], [])
-            perms.extend(eauth.get('*', []))
+            if token['eauth'] == 'django' and '^model' in eauth:
+                perms = token['auth_list']
+            else:
+                # Get sum of '*' perms, user-specific perms, and group-specific perms
+                perms = eauth.get(token['name'], [])
+                perms.extend(eauth.get('*', []))
 
-            if 'groups' in token and token['groups']:
-                user_groups = set(token['groups'])
-                eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
+                if 'groups' in token and token['groups']:
+                    user_groups = set(token['groups'])
+                    eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
 
-                for group in user_groups & eauth_groups:
-                    perms.extend(eauth['{0}%'.format(group)])
+                    for group in user_groups & eauth_groups:
+                        perms.extend(eauth['{0}%'.format(group)])
 
             if not perms:
                 logger.debug("Eauth permission list not found.")
