@@ -3,6 +3,8 @@
 Junos Syslog Engine
 ==========================
 
+.. versionadded:: Nitrogen
+
 An engine that listen to syslog message from Junos devices,
 extract event information and generate message on SaltStack bus.
 
@@ -57,12 +59,11 @@ Here is a sample syslog event which is received from the junos device:
 The source for parsing the syslog messages is taken from:
     https://gist.github.com/leandrosilva/3651640#file-xlog-py
 '''
+from __future__ import absolute_import
 
 import re
 from time import strftime
 import logging
-
-import salt
 
 try:
     from twisted.internet.protocol import DatagramProtocol
@@ -73,6 +74,9 @@ try:
     HAS_TWISTED_AND_PYPARSING = True
 except ImportError:
     HAS_TWISTED_AND_PYPARSING = False
+
+from salt.utils import event
+from salt.ext.six import moves
 
 # logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -94,10 +98,7 @@ class Parser(object):
 
     def __init__(self):
         ints = Word(nums)
-        word = Word(alphas)
         EOL = LineEnd().suppress()
-        SOL = LineStart().leaveWhitespace()
-        blankline = SOL + LineEnd()
 
         # ip address of device
         ipAddress = Optional(
@@ -106,9 +107,6 @@ class Parser(object):
                 ".",
                 combine=True) + Suppress(
                     ":"))
-
-        # Received message
-        rec_msg = Suppress(OneOrMore(word)) + Suppress(Literal("'"))
 
         # priority
         priority = Suppress("<") + ints + Suppress(">")
@@ -239,7 +237,7 @@ class SyslogServerFactory(DatagramProtocol):
                     "jnpr/syslog". Using the default topic.')
                 self.title = ['jnpr', 'syslog', 'hostname', 'event']
             else:
-                for i in range(2, len(topics)):
+                for i in moves.range(2, len(topics)):
                     if topics[i] not in data:
                         log.debug(
                             'Please check the topic specified. \
@@ -252,7 +250,7 @@ class SyslogServerFactory(DatagramProtocol):
             # We are done processing the topic. All other arguments are the
             # filters given by the user. While processing the filters we don't
             # explicitly ignore the 'topic', but delete it here itself.
-            del(self.options['topic'])
+            del self.options['topic']
         else:
             self.title = ['jnpr', 'syslog', 'hostname', 'event']
 
@@ -303,11 +301,11 @@ class SyslogServerFactory(DatagramProtocol):
             if 'event' in data:
                 topic = 'jnpr/syslog'
 
-            for i in range(2, len(self.title)):
-                topic += '/' + str(data[self.title[i]])
-                log.debug(
-                    'Junos Syslog - sending this event on the bus: \
-                    {0} from {1}'.format(data, host))
+                for i in moves.range(2, len(self.title)):
+                    topic += '/' + str(data[self.title[i]])
+                    log.debug(
+                        'Junos Syslog - sending this event on the bus: \
+                        {0} from {1}'.format(data, host))
                 result = {'send': True, 'data': data, 'topic': topic}
                 return result
             else:
@@ -331,9 +329,9 @@ class SyslogServerFactory(DatagramProtocol):
             # If the engine is run on master, get the event bus and send the
             # parsed event.
             if __opts__['__role'] == 'master':
-                salt.utils.event.get_master_event(__opts__,
-                                                  __opts__['sock_dir']
-                                                  ).fire_event(data, topic)
+                event.get_master_event(__opts__,
+                                       __opts__['sock_dir']
+                                       ).fire_event(data, topic)
             # If the engine is run on minion, use the fire_master execution
             # module to send event on the master bus.
             else:
@@ -343,7 +341,6 @@ class SyslogServerFactory(DatagramProtocol):
         '''
         Log the error messages.
         '''
-        
         log.error(err_msg.getErrorMessage)
 
     def datagramReceived(self, data, connection_details):
@@ -355,6 +352,7 @@ class SyslogServerFactory(DatagramProtocol):
             port,
             self.options)
         d.addCallbacks(self.send_event_to_salt, self.handle_error)
+
 
 def start(port=516, **kwargs):
 

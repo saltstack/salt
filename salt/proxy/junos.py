@@ -35,9 +35,9 @@ Run the salt proxy via the following command:
 
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
-
 import logging
 import copy
 
@@ -79,20 +79,20 @@ def init(opts):
     opts['multiprocessing'] = False
     log.debug('Opening connection to junos')
 
-    args = { "host" : opts['proxy']['host'] }
-    optional_args= ['user',
-                    'username',
-                    'password'
-                    'port',
-                    'gather_facts', 
-                    'mode',
-                    'baud',
-                    'attempts',
-                    'auto_probe',
-                    'ssh_private_key',
-                    'ssh_config',
-                    'normalize'
-                   ]
+    args = {"host": opts['proxy']['host']}
+    optional_args = ['user',
+                     'username',
+                     'password'
+                     'port',
+                     'gather_facts',
+                     'mode',
+                     'baud',
+                     'attempts',
+                     'auto_probe',
+                     'ssh_private_key',
+                     'ssh_config',
+                     'normalize'
+                     ]
 
     if 'username' in opts['proxy'].keys():
         opts['proxy']['user'] = opts['proxy'].pop('username')
@@ -126,7 +126,8 @@ def proxytype():
 def grains():
     thisproxy['grains'] = copy.deepcopy(thisproxy['conn'].facts)
     if thisproxy['grains']:
-        thisproxy['grains']['version_info'] = dict(thisproxy['grains']['version_info'])
+        thisproxy['grains']['version_info'] = dict(
+            thisproxy['grains']['version_info'])
     else:
         log.debug(
             'Grains will not be populated by junos facts \
