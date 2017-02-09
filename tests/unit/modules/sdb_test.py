@@ -22,6 +22,7 @@ from salt.modules import sdb
 
 # Globals
 sdb.__opts__ = {}
+sdb.__utils__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
