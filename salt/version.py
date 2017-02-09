@@ -709,6 +709,12 @@ def versions_report(include_salt_cloud=False):
     for line in info:
         yield line
 
+
+def msi_conformant_version_assert(condtition, txt):
+    if not condtition:
+        raise ValueError(txt)
+
+
 def msi_conformant_version():
     '''
     A msi conformant version is a 4-tuple of numbers, each smaller than 256, except the last.
@@ -719,24 +725,24 @@ def msi_conformant_version():
     Example 1 after `git checkout 20166.11`: 2016.11.2-72-g7611698   --> 16.11.2.72
     Example 2 after `git checkout develop`:  2016.11.0-742-g5ca4d20  --> 16.11.0.742
     '''
-    dynamic_str  = str(__discover_version(__version__)) # try to dynamically update the version from git
-    dynamic_list = dynamic_str.replace('-','.').split('.')
-    year    = dynamic_list[0]
-    month   = dynamic_list[1]
-    minor   = dynamic_list[2]
-    commits = dynamic_list[3]
-    if not year.isdigit():    raise ValueError( dynamic_str + ' must start with a year')
-    if not month.isdigit():   raise ValueError( dynamic_str + ' must have month after year')
-    if not minor.isdigit():   raise ValueError( dynamic_str + ' must have minor after month')
-    if not commits.isdigit(): raise ValueError( dynamic_str + ' must have commits after minor')
-    year2   = year[2:]
-    if not int(year2) < 256:  raise ValueError( dynamic_str + ' year2 must be < 256')
-    if not int(month) < 256:  raise ValueError( dynamic_str + ' month must be < 256')
-    if not int(minor) < 256:  raise ValueError( dynamic_str + ' minor must be < 256')
-    return year2 + '.' + month + '.' + minor + '.' + commits
+    dynamic_str = str(__discover_version(__version__))     # try to dynamically update the version from git
+    dynamic_lis = dynamic_str.replace('-','.').split('.')
+    year4 = dynamic_lis[0]
+    month = dynamic_lis[1]
+    minor = dynamic_lis[2]
+    commi = dynamic_lis[3]
+    msi_conformant_version_assert(year4.isdigit(), dynamic_str + ' must start with a year')
+    msi_conformant_version_assert(month.isdigit(), dynamic_str + ' must have month after year')
+    msi_conformant_version_assert(minor.isdigit(), dynamic_str + ' must have minor after month')
+    msi_conformant_version_assert(commi.isdigit(), dynamic_str + ' must have commits after minor')
+    year2 = year4[2:]
+    msi_conformant_version_assert(int(year2) < 256, dynamic_str + ' year2 must be < 256')
+    msi_conformant_version_assert(int(month) < 256, dynamic_str + ' month must be < 256')
+    msi_conformant_version_assert(int(minor) < 256, dynamic_str + ' minor must be < 256')
+    return year2 + '.' + month + '.' + minor + '.' + commi
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == 'msi':
-        print(msi_conformant_version()) # Building the msi requires a msi-conformant version
+        print(msi_conformant_version())     # Building the msi requires a msi-conformant version
     else:
         print(__version__)
