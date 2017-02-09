@@ -169,7 +169,6 @@ from __future__ import absolute_import
 import fnmatch
 import logging
 import os
-import cStringIO
 
 # Import salt libs
 import salt.loader
@@ -177,6 +176,10 @@ import salt.utils
 import salt.utils.dictupdate
 import salt.utils.minions
 import salt.template
+
+# Import 3rd-party libs
+from salt.ext.six.moves import cStringIO
+
 
 # Set up logging
 log = logging.getLogger(__name__)

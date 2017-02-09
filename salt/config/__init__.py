@@ -57,6 +57,7 @@ _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
 )
+_DFLT_REFSPECS = ['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']
 
 if salt.utils.is_windows():
     # Since an 'ipc_mode' of 'ipc' will never work on Windows due to lack of
@@ -580,6 +581,7 @@ VALID_OPTS = {
     'git_pillar_privkey': str,
     'git_pillar_pubkey': str,
     'git_pillar_passphrase': str,
+    'git_pillar_refspecs': list,
     'gitfs_remotes': list,
     'gitfs_mountpoint': str,
     'gitfs_root': str,
@@ -595,6 +597,7 @@ VALID_OPTS = {
     'gitfs_ssl_verify': bool,
     'gitfs_global_lock': bool,
     'gitfs_saltenv': list,
+    'gitfs_refspecs': list,
     'hgfs_remotes': list,
     'hgfs_mountpoint': str,
     'hgfs_root': str,
@@ -781,6 +784,7 @@ VALID_OPTS = {
     'winrepo_privkey': str,
     'winrepo_pubkey': str,
     'winrepo_passphrase': str,
+    'winrepo_refspecs': list,
 
     # Set a hard limit for the amount of memory modules can consume on a minion.
     'modules_max_memory': int,
@@ -988,6 +992,9 @@ VALID_OPTS = {
     # Controls whether the scheduler is set up before a connection
     # to the master is attempted.
     'scheduler_before_connect': bool,
+
+    # Whitelist specific modules to be synced
+    'extmod_whitelist': dict,
 }
 
 # default configurations
@@ -1081,6 +1088,7 @@ DEFAULT_MINION_OPTS = {
     'git_pillar_privkey': '',
     'git_pillar_pubkey': '',
     'git_pillar_passphrase': '',
+    'git_pillar_refspecs': _DFLT_REFSPECS,
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -1096,6 +1104,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'gitfs_saltenv': [],
+    'gitfs_refspecs': _DFLT_REFSPECS,
     'hash_type': 'sha256',
     'disable_modules': [],
     'disable_returners': [],
@@ -1181,6 +1190,7 @@ DEFAULT_MINION_OPTS = {
     'winrepo_privkey': '',
     'winrepo_pubkey': '',
     'winrepo_passphrase': '',
+    'winrepo_refspecs': _DFLT_REFSPECS,
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
     'reactor_refresh_interval': 60,
@@ -1241,6 +1251,7 @@ DEFAULT_MINION_OPTS = {
     'beacons_before_connect': False,
     'scheduler_before_connect': False,
     'cache': 'localfs',
+    'extmod_whitelist': {},
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1297,6 +1308,7 @@ DEFAULT_MASTER_OPTS = {
     'git_pillar_privkey': '',
     'git_pillar_pubkey': '',
     'git_pillar_passphrase': '',
+    'git_pillar_refspecs': _DFLT_REFSPECS,
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -1312,6 +1324,7 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'gitfs_saltenv': [],
+    'gitfs_refspecs': _DFLT_REFSPECS,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -1454,6 +1467,7 @@ DEFAULT_MASTER_OPTS = {
     'winrepo_privkey': '',
     'winrepo_pubkey': '',
     'winrepo_passphrase': '',
+    'winrepo_refspecs': _DFLT_REFSPECS,
     'syndic_wait': 5,
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
@@ -1517,6 +1531,8 @@ DEFAULT_MASTER_OPTS = {
     'thin_extra_mods': '',
     'min_extra_mods': '',
     'ssl': None,
+    'extmod_whitelist': {},
+    'clean_dynamic_modules': True,
 }
 
 

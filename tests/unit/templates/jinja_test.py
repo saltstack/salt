@@ -946,13 +946,13 @@ class TestCustomExtensions(TestCase):
         '''Test the `min` Jinja filter.'''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | min }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'1.0')
+        self.assertEqual(rendered, u'1')
 
     def test_max(self):
         '''Test the `max` Jinja filter.'''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | max }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'3.0')
+        self.assertEqual(rendered, u'3')
 
     def test_avg(self):
         '''Test the `avg` Jinja filter.'''

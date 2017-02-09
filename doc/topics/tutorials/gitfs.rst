@@ -26,21 +26,17 @@ Branches and tags become Salt fileserver environments.
 Installing Dependencies
 =======================
 
-Beginning with version 2014.7.0, both pygit2_ and Dulwich_ are supported as
-alternatives to GitPython_. The desired provider can be configured using the
-:conf_master:`gitfs_provider` parameter in the master config file.
-
-If :conf_master:`gitfs_provider` is not configured, then Salt will prefer
-pygit2_ if a suitable version is available, followed by GitPython_ and
-Dulwich_.
+Both pygit2_ and GitPython_ are supported Python interfaces to git. If
+compatible versions of both are installed, pygit2_ will preferred. In these
+cases, GitPython_ can be forced using the :conf_master:`gitfs_provider`
+parameter in the master config file.
 
 .. note::
     It is recommended to always run the most recent version of any the below
-    dependencies. Certain features of gitfs may not be available without
+    dependencies. Certain features of GitFS may not be available without
     the most recent version of the chosen library.
 
 .. _pygit2: https://github.com/libgit2/pygit2
-.. _Dulwich: https://www.samba.org/~jelmer/dulwich/
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 
 pygit2
@@ -75,7 +71,7 @@ libraries to be present before libgit2_ is built. On some Debian-based distros
 ``pkg-config`` is also required to link libgit2_ with libssh2.
 .. note::
     If you are receiving the error "Unsupported URL Protocol" in the Salt Master
-    log when making a connection using SSH, review the libssh2 details listed 
+    log when making a connection using SSH, review the libssh2 details listed
     above.
 
 Additionally, version 0.21.0 of pygit2 introduced a dependency on python-cffi_,
@@ -157,49 +153,6 @@ install GitPython`` (or ``easy_install GitPython``) as root.
             - name: 'GitPython < 2.0.9'
 
 
-Dulwich
--------
-
-Dulwich 0.9.4 or newer is required to use Dulwich as backend for gitfs.
-
-Dulwich is available in EPEL, and can be easily installed on the master using
-yum:
-
-.. code-block:: bash
-
-    # yum install python-dulwich
-
-For APT-based distros such as Ubuntu and Debian:
-
-.. code-block:: bash
-
-    # apt-get install python-dulwich
-
-.. important::
-
-    If switching to Dulwich from GitPython/pygit2, or switching from
-    GitPython/pygit2 to Dulwich, it is necessary to clear the gitfs cache to
-    avoid unpredictable behavior. This is probably a good idea whenever
-    switching to a new :conf_master:`gitfs_provider`, but it is less important
-    when switching between GitPython and pygit2.
-
-    Beginning in version 2015.5.0, the gitfs cache can be easily cleared using
-    the :mod:`fileserver.clear_cache <salt.runners.fileserver.clear_cache>`
-    runner.
-
-    .. code-block:: bash
-
-        salt-run fileserver.clear_cache backend=git
-
-    If the Master is running an earlier version, then the cache can be cleared
-    by removing the ``gitfs`` and ``file_lists/gitfs`` directories (both paths
-    relative to the master cache directory, usually
-    ``/var/cache/salt/master``).
-
-    .. code-block:: bash
-
-        rm -rf /var/cache/salt/master{,/file_lists}/gitfs
-
 Simple Configuration
 ====================
 
@@ -233,14 +186,6 @@ master:
 
    Information on how to authenticate to SSH remotes can be found :ref:`here
    <gitfs-authentication>`.
-
-   .. note::
-
-       Dulwich does not recognize ``ssh://`` URLs, ``git+ssh://`` must be used
-       instead. Salt version 2015.5.0 and later will automatically add the
-       ``git+`` to the beginning of these URLs before fetching, but earlier
-       Salt versions will fail to fetch unless the URL is specified using
-       ``git+ssh://``.
 
 3. Restart the master to load the new configuration.
 
@@ -316,7 +261,6 @@ is executed. For example:
     cache directory (``/var/cache/salt/master/gitfs``) before restarting the
     salt-master service.
 
-
 .. _gitfs-per-remote-config:
 
 Per-remote Configuration Parameters
@@ -336,6 +280,7 @@ configured gitfs remotes):
 * :conf_master:`gitfs_pubkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_privkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_passphrase` (**pygit2 only**, new in 2014.7.0)
+* :conf_master:`gitfs_refspecs` (new in Nitrogen)
 
 These parameters can now be overridden on a per-remote basis. This allows for a
 tremendous amount of customization. Here's some example usage:
@@ -372,7 +317,8 @@ tremendous amount of customization. Here's some example usage:
 
     2. Per-remote configuration parameters are named like the global versions,
        with the ``gitfs_`` removed from the beginning. The exception being the
-       ``name`` parameter which is only available to per-remote configurations.
+       ``name`` and ``saltenv`` parameters, which are only available to
+       per-remote configurations.
 
 In the example configuration above, the following is true:
 
@@ -454,10 +400,62 @@ Given the above configuration, the following is true:
    ``salt`` directory (and its subdirectories).
 
 
+.. _gitfs-custom-refspecs:
+
+Custom Refspecs
+===============
+
+.. versionadded:: Nitrogen
+
+GitFS will by default fetch remote branches and tags. However, sometimes it can
+be useful to fetch custom refs (such as those created for `GitHub pull
+requests`__). To change the refspecs GitFS fetches, use the
+:conf_master:`gitfs_refspecs` config option:
+
+.. __: https://help.github.com/articles/checking-out-pull-requests-locally/
+
+.. code-block:: yaml
+
+    gitfs_refspecs:
+      - '+refs/heads/*:refs/remotes/origin/*'
+      - '+refs/tags/*:refs/tags/*'
+      - '+refs/pull/*/head:refs/remotes/origin/pr/*'
+      - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
+In the above example, in addition to fetching remote branches and tags,
+GitHub's custom refs for pull requests and merged pull requests will also be
+fetched. These special ``head`` refs represent the head of the branch which is
+requesting to be merged, and the ``merge`` refs represent the result of the
+base branch after the merge.
+
+.. important::
+    When using custom refspecs, the destination of the fetched refs *must* be
+    under ``refs/remotes/origin/``, preferably in a subdirectory like in the
+    example above. These custom refspecs will map as environment names using
+    their relative path underneath ``refs/remotes/origin/``. For example,
+    assuming the configuration above, the head branch for pull request 12345
+    would map to fileserver environment ``pr/12345`` (slash included).
+
+Refspecs can be configured on a :ref:`per-remote basis
+<gitfs-per-remote-config>`. For example, the below configuration would only
+alter the default refspecs for the *second* GitFS remote. The first remote
+would only fetch branches and tags (the default).
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - https://domain.tld/foo.git
+      - https://domain.tld/bar.git:
+        - refspecs:
+          - '+refs/heads/*:refs/remotes/origin/*'
+          - '+refs/tags/*:refs/tags/*'
+          - '+refs/pull/*/head:refs/remotes/origin/pr/*'
+          - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
 Configuration Order of Precedence
 =================================
 
-The order of precedence for gitfs configuration is as follows (each level
+The order of precedence for GitFS configuration is as follows (each level
 overrides all levels below it):
 
 1. Per-saltenv configuration (defined under a per-remote ``saltenv``
@@ -592,7 +590,7 @@ master, each configured git remote will be searched.
 Branches, Environments, and Top Files
 =====================================
 
-When using the gitfs backend, branches, and tags will be mapped to environments
+When using the GitFS backend, branches, and tags will be mapped to environments
 using the branch/tag name as an identifier.
 
 There is one exception to this rule: the ``master`` branch is implicitly mapped
@@ -913,8 +911,9 @@ steps to this process:
          #!/usr/bin/env sh
          sudo -u root salt-call event.fire_master update salt/fileserver/gitfs/update
 
-4. If using sudo in the git hook (above), the policy must be changed to permit all users to fire the event.
-   Add the following policy to the sudoers file on the git server.
+4. If using sudo in the git hook (above), the policy must be changed to permit
+   all users to fire the event.  Add the following policy to the sudoers file
+   on the git server.
 
    .. code-block:: bash
 
@@ -930,8 +929,8 @@ by this reactor.
 Similarly, the tag name ``salt/fileserver/gitfs/update`` can be replaced by
 anything, so long as the usage is consistent.
 
-The ``root`` user name in the hook script and sudo policy should be changed to match the user under which 
-the minion is running.
+The ``root`` user name in the hook script and sudo policy should be changed to
+match the user under which the minion is running.
 
 .. _`post-receive hook`: http://www.git-scm.com/book/en/Customizing-Git-Git-Hooks#Server-Side-Hooks
 

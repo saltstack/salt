@@ -214,7 +214,6 @@ import os
 import re
 import logging
 from subprocess import Popen, PIPE
-import cStringIO
 
 # Import salt libs
 import salt.utils
@@ -223,6 +222,7 @@ from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import cStringIO
 
 log = logging.getLogger(__name__)
 

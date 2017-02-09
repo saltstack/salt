@@ -61,6 +61,61 @@ class SaltUtilModuleTest(integration.ModuleCase):
         self.assertIn('priv', ret['return'])
 
 
+class SaltUtilSyncModuleTest(integration.ModuleCase):
+    '''
+    Testcase for the saltutil sync execution module
+    '''
+
+    def setUp(self):
+        whitelist = {'modules': [], }
+        self.run_function('saltutil.sync_all', extmod_whitelist=whitelist)
+
+    def tearDown(self):
+        self.run_function('saltutil.sync_all')
+
+    def test_sync_all(self):
+        '''
+        Test syncing all ModuleCase
+        '''
+        expected_return = {'engines': [],
+                           'grains': [],
+                           'beacons': [],
+                           'utils': [],
+                           'returners': [],
+                           'modules': ['modules.override_test',
+                                       'modules.runtests_decorators',
+                                       'modules.runtests_helpers',
+                                       'modules.salttest'],
+                           'renderers': [],
+                           'log_handlers': [],
+                           'states': [],
+                           'sdb': [],
+                           'proxymodules': [],
+                           'output': []}
+        ret = self.run_function('saltutil.sync_all')
+        self.assertEqual(ret, expected_return)
+
+    def test_sync_all_whitelist(self):
+        '''
+        Test syncing all ModuleCase
+        '''
+        expected_return = {'engines': [],
+                           'grains': [],
+                           'beacons': [],
+                           'utils': [],
+                           'returners': [],
+                           'modules': ['modules.salttest'],
+                           'renderers': [],
+                           'log_handlers': [],
+                           'states': [],
+                           'sdb': [],
+                           'proxymodules': [],
+                           'output': []}
+        ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['salttest']})
+        self.assertEqual(ret, expected_return)
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(SaltUtilModuleTest)
+    run_tests(SaltUtilSyncModuleTest)
