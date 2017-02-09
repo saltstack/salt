@@ -252,7 +252,7 @@ def collect_garbage():
     '''
     Completely removed all currently 'uninstalled' packages in the nix store.
 
-    Returns a list of all the operations done. There is no filtering for this.
+    Tells the user how many store paths were removed and how much space was freed.
 
     .. warning::
        This is a destructive action on the nix store.
