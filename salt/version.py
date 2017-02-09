@@ -726,7 +726,7 @@ def msi_conformant_version():
     Example 2 after `git checkout develop`:  2016.11.0-742-g5ca4d20  --> 16.11.0.742
     '''
     dynamic_str = str(__discover_version(__version__))     # try to dynamically update the version from git
-    dynamic_lis = dynamic_str.replace('-','.').split('.')
+    dynamic_lis = dynamic_str.replace('-', '.').split('.')
     year4 = dynamic_lis[0]
     month = dynamic_lis[1]
     minor = dynamic_lis[2]
