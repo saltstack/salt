@@ -1026,6 +1026,18 @@ class _policy_info(object):
                                 'value_lookup': True,
                             },
                         },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.smb_server_name_hardening_levels,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.smb_server_name_hardening_levels,
+                                'value_lookup': True,
+                            },
+                        }
                     },
                     'EnableInstallerDetection': {
                         'Policy': 'User Account Control: Detect application '
@@ -2478,6 +2490,7 @@ class _policy_info(object):
         '''
         minimum = 0
         maximum = 1
+
         if isinstance(val, string_types):
             if val.lower() == 'not defined':
                 return True
