@@ -139,6 +139,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       size: n1-standard-1
       location: europe-west1-b
       network: default
+      subnetwork: default
       tags: '["one", "two", "three"]'
       metadata: '{"one": "1", "2": "two"}'
       use_persistent_disk: True
