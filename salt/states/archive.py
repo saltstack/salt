@@ -61,7 +61,8 @@ def extracted(name,
               tar_options=None,
               source_hash=None,
               if_missing=None,
-              keep=False):
+              keep=False,
+              overwrite=False):
     '''
     .. versionadded:: 2014.1.0
 
@@ -167,6 +168,10 @@ def extracted(name,
 
     keep
         Keep the archive in the minion's cache
+
+    overwrite
+        If archive was already extracted, then setting this to True will
+        extract it all over again.
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
@@ -179,23 +184,27 @@ def extracted(name,
 
     # remove this whole block after formal deprecation.
     if archive_user is not None:
-        warn_until(
-          'Boron',
-          'Passing \'archive_user\' is deprecated.'
-          'Pass \'user\' instead.'
-        )
+        warn_until('Boron', "Passing 'archive_user' is deprecated. Pass 'user' instead.")
         if user is None:
             user = archive_user
+
+    # Adjust, if the destination directory already exists
+    # In this case admins usually are using general directory,
+    # like /tmp or /opt etc.
+    if __salt__['file.directory_exists'](name):
+        name = os.path.join(name, os.path.basename(source))
+        if __salt__['file.directory_exists'](name) and overwrite:
+            __salt__['file.remove'](name)
+            log.debug("Overwrite is requested. Removed '{0}'".format(name))
 
     if not name.endswith('/'):
         name += '/'
 
     if if_missing is None:
         if_missing = name
-    if (
-        __salt__['file.directory_exists'](if_missing)
-        or __salt__['file.file_exists'](if_missing)
-    ):
+
+    if __salt__['file.directory_exists'](if_missing) \
+        or __salt__['file.file_exists'](if_missing):
         ret['result'] = True
         ret['comment'] = '{0} already exists'.format(if_missing)
         return ret
