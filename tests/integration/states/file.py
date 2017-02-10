@@ -18,9 +18,6 @@ import tempfile
 import textwrap
 import filecmp
 
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import (
@@ -62,6 +59,7 @@ else:
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 GIT_PYTHON = '0.3.2'
 HAS_GIT_PYTHON = False
@@ -467,7 +465,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         name = os.path.join(integration.TMP, 'grail_not_scene33')
         with salt.utils.fopen(name, 'wb') as fp_:
-            fp_.write('test_managed_show_changes_false\n')
+            fp_.write(six.b('test_managed_show_changes_false\n'))
 
         ret = self.run_state(
             'file.managed', name=name, source='salt://grail/scene33',
@@ -1790,7 +1788,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
             self.assertEqual(contents_pre, contents_post)
         except AssertionError:
-            shutil.copy(tmp_file_append, tmp_file_append + '.bak')
+            if os.path.exists(tmp_file_append):
+                shutil.copy(tmp_file_append, tmp_file_append + '.bak')
             raise
         finally:
             if os.path.isfile(tmp_file_append):
@@ -2082,6 +2081,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
                 os.unlink(filename)
 
+    @skipIf(six.PY3, 'This test will have a LOT of rewriting to support both Py2 and Py3')
+    # And I'm more comfortable with the author doing it - s0undt3ch
     @skipIf(IS_WINDOWS, 'Don\'t know how to fix for Windows')
     def test_issue_8947_utf8_sls(self):
         '''
