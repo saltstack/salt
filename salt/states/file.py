@@ -4489,7 +4489,10 @@ def append(name,
     text = _validate_str_list(text)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        slines = fp_.read().splitlines()
+        slines = fp_.read()
+        if six.PY3:
+            slines = slines.decode(__salt_system_encoding__)
+        slines = slines.splitlines()
 
     append_lines = []
     try:
@@ -4537,7 +4540,10 @@ def append(name,
         ret['comment'] = 'File {0} is in correct state'.format(name)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        nlines = fp_.read().splitlines()
+        nlines = fp_.read()
+        if six.PY3:
+            nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.splitlines()
 
     if slines != nlines:
         if not salt.utils.istextfile(name):
