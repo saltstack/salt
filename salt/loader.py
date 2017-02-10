@@ -1412,10 +1412,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         if self.virtual_enable:
             virtual_funcs_to_process = ['__virtual__'] + self.virtual_funcs
             for virtual_func in virtual_funcs_to_process:
-                (virtual_ret, module_name, virtual_err) = self.process_virtual(
-                    mod,
-                    module_name,
-                )
+                virtual_ret, module_name, virtual_err, virtual_aliases = \
+                    self.process_virtual(mod, module_name)
                 if virtual_err is not None:
                     log.trace('Error loading {0}.{1}: {2}'.format(self.tag,
                                                                   module_name,
@@ -1429,6 +1427,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     self.missing_modules[module_name] = virtual_err
                     self.missing_modules[name] = virtual_err
                     return False
+        else:
+            virtual_aliases = ()
 
         # If this is a proxy minion then MOST modules cannot work. Therefore, require that
         # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
@@ -1455,10 +1455,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # If we had another module by the same virtual name, we should put any
         # new functions under the existing dictionary.
-        if module_name in self.loaded_modules:
-            mod_dict = self.loaded_modules[module_name]
-        else:
-            mod_dict = self.mod_dict_class()
+        mod_names = [module_name] + list(virtual_aliases)
+        mod_dict = dict((
+            (x, self.loaded_modules.get(x, self.mod_dict_class()))
+            for x in mod_names
+        ))
 
         for attr in getattr(mod, '__load__', dir(mod)):
             if attr.startswith('_'):
@@ -1476,18 +1477,19 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # It default's of course to the found callable attribute name
             # if no alias is defined.
             funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
-            try:
-                full_funcname = '.'.join((module_name, funcname))
-            except TypeError:
-                full_funcname = '{0}.{1}'.format(module_name, funcname)
-            # Save many references for lookups
-            # Careful not to overwrite existing (higher priority) functions
-            if full_funcname not in self._dict:
-                self._dict[full_funcname] = func
-            if funcname not in mod_dict:
-                setattr(mod_dict, funcname, func)
-                mod_dict[funcname] = func
-                self._apply_outputter(func, mod)
+            for tgt_mod in mod_names:
+                try:
+                    full_funcname = '.'.join((tgt_mod, funcname))
+                except TypeError:
+                    full_funcname = '{0}.{1}'.format(tgt_mod, funcname)
+                # Save many references for lookups
+                # Careful not to overwrite existing (higher priority) functions
+                if full_funcname not in self._dict:
+                    self._dict[full_funcname] = func
+                if funcname not in mod_dict[tgt_mod]:
+                    setattr(mod_dict[tgt_mod], funcname, func)
+                    mod_dict[tgt_mod][funcname] = func
+                    self._apply_outputter(func, mod)
 
         # enforce depends
         try:
@@ -1496,7 +1498,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             log.info('Depends.enforce_dependencies() failed '
                      'for reasons: {0}'.format(exc))
 
-        self.loaded_modules[module_name] = mod_dict
+        for tgt_mod in mod_names:
+            self.loaded_modules[tgt_mod] = mod_dict[tgt_mod]
         return True
 
     def _load(self, key):
@@ -1589,6 +1592,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # namespace collisions. And finally it allows modules to return False
         # if they are not intended to run on the given platform or are missing
         # dependencies.
+        virtual_aliases = getattr(mod, '__virtual_aliases__', tuple())
         try:
             error_reason = None
             if hasattr(mod, '__virtual__') and inspect.isfunction(mod.__virtual__):
@@ -1604,9 +1608,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                                 end, module_name)
                         log.warning(msg)
                 except Exception as exc:
-                    error_reason = ('Exception raised when processing __virtual__ function'
-                              ' for {0}. Module will not be loaded {1}'.format(
-                                  module_name, exc))
+                    error_reason = (
+                        'Exception raised when processing __virtual__ function'
+                        ' for {0}. Module will not be loaded {1}'.format(
+                            module_name, exc))
                     log.error(error_reason, exc_info_on_loglevel=logging.DEBUG)
                     virtual = None
                 # Get the module's virtual name
@@ -1629,7 +1634,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             )
                         )
 
-                    return (False, module_name, error_reason)
+                    return (False, module_name, error_reason, virtual_aliases)
 
                 # At this point, __virtual__ did not return a
                 # boolean value, let's check for deprecated usage
@@ -1698,9 +1703,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 ),
                 exc_info=True
             )
-            return (False, module_name, error_reason)
+            return (False, module_name, error_reason, virtual_aliases)
 
-        return (True, module_name, None)
+        return (True, module_name, None, virtual_aliases)
 
 
 def global_injector_decorator(inject_globals):
