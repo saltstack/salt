@@ -41,6 +41,7 @@ Example Provider Configuration
       ssh_interface: public_ips
 
 :maintainer: Eric Johnson <erjohnso@google.com>
+:maintainer: Russell Tolle <russ.tolle@gmail.com>
 :depends: libcloud >= 1.0.0
 '''
 # pylint: disable=invalid-name,function-redefined
@@ -461,9 +462,8 @@ def __get_region(conn, vm_):
     '''
     Return a GCE libcloud region object with matching name.
     '''
-    region = config.get_cloud_config_value(
-        'region', vm_, __opts__,
-        default='default', search_global=False)
+    location = __get_location(conn, vm_)
+    region = '-'.join(location.name.split('-')[:2])
     return conn.ex_get_region(region)
 
 
@@ -547,7 +547,7 @@ def __get_ssh_credentials(vm_):
 
 def create_network(kwargs=None, call=None):
     '''
-    ... versionchanged:: 2017.1
+    ... versionchanged:: Nitrogen
     Create a GCE network. Must specify name and cidr.
 
     CLI Example:
@@ -555,6 +555,7 @@ def create_network(kwargs=None, call=None):
     .. code-block:: bash
 
         salt-cloud -f create_network gce name=mynet cidr=10.10.10.0/24 mode=legacy description=optional
+        salt-cloud -f create_network gce name=mynet description=optional
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -567,9 +568,9 @@ def create_network(kwargs=None, call=None):
         )
         return False
 
-    if 'cidr' not in kwargs:
+    if 'cidr' not in kwargs and 'mode' not in kwargs:
         log.error(
-            'A network CIDR range must be specified when creating a network.'
+            'A network CIDR range must be specified when creating a legacy network.'
         )
         return False
 
@@ -593,7 +594,7 @@ def create_network(kwargs=None, call=None):
         transport=__opts__['transport']
     )
 
-    network = conn.ex_create_network(name, cidr, description, mode)
+    network = conn.ex_create_network(name, cidr, desc, mode)
 
     __utils__['cloud.fire_event'](
         'event',
@@ -602,6 +603,8 @@ def create_network(kwargs=None, call=None):
         args={
             'name': name,
             'cidr': cidr,
+            'description': desc,
+            'mode': mode
         },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
@@ -635,8 +638,8 @@ def delete_network(kwargs=None, call=None):
 
     __utils__['cloud.fire_event'](
         'event',
-        'destroying network',
-        'salt/cloud/net/destroying',
+        'deleting network',
+        'salt/cloud/net/deleting',
         args={
             'name': name,
         },
@@ -659,8 +662,8 @@ def delete_network(kwargs=None, call=None):
 
     __utils__['cloud.fire_event'](
         'event',
-        'destroyed network',
-        'salt/cloud/net/destroyed',
+        'deleted network',
+        'salt/cloud/net/deleted',
         args={
             'name': name,
         },
@@ -696,7 +699,7 @@ def show_network(kwargs=None, call=None):
 
 def create_subnetwork(kwargs=None, call=None):
     '''
-    ... versionadded:: 2017.1
+    ... versionadded:: Nitrogen
     Create a GCE Subnetwork. Must specify name, cidr, network, and region.
 
     CLI Example:
@@ -743,7 +746,7 @@ def create_subnetwork(kwargs=None, call=None):
 
     __utils__['cloud.fire_event'](
         'event',
-        'creating subnetwork',
+        'create subnetwork',
         'salt/cloud/subnet/creating',
         args={
             'name': name,
@@ -756,7 +759,7 @@ def create_subnetwork(kwargs=None, call=None):
         transport=__opts__['transport']
     )
 
-    subnet = conn.ex_create_subnetwork(name, network, cidr, region, desc)
+    subnet = conn.ex_create_subnetwork(name, cidr, network, region, desc)
 
     __utils__['cloud.fire_event'](
         'event',
@@ -778,7 +781,7 @@ def create_subnetwork(kwargs=None, call=None):
 
 def delete_subnetwork(kwargs=None, call=None):
     '''
-    ... versionadded:: 2017.1
+    ... versionadded:: Nitrogen
     Delete a GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -810,8 +813,8 @@ def delete_subnetwork(kwargs=None, call=None):
 
     __utils__['cloud.fire_event'](
         'event',
-        'destroying subnetwork',
-        'salt/cloud/subnet/destroying',
+        'deleting subnetwork',
+        'salt/cloud/subnet/deleting',
         args={
             'name': name,
             'region': region
@@ -833,8 +836,8 @@ def delete_subnetwork(kwargs=None, call=None):
 
     __utils__['cloud.fire_event'](
         'event',
-        'destroyed subnetwork',
-        'salt/cloud/subnet/destroyed',
+        'deleted subnetwork',
+        'salt/cloud/subnet/deleted',
         args={
             'name': name,
             'region': region
@@ -847,7 +850,7 @@ def delete_subnetwork(kwargs=None, call=None):
 
 def show_subnetwork(kwargs=None, call=None):
     '''
-    ... versionadded:: 2017.1
+    ... versionadded:: Nitrogen
     Show details of an existing GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -2414,6 +2417,8 @@ def create_attach_volumes(name, kwargs, call=None):
 def request_instance(vm_):
     '''
     Request a single GCE instance from a data dict.
+
+    .. versionchanged: Nitrogen
     '''
     if not GCE_VM_NAME_REGEX.match(vm_['name']):
         raise SaltCloudSystemExit(
@@ -2452,12 +2457,12 @@ def request_instance(vm_):
     elif external_ip == 'None':
         external_ip = None
     else:
-        region = '-'.join(kwargs['location'].name.split('-')[:2])
+        region = __get_region(conn, vm_)
         external_ip = __create_orget_address(conn, external_ip, region)
     kwargs['external_ip'] = external_ip
     vm_['external_ip'] = external_ip
 
-    if LIBCLOUD_VERSION_INFO > (0, 15, 1):
+    if LIBCLOUD_VERSION_INFO > (0, 15, 1) and LIBCLOUD_VERSION_INFO < (1, 0, 0):
 
         kwargs.update({
             'ex_disk_type': config.get_cloud_config_value(
@@ -2478,6 +2483,12 @@ def request_instance(vm_):
                 'The value of \'ex_disk_type\' needs to be one of: '
                 '\'pd-standard\', \'pd-ssd\''
             )
+
+    if LIBCLOUD_VERSION_INFO >= (1, 0, 0):
+
+        kwargs.update({
+            'ex_subnetwork': __get_subnetwork(conn, vm_)
+        })
 
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
         kwargs['location'].name)
