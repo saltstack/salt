@@ -243,10 +243,10 @@ You can now call all of Salt's CLI tools without explicitly passing the configur
 Additional Options
 ..................
 
-In case you want to distribute your virtualenv, you probably don't want to
-include Salt's clone ``.git/`` directory, and, without it, Salt won't report
-the accurate version. You can tell ``setup.py`` to generate the hardcoded
-version information which is distributable:
+If you want to distribute your virtualenv, you probably don't want to include
+Salt's clone ``.git/`` directory, and, without it, Salt won't report the
+accurate version. You can tell ``setup.py`` to generate the hardcoded version
+information which is distributable:
 
 .. code-block:: bash
 
