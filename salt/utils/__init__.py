@@ -733,7 +733,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
         if not hostnames:
             error = True
         else:
-            addr = False
+            resolved = False
             for h in hostnames:
                 if h[0] == socket.AF_INET and ipv6 is True:
                     continue
@@ -747,11 +747,11 @@ def dns_check(addr, port, safe=False, ipv6=None):
                     s.connect((candidate_addr.strip('[]'), port))
                     s.close()
 
-                    addr = candidate_addr
+                    resolved = candidate_addr
                     break
                 except Exception:
                     pass
-            if not addr:
+            if not resolved:
                 error = True
     except TypeError:
         err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(addr)
@@ -760,7 +760,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
         error = True
 
     if error:
-        err = ('DNS lookup of \'{0}\' failed.').format(addr)
+        err = ('DNS lookup or connection check of \'{0}\' failed.').format(addr)
         if safe:
             if salt.log.is_console_configured():
                 # If logging is not configured it also means that either
@@ -769,7 +769,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
                 log.error(err)
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
-    return addr
+    return resolved
 
 
 def required_module_list(docstring=None):
