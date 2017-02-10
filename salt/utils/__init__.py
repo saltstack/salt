@@ -742,7 +742,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
 
                 candidate_addr = ip_bracket(h[4][0])
 
-                s = socket.socket(h[0], socket.SOCK_DGRAM)
+                s = socket.socket(h[0], socket.SOCK_STREAM)
                 try:
                     s.connect((candidate_addr.strip('[]'), port))
                     s.close()
