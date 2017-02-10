@@ -267,6 +267,7 @@ import difflib
 import itertools
 import logging
 import os
+import re
 import shutil
 import sys
 import traceback
@@ -4107,7 +4108,9 @@ def comment(name, regex, char='#', backup='.bak'):
     if not check_res:
         return _error(ret, check_msg)
 
-    unanchor_regex = regex.lstrip('^').rstrip('$')
+    # remove (?i)-like flags, ^ and $
+    unanchor_regex = re.sub(r'^(\(\?[iLmsux]\))?\^?(.*?)\$?$', r'\2', regex)
+
     comment_regex = char + unanchor_regex
 
     # Check if the line is already commented

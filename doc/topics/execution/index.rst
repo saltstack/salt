@@ -15,7 +15,7 @@ a wide variety of tasks. These modules provide functionality such as installing
 packages, restarting a service, running a remote command, transferring files,
 and so on.
 
-    :ref:`Full list of execution modules <all-salt_modules>`
+    :ref:`Full list of execution modules <all-salt.modules>`
         Contains: a list of core modules that ship with Salt.
 
     :ref:`Writing execution modules <writing-execution-modules>`

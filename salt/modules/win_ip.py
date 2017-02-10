@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import socket
 import time
 
 # Import salt libs
@@ -41,62 +40,53 @@ def _interface_configs():
     '''
     cmd = ['netsh', 'interface', 'ip', 'show', 'config']
     lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    iface = ''
-    ip = 0
-    dns_flag = None
-    wins_flag = None
     ret = {}
+    current_iface = None
+    current_ip_list = None
+
     for line in lines:
-        if dns_flag:
-            try:
-                socket.inet_aton(line.strip())
-                ret[iface][dns_flag].append(line.strip())
-                dns_flag = None
-                continue
-            except socket.error as exc:
-                dns_flag = None
-        if wins_flag:
-            try:
-                socket.inet_aton(line.strip())
-                ret[iface][wins_flag].append(line.strip())
-                wins_flag = None
-                continue
-            except socket.error as exc:
-                wins_flag = None
+
+        line = line.strip()
         if not line:
-            iface = ''
+            current_iface = None
+            current_ip_list = None
             continue
+
         if 'Configuration for interface' in line:
             _, iface = line.rstrip('"').split('"', 1)  # get iface name
-            ret[iface] = {}
-            ip = 0
+            current_iface = {}
+            ret[iface] = current_iface
             continue
-        try:
-            key, val = line.split(':', 1)
-        except ValueError as exc:
-            log.debug('Could not split line. Error was {0}.'.format(exc))
+
+        if ':' not in line:
+            if current_ip_list:
+                current_ip_list.append(line)
+            else:
+                log.warning('Cannot parse "{0}"'.format(line))
             continue
-        if 'DNS Servers' in line:
-            dns_flag = key.strip()
-            ret[iface][key.strip()] = [val.strip()]
-            continue
-        if 'WINS Servers' in line:
-            wins_flag = key.strip()
-            ret[iface][key.strip()] = [val.strip()]
-            continue
-        if 'IP Address' in key:
-            if 'ip_addrs' not in ret[iface]:
-                ret[iface]['ip_addrs'] = []
-            ret[iface]['ip_addrs'].append(dict([(key.strip(), val.strip())]))
-            continue
-        if 'Subnet Prefix' in key:
-            subnet, _, netmask = val.strip().split(' ', 2)
-            ret[iface]['ip_addrs'][ip]['Subnet'] = subnet.strip()
-            ret[iface]['ip_addrs'][ip]['Netmask'] = netmask.lstrip().rstrip(')')
-            ip = ip + 1
-            continue
+
+        key, val = line.split(':', 1)
+        key = key.strip()
+        val = val.strip()
+
+        lkey = key.lower()
+        if ('dns servers' in lkey) or ('wins servers' in lkey):
+            current_ip_list = []
+            current_iface[key] = current_ip_list
+            current_ip_list.append(val)
+
+        elif 'ip address' in lkey:
+            current_iface.setdefault('ip_addrs', []).append({key: val})
+
+        elif 'subnet prefix' in lkey:
+            subnet, _, netmask = val.split(' ', 2)
+            last_ip = current_iface['ip_addrs'][-1]
+            last_ip['Subnet'] = subnet.strip()
+            last_ip['Netmask'] = netmask.lstrip().rstrip(')')
+
         else:
-            ret[iface][key.strip()] = val.strip()
+            current_iface[key] = val
+
     return ret
 
 
