@@ -32,6 +32,7 @@ import types
 import warnings
 import string
 import subprocess
+import getpass
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -2913,7 +2914,7 @@ def chugid_and_umask(runas, umask):
     Helper method for for subprocess.Popen to initialise uid/gid and umask
     for the new process.
     '''
-    if runas is not None:
+    if runas is not None and runas != getpass.getuser():
         chugid(runas)
     if umask is not None:
         os.umask(umask)
