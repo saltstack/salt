@@ -350,7 +350,8 @@ Pre 2015.8 the proxymodule also must have an ``id()`` function.  2015.8 and foll
 this function because the proxy's id is required on the command line.
 
 Here is an example proxymodule used to interface to a *very* simple REST
-server.  Code for the server is in the `salt-contrib GitHub repository <https://github.com/saltstack/salt-contrib/proxyminion_rest_example>`_
+server.  Code for the server is in the `salt-contrib GitHub repository
+<https://github.com/saltstack/salt-contrib/tree/master/proxyminion_rest_example>`_
 
 This proxymodule enables "service" enumeration, starting, stopping, restarting,
 and status; "package" installation, and a ping.
