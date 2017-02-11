@@ -679,6 +679,84 @@ class DockerngTestCase(TestCase):
         self.assertEqual(
             {'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42}, ret)
 
+    def test_sls_build_dryrun(self, *args):
+        '''
+        test build sls image in dryrun mode.
+        '''
+        docker_start_mock = MagicMock(
+            return_value={})
+        docker_create_mock = MagicMock(
+            return_value={'Id': 'ID', 'Name': 'NAME'})
+        docker_stop_mock = MagicMock(
+            return_value={'state': {'old': 'running', 'new': 'stopped'},
+                          'result': True})
+        docker_rm_mock = MagicMock(
+            return_value={})
+
+        docker_sls_mock = MagicMock(
+            return_value={
+                "file_|-/etc/test.sh_|-/etc/test.sh_|-managed": {
+                    "comment": "File /etc/test.sh is in the correct state",
+                    "name": "/etc/test.sh",
+                    "start_time": "07:04:26.834792",
+                    "result": True,
+                    "duration": 13.492,
+                    "__run_num__": 0,
+                    "changes": {}
+                },
+                "test_|-always-passes_|-foo_|-succeed_without_changes": {
+                    "comment": "Success!",
+                    "name": "foo",
+                    "start_time": "07:04:26.848915",
+                    "result": True,
+                    "duration": 0.363,
+                    "__run_num__": 1,
+                    "changes": {}
+                }
+            })
+
+        ret = None
+        with patch.dict(dockerng_mod.__salt__, {
+                'dockerng.start': docker_start_mock,
+                'dockerng.create': docker_create_mock,
+                'dockerng.stop': docker_stop_mock,
+                'dockerng.rm': docker_rm_mock,
+                'dockerng.sls': docker_sls_mock}):
+            ret = dockerng_mod.sls_build(
+                'foo',
+                mods='foo',
+                dryrun=True
+            )
+        docker_create_mock.assert_called_once_with(
+            cmd='sleep infinity',
+            image='opensuse/python', interactive=True, name='foo', tty=True)
+        docker_start_mock.assert_called_once_with('ID')
+        docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
+        docker_stop_mock.assert_called_once_with('ID')
+        docker_rm_mock.assert_called_once_with('ID')
+        self.assertEqual(
+                {
+                "file_|-/etc/test.sh_|-/etc/test.sh_|-managed": {
+                    "comment": "File /etc/test.sh is in the correct state",
+                    "name": "/etc/test.sh",
+                    "start_time": "07:04:26.834792",
+                    "result": True,
+                    "duration": 13.492,
+                    "__run_num__": 0,
+                    "changes": {}
+                },
+                "test_|-always-passes_|-foo_|-succeed_without_changes": {
+                    "comment": "Success!",
+                    "name": "foo",
+                    "start_time": "07:04:26.848915",
+                    "result": True,
+                    "duration": 0.363,
+                    "__run_num__": 1,
+                    "changes": {}
+                }
+                },
+                ret)
+
     def test_call_success(self):
         '''
         test module calling inside containers
@@ -694,12 +772,16 @@ class DockerngTestCase(TestCase):
             return_value={
                 'retcode': 0
             })
+        docker_config_mock = MagicMock(
+            return_value=''
+            )
         client = Mock()
         client.put_archive = Mock()
 
         with patch.dict(dockerng_mod.__opts__, {'cachedir': '/tmp'}):
             with patch.dict(dockerng_mod.__salt__, {'dockerng.run_all': docker_run_all_mock,
-                                                    'dockerng.copy_to': docker_copy_to_mock}):
+                                                    'dockerng.copy_to': docker_copy_to_mock,
+                                                    'config.option': docker_config_mock}):
                 with patch.dict(dockerng_mod.__context__, {'docker.client': client}):
                     # call twice to verify tmp path later
                     for i in range(2):

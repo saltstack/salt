@@ -88,7 +88,7 @@ class SystemModuleTest(integration.ModuleCase):
         '''
         Check that hw and sw clocks are sync'd.
         '''
-        if not self.run_function('system._has_settable_hwclock'):
+        if not self.run_function('system.has_settable_hwclock'):
             return None
         if not self._hwclock_has_compare():
             return None
