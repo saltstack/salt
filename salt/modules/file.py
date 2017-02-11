@@ -3651,6 +3651,9 @@ def apply_template_on_contents(
             opts=__opts__)['data']
         if six.PY2:
             contents = contents.encode('utf-8')
+        elif six.PY3:
+            # bytes -> str
+            contents = contents.decode('utf-8')
     else:
         ret = {}
         ret['result'] = False
