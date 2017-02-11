@@ -724,15 +724,19 @@ def msi_conformant_version():
      We need to get the commit count, so probably from the class/object above, which I don't know to use.
      Just doing           xxx = SaltStackVersion()          does not work
 
-    The function calls __discover_version()
-    Examples
-      git checkout develop       2016.11.0-742-g5ca4d20   16.11.0.742
-      git checkout 20166.11      2016.11.2-72-g7611698    16.11.2.72
-      git checkout v20166.11.2   2016.11.2                16.11.2       !! PROBLEM: the commit count is missing
+    This function calls __discover_version()
 
-    TODOS:
-      - if `git checkout v20166.11.2` and `python version.py msi`, the commit count is missing
-      - if `git checkout v20166.11.2` and `python version.py`, __version__ is 2016.11.0-750-g2a40840. this is wrong
+    Examples for checkout and build
+      develop              2016.11.0-742-g5ca4d20   16.11.0.742
+      20166.11      branch 2016.11.2-72-g7611698    16.11.2.72
+      v20166.11.2   tag    2016.11.2                16.11.2       !! PROBLEM: the commit count is missing
+
+    How to checkout and build XYZ:
+    git checkout XYZ, git clean -fxd and C:\git\salt\pkg\windows>build.bat
+
+    How to call:
+      C:\git\salt\pkg\windows>\Python27\python.exe \git\salt\salt\version.py
+      C:\git\salt\pkg\windows>\Python27\python.exe \git\salt\salt\version.py msi
     '''
     dynamic_str = str(__discover_version(__version__))     # try to dynamically update the version from git
     dynamic_lis = dynamic_str.replace('-', '.').split('.')
