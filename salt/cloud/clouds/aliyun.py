@@ -65,11 +65,21 @@ ALIYUN_LOCATIONS = {
     'cn-hangzhou': 'AliYun HangZhou Region',
     'cn-beijing': 'AliYun BeiJing Region',
     'cn-hongkong': 'AliYun HongKong Region',
-    'cn-qingdao': 'AliYun QingDao Region'
+    'cn-qingdao': 'AliYun QingDao Region',
+    'cn-hongkong': 'AliYun HangKong Region',
+    'cn-shanghai': 'AliYun ShangHai Region',
+    'cn-shenzhen': 'AliYun ShenZheng Region',
+    'ap-northeast-1': 'AliYun DongJing Region',
+    'ap-southeast-1': 'AliYun XinJiaPo Region',
+    'ap-southeast-2': 'AliYun XiNi Region',
+    'eu-central-1': 'EU FalaKeFu Region',
+    'me-east-1': 'ME DiBai Region',
+    'us-east-1': 'US FuJiNiYa Region',
+    'us-west-1': 'US GuiGu Region',
 }
 DEFAULT_LOCATION = 'cn-hangzhou'
 
-DEFAULT_ALIYUN_API_VERSION = '2013-01-10'
+DEFAULT_ALIYUN_API_VERSION = '2014-05-26'
 
 __virtualname__ = 'aliyun'
 
@@ -151,7 +161,11 @@ def avail_images(kwargs=None, call=None):
     if 'location' in kwargs:
         location = kwargs['location']
 
-    params = {'Action': 'DescribeImages', 'RegionId': location}
+    params = {
+        'Action': 'DescribeImages',
+        'RegionId': location,
+        'PageSize': '100',
+    }
     items = query(params=params)
 
     ret = {}
@@ -365,6 +379,7 @@ def list_securitygroup(call=None):
     params = {
         'Action': 'DescribeSecurityGroups',
         'RegionId': get_location(),
+        'PageSize': '50',
     }
 
     result = query(params)
@@ -731,7 +746,7 @@ def query(params=None):
     '''
     Make a web call to aliyun ECS REST API
     '''
-    path = 'https://ecs.aliyuncs.com/'
+    path = 'https://ecs-cn-hangzhou.aliyuncs.com'
 
     access_key_id = config.get_cloud_config_value(
         'id', get_configured_provider(), __opts__, search_global=False
