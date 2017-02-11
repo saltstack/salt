@@ -124,7 +124,7 @@ def _linux_disks():
     '''
     ret = {'disks': [], 'SSDs': []}
 
-    for entry in glob.glob('/sys/block/*/queue/rotational'):
+    for entry in glob.glob('/sys/block/[hs]d*/queue/rotational'):
         with salt.utils.fopen(entry) as entry_fp:
             device = entry.split('/')[3]
             flag = entry_fp.read(1)
