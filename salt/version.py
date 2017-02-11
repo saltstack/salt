@@ -718,19 +718,31 @@ def msi_conformant_version_assert(condtition, txt):
 def msi_conformant_version():
     '''
     A msi conformant version is a 4-tuple of numbers, each smaller than 256, except the last.
-    Assumptions:
+    Assumption:
        __version__ is a string and contains        year . month . minor - commits - 'g' hash
-       year has 4-digits
-    The function dynamically discovers the version from git.
-    Example 1 after `git checkout 20166.11`: 2016.11.2-72-g7611698   --> 16.11.2.72
-    Example 2 after `git checkout develop`:  2016.11.0-742-g5ca4d20  --> 16.11.0.742
+     This assumption does not hold after `git checkout v20166.11.2`: commit count is missing.
+     We need to get the commit count, so probably from the class/object above, which I don't know to use.
+     Just doing           xxx = SaltStackVersion()          does not work
+
+    The function calls __discover_version()
+    Examples
+      git checkout develop       2016.11.0-742-g5ca4d20   16.11.0.742
+      git checkout 20166.11      2016.11.2-72-g7611698    16.11.2.72
+      git checkout v20166.11.2   2016.11.2                16.11.2       !! PROBLEM: the commit count is missing
+
+    TODOS:
+      - if `git checkout v20166.11.2` and `python version.py msi`, the commit count is missing
+      - if `git checkout v20166.11.2` and `python version.py`, __version__ is 2016.11.0-750-g2a40840. this is wrong
     '''
     dynamic_str = str(__discover_version(__version__))     # try to dynamically update the version from git
     dynamic_lis = dynamic_str.replace('-', '.').split('.')
     year4 = dynamic_lis[0]
     month = dynamic_lis[1]
     minor = dynamic_lis[2]
-    commi = dynamic_lis[3]
+    if len(dynamic_lis) >= 4:
+        commi = dynamic_lis[3]
+    else:
+        commi = '0'         # this is only a quick fix. We need the commit count.
     msi_conformant_version_assert(year4.isdigit(), dynamic_str + ' must start with a year')
     msi_conformant_version_assert(month.isdigit(), dynamic_str + ' must have month after year')
     msi_conformant_version_assert(minor.isdigit(), dynamic_str + ' must have minor after month')
