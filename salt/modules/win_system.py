@@ -251,7 +251,7 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
         If this is set to True, then then shutdown will only proceed
         if the system reports a pending reboot.
 
-    :return: True if successful
+    :return: True if successful (a shutdown or reboot will occur)
     :rtype: bool
 
     CLI Example:
