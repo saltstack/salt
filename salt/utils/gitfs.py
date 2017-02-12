@@ -2027,8 +2027,8 @@ class GitBase(object):
                     changed = True
             except Exception as exc:
                 log.error(
-                    'Exception \'{0}\' caught while fetching {1} remote '
-                    '\'{2}\''.format(exc, self.role, repo.id),
+                    'Exception caught while fetching %s remote \'%s\': %s',
+                    self.role, repo.id, exc,
                     exc_info_on_loglevel=logging.DEBUG
                 )
         return changed
