@@ -446,7 +446,7 @@ class GitProvider(object):
         cmd = subprocess.Popen(
             shlex.split(cmd_str),
             close_fds=not salt.utils.is_windows(),
-            cwd=self.repo.workdir,
+            cwd=os.path.dirname(self.gitdir),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         output = cmd.communicate()[0]
@@ -538,7 +538,7 @@ class GitProvider(object):
             cmd = subprocess.Popen(
                 shlex.split(cmd_str),
                 close_fds=not salt.utils.is_windows(),
-                cwd=self.repo.workdir,
+                cwd=os.path.dirname(self.gitdir),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT)
             output = cmd.communicate()[0]
