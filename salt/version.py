@@ -710,11 +710,6 @@ def versions_report(include_salt_cloud=False):
         yield line
 
 
-def msi_conformant_version_assert(condtition, txt):
-    if not condtition:
-        raise ValueError(txt)
-
-
 def msi_conformant_version():
     '''
     A msi conformant version consists of up to 4 numbers, each smaller than 256, except the 4th.
