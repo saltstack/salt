@@ -81,13 +81,13 @@ from __future__ import absolute_import, print_function
 
 import logging
 import json
-import StringIO
 import smtplib
 import cgi
 from email.mime.text import MIMEText
 
 import yaml
 from salt.ext.six.moves import range
+from salt.ext.six.moves import StringIO
 
 import salt.returners
 
@@ -423,12 +423,12 @@ def _produce_output(report, failed, setup):
     if report_format == 'json':
         report_text = json.dumps(report)
     elif report_format == 'yaml':
-        string_file = StringIO.StringIO()
+        string_file = StringIO()
         yaml.safe_dump(report, string_file, default_flow_style=False)
         string_file.seek(0)
         report_text = string_file.read()
     else:
-        string_file = StringIO.StringIO()
+        string_file = StringIO()
         _generate_html(report, string_file)
         string_file.seek(0)
         report_text = string_file.read()
@@ -493,7 +493,7 @@ def __test_html():
         data_text = input_file.read()
     data = yaml.safe_load(data_text)
 
-    string_file = StringIO.StringIO()
+    string_file = StringIO()
     _generate_html(data, string_file)
     string_file.seek(0)
     result = string_file.read()
