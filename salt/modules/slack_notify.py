@@ -139,6 +139,8 @@ def find_room(name, api_key=None):
         rooms = ret['message']
         if rooms:
             for room in range(0, len(rooms)):
+                if rooms[room]['id'] == name:
+                    return rooms[room]
                 if rooms[room]['name'] == name:
                     return rooms[room]
     return False
