@@ -424,7 +424,11 @@ class Terminal(object):
 
             if self.pid == 0:
                 # Child
-                self.stdin = sys.stdin.fileno()
+                try:
+                    self.stdin = sys.stdin.fileno()
+                except AttributeError:
+                    # Work around PyDev replacing sys.stdin with a wrapper object.
+                    self.stdin = sys.stdin.original_stdin.fileno()
                 self.stdout = sys.stdout.fileno()
                 self.stderr = sys.stderr.fileno()
 
