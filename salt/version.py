@@ -717,45 +717,21 @@ def msi_conformant_version_assert(condtition, txt):
 
 def msi_conformant_version():
     '''
-    A msi conformant version is a 4-tuple of numbers, each smaller than 256, except the last.
-    Assumption:
-       __version__ is a string and contains        year . month . minor - commits - 'g' hash
-     This assumption does not hold after `git checkout v20166.11.2`: commit count is missing.
-     We need to get the commit count, so probably from the class/object above, which I don't know to use.
-     Just doing           xxx = SaltStackVersion()          does not work
+    A msi conformant version consists of up to 4 numbers, each smaller than 256, except the 4th.
+    Therefore, the year must be represented as 'short year'.
 
-    This function calls __discover_version()
+    Examples (depend on git checkout):
+      develop                2016.11.0-742-g5ca4d20     16.11.0.742
+      20166.11 (branch)      2016.11.2-78-gce1f01f      16.11.2.78
+      v20166.11.2 (tag)      2016.11.2                  16.11.2.0
 
-    Examples for checkout and build
-      develop              2016.11.0-742-g5ca4d20   16.11.0.742
-      20166.11      branch 2016.11.2-72-g7611698    16.11.2.72
-      v20166.11.2   tag    2016.11.2                16.11.2       !! PROBLEM: the commit count is missing
-
-    How to checkout and build XYZ:
-    git checkout XYZ, git clean -fxd and C:\git\salt\pkg\windows>build.bat
-
-    How to call:
-      C:\git\salt\pkg\windows>\Python27\python.exe \git\salt\salt\version.py
-      C:\git\salt\pkg\windows>\Python27\python.exe \git\salt\salt\version.py msi
+    Note that the commit count for tags is 0(zero)
     '''
-    dynamic_str = str(__discover_version(__version__))     # try to dynamically update the version from git
-    dynamic_lis = dynamic_str.replace('-', '.').split('.')
-    year4 = dynamic_lis[0]
-    month = dynamic_lis[1]
-    minor = dynamic_lis[2]
-    if len(dynamic_lis) >= 4:
-        commi = dynamic_lis[3]
-    else:
-        commi = '0'         # this is only a quick fix. We need the commit count.
-    msi_conformant_version_assert(year4.isdigit(), dynamic_str + ' must start with a year')
-    msi_conformant_version_assert(month.isdigit(), dynamic_str + ' must have month after year')
-    msi_conformant_version_assert(minor.isdigit(), dynamic_str + ' must have minor after month')
-    msi_conformant_version_assert(commi.isdigit(), dynamic_str + ' must have commits after minor')
-    year2 = year4[2:]
-    msi_conformant_version_assert(int(year2) < 256, dynamic_str + ' year2 must be < 256')
-    msi_conformant_version_assert(int(month) < 256, dynamic_str + ' month must be < 256')
-    msi_conformant_version_assert(int(minor) < 256, dynamic_str + ' minor must be < 256')
-    return year2 + '.' + month + '.' + minor + '.' + commi
+    year2 = int(str(__saltstack_version__.major)[2:])
+    month = __saltstack_version__.minor
+    minor = __saltstack_version__.bugfix
+    commi = __saltstack_version__.noc
+    return '{0}.{1}.{2}.{3}'.format(year2, month, minor, commi)
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == 'msi':
