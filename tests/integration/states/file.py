@@ -643,7 +643,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             '''
             Return a string octal representation of the permissions for name
             '''
-            return oct(os.stat(name).st_mode & 0o777)
+            return salt.utils.normalize_mode(oct(os.stat(name).st_mode & 0o777))
 
         top = os.path.join(integration.TMP, 'top_dir')
         sub = os.path.join(top, 'sub_dir')
