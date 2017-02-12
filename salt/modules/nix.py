@@ -3,13 +3,13 @@
 Work with Nix packages
 ======================
 
-..versionadded:: Nitrogen
+.. versionadded:: Nitrogen
 
 Does not require the machine to be Nixos, just have Nix installed and available to use for the user running this command. Their profile must
-be located in their home, under `$HOME/.nix-profile/`, and the nix store, unless specially set up, should be in `/nix`. To easily use this
+be located in their home, under ``$HOME/.nix-profile/``, and the nix store, unless specially set up, should be in ``/nix``. To easily use this
 with multiple users or a root user, set up the _`nix-daemon`.
 
-This module exposes most of the common nix operations. Currently not meant to be run as a `pkg` module, but explicitly as `nix.*`.
+This module exposes most of the common nix operations. Currently not meant to be run as a ``pkg`` module, but explicitly as ``nix.*``.
 
 For more information on nix, see the `nix documentation`_.
 
@@ -43,7 +43,7 @@ def __virtual__():
 
 def _run(cmd):
     '''
-    Just a convenience function for `__salt__['cmd.run_all'](cmd)`
+    Just a convenience function for ``__salt__['cmd.run_all'](cmd)``
     '''
     return __salt__['cmd.run_all'](cmd, env={'HOME': os.path.expanduser('~{0}'.format(__opts__['user']))})
 
@@ -86,7 +86,7 @@ def _zip_flatten(x, ys):
 def _output_format(out,
                    operation):
     '''
-    gets a list of all the packages that were affected by `operation`, splits it up (there can be multiple packages on a line), and then
+    gets a list of all the packages that were affected by ``operation``, splits it up (there can be multiple packages on a line), and then
     flattens that list. We make it to a list for easier parsing.
     '''
     return [s.split()[1:] for s in out
@@ -95,7 +95,7 @@ def _output_format(out,
 
 def _format_upgrade(s):
     '''
-    split the `upgrade` responses on `' to '`
+    split the ``upgrade`` responses on ``' to '``
     '''
     return s.split(' to ')
 
@@ -111,10 +111,12 @@ def upgrade(*pkgs):
     '''
     Runs an update operation on the specified packages, or all packages if none is specified.
 
-    pkgs
+    :type pkgs: list(str)
+    :param pkgs:
         List of packages to update
 
-    Returns a list fo the upgraded packages. Example element: `['libxslt-1.1.0', 'libxslt-1.1.10']`
+    :return: The upgraded packages. Example element: ``['libxslt-1.1.0', 'libxslt-1.1.10']``
+    :rtype: list(tuple(str, str))
 
     .. code-block:: bash
 
@@ -139,13 +141,15 @@ def install(*pkgs, **kwargs):
     '''
     Installs a single or multiple packages via nix
 
-    pkgs
-        [String], List of packages to update
-    attributes
-        Bool, Pass the list of packages or single package as attribues, not package names.
+    :type pkgs: list(str)
+    :param pkgs:
+        packages to update
+    :param bool attributes:
+        Pass the list of packages or single package as attribues, not package names.
         default: False
 
-    Returns a list of installed packages. Example element: `gcc-3.3.2`
+    :return: Installed packages. Example element: ``gcc-3.3.2``
+    :rtype: list(str)
 
     .. code-block:: bash
 
@@ -179,17 +183,18 @@ def install(*pkgs, **kwargs):
 def list_pkgs(installed=True,
               attributes=True):
     '''
-    Lists installed packages. Due to how nix works, it defaults to just doing a `nix-env -q`.
+    Lists installed packages. Due to how nix works, it defaults to just doing a ``nix-env -q``.
 
-    installed
-        Bool, list only installed packages. This can be a very long list (12,000+ elements), so caution is advised.
-        default: True
+    :param bool installed:
+        list only installed packages. This can be a very long list (12,000+ elements), so caution is advised.
+        Default: True
 
-    attributes
-        Bool, show the attributes of the packages when listing all packages.
-        default: True
+    :param bool attributes:
+        show the attributes of the packages when listing all packages.
+        Default: True
 
-    Returns a list of packages installed or available, along with their attributes.
+    :return: Packages installed or available, along with their attributes.
+    :rtype: list(list(str))
 
     .. code-block:: bash
 
@@ -224,11 +229,15 @@ def list_pkgs(installed=True,
 def uninstall(*pkgs):
     '''
     Erases a package from the current nix profile. Nix uninstalls work differently than other package managers, and the symlinks in the
-    profile are removed, while the actual package remains. There is also a `nix.purge` function, to clear the package cache of unused
+    profile are removed, while the actual package remains. There is also a ``nix.purge`` function, to clear the package cache of unused
     packages.
 
-    pkgs
+    :type pkgs: list(str)
+    :param pkgs:
         List, single package to uninstall
+
+    :return: Packages that have been uninstalled
+    :rtype: list(str)
 
     .. code-block:: bash
 
@@ -253,6 +262,9 @@ def collect_garbage():
     Completely removed all currently 'uninstalled' packages in the nix store.
 
     Tells the user how many store paths were removed and how much space was freed.
+
+    :return: How much space was freed and how many derivations were removed
+    :rtype: str
 
     .. warning::
        This is a destructive action on the nix store.
