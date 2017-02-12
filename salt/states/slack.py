@@ -113,7 +113,7 @@ def post_message(name,
     except SaltInvocationError as sie:
         ret['comment'] = 'Failed to send message ({0}): {1}'.format(sie, name)
     else:
-        if isinstance(result, bool) and result:
+        if isinstance(result.get('res'), bool) and result:
             ret['result'] = True
             ret['comment'] = 'Sent message: {0}'.format(name)
         else:

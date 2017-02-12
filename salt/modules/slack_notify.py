@@ -237,10 +237,7 @@ def post_message(channel,
                                     data=_urlencode(parameters),
                                     opts=__opts__)
 
-    if result['res']:
-        return True
-    else:
-        return result
+    return result
 
 
 def call_hook(message,
