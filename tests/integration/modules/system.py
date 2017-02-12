@@ -3,7 +3,9 @@
 # Import python libs
 from __future__ import absolute_import
 import datetime
+import logging
 import os
+import signal
 import subprocess
 
 # Import Salt Testing libs
@@ -12,6 +14,7 @@ from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath
 )
+from salt.ext.six.moves import range
 
 ensure_in_syspath('../../')
 
@@ -19,6 +22,8 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 import salt.states.file
+
+log = logging.getLogger(__name__)
 
 
 @skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
@@ -93,29 +98,50 @@ class SystemModuleTest(integration.ModuleCase):
         if not self._hwclock_has_compare():
             return None
 
-        rpipeFd, wpipeFd = os.pipe()
-        with os.fdopen(rpipeFd, "r") as rpipe:
-            with os.fdopen(wpipeFd, "w") as wpipe:
-                with open(os.devnull, "r") as nulFd:
-                    p = subprocess.Popen(args=['hwclock', '--compare'],
-                        stdin=nulFd, stdout=wpipeFd, stderr=subprocess.PIPE)
+        class CompareTimeout(BaseException):
+            pass
 
-                    # read header
-                    rpipe.readline()
+        def _alrm_handler(sig, frame):
+            log.warning('hwclock --compare failed to produce output after 3 seconds')
+            raise CompareTimeout
 
-                    # read first time comparison
-                    timeCompStr = rpipe.readline()
+        for _ in range(2):
+            try:
+                orig_handler = signal.signal(signal.SIGALRM, _alrm_handler)
+                signal.alarm(3)
+                rpipeFd, wpipeFd = os.pipe()
+                log.debug('Comparing hwclock to sys clock')
+                with os.fdopen(rpipeFd, "r") as rpipe:
+                    with os.fdopen(wpipeFd, "w") as wpipe:
+                        with open(os.devnull, "r") as nulFd:
+                            p = subprocess.Popen(args=['hwclock', '--compare'],
+                                stdin=nulFd, stdout=wpipeFd, stderr=subprocess.PIPE)
+                            p.communicate()
 
-                    # stop
-                    p.terminate()
+                            # read header
+                            rpipe.readline()
 
-                    timeComp = timeCompStr.split()
-                    hwTime = float(timeComp[0])
-                    swTime = float(timeComp[1])
-                    diff = abs(hwTime - swTime)
+                            # read first time comparison
+                            timeCompStr = rpipe.readline()
 
-                    self.assertTrue(diff <= 2.0,
-                        msg=("hwclock difference too big: " + str(timeCompStr)))
+                            # stop
+                            p.terminate()
+
+                            timeComp = timeCompStr.split()
+                            hwTime = float(timeComp[0])
+                            swTime = float(timeComp[1])
+                            diff = abs(hwTime - swTime)
+
+                            self.assertTrue(diff <= 2.0,
+                                msg=("hwclock difference too big: " + str(timeCompStr)))
+                            break
+            except CompareTimeout:
+                p.terminate()
+            finally:
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, orig_handler)
+        else:
+            log.error('Failed to check hwclock sync')
 
     def _save_machine_info(self):
         if os.path.isfile('/etc/machine-info'):
@@ -161,13 +187,11 @@ class SystemModuleTest(integration.ModuleCase):
         Test changing the system clock. We are only able to set it up to a
         resolution of a second so this test may appear to run in negative time.
         '''
-        cmp_time = datetime.datetime.strptime("1981-02-03 04:05:06",
-                                              self.fmt_str)
-
         self._save_time()
+        cmp_time = datetime.datetime.now() - datetime.timedelta(days=7)
         result = self._set_time(cmp_time)
-
         time_now = datetime.datetime.now()
+
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(time_now, cmp_time))
         self.assertTrue(result and self._same_times(time_now, cmp_time),
@@ -181,12 +205,11 @@ class SystemModuleTest(integration.ModuleCase):
         Test changing the system clock. We are only able to set it up to a
         resolution of a second so this test may appear to run in negative time.
         '''
-        cmp_time = datetime.datetime.strptime("1981-02-03 04:05:06", self.fmt_str)
-
         self._save_time()
+        cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
         result = self._set_time(cmp_time, offset="+0000")
-
         time_now = datetime.datetime.utcnow()
+
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(time_now, cmp_time))
         self.assertTrue(result)
@@ -200,17 +223,13 @@ class SystemModuleTest(integration.ModuleCase):
         Test changing the system clock. We are only able to set it up to a
         resolution of a second so this test may appear to run in negative time.
         '''
-        cmp_time = datetime.datetime.strptime("1981-02-03 11:05:06",
-                                              self.fmt_str)
-        offset_str = "-0700"
-        time_to_set = datetime.datetime.strptime("1981-02-03 04:05:06",
-                                                 self.fmt_str)
-
         self._save_time()
-
-        result = self._set_time(time_to_set, offset=offset_str)
-
+        cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+        # 25200 seconds = 7 hours
+        time_to_set = cmp_time - datetime.timedelta(seconds=25200)
+        result = self._set_time(time_to_set, offset='-0700')
         time_now = datetime.datetime.utcnow()
+
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(time_now, cmp_time))
         self.assertTrue(result)
@@ -224,16 +243,13 @@ class SystemModuleTest(integration.ModuleCase):
         Test changing the system clock. We are only able to set it up to a
         resolution of a second so this test may appear to run in negative time.
         '''
-        cmp_time = datetime.datetime.strptime("1981-02-03 02:05:06",
-                                                     self.fmt_str)
-        offset_str = "+0200"
-        time_to_set = datetime.datetime.strptime("1981-02-03 04:05:06",
-                                                 self.fmt_str)
-
         self._save_time()
-        result = self._set_time(time_to_set, offset=offset_str)
-
+        cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+        # 7200 seconds = 2 hours
+        time_to_set = cmp_time + datetime.timedelta(seconds=7200)
+        result = self._set_time(time_to_set, offset='+0200')
         time_now = datetime.datetime.utcnow()
+
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(time_now, cmp_time))
         self.assertTrue(result)
@@ -265,10 +281,13 @@ class SystemModuleTest(integration.ModuleCase):
         '''
         Test setting the system date without adjusting the time.
         '''
-        cmp_time = datetime.datetime.now().replace(year=2000, month=12, day=25)
+        cmp_time = datetime.datetime.now() - datetime.timedelta(days=7)
 
         self._save_time()
-        result = self.run_function('system.set_system_date', ["2000-12-25"])
+        result = self.run_function(
+            'system.set_system_date',
+            [cmp_time.strftime('%Y-%m-%d')]
+        )
 
         time_now = datetime.datetime.now()
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
