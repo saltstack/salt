@@ -185,7 +185,7 @@ def post_message(channel,
     :param message:     The message to send to the Slack channel.
     :param from_name:   Specify who the message is from.
     :param api_key:     The Slack api key, if not specified in the configuration.
-    :param icon:        URL to an image to use as the icon for this message
+    :param icon:        URL to an image to use as the icon for this message or an emoji code such as ``:simple_smile:``
     :return:            Boolean if message was sent successfully.
 
     CLI Example:
@@ -222,7 +222,10 @@ def post_message(channel,
     }
 
     if icon is not None:
-        parameters['icon_url'] = icon
+        if icon.startswith(':') and icon.endswith(':'):
+            parameters['icon_emoji'] = icon
+        else:
+            parameters['icon_url'] = icon
 
     # Slack wants the body on POST to be urlencoded.
     result = salt.utils.slack.query(function='message',
