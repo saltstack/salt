@@ -43,7 +43,13 @@ def query(function,
     :param function:    The Slack api function to perform.
     :param method:      The HTTP method, e.g. GET or POST.
     :param data:        The data to be sent for POST method.
-    :return:            The json response from the API call or False.
+    :return:            A dictionary containing:
+                          - message: the shortened result of the corresponding function
+                              - channels.list:    a list of limited channel objects
+                              - users.list:       a list of user objects in no particular order
+                              - chat.postMessage: the `message` object of the sent message
+                          - res:      a boolean indicating success/failure
+                          - response: the full JSON response from the Slack API
     '''
     query_params = {}
 
