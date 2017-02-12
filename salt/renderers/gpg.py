@@ -217,12 +217,12 @@ from subprocess import Popen, PIPE
 
 # Import salt libs
 import salt.utils
+import salt.utils.stringio
 import salt.syspaths
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six.moves import cStringIO
 
 log = logging.getLogger(__name__)
 
@@ -279,7 +279,7 @@ def _decrypt_object(obj, translate_newlines=False):
     (string or unicode), and it contains a valid GPG header, decrypt it,
     otherwise keep going until a string is found.
     '''
-    if isinstance(obj, cStringIO.InputType):
+    if salt.utils.stringio.is_readable(obj):
         return _decrypt_object(obj.getvalue(), translate_newlines)
     if isinstance(obj, six.string_types):
         if GPG_HEADER.search(obj):

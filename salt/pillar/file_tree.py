@@ -175,11 +175,8 @@ import salt.loader
 import salt.utils
 import salt.utils.dictupdate
 import salt.utils.minions
+import salt.utils.stringio
 import salt.template
-
-# Import 3rd-party libs
-from salt.ext.six.moves import cStringIO
-
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -275,7 +272,7 @@ def _construct_pillar(top_dir,
                                                           default=render_default,
                                                           blacklist=renderer_blacklist,
                                                           whitelist=renderer_whitelist)
-                if isinstance(data, cStringIO.InputType):
+                if salt.utils.stringio.is_readable(data):
                     pillar_node[file_name] = data.getvalue()
                 else:
                     pillar_node[file_name] = data
