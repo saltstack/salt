@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Unit tests for the dockerng state
+Unit tests for the docker state
 '''
 
 # Import Python Libs
@@ -22,46 +22,46 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
-from salt.modules import dockerng as dockerng_mod
-from salt.states import dockerng as dockerng_state
+from salt.modules import docker as docker_mod
+from salt.states import docker as docker_state
 
-dockerng_mod.__context__ = {'docker.docker_version': ''}
-dockerng_mod.__salt__ = {}
-dockerng_state.__context__ = {}
-dockerng_state.__opts__ = {'test': False}
+docker_mod.__context__ = {'docker.docker_version': ''}
+docker_mod.__salt__ = {}
+docker_state.__context__ = {}
+docker_state.__opts__ = {'test': False}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DockerngTestCase(TestCase):
+class DockerTestCase(TestCase):
     '''
-    Validate dockerng state
+    Validate docker state
     '''
 
     def test_running_with_no_predifined_volume(self):
         '''
-        Test dockerng.running function with an image
+        Test docker.running function with an image
         that doens't have VOLUME defined.
 
         The ``binds`` argument, should create a container
         with respective volumes extracted from ``binds``.
         '''
-        dockerng_create = Mock()
-        dockerng_start = Mock()
-        __salt__ = {'dockerng.list_containers': MagicMock(),
-                    'dockerng.list_tags': MagicMock(),
-                    'dockerng.pull': MagicMock(),
-                    'dockerng.state': MagicMock(),
-                    'dockerng.inspect_image': MagicMock(),
-                    'dockerng.create': dockerng_create,
-                    'dockerng.start': dockerng_start,
+        docker_create = Mock()
+        docker_start = Mock()
+        __salt__ = {'docker.list_containers': MagicMock(),
+                    'docker.list_tags': MagicMock(),
+                    'docker.pull': MagicMock(),
+                    'docker.state': MagicMock(),
+                    'docker.inspect_image': MagicMock(),
+                    'docker.create': docker_create,
+                    'docker.start': docker_start,
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            dockerng_state.running(
+            docker_state.running(
                 'cont',
                 image='image:latest',
                 binds=['/host-0:/container-0:ro'])
-        dockerng_create.assert_called_with(
+        docker_create.assert_called_with(
             'image:latest',
             validate_input=False,
             name='cont',
@@ -69,37 +69,37 @@ class DockerngTestCase(TestCase):
             volumes=['/container-0'],
             validate_ip_addrs=False,
             client_timeout=60)
-        dockerng_start.assert_called_with('cont')
+        docker_start.assert_called_with('cont')
 
     def test_running_with_predifined_volume(self):
         '''
-        Test dockerng.running function with an image
+        Test docker.running function with an image
         that already have VOLUME defined.
 
         The ``binds`` argument, should create a container
         with ``volumes`` extracted from ``binds``.
         '''
-        dockerng_create = Mock()
-        dockerng_start = Mock()
-        dockerng_inspect_image = Mock(return_value={
+        docker_create = Mock()
+        docker_start = Mock()
+        docker_inspect_image = Mock(return_value={
             'Id': 'abcd',
             'Config': {'Config': {'Volumes': ['/host-1']}},
         })
-        __salt__ = {'dockerng.list_containers': MagicMock(),
-                    'dockerng.list_tags': MagicMock(),
-                    'dockerng.pull': MagicMock(),
-                    'dockerng.state': MagicMock(),
-                    'dockerng.inspect_image': dockerng_inspect_image,
-                    'dockerng.create': dockerng_create,
-                    'dockerng.start': dockerng_start,
+        __salt__ = {'docker.list_containers': MagicMock(),
+                    'docker.list_tags': MagicMock(),
+                    'docker.pull': MagicMock(),
+                    'docker.state': MagicMock(),
+                    'docker.inspect_image': docker_inspect_image,
+                    'docker.create': docker_create,
+                    'docker.start': docker_start,
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            dockerng_state.running(
+            docker_state.running(
                 'cont',
                 image='image:latest',
                 binds=['/host-0:/container-0:ro'])
-        dockerng_create.assert_called_with(
+        docker_create.assert_called_with(
             'image:latest',
             validate_input=False,
             binds={'/host-0': {'bind': '/container-0', 'ro': True}},
@@ -107,37 +107,37 @@ class DockerngTestCase(TestCase):
             validate_ip_addrs=False,
             name='cont',
             client_timeout=60)
-        dockerng_start.assert_called_with('cont')
+        docker_start.assert_called_with('cont')
 
     def test_running_with_no_predifined_ports(self):
         '''
-        Test dockerng.running function with an image
+        Test docker.running function with an image
         that doens't have EXPOSE defined.
 
         The ``port_bindings`` argument, should create a container
         with ``ports`` extracted from ``port_bindings``.
         '''
-        dockerng_create = Mock()
-        dockerng_start = Mock()
-        dockerng_inspect_image = Mock(return_value={
+        docker_create = Mock()
+        docker_start = Mock()
+        docker_inspect_image = Mock(return_value={
             'Id': 'abcd',
             'Config': {'Config': {'ExposedPorts': {}}},
         })
-        __salt__ = {'dockerng.list_containers': MagicMock(),
-                    'dockerng.list_tags': MagicMock(),
-                    'dockerng.pull': MagicMock(),
-                    'dockerng.state': MagicMock(),
-                    'dockerng.inspect_image': dockerng_inspect_image,
-                    'dockerng.create': dockerng_create,
-                    'dockerng.start': dockerng_start,
+        __salt__ = {'docker.list_containers': MagicMock(),
+                    'docker.list_tags': MagicMock(),
+                    'docker.pull': MagicMock(),
+                    'docker.state': MagicMock(),
+                    'docker.inspect_image': docker_inspect_image,
+                    'docker.create': docker_create,
+                    'docker.start': docker_start,
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            dockerng_state.running(
+            docker_state.running(
                 'cont',
                 image='image:latest',
                 port_bindings=['9090:9797/tcp'])
-        dockerng_create.assert_called_with(
+        docker_create.assert_called_with(
             'image:latest',
             validate_input=False,
             name='cont',
@@ -145,11 +145,11 @@ class DockerngTestCase(TestCase):
             port_bindings={9797: [9090]},
             validate_ip_addrs=False,
             client_timeout=60)
-        dockerng_start.assert_called_with('cont')
+        docker_start.assert_called_with('cont')
 
     def test_running_with_predifined_ports(self):
         '''
-        Test dockerng.running function with an image
+        Test docker.running function with an image
         that expose ports (via Dockerfile EXPOSE statement).
 
         Check that `ports` contains ports defined on Image and by
@@ -166,32 +166,32 @@ class DockerngTestCase(TestCase):
         .. code-block:: yaml
 
             container:
-                dockerng.running:
+                docker.running:
                     - port_bindings:
                         - '9090:9797/tcp'
 
         '''
-        dockerng_create = Mock()
-        dockerng_start = Mock()
-        dockerng_inspect_image = Mock(return_value={
+        docker_create = Mock()
+        docker_start = Mock()
+        docker_inspect_image = Mock(return_value={
             'Id': 'abcd',
             'Config': {'ExposedPorts': {'9898/tcp': {}}}
         })
-        __salt__ = {'dockerng.list_containers': MagicMock(),
-                    'dockerng.list_tags': MagicMock(),
-                    'dockerng.pull': MagicMock(),
-                    'dockerng.state': MagicMock(),
-                    'dockerng.inspect_image': dockerng_inspect_image,
-                    'dockerng.create': dockerng_create,
-                    'dockerng.start': dockerng_start,
+        __salt__ = {'docker.list_containers': MagicMock(),
+                    'docker.list_tags': MagicMock(),
+                    'docker.pull': MagicMock(),
+                    'docker.state': MagicMock(),
+                    'docker.inspect_image': docker_inspect_image,
+                    'docker.create': docker_create,
+                    'docker.start': docker_start,
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            dockerng_state.running(
+            docker_state.running(
                 'cont',
                 image='image:latest',
                 port_bindings=['9090:9797/tcp'])
-        dockerng_create.assert_called_with(
+        docker_create.assert_called_with(
             'image:latest',
             validate_input=False,
             name='cont',
@@ -199,7 +199,7 @@ class DockerngTestCase(TestCase):
             port_bindings={9797: [9090]},
             validate_ip_addrs=False,
             client_timeout=60)
-        dockerng_start.assert_called_with('cont')
+        docker_start.assert_called_with('cont')
 
     def test_running_with_udp_bindings(self):
         '''
@@ -214,7 +214,7 @@ class DockerngTestCase(TestCase):
         .. code-block:: yaml
 
             container:
-                dockerng.running:
+                docker.running:
                     - port_bindings:
                         - '9090:9797/udp'
 
@@ -223,33 +223,33 @@ class DockerngTestCase(TestCase):
         .. code-block:: yaml
 
             container:
-                dockerng.running:
+                docker.running:
                     - ports:
                         - 9797/udp
                     - port_bindings:
                         - '9090:9797/udp'
         '''
-        dockerng_create = Mock()
-        dockerng_start = Mock()
-        dockerng_inspect_image = Mock(return_value={
+        docker_create = Mock()
+        docker_start = Mock()
+        docker_inspect_image = Mock(return_value={
             'Id': 'abcd',
             'Config': {'ExposedPorts': {}}
         })
-        __salt__ = {'dockerng.list_containers': MagicMock(),
-                    'dockerng.list_tags': MagicMock(),
-                    'dockerng.pull': MagicMock(),
-                    'dockerng.state': MagicMock(),
-                    'dockerng.inspect_image': dockerng_inspect_image,
-                    'dockerng.create': dockerng_create,
-                    'dockerng.start': dockerng_start,
+        __salt__ = {'docker.list_containers': MagicMock(),
+                    'docker.list_tags': MagicMock(),
+                    'docker.pull': MagicMock(),
+                    'docker.state': MagicMock(),
+                    'docker.inspect_image': docker_inspect_image,
+                    'docker.create': docker_create,
+                    'docker.start': docker_start,
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            dockerng_state.running(
+            docker_state.running(
                 'cont',
                 image='image:latest',
                 port_bindings=['9090:9797/udp'])
-        dockerng_create.assert_called_with(
+        docker_create.assert_called_with(
             'image:latest',
             validate_input=False,
             name='cont',
@@ -257,7 +257,7 @@ class DockerngTestCase(TestCase):
             port_bindings={'9797/udp': [9090]},
             validate_ip_addrs=False,
             client_timeout=60)
-        dockerng_start.assert_called_with('cont')
+        docker_start.assert_called_with('cont')
 
     def test_running_compare_images_by_id(self):
         '''
@@ -272,33 +272,33 @@ class DockerngTestCase(TestCase):
         '''
         new_fake_image_id = 'abcdefgh'
         old_fake_image_id = '123456789'
-        dockerng_inspect_image = Mock(return_value={'Id': new_fake_image_id})
-        dockerng_inspect_container = Mock(
+        docker_inspect_image = Mock(return_value={'Id': new_fake_image_id})
+        docker_inspect_container = Mock(
             return_value={'Image': old_fake_image_id,
                           'Config': {'Image': 'image:latest'}})
-        dockerng_list_containers = Mock(return_value=['cont'])
-        dockerng__state = Mock(return_value='running')
-        dockerng_stop = Mock(return_value={'result': True})
-        dockerng_rm = Mock(return_value=['container-id'])
-        __salt__ = {'dockerng.list_containers': dockerng_list_containers,
-                    'dockerng.inspect_container': dockerng_inspect_container,
-                    'dockerng.inspect_image': dockerng_inspect_image,
-                    'dockerng.list_tags': MagicMock(),
-                    'dockerng.state': dockerng__state,
-                    'dockerng.pull': MagicMock(return_value=new_fake_image_id),
-                    'dockerng.create': MagicMock(return_value='new_container'),
-                    'dockerng.start': MagicMock(),
-                    'dockerng.stop': dockerng_stop,
-                    'dockerng.rm': dockerng_rm,
+        docker_list_containers = Mock(return_value=['cont'])
+        docker__state = Mock(return_value='running')
+        docker_stop = Mock(return_value={'result': True})
+        docker_rm = Mock(return_value=['container-id'])
+        __salt__ = {'docker.list_containers': docker_list_containers,
+                    'docker.inspect_container': docker_inspect_container,
+                    'docker.inspect_image': docker_inspect_image,
+                    'docker.list_tags': MagicMock(),
+                    'docker.state': docker__state,
+                    'docker.pull': MagicMock(return_value=new_fake_image_id),
+                    'docker.create': MagicMock(return_value='new_container'),
+                    'docker.start': MagicMock(),
+                    'docker.stop': docker_stop,
+                    'docker.rm': docker_rm,
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.running(
+            ret = docker_state.running(
                 'cont',
                 image='image:latest',
                 )
-            dockerng_stop.assert_called_with('cont', timeout=10, unpause=True)
-            dockerng_rm.assert_called_with('cont')
+            docker_stop.assert_called_with('cont', timeout=10, unpause=True)
+            docker_rm.assert_called_with('cont')
         self.assertEqual(ret, {'name': 'cont',
                                'comment': "Container 'cont' was replaced",
                                'result': True,
@@ -314,30 +314,30 @@ class DockerngTestCase(TestCase):
         .. code-block:: yaml
 
             image:latest:
-              dockerng.image_present:
+              docker.image_present:
                 - force: true
 
         if ``image:latest`` is already downloaded locally the state
         should not report changes.
         '''
-        dockerng_inspect_image = Mock(
+        docker_inspect_image = Mock(
             return_value={'Id': 'abcdefghijk'})
-        dockerng_pull = Mock(
+        docker_pull = Mock(
             return_value={'Layers':
                           {'Already_Pulled': ['abcdefghijk'],
                            'Pulled': []},
                           'Status': 'Image is up to date for image:latest',
                           'Time_Elapsed': 1.1})
-        dockerng_list_tags = Mock(
+        docker_list_tags = Mock(
             return_value=['image:latest']
         )
-        __salt__ = {'dockerng.list_tags': dockerng_list_tags,
-                    'dockerng.pull': dockerng_pull,
-                    'dockerng.inspect_image': dockerng_inspect_image,
+        __salt__ = {'docker.list_tags': docker_list_tags,
+                    'docker.pull': docker_pull,
+                    'docker.inspect_image': docker_inspect_image,
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.image_present('image:latest', force=True)
+            ret = docker_state.image_present('image:latest', force=True)
             self.assertEqual(ret,
                              {'changes': {},
                               'result': True,
@@ -353,31 +353,31 @@ class DockerngTestCase(TestCase):
         .. code-block:: yaml
 
             image:latest:
-              dockerng.image_present:
+              docker.image_present:
                 - force: true
 
         if ``image:latest`` is not downloaded and force is true
         should pull a new image successfuly.
         '''
-        dockerng_inspect_image = Mock(
+        docker_inspect_image = Mock(
             side_effect=CommandExecutionError(
                 'Error 404: No such image/container: image:latest'))
-        dockerng_pull = Mock(
+        docker_pull = Mock(
             return_value={'Layers':
                           {'Already_Pulled': ['abcdefghijk'],
                            'Pulled': ['abcdefghijk']},
                           'Status': "Image 'image:latest' was pulled",
                           'Time_Elapsed': 1.1})
-        dockerng_list_tags = Mock(
+        docker_list_tags = Mock(
             side_effect=[[], ['image:latest']]
         )
-        __salt__ = {'dockerng.list_tags': dockerng_list_tags,
-                    'dockerng.pull': dockerng_pull,
-                    'dockerng.inspect_image': dockerng_inspect_image,
+        __salt__ = {'docker.list_tags': docker_list_tags,
+                    'docker.pull': docker_pull,
+                    'docker.inspect_image': docker_inspect_image,
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.image_present('image:latest', force=True)
+            ret = docker_state.image_present('image:latest', force=True)
         self.assertEqual(ret,
                          {'changes': {
                              'Layers': {'Already_Pulled': ['abcdefghijk'],
@@ -391,14 +391,14 @@ class DockerngTestCase(TestCase):
 
     def test_check_start_false(self):
         '''
-        If start is False, then dockerng.running will not try
+        If start is False, then docker.running will not try
         to start a container that is stopped.
         '''
         image_id = 'abcdefg'
-        dockerng_create = Mock()
-        dockerng_start = Mock()
-        dockerng_list_containers = Mock(return_value=['cont'])
-        dockerng_inspect_container = Mock(
+        docker_create = Mock()
+        docker_start = Mock()
+        docker_list_containers = Mock(return_value=['cont'])
+        docker_inspect_container = Mock(
             return_value={
                 'Config': {
                     'Image': 'image:latest',
@@ -442,7 +442,7 @@ class DockerngTestCase(TestCase):
                     'MacAddress': '00:00:00:00:00:01',
                 },
                 'Image': image_id})
-        dockerng_inspect_image = MagicMock(
+        docker_inspect_image = MagicMock(
             return_value={
                 'Id': image_id,
                 'Config': {
@@ -454,20 +454,20 @@ class DockerngTestCase(TestCase):
                     'ExposedPorts': {},
                 },
                 })
-        __salt__ = {'dockerng.list_containers': dockerng_list_containers,
-                    'dockerng.inspect_container': dockerng_inspect_container,
-                    'dockerng.inspect_image': dockerng_inspect_image,
-                    'dockerng.list_tags': MagicMock(
+        __salt__ = {'docker.list_containers': docker_list_containers,
+                    'docker.inspect_container': docker_inspect_container,
+                    'docker.inspect_image': docker_inspect_image,
+                    'docker.list_tags': MagicMock(
                         return_value=['image:latest']),
-                    'dockerng.pull': MagicMock(),
-                    'dockerng.state': MagicMock(side_effect=['stopped',
+                    'docker.pull': MagicMock(),
+                    'docker.state': MagicMock(side_effect=['stopped',
                                                              'running']),
-                    'dockerng.create': dockerng_create,
-                    'dockerng.start': dockerng_start,
+                    'docker.create': docker_create,
+                    'docker.start': docker_start,
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.running(
+            ret = docker_state.running(
                 'cont',
                 image='image:latest',
                 start=False,
@@ -481,14 +481,14 @@ class DockerngTestCase(TestCase):
 
     def test_check_start_true(self):
         '''
-        If start is True, then dockerng.running will try
+        If start is True, then docker.running will try
         to start a container that is stopped.
         '''
         image_id = 'abcdefg'
-        dockerng_create = Mock()
-        dockerng_start = Mock()
-        dockerng_list_containers = Mock(return_value=['cont'])
-        dockerng_inspect_container = Mock(
+        docker_create = Mock()
+        docker_start = Mock()
+        docker_list_containers = Mock(return_value=['cont'])
+        docker_inspect_container = Mock(
             return_value={
                 'Config': {
                     'Image': 'image:latest',
@@ -532,7 +532,7 @@ class DockerngTestCase(TestCase):
                     'MacAddress': '00:00:00:00:00:01',
                 },
                 'Image': image_id})
-        dockerng_inspect_image = MagicMock(
+        docker_inspect_image = MagicMock(
             return_value={
                 'Id': image_id,
                 'Config': {
@@ -544,19 +544,19 @@ class DockerngTestCase(TestCase):
                     'ExposedPorts': {},
                 },
                 })
-        __salt__ = {'dockerng.list_containers': dockerng_list_containers,
-                    'dockerng.inspect_container': dockerng_inspect_container,
-                    'dockerng.inspect_image': dockerng_inspect_image,
-                    'dockerng.list_tags': MagicMock(),
-                    'dockerng.pull': MagicMock(return_value=True),
-                    'dockerng.state': MagicMock(side_effect=['stopped',
+        __salt__ = {'docker.list_containers': docker_list_containers,
+                    'docker.inspect_container': docker_inspect_container,
+                    'docker.inspect_image': docker_inspect_image,
+                    'docker.list_tags': MagicMock(),
+                    'docker.pull': MagicMock(return_value=True),
+                    'docker.state': MagicMock(side_effect=['stopped',
                                                              'running']),
-                    'dockerng.create': dockerng_create,
-                    'dockerng.start': dockerng_start,
+                    'docker.create': docker_create,
+                    'docker.start': docker_start,
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.running(
+            ret = docker_state.running(
                 'cont',
                 image='image:latest',
                 start=True,
@@ -577,7 +577,7 @@ class DockerngTestCase(TestCase):
         .. code-block:: yaml
 
             container:
-                dockerng.running:
+                docker.running:
                     - environment:
                         - KEY: 1
 
@@ -586,23 +586,23 @@ class DockerngTestCase(TestCase):
         .. code-block:: yaml
 
             container:
-                dockerng.running:
+                docker.running:
                     - environment:
                         - KEY: "1"
         '''
-        __salt__ = {'dockerng.list_containers': MagicMock(),
-                    'dockerng.list_tags': MagicMock(
+        __salt__ = {'docker.list_containers': MagicMock(),
+                    'docker.list_tags': MagicMock(
                         return_value=['image:latest']),
-                    'dockerng.inspect_image': MagicMock(),
-                    'dockerng.pull': MagicMock(),
-                    'dockerng.state': MagicMock(),
-                    'dockerng.create': MagicMock(),
-                    'dockerng.start': MagicMock(),
+                    'docker.inspect_image': MagicMock(),
+                    'docker.pull': MagicMock(),
+                    'docker.state': MagicMock(),
+                    'docker.create': MagicMock(),
+                    'docker.start': MagicMock(),
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
             for wrong_value in (1, .2, (), [], {}):
-                ret = dockerng_state.running(
+                ret = docker_state.running(
                     'cont',
                     image='image:latest',
                     environment=[{'KEY': wrong_value}])
@@ -615,24 +615,24 @@ class DockerngTestCase(TestCase):
 
     def test_running_with_labels(self):
         '''
-        Test dockerng.running with labels parameter.
+        Test docker.running with labels parameter.
         '''
-        dockerng_create = Mock()
-        __salt__ = {'dockerng.list_containers': MagicMock(),
-                    'dockerng.list_tags': MagicMock(),
-                    'dockerng.pull': MagicMock(),
-                    'dockerng.state': MagicMock(),
-                    'dockerng.inspect_image': MagicMock(),
-                    'dockerng.create': dockerng_create,
+        docker_create = Mock()
+        __salt__ = {'docker.list_containers': MagicMock(),
+                    'docker.list_tags': MagicMock(),
+                    'docker.pull': MagicMock(),
+                    'docker.state': MagicMock(),
+                    'docker.inspect_image': MagicMock(),
+                    'docker.create': docker_create,
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            dockerng_state.running(
+            docker_state.running(
                 'cont',
                 image='image:latest',
                 labels=['LABEL1', 'LABEL2'],
                 )
-        dockerng_create.assert_called_with(
+        docker_create.assert_called_with(
             'image:latest',
             validate_input=False,
             validate_ip_addrs=False,
@@ -642,13 +642,13 @@ class DockerngTestCase(TestCase):
 
     def test_running_with_labels_from_image(self):
         '''
-        Test dockerng.running with labels parameter supports also
+        Test docker.running with labels parameter supports also
         labels carried by the image.
         '''
-        dockerng_create = Mock()
+        docker_create = Mock()
 
         image_id = 'a' * 128
-        dockerng_inspect_image = MagicMock(
+        docker_inspect_image = MagicMock(
             return_value={
                 'Id': image_id,
                 'Config': {
@@ -662,21 +662,21 @@ class DockerngTestCase(TestCase):
                                'LABEL1': 'label1'},
                 },
                 })
-        __salt__ = {'dockerng.list_containers': MagicMock(),
-                    'dockerng.list_tags': MagicMock(),
-                    'dockerng.pull': MagicMock(),
-                    'dockerng.state': MagicMock(),
-                    'dockerng.inspect_image': dockerng_inspect_image,
-                    'dockerng.create': dockerng_create,
+        __salt__ = {'docker.list_containers': MagicMock(),
+                    'docker.list_tags': MagicMock(),
+                    'docker.pull': MagicMock(),
+                    'docker.state': MagicMock(),
+                    'docker.inspect_image': docker_inspect_image,
+                    'docker.create': docker_create,
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            dockerng_state.running(
+            docker_state.running(
                 'cont',
                 image='image:latest',
                 labels=[{'LABEL1': 'foo1'}, {'LABEL2': 'foo2'}],
                 )
-        dockerng_create.assert_called_with(
+        docker_create.assert_called_with(
             'image:latest',
             validate_input=False,
             validate_ip_addrs=False,
@@ -686,24 +686,24 @@ class DockerngTestCase(TestCase):
 
     def test_network_present(self):
         '''
-        Test dockerng.network_present
+        Test docker.network_present
         '''
-        dockerng_create_network = Mock(return_value='created')
-        dockerng_connect_container_to_network = Mock(return_value='connected')
-        dockerng_inspect_container = Mock(return_value={'Id': 'abcd'})
-        __salt__ = {'dockerng.create_network': dockerng_create_network,
-                    'dockerng.inspect_container': dockerng_inspect_container,
-                    'dockerng.connect_container_to_network': dockerng_connect_container_to_network,
-                    'dockerng.networks': Mock(return_value=[]),
+        docker_create_network = Mock(return_value='created')
+        docker_connect_container_to_network = Mock(return_value='connected')
+        docker_inspect_container = Mock(return_value={'Id': 'abcd'})
+        __salt__ = {'docker.create_network': docker_create_network,
+                    'docker.inspect_container': docker_inspect_container,
+                    'docker.connect_container_to_network': docker_connect_container_to_network,
+                    'docker.networks': Mock(return_value=[]),
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.network_present(
+            ret = docker_state.network_present(
                 'network_foo',
                 containers=['container'],
                 )
-        dockerng_create_network.assert_called_with('network_foo', driver=None)
-        dockerng_connect_container_to_network.assert_called_with('abcd',
+        docker_create_network.assert_called_with('network_foo', driver=None)
+        docker_connect_container_to_network.assert_called_with('abcd',
                                                                  'network_foo')
         self.assertEqual(ret, {'name': 'network_foo',
                                'comment': '',
@@ -713,22 +713,22 @@ class DockerngTestCase(TestCase):
 
     def test_network_absent(self):
         '''
-        Test dockerng.network_absent
+        Test docker.network_absent
         '''
-        dockerng_remove_network = Mock(return_value='removed')
-        dockerng_disconnect_container_from_network = Mock(return_value='disconnected')
-        __salt__ = {'dockerng.remove_network': dockerng_remove_network,
-                    'dockerng.disconnect_container_from_network': dockerng_disconnect_container_from_network,
-                    'dockerng.networks': Mock(return_value=[{'Containers': {'container': {}}}]),
+        docker_remove_network = Mock(return_value='removed')
+        docker_disconnect_container_from_network = Mock(return_value='disconnected')
+        __salt__ = {'docker.remove_network': docker_remove_network,
+                    'docker.disconnect_container_from_network': docker_disconnect_container_from_network,
+                    'docker.networks': Mock(return_value=[{'Containers': {'container': {}}}]),
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.network_absent(
+            ret = docker_state.network_absent(
                 'network_foo',
                 )
-        dockerng_disconnect_container_from_network.assert_called_with('container',
+        docker_disconnect_container_from_network.assert_called_with('container',
                                                                       'network_foo')
-        dockerng_remove_network.assert_called_with('network_foo')
+        docker_remove_network.assert_called_with('network_foo')
         self.assertEqual(ret, {'name': 'network_foo',
                                'comment': '',
                                'changes': {'disconnected': 'disconnected',
@@ -737,7 +737,7 @@ class DockerngTestCase(TestCase):
 
     def test_volume_present(self):
         '''
-        Test dockerng.volume_present
+        Test docker.volume_present
         '''
         volumes = []
         default_driver = 'dummy_default'
@@ -762,17 +762,17 @@ class DockerngTestCase(TestCase):
             volumes.remove(removed[0])
             return removed[0]
 
-        dockerng_create_volume = Mock(side_effect=create_volume)
-        __salt__ = {'dockerng.create_volume': dockerng_create_volume,
-                    'dockerng.volumes': Mock(return_value={'Volumes': volumes}),
-                    'dockerng.remove_volume': Mock(side_effect=remove_volume),
+        docker_create_volume = Mock(side_effect=create_volume)
+        __salt__ = {'docker.create_volume': docker_create_volume,
+                    'docker.volumes': Mock(return_value={'Volumes': volumes}),
+                    'docker.remove_volume': Mock(side_effect=remove_volume),
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.volume_present(
+            ret = docker_state.volume_present(
                 'volume_foo',
                 )
-            dockerng_create_volume.assert_called_with('volume_foo',
+            docker_create_volume.assert_called_with('volume_foo',
                                                       driver=None,
                                                       driver_opts=None)
             self.assertEqual(
@@ -794,7 +794,7 @@ class DockerngTestCase(TestCase):
 
             # run it again with the same arguments
             orig_volumes = [volumes[0].copy()]
-            ret = dockerng_state.volume_present('volume_foo')
+            ret = docker_state.volume_present('volume_foo')
             self.assertEqual(
                 {
                     'name': 'volume_foo',
@@ -806,7 +806,7 @@ class DockerngTestCase(TestCase):
             self.assertEqual(orig_volumes, volumes)
 
             # run it again with a different driver but don't force
-            ret = dockerng_state.volume_present('volume_foo', driver='local')
+            ret = docker_state.volume_present('volume_foo', driver='local')
             self.assertEqual(
                 {
                     'name': 'volume_foo',
@@ -820,7 +820,7 @@ class DockerngTestCase(TestCase):
             self.assertEqual(orig_volumes, volumes)
 
             # run it again with a different driver and force
-            ret = dockerng_state.volume_present(
+            ret = docker_state.volume_present(
                 'volume_foo', driver='local', force=True)
             self.assertEqual(
                 {
@@ -845,25 +845,25 @@ class DockerngTestCase(TestCase):
 
     def test_volume_present_with_another_driver(self):
         '''
-        Test dockerng.volume_present
+        Test docker.volume_present
         '''
-        dockerng_create_volume = Mock(return_value='created')
-        dockerng_remove_volume = Mock(return_value='removed')
-        __salt__ = {'dockerng.create_volume': dockerng_create_volume,
-                    'dockerng.remove_volume': dockerng_remove_volume,
-                    'dockerng.volumes': Mock(return_value={
+        docker_create_volume = Mock(return_value='created')
+        docker_remove_volume = Mock(return_value='removed')
+        __salt__ = {'docker.create_volume': docker_create_volume,
+                    'docker.remove_volume': docker_remove_volume,
+                    'docker.volumes': Mock(return_value={
                         'Volumes': [{'Name': 'volume_foo',
                                      'Driver': 'foo'}]}),
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.volume_present(
+            ret = docker_state.volume_present(
                 'volume_foo',
                 driver='bar',
                 force=True,
                 )
-        dockerng_remove_volume.assert_called_with('volume_foo')
-        dockerng_create_volume.assert_called_with('volume_foo',
+        docker_remove_volume.assert_called_with('volume_foo')
+        docker_create_volume.assert_called_with('volume_foo',
                                                   driver='bar',
                                                   driver_opts=None)
         self.assertEqual(ret, {'name': 'volume_foo',
@@ -874,22 +874,22 @@ class DockerngTestCase(TestCase):
 
     def test_volume_present_wo_existing_volumes(self):
         '''
-        Test dockerng.volume_present without existing volumes.
+        Test docker.volume_present without existing volumes.
         '''
-        dockerng_create_volume = Mock(return_value='created')
-        dockerng_remove_volume = Mock(return_value='removed')
-        __salt__ = {'dockerng.create_volume': dockerng_create_volume,
-                    'dockerng.remove_volume': dockerng_remove_volume,
-                    'dockerng.volumes': Mock(return_value={'Volumes': None}),
+        docker_create_volume = Mock(return_value='created')
+        docker_remove_volume = Mock(return_value='removed')
+        __salt__ = {'docker.create_volume': docker_create_volume,
+                    'docker.remove_volume': docker_remove_volume,
+                    'docker.volumes': Mock(return_value={'Volumes': None}),
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.volume_present(
+            ret = docker_state.volume_present(
                 'volume_foo',
                 driver='bar',
                 force=True,
                 )
-        dockerng_create_volume.assert_called_with('volume_foo',
+        docker_create_volume.assert_called_with('volume_foo',
                                                   driver='bar',
                                                   driver_opts=None)
         self.assertEqual(ret, {'name': 'volume_foo',
@@ -899,19 +899,19 @@ class DockerngTestCase(TestCase):
 
     def test_volume_absent(self):
         '''
-        Test dockerng.volume_absent
+        Test docker.volume_absent
         '''
-        dockerng_remove_volume = Mock(return_value='removed')
-        __salt__ = {'dockerng.remove_volume': dockerng_remove_volume,
-                    'dockerng.volumes': Mock(return_value={
+        docker_remove_volume = Mock(return_value='removed')
+        __salt__ = {'docker.remove_volume': docker_remove_volume,
+                    'docker.volumes': Mock(return_value={
                         'Volumes': [{'Name': 'volume_foo'}]}),
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.volume_absent(
+            ret = docker_state.volume_absent(
                 'volume_foo',
                 )
-        dockerng_remove_volume.assert_called_with('volume_foo')
+        docker_remove_volume.assert_called_with('volume_foo')
         self.assertEqual(ret, {'name': 'volume_foo',
                                'comment': '',
                                'changes': {'removed': 'removed'},
@@ -919,14 +919,14 @@ class DockerngTestCase(TestCase):
 
     def test_removal_of_parameter_is_detected(self):
         '''
-        Test dockerng.running with deleted parameter.
+        Test docker.running with deleted parameter.
 
         1. define your sls
 
         .. code-block:: yaml
 
             container:
-                dockerng.running:
+                docker.running:
                     - name: super-container
                     - binds:
                         - /path:/path:ro
@@ -938,16 +938,16 @@ class DockerngTestCase(TestCase):
         .. code-block:: yaml
 
             container:
-                dockerng.running:
+                docker.running:
                     - name: super-container
 
         4. enjoy your new created container without mounted volumes.
         '''
         image_id = 'abcdefg'
-        dockerng_create = Mock(return_value=True)
-        dockerng_start = Mock()
-        dockerng_list_containers = Mock(return_value=['cont'])
-        dockerng_inspect_container = Mock(
+        docker_create = Mock(return_value=True)
+        docker_start = Mock()
+        docker_list_containers = Mock(return_value=['cont'])
+        docker_inspect_container = Mock(
             side_effect=[{
                 'Config': {
                     'Image': 'image:latest',
@@ -1034,7 +1034,7 @@ class DockerngTestCase(TestCase):
                 },
                 'Image': image_id}]
         )
-        dockerng_inspect_image = MagicMock(
+        docker_inspect_image = MagicMock(
             return_value={
                 'Id': image_id,
                 'Config': {
@@ -1046,20 +1046,20 @@ class DockerngTestCase(TestCase):
                     'ExposedPorts': {},
                 },
                 })
-        __salt__ = {'dockerng.list_containers': dockerng_list_containers,
-                    'dockerng.inspect_container': dockerng_inspect_container,
-                    'dockerng.inspect_image': dockerng_inspect_image,
-                    'dockerng.list_tags': MagicMock(),
-                    'dockerng.pull': MagicMock(return_value=True),
-                    'dockerng.state': MagicMock(side_effect=['stopped',
+        __salt__ = {'docker.list_containers': docker_list_containers,
+                    'docker.inspect_container': docker_inspect_container,
+                    'docker.inspect_image': docker_inspect_image,
+                    'docker.list_tags': MagicMock(),
+                    'docker.pull': MagicMock(return_value=True),
+                    'docker.state': MagicMock(side_effect=['stopped',
                                                              'running']),
-                    'dockerng.rm': MagicMock(return_value='cont'),
-                    'dockerng.create': dockerng_create,
-                    'dockerng.start': dockerng_start,
+                    'docker.rm': MagicMock(return_value='cont'),
+                    'docker.create': docker_create,
+                    'docker.start': docker_start,
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.running(
+            ret = docker_state.running(
                 'cont',
                 image='image:latest',
                 )
@@ -1078,7 +1078,7 @@ class DockerngTestCase(TestCase):
                                },
                                'result': True,
                                })
-        dockerng_create.assert_called_with('image:latest',
+        docker_create.assert_called_with('image:latest',
                                            validate_ip_addrs=False,
                                            validate_input=False,
                                            name='cont',
@@ -1087,16 +1087,16 @@ class DockerngTestCase(TestCase):
     def test_validate_input_min_docker_py(self):
         docker_mock = Mock()
         docker_mock.version_info = (1, 0, 0)
-        dockerng_mod.docker = None
-        with patch.dict(dockerng_mod.VALID_CREATE_OPTS['command'],
+        docker_mod.docker = None
+        with patch.dict(docker_mod.VALID_CREATE_OPTS['command'],
                         {'path': 'Config:Cmd',
                          'image_path': 'Config:Cmd',
                          'min_docker_py': (999, 0, 0)}):
-            with patch.object(dockerng_mod, 'docker', docker_mock):
+            with patch.object(docker_mod, 'docker', docker_mock):
                 self.assertRaisesRegexp(SaltInvocationError,
                                         "The 'command' parameter requires at"
                                         " least docker-py 999.0.0.*$",
-                                        dockerng_state._validate_input,
+                                        docker_state._validate_input,
                                         {'command': 'echo boom'})
 
     def test_command_defined_on_image_layer_dont_diff_if_attempted_to_blank(self):
@@ -1111,7 +1111,7 @@ class DockerngTestCase(TestCase):
         .. code-block:: yaml
 
             cont:
-                dockerng.running:
+                docker.running:
                     - image: image:latest
 
 
@@ -1120,10 +1120,10 @@ class DockerngTestCase(TestCase):
         No diff should be reported
         '''
         image_id = 'abcdefg'
-        dockerng_create = Mock(return_value=True)
-        dockerng_start = Mock()
-        dockerng_list_containers = Mock(return_value=['cont'])
-        dockerng_inspect_container = Mock(
+        docker_create = Mock(return_value=True)
+        docker_start = Mock()
+        docker_list_containers = Mock(return_value=['cont'])
+        docker_inspect_container = Mock(
             side_effect=[{
                 'Config': {
                     'Image': 'image:latest',
@@ -1168,7 +1168,7 @@ class DockerngTestCase(TestCase):
                 },
                 'Image': image_id}]
         )
-        dockerng_inspect_image = MagicMock(
+        docker_inspect_image = MagicMock(
             return_value={
                 'Id': image_id,
                 'Config': {
@@ -1180,15 +1180,15 @@ class DockerngTestCase(TestCase):
                     'ExposedPorts': {},
                 },
                 })
-        __salt__ = {'dockerng.list_containers': dockerng_list_containers,
-                    'dockerng.inspect_container': dockerng_inspect_container,
-                    'dockerng.inspect_image': dockerng_inspect_image,
-                    'dockerng.list_tags': MagicMock(side_effect=[['image:latest']]),
-                    'dockerng.state': MagicMock(side_effect=['running']),
+        __salt__ = {'docker.list_containers': docker_list_containers,
+                    'docker.inspect_container': docker_inspect_container,
+                    'docker.inspect_image': docker_inspect_image,
+                    'docker.list_tags': MagicMock(side_effect=[['image:latest']]),
+                    'docker.state': MagicMock(side_effect=['running']),
                     }
-        with patch.dict(dockerng_state.__dict__,
+        with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.running(
+            ret = docker_state.running(
                 'cont',
                 image='image:latest',
                 )
@@ -1202,4 +1202,4 @@ class DockerngTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(DockerngTestCase, needs_daemon=False)
+    run_tests(DockerTestCase, needs_daemon=False)

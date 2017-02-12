@@ -33,7 +33,7 @@ class MineTestCase(TestCase):
     '''
     def test_get_docker(self):
         '''
-        Test for Get all mine data for 'dockerng.ps' and run an
+        Test for Get all mine data for 'docker.ps' and run an
         aggregation.
         '''
         ps_response = {
@@ -81,7 +81,7 @@ class MineTestCase(TestCase):
 
     def test_get_docker_with_container_id(self):
         '''
-        Test for Get all mine data for 'dockerng.ps' and run an
+        Test for Get all mine data for 'docker.ps' and run an
         aggregation.
         '''
         ps_response = {

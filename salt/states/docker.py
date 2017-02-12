@@ -4,30 +4,12 @@ Management of Docker containers
 
 .. versionadded:: 2015.8.0
 
+:depends: docker-py_ Python module
 
-This is the state module to accompany the :mod:`dockerng
-<salt.modules.dockerng>` execution module.
+.. _docker-py: https://pypi.python.org/pypi/docker-py
 
-
-Why Make a Second Docker State Module?
---------------------------------------
-
-We have received a lot of feedback on our Docker support. In the process of
-implementing recommended improvements, it became obvious that major changes
-needed to be made to the functions and return data. In the end, a complete
-rewrite was done.
-
-The changes being too significant, it was decided that making a separate
-execution module and state module (called ``dockerng``) would be the best
-option. This will give users a couple release cycles to modify their scripts,
-SLS files, etc. to use the new functionality, rather than forcing users to
-change everything immediately.
-
-In the **Nitrogen** release of Salt (due in 2017), this execution module will
-take the place of the default Docker execution module, and backwards-compatible
-naming will be maintained for a couple releases after that to allow users time
-to replace references to ``dockerng`` with ``docker``.
-
+This is the state module to accompany the :mod:`docker <salt.modules.docker>`
+execution module.
 
 .. note::
 
@@ -45,7 +27,7 @@ import traceback
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: disable=no-name-in-module,import-error
-from salt.modules.dockerng import (
+from salt.modules.docker import (
     CLIENT_TIMEOUT,
     STOP_TIMEOUT,
     VALID_CREATE_OPTS,
@@ -60,20 +42,21 @@ import salt.ext.six as six
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # Define the module's virtual name
-__virtualname__ = 'dockerng'
+__virtualname__ = 'docker'
+__virtual_aliases__ = ('dockerng',)
 
 
 def __virtual__():
     '''
-    Only load if the dockerng execution module is available
+    Only load if the docker execution module is available
     '''
-    if 'dockerng.version' in __salt__:
+    if 'docker.version' in __salt__:
         global _validate_input  # pylint: disable=global-statement
         _validate_input = salt.utils.namespaced_function(
             _validate_input, globals(), preserve_context=True,
         )
         return __virtualname__
-    return (False, __salt__.missing_fun_string('dockerng.version'))
+    return (False, __salt__.missing_fun_string('docker.version'))
 
 
 def _format_comments(comments):
@@ -135,7 +118,7 @@ def _prep_input(kwargs):
 def _compare(actual, create_kwargs, defaults_from_image):
     '''
     Compare the desired configuration against the actual configuration returned
-    by dockerng.inspect_container
+    by docker.inspect_container
     '''
     def _get(path, default=None):
         return salt.utils.traverse_dict(actual, path, default, delimiter=':')
@@ -156,15 +139,15 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 else:
                     data = config.get('default')
 
-        log.trace('dockerng.running: comparing ' + item)
+        log.trace('docker.running: comparing ' + item)
         conf_path = config['path']
         if isinstance(conf_path, tuple):
             actual_data = [_get(x) for x in conf_path]
         else:
             actual_data = _get(conf_path, default=config.get('default'))
-        log.trace('dockerng.running ({0}): desired value: {1}'
+        log.trace('docker.running ({0}): desired value: {1}'
                   .format(item, data))
-        log.trace('dockerng.running ({0}): actual value: {1}'
+        log.trace('docker.running ({0}): actual value: {1}'
                   .format(item, actual_data))
 
         # 'create' comparison params
@@ -172,7 +155,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             # Something unique here. Two fields to check, if both are False
             # then detach is True
             actual_detach = all(x is False for x in actual_data)
-            log.trace('dockerng.running ({0}): munged actual value: {1}'
+            log.trace('docker.running ({0}): munged actual value: {1}'
                       .format(item, actual_detach))
             if actual_detach != data:
                 ret.update({item: {'old': actual_detach, 'new': data}})
@@ -193,7 +176,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
                     continue
                 else:
                     actual_env[key] = val
-            log.trace('dockerng.running ({0}): munged actual value: {1}'
+            log.trace('docker.running ({0}): munged actual value: {1}'
                       .format(item, actual_env))
             env_diff = {}
             for key in data:
@@ -232,9 +215,9 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 k for k in _image_get(config['image_path']) or [] if
                 k not in desired_ports])
             desired_ports.sort()
-            log.trace('dockerng.running ({0}): munged actual value: {1}'
+            log.trace('docker.running ({0}): munged actual value: {1}'
                       .format(item, actual_ports))
-            log.trace('dockerng.running ({0}): munged desired value: {1}'
+            log.trace('docker.running ({0}): munged desired value: {1}'
                       .format(item, desired_ports))
             if actual_ports != desired_ports:
                 ret.update({item: {'old': actual_ports,
@@ -343,9 +326,9 @@ def _compare(actual, create_kwargs, defaults_from_image):
                     desired_binds.append(bind_def)
             actual_binds.sort()
             desired_binds.sort()
-            log.trace('dockerng.running ({0}): munged actual value: {1}'
+            log.trace('docker.running ({0}): munged actual value: {1}'
                       .format(item, actual_binds))
-            log.trace('dockerng.running ({0}): munged desired value: {1}'
+            log.trace('docker.running ({0}): munged desired value: {1}'
                       .format(item, desired_binds))
             if actual_binds != desired_binds:
                 ret.update({item: {'old': actual_binds,
@@ -472,9 +455,9 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 actual_data = []
             actual_data = sorted(actual_data)
             desired_data = sorted(data)
-            log.trace('dockerng.running ({0}): munged actual value: {1}'
+            log.trace('docker.running ({0}): munged actual value: {1}'
                       .format(item, actual_data))
-            log.trace('dockerng.running ({0}): munged desired value: {1}'
+            log.trace('docker.running ({0}): munged desired value: {1}'
                       .format(item, desired_data))
             if actual_data != desired_data:
                 ret.update({item: {'old': actual_data,
@@ -493,7 +476,7 @@ def _find_volume(name):
     '''
     Find volume by name on minion
     '''
-    docker_volumes = __salt__['dockerng.volumes']()['Volumes']
+    docker_volumes = __salt__['docker.volumes']()['Volumes']
     if docker_volumes:
         volumes = [v for v in docker_volumes if v['Name'] == name]
         if volumes:
@@ -503,7 +486,7 @@ def _find_volume(name):
 
 
 def _get_defaults_from_image(image_id):
-    return __salt__['dockerng.inspect_image'](image_id)
+    return __salt__['docker.inspect_image'](image_id)
 
 
 def image_present(name,
@@ -531,7 +514,7 @@ def image_present(name,
     .. code-block:: yaml
 
         myuser/myimage:mytag:
-          dockerng.image_present
+          docker.image_present
 
     build
         Path to directory on the Minion containing a Dockerfile
@@ -539,30 +522,30 @@ def image_present(name,
         .. code-block:: yaml
 
             myuser/myimage:mytag:
-              dockerng.image_present:
+              docker.image_present:
                 - build: /home/myuser/docker/myimage
 
 
             myuser/myimage:mytag:
-              dockerng.image_present:
+              docker.image_present:
                 - build: /home/myuser/docker/myimage
                 - dockerfile: Dockerfile.alternative
 
             .. versionadded:: develop
 
-        The image will be built using :py:func:`dockerng.build
-        <salt.modules.dockerng.build>` and the specified image name and tag
+        The image will be built using :py:func:`docker.build
+        <salt.modules.docker.build>` and the specified image name and tag
         will be applied to it.
 
     load
-        Loads a tar archive created with :py:func:`dockerng.load
-        <salt.modules.dockerng.load>` (or the ``docker load`` Docker CLI
+        Loads a tar archive created with :py:func:`docker.load
+        <salt.modules.docker.load>` (or the ``docker load`` Docker CLI
         command), and assigns it the specified repo and tag.
 
         .. code-block:: yaml
 
             myuser/myimage:mytag:
-              dockerng.image_present:
+              docker.image_present:
                 - load: salt://path/to/image.tar
 
     force : False
@@ -590,7 +573,7 @@ def image_present(name,
 
     # Ensure that we have repo:tag notation
     image = ':'.join(_get_repo_tag(name))
-    all_tags = __salt__['dockerng.list_tags']()
+    all_tags = __salt__['docker.list_tags']()
 
     if image in all_tags:
         if not force:
@@ -599,7 +582,7 @@ def image_present(name,
             return ret
         else:
             try:
-                image_info = __salt__['dockerng.inspect_image'](name)
+                image_info = __salt__['docker.inspect_image'](name)
             except Exception as exc:
                 ret['comment'] = \
                     'Unable to get info for image \'{0}\': {1}'.format(name, exc)
@@ -622,7 +605,7 @@ def image_present(name,
 
     if build:
         try:
-            image_update = __salt__['dockerng.build'](path=build,
+            image_update = __salt__['docker.build'](path=build,
                                                       image=image,
                                                       dockerfile=dockerfile)
         except Exception as exc:
@@ -636,7 +619,7 @@ def image_present(name,
 
     elif load:
         try:
-            image_update = __salt__['dockerng.load'](path=load, image=image)
+            image_update = __salt__['docker.load'](path=load, image=image)
         except Exception as exc:
             ret['comment'] = (
                 'Encountered error loading {0} as {1}: {2}'
@@ -648,7 +631,7 @@ def image_present(name,
 
     else:
         try:
-            image_update = __salt__['dockerng.pull'](
+            image_update = __salt__['docker.pull'](
                 image,
                 insecure_registry=insecure_registry,
                 client_timeout=client_timeout
@@ -669,7 +652,7 @@ def image_present(name,
             # Only add to the changes dict if layers were pulled
             ret['changes'] = image_update
 
-    ret['result'] = image in __salt__['dockerng.list_tags']()
+    ret['result'] = image in __salt__['docker.list_tags']()
 
     if not ret['result']:
         # This shouldn't happen, failure to pull should be caught above
@@ -697,7 +680,7 @@ def image_absent(name=None, images=None, force=False):
         .. code-block:: yaml
 
             remove_images:
-              dockerng.image_absent:
+              docker.image_absent:
                 - names:
                   - busybox
                   - centos:6
@@ -706,7 +689,7 @@ def image_absent(name=None, images=None, force=False):
         .. code-block:: yaml
 
             remove_images:
-              dockerng.image_absent:
+              docker.image_absent:
                 - images:
                   - busybox
                   - centos:6
@@ -724,19 +707,19 @@ def image_absent(name=None, images=None, force=False):
         .. note::
 
             This option can also be overridden by Pillar data. If the Minion
-            has a pillar variable named ``dockerng.running.force`` which is
+            has a pillar variable named ``docker.running.force`` which is
             set to ``True``, it will turn on this option. This pillar variable
             can even be set at runtime. For example:
 
             .. code-block:: bash
 
-                salt myminion state.sls docker_stuff pillar="{dockerng.force: True}"
+                salt myminion state.sls docker_stuff pillar="{docker.force: True}"
 
             If this pillar variable is present and set to ``False``, then it
             will turn off this option.
 
             For more granular control, setting a pillar variable named
-            ``dockerng.force.image_name`` will affect only the named image.
+            ``docker.force.image_name`` will affect only the named image.
     '''
     ret = {'name': name,
            'changes': {},
@@ -762,7 +745,7 @@ def image_absent(name=None, images=None, force=False):
         except TypeError:
             targets = [':'.join(_get_repo_tag(str(name)))]
 
-    pre_tags = __salt__['dockerng.list_tags']()
+    pre_tags = __salt__['docker.list_tags']()
     to_delete = [x for x in targets if x in pre_tags]
     log.debug('targets = {0}'.format(targets))
     log.debug('to_delete = {0}'.format(to_delete))
@@ -785,8 +768,8 @@ def image_absent(name=None, images=None, force=False):
                               .format(', '.join(to_delete)))
         return ret
 
-    result = __salt__['dockerng.rmi'](*to_delete, force=force)
-    post_tags = __salt__['dockerng.list_tags']()
+    result = __salt__['docker.rmi'](*to_delete, force=force)
+    post_tags = __salt__['docker.list_tags']()
     failed = [x for x in to_delete if x in post_tags]
 
     if failed:
@@ -844,8 +827,8 @@ def running(name,
             the image needs to be built from a Dockerfile or loaded from a
             saved image, or if you would like to use requisites to trigger a
             replacement of the container when the image is updated, then the
-            :py:func:`dockerng.image_present
-            <salt.modules.dockerng.image_present>` should be used to manage the
+            :py:func:`docker.image_present
+            <salt.modules.docker.image_present>` should be used to manage the
             image.
 
     force : False
@@ -854,9 +837,9 @@ def running(name,
 
     stop_timeout : 10
         If the container needs to be replaced, the container will be stopped
-        using :py:func:`dockerng.stop <salt.modules.dockerng.stop>`. The value
-        of this parameter will be passed to :py:func:`dockerng.stop
-        <salt.modules.dockerng.stop>` as the ``timeout`` value, telling Docker
+        using :py:func:`docker.stop <salt.modules.docker.stop>`. The value
+        of this parameter will be passed to :py:func:`docker.stop
+        <salt.modules.docker.stop>` as the ``timeout`` value, telling Docker
         how long to wait for a graceful shutdown before killing the container.
 
     validate_ip_addrs : True
@@ -879,7 +862,7 @@ def running(name,
         .. code-block:: yaml
 
             mycontainer:
-              dockerng.running:
+              docker.running:
                 - image: busybox
                 - watch_action: SIGHUP
                 - watch:
@@ -908,7 +891,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - command: bash
 
@@ -917,7 +900,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - cmd: bash
 
@@ -932,7 +915,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - hostname: web1
 
@@ -944,7 +927,7 @@ def running(name,
             .. code-block:: yaml
 
                 foo:
-                  dockerng.running:
+                  docker.running:
                     - image: bar/baz:latest
                     - hostname: web1
                     - network_mode: host
@@ -955,7 +938,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - hostname: domain.tld
 
@@ -966,7 +949,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - interactive: True
 
@@ -976,7 +959,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - tty: True
 
@@ -987,7 +970,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - detach: True
 
@@ -997,7 +980,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - user: foo
 
@@ -1009,7 +992,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - memory: 512M
 
@@ -1020,7 +1003,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - memory_swap: 1G
 
@@ -1031,7 +1014,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - mac_address: 01:23:45:67:89:0a
 
@@ -1041,7 +1024,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - network_disabled: True
 
@@ -1051,7 +1034,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - working_dir: /var/log/nginx
 
@@ -1061,7 +1044,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - entrypoint: "mycmd --arg1 --arg2"
 
@@ -1070,7 +1053,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - entrypoint:
                   - mycmd
@@ -1084,7 +1067,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - environment:
                   - VAR1: value
@@ -1093,7 +1076,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - environment:
                   - VAR1=value
@@ -1113,14 +1096,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - ports: 1111,2222/udp
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - ports:
                   - 1111
@@ -1134,14 +1117,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - volumes: /mnt/vol1,/mnt/vol2
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - volumes:
                   - /mnt/vol1
@@ -1153,7 +1136,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - cpu_shares: 256
 
@@ -1165,7 +1148,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - cpuset: "0,1"
 
@@ -1178,7 +1161,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - binds: /srv/www:/var/www:ro,/etc/foo.conf:/usr/local/etc/foo.conf:rw
 
@@ -1187,7 +1170,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - binds:
                   - /srv/www:/var/www:ro
@@ -1200,7 +1183,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - binds:
                   - /srv/www:/var/www:ro
@@ -1225,14 +1208,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - port_bindings: "5000:5000,2123:2123/udp,8080"
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - port_bindings:
                   - 5000:5000
@@ -1252,7 +1235,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - lxc_conf:
                   - lxc.utsname: docker
@@ -1269,7 +1252,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - security_opts:
                   - 'apparmor:unconfined'
@@ -1286,7 +1269,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - ports: 8080
                 - publish_all_ports: True
@@ -1300,14 +1283,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - links: web1:link1,web2:link2
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - links:
                   - web1:link1
@@ -1320,14 +1303,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - dns: 8.8.8.8,8.8.4.4
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - dns:
                   - 8.8.8.8
@@ -1344,14 +1327,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - dns_search: foo1.domain.tld,foo2.domain.tld
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - dns_search:
                   - foo1.domain.tld
@@ -1365,14 +1348,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - volumes_from: foo
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - volumes_from:
                   - foo
@@ -1387,7 +1370,7 @@ def running(name,
         - ``container:<name_or_id>`` - Reuses another container's network stack
         - ``host`` - Use the host's network stack inside the container
         - Any name that identifies an existing network that might be created
-          with ``dockerng.network_present``.
+          with ``docker.network_present``.
 
           .. warning::
 
@@ -1398,7 +1381,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - network_mode: null
 
@@ -1412,12 +1395,12 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - restart_policy: on-failure:5
 
             bar:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - restart_policy: always
 
@@ -1429,14 +1412,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - cap_add: SYS_ADMIN,MKNOD
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - cap_add:
                   - SYS_ADMIN
@@ -1454,14 +1437,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - cap_drop: SYS_ADMIN,MKNOD
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - cap_drop:
                   - SYS_ADMIN
@@ -1487,14 +1470,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - extra_hosts: web1:10.9.8.7,web2:10.9.8.8
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - extra_hosts:
                   - web1:10.9.8.7
@@ -1515,7 +1498,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - pid_mode: host
 
@@ -1530,7 +1513,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - labels:
                     - LABEL1
@@ -1539,7 +1522,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - labels:
                     KEY1: VALUE1
@@ -1548,7 +1531,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - labels:
                   - KEY1: VALUE1
@@ -1569,7 +1552,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - stop_signal: SIGRTMIN+3
 
@@ -1587,7 +1570,7 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker.running:
                 - image: bar/baz:latest
                 - log_config:
                     Type: syslog
@@ -1627,10 +1610,10 @@ def running(name,
     except TypeError:
         image = ':'.join(_get_repo_tag(str(image)))
 
-    if image not in __salt__['dockerng.list_tags']() and not __opts__['test']:
+    if image not in __salt__['docker.list_tags']() and not __opts__['test']:
         try:
             # Pull image
-            pull_result = __salt__['dockerng.pull'](
+            pull_result = __salt__['docker.pull'](
                 image,
                 client_timeout=client_timeout,
             )
@@ -1642,17 +1625,17 @@ def running(name,
             ret['changes']['image'] = pull_result
 
     try:
-        image_id = __salt__['dockerng.inspect_image'](image)['Id']
+        image_id = __salt__['docker.inspect_image'](image)['Id']
     except CommandExecutionError:
         if not __opts__['test']:
             raise
         image_id = None
 
-    if name not in __salt__['dockerng.list_containers'](all=True):
+    if name not in __salt__['docker.list_containers'](all=True):
         pre_config = {}
     else:
         try:
-            pre_config = __salt__['dockerng.inspect_container'](name)
+            pre_config = __salt__['docker.inspect_container'](name)
             try:
                 current_image_id = pre_config['Image']
             except KeyError:
@@ -1696,7 +1679,7 @@ def running(name,
         _prep_input(create_kwargs)
         # Perform data type validation and, where necessary, munge
         # the data further so it is in a format that can be passed
-        # to dockerng.create.
+        # to docker.create.
         _validate_input(create_kwargs,
                         validate_ip_addrs=validate_ip_addrs)
 
@@ -1746,13 +1729,13 @@ def running(name,
                                               defaults_from_image)
                     if changes_needed:
                         log.debug(
-                            'dockerng.running: Analysis of container \'{0}\' '
+                            'docker.running: Analysis of container \'{0}\' '
                             'reveals the following changes need to be made: '
                             '{1}'.format(name, changes_needed)
                         )
                     else:
                         log.debug(
-                            'dockerng.running: Container \'{0}\' already '
+                            'docker.running: Container \'{0}\' already '
                             'matches the desired configuration'.format(name)
                         )
                 except Exception as exc:
@@ -1792,13 +1775,13 @@ def running(name,
     if not pre_config:
         pre_state = None
     else:
-        pre_state = __salt__['dockerng.state'](name)
+        pre_state = __salt__['docker.state'](name)
 
     if new_container:
         if pre_config:
             # Container exists, stop if necessary, then remove and recreate
             if pre_state != 'stopped':
-                result = __salt__['dockerng.stop'](name,
+                result = __salt__['docker.stop'](name,
                                                    timeout=stop_timeout,
                                                    unpause=True)['result']
                 if result is not True:
@@ -1810,7 +1793,7 @@ def running(name,
                     return ret
 
             # Remove existing container
-            removed_ids = __salt__['dockerng.rm'](name)
+            removed_ids = __salt__['docker.rm'](name)
             if not removed_ids:
                 comments.append('Failed to remove container {0}'.format(name))
                 ret['comment'] = _format_comments(comments)
@@ -1820,10 +1803,10 @@ def running(name,
             # changes dict.
             ret['changes']['removed'] = removed_ids
 
-        if image not in __salt__['dockerng.list_tags']():
+        if image not in __salt__['docker.list_tags']():
             try:
                 # Pull image
-                pull_result = __salt__['dockerng.pull'](
+                pull_result = __salt__['docker.pull'](
                     image,
                     client_timeout=client_timeout,
                 )
@@ -1836,7 +1819,7 @@ def running(name,
 
         try:
             # Create new container
-            create_result = __salt__['dockerng.create'](
+            create_result = __salt__['docker.create'](
                 image,
                 name=name,
                 validate_ip_addrs=False,
@@ -1857,7 +1840,7 @@ def running(name,
     if new_container or (pre_state != 'running' and start):
         try:
             # Start container
-            __salt__['dockerng.start'](
+            __salt__['docker.start'](
                 name,
             )
         except Exception as exc:
@@ -1868,7 +1851,7 @@ def running(name,
             ret['comment'] = _format_comments(comments)
             return ret
 
-        post_state = __salt__['dockerng.state'](name)
+        post_state = __salt__['docker.state'](name)
         if pre_state != post_state:
             # If the container changed states at all, note this change in the
             # return dict.
@@ -1879,19 +1862,19 @@ def running(name,
 
     if changes_needed:
         try:
-            post_config = __salt__['dockerng.inspect_container'](name)
+            post_config = __salt__['docker.inspect_container'](name)
             defaults_from_image = _get_defaults_from_image(image_id)
             changes_still_needed = _compare(post_config, create_kwargs,
                                             defaults_from_image)
             if changes_still_needed:
                 log.debug(
-                    'dockerng.running: Analysis of container \'{0}\' after '
+                    'docker.running: Analysis of container \'{0}\' after '
                     'creation/replacement reveals the following changes still '
                     'need to be made: {1}'.format(name, changes_still_needed)
                 )
             else:
                 log.debug(
-                    'dockerng.running: Changes successfully applied to '
+                    'docker.running: Changes successfully applied to '
                     'container \'{0}\''.format(name)
                 )
         except Exception as exc:
@@ -1936,7 +1919,7 @@ def running(name,
         if not new_container:
             if send_signal:
                 try:
-                    __salt__['dockerng.signal'](name, signal=watch_action)
+                    __salt__['docker.signal'](name, signal=watch_action)
                 except CommandExecutionError as exc:
                     comments.append(
                         'Failed to signal container: {0}'.format(exc)
@@ -1951,7 +1934,7 @@ def running(name,
             elif ret['changes']:
                 if not comments:
                     log.warning(
-                        'dockerng.running: we detected changes without '
+                        'docker.running: we detected changes without '
                         'a specific comment for container \'{0}\'.'.format(
                             name)
                     )
@@ -2003,7 +1986,7 @@ def stopped(name=None,
         .. code-block:: yaml
 
             stopped_containers:
-              dockerng.stopped:
+              docker.stopped:
                 - names:
                   - foo
                   - bar
@@ -2012,7 +1995,7 @@ def stopped(name=None,
         .. code-block:: yaml
 
             stopped_containers:
-              dockerng.stopped:
+              docker.stopped:
                 - containers:
                   - foo
                   - bar
@@ -2060,7 +2043,7 @@ def stopped(name=None,
     containers = {}
     for target in targets:
         try:
-            c_state = __salt__['dockerng.state'](target)
+            c_state = __salt__['docker.state'](target)
         except CommandExecutionError:
             containers.setdefault('absent', []).append(target)
         else:
@@ -2110,7 +2093,7 @@ def stopped(name=None,
 
     stop_errors = []
     for target in to_stop:
-        changes = __salt__['dockerng.stop'](target,
+        changes = __salt__['docker.stop'](target,
                                             timeout=stop_timeout,
                                             unpause=unpause)
         if changes['result'] is True:
@@ -2150,10 +2133,10 @@ def absent(name, force=False):
     .. code-block:: yaml
 
         mycontainer:
-          dockerng.absent
+          docker.absent
 
         multiple_containers:
-          dockerng.absent:
+          docker.absent:
             - names:
               - foo
               - bar
@@ -2164,12 +2147,12 @@ def absent(name, force=False):
            'result': False,
            'comment': ''}
 
-    if name not in __salt__['dockerng.list_containers'](all=True):
+    if name not in __salt__['docker.list_containers'](all=True):
         ret['result'] = True
         ret['comment'] = 'Container \'{0}\' does not exist'.format(name)
         return ret
 
-    pre_state = __salt__['dockerng.state'](name)
+    pre_state = __salt__['docker.state'](name)
     if pre_state != 'stopped' and not force:
         ret['comment'] = ('Container is running, set force to True to '
                           'forcibly remove it')
@@ -2181,13 +2164,13 @@ def absent(name, force=False):
         return ret
 
     try:
-        ret['changes']['removed'] = __salt__['dockerng.rm'](name, force=force)
+        ret['changes']['removed'] = __salt__['docker.rm'](name, force=force)
     except Exception as exc:
         ret['comment'] = ('Failed to remove container \'{0}\': {1}'
                           .format(name, exc))
         return ret
 
-    if name in __salt__['dockerng.list_containers'](all=True):
+    if name in __salt__['docker.list_containers'](all=True):
         ret['comment'] = 'Failed to remove container \'{0}\''.format(name)
     else:
         if force and pre_state != 'stopped':
@@ -2216,13 +2199,13 @@ def network_present(name, driver=None, containers=None):
     .. code-block:: yaml
 
         network_foo:
-          dockerng.network_present
+          docker.network_present
 
 
     .. code-block:: yaml
 
         network_bar:
-          dockerng.network_present
+          docker.network_present
             - name: bar
             - containers:
                 - cont1
@@ -2236,8 +2219,8 @@ def network_present(name, driver=None, containers=None):
     if containers is None:
         containers = []
     # map containers to container's Ids.
-    containers = [__salt__['dockerng.inspect_container'](c)['Id'] for c in containers]
-    networks = __salt__['dockerng.networks'](names=[name])
+    containers = [__salt__['docker.inspect_container'](c)['Id'] for c in containers]
+    networks = __salt__['docker.networks'](names=[name])
     if networks:
         network = networks[0]  # we expect network's name to be unique
         if all(c in network['Containers'] for c in containers):
@@ -2248,7 +2231,7 @@ def network_present(name, driver=None, containers=None):
         for container in containers:
             if container not in network['Containers']:
                 try:
-                    ret['changes']['connected'] = __salt__['dockerng.connect_container_to_network'](
+                    ret['changes']['connected'] = __salt__['docker.connect_container_to_network'](
                         container, name)
                 except Exception as exc:
                     ret['comment'] = ('Failed to connect container \'{0}\' to network \'{1}\' {2}'.format(
@@ -2258,7 +2241,7 @@ def network_present(name, driver=None, containers=None):
 
     else:
         try:
-            ret['changes']['created'] = __salt__['dockerng.create_network'](
+            ret['changes']['created'] = __salt__['docker.create_network'](
                 name, driver=driver)
         except Exception as exc:
             ret['comment'] = ('Failed to create network \'{0}\': {1}'
@@ -2267,7 +2250,7 @@ def network_present(name, driver=None, containers=None):
             result = True
             for container in containers:
                 try:
-                    ret['changes']['connected'] = __salt__['dockerng.connect_container_to_network'](
+                    ret['changes']['connected'] = __salt__['docker.connect_container_to_network'](
                         container, name)
                 except Exception as exc:
                     ret['comment'] = ('Failed to connect container \'{0}\' to network \'{1}\' {2}'.format(
@@ -2289,7 +2272,7 @@ def network_absent(name, driver=None):
     .. code-block:: yaml
 
         network_foo:
-          dockerng.network_absent
+          docker.network_absent
 
     '''
     ret = {'name': name,
@@ -2297,7 +2280,7 @@ def network_absent(name, driver=None):
            'result': False,
            'comment': ''}
 
-    networks = __salt__['dockerng.networks'](names=[name])
+    networks = __salt__['docker.networks'](names=[name])
     if not networks:
         ret['result'] = True
         ret['comment'] = 'Network \'{0}\' already absent'.format(name)
@@ -2305,12 +2288,12 @@ def network_absent(name, driver=None):
 
     for container in networks[0]['Containers']:
         try:
-            ret['changes']['disconnected'] = __salt__['dockerng.disconnect_container_from_network'](container, name)
+            ret['changes']['disconnected'] = __salt__['docker.disconnect_container_from_network'](container, name)
         except Exception as exc:
             ret['comment'] = ('Failed to disconnect container \'{0}\' to network \'{1}\' {2}'.format(
                 container, name, exc))
     try:
-        ret['changes']['removed'] = __salt__['dockerng.remove_network'](name)
+        ret['changes']['removed'] = __salt__['docker.remove_network'](name)
         ret['result'] = True
     except Exception as exc:
         ret['comment'] = ('Failed to remove network \'{0}\': {1}'
@@ -2358,13 +2341,13 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
     .. code-block:: yaml
 
         volume_foo:
-          dockerng.volume_present
+          docker.volume_present
 
 
     .. code-block:: yaml
 
         volume_bar:
-          dockerng.volume_present
+          docker.volume_present
             - name: bar
             - driver: local
             - driver_opts:
@@ -2373,7 +2356,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
     .. code-block:: yaml
 
         volume_bar:
-          dockerng.volume_present
+          docker.volume_present
             - name: bar
             - driver: local
             - driver_opts:
@@ -2394,7 +2377,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
             ret['comment'] = ('The volume \'{0}\' will be created'.format(name))
             return ret
         try:
-            ret['changes']['created'] = __salt__['dockerng.create_volume'](
+            ret['changes']['created'] = __salt__['docker.create_volume'](
                 name, driver=driver, driver_opts=driver_opts)
         except Exception as exc:
             ret['comment'] = ('Failed to create volume \'{0}\': {1}'
@@ -2420,14 +2403,14 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
                                  name, volume)
             return ret
         try:
-            ret['changes']['removed'] = __salt__['dockerng.remove_volume'](name)
+            ret['changes']['removed'] = __salt__['docker.remove_volume'](name)
         except Exception as exc:
             ret['comment'] = ('Failed to remove volume \'{0}\': {1}'
                               .format(name, exc))
             return ret
         else:
             try:
-                ret['changes']['created'] = __salt__['dockerng.create_volume'](
+                ret['changes']['created'] = __salt__['docker.create_volume'](
                     name, driver=driver, driver_opts=driver_opts)
             except Exception as exc:
                 ret['comment'] = ('Failed to create volume \'{0}\': {1}'
@@ -2457,7 +2440,7 @@ def volume_absent(name, driver=None):
     .. code-block:: yaml
 
         volume_foo:
-          dockerng.volume_absent
+          docker.volume_absent
 
     '''
     ret = {'name': name,
@@ -2472,7 +2455,7 @@ def volume_absent(name, driver=None):
         return ret
 
     try:
-        ret['changes']['removed'] = __salt__['dockerng.remove_volume'](name)
+        ret['changes']['removed'] = __salt__['docker.remove_volume'](name)
         ret['result'] = True
     except Exception as exc:
         ret['comment'] = ('Failed to remove volume \'{0}\': {1}'

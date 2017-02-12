@@ -71,7 +71,7 @@ state modules
     debconfmod
     dellchassis
     disk
-    dockerng
+    docker
     drac
     elasticsearch_index
     elasticsearch_index_template
