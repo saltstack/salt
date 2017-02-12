@@ -66,7 +66,6 @@ ALIYUN_LOCATIONS = {
     'cn-beijing': 'AliYun BeiJing Region',
     'cn-hongkong': 'AliYun HongKong Region',
     'cn-qingdao': 'AliYun QingDao Region',
-    'cn-hongkong': 'AliYun HangKong Region',
     'cn-shanghai': 'AliYun ShangHai Region',
     'cn-shenzhen': 'AliYun ShenZheng Region',
     'ap-northeast-1': 'AliYun DongJing Region',
