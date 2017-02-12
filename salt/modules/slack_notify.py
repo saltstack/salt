@@ -178,6 +178,7 @@ def find_user(name, api_key=None):
 def post_message(channel,
                  message,
                  from_name,
+                 attachments=None,
                  api_key=None,
                  icon=None):
     '''
@@ -186,6 +187,7 @@ def post_message(channel,
     :param channel:     The channel name, either will work.
     :param message:     The message to send to the Slack channel.
     :param from_name:   Specify who the message is from.
+    :param attachments: Add attachments to the message
     :param api_key:     The Slack api key, if not specified in the configuration.
     :param icon:        URL to an image to use as the icon for this message or an emoji code such as ``:simple_smile:``
     :return:            Boolean if message was sent successfully.
@@ -195,6 +197,8 @@ def post_message(channel,
     .. code-block:: bash
 
         salt '*' slack.post_message channel="Development Room" message="Build is done" from_name="Build Server"
+        salt '*' slack.post_message channel="Development Room" message="Build failed" from_name="Build Server" \
+                attachments='[{"title": "Build Failure", "color": "#f00", "fields": ["title": "Component", "value": "API"]}]'
 
     '''
     if not api_key:
@@ -215,7 +219,8 @@ def post_message(channel,
     parameters = {
         'channel': channel,
         'username': from_name,
-        'text': message
+        'text': message,
+        'attachments': attachments,
     }
 
     if icon is not None:
