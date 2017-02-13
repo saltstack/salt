@@ -98,7 +98,7 @@ class SysModuleTest(integration.ModuleCase):
                     continue
                 if fun in allow_failure:
                     continue
-                if not isinstance(docs[fun], six.string_types):
+                if not isinstance(docs, dict) and not isinstance(docs[fun], six.string_types):
                     nodoc.add(fun)
                 elif not re.search(r'([E|e]xample(?:s)?)+(?:.*)::?', docs[fun]):
                     noexample.add(fun)
