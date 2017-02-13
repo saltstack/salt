@@ -762,7 +762,6 @@ def install_config(path=None, **kwargs):
 
 
     Parameters:
-      Required
         * path:
           Path where the configuration file is present. If the file has a \
           '*.conf' extension,
@@ -771,8 +770,12 @@ def install_config(path=None, **kwargs):
           the content is treated as XML format. If the file has a '*.set' \
           extension,
           the content is treated as Junos OS 'set' commands.(default = None)
-      Optional
         * kwargs: Keyworded arguments which can be provided like-
+            * template_path:
+              Path where the jinja template is present on the master.
+            * template_vars:
+              The dictionary of data for the jinja variables present in the \
+              jinja template
             * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
@@ -840,7 +843,7 @@ def install_config(path=None, **kwargs):
         ret['message'] = 'Invalid file path.'
         ret['out'] = False
         return ret
-    
+
     if os.path.getsize(template_cached_path) == 0:
         ret['message'] = 'Template failed to render'
         ret['out'] = False
