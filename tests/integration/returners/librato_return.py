@@ -5,7 +5,6 @@ Tests for the librato returner
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import os
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -13,8 +12,6 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-from integration import TMP
-import salt.utils.job
 from salt.returners import librato_return
 
 log = logging.getLogger(__name__)
