@@ -226,6 +226,7 @@ Use this setting to define the subnetwork an instance will be created in.
 This requires that the network your instance is created under has a mode of 'custom' or 'auto'.
 Additionally, the subnetwork your instance is created under is associated with the location you provide. Required.
 
+
 .. versionadded:: Nitrogen
 
 tags

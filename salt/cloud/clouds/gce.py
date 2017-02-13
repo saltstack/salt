@@ -2484,12 +2484,6 @@ def request_instance(vm_):
                 '\'pd-standard\', \'pd-ssd\''
             )
 
-    if LIBCLOUD_VERSION_INFO >= (1, 0, 0):
-
-        kwargs.update({
-            'ex_subnetwork': __get_subnetwork(conn, vm_)
-        })
-
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
         kwargs['location'].name)
     )
