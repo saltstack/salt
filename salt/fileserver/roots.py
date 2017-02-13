@@ -361,26 +361,13 @@ def symlink_list(load):
     ret = {}
     if load['saltenv'] not in __opts__['file_roots']:
         return ret
-    for path in __opts__['file_roots'][load['saltenv']]:
-        try:
-            prefix = load['prefix'].strip('/')
-        except KeyError:
-            prefix = ''
-        # Adopting rsync functionality here and stopping at any encounter of a symlink
-        for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=False):
-            for fname in files:
-                if not os.path.islink(os.path.join(root, fname)):
-                    continue
-                rel_fn = os.path.relpath(
-                            os.path.join(root, fname),
-                            path
-                        )
-                if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
-                    ret[rel_fn] = os.readlink(os.path.join(root, fname))
-            for dname in dirs:
-                if os.path.islink(os.path.join(root, dname)):
-                    ret[os.path.relpath(os.path.join(root,
-                                                     dname),
-                                        path)] = os.readlink(os.path.join(root,
-                                                                          dname))
-    return ret
+
+    if 'prefix' in load:
+        prefix = load['prefix'].strip('/')
+    else:
+        prefix = ''
+
+    symlinks = _file_lists(load, 'links')
+    return dict([(key, val)
+                 for key, val in six.iteritems(symlinks)
+                 if key.startswith(prefix)])
