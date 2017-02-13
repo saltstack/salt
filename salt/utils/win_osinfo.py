@@ -43,14 +43,12 @@ if HAS_WIN32:
             self.dwOSVersionInfoSize = ctypes.sizeof(self)
             kernel32.GetVersionExW(ctypes.byref(self))
 
-
     class OSVERSIONINFOEX(OSVERSIONINFO):
         _fields_ = (('wServicePackMajor', WORD),
                     ('wServicePackMinor', WORD),
                     ('wSuiteMask', WORD),
                     ('wProductType', BYTE),
                     ('wReserved', BYTE))
-
 
     def errcheck_bool(result, func, args):
         if not result:
