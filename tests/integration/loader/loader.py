@@ -62,7 +62,7 @@ class LazyLoaderTest(TestCase):
         self.module_file = os.path.join(self.module_dir,
                                         '{0}.py'.format(self.module_name))
         with open(self.module_file, 'w') as fh:
-            fh.write(loader_template.decode())
+            fh.write(loader_template)
             fh.flush()
             os.fsync(fh.fileno())
 
