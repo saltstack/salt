@@ -19,11 +19,12 @@ other tags.
 
 Adding EC2 Tags example:
 If ec2_tags:region were desired within the tags for multi-dimension. The tags
-could be modified to include the ec2 tags.
+could be modified to include the ec2 tags. Multiple dimensions are added simply
+by adding more tags to the submission.
 
 .. code-block:: python
     pillar_data = __salt__['pillar.raw']()
-    q.add(metric.name, value, tags={'Region': pillar_data['ec2_tags']['Name']})
+    q.add(metric.name, value, tags={'Name': ret['id'],'Region': pillar_data['ec2_tags']['Name']})
 
 '''
 
