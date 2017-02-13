@@ -19,6 +19,7 @@ import salt.crypt
 import salt.transport
 import salt.utils.url
 import salt.utils.cache
+from salt.utils.master import MasterPillarUtil
 from salt.exceptions import SaltClientError
 from salt.template import compile_template
 from salt.utils.dictupdate import merge
@@ -348,6 +349,10 @@ class Pillar(object):
             opts['environment'] = saltenv
         if 'pillarenv' not in opts:
             opts['pillarenv'] = pillarenv
+        if 'pillar' not in opts:
+            mpu = MasterPillarUtil(id_, opts=opts, saltenv=pillarenv)
+            mp_ret = mpu.get_minion_pillar()
+            opts['pillar'] = mp_ret.get(id_, {})
         if opts['state_top'].startswith('salt://'):
             opts['state_top'] = opts['state_top']
         elif opts['state_top'].startswith('/'):
