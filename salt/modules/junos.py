@@ -739,7 +739,8 @@ def shutdown(**kwargs):
         ret['message'] = 'Successfully powered off/rebooted.'
         ret['out'] = True
     except Exception as exception:
-        ret['message'] = 'Could not poweroff/reboot beacause "{0}"'.format(exception)
+        ret['message'] = 'Could not poweroff/reboot because "{0}"'.format(
+            exception)
         ret['out'] = False
     return ret
 
@@ -800,25 +801,6 @@ def install_config(path=None, **kwargs):
     ret = dict()
     ret['out'] = True
 
-    if path is None:
-        ret['message'] = 'Please provide the salt path where the \
-            configuration is present'
-        ret['out'] = False
-        return ret
-
-    template_cached_path = files.mkstemp()
-    __salt__['cp.get_template'](path, template_cached_path)
-
-    if not os.path.isfile(template_cached_path):
-        ret['message'] = 'Invalid file path.'
-        ret['out'] = False
-        return ret
-
-    if os.path.getsize(template_cached_path) == 0:
-        ret['message'] = 'Template failed to render'
-        ret['out'] = False
-        return ret
-
     op = dict()
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
@@ -827,22 +809,48 @@ def install_config(path=None, **kwargs):
     else:
         op.update(kwargs)
 
+    if path is None and 'template_path' not in op:
+        ret['message'] = 'Please provide the salt path where the \
+            configuration is present'
+        ret['out'] = False
+        return ret
+
+    template_cached_path = files.mkstemp()
+    if path:
+        __salt__['cp.get_template'](path, template_cached_path)
+        # Needed to set the format
+        path_arg = path
+    else:
+        __salt__['cp.get_file'](op['template_path'], template_cached_path)
+        # Needed to set the format
+        path_arg = op['template_path']
+
+    # This is done because the temporary file created on the proxy minion
+    # might not have the same name as the original file.
+    if 'format' not in op:
+        if path_arg.endswith('set'):
+            template_format = 'set'
+        elif path_arg.endswith('xml'):
+            template_format = 'xml'
+        else:
+            template_format = 'text'
+        op['format'] = template_format
+
+    if not os.path.isfile(template_cached_path):
+        ret['message'] = 'Invalid file path.'
+        ret['out'] = False
+        return ret
+    
+    if os.path.getsize(template_cached_path) == 0:
+        ret['message'] = 'Template failed to render'
+        ret['out'] = False
+        return ret
+    op['template_path'] = template_cached_path
+
     write_diff = ''
     if 'diffs_file' in op and op['diffs_file'] is not None:
         write_diff = op['diffs_file']
         del op['diffs_file']
-
-    op['path'] = template_cached_path
-
-    if 'format' not in op:
-        if path.endswith('set'):
-            template_format = 'set'
-        elif path.endswith('xml'):
-            template_format = 'xml'
-        else:
-            template_format = 'text'
-
-        op['format'] = template_format
 
     if 'replace' in op and op['replace']:
         op['merge'] = False
