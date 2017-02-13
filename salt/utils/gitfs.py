@@ -323,7 +323,11 @@ class GitProvider(object):
             failhard(self.role)
 
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
-        self.hash = hash_type(self.id).hexdigest()
+        if six.PY3:
+            # We loaded this data from yaml configuration files, so, its safe to use UTF-8
+            self.hash = hash_type(self.id.encode('utf-8')).hexdigest()
+        else:
+            self.hash = hash_type(self.id).hexdigest()
         self.cachedir_basename = getattr(self, 'name', self.hash)
         self.cachedir = salt.utils.path_join(cache_root, self.cachedir_basename)
         if not os.path.isdir(self.cachedir):
