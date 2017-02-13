@@ -158,10 +158,12 @@ class SPMClient(object):
             self._repo_list(args)
         elif command == 'packages':
             self._repo_packages(args)
+        elif command == 'search':
+            self._repo_packages(args, search=True)
         else:
             raise SPMInvocationError('Invalid repo command \'{0}\''.format(command))
 
-    def _repo_packages(self, args):
+    def _repo_packages(self, args, search=False):
         '''
         List packages for one or more configured repos
         '''
@@ -169,11 +171,12 @@ class SPMClient(object):
         repo_metadata = self._get_repo_metadata()
         for repo in repo_metadata:
             for pkg in repo_metadata[repo]['packages']:
-                version = repo_metadata[repo]['packages'][pkg]['info']['version']
-                release = repo_metadata[repo]['packages'][pkg]['info']['release']
-                packages.append(
-                    '{0}\t{1}-{2}\t{3}'.format(pkg, version, release, repo)
-                )
+                if args[1] in pkg:
+                    version = repo_metadata[repo]['packages'][pkg]['info']['version']
+                    release = repo_metadata[repo]['packages'][pkg]['info']['release']
+                    packages.append(
+                        '{0}\t{1}-{2}\t{3}'.format(pkg, version, release, repo)
+                    )
         for pkg in sorted(packages):
             self.ui.status(pkg)
 
