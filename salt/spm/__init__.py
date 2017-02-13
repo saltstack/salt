@@ -169,8 +169,10 @@ class SPMClient(object):
         repo_metadata = self._get_repo_metadata()
         for repo in repo_metadata:
             for pkg in repo_metadata[repo]['packages']:
+                version = repo_metadata[repo]['packages'][pkg]['info']['version']
+                release = repo_metadata[repo]['packages'][pkg]['info']['release']
                 packages.append(
-                    '{0}\t\t{1}'.format(pkg, repo)
+                    '{0}\t{1}-{2}\t{3}'.format(pkg, version, release, repo)
                 )
         for pkg in sorted(packages):
             self.ui.status(pkg)
