@@ -102,6 +102,8 @@ class SPMClient(object):
                 self._install(args)
             elif command == 'local':
                 self._local(args)
+            elif command == 'repo':
+                self._repo(args)
             elif command == 'remove':
                 self._remove(args)
             elif command == 'build':
@@ -145,6 +147,41 @@ class SPMClient(object):
             self._local_info(args)
         else:
             raise SPMInvocationError('Invalid local command \'{0}\''.format(command))
+
+    def _repo(self, args):
+        '''
+        Process repo commands
+        '''
+        args.pop(0)
+        command = args[0]
+        if command == 'list':
+            self._repo_list(args)
+        elif command == 'packages':
+            self._repo_packages(args)
+        else:
+            raise SPMInvocationError('Invalid repo command \'{0}\''.format(command))
+
+    def _repo_packages(self, args):
+        '''
+        List packages for one or more configured repos
+        '''
+        packages = []
+        repo_metadata = self._get_repo_metadata()
+        for repo in repo_metadata:
+            for pkg in repo_metadata[repo]['packages']:
+                packages.append(
+                    '{0}\t\t{1}'.format(pkg, repo)
+                )
+        for pkg in sorted(packages):
+            self.ui.status(pkg)
+
+    def _repo_list(self, args):
+        '''
+        List configured repos
+        '''
+        repo_metadata = self._get_repo_metadata()
+        for repo in repo_metadata:
+            self.ui.status(repo)
 
     def _install(self, args):
         '''
