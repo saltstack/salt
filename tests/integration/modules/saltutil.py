@@ -97,7 +97,7 @@ class SaltUtilSyncModuleTest(integration.ModuleCase):
 
     def test_sync_all_whitelist(self):
         '''
-        Test syncing all ModuleCase
+        Test syncing all ModuleCase with whitelist
         '''
         expected_return = {'engines': [],
                            'grains': [],
@@ -112,6 +112,47 @@ class SaltUtilSyncModuleTest(integration.ModuleCase):
                            'proxymodules': [],
                            'output': []}
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['salttest']})
+        self.assertEqual(ret, expected_return)
+
+    def test_sync_all_blacklist(self):
+        '''
+        Test syncing all ModuleCase with blacklist
+        '''
+        expected_return = {'engines': [],
+                           'grains': [],
+                           'beacons': [],
+                           'utils': [],
+                           'returners': [],
+                           'modules': ['modules.override_test',
+                                       'modules.runtests_helpers',
+                                       'modules.salttest'],
+                           'renderers': [],
+                           'log_handlers': [],
+                           'states': [],
+                           'sdb': [],
+                           'proxymodules': [],
+                           'output': []}
+        ret = self.run_function('saltutil.sync_all', extmod_blacklist={'modules': ['runtests_decorators']})
+        self.assertEqual(ret, expected_return)
+
+    def test_sync_all_blacklist_and_whitelist(self):
+        '''
+        Test syncing all ModuleCase with whitelist and blacklist
+        '''
+        expected_return = {'engines': [],
+                           'grains': [],
+                           'beacons': [],
+                           'utils': [],
+                           'returners': [],
+                           'modules': [],
+                           'renderers': [],
+                           'log_handlers': [],
+                           'states': [],
+                           'sdb': [],
+                           'proxymodules': [],
+                           'output': []}
+        ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['runtests_decorators']},
+                                extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)
 
 
