@@ -4,6 +4,8 @@
 from __future__ import absolute_import
 
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import random
+import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -15,6 +17,7 @@ ensure_in_syspath('../../')
 # Import Salt libs
 import salt.config
 import salt.loader
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error
 from unit.modules.boto_vpc_test import BotoVpcTestCaseMixin
@@ -86,6 +89,10 @@ def _has_required_boto():
 class BotoVpcStateTestCaseBase(TestCase):
     def setUp(self):
         ctx.clear()
+        # connections keep getting cached from prior tests, can't find the
+        # correct context object to clear it. So randomize the cache key, to prevent any
+        # cache hits
+        conn_parameters['key'] = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(50))
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -299,11 +306,12 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
         vpc = self._create_vpc(name='test')
         igw = self._create_internet_gateway(name='test', vpc_id=vpc.id)
 
-        route_table_present_result = salt_states['boto_vpc.route_table_present'](
-                name='test', vpc_name='test', routes=[{'destination_cidr_block': '0.0.0.0/0',
-                                                       'gateway_id': igw.id},
-                                                      {'destination_cidr_block': '10.0.0.0/24',
-                                                       'gateway_id': 'local'}])
+        with patch.dict('salt.utils.boto.__salt__', funcs):
+            route_table_present_result = salt_states['boto_vpc.route_table_present'](
+                    name='test', vpc_name='test', routes=[{'destination_cidr_block': '0.0.0.0/0',
+                                                           'gateway_id': igw.id},
+                                                          {'destination_cidr_block': '10.0.0.0/24',
+                                                           'gateway_id': 'local'}])
         routes = [x['gateway_id'] for x in route_table_present_result['changes']['new']['routes']]
 
         self.assertEqual(set(routes), set(['local', igw.id]))
