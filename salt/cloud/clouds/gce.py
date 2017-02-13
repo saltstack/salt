@@ -2463,7 +2463,7 @@ def request_instance(vm_):
     kwargs['external_ip'] = external_ip
     vm_['external_ip'] = external_ip
 
-    if LIBCLOUD_VERSION_INFO > (0, 15, 1):
+    if LIBCLOUD_VERSION_INFO > (0, 15, 1) and LIBCLOUD_VERSION_INFO < (1, 0, 0):
 
         kwargs.update({
             'ex_disk_type': config.get_cloud_config_value(
