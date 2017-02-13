@@ -469,6 +469,7 @@ class SPMClient(object):
         Connect to all repos and download metadata
         '''
         cache = salt.cache.Cache(self.opts, self.opts['spm_cache_dir'])
+
         def _update_metadata(repo, repo_info):
             dl_path = '{0}/SPM-METADATA'.format(repo_info['url'])
             if dl_path.startswith('file://'):
