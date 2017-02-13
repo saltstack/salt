@@ -21,10 +21,14 @@ class SaltRunnerTest(integration.ShellCase):
     '''
     def test_salt_cmd(self):
         '''
-        salt.cmd
+        test return values of salt.cmd
         '''
         ret = self.run_run_plus('salt.cmd', 'test.ping')
-        self.assertTrue(ret.get('out')[0])
+        out_ret = ret.get('out')[0]
+        return_ret = ret.get('return')
+
+        self.assertEqual(out_ret, 'True')
+        self.assertTrue(return_ret)
 
 
 if __name__ == '__main__':
