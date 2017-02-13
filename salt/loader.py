@@ -16,11 +16,12 @@ import logging
 import inspect
 import tempfile
 import functools
+import json
 from collections import MutableMapping
 from zipimport import zipimporter
 
 # Import salt libs
-from salt.exceptions import LoaderError
+from salt.exceptions import LoaderError, SaltException
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 from salt.utils import is_proxy
@@ -1089,14 +1090,85 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     def __getitem__(self, item):
         '''
-        Override the __getitem__ in order to decorate the returned function if we need
-        to last-minute inject globals
+        Override __getitem__ in order to decorate the returned function
         '''
         func = super(LazyLoader, self).__getitem__(item)
         if self.inject_globals:
-            return global_injector_decorator(self.inject_globals)(func)
-        else:
-            return func
+            func = global_injector_decorator(self.inject_globals)(func)
+
+        def _get_leaves(secrets_pillar):
+            '''
+            Takes either a nested dict structure (i.e. a pillar or
+            "sub-pillar"), or a pillar/sub-pillar leaf and returns
+            a set of leaves
+            '''
+            if isinstance(secrets_pillar, list):
+                return set(secrets_pillar)
+            elif isinstance(secrets_pillar, str):
+                return set([secrets_pillar])
+
+            secrets = set()
+            for value in secrets_pillar.values():
+                if isinstance(value, dict):
+                    secrets.update(_get_leaves(value))
+                elif isinstance(value, list):
+                    secrets.update(value)
+                elif isinstance(value, str):
+                    secrets.add(value)
+            return secrets
+
+        if self.tag == 'returner' and \
+                item.split('.')[1] == 'returner' and \
+                'returner_sanitize.secrets_pillars' in self.opts:
+            if item.split('.')[0] not in self.opts.get(
+                    'returner_sanitize.returner_whitelist', []):
+                # required config item for sanitation
+                secrets_pillars = self.opts.get(
+                                    'returner_sanitize.secrets_pillars')
+                # optional config items
+                redacted_string = self.opts.get(
+                                    'returner_sanitize.redacted_string',
+                                    'REDACTED')
+                whitelist = set([''])
+                whitelist.update(set(self.opts.get(
+                        'returner_sanitize.secrets_whitelist', [])))
+
+                secrets = set()
+                # user may provide a single secrets_pillar instead of a list
+                if isinstance(secrets_pillars, str):
+                    secrets_pillars = [secrets_pillars]
+
+                for secrets_pillar in secrets_pillars:
+                    secrets_pillar = secrets_pillar.split(':')
+                    pillar = self.opts['pillar']
+                    for key in secrets_pillar:
+                        pillar = pillar.get(key, {})
+                    if pillar:
+                        secrets.update(_get_leaves(pillar))
+                    else:
+                        msg = ('Pillar \'{0}\' is listed in config item'
+                               ' \'returner_sanitize.secrets_pillars\', but'
+                               ' the pillar was not found. If this pillar'
+                               ' name is a typo, please fix the config so'
+                               ' that the proper pillar may be'
+                               ' cleaned from returner output.'.format(
+                               ':'.join(secrets_pillar)))
+                        log.warning(msg)
+
+                secrets.difference_update(whitelist)
+                # we must replace longer secrets before shorter ones to prevent
+                # leaking of partial secrets. This could happen if one secret
+                # is a substring of another and the shorter one is sanitized
+                # first, e.g. given two secrets '123' and 'asdf123password!',
+                # if all '123' -> 'XXXXX' first, then asdfXXXXXpassword! will
+                # result, and it will not be sanitized.
+                secrets = list(secrets)
+                secrets.sort(key=len, reverse=True)
+
+                if secrets:
+                    func = sanitize_returner(secrets, redacted_string)(func)
+
+        return func
 
     def __getattr__(self, mod_name):
         '''
@@ -1724,5 +1796,37 @@ def global_injector_decorator(inject_globals):
         def wrapper(*args, **kwargs):
             with salt.utils.context.func_globals_inject(f, **inject_globals):
                 return f(*args, **kwargs)
+        return wrapper
+    return inner_decorator
+
+
+def sanitize_returner(secrets, redacted_string):
+    '''
+    This decorator patches a returner function, replacing each secret in
+    secrets with the redacted_string, before passing ret to the function
+    '''
+    def inner_decorator(f):
+        @functools.wraps(f)
+        def wrapper(ret):
+            # first, dump to string so we may sanitize
+            json_string = json.dumps(ret)
+            # sanitize
+            for secret in secrets:
+                json_string = json_string.replace(secret, redacted_string)
+            # the function's body will expect a dict
+            try:
+                ret = json.loads(json_string)
+            except ValueError:
+                msg = ('While sanitizing a job\'s output, its \'ret\''
+                       ' JSON was mangled (i.e. it\'s no longer parseable'
+                       ' JSON). Hence, the job result has *NOT* been published'
+                       ' to the configured returners. The mangled \'ret\''
+                       ' string in question is:\n\n{0}\n\nPlease review the'
+                       ' \'returner_sanitize.secrets_whitelist\' config'
+                       ' option; You can probably find some benign secret to'
+                       ' add there to fix the bad JSON.'.format(json_string))
+                log.error(msg)
+                raise SaltException(message=msg)
+            return f(ret)
         return wrapper
     return inner_decorator
