@@ -29,34 +29,34 @@ def __virtual__():
     return 'win_osinfo'
 
 
-class OSVERSIONINFO(ctypes.Structure):
-    _fields_ = (('dwOSVersionInfoSize', DWORD),
-                ('dwMajorVersion', DWORD),
-                ('dwMinorVersion', DWORD),
-                ('dwBuildNumber', DWORD),
-                ('dwPlatformId', DWORD),
-                ('szCSDVersion', WCHAR * 128))
-
-    def __init__(self, *args, **kwds):
-        super(OSVERSIONINFO, self).__init__(*args, **kwds)
-        self.dwOSVersionInfoSize = ctypes.sizeof(self)
-        kernel32.GetVersionExW(ctypes.byref(self))
-
-
-class OSVERSIONINFOEX(OSVERSIONINFO):
-    _fields_ = (('wServicePackMajor', WORD),
-                ('wServicePackMinor', WORD),
-                ('wSuiteMask', WORD),
-                ('wProductType', BYTE),
-                ('wReserved', BYTE))
-
-
-def errcheck_bool(result, func, args):
-    if not result:
-        raise ctypes.WinError(ctypes.get_last_error())
-    return args
-
 if HAS_WIN32:
+    class OSVERSIONINFO(ctypes.Structure):
+        _fields_ = (('dwOSVersionInfoSize', DWORD),
+                    ('dwMajorVersion', DWORD),
+                    ('dwMinorVersion', DWORD),
+                    ('dwBuildNumber', DWORD),
+                    ('dwPlatformId', DWORD),
+                    ('szCSDVersion', WCHAR * 128))
+
+        def __init__(self, *args, **kwds):
+            super(OSVERSIONINFO, self).__init__(*args, **kwds)
+            self.dwOSVersionInfoSize = ctypes.sizeof(self)
+            kernel32.GetVersionExW(ctypes.byref(self))
+
+
+    class OSVERSIONINFOEX(OSVERSIONINFO):
+        _fields_ = (('wServicePackMajor', WORD),
+                    ('wServicePackMinor', WORD),
+                    ('wSuiteMask', WORD),
+                    ('wProductType', BYTE),
+                    ('wReserved', BYTE))
+
+
+    def errcheck_bool(result, func, args):
+        if not result:
+            raise ctypes.WinError(ctypes.get_last_error())
+        return args
+
     kernel32.GetVersionExW.errcheck = errcheck_bool
     kernel32.GetVersionExW.argtypes = (ctypes.POINTER(OSVERSIONINFO),)
 
