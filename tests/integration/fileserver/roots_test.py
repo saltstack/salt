@@ -18,6 +18,9 @@ import integration
 from salt.fileserver import roots
 from salt import fileclient
 
+# Import third party libs
+import salt.ext.six as six
+
 roots.__opts__ = {}
 
 
@@ -68,19 +71,19 @@ class RootsTest(integration.ModuleCase):
             ret = roots.serve_file(load, fnd)
             self.assertDictEqual(
                 ret,
-                {'data': 'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  '
-                         'ARTHUR:  And this enchanter of whom you speak, he '
-                         'has seen the grail?\n  OLD MAN:  Ha ha he he he '
-                         'he!\n  ARTHUR:  Where does he live?  Old man, where '
-                         'does he live?\n  OLD MAN:  He knows of a cave, a '
-                         'cave which no man has entered.\n  ARTHUR:  And the '
-                         'Grail... The Grail is there?\n  OLD MAN:  Very much '
-                         'danger, for beyond the cave lies the Gorge\n      '
-                         'of Eternal Peril, which no man has ever crossed.\n  '
-                         'ARTHUR:  But the Grail!  Where is the Grail!?\n  '
-                         'OLD MAN:  Seek you the Bridge of Death.\n  ARTHUR:  '
-                         'The Bridge of Death, which leads to the Grail?\n  '
-                         'OLD MAN:  Hee hee ha ha!\n\n',
+                {'data': six.b('Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  '
+                              'ARTHUR:  And this enchanter of whom you speak, he '
+                              'has seen the grail?\n  OLD MAN:  Ha ha he he he '
+                              'he!\n  ARTHUR:  Where does he live?  Old man, where '
+                              'does he live?\n  OLD MAN:  He knows of a cave, a '
+                              'cave which no man has entered.\n  ARTHUR:  And the '
+                              'Grail... The Grail is there?\n  OLD MAN:  Very much '
+                              'danger, for beyond the cave lies the Gorge\n      '
+                              'of Eternal Peril, which no man has ever crossed.\n  '
+                              'ARTHUR:  But the Grail!  Where is the Grail!?\n  '
+                              'OLD MAN:  Seek you the Bridge of Death.\n  ARTHUR:  '
+                              'The Bridge of Death, which leads to the Grail?\n  '
+                              'OLD MAN:  Hee hee ha ha!\n\n'),
                  'dest': 'testfile'})
 
     @skipIf(True, "Update test not yet implemented")

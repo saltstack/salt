@@ -1103,6 +1103,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Allow for "direct" attribute access-- this allows jinja templates to
         access things like `salt.test.ping()`
         '''
+        if mod_name in ('__getstate__', '__setstate__'):
+            return object.__getattribute__(self, mod_name)
+
         # if we have an attribute named that, lets return it.
         try:
             return object.__getattr__(self, mod_name)  # pylint: disable=no-member

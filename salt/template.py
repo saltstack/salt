@@ -10,15 +10,15 @@ import time
 import os
 import codecs
 import logging
-import cStringIO
-import StringIO
 
 # Import salt libs
 import salt.utils
 import salt.utils.files
+import salt.utils.stringio
 from salt._compat import string_io
-from salt.ext.six import string_types
 
+# Import 3rd-party libs
+import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 
@@ -59,7 +59,7 @@ def compile_template(template,
 
     if template != ':string:':
         # Template was specified incorrectly
-        if not isinstance(template, string_types):
+        if not isinstance(template, six.string_types):
             log.error('Template was specified incorrectly: {0}'.format(template))
             return ret
         # Template does not exist
@@ -84,7 +84,7 @@ def compile_template(template,
 
     input_data = string_io(input_data)
     for render, argline in render_pipe:
-        if isinstance(input_data, (cStringIO.InputType, StringIO.StringIO)):
+        if salt.utils.stringio.is_readable(input_data):
             input_data.seek(0)      # pylint: disable=no-member
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
@@ -108,7 +108,7 @@ def compile_template(template,
             # If ret is not a StringIO (which means it was rendered using
             # yaml, mako, or another engine which renders to a data
             # structure) we don't want to log this.
-            if isinstance(ret, (cStringIO.InputType, StringIO.StringIO)):
+            if salt.utils.stringio.is_readable(ret):
                 log.debug('Rendered data from file: {0}:\n{1}'.format(
                     template,
                     ret.read()))    # pylint: disable=no-member

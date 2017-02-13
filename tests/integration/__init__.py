@@ -1123,6 +1123,13 @@ class TestDaemon(object):
                 TMP_PRODENV_STATE_TREE
             ]
         }
+        master_opts.setdefault('reactor', []).append(
+            {
+                'salt/minion/*/start': [
+                    os.path.join(FILES, 'reactor-sync-minion.sls')
+                ],
+            }
+        )
         for opts_dict in (master_opts, syndic_master_opts):
             if 'ext_pillar' not in opts_dict:
                 opts_dict['ext_pillar'] = []
@@ -1565,6 +1572,7 @@ class TestDaemon(object):
         self.sync_minion_modules_('modules', targets, timeout=timeout)
 
     def sync_minion_grains(self, targets, timeout=None):
+        salt.utils.appendproctitle('SyncMinionGrains')
         self.sync_minion_modules_('grains', targets, timeout=timeout)
 
 
