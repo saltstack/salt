@@ -64,7 +64,7 @@ class NetapiClient(object):
 
         if low.get('client') not in CLIENTS:
             raise salt.exceptions.SaltInvocationError(
-                    'Invalid client specified: {0!r}'.format(low.get('client')))
+                    'Invalid client specified: \'{0}\''.format(low.get('client')))
 
         if not ('token' in low or 'eauth' in low) and low['client'] != 'ssh':
             raise salt.exceptions.EauthAuthenticationError(
