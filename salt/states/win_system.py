@@ -235,12 +235,13 @@ def join_domain(name, username=None, password=None, account_ou=None,
         ret['result'] = False
     return ret
 
+
 def reboot(name, message=None, timeout=5, force_close=True, in_seconds=False,
            only_on_pending_reboot=True):
     '''
     Reboot the computer
 
-	:param str message:
+    :param str message:
         An optional message to display to users. It will also be used as a
         comment in the event log entry.
 
@@ -279,6 +280,7 @@ def reboot(name, message=None, timeout=5, force_close=True, in_seconds=False,
                     force_close=force_close, reboot=True,
                     in_seconds=in_seconds,
                     only_on_pending_reboot=only_on_pending_reboot)
+
 
 def shutdown(name, message=None, timeout=5, force_close=True, reboot=False,
              in_seconds=False, only_on_pending_reboot=False):
@@ -341,10 +343,10 @@ def shutdown(name, message=None, timeout=5, force_close=True, reboot=False,
     if only_on_pending_reboot and not __salt__['system.get_pending_reboot']():
         if __opts__['test']:
             ret['comment'] = ('System {0} will be skipped because '
-			                  'no reboot is pending').format(action)
+                              'no reboot is pending').format(action)
         else:
             ret['comment'] = ('System {0} has been skipped because '
-			                  'no reboot was pending').format(action)
+                              'no reboot was pending').format(action)
         return ret
 
     if __opts__['test']:
@@ -360,9 +362,9 @@ def shutdown(name, message=None, timeout=5, force_close=True, reboot=False,
                                                 only_on_pending_reboot=False)
 
     if ret['result']:
-	    ret['changes'] = {'old': 'No reboot or shutdown was scheduled',
-		                  'new': 'A {0} has been scheduled'.format(action)}
-	    ret['comment'] = 'Request to {0} was successful'.format(action)
+        ret['changes'] = {'old': 'No reboot or shutdown was scheduled',
+                          'new': 'A {0} has been scheduled'.format(action)}
+        ret['comment'] = 'Request to {0} was successful'.format(action)
     else:
-	    ret['comment'] = 'Request to {0} failed'.format(action)
+        ret['comment'] = 'Request to {0} failed'.format(action)
     return ret
