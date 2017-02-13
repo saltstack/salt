@@ -2463,7 +2463,7 @@ def request_instance(vm_):
     kwargs['external_ip'] = external_ip
     vm_['external_ip'] = external_ip
 
-    if LIBCLOUD_VERSION_INFO > (0, 15, 1) and LIBCLOUD_VERSION_INFO < (1, 0, 0):
+    if LIBCLOUD_VERSION_INFO > (0, 15, 1):
 
         kwargs.update({
             'ex_disk_type': config.get_cloud_config_value(
@@ -2484,12 +2484,6 @@ def request_instance(vm_):
                 'The value of \'ex_disk_type\' needs to be one of: '
                 '\'pd-standard\', \'pd-ssd\''
             )
-
-    if LIBCLOUD_VERSION_INFO >= (1, 0, 0):
-
-        kwargs.update({
-            'ex_subnetwork': __get_subnetwork(conn, vm_)
-        })
 
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
         kwargs['location'].name)
