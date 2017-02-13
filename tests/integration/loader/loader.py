@@ -9,10 +9,13 @@
 # Import Python libs
 from __future__ import absolute_import
 import inspect
+import logging
 import tempfile
 import shutil
 import os
 import collections
+
+log = logging.getLogger(__name__)
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -355,6 +358,72 @@ class LazyLoaderReloadingTest(TestCase):
         self.assertEqual(self.loader[self.module_key](), self.count)
         self.loader.clear()
         self.assertNotIn(self.module_key, self.loader)
+
+
+virtual_aliases = ('loadertest2', 'loadertest3')
+virtual_alias_module_template = '''
+__virtual_aliases__ = {0}
+
+def test():
+    return True
+'''.format(virtual_aliases)
+
+
+class LazyLoaderVirtualAliasTest(TestCase):
+    '''
+    Test the loader of salt with changing modules
+    '''
+    module_name = 'loadertest'
+
+    def setUp(self):
+        self.opts = _config = minion_config(None)
+        self.opts['grains'] = grains(self.opts)
+        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
+        dirs = _module_dirs(self.opts, 'modules', 'module')
+        dirs.append(self.tmp_dir)
+        self.utils = utils(self.opts)
+        self.proxy = proxy(self.opts)
+        self.minion_mods = minion_mods(self.opts)
+        self.loader = LazyLoader(dirs,
+                                 self.opts,
+                                 tag='module',
+                                 pack={'__utils__': self.utils,
+                                       '__proxy__': self.proxy,
+                                       '__salt__': self.minion_mods})
+
+    def update_module(self):
+        with open(self.module_path, 'wb') as fh:
+            fh.write(salt.utils.to_bytes(virtual_alias_module_template))
+            fh.flush()
+            os.fsync(fh.fileno())  # flush to disk
+
+        # pyc files don't like it when we change the original quickly
+        # since the header bytes only contain the timestamp (granularity of seconds)
+        # TODO: don't write them? Is *much* slower on re-load (~3x)
+        # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
+        try:
+            os.unlink(self.module_path + 'c')
+        except OSError:
+            pass
+
+    @property
+    def module_path(self):
+        return os.path.join(self.tmp_dir, '{0}.py'.format(self.module_name))
+
+    def test_virtual_alias(self):
+        '''
+        Test the __virtual_alias__ feature
+        '''
+        self.update_module()
+
+        mod_names = [self.module_name] + list(virtual_aliases)
+        for mod_name in mod_names:
+            func_name = '.'.join((mod_name, 'test'))
+            log.debug('Running %s (dict attribute)', func_name)
+            self.assertTrue(self.loader[func_name]())
+            log.debug('Running %s (loader attribute)', func_name)
+            self.assertTrue(getattr(self.loader, mod_name).test())
+
 
 submodule_template = '''
 import lib
