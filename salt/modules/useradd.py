@@ -43,7 +43,12 @@ def _get_gecos(name):
     '''
     Retrieve GECOS field info and return it in dictionary form
     '''
+
+    if isinstance(name, int):
+        name = "{0}".format(name)
+
     gecos_field = pwd.getpwnam(name).pw_gecos.split(',', 3)
+
     if not gecos_field:
         return {}
     else:
@@ -482,6 +487,9 @@ def info(name):
 
         salt '*' user.info root
     '''
+    if isinstance(name, int):
+        name = "{0}".format(name)
+
     try:
         data = pwd.getpwnam(name)
     except KeyError:
