@@ -45,7 +45,7 @@ def _get_gecos(name):
     '''
 
     if isinstance(name, int):
-        name = "{}".format(name)
+        name = "{0}".format(name)
 
     gecos_field = pwd.getpwnam(name).pw_gecos.split(',', 3)
 
@@ -488,7 +488,7 @@ def info(name):
         salt '*' user.info root
     '''
     if isinstance(name, int):
-        name = "{}".format(name)
+        name = "{0}".format(name)
 
     try:
         data = pwd.getpwnam(name)
