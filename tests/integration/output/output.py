@@ -105,7 +105,16 @@ class OutputReturnTest(integration.ShellCase):
         except Exception:
             # display trace in error message for debugging on jenkins
             trace = traceback.format_exc()
-            self.assertEqual(trace, '')
+            sentinel = object()
+            old_max_diff = getattr(self, 'maxDiff', sentinel)
+            try:
+                self.maxDiff = None
+                self.assertEqual(trace, '')
+            finally:
+                if old_max_diff is sentinel:
+                    delattr(self, 'maxDiff')
+                else:
+                    self.maxDiff = old_max_diff
 
 
 if __name__ == '__main__':
