@@ -317,7 +317,6 @@ def list_nodes_full(call=None):
     if 'Code' in result or result['TotalCount'] == 0:
         return ret
 
-    
     # aliyun max 100 top instance in api
     result_instancestatus = result['InstanceStatuses']['InstanceStatus']
     if result['TotalCount'] > 50:
@@ -355,7 +354,7 @@ def list_nodes_full(call=None):
             if item == "InnerIpAddress" and 'private_ips' not in ret[name]:
                 ret[name]['private_ips'] = items[item]['IpAddress']
             if item == 'VpcAttributes':
-	        vpc_ips = items[item]['PrivateIpAddress']['IpAddress']
+            vpc_ips = items[item]['PrivateIpAddress']['IpAddress']
                 if len(vpc_ips) > 0:
                     ret[name]['private_ips'] = vpc_ips
             ret[name][item] = value
@@ -640,21 +639,21 @@ def create(vm_):
         'securitygroup_id': get_securitygroup(vm_),
     }
     if 'vswitch_id' in vm_:
-        kwargs['VSwitchId'] = vm_['vswitch_id']
+          kwargs['VSwitchId'] = vm_['vswitch_id']
     if 'internet_chargetype' in vm_:
-        kwargs['InternetChargeType'] = vm_['internet_chargetype']
+          kwargs['InternetChargeType'] = vm_['internet_chargetype']
     if 'internet_maxbandwidthin' in vm_:
-        kwargs['InternetMaxBandwidthIn'] = str(vm_['internet_maxbandwidthin'])
+          kwargs['InternetMaxBandwidthIn'] = str(vm_['internet_maxbandwidthin'])
     if 'internet_maxbandwidthout' in vm_:
-        kwargs['InternetMaxBandwidthOut'] = str(vm_['internet_maxbandwidthOut'])
+          kwargs['InternetMaxBandwidthOut'] = str(vm_['internet_maxbandwidthOut'])
     if 'hostname' in  vm_:
-        kwargs['HostName'] = vm_['hostname']
+          kwargs['HostName'] = vm_['hostname']
     if 'password' in  vm_:
-        kwargs['Password'] = vm_['password']
+          kwargs['Password'] = vm_['password']
     if 'instance_name' in  vm_:
-        kwargs['InstanceName'] = vm_['instance_name']
+          kwargs['InstanceName'] = vm_['instance_name']
     if 'systemdisk_category' in  vm_:
-        kwargs['SystemDisk.Category'] = vm_['systemdisk_category']
+          kwargs['SystemDisk.Category'] = vm_['systemdisk_category']
 
     __utils__['cloud.fire_event'](
         'event',
@@ -684,7 +683,6 @@ def create(vm_):
     params = {'Action': 'StartInstance',
               'InstanceId': ret}
     query(params)
-    
 
     def __query_node_data(vm_name):
         data = show_instance(vm_name, call='action')
@@ -693,7 +691,7 @@ def create(vm_):
             return False
         if data.get('PublicIpAddress', None) is not None:
             return data
-    
+
     try:
         data = salt.utils.cloud.wait_for_ip(
             __query_node_data,
@@ -711,14 +709,14 @@ def create(vm_):
             pass
         finally:
             raise SaltCloudSystemExit(str(exc))
-   
+
     if len(data['public_ips']) > 0:
-       ssh_ip = data['public_ips'][0]
+         ssh_ip = data['public_ips'][0]
     elif len(data['private_ips']) > 0:
-       ssh_ip = data['private_ips'][0]
+         ssh_ip = data['private_ips'][0]
     else:
-       log.info('No available ip:cant connect to salt')
-       return False
+         log.info('No available ip:cant connect to salt')
+         return False
     log.debug('VM {0} is now running'.format(ssh_ip))
     vm_['ssh_host'] = ssh_ip
 
