@@ -354,7 +354,7 @@ def list_nodes_full(call=None):
             if item == "InnerIpAddress" and 'private_ips' not in ret[name]:
                 ret[name]['private_ips'] = items[item]['IpAddress']
             if item == 'VpcAttributes':
-            vpc_ips = items[item]['PrivateIpAddress']['IpAddress']
+                vpc_ips = items[item]['PrivateIpAddress']['IpAddress']
                 if len(vpc_ips) > 0:
                     ret[name]['private_ips'] = vpc_ips
             ret[name][item] = value
