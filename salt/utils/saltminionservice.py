@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import sys
 
 # Import salt libs
-from salt.utils.winservice import Service, instart
+from salt.utils.winservice import service, instart
 import salt
 import salt.defaults.exitcodes
 
@@ -15,7 +15,7 @@ import win32service
 import winerror
 
 
-class MinionService(Service):
+class MinionService(service):
 
     def start(self):
         self.runflag = True

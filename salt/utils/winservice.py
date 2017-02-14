@@ -30,7 +30,16 @@ def __virtual__():
     return 'winservice'
 
 
-if HAS_WIN32:
+def service():
+    '''
+    Helper function to return the Service class
+
+    Returns:
+        class: An instance of the ServiceFramework class
+    '''
+    if not HAS_WIN32:
+        return
+
     class Service(win32serviceutil.ServiceFramework):
 
         _svc_name_ = '_unNamed'
@@ -77,6 +86,8 @@ if HAS_WIN32:
         # to be overridden
         def stop(self):
             pass
+
+    return Service()
 
 
 def instart(cls, name, display_name=None, stay_alive=True):

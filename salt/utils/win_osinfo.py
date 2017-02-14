@@ -34,8 +34,11 @@ def os_version_info_ex():
     Helper function to return the OSVersionInfo class
 
     Returns:
-        class: The OsVersionInfo class
+        class: An instance of a class containing version info
     '''
+    if not HAS_WIN32:
+        return
+
     class OSVersionInfo(ctypes.Structure):
         _fields_ = (('dwOSVersionInfoSize', DWORD),
                     ('dwMajorVersion', DWORD),
