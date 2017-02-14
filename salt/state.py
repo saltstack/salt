@@ -25,7 +25,6 @@ import traceback
 import re
 import time
 import random
-import multiprocessing
 
 # Import salt libs
 import salt.utils
@@ -36,6 +35,7 @@ import salt.fileclient
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.url
+import salt.utils.process
 import salt.syspaths as syspaths
 from salt.utils import immutabletypes
 from salt.template import compile_template, compile_template_str
@@ -1688,7 +1688,7 @@ class State(object):
         '''
         Call the state defined in the given cdata in parallel
         '''
-        proc = multiprocessing.Process(
+        proc = salt.utils.process.MultiprocessingProcess(
                 target=self._call_parallel_target,
                 args=(cdata, low))
         proc.start()
