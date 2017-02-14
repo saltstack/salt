@@ -74,6 +74,9 @@ def _walk_through(job_dir):
     for top in os.listdir(job_dir):
         t_path = os.path.join(job_dir, top)
 
+        if not os.path.exists(t_path):
+            continue
+
         for final in os.listdir(t_path):
             load_path = os.path.join(t_path, final, LOAD_P)
 
