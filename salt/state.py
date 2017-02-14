@@ -2010,7 +2010,7 @@ class State(object):
                     running[tag].pop('proc')
                 else:
                     retset.add(False)
-        return False if False in retset else True
+        return False not in retset
 
     def check_requisite(self, low, running, chunks, pre=False):
         '''
