@@ -199,6 +199,7 @@ from collections import defaultdict
 # pylint: disable=import-error
 import cgi
 import yaml
+import tornado.escape
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
@@ -523,7 +524,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
             # Use cgi.parse_header to correctly separate parameters from value
             header = cgi.parse_header(self.request.headers['Content-Type'])
             value, parameters = header
-            return ct_in_map[value](data)
+            return ct_in_map[value](tornado.escape.native_str(data))
         except KeyError:
             self.send_error(406)
         except ValueError:
