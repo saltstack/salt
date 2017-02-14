@@ -87,17 +87,14 @@ def _get_librato(ret=None):
     '''
     _options = _get_options(ret)
 
-    try:
-        conn = librato.connect(
-            _options.get('email'),
-            _options.get('api_token'),
-            sanitizer=librato.sanitize_metric_name,
-            hostname=_options.get('api_url'))
-        log.info("Connected to librato.")
-        return conn
-    except:
-        log.error("Could not connect to librato.")
-        return False
+
+    conn = librato.connect(
+        _options.get('email'),
+        _options.get('api_token'),
+        sanitizer=librato.sanitize_metric_name,
+        hostname=_options.get('api_url'))
+    log.info("Connected to librato.")
+    return conn
 
 
 def _calculate_runtimes(states):
