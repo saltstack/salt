@@ -861,7 +861,7 @@ def symlink(
         return _error(ret, 'Must provide name to file.symlink')
 
     if user is None:
-        user = __opts__['user']
+        user = salt.utils.get_user()
 
     if salt.utils.is_windows():
 
@@ -4653,7 +4653,7 @@ def copy(
     else:
         user = _test_owner(kwargs, user=user)
         if user is None:
-            user = __opts__['user']
+            user = salt.utils.get_user()
 
         if salt.utils.is_windows():
             if group is not None:
