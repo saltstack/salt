@@ -58,14 +58,14 @@ def cache_jobs(opts, jid, ret):
         fp_.write(serial.dumps(ret))
 
 
-def connected_masters():
+def connected_masters(pub_port):
     '''
     Return current connected masters
     '''
     # default port
     port = 4505
 
-    config_port = __salt__['config.get']('publish_port')
+    config_port = pub_port
     if config_port:
         port = config_port
 

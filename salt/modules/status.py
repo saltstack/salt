@@ -1054,8 +1054,12 @@ def master(master=None, connected=True):
     if not master_ips:
         return
 
+    pub_port = None
+    if __salt__['config.get']('publish_port') != '':
+        pub_port = int(__salt__['config.get']('publish_port'))
+
     master_connection_status = False
-    connected_ips = _connected_masters()
+    connected_ips = _connected_masters(pub_port)
 
     # Get connection status for master
     for master_ip in master_ips:
