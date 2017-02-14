@@ -257,7 +257,8 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
     the cipher and return the decrypted string. If the cipher cannot be
     decrypted, log the error, and return the ciphertext back out.
     '''
-    cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '-d']
+    cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '--status-fd', '2',
+           '--no-tty', '-d']
     proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
     decrypted_data, decrypt_error = proc.communicate(
         input=cipher.replace(r'\n', '\n') if translate_newlines else cipher
