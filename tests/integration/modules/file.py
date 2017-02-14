@@ -17,7 +17,6 @@ from salttesting.mock import patch, MagicMock
 ensure_in_syspath('../../')
 
 # Import salt libs
-import salt.ext.six as six
 import integration
 import salt.utils
 from salt.modules import file as filemod
@@ -167,10 +166,7 @@ class FileModuleTest(integration.ModuleCase):
     def test_source_list_for_single_file_returns_unchanged(self):
         ret = self.run_function('file.source_list', ['salt://http/httpd.conf',
                                                      'filehash', 'base'])
-        if six.PY3:
-            self.assertCountEqual(ret, ['salt://http/httpd.conf', 'filehash'])
-        else:
-            self.assertItemsEqual(ret, ['salt://http/httpd.conf', 'filehash'])
+        self.assertEqual(list(ret), ['salt://http/httpd.conf', 'filehash'])
 
     def test_source_list_for_list_returns_existing_file(self):
         filemod.__salt__ = {
@@ -183,12 +179,7 @@ class FileModuleTest(integration.ModuleCase):
         ret = filemod.source_list(['salt://http/httpd.conf',
                                    'salt://http/httpd.conf.fallback'],
                                   'filehash', 'base')
-        if six.PY3:
-            self.assertCountEqual(ret, ['salt://http/httpd.conf.fallback',
-                                        'filehash'])
-        else:
-            self.assertItemsEqual(ret, ['salt://http/httpd.conf.fallback',
-                                        'filehash'])
+        self.assertEqual(list(ret), ['salt://http/httpd.conf.fallback', 'filehash'])
 
     def test_source_list_for_list_returns_file_from_other_env(self):
         def list_master(env):
@@ -203,12 +194,7 @@ class FileModuleTest(integration.ModuleCase):
         ret = filemod.source_list(['salt://http/httpd.conf?saltenv=dev',
                                    'salt://http/httpd.conf.fallback'],
                                   'filehash', 'base')
-        if six.PY3:
-            self.assertCountEqual(ret, ['salt://http/httpd.conf?saltenv=dev',
-                                        'filehash'])
-        else:
-            self.assertItemsEqual(ret, ['salt://http/httpd.conf?saltenv=dev',
-                                        'filehash'])
+        self.assertEqual(list(ret), ['salt://http/httpd.conf?saltenv=dev', 'filehash'])
 
     def test_source_list_for_list_returns_file_from_dict(self):
         filemod.__salt__ = {
@@ -219,10 +205,7 @@ class FileModuleTest(integration.ModuleCase):
 
         ret = filemod.source_list(
             [{'salt://http/httpd.conf': ''}], 'filehash', 'base')
-        if six.PY3:
-            self.assertCountEqual(ret, ['salt://http/httpd.conf', 'filehash'])
-        else:
-            self.assertItemsEqual(ret, ['salt://http/httpd.conf', 'filehash'])
+        self.assertEqual(list(ret), ['salt://http/httpd.conf', 'filehash'])
 
     @patch('salt.modules.file.os.remove')
     def test_source_list_for_list_returns_file_from_dict_via_http(self, remove):
@@ -236,62 +219,39 @@ class FileModuleTest(integration.ModuleCase):
 
         ret = filemod.source_list(
             [{'http://t.est.com/http/httpd.conf': 'filehash'}], '', 'base')
-        if six.PY3:
-            self.assertCountEqual(ret, ['http://t.est.com/http/httpd.conf',
-                                        'filehash'])
-        else:
-            self.assertItemsEqual(ret, ['http://t.est.com/http/httpd.conf',
-                                        'filehash'])
+        self.assertEqual(list(ret), ['http://t.est.com/http/httpd.conf', 'filehash'])
 
     def test_source_list_for_single_local_file_slash_returns_unchanged(self):
         ret = self.run_function('file.source_list', [self.myfile,
                                                      'filehash', 'base'])
-        if six.PY3:
-            self.assertCountEqual(ret, [self.myfile, 'filehash'])
-        else:
-            self.assertItemsEqual(ret, [self.myfile, 'filehash'])
+        self.assertEqual(list(ret), [self.myfile, 'filehash'])
 
     def test_source_list_for_single_local_file_proto_returns_unchanged(self):
         ret = self.run_function('file.source_list', ['file://' + self.myfile,
                                                      'filehash', 'base'])
-        if six.PY3:
-            self.assertCountEqual(ret, ['file://' + self.myfile, 'filehash'])
-        else:
-            self.assertItemsEqual(ret, ['file://' + self.myfile, 'filehash'])
+        self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
 
     def test_source_list_for_list_returns_existing_local_file_slash(self):
         ret = filemod.source_list([self.myfile + '-foo',
                                    self.myfile],
                                   'filehash', 'base')
-        if six.PY3:
-            self.assertCountEqual(ret, [self.myfile, 'filehash'])
-        else:
-            self.assertItemsEqual(ret, [self.myfile, 'filehash'])
+        self.assertEqual(list(ret), [self.myfile, 'filehash'])
 
     def test_source_list_for_list_returns_existing_local_file_proto(self):
         ret = filemod.source_list(['file://' + self.myfile + '-foo',
                                    'file://' + self.myfile],
                                   'filehash', 'base')
-        if six.PY3:
-            self.assertCountEqual(ret, ['file://' + self.myfile, 'filehash'])
-        else:
-            self.assertItemsEqual(ret, ['file://' + self.myfile, 'filehash'])
+        self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
 
     def test_source_list_for_list_returns_local_file_slash_from_dict(self):
         ret = filemod.source_list(
             [{self.myfile: ''}], 'filehash', 'base')
-        if six.PY3:
-            self.assertCountEqual(ret, [self.myfile, 'filehash'])
-        else:
-            self.assertItemsEqual(ret, [self.myfile, 'filehash'])
+        self.assertEqual(list(ret), [self.myfile, 'filehash'])
 
     def test_source_list_for_list_returns_local_file_proto_from_dict(self):
         ret = filemod.source_list(
             [{'file://' + self.myfile: ''}], 'filehash', 'base')
-        if six.PY3:
-            self.assertCountEqual(ret, ['file://' + self.myfile, 'filehash'])
-        else:
-            self.assertItemsEqual(ret, ['file://' + self.myfile, 'filehash'])
+        self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
 
 if __name__ == '__main__':
     from integration import run_tests
