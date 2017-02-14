@@ -77,7 +77,7 @@ def _get_options(ret=None):
 
     _options['api_url'] = _options.get('api_url', 'metrics-api.librato.com')
 
-    log.debug("Retrieved Librato options: {}".format(_options))
+    log.debug("Retrieved Librato options: {0}".format(_options))
     return _options
 
 
@@ -118,7 +118,7 @@ def _calculate_runtimes(states):
             # Count durations
             results['runtime'] += resultset['duration']
 
-    log.debug("Parsed state metrics: {}".format(results))
+    log.debug("Parsed state metrics: {0}".format(results))
     return results
 
 
@@ -134,25 +134,25 @@ def returner(ret):
         log.debug("Found returned Highstate data.")
         # Calculate the runtimes and number of failed states.
         stats = _calculate_runtimes(ret['return'])
-        log.debug("Batching Metric retcode with {}".format(ret['retcode']))
+        log.debug("Batching Metric retcode with {0}".format(ret['retcode']))
         q.add("saltstack.highstate.retcode", ret[
               'retcode'], tags={'Name': ret['id']})
 
-        log.debug("Batching Metric num_failed_jobs with {}".format(
+        log.debug("Batching Metric num_failed_jobs with {0}".format(
             stats['num_failed_states']))
         q.add("saltstack.highstate.failed_states",
               stats['num_failed_states'], tags={'Name': ret['id']})
 
-        log.debug("Batching Metric num_passed_states with {}".format(
+        log.debug("Batching Metric num_passed_states with {0}".format(
             stats['num_passed_states']))
         q.add("saltstack.highstate.passed_states",
               stats['num_passed_states'], tags={'Name': ret['id']})
 
-        log.debug("Batching Metric runtime with {}".format(stats['runtime']))
+        log.debug("Batching Metric runtime with {0}".format(stats['runtime']))
         q.add("saltstack.highstate.runtime",
               stats['runtime'], tags={'Name': ret['id']})
 
-        log.debug("Batching Metric runtime with {}".format(
+        log.debug("Batching Metric runtime with {0}".format(
             stats['num_failed_states'] + stats['num_passed_states']))
         q.add("saltstack.highstate.total_states", stats[
               'num_failed_states'] + stats['num_passed_states'], tags={'Name': ret['id']})
