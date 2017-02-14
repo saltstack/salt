@@ -211,8 +211,8 @@ def create_site(name, sourcepath, apppool='', hostheader='',
         name (str): The IIS site name.
         sourcepath (str): The physical path of the IIS site.
         apppool (str): The name of the IIS application pool.
-        hostheader (str): The host header of the binding. Usually the hostname,
-            ie: contoso.com
+        hostheader (str): The host header of the binding. Usually the hostname
+            or website name, ie: www.contoso.com
         ipaddress (str): The IP address of the binding.
         port (int): The TCP port of the binding.
         protocol (str): The application protocol of the binding. (http, https,
