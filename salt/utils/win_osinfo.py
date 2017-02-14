@@ -31,7 +31,8 @@ def __virtual__():
 
 def os_version_info_ex():
     '''
-    Helper function to return an instance of the OSVersionInfo class
+    Helper function to return the results of the GetVersionExW Windows API call.
+    It is a ctypes Structure that contains Windows OS Version information.
 
     Returns:
         class: An instance of a class containing version info
