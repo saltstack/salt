@@ -61,7 +61,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 ALIYUN_LOCATIONS = {
-    #'us-west-2': 'ec2_us_west_oregon',
+    # 'us-west-2': 'ec2_us_west_oregon',
     'cn-hangzhou': 'AliYun HangZhou Region',
     'cn-beijing': 'AliYun BeiJing Region',
     'cn-hongkong': 'AliYun HongKong Region',
@@ -639,21 +639,21 @@ def create(vm_):
         'securitygroup_id': get_securitygroup(vm_),
     }
     if 'vswitch_id' in vm_:
-          kwargs['VSwitchId'] = vm_['vswitch_id']
+        kwargs['VSwitchId'] = vm_['vswitch_id']
     if 'internet_chargetype' in vm_:
-          kwargs['InternetChargeType'] = vm_['internet_chargetype']
+        kwargs['InternetChargeType'] = vm_['internet_chargetype']
     if 'internet_maxbandwidthin' in vm_:
-          kwargs['InternetMaxBandwidthIn'] = str(vm_['internet_maxbandwidthin'])
+        kwargs['InternetMaxBandwidthIn'] = str(vm_['internet_maxbandwidthin'])
     if 'internet_maxbandwidthout' in vm_:
-          kwargs['InternetMaxBandwidthOut'] = str(vm_['internet_maxbandwidthOut'])
-    if 'hostname' in  vm_:
-          kwargs['HostName'] = vm_['hostname']
-    if 'password' in  vm_:
-          kwargs['Password'] = vm_['password']
-    if 'instance_name' in  vm_:
-          kwargs['InstanceName'] = vm_['instance_name']
-    if 'systemdisk_category' in  vm_:
-          kwargs['SystemDisk.Category'] = vm_['systemdisk_category']
+        kwargs['InternetMaxBandwidthOut'] = str(vm_['internet_maxbandwidthOut'])
+    if 'hostname' in vm_:
+        kwargs['HostName'] = vm_['hostname']
+    if 'password' in vm_:
+        kwargs['Password'] = vm_['password']
+    if 'instance_name' in vm_:
+        kwargs['InstanceName'] = vm_['instance_name']
+    if 'systemdisk_category' in vm_:
+        kwargs['SystemDisk.Category'] = vm_['systemdisk_category']
 
     __utils__['cloud.fire_event'](
         'event',
@@ -711,12 +711,12 @@ def create(vm_):
             raise SaltCloudSystemExit(str(exc))
 
     if len(data['public_ips']) > 0:
-         ssh_ip = data['public_ips'][0]
+        ssh_ip = data['public_ips'][0]
     elif len(data['private_ips']) > 0:
-         ssh_ip = data['private_ips'][0]
+        ssh_ip = data['private_ips'][0]
     else:
-         log.info('No available ip:cant connect to salt')
-         return False
+        log.info('No available ip:cant connect to salt')
+        return False
     log.debug('VM {0} is now running'.format(ssh_ip))
     vm_['ssh_host'] = ssh_ip
 
