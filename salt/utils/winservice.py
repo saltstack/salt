@@ -32,7 +32,7 @@ def __virtual__():
 
 def service():
     '''
-    Helper function to return the Service class
+    Helper function to return an instance of the ServiceFramework class
 
     Returns:
         class: An instance of the ServiceFramework class
