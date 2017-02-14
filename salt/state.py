@@ -23,7 +23,9 @@ import logging
 import datetime
 import traceback
 import re
+import time
 import random
+import multiprocessing
 
 # Import salt libs
 import salt.utils
@@ -53,6 +55,7 @@ import salt.utils.yamlloader as yamlloader
 import salt.ext.six as six
 from salt.ext.six.moves import map, range, reload_module
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
+import msgpack
 
 log = logging.getLogger(__name__)
 
@@ -85,6 +88,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'unless',
     'retry',
     'order',
+    'parallel',
     'prereq',
     'prereq_in',
     'prerequired',
@@ -1645,6 +1649,56 @@ class State(object):
         errors.extend(req_in_errors)
         return req_in_high, errors
 
+    def _call_parallel_target(self, cdata, low):
+        '''
+        The target function to call that will create the parallel thread/process
+        '''
+        tag = _gen_tag(low)
+        try:
+            ret = self.states[cdata['full']](*cdata['args'],
+                                             **cdata['kwargs'])
+        except Exception:
+            trb = traceback.format_exc()
+            # There are a number of possibilities to not have the cdata
+            # populated with what we might have expected, so just be smart
+            # enough to not raise another KeyError as the name is easily
+            # guessable and fallback in all cases to present the real
+            # exception to the user
+            if len(cdata['args']) > 0:
+                name = cdata['args'][0]
+            elif 'name' in cdata['kwargs']:
+                name = cdata['kwargs']['name']
+            else:
+                name = low.get('name', low.get('__id__'))
+            ret = {
+                'result': False,
+                'name': name,
+                'changes': {},
+                'comment': 'An exception occurred in this state: {0}'.format(
+                    trb)
+            }
+        troot = os.path.join(self.opts['cachedir'], self.jid)
+        tfile = os.path.join(troot, tag)
+        if not os.path.isdir(troot):
+            os.makedirs(troot)
+        with open(tfile, 'wb+') as fp_:
+            fp_.write(msgpack.dumps(ret))
+
+    def call_parallel(self, cdata, low):
+        '''
+        Call the state defined in the given cdata in parallel
+        '''
+        proc = multiprocessing.Process(
+                target=self._call_parallel_target,
+                args=(cdata, low))
+        proc.start()
+        ret = {'name': cdata['args'][0],
+                'result': None,
+                'changes': {},
+                'comment': 'Started in a seperate process',
+                'proc': proc}
+        return ret
+
     def call(self, low, chunks=None, running=None, retries=1):
         '''
         Call a state directly with the low data structure, verify data
@@ -1751,8 +1805,13 @@ class State(object):
                 if self.mocked:
                     ret = mock_ret(cdata)
                 else:
-                    ret = self.states[cdata['full']](*cdata['args'],
-                                                     **cdata['kwargs'])
+                    # Execute the state function
+                    if not low.get('__prereq__') and low.get('parallel'):
+                        # run the state call in parallel, but only if not in a prereq
+                        ret = self.call_parallel(cdata, low)
+                    else:
+                        ret = self.states[cdata['full']](*cdata['args'],
+                                                         **cdata['kwargs'])
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
@@ -1904,6 +1963,10 @@ class State(object):
                 if self.check_failhard(low, running):
                     return running
             self.active = set()
+        while True:
+            if self.reconcile_procs(running):
+                break
+            time.sleep(0.2)
         return running
 
     def check_failhard(self, low, running):
@@ -1919,6 +1982,35 @@ class State(object):
                 return False
             return not running[tag]['result']
         return False
+
+    def reconcile_procs(self, running):
+        '''
+        Check the running dict for processes and resolve them
+        '''
+        retset = set()
+        for tag in running:
+            proc = running[tag].get('proc')
+            if proc:
+                if not proc.is_alive():
+                    ret_cache = os.path.join(self.opts['cachedir'], self.jid, tag)
+                    if not os.path.isfile(ret_cache):
+                        ret = {'result': False,
+                               'comment': 'Parallel process failed to return',
+                               'name': running[tag]['name'],
+                               'changes': {}}
+                    try:
+                        with salt.utils.fopen(ret_cache, 'rb') as fp_:
+                            ret = msgpack.loads(fp_.read())
+                    except OSError, IOError:
+                        ret = {'result': False,
+                               'comment': 'Parallel cache failure',
+                               'name': running[tag]['name'],
+                               'changes': {}}
+                    running[tag].update(ret)
+                    running[tag].pop('proc')
+                else:
+                    retset.add(False)
+        return False if False in retset else True
 
     def check_requisite(self, low, running, chunks, pre=False):
         '''
@@ -1947,6 +2039,7 @@ class State(object):
             present = True
         if not present:
             return 'met', ()
+        self.reconcile_procs(running)
         reqs = {
                 'require': [],
                 'watch': [],
@@ -1994,6 +2087,10 @@ class State(object):
                 if tag not in run_dict:
                     fun_stats.add('unmet')
                     continue
+                if run_dict[tag].get('proc'):
+                    # Run in parallel, first wait for a touch and then recheck
+                    time.sleep(0.2)
+                    return self.check_requisite(low, running, chunks, pre)
                 if r_state == 'onfail':
                     if run_dict[tag]['result'] is True:
                         fun_stats.add('onfail')  # At least one state is OK
