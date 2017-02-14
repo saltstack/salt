@@ -1966,7 +1966,7 @@ class State(object):
         while True:
             if self.reconcile_procs(running):
                 break
-            time.sleep(0.2)
+            time.sleep(0.01)
         return running
 
     def check_failhard(self, low, running):
@@ -2089,7 +2089,7 @@ class State(object):
                     continue
                 if run_dict[tag].get('proc'):
                     # Run in parallel, first wait for a touch and then recheck
-                    time.sleep(0.2)
+                    time.sleep(0.01)
                     return self.check_requisite(low, running, chunks, pre)
                 if r_state == 'onfail':
                     if run_dict[tag]['result'] is True:
