@@ -454,6 +454,8 @@ class GitProvider(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         output = cmd.communicate()[0]
+        if six.PY3:
+            output = output.decode(__salt_system_encoding__)
         if cmd.returncode != 0:
             log.warning(
                 'Failed to prune stale branches for %s remote \'%s\'. '
@@ -601,7 +603,7 @@ class GitProvider(object):
                           os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             with os.fdopen(fh_, 'w'):
                 # Write the lock file and close the filehandle
-                os.write(fh_, str(os.getpid()))
+                os.write(fh_, six.b(str(os.getpid())))
         except (OSError, IOError) as exc:
             if exc.errno == errno.EEXIST:
                 with salt.utils.fopen(self._get_lock_file(lock_type), 'r') as fd_:
@@ -2078,7 +2080,8 @@ class GitBase(object):
                 os.makedirs(env_cachedir)
             new_envs = self.envs(ignore_cache=True)
             serial = salt.payload.Serial(self.opts)
-            with salt.utils.fopen(self.env_cache, 'w+') as fp_:
+            mode = 'wb+' if six.PY3 else 'w+'
+            with salt.utils.fopen(self.env_cache, mode) as fp_:
                 fp_.write(serial.dumps(new_envs))
                 log.trace('Wrote env cache data to {0}'.format(self.env_cache))
 
@@ -2480,9 +2483,12 @@ class GitFS(GitBase):
             return ret
         ret['dest'] = fnd['rel']
         gzip = load.get('gzip', None)
-        with salt.utils.fopen(fnd['path'], 'rb') as fp_:
+        fpath = os.path.normpath(fnd['path'])
+        with salt.utils.fopen(fpath, 'rb') as fp_:
             fp_.seek(load['loc'])
             data = fp_.read(self.opts['file_buffer_size'])
+            if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+                data = data.decode(__salt_system_encoding__)
             if gzip and data:
                 data = salt.utils.gzip_util.compress(data, gzip)
                 ret['gzip'] = gzip

@@ -350,7 +350,7 @@ class SyncClientMixin(object):
                 for global_key, value in six.iteritems(func_globals):
                     self.functions[mod_name].__globals__[global_key] = value
 
-            # There are some descrepencies of what a "low" structure is in the
+            # There are some discrepancies of what a "low" structure is in the
             # publisher world it is a dict including stuff such as jid, fun,
             # arg (a list of args, with kwargs packed in). Historically this
             # particular one has had no "arg" and just has had all the kwargs
