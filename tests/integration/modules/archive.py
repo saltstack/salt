@@ -126,7 +126,7 @@ class ArchiveTest(integration.ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.tar', ['-cvf', self.arch], sources=self.src)
-        self.assertTrue(isinstance(ret, list))
+        self.assertTrue(isinstance(ret, list), str(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -141,7 +141,7 @@ class ArchiveTest(integration.ModuleCase):
 
         # Test extract archive
         ret = self.run_function('archive.tar', ['-xvf', self.arch], dest=self.dst)
-        self.assertTrue(isinstance(ret, list))
+        self.assertTrue(isinstance(ret, list), str(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -155,7 +155,7 @@ class ArchiveTest(integration.ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.gzip', [self.src_file], options='-v')
-        self.assertTrue(isinstance(ret, list))
+        self.assertTrue(isinstance(ret, list), str(ret))
         self._assert_artifacts_in_ret(ret, file_only=True)
 
         self._tear_down()
@@ -171,7 +171,7 @@ class ArchiveTest(integration.ModuleCase):
 
         # Test extract archive
         ret = self.run_function('archive.gunzip', [self.src_file + '.gz'], options='-v')
-        self.assertTrue(isinstance(ret, list))
+        self.assertTrue(isinstance(ret, list), str(ret))
         self._assert_artifacts_in_ret(ret, file_only=True)
 
         self._tear_down()
@@ -185,7 +185,7 @@ class ArchiveTest(integration.ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.cmd_zip', [self.arch, self.src])
-        self.assertTrue(isinstance(ret, list))
+        self.assertTrue(isinstance(ret, list), str(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -201,7 +201,7 @@ class ArchiveTest(integration.ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.cmd_unzip', [self.arch, self.dst])
-        self.assertTrue(isinstance(ret, list))
+        self.assertTrue(isinstance(ret, list), str(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -215,7 +215,7 @@ class ArchiveTest(integration.ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.zip', [self.arch, self.src])
-        self.assertTrue(isinstance(ret, list))
+        self.assertTrue(isinstance(ret, list), str(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -230,7 +230,7 @@ class ArchiveTest(integration.ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.unzip', [self.arch, self.dst])
-        self.assertTrue(isinstance(ret, list))
+        self.assertTrue(isinstance(ret, list), str(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -244,7 +244,7 @@ class ArchiveTest(integration.ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.rar', [self.arch, self.src])
-        self.assertTrue(isinstance(ret, list))
+        self.assertTrue(isinstance(ret, list), str(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -260,7 +260,7 @@ class ArchiveTest(integration.ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.unrar', [self.arch, self.dst])
-        self.assertTrue(isinstance(ret, list))
+        self.assertTrue(isinstance(ret, list), str(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
