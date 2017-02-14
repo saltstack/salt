@@ -716,7 +716,7 @@ def ip_bracket(addr):
     return addr
 
 
-def dns_check(addr, port, safe=False, ipv6=None):
+def dns_check(addr, port, connect=True, safe=False, ipv6=None):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception. Obeys system preference for IPv4/6 address resolution.
@@ -739,8 +739,13 @@ def dns_check(addr, port, safe=False, ipv6=None):
                     continue
                 if h[0] == socket.AF_INET6 and ipv6 is False:
                     continue
+                if h[0] == socket.AF_INET6 and connect is False and ipv6 is None:
+                    continue
 
                 candidate_addr = ip_bracket(h[4][0])
+
+                if not connect:
+                    resolved = candidate_addr
 
                 s = socket.socket(h[0], socket.SOCK_STREAM)
                 try:
