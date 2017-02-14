@@ -29,8 +29,14 @@ def __virtual__():
     return 'win_osinfo'
 
 
-if HAS_WIN32:
-    class OSVERSIONINFO(ctypes.Structure):
+def os_version_info_ex():
+    '''
+    Helper function to return the OSVersionInfo class
+
+    Returns:
+        class: The OsVersionInfo class
+    '''
+    class OSVersionInfo(ctypes.Structure):
         _fields_ = (('dwOSVersionInfoSize', DWORD),
                     ('dwMajorVersion', DWORD),
                     ('dwMinorVersion', DWORD),
@@ -39,30 +45,22 @@ if HAS_WIN32:
                     ('szCSDVersion', WCHAR * 128))
 
         def __init__(self, *args, **kwds):
-            super(OSVERSIONINFO, self).__init__(*args, **kwds)
+            super(OSVersionInfo, self).__init__(*args, **kwds)
             self.dwOSVersionInfoSize = ctypes.sizeof(self)
             kernel32.GetVersionExW(ctypes.byref(self))
 
-
-    class OSVERSIONINFOEX(OSVERSIONINFO):
+    class OSVersionInfoEx(OSVersionInfo):
         _fields_ = (('wServicePackMajor', WORD),
                     ('wServicePackMinor', WORD),
                     ('wSuiteMask', WORD),
                     ('wProductType', BYTE),
                     ('wReserved', BYTE))
 
-
-    def errcheck_bool(result, func, args):
-        if not result:
-            raise ctypes.WinError(ctypes.get_last_error())
-        return args
-
-    kernel32.GetVersionExW.errcheck = errcheck_bool
-    kernel32.GetVersionExW.argtypes = (ctypes.POINTER(OSVERSIONINFO),)
+    return OSVersionInfoEx()
 
 
 def get_os_version_info():
-    info = OSVERSIONINFOEX()
+    info = os_version_info_ex()
     ret = {'MajorVersion': info.dwMajorVersion,
            'MinorVersion': info.dwMinorVersion,
            'BuildNumber': info.dwBuildNumber,
