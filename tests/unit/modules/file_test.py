@@ -696,6 +696,7 @@ class FileModuleTestCase(TestCase):
         empty_file.close()
         os.remove(empty_file.name)
 
+
 class FileBasicsTestCase(TestCase):
     def setUp(self):
         self.directory = tempfile.mkdtemp()
