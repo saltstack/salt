@@ -248,11 +248,11 @@ class SPMClient(object):
 
         repo_metadata = self._get_repo_metadata()
 
+        dl_list = {}
         for package in to_install:
             if package in file_map:
                 self._install_indv_pkg(package, file_map[package])
             else:
-                dl_list = {}
                 for repo in repo_metadata:
                     repo_info = repo_metadata[repo]
                     if package in repo_info['packages']:
