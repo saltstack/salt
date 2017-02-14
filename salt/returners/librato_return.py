@@ -49,6 +49,7 @@ __virtualname__ = 'librato'
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     if not HAS_LIBRATO:
         log.error("Could not import librato module.")
@@ -57,6 +58,7 @@ def __virtual__():
     else:
         log.debug("Librato Module loaded.")
     return __virtualname__
+
 
 def _get_options(ret=None):
     '''
@@ -78,6 +80,7 @@ def _get_options(ret=None):
     log.debug("Retrieved Librato options: {0}".format(_options))
     return _options
 
+
 def _get_librato(ret=None):
     '''
     Return a librato connection object.
@@ -91,6 +94,7 @@ def _get_librato(ret=None):
         hostname=_options.get('api_url'))
     log.info("Connected to librato.")
     return conn
+
 
 def _calculate_runtimes(states):
     results = {
@@ -112,6 +116,7 @@ def _calculate_runtimes(states):
 
     log.debug("Parsed state metrics: {0}".format(results))
     return results
+
 
 def returner(ret):
     '''
