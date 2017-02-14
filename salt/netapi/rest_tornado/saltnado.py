@@ -1059,7 +1059,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
 
     # salt.utils.format_call doesn't work for functions having the annotation tornado.gen.coroutine
     def _format_call_run_job_async(self, chunk):
-        f_call = salt.utils.format_call(salt.client.LocalClient.run_job, chunk)
+        f_call = salt.utils.format_call(salt.client.LocalClient.run_job, chunk, is_class_method=True)
         f_call.get('kwargs', {})['io_loop'] = tornado.ioloop.IOLoop.current()
         return f_call
 
