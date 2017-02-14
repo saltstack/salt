@@ -370,38 +370,6 @@ def list_nodes_full(call=None):
 
     return ret
 
-def _get_node_detail(instanceid):
-    params = {
-        'Action': 'DescribeInstanceAttribute',
-        'InstanceId': instanceid
-     }
-    items = query(params=params)
-    if 'Code' in items:
-        return None
-    name = items['InstanceName']
-    detail_dict = {
-        name: {
-            'id': items['InstanceId'],
-            'name': name,
-            'image': items['ImageId'],
-            'size': 'TODO',
-            'state': items['Status']
-        }
-    }
-    for item in items:
-        value = items[item]
-        if value is not None:
-            value = str(value)
-        if item == "PublicIpAddress":
-            detail_dict[name]['public_ips'] = items[item]['IpAddress']
-        if item == "InnerIpAddress" and 'private_ips' not in detail_dict[name]:
-            detail_dict[name]['private_ips'] = items[item]['IpAddress']
-        if item == 'VpcAttributes':
-            vpc_ips = items[item]['PrivateIpAddress']['IpAddress']
-        if len(vpc_ips) > 0:
-            detail_dict[name]['private_ips'] = vpc_ips
-    return detail_dict
-
 
 def list_nodes_select(call=None):
     '''
@@ -712,7 +680,7 @@ def create(vm_):
         )
         return False
     # repair ip address error and start vm
-    time.sleep(1)
+    time.sleep(8)
     params = {'Action': 'StartInstance',
               'InstanceId': ret}
     query(params)
@@ -1058,9 +1026,11 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
+    instanceId = _get_node(name)['InstanceId']
+
     params = {
         'Action': 'DeleteInstance',
-        'InstanceId': name
+        'InstanceId': instanceId
     }
 
     node = query(params)
