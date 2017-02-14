@@ -1337,7 +1337,6 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             else:
                 removal_targets.append(version_num)
 
-
         for target in removal_targets:
             # Get the uninstaller
             uninstaller = pkginfo[target].get('uninstaller')
