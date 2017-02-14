@@ -148,11 +148,12 @@ class RootsTest(integration.ModuleCase):
             self.assertIn('empty_dir', ret)
 
     def test_symlink_list(self):
-        with patch.dict(roots.__opts__, {'file_roots': self.master_opts['file_roots'],
-                         'fileserver_ignoresymlinks': False,
-                         'fileserver_followsymlinks': False,
-                         'file_ignore_regex': False,
-                         'file_ignore_glob': False}):
+        with patch.dict(roots.__opts__, {'cachedir': self.master_opts['cachedir'],
+                                         'file_roots': self.master_opts['file_roots'],
+                                         'fileserver_ignoresymlinks': False,
+                                         'fileserver_followsymlinks': False,
+                                         'file_ignore_regex': False,
+                                         'file_ignore_glob': False}):
             ret = roots.symlink_list({'saltenv': 'base'})
             self.assertDictEqual(ret, {'dest_sym': 'source_sym'})
 

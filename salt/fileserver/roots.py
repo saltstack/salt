@@ -280,37 +280,82 @@ def _file_lists(load, form):
         return cache_match
     if refresh_cache:
         ret = {
-            'files': [],
-            'dirs': [],
-            'empty_dirs': [],
-            'links': []
+            'files': set(),
+            'dirs': set(),
+            'empty_dirs': set(),
+            'links': {}
         }
+
+        def _add_to(tgt, fs_root, parent_dir, items):
+            '''
+            Add the files to the target set
+            '''
+            def _translate_sep(path):
+                '''
+                Translate path separators for Windows masterless minions
+                '''
+                return path.replace('\\', '/') if os.path.sep == '\\' else path
+
+            for item in items:
+                abs_path = os.path.join(parent_dir, item)
+                log.trace('roots: Processing %s', abs_path)
+                is_link = os.path.islink(abs_path)
+                log.trace(
+                    'roots: %s is %sa link',
+                    abs_path, 'not ' if not is_link else ''
+                )
+                if is_link and __opts__['fileserver_ignoresymlinks']:
+                    continue
+                rel_path = _translate_sep(os.path.relpath(abs_path, fs_root))
+                log.trace('roots: %s relative path is %s', abs_path, rel_path)
+                if salt.fileserver.is_file_ignored(__opts__, rel_path):
+                    continue
+                tgt.add(rel_path)
+                try:
+                    if not os.listdir(abs_path):
+                        ret['empty_dirs'].add(rel_path)
+                except Exception:
+                    # Generic exception because running os.listdir() on a
+                    # non-directory path raises an OSError on *NIX and a
+                    # WindowsError on Windows.
+                    pass
+                if is_link:
+                    link_dest = os.readlink(abs_path)
+                    log.trace(
+                        'roots: %s symlink destination is %s',
+                        abs_path, link_dest
+                    )
+                    if link_dest.startswith('..'):
+                        joined = os.path.join(abs_path, link_dest)
+                    else:
+                        joined = os.path.join(
+                            os.path.dirname(abs_path), link_dest
+                        )
+                    rel_dest = os.path.relpath(
+                        os.path.realpath(os.path.normpath(joined)),
+                        fs_root
+                    )
+                    log.trace(
+                        'roots: %s relative path is %s',
+                        abs_path, rel_dest
+                    )
+                    if not rel_dest.startswith('..'):
+                        # Only count the link if it does not point
+                        # outside of the root dir of the fileserver
+                        # (i.e. the "path" variable)
+                        ret['links'][rel_path] = rel_dest
+
         for path in __opts__['file_roots'][load['saltenv']]:
             for root, dirs, files in os.walk(
                     path,
                     followlinks=__opts__['fileserver_followsymlinks']):
-                dir_rel_fn = os.path.relpath(root, path)
-                if __opts__.get('file_client', 'remote') == 'local' and os.path.sep == "\\":
-                    dir_rel_fn = dir_rel_fn.replace('\\', '/')
-                ret['dirs'].append(dir_rel_fn)
-                if len(dirs) == 0 and len(files) == 0:
-                    if dir_rel_fn not in ('.', '..') \
-                            and not salt.fileserver.is_file_ignored(__opts__, dir_rel_fn):
-                        ret['empty_dirs'].append(dir_rel_fn)
-                for fname in files:
-                    is_link = os.path.islink(os.path.join(root, fname))
-                    if is_link:
-                        ret['links'].append(fname)
-                    if __opts__['fileserver_ignoresymlinks'] and is_link:
-                        continue
-                    rel_fn = os.path.relpath(
-                                os.path.join(root, fname),
-                                path
-                            )
-                    if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
-                        if __opts__.get('file_client', 'remote') == 'local' and os.path.sep == "\\":
-                            rel_fn = rel_fn.replace('\\', '/')
-                        ret['files'].append(rel_fn)
+                _add_to(ret['dirs'], path, root, dirs)
+                _add_to(ret['files'], path, root, files)
+
+        ret['files'] = sorted(ret['files'])
+        ret['dirs'] = sorted(ret['dirs'])
+        ret['empty_dirs'] = sorted(ret['empty_dirs'])
+
         if save_cache:
             try:
                 salt.fileserver.write_file_list_cache(
