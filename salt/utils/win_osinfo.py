@@ -31,7 +31,7 @@ def __virtual__():
 
 def os_version_info_ex():
     '''
-    Helper function to return the OSVersionInfo class
+    Helper function to return an instance of the OSVersionInfo class
 
     Returns:
         class: An instance of a class containing version info
