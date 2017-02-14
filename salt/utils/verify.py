@@ -555,7 +555,7 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
         if not permissive:
             try:
                 # Get a clean dacl by not passing an obj_name
-                dacl = salt.utils.win_dacl.Dacl()
+                dacl = salt.utils.win_dacl.dacl()
 
                 # Add aces to the dacl, use the GUID (locale non-specific)
                 # Administrators Group
@@ -599,7 +599,7 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
 
                 # Give Admins, System and Owner permissions
                 # Get a clean dacl by not passing an obj_name
-                dacl = salt.utils.win_dacl.Dacl()
+                dacl = salt.utils.win_dacl.dacl()
 
                 # Add aces to the dacl, use the GUID (locale non-specific)
                 # Administrators Group

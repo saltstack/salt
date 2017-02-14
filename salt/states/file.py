@@ -767,8 +767,8 @@ def _check_directory_win(name,
                     user = salt.utils.win_dacl.get_name(user)
 
                     # Get the proper applies_to text
-                    at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][applies_to]
-                    applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+                    at_flag = salt.utils.win_dacl.flags().ace_prop['file'][applies_to]
+                    applies_to_text = salt.utils.win_dacl.flags().ace_prop['file'][at_flag]
 
                     if 'grant' in perms[user]:
                         if not perms[user]['grant']['applies to'] == applies_to_text:
@@ -815,8 +815,8 @@ def _check_directory_win(name,
                     user = salt.utils.win_dacl.get_name(user)
 
                     # Get the proper applies_to text
-                    at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][applies_to]
-                    applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+                    at_flag = salt.utils.win_dacl.flags().ace_prop['file'][applies_to]
+                    applies_to_text = salt.utils.win_dacl.flags().ace_prop['file'][at_flag]
 
                     if 'deny' in perms[user]:
                         if not perms[user]['deny']['applies to'] == applies_to_text:

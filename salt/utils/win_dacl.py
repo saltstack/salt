@@ -151,7 +151,21 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-if HAS_WIN32:
+def flags(instantiated=True):
+    '''
+    Helper function for instantiating a Flags object
+
+    Args:
+        instantiated (bool): True to return an instantiated object, False to
+            return the object definition. Use False if inherited by another
+            class. Default is True.
+
+    Returns:
+        object: An instance of the Flags object or its definition
+    '''
+    if not HAS_WIN32:
+        return
+
     class Flags(object):
         '''
         Object containing all the flags for dealing with Windows permissions
@@ -390,8 +404,26 @@ if HAS_WIN32:
             'share': win32security.SE_LMSHARE,
         }
 
+    return Flags() if instantiated else Flags
 
-    class Dacl(Flags):
+
+def dacl(obj_name=None, obj_type='file'):
+    '''
+    Helper function for instantiating a Dacl class.
+
+    Args:
+        obj_name (str): The full path to the object. If None, a blank DACL will
+            be created. Default is None.
+        obj_type (str): The type of object. Default is 'File'
+
+    Returns:
+        object: An instantiated Dacl object
+    '''
+
+    if not HAS_WIN32:
+        return
+
+    class Dacl(flags(False)):
         '''
         DACL Object
         '''
@@ -977,6 +1009,8 @@ if HAS_WIN32:
 
             return True
 
+    return Dacl(obj_name, obj_type)
+
 
 def get_sid(principal):
     '''
@@ -1145,7 +1179,7 @@ def set_owner(obj_name, principal, obj_type='file'):
     '''
     sid = get_sid(principal)
 
-    flags = Flags()
+    obj_flags = flags()
 
     # To set the owner to something other than the logged in user requires
     # SE_TAKE_OWNERSHIP_NAME and SE_RESTORE_NAME privileges
@@ -1170,8 +1204,8 @@ def set_owner(obj_name, principal, obj_type='file'):
     try:
         win32security.SetNamedSecurityInfo(
             obj_name,
-            flags.obj_type[obj_type],
-            flags.element['owner'],
+            obj_flags.obj_type[obj_type],
+            obj_flags.element['owner'],
             sid,
             None, None, None)
     except pywintypes.error as exc:
@@ -1242,16 +1276,16 @@ def set_permissions(obj_name,
     # If you don't pass `obj_name` it will create a blank DACL
     # Otherwise, it will grab the existing DACL and add to it
     if reset_perms:
-        dacl = Dacl(obj_type=obj_type)
+        obj_dacl = dacl(obj_type=obj_type)
     else:
-        dacl = Dacl(obj_name, obj_type)
-        dacl.rm_ace(principal, access_mode)
+        obj_dacl = dacl(obj_name, obj_type)
+        obj_dacl.rm_ace(principal, access_mode)
 
-    dacl.add_ace(principal, access_mode, permissions, applies_to)
+    obj_dacl.add_ace(principal, access_mode, permissions, applies_to)
 
-    dacl.order_acl()
+    obj_dacl.order_acl()
 
-    dacl.save(obj_name, protected)
+    obj_dacl.save(obj_name, protected)
 
     return True
 
@@ -1295,10 +1329,10 @@ def rm_permissions(obj_name,
         # Remove all ACEs for jsnuffy from C:\Temp
         salt.utils.win_dacl.rm_permissions('C:\\Temp', 'jsnuffy')
     '''
-    dacl = Dacl(obj_name, obj_type)
+    obj_dacl = dacl(obj_name, obj_type)
 
-    dacl.rm_ace(principal, ace_type)
-    dacl.save(obj_name)
+    obj_dacl.rm_ace(principal, ace_type)
+    obj_dacl.save(obj_name)
 
     return True
 
@@ -1327,12 +1361,12 @@ def get_permissions(obj_name, principal=None, obj_type='file'):
 
         salt.utils.win_dacl.get_permissions('C:\\Temp')
     '''
-    dacl = Dacl(obj_name, obj_type)
+    obj_dacl = dacl(obj_name, obj_type)
 
     if principal is None:
-        return dacl.list_aces()
+        return obj_dacl.list_aces()
 
-    return dacl.get_ace(principal)
+    return obj_dacl.get_ace(principal)
 
 
 def has_permission(obj_name,
@@ -1388,7 +1422,7 @@ def has_permission(obj_name,
     access_mode = access_mode.lower()
 
     # Get the DACL
-    dacl = Dacl(obj_name, obj_type)
+    obj_dacl = dacl(obj_name, obj_type)
 
     obj_type = obj_type.lower()
 
@@ -1396,18 +1430,18 @@ def has_permission(obj_name,
     sid = get_sid(principal)
 
     # Get the passed permission flag, check basic first
-    chk_flag = dacl.ace_perms[obj_type]['basic'].get(
+    chk_flag = obj_dacl.ace_perms[obj_type]['basic'].get(
         permission.lower(),
-        dacl.ace_perms[obj_type]['advanced'].get(permission.lower(), False))
+        obj_dacl.ace_perms[obj_type]['advanced'].get(permission.lower(), False))
     if not chk_flag:
         raise SaltInvocationError(
             'Invalid "permission" passed: {0}'.format(permission))
 
     # Check each ace for sid and type
     cur_flag = None
-    for i in range(0, dacl.dacl.GetAceCount()):
-        ace = dacl.dacl.GetAce(i)
-        if ace[2] == sid and dacl.ace_type[ace[0][0]] == access_mode:
+    for i in range(0, obj_dacl.dacl.GetAceCount()):
+        ace = obj_dacl.dacl.GetAce(i)
+        if ace[2] == sid and obj_dacl.ace_type[ace[0][0]] == access_mode:
             cur_flag = ace[1]
 
     # If the ace is empty, return false
@@ -1456,11 +1490,11 @@ def set_inheritance(obj_name, enabled, obj_type='file', clear=False):
             'obj_type called with incorrect parameter: {0}'.format(obj_name))
 
     if clear:
-        dacl = Dacl(obj_type=obj_type)
+        obj_dacl = dacl(obj_type=obj_type)
     else:
-        dacl = Dacl(obj_name, obj_type)
+        obj_dacl = dacl(obj_name, obj_type)
 
-    return dacl.save(obj_name, not enabled)
+    return obj_dacl.save(obj_name, not enabled)
 
 
 def get_inheritance(obj_name, obj_type='file'):
@@ -1493,11 +1527,11 @@ def get_inheritance(obj_name, obj_type='file'):
 
         salt.utils.win_dacl.get_inheritance('HKLM\\SOFTWARE\\salt', 'registry')
     '''
-    dacl = Dacl(obj_name, obj_type)
+    obj_dacl = dacl(obj_name, obj_type)
     inherited = win32security.INHERITED_ACE
 
-    for i in range(0, dacl.dacl.GetAceCount()):
-        ace = dacl.dacl.GetAce(i)
+    for i in range(0, obj_dacl.dacl.GetAceCount()):
+        ace = obj_dacl.dacl.GetAce(i)
         if ace[0][1] & inherited == inherited:
             return True
 
