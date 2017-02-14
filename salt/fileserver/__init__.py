@@ -594,9 +594,7 @@ class Fileserver(object):
             return ret
         fstr = '{0}.serve_file'.format(fnd['back'])
         if fstr in self.servers:
-            ret = self.servers[fstr](load, fnd)
-        if six.PY3 and ret.get('data'):
-            ret['data'] = ret['data'].decode(__salt_system_encoding__)
+            return self.servers[fstr](load, fnd)
         return ret
 
     def __file_hash_and_stat(self, load):
