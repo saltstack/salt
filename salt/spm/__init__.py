@@ -175,11 +175,12 @@ class SPMClient(object):
                 if args[1] in pkg:
                     version = repo_metadata[repo]['packages'][pkg]['info']['version']
                     release = repo_metadata[repo]['packages'][pkg]['info']['release']
-                    packages.append(
-                        '{0}\t{1}-{2}\t{3}'.format(pkg, version, release, repo)
-                    )
+                    packages.append((pkg, version, release, repo))
         for pkg in sorted(packages):
-            self.ui.status(pkg)
+            self.ui.status(
+                '{0}\t{1}-{2}\t{3}'.format(pkg[0], pkg[1], pkg[2], pkg[3])
+            )
+        return packages
 
     def _repo_list(self, args):
         '''
@@ -251,35 +252,75 @@ class SPMClient(object):
             if package in file_map:
                 self._install_indv_pkg(package, file_map[package])
             else:
+                dl_list = {}
                 for repo in repo_metadata:
                     repo_info = repo_metadata[repo]
-                    if package in repo_metadata[repo]['packages']:
-                        cache_path = '{0}/{1}'.format(
-                            self.opts['spm_cache_dir'],
-                            repo
-                        )
-                        # Download the package
-                        dl_path = '{0}/{1}'.format(
-                            repo_info['info']['url'],
-                            repo_info['packages'][package]['filename']
-                        )
-                        out_file = '{0}/{1}'.format(
-                            cache_path,
-                            repo_info['packages'][package]['filename']
-                        )
-                        if not os.path.exists(cache_path):
-                            os.makedirs(cache_path)
-
-                        if dl_path.startswith('file://'):
-                            dl_path = dl_path.replace('file://', '')
-                            shutil.copyfile(dl_path, out_file)
+                    if package in repo_info['packages']:
+                        dl_package = False
+                        repo_ver = repo_info['packages'][package]['info']['version']
+                        repo_rel = repo_info['packages'][package]['info']['release']
+                        repo_url = repo_info['info']['url']
+                        if package in dl_list:
+                            # Check package version, replace if newer version
+                            if repo_ver == dl_list[package]['version']:
+                                # Version is the same, check release
+                                if repo_rel > dl_list[package]['release']:
+                                    dl_package = True
+                                elif repo_rel == dl_list[package]['release']:
+                                    # Version and release are the same, give
+                                    # preference to local (file://) repos
+                                    if dl_list[package]['source'].startswith('file://'):
+                                        if not repo_url.startswith('file://'):
+                                            dl_package = True
+                            elif repo_ver > dl_list[package]['version']:
+                                dl_package = True
                         else:
-                            response = http.query(dl_path, text=True)
-                            with salt.utils.fopen(out_file, 'w') as outf:
-                                outf.write(response.get("text"))
+                            dl_package = True
 
-                        # Kick off the install
-                        self._install_indv_pkg(package, out_file)
+                        if dl_package is True:
+                            # Put together download directory
+                            cache_path = os.path.join(
+                                self.opts['spm_cache_dir'],
+                                repo
+                            )
+
+                            # Put together download paths
+                            dl_url = '{0}/{1}'.format(
+                                repo_info['info']['url'],
+                                repo_info['packages'][package]['filename']
+                            )
+                            out_file = os.path.join(
+                                cache_path,
+                                repo_info['packages'][package]['filename']
+                            )
+                            dl_list[package] = {
+                                'version': repo_ver,
+                                'release': repo_rel,
+                                'source': dl_url,
+                                'dest_dir': cache_path,
+                                'dest_file': out_file,
+                            }
+
+        for package in dl_list:
+            dl_url = dl_list[package]['source']
+            cache_path = dl_list[package]['dest_dir']
+            out_file = dl_list[package]['dest_file']
+
+            # Make sure download directory exists
+            if not os.path.exists(cache_path):
+                os.makedirs(cache_path)
+
+            # Download the package
+            if dl_url.startswith('file://'):
+                dl_url = dl_url.replace('file://', '')
+                shutil.copyfile(dl_url, out_file)
+            else:
+                response = http.query(dl_url, text=True)
+                with salt.utils.fopen(out_file, 'w') as outf:
+                    outf.write(response.get("text"))
+
+            # Kick off the install
+            self._install_indv_pkg(package, out_file)
         return
 
     def _local_install(self, args, pkg_name=None):
