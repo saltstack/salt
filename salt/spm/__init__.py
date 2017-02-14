@@ -117,6 +117,8 @@ class SPMClient(object):
                 self._list_files(args)
             elif command == 'info':
                 self._info(args)
+            elif command == 'list':
+                self._list(args)
             else:
                 raise SPMInvocationError('Invalid command \'{0}\''.format(command))
         except SPMException as exc:
@@ -133,6 +135,21 @@ class SPMClient(object):
             return getattr(getattr(self.pkgfiles, self.files_prov), func)(*args, **kwargs)
         except AttributeError:
             return self.pkgfiles['{0}.{1}'.format(self.files_prov, func)](*args, **kwargs)
+
+    def _list(self, args):
+        '''
+        Process local commands
+        '''
+        args.pop(0)
+        command = args[0]
+        if command == 'packages':
+            self._list_packages(args)
+        elif command == 'files':
+            self._list_files(args)
+        elif command == 'repos':
+            self._repo_list(args)
+        else:
+            raise SPMInvocationError('Invalid list command \'{0}\''.format(command))
 
     def _local(self, args):
         '''
@@ -161,6 +178,10 @@ class SPMClient(object):
             self._repo_packages(args)
         elif command == 'search':
             self._repo_packages(args, search=True)
+        elif command == 'update':
+            self._download_repo_metadata(args)
+        elif command == 'create':
+            self._create_repo(args)
         else:
             raise SPMInvocationError('Invalid repo command \'{0}\''.format(command))
 
@@ -184,6 +205,8 @@ class SPMClient(object):
     def _repo_list(self, args):
         '''
         List configured repos
+
+        This can be called either as a ``repo`` command or a ``list`` command
         '''
         repo_metadata = self._get_repo_metadata()
         for repo in repo_metadata:
@@ -232,13 +255,15 @@ class SPMClient(object):
                 recommended.extend(re_)
 
         optional = set(filter(len, optional))
-        self.ui.status('The following dependencies are optional:\n\t{0}\n'.format(
-            '\n\t'.join(optional)
-        ))
+        if optional:
+            self.ui.status('The following dependencies are optional:\n\t{0}\n'.format(
+                '\n\t'.join(optional)
+            ))
         recommended = set(filter(len, recommended))
-        self.ui.status('The following dependencies are recommended:\n\t{0}\n'.format(
-            '\n\t'.join(recommended)
-        ))
+        if recommended:
+            self.ui.status('The following dependencies are recommended:\n\t{0}\n'.format(
+                '\n\t'.join(recommended)
+            ))
 
         to_install = set(filter(len, to_install))
         msg = 'Installing packages:\n\t{0}\n'.format('\n\t'.join(to_install))
@@ -732,6 +757,18 @@ class SPMClient(object):
         for member in pkg_files:
             self.ui.status(member.name)
 
+    def _list_packages(self, args):
+        '''
+        List files for an installed package
+        '''
+        packages = self._pkgdb_fun('list_packages', self.db_conn)
+        for package in packages:
+            if self.opts['verbose']:
+                status_msg = ','.join(package)
+            else:
+                status_msg = package[0]
+            self.ui.status(status_msg)
+
     def _list_files(self, args):
         '''
         List files for an installed package
@@ -739,7 +776,7 @@ class SPMClient(object):
         if len(args) < 2:
             raise SPMInvocationError('A package name must be specified')
 
-        package = args[1]
+        package = args[-1]
 
         files = self._pkgdb_fun('list_files', package, self.db_conn)
         if files is None:
