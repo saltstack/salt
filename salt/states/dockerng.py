@@ -202,6 +202,14 @@ def _compare(actual, create_kwargs, defaults_from_image):
                     env_ptr = env_diff.setdefault(item, {})
                     env_ptr.setdefault('old', {})[key] = actual_val
                     env_ptr.setdefault('new', {})[key] = data[key]
+
+            for key in actual_env:
+                if key not in ['PATH','no_proxy']:
+                    if key not in data:
+                        env_ptr = env_diff.setdefault(item, {})
+                        env_ptr.setdefault('old', {})[key] = actual_val
+                        env_ptr.setdefault('new', {})[key] = None
+
             if env_diff:
                 ret.update(env_diff)
             continue
