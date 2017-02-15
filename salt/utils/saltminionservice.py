@@ -15,7 +15,7 @@ import win32service
 import winerror
 
 
-class MinionService(service):
+class MinionService(service(False)):
 
     def start(self):
         self.runflag = True

@@ -30,9 +30,14 @@ def __virtual__():
     return 'winservice'
 
 
-def service():
+def service(instantiated=True):
     '''
     Helper function to return an instance of the ServiceFramework class
+
+    Args:
+        instantiated (bool): True to return an instantiated object, False to
+            return the object definition. Use False if inherited by another
+            class. Default is True.
 
     Returns:
         class: An instance of the ServiceFramework class
@@ -87,7 +92,7 @@ def service():
         def stop(self):
             pass
 
-    return Service()
+    return Service() if instantiated else Service
 
 
 def instart(cls, name, display_name=None, stay_alive=True):
