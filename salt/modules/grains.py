@@ -200,6 +200,10 @@ def setvals(grains, destructive=False, refresh=True):
         If an operation results in a key being removed, delete the key, too.
         Defaults to False.
 
+    refresh
+        Refresh minion grains using saltutil.sync_grains.
+        Defaults to True.
+
     CLI Example:
 
     .. code-block:: bash
@@ -293,6 +297,10 @@ def setval(key, val, destructive=False, refresh=True):
     destructive
         If an operation results in a key being removed, delete the key, too.
         Defaults to False.
+
+    refresh
+        Refresh minion grains using saltutil.sync_grains.
+        Defaults to True.
 
     CLI Example:
 
