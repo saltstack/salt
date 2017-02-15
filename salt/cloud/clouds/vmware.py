@@ -116,7 +116,7 @@ configuration, run :py:func:`test_vcenter_connection`
 # Import python libs
 from __future__ import absolute_import
 from random import randint
-from re import findall
+from re import findall, split
 import pprint
 import logging
 import time
@@ -2570,8 +2570,8 @@ def create(vm_):
             global_ip = vim.vm.customization.GlobalIPSettings()
             if 'dns_servers' in list(vm_.keys()):
                 global_ip.dnsServerList = vm_['dns_servers']
-            hostName = vm_name.split('.')[0]
-            domainName = vm_name.split('.', 1)[-1]
+            hostName, domainName = split(r'[^\w-]', vm_name, maxsplit=1)
+            domainName = domainName.split('.', maxsplit=1)[-1]
             if 'Windows' not in object_ref.config.guestFullName:
                 identity = vim.vm.customization.LinuxPrep()
                 identity.hostName = vim.vm.customization.FixedName(name=hostName)
