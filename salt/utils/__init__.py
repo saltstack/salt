@@ -716,7 +716,7 @@ def ip_bracket(addr):
     return addr
 
 
-def dns_check(addr, port, connect=True, safe=False, ipv6=None):
+def dns_check(addr, port, safe=False, ipv6=None, connect=True):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception. Obeys system preference for IPv4/6 address resolution.
