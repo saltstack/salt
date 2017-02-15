@@ -110,24 +110,37 @@ def enforce_types(key, val):
         'insecure_auth': bool,
         'env_whitelist': 'stringlist',
         'env_blacklist': 'stringlist',
-        'gitfs_env_whitelist': 'stringlist',
-        'gitfs_env_blacklist': 'stringlist',
         'refspecs': 'stringlist',
-        'gitfs_refspecs': 'stringlist',
     }
 
+    def _find_global(key):
+        for item in non_string_params:
+            try:
+                if key.endswith('_' + item):
+                    ret = item
+                    break
+            except TypeError:
+                if key.endswith('_' + str(item)):
+                    ret = item
+                    break
+        else:
+            ret = None
+        return ret
+
     if key not in non_string_params:
-        return six.text_type(val)
-    else:
-        expected = non_string_params[key]
-        if expected is bool:
-            return val
-        elif expected == 'stringlist':
-            if not isinstance(val, (six.string_types, list)):
-                val = six.text_type(val)
-            if isinstance(val, six.string_types):
-                return [x.strip() for x in val.split(',')]
-            return [six.text_type(x) for x in val]
+        key = _find_global(key)
+        if key is None:
+            return six.text_type(val)
+
+    expected = non_string_params[key]
+    if expected is bool:
+        return val
+    elif expected == 'stringlist':
+        if not isinstance(val, (six.string_types, list)):
+            val = six.text_type(val)
+        if isinstance(val, six.string_types):
+            return [x.strip() for x in val.split(',')]
+        return [six.text_type(x) for x in val]
 
 
 def failhard(role):
@@ -310,7 +323,11 @@ class GitProvider(object):
             failhard(self.role)
 
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
-        self.hash = hash_type(self.id).hexdigest()
+        if six.PY3:
+            # We loaded this data from yaml configuration files, so, its safe to use UTF-8
+            self.hash = hash_type(self.id.encode('utf-8')).hexdigest()
+        else:
+            self.hash = hash_type(self.id).hexdigest()
         self.cachedir_basename = getattr(self, 'name', self.hash)
         self.cachedir = salt.utils.path_join(cache_root, self.cachedir_basename)
         if not os.path.isdir(self.cachedir):
@@ -433,10 +450,12 @@ class GitProvider(object):
         cmd = subprocess.Popen(
             shlex.split(cmd_str),
             close_fds=not salt.utils.is_windows(),
-            cwd=self.repo.workdir,
+            cwd=os.path.dirname(self.gitdir),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         output = cmd.communicate()[0]
+        if six.PY3:
+            output = output.decode(__salt_system_encoding__)
         if cmd.returncode != 0:
             log.warning(
                 'Failed to prune stale branches for %s remote \'%s\'. '
@@ -525,7 +544,7 @@ class GitProvider(object):
             cmd = subprocess.Popen(
                 shlex.split(cmd_str),
                 close_fds=not salt.utils.is_windows(),
-                cwd=self.repo.workdir,
+                cwd=os.path.dirname(self.gitdir),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT)
             output = cmd.communicate()[0]
@@ -584,7 +603,7 @@ class GitProvider(object):
                           os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             with os.fdopen(fh_, 'w'):
                 # Write the lock file and close the filehandle
-                os.write(fh_, str(os.getpid()))
+                os.write(fh_, six.b(str(os.getpid())))
         except (OSError, IOError) as exc:
             if exc.errno == errno.EEXIST:
                 with salt.utils.fopen(self._get_lock_file(lock_type), 'r') as fd_:
@@ -2014,8 +2033,8 @@ class GitBase(object):
                     changed = True
             except Exception as exc:
                 log.error(
-                    'Exception \'{0}\' caught while fetching {1} remote '
-                    '\'{2}\''.format(exc, self.role, repo.id),
+                    'Exception caught while fetching %s remote \'%s\': %s',
+                    self.role, repo.id, exc,
                     exc_info_on_loglevel=logging.DEBUG
                 )
         return changed
@@ -2061,7 +2080,8 @@ class GitBase(object):
                 os.makedirs(env_cachedir)
             new_envs = self.envs(ignore_cache=True)
             serial = salt.payload.Serial(self.opts)
-            with salt.utils.fopen(self.env_cache, 'w+') as fp_:
+            mode = 'wb+' if six.PY3 else 'w+'
+            with salt.utils.fopen(self.env_cache, mode) as fp_:
                 fp_.write(serial.dumps(new_envs))
                 log.trace('Wrote env cache data to {0}'.format(self.env_cache))
 
@@ -2463,9 +2483,12 @@ class GitFS(GitBase):
             return ret
         ret['dest'] = fnd['rel']
         gzip = load.get('gzip', None)
-        with salt.utils.fopen(fnd['path'], 'rb') as fp_:
+        fpath = os.path.normpath(fnd['path'])
+        with salt.utils.fopen(fpath, 'rb') as fp_:
             fp_.seek(load['loc'])
             data = fp_.read(self.opts['file_buffer_size'])
+            if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+                data = data.decode(__salt_system_encoding__)
             if gzip and data:
                 data = salt.utils.gzip_util.compress(data, gzip)
                 ret['gzip'] = gzip

@@ -74,6 +74,10 @@ try:
 except ImportError:
     HAS_TWISTED_AND_PYPARSING = False
 
+    # Fallback class
+    class DatagramProtocol(object):
+        pass
+
 from salt.utils import event
 from salt.ext.six import moves
 

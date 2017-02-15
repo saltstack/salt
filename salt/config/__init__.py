@@ -1609,6 +1609,7 @@ DEFAULT_SPM_OPTS = {
     'spm_build_dir': '/srv/spm_build',
     'spm_build_exclude': ['CVS', '.hg', '.git', '.svn'],
     'spm_db': os.path.join(salt.syspaths.CACHE_DIR, 'spm', 'packages.db'),
+    'cache': 'localfs',
     # <---- Salt master settings overridden by SPM ----------------------
 }
 
@@ -2112,7 +2113,7 @@ def syndic_config(master_config_path,
         'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir'
     ]
-    for config_key in ('log_file', 'key_logfile'):
+    for config_key in ('syndic_log_file', 'log_file', 'key_logfile'):
         # If this is not a URI and instead a local path
         if urlparse(opts.get(config_key, '')).scheme == '':
             prepend_root_dirs.append(config_key)

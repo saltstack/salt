@@ -39,6 +39,7 @@ __opts__ = {
     'assume_yes': True,
     'force': False,
     'verbose': False,
+    'cache': 'localfs',
 }
 
 _F1 = {

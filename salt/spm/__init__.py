@@ -22,6 +22,7 @@ import sys
 # Import Salt libs
 import salt.config
 import salt.loader
+import salt.cache
 import salt.utils
 import salt.utils.http as http
 import salt.syspaths as syspaths
@@ -102,6 +103,8 @@ class SPMClient(object):
                 self._install(args)
             elif command == 'local':
                 self._local(args)
+            elif command == 'repo':
+                self._repo(args)
             elif command == 'remove':
                 self._remove(args)
             elif command == 'build':
@@ -114,6 +117,8 @@ class SPMClient(object):
                 self._list_files(args)
             elif command == 'info':
                 self._info(args)
+            elif command == 'list':
+                self._list(args)
             else:
                 raise SPMInvocationError('Invalid command \'{0}\''.format(command))
         except SPMException as exc:
@@ -131,6 +136,21 @@ class SPMClient(object):
         except AttributeError:
             return self.pkgfiles['{0}.{1}'.format(self.files_prov, func)](*args, **kwargs)
 
+    def _list(self, args):
+        '''
+        Process local commands
+        '''
+        args.pop(0)
+        command = args[0]
+        if command == 'packages':
+            self._list_packages(args)
+        elif command == 'files':
+            self._list_files(args)
+        elif command == 'repos':
+            self._repo_list(args)
+        else:
+            raise SPMInvocationError('Invalid list command \'{0}\''.format(command))
+
     def _local(self, args):
         '''
         Process local commands
@@ -146,12 +166,60 @@ class SPMClient(object):
         else:
             raise SPMInvocationError('Invalid local command \'{0}\''.format(command))
 
+    def _repo(self, args):
+        '''
+        Process repo commands
+        '''
+        args.pop(0)
+        command = args[0]
+        if command == 'list':
+            self._repo_list(args)
+        elif command == 'packages':
+            self._repo_packages(args)
+        elif command == 'search':
+            self._repo_packages(args, search=True)
+        elif command == 'update':
+            self._download_repo_metadata(args)
+        elif command == 'create':
+            self._create_repo(args)
+        else:
+            raise SPMInvocationError('Invalid repo command \'{0}\''.format(command))
+
+    def _repo_packages(self, args, search=False):
+        '''
+        List packages for one or more configured repos
+        '''
+        packages = []
+        repo_metadata = self._get_repo_metadata()
+        for repo in repo_metadata:
+            for pkg in repo_metadata[repo]['packages']:
+                if args[1] in pkg:
+                    version = repo_metadata[repo]['packages'][pkg]['info']['version']
+                    release = repo_metadata[repo]['packages'][pkg]['info']['release']
+                    packages.append(
+                        '{0}\t{1}-{2}\t{3}'.format(pkg, version, release, repo)
+                    )
+        for pkg in sorted(packages):
+            self.ui.status(pkg)
+
+    def _repo_list(self, args):
+        '''
+        List configured repos
+
+        This can be called either as a ``repo`` command or a ``list`` command
+        '''
+        repo_metadata = self._get_repo_metadata()
+        for repo in repo_metadata:
+            self.ui.status(repo)
+
     def _install(self, args):
         '''
         Install a package from a repo
         '''
         if len(args) < 2:
             raise SPMInvocationError('A package must be specified')
+
+        cache = salt.cache.Cache(self.opts)
 
         packages = args[1:]
         file_map = {}
@@ -187,13 +255,15 @@ class SPMClient(object):
                 recommended.extend(re_)
 
         optional = set(filter(len, optional))
-        self.ui.status('The following dependencies are optional:\n\t{0}\n'.format(
-            '\n\t'.join(optional)
-        ))
+        if optional:
+            self.ui.status('The following dependencies are optional:\n\t{0}\n'.format(
+                '\n\t'.join(optional)
+            ))
         recommended = set(filter(len, recommended))
-        self.ui.status('The following dependencies are recommended:\n\t{0}\n'.format(
-            '\n\t'.join(recommended)
-        ))
+        if recommended:
+            self.ui.status('The following dependencies are recommended:\n\t{0}\n'.format(
+                '\n\t'.join(recommended)
+            ))
 
         to_install = set(filter(len, to_install))
         msg = 'Installing packages:\n\t{0}\n'.format('\n\t'.join(to_install))
@@ -450,9 +520,6 @@ class SPMClient(object):
                     continue
                 repo_files.append(repo_file)
 
-        if not os.path.exists(self.opts['spm_cache_dir']):
-            os.makedirs(self.opts['spm_cache_dir'])
-
         for repo_file in repo_files:
             repo_path = '{0}.d/{1}'.format(self.opts['spm_repos_config'], repo_file)
             with salt.utils.fopen(repo_path) as rph:
@@ -468,6 +535,8 @@ class SPMClient(object):
         '''
         Connect to all repos and download metadata
         '''
+        cache = salt.cache.Cache(self.opts, self.opts['spm_cache_dir'])
+
         def _update_metadata(repo, repo_info):
             dl_path = '{0}/SPM-METADATA'.format(repo_info['url'])
             if dl_path.startswith('file://'):
@@ -477,13 +546,8 @@ class SPMClient(object):
             else:
                 response = http.query(dl_path, text=True)
                 metadata = yaml.safe_load(response.get('text', '{}'))
-            cache_path = '{0}/{1}.p'.format(
-                self.opts['spm_cache_dir'],
-                repo
-            )
 
-            with salt.utils.fopen(cache_path, 'w') as cph:
-                msgpack.dump(metadata, cph)
+            cache.store('.', repo, metadata)
 
         repo_name = args[1] if len(args) > 1 else None
         self._traverse_repos(_update_metadata, repo_name)
@@ -492,25 +556,18 @@ class SPMClient(object):
         '''
         Return cached repo metadata
         '''
+        cache = salt.cache.Cache(self.opts, self.opts['spm_cache_dir'])
         metadata = {}
 
-        if not os.path.exists(self.opts['spm_cache_dir']):
-            os.makedirs(self.opts['spm_cache_dir'])
-
         def _read_metadata(repo, repo_info):
-            cache_path = '{0}/{1}.p'.format(
-                self.opts['spm_cache_dir'],
-                repo
-            )
+            if cache.updated('.', repo) is None:
+                log.warn('Updating repo metadata')
+                self._download_repo_metadata({})
 
-            if not os.path.exists(cache_path):
-                raise SPMPackageError('SPM cache {0} not found'.format(cache_path))
-
-            with salt.utils.fopen(cache_path, 'r') as cph:
-                metadata[repo] = {
-                    'info': repo_info,
-                    'packages': msgpack.load(cph),
-                }
+            metadata[repo] = {
+                'info': repo_info,
+                'packages': cache.fetch('.', repo),
+            }
 
         self._traverse_repos(_read_metadata)
         return metadata
@@ -700,6 +757,18 @@ class SPMClient(object):
         for member in pkg_files:
             self.ui.status(member.name)
 
+    def _list_packages(self, args):
+        '''
+        List files for an installed package
+        '''
+        packages = self._pkgdb_fun('list_packages', self.db_conn)
+        for package in packages:
+            if self.opts['verbose']:
+                status_msg = ','.join(package)
+            else:
+                status_msg = package[0]
+            self.ui.status(status_msg)
+
     def _list_files(self, args):
         '''
         List files for an installed package
@@ -707,7 +776,7 @@ class SPMClient(object):
         if len(args) < 2:
             raise SPMInvocationError('A package name must be specified')
 
-        package = args[1]
+        package = args[-1]
 
         files = self._pkgdb_fun('list_files', package, self.db_conn)
         if files is None:
