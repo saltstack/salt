@@ -759,6 +759,7 @@ def install_config(path=None, **kwargs):
 
         salt 'device_name' junos.install_config 'salt://my_new_configuration.conf' dev_timeout=300 diffs_file='/salt/confs/old_config.conf' overwrite=True
 
+        salt 'device_name' junos.install_config 'salt://syslog_template.conf' template_vars='{"syslog_host": "10.180.222.7"}'
 
     Parameters:
       Required
@@ -790,10 +791,14 @@ def install_config(path=None, **kwargs):
               the given time unless the commit is confirmed.
             * diffs_file:
               Path to the file where the diff (difference in old configuration
-              and the commited configuration) will be stored.(default = None)
+              and the committed configuration) will be stored.(default = None)
               Note that the file will be stored on the proxy minion. To push the
               files to the master use the salt's following execution module: \
               :py:func:`cp.push <salt.modules.cp.push>`
+            * template_vars:
+              Variables to be passed into the template processing engine in addition
+              to those present in __pillar__, __opts__, __grains__, etc. You may reference these variables like so:
+              {{ template_vars["var_name"] }}
 
     '''
     conn = __proxy__['junos.conn']()
@@ -806,8 +811,12 @@ def install_config(path=None, **kwargs):
         ret['out'] = False
         return ret
 
+    template_vars = dict()
+    if "template_vars" in kwargs:
+        template_vars = kwargs["template_vars"]
+
     template_cached_path = files.mkstemp()
-    __salt__['cp.get_template'](path, template_cached_path)
+    __salt__['cp.get_template'](path, template_cached_path, template_vars=template_vars)
 
     if not os.path.isfile(template_cached_path):
         ret['message'] = 'Invalid file path.'
