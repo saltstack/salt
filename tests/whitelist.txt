@@ -1,3 +1,8 @@
+integration.client.runner
+integration.fileclient.fileclient_test
+integration.loader.globals
+integration.loader.interfaces
+integration.loader.loader
 integration.modules.aliases
 integration.modules.beacons
 integration.modules.config
@@ -15,4 +20,9 @@ integration.modules.state
 integration.modules.sysmod
 integration.modules.test
 integration.modules.useradd
+integration.runners.jobs
+integration.runners.salt
+integration.runners.winrepo
 integration.states.host
+integration.states.renderers
+integration.utils.testprogram
