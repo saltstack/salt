@@ -61,7 +61,32 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     '''
-    def __init__(self, opts, saltenv='base', encoding='utf-8',
+
+    _singletons = {}
+
+    @classmethod
+    def clear_cache(cls):
+        cls._singletons = {}
+
+    def __new__(cls, *args, **kwargs):
+        # Given that neither of the opts will change at runtime
+        # (without restart)
+        # We can safely make this class a singleton, differentiating just on pillar_rend variable
+        # So one loader for states and one for pillar
+        # This is used to re-use FileClient for files included in jinja templates.
+
+        pillar = kwargs['pillar_rend']
+        key = (pillar,)
+        inst = cls._singletons.get(key)
+        if inst:
+            return inst
+
+        inst = object.__new__(cls)
+        inst.__singleton_init__(*args, **kwargs)
+        cls._singletons[key] = inst
+        return inst
+
+    def __singleton_init__(self, opts, saltenv='base', encoding='utf-8',
                  pillar_rend=False):
         self.opts = opts
         self.saltenv = saltenv
