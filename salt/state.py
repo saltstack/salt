@@ -1727,6 +1727,7 @@ class State(object):
                 if self.mocked:
                     ret = mock_ret(cdata)
                 else:
+                    self.format_slots(cdata)
                     ret = self.states[cdata['full']](*cdata['args'],
                                                      **cdata['kwargs'])
                 self.states.inject_globals = {}
@@ -1829,6 +1830,20 @@ class State(object):
                                                 low['retry']['until'],
                                                 low['retry']['splay'])])
         return ret
+
+    def format_slots(self, cdata):
+        '''
+        Format slots reads in the arguments to the call and executes slots
+        '''
+        for ind in range(len(cdata['args'])):
+            arg = cdata['args'][ind]
+            if arg.startswih('__slot__:'):
+                # If is a slot! Call it!
+                fmt = arg.split(':')
+                if len(fmt) < 3:
+                    continue
+                if fmt[1] == 'salt':
+                    cdata['args'][ind] = self.functions[fmt[2]](*fmt[3])
 
     def verify_retry_data(self, retry_data):
         '''
