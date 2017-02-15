@@ -754,7 +754,7 @@ def dns_check(addr, port, connect=True, safe=False, ipv6=None):
 
                     resolved = candidate_addr
                     break
-                except Exception:
+                except socket.error:
                     pass
             if not resolved:
                 error = True
