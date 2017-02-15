@@ -768,15 +768,19 @@ class Fileserver(object):
         if not isinstance(load['saltenv'], six.string_types):
             load['saltenv'] = six.text_type(load['saltenv'])
 
+        funcs = []
         for fsb in self._gen_back(load.pop('fsbackend', None)):
             fstr = '{0}.file_stats'.format(fsb)
             if fstr in self.servers:
-                ret.update(self.servers[fstr](load)) # merging dicts here
-            else:
-                # if any of used fs backend doesn't support new file_stats
-                # we return False, so that client can use old _file_find function
-                # gitfs is not yet supported
-                return False
+                funcs.append(fstr)
+
+        if len(funcs) != len(self.opts['fileserver_backend']):
+            # if any of used fs backend doesn't support new file_stats
+            # we return False, so that client can use old _file_find function
+            # gitfs is not yet supported
+            return False
+        for fstr in funcs:
+            ret.update(self.servers[fstr](load)) # merging dicts here
 
         # upgrade all set elements to a common encoding
 
