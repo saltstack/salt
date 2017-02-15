@@ -171,6 +171,8 @@ def wrap_tmpl_func(render_str):
             if to_str:  # then render as string
                 return dict(result=True, data=output)
             with tempfile.NamedTemporaryFile('wb', delete=False, prefix=salt.utils.files.TEMPFILE_PREFIX) as outf:
+                if six.PY3:
+                    output = output.encode(SLS_ENCODING)
                 outf.write(output)
                 # Note: If nothing is replaced or added by the rendering
                 #       function, then the contents of the output file will
