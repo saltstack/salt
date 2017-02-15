@@ -3198,7 +3198,7 @@ def filter_by(lookup_dict,
     # Iterate over the list of values to match against patterns in the
     # lookup_dict keys
     for each in val if isinstance(val, list) else [val]:
-        for key in sorted(lookup_dict):
+        for key in lookup_dict:
             test_key = key if isinstance(key, six.string_types) else str(key)
             test_each = each if isinstance(each, six.string_types) else str(each)
             if fnmatch.fnmatchcase(test_each, test_key):
