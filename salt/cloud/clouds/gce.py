@@ -654,8 +654,7 @@ def delete_network(kwargs=None, call=None):
         )
     except ResourceNotFoundError as exc:
         log.error(
-            'Nework {0} could not be found.\n'
-            'The following exception was thrown by libcloud:\n{1}'.format(
+            'Nework {0} was not found. Exception was: {1}'.format(
                 name, exc),
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -828,8 +827,7 @@ def delete_subnetwork(kwargs=None, call=None):
         result = conn.ex_destroy_subnetwork(name, region)
     except ResourceNotFoundError as exc:
         log.error(
-            'Subnework {0} could not be found.\n'
-            'The following exception was thrown by libcloud:\n{1}'.format(
+            'Subnetwork {0} was not found. Exception was: {1}'.format(
                 name, exc),
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -1002,8 +1000,7 @@ def delete_fwrule(kwargs=None, call=None):
         )
     except ResourceNotFoundError as exc:
         log.error(
-            'Rule {0} could not be found.\n'
-            'The following exception was thrown by libcloud:\n{1}'.format(
+            'Rule {0} was not found. Exception was: {1}'.format(
                 name, exc),
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -1163,8 +1160,7 @@ def delete_hc(kwargs=None, call=None):
         )
     except ResourceNotFoundError as exc:
         log.error(
-            'Health check {0} could not be found.\n'
-            'The following exception was thrown by libcloud:\n{1}'.format(
+            'Health check {0} was not found. Exception was: {1}'.format(
                 name, exc),
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -1313,8 +1309,7 @@ def delete_address(kwargs=None, call=None):
         )
     except ResourceNotFoundError as exc:
         log.error(
-            'Address {0} could not be found (region {1})\n'
-            'The following exception was thrown by libcloud:\n{2}'.format(
+            'Address {0} in region {1} was not found. Exception was: {2}'.format(
                 name, ex_region, exc),
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -1490,8 +1485,7 @@ def delete_lb(kwargs=None, call=None):
         )
     except ResourceNotFoundError as exc:
         log.error(
-            'Load balancer {0} could not be found.\n'
-            'The following exception was thrown by libcloud:\n{1}'.format(
+            'Load balancer {0} was not found. Exception was: {1}'.format(
                 name, exc),
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -1696,8 +1690,7 @@ def delete_snapshot(kwargs=None, call=None):
         )
     except ResourceNotFoundError as exc:
         log.error(
-            'Snapshot {0} could not be found.\n'
-            'The following exception was thrown by libcloud:\n{1}'.format(
+            'Snapshot {0} was not found. Exception was: {1}'.format(
                 name, exc),
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -1902,8 +1895,7 @@ def create_snapshot(kwargs=None, call=None):
         disk = conn.ex_get_volume(disk_name)
     except ResourceNotFoundError as exc:
         log.error(
-            'Disk {0} could not be found.\n'
-            'The following exception was thrown by libcloud:\n{1}'.format(
+            'Disk {0} was not found. Exception was: {1}'.format(
                 disk_name, exc),
             exc_info_on_loglevel=logging.DEBUG
         )
