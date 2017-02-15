@@ -1035,7 +1035,6 @@ def unzip(zip_file,
         os.seteuid(uinfo['uid'])
 
     try:
-        exc = None
         # Define cleaned_files here so that an exception will not prevent this
         # variable from being defined and cause a NameError in the return
         # statement at the end of the function.
@@ -1062,18 +1061,19 @@ def unzip(zip_file,
                     if extract_perms:
                         os.chmod(os.path.join(dest, target), zfile.getinfo(target).external_attr >> 16)
     except Exception as exc:
-        pass
+        if runas:
+            os.seteuid(euid)
+            os.setegid(egid)
+        # Wait to raise the exception until euid/egid are restored to avoid
+        # permission errors in writing to minion log.
+        raise CommandExecutionError(
+            'Exception encountered unpacking zipfile: {0}'.format(exc)
+        )
     finally:
         # Restore the euid/egid
         if runas:
             os.seteuid(euid)
             os.setegid(egid)
-        if exc is not None:
-            # Wait to raise the exception until euid/egid are restored to avoid
-            # permission errors in writing to minion log.
-            raise CommandExecutionError(
-                'Exception encountered unpacking zipfile: {0}'.format(exc)
-            )
 
     return _trim_files(cleaned_files, trim_output)
 
