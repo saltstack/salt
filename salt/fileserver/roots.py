@@ -324,7 +324,8 @@ def _file_lists(load, form):
             'files': [],
             'dirs': [],
             'empty_dirs': [],
-            'links': []
+            'links': [],
+            'files_stat': {}
         }
         for path in __opts__['file_roots'][load['saltenv']]:
             for root, dirs, files in os.walk(
@@ -352,8 +353,12 @@ def _file_lists(load, form):
                                 path
                             )
                     if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
+                        stat = list(os.stat(os.path.join(root, fname)))
+
                         if __opts__.get('file_client', 'remote') == 'local' and os.path.sep == "\\":
                             rel_fn = rel_fn.replace('\\', '/')
+
+                        ret['files_stat'][rel_fn] = stat
                         ret['files'].append(rel_fn)
         if save_cache:
             try:
@@ -389,6 +394,8 @@ def dir_list(load):
     '''
     return _file_lists(load, 'dirs')
 
+def file_stats(load):
+    return _file_lists(load, 'files_stat')
 
 def symlink_list(load):
     '''

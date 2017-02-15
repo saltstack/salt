@@ -973,12 +973,26 @@ class RemoteClient(Client):
         else:
             self.auth = ''
 
+        self.remote_file_list = {} # saltenv is used a key in this dict
+
     def _refresh_channel(self):
         '''
         Reset the channel, in the event of an interruption
         '''
         self.channel = salt.transport.Channel.factory(self.opts)
         return self.channel
+
+    def _get_remote_file_list(self, saltenv):
+        if saltenv in self.remote_file_list:
+            log.debug("Using cached file list for saltenv {0}".format(saltenv))
+        else:
+            log.debug("Fetching remote file list for saltenv {0}".format(saltenv))
+            res = self.file_stats(saltenv)
+            if res:
+                self.remote_file_list[saltenv] = res
+            return res
+
+        return self.remote_file_list[saltenv]
 
     def get_file(self,
                  path,
@@ -994,30 +1008,35 @@ class RemoteClient(Client):
         cache
         '''
         path, senv = salt.utils.url.split_env(path)
+
         if senv:
             saltenv = senv
 
-        if not salt.utils.is_windows():
-            hash_server, stat_server = self.hash_and_stat_file(path, saltenv)
-            try:
-                mode_server = stat_server[0]
-            except (IndexError, TypeError):
-                mode_server = None
-        else:
-            hash_server = self.hash_file(path, saltenv)
-            mode_server = None
+        cached_list = self._get_remote_file_list(saltenv)
 
-        # Check if file exists on server, before creating files and
-        # directories
-        if hash_server == '':
+        stat_server = self.stat_file(path, saltenv) # gets information only from cached list
+
+        # if cached_list is non empty, we know that all used filesystems
+        # support extended file stats and there's no need to check hashes
+        if not cached_list:
+            # if the fs backend doesn't support _file_stats, use old _file_find
+            hash_server, stat_server = self.hash_and_stat_file(path, saltenv)
+
+        if not stat_server:
             log.debug(
-                'Could not find file \'%s\' in saltenv \'%s\'',
+                '[CACHED] Could not find file \'%s\' in saltenv \'%s\'',
                 path, saltenv
             )
             return False
 
-        # Hash compare local copy with master and skip download
-        # if no difference found.
+        # Some fs like gitfs does not support extended file stats yet
+        # In such case we need to fallback to comparing file hashes
+        support_mtime = len(stat_server) > 8
+        mode_server = stat_server[0]
+        if support_mtime:
+            mtime_server = stat_server[8]
+            size_server = stat_server[6]
+
         dest2check = dest
         if not dest2check:
             rel_path = self._check_proto(path)
@@ -1035,60 +1054,57 @@ class RemoteClient(Client):
             '\'%s\'', saltenv, dest2check, path
         )
 
-        if dest2check and os.path.isfile(dest2check):
-            if not salt.utils.is_windows():
-                hash_local, stat_local = \
-                    self.hash_and_stat_file(dest2check, saltenv)
-                try:
-                    mode_local = stat_local[0]
-                except (IndexError, TypeError):
-                    mode_local = None
-            else:
-                hash_local = self.hash_file(dest2check, saltenv)
-                mode_local = None
+        # Compare local copy with master and skip download
+        # if no difference found.
 
-            if hash_local == hash_server:
-                if not salt.utils.is_windows():
-                    if mode_server is None:
-                        log.debug('No file mode available for \'%s\'', path)
-                    elif mode_local is None:
-                        log.debug(
-                            'No file mode available for \'%s\'',
-                            dest2check
-                        )
-                    else:
-                        if mode_server == mode_local:
-                            log.info(
-                                'Fetching file from saltenv \'%s\', '
-                                '** skipped ** latest already in cache '
-                                '\'%s\', mode up-to-date', saltenv, path
-                            )
-                        else:
-                            try:
-                                os.chmod(dest2check, mode_server)
-                                log.info(
-                                    'Fetching file from saltenv \'%s\', '
-                                    '** updated ** latest already in cache, '
-                                    '\'%s\', mode updated from %s to %s',
-                                    saltenv,
-                                    path,
-                                    salt.utils.st_mode_to_octal(mode_local),
-                                    salt.utils.st_mode_to_octal(mode_server)
-                                )
-                            except OSError as exc:
-                                log.warning(
-                                    'Failed to chmod %s: %s', dest2check, exc
-                                )
-                    # We may not have been able to check/set the mode, but we
-                    # don't want to re-download the file because of a failure
-                    # in mode checking. Return the cached path.
-                    return dest2check
-                else:
+        if dest2check and os.path.isfile(dest2check):
+            # stat local file
+
+            if support_mtime:
+                stat_local = self.stat_file(dest2check, saltenv)
+            else:
+                stat_local, hash_local = self.hash_and_stat_file(dest2check, saltenv)
+
+            mode_local = stat_local[0]
+            mtime_local = stat_local[8]
+            size_local = stat_local[6]
+
+            if support_mtime:
+                # Compare dates of modification and size
+                mtime_delta = mtime_server - mtime_local # if delta is > 0 then the file on the server was updated
+                size_ok = ( size_local == size_server )
+                log.debug("File sizes server/client: {0}, {1}, mtime delta = {2}".format(size_local, size_server, mtime_delta))
+
+                ok = mtime_delta <= 0 and size_ok # this is similar to how rsync would work
+            else:
+                # Compare hashes
+                log.debug("File hashes server/client {0}, {1}", hash_server, hash_local)
+                ok = ( hash_server == hash_local )
+
+            if ok and not salt.utils.is_windows() and mode_server != mode_local:
+                try:
+                    os.chmod(dest2check, mode_server)
                     log.info(
-                        'Fetching file from saltenv \'%s\', ** skipped ** '
-                        'latest already in cache \'%s\'', saltenv, path
+                        'Fetching file from saltenv \'%s\', '
+                        '** updated ** latest already in cache, '
+                        '\'%s\', mode updated from %s to %s',
+                        saltenv,
+                        path,
+                        salt.utils.st_mode_to_octal(mode_local),
+                        salt.utils.st_mode_to_octal(mode_server)
                     )
-                    return dest2check
+                except OSError as exc:
+                    log.warning(
+                        'Failed to chmod %s: %s', dest2check, exc
+                    )
+                return dest2check
+
+            if ok:
+                log.info(
+                    'Fetching file from saltenv \'%s\', ** skipped ** '
+                    'latest already in cache \'%s\'', saltenv, path
+                )
+                return dest2check
 
         log.debug(
             'Fetching file from saltenv \'%s\', ** attempting ** \'%s\'',
@@ -1234,6 +1250,21 @@ class RemoteClient(Client):
 
         return [sdecode(fn_) for fn_ in self.channel.send(load)]
 
+    def file_stats(self, saltenv='base', prefix=''):
+        '''
+        List the files on the master with their stats
+        '''
+        load = {'saltenv': saltenv,
+                'prefix': prefix,
+                'cmd': '_file_stats'}
+
+        ret = self.channel.send(load)
+        if not ret:
+            return ret
+
+
+        return {sdecode(fn_): v for fn_, v in ret.items()}
+
     def file_list_emptydirs(self, saltenv='base', prefix=''):
         '''
         List the empty dirs on the master
@@ -1282,6 +1313,25 @@ class RemoteClient(Client):
                 'saltenv': saltenv,
                 'cmd': '_file_hash_and_stat'}
         return self.channel.send(load)
+
+    def stat_file(self, path, saltenv='base'):
+        '''
+        '''
+        try:
+            path = self._check_proto(path)
+        except MinionError as err:
+            if not os.path.isfile(path):
+                msg = 'specified file {0} is not present to check stats: {1}'
+                log.warning(msg.format(path, err))
+                return []
+            else:
+                return list(os.stat(path))
+
+        if saltenv in self.remote_file_list and path in self.remote_file_list[saltenv]:
+            log.debug("*** Found cached stat! for file: " + path)
+            return self.remote_file_list[saltenv][path]
+
+        return False
 
     def hash_file(self, path, saltenv='base'):
         '''
@@ -1342,6 +1392,7 @@ class FSClient(RemoteClient):
         self.opts = opts
         self.channel = salt.fileserver.FSChan(opts)
         self.auth = DumbAuth()
+        self.remote_file_list = {}
 
 
 class DumbAuth(object):
