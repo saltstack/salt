@@ -984,9 +984,9 @@ class RemoteClient(Client):
 
     def _get_remote_file_list(self, saltenv):
         if saltenv in self.remote_file_list:
-            log.debug("Using cached file list for saltenv {0}".format(saltenv))
+            log.debug('Using cached file list for saltenv %s', saltenv)
         else:
-            log.debug("Fetching remote file list for saltenv {0}".format(saltenv))
+            log.debug('Fetching remote file list for saltenv %s', saltenv)
             res = self.file_stats(saltenv)
             if res:
                 self.remote_file_list[saltenv] = res
@@ -1018,6 +1018,8 @@ class RemoteClient(Client):
 
         # if cached_list is non empty, we know that all used filesystems
         # support extended file stats and there's no need to check hashes
+        hash_server = None
+        stat_server = None
         if not cached_list:
             # if the fs backend doesn't support _file_stats, use old _file_find
             hash_server, stat_server = self.hash_and_stat_file(path, saltenv)
@@ -1033,6 +1035,9 @@ class RemoteClient(Client):
         # In such case we need to fallback to comparing file hashes
         support_mtime = len(stat_server) > 8
         mode_server = stat_server[0]
+        mtime_server = None
+        size_server = None
+
         if support_mtime:
             mtime_server = stat_server[8]
             size_server = stat_server[6]
@@ -1063,7 +1068,7 @@ class RemoteClient(Client):
             if support_mtime:
                 stat_local = self.stat_file(dest2check, saltenv)
             else:
-                stat_local, hash_local = self.hash_and_stat_file(dest2check, saltenv)
+                hash_local, stat_local = self.hash_and_stat_file(dest2check, saltenv)
 
             mode_local = stat_local[0]
             mtime_local = stat_local[8]
@@ -1262,7 +1267,6 @@ class RemoteClient(Client):
         if not ret:
             return ret
 
-
         return {sdecode(fn_): v for fn_, v in ret.items()}
 
     def file_list_emptydirs(self, saltenv='base', prefix=''):
@@ -1328,7 +1332,7 @@ class RemoteClient(Client):
                 return list(os.stat(path))
 
         if saltenv in self.remote_file_list and path in self.remote_file_list[saltenv]:
-            log.debug("*** Found cached stat! for file: " + path)
+            log.debug("*** Found cached stat for file: " + path)
             return self.remote_file_list[saltenv][path]
 
         return False
