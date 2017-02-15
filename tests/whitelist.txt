@@ -1,5 +1,5 @@
 integration.client.runner
-integration.fileclient.fileclient_test
+integration.fileserver.fileclient_test
 integration.loader.globals
 integration.loader.interfaces
 integration.loader.loader
