@@ -20,6 +20,7 @@ from salt.config.schemas import ssh as ssh_schemas
 from salt.config.schemas.minion import MinionConfiguration
 
 # Import 3rd-party libs
+import salt.ext.six as six
 try:
     import jsonschema
     import jsonschema.exceptions
@@ -30,6 +31,7 @@ except ImportError:
     JSONSCHEMA_VERSION = _LooseVersion('0')
 
 
+@skipIf(six.PY3, 'Tests disabled under Python 3')
 class RoosterEntryConfigTest(TestCase):
     def test_config(self):
         config = ssh_schemas.RosterEntryConfig()
