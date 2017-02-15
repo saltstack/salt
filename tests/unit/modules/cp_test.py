@@ -6,11 +6,6 @@
 # Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Libs
-from salt.modules import cp
-from salt.utils import templates
-from salt.exceptions import CommandExecutionError
-
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -24,6 +19,13 @@ from salttesting.mock import (
 )
 
 ensure_in_syspath('../../')
+
+# Import Salt Libs
+from salt.modules import cp
+from salt.utils import templates
+from salt.exceptions import CommandExecutionError
+import salt.utils
+import salt.transport
 
 # Globals
 cp.__salt__ = {}
@@ -144,7 +146,6 @@ class CpTestCase(TestCase):
         '''
         Test if push works with good posix path.
         '''
-        import salt
         response = cp.push('/saltines/test.file')
         self.assertEqual(response, True)
         self.assertEqual(salt.utils.fopen().read.call_count, 2)
@@ -153,7 +154,7 @@ class CpTestCase(TestCase):
                 loc=salt.utils.fopen().tell(),
                 cmd='_file_recv',
                 tok='token',
-                path=('saltines', 'test.file'),
+                path=['saltines', 'test.file'],
                 data='',  # data is empty here because load['data'] is overwritten
                 id='abc'
             )
