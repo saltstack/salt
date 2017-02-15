@@ -497,6 +497,9 @@ def bootstrap(vm_, opts):
         deploy_kwargs['winrm_port'] = salt.config.get_cloud_config_value(
             'winrm_port', vm_, opts, default=5986
         )
+        deploy_kwargs['winrm_use_ssl'] = salt.config.get_cloud_config_value(
+        'winrm_use_ssl', vm_, opts, default=True
+        )
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
@@ -821,7 +824,7 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
             )
 
 
-def wait_for_winrm(host, port, username, password, timeout=900):
+def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
     '''
     Wait until WinRM connection can be established.
     '''
@@ -835,7 +838,10 @@ def wait_for_winrm(host, port, username, password, timeout=900):
     while True:
         trycount += 1
         try:
-            s = winrm.Session(host, auth=(username, password), transport='ssl')
+            transport = 'ssl'
+            if not use_ssl:
+                transport = 'plaintext'
+            s = winrm.Session(host, auth=(username, password), transport=transport)
             if hasattr(s.protocol, 'set_timeout'):
                 s.protocol.set_timeout(15)
             log.trace('WinRM endpoint url: {0}'.format(s.url))
@@ -982,6 +988,7 @@ def deploy_windows(host,
                    master_sign_pub_file=None,
                    use_winrm=False,
                    winrm_port=5986,
+                   winrm_use_ssl=True,
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
@@ -1007,8 +1014,8 @@ def deploy_windows(host,
 
     if HAS_WINRM and use_winrm:
         winrm_session = wait_for_winrm(host=host, port=winrm_port,
-                                           username=username, password=password,
-                                           timeout=port_timeout * 60)
+                                       username=username, password=password,
+                                       timeout=port_timeout * 60, use_ssl=winrm_use_ssl)
         if winrm_session is not None:
             service_available = True
     else:
@@ -1127,8 +1134,11 @@ def deploy_windows(host,
         # Delete C:\salttmp\ and installer file
         # Unless keep_tmp is True
         if not keep_tmp:
-            smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
-            smb_conn.deleteDirectory('C$', 'salttemp')
+            if use_winrm:
+                winrm_cmd(winrm_session, 'rmdir', ['/Q', '/S', 'C:\\salttemp\\'])
+            else:
+                smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
+                smb_conn.deleteDirectory('C$', 'salttemp')
         # Shell out to winexe to ensure salt-minion service started
         if use_winrm:
             winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
