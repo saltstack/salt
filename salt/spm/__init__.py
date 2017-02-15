@@ -626,6 +626,7 @@ class SPMClient(object):
         else:
             repo_path = args[1]
 
+        old_files = []
         repo_metadata = {}
         for (dirpath, dirnames, filenames) in os.walk(repo_path):
             for spm_file in filenames:
@@ -639,16 +640,93 @@ class SPMClient(object):
                 spm_fh = tarfile.open(spm_path, 'r:bz2')
                 formula_handle = spm_fh.extractfile('{0}/FORMULA'.format(spm_name))
                 formula_conf = yaml.safe_load(formula_handle.read())
-                repo_metadata[spm_name] = {
-                    'info': formula_conf.copy(),
-                }
-                repo_metadata[spm_name]['filename'] = spm_file
+
+                use_formula = True
+                if spm_name in repo_metadata:
+                    # This package is already in the repo; use the latest
+                    cur_info = repo_metadata[spm_name]['info']
+                    new_info = formula_conf
+                    if int(new_info['version']) == int(cur_info['version']):
+                        # Version is the same, check release
+                        if int(new_info['release']) < int(cur_info['release']):
+                            # This is an old release; don't use it
+                            use_formula = False
+                    elif int(new_info['version']) < int(cur_info['version']):
+                        # This is an old version; don't use it
+                        use_formula = False
+
+                    if use_formula is True:
+                        # Ignore/archive/delete the old version
+                        log.debug(
+                            '{0} {1}-{2} had been added, but {3}-{4} will replace it'.format(
+                                spm_name,
+                                cur_info['version'],
+                                cur_info['release'],
+                                new_info['version'],
+                                new_info['release'],
+                            )
+                        )
+                        old_files.append(repo_metadata[spm_name]['filename'])
+                    else:
+                        # Ignore/archive/delete the new version
+                        log.debug(
+                            '{0} {1}-{2} has been found, but is older than {3}-{4}'.format(
+                                spm_name,
+                                new_info['version'],
+                                new_info['release'],
+                                cur_info['version'],
+                                cur_info['release'],
+                            )
+                        )
+                        old_files.append(spm_file)
+
+                if use_formula is True:
+                    log.debug(
+                        'adding {0}-{1}-{2} to the repo'.format(
+                            formula_conf['name'],
+                            formula_conf['version'],
+                            formula_conf['release'],
+                        )
+                    )
+                    repo_metadata[spm_name] = {
+                        'info': formula_conf.copy(),
+                    }
+                    repo_metadata[spm_name]['filename'] = spm_file
 
         metadata_filename = '{0}/SPM-METADATA'.format(repo_path)
         with salt.utils.fopen(metadata_filename, 'w') as mfh:
             yaml.dump(repo_metadata, mfh, indent=4, canonical=False, default_flow_style=False)
 
         log.debug('Wrote {0}'.format(metadata_filename))
+
+        for file_ in old_files:
+            if self.opts['spm_repo_dups'] == 'ignore':
+                # ignore old packages, but still only add the latest
+                log.debug('{0} will be left in the directory'.format(file_))
+            elif self.opts['spm_repo_dups'] == 'archive':
+                # spm_repo_archive_path is where old packages are moved
+                if not os.path.exists('./archive'):
+                    try:
+                        os.makedirs('./archive')
+                        log.debug('{0} has been archived'.format(file_))
+                    except IOError:
+                        log.error('Unable to create archive directory')
+                try:
+                    shutil.move(file_, './archive')
+                except (IOError, OSError):
+                    log.error(
+                        'Unable to archive {0}'.format(file_)
+                    )
+            elif self.opts['spm_repo_dups'] == 'delete':
+                # delete old packages from the repo
+                try:
+                    os.remove(file_)
+                    log.debug('{0} has been deleted'.format(file_))
+                except IOError:
+                    log.error('Unable to delete {0}'.format(file_))
+                except OSError:
+                    # The file has already been deleted
+                    pass
 
     def _remove(self, args):
         '''
