@@ -1930,6 +1930,7 @@ class State(object):
                         # run the state call in parallel, but only if not in a prereq
                         ret = self.call_parallel(cdata, low)
                     else:
+                        self.format_slots(cdata)
                         ret = self.states[cdata['full']](*cdata['args'],
                                                           **cdata['kwargs'])
                 self.states.inject_globals = {}
@@ -2038,6 +2039,25 @@ class State(object):
                                                 low['retry']['until'],
                                                 low['retry']['splay'])])
         return ret
+
+    def format_slots(self, cdata):
+        '''
+        Read in the arguments from the low level slot syntax to make a last
+        minute runtime call to gather relevant data for the specific routine
+        '''
+        # __slot__:salt.cmd.run(foo, bar, baz=qux)
+        for ind in range(len(cdata['args'])):
+            arg = cdata['args'][ind]
+            if arg.startswith('__slot__:'):
+                # Call the slot
+                fmt = arg.split(':')
+                if len(fmt) < 2:
+                    # Impropperly formated slot
+                    continue
+                fun = fmt[1]
+                comps = fun.split('(')
+                if len(comps) < 3:
+                    continue
 
     def verify_retry_data(self, retry_data):
         '''
