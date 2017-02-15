@@ -2836,10 +2836,10 @@ def create(image,
 
         Example: ``tty=True``
 
-    detach : True
+    detach : False
         If ``True``, run ``command`` in the background (daemon mode)
 
-        Example: ``detach=False``
+        Example: ``detach=True``
 
     user
         User under which to run docker

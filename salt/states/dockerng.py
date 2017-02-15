@@ -980,7 +980,7 @@ def running(name,
                 - image: bar/baz:latest
                 - tty: True
 
-    detach : True
+    detach : False
         If ``True``, run the container's command in the background (daemon
         mode)
 
@@ -989,7 +989,7 @@ def running(name,
             foo:
               dockerng.running:
                 - image: bar/baz:latest
-                - detach: False
+                - detach: True
 
     user
         User under which to run docker
