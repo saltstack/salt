@@ -15,6 +15,7 @@ from salt.exceptions import CommandExecutionError
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
+    Mock,
     MagicMock,
     mock_open,
     patch,
@@ -128,7 +129,37 @@ class CpTestCase(TestCase):
         path = '../saltines'
         ret = False
 
+
         self.assertEqual(cp.push_dir(path), ret)
+
+    def test_push(self):
+        '''
+        Test if push works with good posix path.
+        '''
+        path = '/saltines/test.file'
+        patcher_os_path = patch(
+            'salt.modules.cp.os.path',
+            MagicMock(isfile=Mock(return_value=True), wraps=cp.os.path))
+        patcher_cp = patch.multiple(
+            'salt.modules.cp',
+            _auth=MagicMock(**{'return_value.gen_token.return_value': 'token'}),
+            __opts__={'id': 'abc', 'file_buffer_size': 10})
+        patcher_fopen = patch('salt.utils.fopen', mock_open(read_data='content'))
+        patcher_Channel = patch('salt.transport.Channel.factory', MagicMock())
+        with patcher_os_path, patcher_cp, patcher_fopen as mock_fopen, patcher_Channel as mock_Channel:
+            response = cp.push(path)
+            self.assertEqual(response, True)
+            self.assertEqual(mock_fopen().read.call_count, 2)
+            mock_Channel().send.assert_called_once_with(
+                dict(
+                    loc=mock_fopen().tell(),
+                    cmd='_file_recv',
+                    tok= 'token',
+                    path=('saltines', 'test.file'),
+                    data='',  # data is empty here because load['data'] is overwritten
+                    id='abc'
+                )
+            )
 
 
 if __name__ == '__main__':
