@@ -3,9 +3,6 @@
 # Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Libs
-from salt.states import proxy as proxy
-
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -17,7 +14,13 @@ from salttesting.mock import (
     call
 )
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 ensure_in_syspath('../../')
+
+# Import Salt Libs
+from salt.states import proxy as proxy
 
 proxy.__salt__ = {}
 proxy.__grains__ = {}
@@ -28,6 +31,7 @@ class ProxyTestCase(TestCase):
     '''
         Validate the proxy state
     '''
+
     def test_set_proxy_macos(self):
         '''
             Test to make sure we can set the proxy settings on macOS
@@ -69,6 +73,9 @@ class ProxyTestCase(TestCase):
         with patch.dict(proxy.__salt__, patches):
             out = proxy.managed('192.168.0.1', '3128', user='frank', password='passw0rd',
                                 bypass_domains=['salt.com', 'test.com'])
+            if six.PY3:
+                # Sorting is different in Py3
+                out['changes']['new'][-1]['bypass_domains'] = sorted(out['changes']['new'][-1]['bypass_domains'])
 
             calls = [
                 call('192.168.0.1', '3128', 'frank', 'passw0rd', 'Ethernet'),
