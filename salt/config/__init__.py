@@ -1611,6 +1611,7 @@ DEFAULT_SPM_OPTS = {
     'spm_build_exclude': ['CVS', '.hg', '.git', '.svn'],
     'spm_db': os.path.join(salt.syspaths.CACHE_DIR, 'spm', 'packages.db'),
     'cache': 'localfs',
+    'spm_repo_dups': 'ignore',
     # <---- Salt master settings overridden by SPM ----------------------
 }
 
