@@ -29,6 +29,7 @@ class ZipFileMock(MagicMock):
             files = ['salt']
         MagicMock.__init__(self, **kwargs)
         self._files = files
+        self.external_attr = 0o0777 << 16
 
     def namelist(self):
         return self._files
