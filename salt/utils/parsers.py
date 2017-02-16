@@ -377,6 +377,10 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
                 saltfile = ''
             if os.path.isfile(saltfile):
                 self.options.saltfile = saltfile
+            else:
+                saltfile = os.path.join(os.path.expanduser("~"), '.salt', 'Saltfile')
+                if os.path.isfile(saltfile):
+                    self.options.saltfile = saltfile
         else:
             saltfile = self.options.saltfile
 
@@ -498,6 +502,7 @@ class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
     def process_config_dir(self):
+        self.options.config_dir = os.path.expanduser(self.options.config_dir)
         if not os.path.isdir(self.options.config_dir):
             # No logging is configured yet
             sys.stderr.write(
