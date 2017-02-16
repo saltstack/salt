@@ -95,11 +95,12 @@ class WinDismTestCase(TestCase):
             dism.__salt__, {'dism.installed_capabilities': mock_installed,
                             'dism.add_capability': mock_add}):
 
-            out = dism.capability_installed('Capa2', 'somewhere', True)
+            with patch.dict(dism.__opts__, {'test': False}):
+                out = dism.capability_installed('Capa2', 'somewhere', True)
 
-            mock_installed.assert_called_once_with()
-            assert not mock_add.called
-            self.assertEqual(out, expected)
+                mock_installed.assert_called_once_with()
+                assert not mock_add.called
+                self.assertEqual(out, expected)
 
     def test_capability_removed(self):
         '''
@@ -360,13 +361,14 @@ class WinDismTestCase(TestCase):
                             'dism.add_package': mock_add,
                             'dism.package_info': mock_info}):
             with patch.dict(dism.__opts__, {'test': False}):
+                with patch('os.path.exists'):
 
-                out = dism.package_installed('Pack2')
+                    out = dism.package_installed('Pack2')
 
-                mock_installed.assert_called_with()
-                mock_add.assert_called_once_with(
-                    'Pack2', False, False, None, False)
-                self.assertEqual(out, expected)
+                    mock_installed.assert_called_with()
+                    mock_add.assert_called_once_with(
+                        'Pack2', False, False, None, False)
+                    self.assertEqual(out, expected)
 
     def test_package_installed_failure(self):
         '''
@@ -390,13 +392,14 @@ class WinDismTestCase(TestCase):
                             'dism.add_package': mock_add,
                             'dism.package_info': mock_info}):
             with patch.dict(dism.__opts__, {'test': False}):
+                with patch('os.path.exists'):
 
-                out = dism.package_installed('Pack2')
+                    out = dism.package_installed('Pack2')
 
-                mock_installed.assert_called_with()
-                mock_add.assert_called_once_with(
-                    'Pack2', False, False, None, False)
-                self.assertEqual(out, expected)
+                    mock_installed.assert_called_with()
+                    mock_add.assert_called_once_with(
+                        'Pack2', False, False, None, False)
+                    self.assertEqual(out, expected)
 
     def test_package_installed_installed(self):
         '''
@@ -418,12 +421,14 @@ class WinDismTestCase(TestCase):
             dism.__salt__, {'dism.installed_packages': mock_installed,
                             'dism.add_package': mock_add,
                             'dism.package_info': mock_info}):
+            with patch.dict(dism.__opts__, {'test': False}):
+                with patch('os.path.exists'):
 
-            out = dism.package_installed('Pack2')
+                    out = dism.package_installed('Pack2')
 
-            mock_installed.assert_called_once_with()
-            assert not mock_add.called
-            self.assertEqual(out, expected)
+                    mock_installed.assert_called_once_with()
+                    assert not mock_add.called
+                    self.assertEqual(out, expected)
 
     def test_package_removed(self):
         '''
@@ -448,13 +453,14 @@ class WinDismTestCase(TestCase):
                             'dism.remove_package': mock_remove,
                             'dism.package_info': mock_info}):
             with patch.dict(dism.__opts__, {'test': False}):
+                with patch('os.path.exists'):
 
-                out = dism.package_removed('Pack2')
+                    out = dism.package_removed('Pack2')
 
-                mock_removed.assert_called_with()
-                mock_remove.assert_called_once_with(
-                    'Pack2', None, False)
-                self.assertEqual(out, expected)
+                    mock_removed.assert_called_with()
+                    mock_remove.assert_called_once_with(
+                        'Pack2', None, False)
+                    self.assertEqual(out, expected)
 
     def test_package_removed_failure(self):
         '''
@@ -478,13 +484,14 @@ class WinDismTestCase(TestCase):
                             'dism.remove_package': mock_remove,
                             'dism.package_info': mock_info}):
             with patch.dict(dism.__opts__, {'test': False}):
+                with patch('os.path.exists'):
 
-                out = dism.package_removed('Pack2')
+                    out = dism.package_removed('Pack2')
 
-                mock_removed.assert_called_with()
-                mock_remove.assert_called_once_with(
-                    'Pack2', None, False)
-                self.assertEqual(out, expected)
+                    mock_removed.assert_called_with()
+                    mock_remove.assert_called_once_with(
+                        'Pack2', None, False)
+                    self.assertEqual(out, expected)
 
     def test_package_removed_removed(self):
         '''
@@ -507,11 +514,13 @@ class WinDismTestCase(TestCase):
                             'dism.remove_package': mock_remove,
                             'dism.package_info': mock_info}):
 
-            out = dism.package_removed('Pack2')
+            with patch.dict(dism.__opts__, {'test': False}):
+                with patch('os.path.exists'):
+                    out = dism.package_removed('Pack2')
 
-            mock_removed.assert_called_once_with()
-            assert not mock_remove.called
-            self.assertEqual(out, expected)
+                    mock_removed.assert_called_once_with()
+                    assert not mock_remove.called
+                    self.assertEqual(out, expected)
 
 
 if __name__ == '__main__':
