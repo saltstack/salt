@@ -188,12 +188,12 @@ def _compare(actual, create_kwargs, defaults_from_image):
             # Comparing list vice-versa
             for key in actual_env:
                 # Need to skip PATH and no_proxy variables.
+                actual_val = actual_env.get(key)
                 if key not in ['PATH', 'no_proxy']:
                     if key not in data:
                         env_ptr = env_diff.setdefault(item, {})
                         env_ptr.setdefault('old', {})[key] = actual_val
-                        env_ptr.setdefault('new', {})[key] = None
-
+                        
             if env_diff:
                 ret.update(env_diff)
             continue
