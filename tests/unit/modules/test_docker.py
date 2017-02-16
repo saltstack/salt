@@ -641,6 +641,7 @@ class DockerTestCase(TestCase):
         docker_stop_mock = MagicMock(
             return_value={'state': {'old': 'running', 'new': 'stopped'},
                           'result': True})
+        docker_rm_mock = MagicMock(return_value={})
         docker_commit_mock = MagicMock(
             return_value={'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42})
 
@@ -672,16 +673,18 @@ class DockerTestCase(TestCase):
                 with patch.object(docker_mod, 'stop', docker_stop_mock):
                     with patch.object(docker_mod, 'commit', docker_commit_mock):
                         with patch.object(docker_mod, 'sls', docker_sls_mock):
-                            ret = docker_mod.sls_build(
-                                'foo',
-                                mods='foo',
-                            )
+                            with patch.object(docker_mod, 'rm_', docker_rm_mock):
+                                ret = docker_mod.sls_build(
+                                    'foo',
+                                    mods='foo',
+                                )
         docker_create_mock.assert_called_once_with(
             cmd='sleep infinity',
-            image='opensuse/python', interactive=True, name='foo', tty=True)
+            image='opensuse/python', interactive=True, tty=True)
         docker_start_mock.assert_called_once_with('ID')
         docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
         docker_stop_mock.assert_called_once_with('ID')
+        docker_rm_mock.assert_called_once_with('ID')
         docker_commit_mock.assert_called_once_with('ID', 'foo')
         self.assertEqual(
             {'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42}, ret)
@@ -735,7 +738,7 @@ class DockerTestCase(TestCase):
                             )
         docker_create_mock.assert_called_once_with(
             cmd='sleep infinity',
-            image='opensuse/python', interactive=True, name='foo', tty=True)
+            image='opensuse/python', interactive=True, tty=True)
         docker_start_mock.assert_called_once_with('ID')
         docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
         docker_stop_mock.assert_called_once_with('ID')

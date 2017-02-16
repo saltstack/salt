@@ -511,6 +511,9 @@ def image_present(name,
                   insecure_registry=False,
                   client_timeout=CLIENT_TIMEOUT,
                   dockerfile=None,
+                  sls=None,
+                  base='opensuse/python',
+                  saltenv='base',
                   **kwargs):
     '''
     Ensure that an image is present. The image can either be pulled from a
@@ -546,7 +549,7 @@ def image_present(name,
                 - build: /home/myuser/docker/myimage
                 - dockerfile: Dockerfile.alternative
 
-            .. versionadded:: develop
+            .. versionadded:: 2016.11.0
 
         The image will be built using :py:func:`docker.build
         <salt.modules.docker.build>` and the specified image name and tag
@@ -575,7 +578,33 @@ def image_present(name,
         Allows for an alternative Dockerfile to be specified.  Path to alternative
         Dockefile is relative to the build path for the Docker container.
 
-        .. versionadded:: develop
+        .. versionadded:: 2016.11.0
+
+    sls
+        Allow for building images with ``dockerng.sls_build`` by specify the
+        sls files to build with. This can be a list or comma-seperated string.
+
+        .. code-block:: yaml
+
+            myuser/myimage:mytag:
+              dockerng.image_present:
+                - sls:
+                    - webapp1
+                    - webapp2
+                - base: centos
+                - saltenv: base
+
+        .. versionadded: Nitrogen
+
+    base
+        Base image with which to start ``dockerng.sls_build``
+
+        .. versionadded: Nitrogen
+
+    saltenv
+        environment from which to pull sls files for ``dockerng.sls_build``.
+
+        .. versionadded: Nitrogen
     '''
     ret = {'name': name,
            'changes': {},
@@ -605,7 +634,7 @@ def image_present(name,
     else:
         image_info = None
 
-    if build:
+    if build or sls:
         action = 'built'
     elif load:
         action = 'loaded'
@@ -627,6 +656,23 @@ def image_present(name,
             ret['comment'] = (
                 'Encountered error building {0} as {1}: {2}'
                 .format(build, image, exc)
+            )
+            return ret
+        if image_info is None or image_update['Id'] != image_info['Id'][:12]:
+            ret['changes'] = image_update
+
+    elif sls:
+        if isinstance(sls, list):
+            sls = ','.join(sls)
+        try:
+            image_update = __salt__['dockerng.sls_build'](name=image,
+                                                          base=base,
+                                                          mods=sls,
+                                                          saltenv=saltenv)
+        except Exception as exc:
+            ret['comment'] = (
+                'Encountered error using sls {0} for building {1}: {2}'
+                .format(sls, image, exc)
             )
             return ret
         if image_info is None or image_update['Id'] != image_info['Id'][:12]:
