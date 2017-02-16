@@ -20,12 +20,6 @@ import integration
 from salt.states import saltmod
 
 
-# Globals
-saltmod.__opts__ = dict()
-saltmod.__env__ = dict()
-saltmod.__salt__ = dict()
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class StatemodTests(TestCase):
     def setUp(self):
@@ -73,6 +67,7 @@ class StatemodTests(TestCase):
             'result': True
         }
         self.assertEqual(ret, expected)
+
 
 if __name__ == '__main__':
     from integration import run_tests
