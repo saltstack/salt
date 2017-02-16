@@ -1,33 +1,31 @@
 # -*- coding: utf-8 -*-
 '''
-NAPALM Proxy functions
-======================
+NAPALM helpers
+==============
 
-Proxy-related features for the NAPALM modules.
+Helpers for the NAPALM modules.
 
-.. versionadded:: 2016.11.3
+.. versionadded:: Nitrogen
 '''
 
 from __future__ import absolute_import
 
+# Import python stdlib
 import logging
 log = logging.getLogger(__file__)
 
-try:
-    # will try to import NAPALM
-    # https://github.com/napalm-automation/napalm
-    # pylint: disable=W0611
-    from napalm_base import get_network_driver
-    # pylint: enable=W0611
-    HAS_NAPALM = True
-except ImportError:
-    HAS_NAPALM = False
+# import NAPALM utils
+import salt.utils.napalm
+from salt.utils.napalm import proxy_napalm_wrap
+
+# Import Salt modules
+from salt.ext import six
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-__virtualname__ = 'napalm_proxy'
+__virtualname__ = 'napalm'
 __proxyenabled__ = ['napalm']
 # uses NAPALM-based proxy to interact with network devices
 
@@ -38,14 +36,9 @@ __proxyenabled__ = ['napalm']
 
 def __virtual__():
     '''
-    NAPALM library must be installed for this module to work.
-    Also, the key proxymodule must be set in the __opts___ dictionary.
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
     '''
-    if HAS_NAPALM and 'proxy' in __opts__:
-        return __virtualname__
-    else:
-        return (False, 'The NAPALM keepalive modules cannot be loaded: \
-                NAPALM or proxy could not be loaded.')
+    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -56,7 +49,8 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def alive():
+@proxy_napalm_wrap
+def alive(**kwargs):  # pylint: disable=unused-argument
     '''
     Returns the alive status of the connection layer.
     The output is a dictionary under the usual dictionary
@@ -66,7 +60,7 @@ def alive():
 
     .. code-block:: bash
 
-        salt '*' napalm_proxy.alive
+        salt '*' napalm.alive
 
     Output Example:
 
@@ -77,27 +71,41 @@ def alive():
             is_alive: False
         comment: ''
     '''
-    return __proxy__['napalm.call'](
+    return salt.utils.napalm.call(
+        napalm_device,  # pylint: disable=undefined-variable
         'is_alive',
-        **{
-        }
+        **{}
     )
 
 
-def reconnect(force=False):
+@proxy_napalm_wrap
+def reconnect(force=False, **kwargs):  # pylint: disable=unused-argument
     '''
     Reconnect the NAPALM proxy when the connection
     is dropped by the network device.
     The connection can be forced to be restarted
-    using the ``force`` argument
+    using the ``force`` argument.
+
+    .. note::
+
+        This function can be used only when running proxy minions.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' napalm_proxy.reconnect
-        salt '*' napalm_proxy.reconnect force=True
+        salt '*' napalm.reconnect
+        salt '*' napalm.reconnect force=True
     '''
+    default_ret = {
+        'out': None,
+        'result': True,
+        'comment': 'Already alive.'
+    }
+    if not salt.utils.napalm.is_proxy(__opts__):
+        # regular minion is always alive
+        # otherwise, the user would not be able to execute this command
+        return default_ret
     is_alive = alive()
     log.debug('Is alive fetch:')
     log.debug(is_alive)
@@ -108,21 +116,21 @@ def reconnect(force=False):
         proxyid = __opts__.get('proxyid') or __opts__.get('id')
         # close the connection
         log.info('Closing the NAPALM proxy connection with {proxyid}'.format(proxyid=proxyid))
-        __proxy__['napalm.call'](
+        salt.utils.napalm.call(
+            napalm_device,  # pylint: disable=undefined-variable
             'close',
-            **{
-            }
+            **{}
         )
         # and re-open
         log.info('Re-opening the NAPALM proxy connection with {proxyid}'.format(proxyid=proxyid))
-        __proxy__['napalm.call'](
+        salt.utils.napalm.call(
+            napalm_device,  # pylint: disable=undefined-variable
             'open',
-            **{
-            }
+            **{}
         )
+        default_ret.update({
+            'comment': 'Connection restarted!'
+        })
+        return default_ret
     # otherwise, I have nothing to do here:
-    return {
-        'out': None,
-        'result': True,
-        'comment': 'Already alive.'
-    }
+    return default_ret
