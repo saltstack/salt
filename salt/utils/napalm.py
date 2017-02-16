@@ -131,14 +131,20 @@ def call(napalm_device, method, *args, **kwargs):
         # either not connected
         # either unable to execute the command
         err_tb = traceback.format_exc()  # let's get the full traceback and display for debugging reasons.
-        comment = 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
-            device=napalm_device.get('HOSTNAME', '[unspecified hostname]'),
-            port=(':{port}'.format(port=napalm_device.get('OPTIONAL_ARGS', {}).get('port'))
-                  if napalm_device.get('OPTIONAL_ARGS', {}).get('port') else ''),
-            user=napalm_device.get('USERNAME', ''),
-            method=method,
-            error=error
-        )
+        if isinstance(error, NotImplementedError):
+            comment = '{method} is not implemented for the NAPALM {driver} driver!'.format(
+                method=method,
+                driver=napalm_device.get('DRIVER_NAME')
+            )
+        else:
+            comment = 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
+                device=napalm_device.get('HOSTNAME', '[unspecified hostname]'),
+                port=(':{port}'.format(port=napalm_device.get('OPTIONAL_ARGS', {}).get('port'))
+                      if napalm_device.get('OPTIONAL_ARGS', {}).get('port') else ''),
+                user=napalm_device.get('USERNAME', ''),
+                method=method,
+                error=error
+            )
         log.error(comment)
         log.error(err_tb)
         return {
