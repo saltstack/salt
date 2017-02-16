@@ -3199,9 +3199,9 @@ def filter_by(lookup_dict,
     # lookup_dict keys
     for each in val if isinstance(val, list) else [val]:
         for key in sorted(lookup_dict):
-            if key not in six.string_types:
-                key = str(key)
-            if fnmatch.fnmatchcase(each, key):
+            test_key = key if isinstance(key, six.string_types) else str(key)
+            test_each = each if isinstance(each, six.string_types) else str(each)
+            if fnmatch.fnmatchcase(test_each, test_key):
                 ret = lookup_dict[key]
                 break
         if ret is not None:

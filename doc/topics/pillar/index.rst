@@ -150,6 +150,24 @@ And the actual pillar file at '/srv/pillar/common_pillar.sls':
     foo: bar
     boo: baz
 
+.. note::
+    When working with multiple pillar environments, assuming that each pillar
+    environment has its own top file, the jinja placeholder ``{{ saltenv }}``
+    can be used in place of the environment name:
+
+    .. code-block:: yaml
+
+        {{ saltenv }}:
+          '*':
+             - common_pillar
+
+    Yes, this is ``{{ saltenv }}``, and not ``{{ pillarenv }}``. The reason for
+    this is because the Pillar top files are parsed using some of the same code
+    which parses top files when :ref:`running states <running-highstate>`, so
+    the pillar environment takes the place of ``{{ saltenv }}`` in the jinja
+    context.
+
+
 Pillar Namespace Flattening
 ===========================
 

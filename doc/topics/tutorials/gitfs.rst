@@ -79,9 +79,6 @@ Additionally, version 0.21.0 of pygit2 introduced a dependency on python-cffi_,
 which in turn depends on newer releases of libffi_. Upgrading libffi_ is not
 advisable as several other applications depend on it, so on older LTS linux
 releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
-While these are not packaged in the official repositories for Debian and
-Ubuntu, SaltStack is actively working on adding packages for these to our
-repositories_. The progress of this effort can be tracked `here <salt-pack-70>`_.
 
 .. warning::
     pygit2_ is actively developed and `frequently makes
@@ -99,8 +96,53 @@ repositories_. The progress of this effort can be tracked `here <salt-pack-70>`_
 .. _libssh2: http://www.libssh2.org/
 .. _python-cffi: https://pypi.python.org/pypi/cffi
 .. _libffi: http://sourceware.org/libffi/
-.. _repositories: https://repo.saltstack.com
-.. _salt-pack-70: https://github.com/saltstack/salt-pack/issues/70
+
+
+RedHat Pygit2 Issues
+~~~~~~~~~~~~~~~~~~~~
+
+Around the time of the release of RedHat 7.3, RedHat effectively broke pygit2_
+by upgrading python-cffi_ to a release incompatible with the version of pygit2_
+available in their repositories. This prevents Python from importing the
+pygit2_ module at all, leading to a master that refuses to start, and leaving
+the following errors in the master log file:
+
+.. code-block:: text
+
+    2017-02-10 09:07:34,892 [salt.utils.gitfs ][ERROR ][11211] Import pygit2 failed: CompileError: command 'gcc' failed with exit status 1
+    2017-02-10 09:07:34,907 [salt.utils.gitfs ][ERROR ][11211] gitfs is configured but could not be loaded, are pygit2 and libgit2 installed?
+    2017-02-10 09:07:34,907 [salt.utils.gitfs ][CRITICAL][11211] No suitable gitfs provider module is installed.
+    2017-02-10 09:07:34,912 [salt.master ][CRITICAL][11211] Master failed pre flight checks, exiting
+
+This issue has been reported on the `RedHat Bugzilla`_. In the meantime, you
+can work around it by downgrading python-cffi_. To do this, go to `this page`_
+and download the appropriate python-cffi_ 0.8.6 RPM. Then copy that RPM to the
+master and downgrade using the ``rpm`` command. For example:
+
+.. code-block:: bash
+
+    # rpm -Uvh --oldpackage python-cffi-0.8.6-1.el7.x86_64.rpm
+    Preparing...                          ################################# [100%]
+    Updating / installing...
+       1:python-cffi-0.8.6-1.el7          ################################# [ 50%]
+    Cleaning up / removing...
+       2:python-cffi-1.6.0-5.el7          ################################# [100%]
+    # rpm -q python-cffi
+    python-cffi-0.8.6-1.el7.x86_64
+
+To confirm that pygit2_ is now "fixed", you can test trying to import it like so:
+
+.. code-block:: bash
+
+    # python -c 'import pygit2'
+    #
+
+If the command produces no output, then your master should work when you start
+it again.
+
+.. _`this page`: https://koji.fedoraproject.org/koji/buildinfo?buildID=569520
+.. _`RedHat Bugzilla`: https://bugzilla.redhat.com/show_bug.cgi?id=1400668
+
 
 GitPython
 ---------

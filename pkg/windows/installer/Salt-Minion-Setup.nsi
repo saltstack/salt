@@ -194,8 +194,8 @@ ShowUnInstDetails show
 ; See http://blogs.msdn.com/b/astebner/archive/2009/01/29/9384143.aspx for more info
 Section -Prerequisites
 
-    ; VCRedist only needed on Server 2008/Vista and below
-    ${If} ${AtMostWin2008}
+    ; VCRedist only needed on Windows Server 2008R2/Windows 7 and below
+    ${If} ${AtMostWin2008R2}
 
         !define VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
         !define VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"

@@ -171,6 +171,11 @@ def list_sites():
         bindings = dict()
 
         for binding in item['bindings']['Collection']:
+
+            # Ignore bindings which do not have host names
+            if binding['protocol'] not in ['http', 'https']:
+                continue
+
             filtered_binding = dict()
 
             for key in binding:
