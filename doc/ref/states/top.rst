@@ -64,7 +64,7 @@ to them:
 Environments
 ============
 
-Environments are directory hierarchies which contain a top files and a set
+Environments are directory hierarchies which contain a top file and a set
 of state files.
 
 Environments can be used in many ways, however there is no requirement that
