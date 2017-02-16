@@ -41,11 +41,18 @@ def __virtual__():
     return (False, 'useradd execution module not loaded: either pwd python library not available or system not one of Linux, OpenBSD or NetBSD')
 
 
+def _quote_username(name):
+    if isinstance(name, int):
+        name = "{0}".format(name)
+
+    return name
+
+
 def _get_gecos(name):
     '''
     Retrieve GECOS field info and return it in dictionary form
     '''
-    gecos_field = pwd.getpwnam(name).pw_gecos.split(',', 3)
+    gecos_field = pwd.getpwnam(_quote_username(name)).pw_gecos.split(',', 3)
     if not gecos_field:
         return {}
     else:
@@ -521,7 +528,7 @@ def info(name):
         salt '*' user.info root
     '''
     try:
-        data = pwd.getpwnam(name)
+        data = pwd.getpwnam(_quote_username(name))
     except KeyError:
         return {}
     else:
