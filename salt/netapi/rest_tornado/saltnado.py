@@ -866,7 +866,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         self.disbatch()
 
     @tornado.gen.coroutine
-    def disbatch(self):
+    def disbatch(self, disable_auth=False):
         '''
         Disbatch all lowstates to the appropriate clients
         '''
@@ -874,15 +874,15 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
 
         # check clients before going, we want to throw 400 if one is bad
         for low in self.lowstate:
-            if not self._verify_client(low):
+            if not disable_auth and not self._verify_client(low):
                 return
 
             # Make sure we have 'token' or 'username'/'password' in each low chunk.
             # Salt will verify the credentials are correct.
-            if self.token is not None and 'token' not in low:
+            if not disable_auth and self.token is not None and 'token' not in low:
                 low['token'] = self.token
 
-            if not (('token' in low)
+            if not disable_auth and not (('token' in low)
                     or ('username' in low and 'password' in low and 'eauth' in low)):
                 ret.append('Failed to authenticate')
                 break
@@ -1533,6 +1533,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
     .. seealso:: :ref:`events`, :ref:`reactor`
     '''
+    @tornado.web.asynchronous
     def post(self, tag_suffix=None):  # pylint: disable=W0221
         '''
         Fire an event in Salt with a custom event tag and data
@@ -1616,35 +1617,23 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             {% endif %}
         '''
         disable_auth = self.application.mod_opts.get('webhook_disable_auth')
+
         if not disable_auth and not self._verify_auth():
             self.redirect('/login')
             return
 
-        # if you have the tag, prefix
-        tag = 'salt/netapi/hook'
-        if tag_suffix:
-            tag += tag_suffix
+        if tag_suffix is None:
+            self.set_status(400)
+            self.finish()
+            return
 
-        # TODO: consolidate??
-        self.event = salt.utils.event.get_event(
-            'master',
-            self.application.opts['sock_dir'],
-            self.application.opts['transport'],
-            opts=self.application.opts,
-            listen=False)
+        tag_suffix = tag_suffix[1:] if len(tag_suffix) > 0 and tag_suffix[0] == '/' else tag_suffix
+        arg = tag_suffix.replace('/', '.')
+        for low in self.lowstate:
+            low['fun'] = 'state.sls'
+            low['arg'] = [arg]
 
-        ret = self.event.fire_event({
-            'post': self.raw_data,
-            'get': dict(self.request.query_arguments),
-            # In Tornado >= v4.0.3, the headers come
-            # back as an HTTPHeaders instance, which
-            # is a dictionary. We must cast this as
-            # a dictionary in order for msgpack to
-            # serialize it.
-            'headers': dict(self.request.headers),
-        }, tag)
-
-        self.write(self.serialize({'success': ret}))
+        self.disbatch(disable_auth)
 
 
 def _check_cors_origin(origin, allowed_origins):

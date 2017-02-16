@@ -50,7 +50,7 @@ class NetapiClient(object):
             self.opts['sock_dir'],
             ipc_file))
 
-    def run(self, low):
+    def run(self, low, disable_auth=False):
         '''
         Execute the specified function in the specified client by passing the
         lowstate
@@ -66,7 +66,7 @@ class NetapiClient(object):
             raise salt.exceptions.SaltInvocationError(
                     'Invalid client specified: \'{0}\''.format(low.get('client')))
 
-        if not ('token' in low or 'eauth' in low) and low['client'] != 'ssh':
+        if not disable_auth and not ('token' in low or 'eauth' in low) and low['client'] != 'ssh':
             raise salt.exceptions.EauthAuthenticationError(
                     'No authentication credentials given')
 

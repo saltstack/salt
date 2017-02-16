@@ -94,6 +94,11 @@ class NetapiClientTest(TestCase):
 
         ret = self.netapi.run(low)
 
+    def test_disable_auth_true(self):
+        low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping'}
+
+        ret = self.netapi.run(low, disable_auth=True)
+        self.assertEqual(ret, {'minion': True, 'sub_minion': True})
 
 if __name__ == '__main__':
     from integration import run_tests

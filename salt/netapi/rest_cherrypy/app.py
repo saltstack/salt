@@ -458,7 +458,6 @@ Here is an example of sending urlencoded data:
 # Import Python libs
 from __future__ import absolute_import
 import collections
-import itertools
 import functools
 import logging
 import json
@@ -957,7 +956,7 @@ class LowDataAdapter(object):
         self.opts = cherrypy.config['saltopts']
         self.api = salt.netapi.NetapiClient(self.opts)
 
-    def exec_lowstate(self, client=None, token=None):
+    def exec_lowstate(self, client=None, token=None, disable_auth=False):
         '''
         Pull a Low State data structure from request and execute the low-data
         chunks through Salt. The low-data chunks will be updated to include the
@@ -993,7 +992,7 @@ class LowDataAdapter(object):
             if 'arg' in chunk and not isinstance(chunk['arg'], list):
                 chunk['arg'] = [chunk['arg']]
 
-            ret = self.api.run(chunk)
+            ret = self.api.run(chunk, disable_auth=disable_auth)
 
             # Sometimes Salt gives us a return and sometimes an iterator
             if isinstance(ret, collections.Iterator):
@@ -2294,7 +2293,7 @@ class WebsocketEndpoint(object):
         proc.start()
 
 
-class Webhook(object):
+class Webhook(LowDataAdapter):
     '''
     A generic web hook entry point that fires an event on Salt's event bus
 
@@ -2339,7 +2338,6 @@ class Webhook(object):
     .. seealso:: :ref:`events`, :ref:`reactor`
     '''
     exposed = True
-    tag_base = ['salt', 'netapi', 'hook']
 
     _cp_config = dict(LowDataAdapter._cp_config, **{
         # Don't do any lowdata processing on the POST data
@@ -2351,14 +2349,7 @@ class Webhook(object):
     })
 
     def __init__(self):
-        self.opts = cherrypy.config['saltopts']
-        self.event = salt.utils.event.get_event(
-                'master',
-                sock_dir=self.opts['sock_dir'],
-                transport=self.opts['transport'],
-                opts=self.opts,
-                listen=False)
-
+        super(Webhook, self).__init__()
         if cherrypy.config['apiopts'].get('webhook_disable_auth'):
             self._cp_config['tools.salt_token.on'] = False
             self._cp_config['tools.salt_auth.on'] = False
@@ -2447,19 +2438,18 @@ class Webhook(object):
                       revision: {{ revision }}
             {% endif %}
         '''
-        tag = '/'.join(itertools.chain(self.tag_base, args))
-        data = cherrypy.serving.request.unserialized_data
-        if not data:
-            data = {}
-        raw_body = getattr(cherrypy.serving.request, 'raw_body', '')
-        headers = dict(cherrypy.request.headers)
 
-        ret = self.event.fire_event({
-            'body': raw_body,
-            'post': data,
-            'headers': headers,
-        }, tag)
-        return {'success': ret}
+        arg = '.'.join(args)
+        for low in cherrypy.request.lowstate:
+            low['fun'] = 'state.sls'
+            low['arg'] = [arg]
+
+        if cherrypy.config['apiopts'].get('webhook_disable_auth'):
+            ret = list(self.exec_lowstate(token=cherrypy.session.get('token'), disable_auth=True))
+        else:
+            ret = list(self.exec_lowstate(token=cherrypy.session.get('token')))
+
+        return {'return': ret}
 
 
 class Stats(object):
