@@ -4,10 +4,16 @@
 Orchestrate Runner
 ==================
 
-Orchestration is accomplished in salt primarily through the :ref:`Orchestrate
-Runner <orchestrate-runner>`. Added in version 0.17.0, this Salt :ref:`Runner
-<runners>` can use the full suite of :ref:`requisites` available in states,
-and can also execute states/functions using salt-ssh.
+Executing states or highstate on a minion is perfect when you want to ensure that
+minion configured and running the way you want. Sometimes however you want to 
+configure a set of minions all at once.
+
+For example, if you want to set up a load balancer in front of a cluster of web 
+servers you can ensure the load balancer is set up first, and then the same
+matching configuration is applied consistently across the whole cluster.
+
+Orchestration is the way to do this.
+
 
 The Orchestrate Runner
 ----------------------
@@ -34,10 +40,6 @@ conditionals.  This allows for inter minion requisites, like ordering the
 application of states on different minions that must not happen simultaneously,
 or for halting the state run on all minions if a minion fails one of its
 states.
-
-If you want to set up a load balancer in front of a cluster of web servers, for
-example, you can ensure the load balancer is set up before the web servers or
-stop the state run altogether if a minion fails to apply any states.
 
 The ``state.sls``, ``state.highstate``, et al. functions allow you to statefully
 manage each minion and the ``state.orchestrate`` runner allows you to
