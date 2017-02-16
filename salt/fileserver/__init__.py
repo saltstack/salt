@@ -757,6 +757,40 @@ class Fileserver(object):
             ret = [f for f in ret if f.startswith(prefix)]
         return sorted(ret)
 
+
+    def file_stats(self, load):
+        '''
+        Return a list of files from the dominant environment
+        '''
+        ret = {}
+        if 'saltenv' not in load:
+            return []
+        if not isinstance(load['saltenv'], six.string_types):
+            load['saltenv'] = six.text_type(load['saltenv'])
+
+        funcs = []
+        for fsb in self._gen_back(load.pop('fsbackend', None)):
+            fstr = '{0}.file_stats'.format(fsb)
+            if fstr in self.servers:
+                funcs.append(fstr)
+
+        if len(funcs) != len(self.opts['fileserver_backend']):
+            # if any of used fs backend doesn't support new file_stats
+            # we return False, so that client can use old _file_find function
+            # gitfs is not yet supported
+            return False
+        for fstr in funcs:
+            ret.update(self.servers[fstr](load)) # merging dicts here
+
+        # upgrade all set elements to a common encoding
+
+        ret = {salt.utils.locales.sdecode(f): v for f, v in ret.items()}
+        # some *fs do not handle prefix. Ensure it is filtered
+        prefix = load.get('prefix', '').strip('/')
+        if prefix != '':
+            ret = {f: v for f, v in ret.items() if f.startswith(prefix)}
+        return ret
+
     def file_list_emptydirs(self, load):
         '''
         List all emptydirs in the given environment

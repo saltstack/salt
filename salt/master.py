@@ -973,6 +973,7 @@ class AESFuncs(object):
         self._file_hash = self.fs_.file_hash
         self._file_hash_and_stat = self.fs_.file_hash_and_stat
         self._file_list = self.fs_.file_list
+        self._file_stats = self.fs_.file_stats
         self._file_list_emptydirs = self.fs_.file_list_emptydirs
         self._dir_list = self.fs_.dir_list
         self._symlink_list = self.fs_.symlink_list
