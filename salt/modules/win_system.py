@@ -171,7 +171,7 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disabl
         reports a pending reboot. To optionally reboot in a highstate, consider
         using the reboot state instead of this module.
 
-    :return: True if successful
+    :return: True if successful (a reboot will occur)
     :rtype: bool
 
     CLI Example:
@@ -250,7 +250,7 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
         system reports a pending reboot. To optionally shutdown in a highstate,
         consider using the shutdown state instead of this module.
 
-    :return: True if successful
+    :return: True if successful (a shutdown or reboot will occur)
     :rtype: bool
 
     CLI Example:
@@ -262,7 +262,7 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
     timeout = _convert_minutes_seconds(timeout, in_seconds)
 
     if only_on_pending_reboot and not get_pending_reboot():
-        return True
+        return False
 
     if message and not isinstance(message, str):
         message = message.decode('utf-8')
