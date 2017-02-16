@@ -134,3 +134,35 @@ def reconnect(force=False, **kwargs):  # pylint: disable=unused-argument
         return default_ret
     # otherwise, I have nothing to do here:
     return default_ret
+
+
+@proxy_napalm_wrap
+def call(method, *args, **kwargs):
+    '''
+    Execute arbitrary methods from the NAPALM library.
+    To see the expected output, please consult the NAPALM documentation.
+
+    .. note::
+
+        This feature is not recommended to be used in production.
+        It should be used for testing only!
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.call get_lldp_neighbors
+        salt '*' napalm.call get_firewall_policies
+        salt '*' napalm.call get_bgp_config group='my-group'
+    '''
+    clean_kwargs = {}
+    for karg, warg in six.iteritems(kwargs):
+        # remove the __pub args
+        if not karg.startswith('__pub_'):
+            clean_kwargs[karg] = warg
+    return salt.utils.napalm.call(
+        napalm_device,  # pylint: disable=undefined-variable
+        method,
+        *args,
+        **clean_kwargs
+    )
