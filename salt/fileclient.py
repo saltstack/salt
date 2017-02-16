@@ -1226,6 +1226,13 @@ class RemoteClient(Client):
                 saltenv, path
             )
 
+        if mtime_server is not None:
+            try:
+                os.utime(dest, (mtime_server, mtime_server,))
+                log.debug('Applied remote modification date to file %s', dest)
+            except OSError:
+                log.warning('Failed to override modification date for file %s', dest)
+
         if not salt.utils.is_windows():
             if mode_server is not None:
                 try:
