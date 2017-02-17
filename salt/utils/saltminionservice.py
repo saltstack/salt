@@ -10,9 +10,25 @@ import salt
 import salt.defaults.exitcodes
 
 # Import third party libs
-import win32serviceutil
-import win32service
-import winerror
+try:
+    import win32serviceutil
+    import win32service
+    import winerror
+    HAS_WIN32 = True
+except ImportError:
+    HAS_WIN32 = False
+
+
+# Although utils are often directly imported, it is also possible to use the
+# loader.
+def __virtual__():
+    '''
+    Only load if Win32 Libraries are installed
+    '''
+    if not HAS_WIN32:
+        return False, 'This utility requires pywin32'
+
+    return 'saltminionservice'
 
 
 class MinionService(service(False)):
