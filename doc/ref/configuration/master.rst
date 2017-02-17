@@ -245,7 +245,7 @@ each of Salt's module types such as ``runners``, ``output``, ``wheel``,
 
     extension_modules: /root/salt_extmods
 
-``extmod_whitelist``
+``extmod_whitelist/extmod_blacklist``
 --------------------
 
 .. versionadded:: Nitrogen
@@ -262,6 +262,10 @@ whitelist an empty list.
       engines:
         - custom_engine
       pillars: []
+
+    extmod_blacklist:
+      modules:
+        - specific_module
 
 Valid options:
   - modules

@@ -994,8 +994,9 @@ VALID_OPTS = {
     # to the master is attempted.
     'scheduler_before_connect': bool,
 
-    # Whitelist specific modules to be synced
+    # Whitelist/blacklist specific modules to be synced
     'extmod_whitelist': dict,
+    'extmod_blacklist': dict,
 
     # django auth
     'django_auth_path': str,
@@ -1257,6 +1258,7 @@ DEFAULT_MINION_OPTS = {
     'scheduler_before_connect': False,
     'cache': 'localfs',
     'extmod_whitelist': {},
+    'extmod_blacklist': {},
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1537,6 +1539,7 @@ DEFAULT_MASTER_OPTS = {
     'min_extra_mods': '',
     'ssl': None,
     'extmod_whitelist': {},
+    'extmod_blacklist': {},
     'clean_dynamic_modules': True,
     'django_auth_path': '',
     'django_auth_settings': '',
