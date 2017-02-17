@@ -11,9 +11,19 @@
 # Import python libs
 from __future__ import absolute_import
 import os
+import sys
 import stat
 import socket
 import logging
+
+# Let's allow `integration` and `unit` to be importable
+TESTS_DIR = os.path.dirname(
+    os.path.normpath(os.path.abspath(__file__))
+)
+if TESTS_DIR not in sys.path:
+    sys.path.insert(0, TESTS_DIR)
+
+CODE_DIR = os.path.dirname(TESTS_DIR)
 
 # Import 3rd-party libs
 import pytest
@@ -23,10 +33,10 @@ import salt.ext.six as six
 import salt.utils
 
 # Define the pytest plugins we rely on
-pytest_plugins = ['salt', 'pytest_catchlog', 'tempdir', 'helpers_namespace']  # pylint: disable=invalid-name
+pytest_plugins = ['pytest_catchlog', 'tempdir', 'helpers_namespace']  # pylint: disable=invalid-name
 
-# Import pytest-salt libs
-#from pytestsalt.utils import get_unused_localhost_port
+# Define where not to collect tests from
+collect_ignore = ['setup.py']
 
 log = logging.getLogger('salt.testsuite')
 
@@ -69,6 +79,7 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     '''
+    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'templates'))
     config.addinivalue_line(
         'markers',
         'destructive_test: Run destructive tests. These tests can include adding '
@@ -489,4 +500,21 @@ def session_pillar_tree_root_dir(session_integration_files_dir):
 
 # <---- Fixtures Overrides -------------------------------------------------------------------------------------------
 # ----- Custom Fixtures Definitions --------------------------------------------------------------------------------->
+@pytest.fixture(scope='session', autouse=True)
+def test_daemon():
+    from collections import namedtuple
+    from integration import TestDaemon, PNUM
+    values = ('transport', 'zeromq'), ('sysinfo', True), ('no_colors', False), ('output_columns', PNUM)
+    options_nt = namedtuple('options', [n for n, v in values])
+    options = options_nt(*[v for n, v in values])
+    fake_parser_nt = namedtuple('parser', 'options')
+    fake_parser = fake_parser_nt(options)
+
+    # Transplant configuration
+    TestDaemon.transplant_configs(transport=fake_parser.options.transport)
+
+    tg = TestDaemon(fake_parser)
+    with tg:
+        yield
+    TestDaemon.clean()
 # <---- Custom Fixtures Definitions ----------------------------------------------------------------------------------
