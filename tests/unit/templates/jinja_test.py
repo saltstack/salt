@@ -558,7 +558,10 @@ class TestCustomExtensions(TestCase):
         dataset = u"str value"
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
-        self.assertEqual("!!python/unicode str value", rendered)
+        if six.PY3:
+            self.assertEqual("str value", rendered)
+        else:
+            self.assertEqual("!!python/unicode str value", rendered)
 
     def test_serialize_python(self):
         dataset = {

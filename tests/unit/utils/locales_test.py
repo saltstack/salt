@@ -28,10 +28,13 @@ class TestLocales(TestCase):
         reload_module(locales)
 
     def test_sdecode(self):
-        b = '\xe7\xb9\x81\xe4\xbd\x93' if six.PY2 else bytes((0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93))
+        b = six.b('\xe7\xb9\x81\xe4\xbd\x93')
         u = u'\u7e41\u4f53'
-        with patch('salt.utils.locales.get_encodings', return_value=['ascii']):
-            self.assertEqual(locales.sdecode(b), b)  # no decode
+        if six.PY2:
+            # Under Py3, the above `b` as bytes, will never decode as anything even comparable using `ascii`
+            # but no unicode error will be raised, as such, sdecode will return the poorly decoded string
+            with patch('salt.utils.locales.get_encodings', return_value=['ascii']):
+                self.assertEqual(locales.sdecode(b), b)  # no decode
         with patch('salt.utils.locales.get_encodings', return_value=['utf-8']):
             self.assertEqual(locales.sdecode(b), u)
 
