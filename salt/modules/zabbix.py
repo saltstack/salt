@@ -1499,3 +1499,43 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
             raise KeyError
     except KeyError:
         return False
+
+
+def run_query(method, params, **connection_args):
+    '''
+    Send Zabbix API call
+
+    Args:
+        method: actual operation to perform via the API
+        params: parameters required for specific method
+
+        optional connection_args:
+                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
+                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
+                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+
+                all optional template.get parameters: keyword argument names differ depending on your zabbix version, see:
+
+                https://www.zabbix.com/documentation/2.4/manual/api/reference/
+
+    Returns:
+        Response from Zabbix API
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.run_query proxy.create '{"host": "zabbixproxy.domain.com", "status": "5"}'
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = method
+            params = params
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result'] if len(ret['result']) > 0 else False
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
