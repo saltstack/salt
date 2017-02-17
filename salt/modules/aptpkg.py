@@ -2464,7 +2464,7 @@ def owner(*paths):
     return ret
 
 
-def info_installed(*names):
+def info_installed(failhard=True, *names):
     '''
     Return the information of the named package(s) installed on the system.
 
@@ -2473,15 +2473,20 @@ def info_installed(*names):
     names
         The names of the packages for which to return information.
 
+    failhard
+        Whether to throw an exception if none of the packages are installed.
+        Defaults to True.
+
     CLI example:
 
     .. code-block:: bash
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
+        salt '*' pkg.info_installed <package1> failhard=false
     '''
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names).items():
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard).items():
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
