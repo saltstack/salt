@@ -24,7 +24,7 @@ from salt.ext.six.moves import range
 from salt.modules import dockerng as dockerng_mod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-dockerng_mod.__context__ = {'docker.docker_version': ''}
+dockerng_mod.__context__ = {'docker.docker_version': '', 'docker.docker_py_version': ''}
 dockerng_mod.__salt__ = {}
 dockerng_mod.__opts__ = {}
 

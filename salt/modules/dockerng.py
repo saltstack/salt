@@ -1933,6 +1933,21 @@ def _validate_input(kwargs,
             docker_version = _version['VersionInfo']
         __context__['docker.docker_version'] = docker_version
 
+    if 'docker.docker_py_version' not in __context__:
+        # Have to call this func using the __salt__ dunder (instead of just
+        # version()) because this _validate_input() will be imported into the
+        # state module, and the state module won't have a version() func.
+        _version = __salt__['dockerng.version']()
+        if 'DockerPyVersion' not in _version:
+            log.warning(
+                'Unable to determine docker-py version. Feature version '
+                'checking will be unavailable.'
+            )
+            docker_py_version = None
+        else:
+            docker_py_version = _version['DockerPyVersion']
+        __context__['docker.docker_py_version'] = docker_py_version
+
     _locals = locals()
     for kwarg in kwargs:
         if kwarg not in VALID_CREATE_OPTS:
@@ -1953,7 +1968,7 @@ def _validate_input(kwargs,
                         )
                     )
         if 'min_docker_py' in VALID_CREATE_OPTS[kwarg]:
-            cur_docker_py = _get_docker_py_versioninfo()
+            cur_docker_py = __context__['docker.docker_py_version']
             if cur_docker_py is not None:
                 min_docker_py = VALID_CREATE_OPTS[kwarg]['min_docker_py']
                 if cur_docker_py < min_docker_py:
@@ -2781,6 +2796,8 @@ def version():
             ret['ApiVersionInfo'] = tuple(
                 [int(x) for x in match.group(1).split('.')]
             )
+    if HAS_DOCKER_PY:
+        ret['DockerPyVersion'] = docker.version_info
     return ret
 
 

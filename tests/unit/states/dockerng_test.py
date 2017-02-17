@@ -25,7 +25,7 @@ from salt.exceptions import CommandExecutionError
 from salt.modules import dockerng as dockerng_mod
 from salt.states import dockerng as dockerng_state
 
-dockerng_mod.__context__ = {'docker.docker_version': ''}
+dockerng_mod.__context__ = {'docker.docker_version': '', 'docker.docker_py_version': ''}
 dockerng_mod.__salt__ = {}
 dockerng_state.__context__ = {}
 dockerng_state.__opts__ = {'test': False}
