@@ -49,7 +49,7 @@ still honored, and given that in the above case, `parallel: True` does not
 actually speed things up.
 
 To run the above state much faster make sure that the `sleep 5` is evaluated
-before the nginx this this:
+before the `nginx` state
 
 .. code_block:: yaml
 

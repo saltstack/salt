@@ -1681,7 +1681,7 @@ class State(object):
         tfile = os.path.join(troot, tag)
         if not os.path.isdir(troot):
             os.makedirs(troot)
-        with open(tfile, 'wb+') as fp_:
+        with salt.utils.fopen(tfile, 'wb+') as fp_:
             fp_.write(msgpack.dumps(ret))
 
     def call_parallel(self, cdata, low):
@@ -2001,7 +2001,7 @@ class State(object):
                     try:
                         with salt.utils.fopen(ret_cache, 'rb') as fp_:
                             ret = msgpack.loads(fp_.read())
-                    except OSError, IOError:
+                    except (OSError, IOError):
                         ret = {'result': False,
                                'comment': 'Parallel cache failure',
                                'name': running[tag]['name'],
