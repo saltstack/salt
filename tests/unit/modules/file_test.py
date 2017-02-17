@@ -697,6 +697,24 @@ class FileModuleTestCase(TestCase):
         os.remove(empty_file.name)
 
 
+class FileBasicsTestCase(TestCase):
+    def setUp(self):
+        self.directory = tempfile.mkdtemp()
+        with tempfile.NamedTemporaryFile(delete=False, mode='w+') as self.tfile:
+            self.tfile.write('Hi hello! I am a file.')
+            self.tfile.close()
+
+    def tearDown(self):
+        os.remove(self.tfile.name)
+        os.remove(self.directory + '/a_link')
+        os.rmdir(self.directory)
+
+    def test_symlink_already_in_desired_state(self):
+        os.symlink(self.tfile.name, self.directory + '/a_link')
+        result = filemod.symlink(self.tfile.name, self.directory + '/a_link')
+        self.assertTrue(result)
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(FileModuleTestCase,

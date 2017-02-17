@@ -3012,6 +3012,13 @@ def symlink(src, path):
     '''
     path = os.path.expanduser(path)
 
+    try:
+        if os.path.normpath(os.readlink(path)) == os.path.normpath(src):
+            log.debug('link already in correct state: %s -> %s', path, src)
+            return True
+    except OSError:
+        pass
+
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
 
