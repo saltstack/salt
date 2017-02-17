@@ -24,11 +24,12 @@ import salt.loader
 from salt.modules import boto_vpc
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd-party libs
 import salt.ext.six as six
-# pylint: disable=import-error,no-name-in-module,unused-import
+# pylint: disable=import-error
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+# pylint: disable=no-name-in-module,unused-import
 try:
     import boto
     import boto3
@@ -80,7 +81,8 @@ mods = salt.loader.minion_mods(opts)
 
 boto_vpc.__utils__ = utils
 boto_vpc.__salt__ = {}
-boto_vpc.__init__(opts)
+if HAS_BOTO:
+    boto_vpc.__init__(opts)
 
 
 def _has_required_boto():
