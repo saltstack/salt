@@ -530,9 +530,8 @@ not possible to add/remove existing instances to a network.
 
 Destroy network
 ---------------
-Destroy a network by specifying the name. Make sure that there are no
-instances associated with the network prior to deleting it or you'll have
-a bad day.
+Destroy a network by specifying the name. If a resource is currently using
+the target network an exception will be raised.
 
 .. code-block:: bash
 
@@ -562,9 +561,8 @@ not possible to add/remove existing instances to a subnetwork.
 
 Destroy subnetwork
 ---------------
-Destroy a subnetwork by specifying the name and region. Make sure that there are no
-instances associated with the network prior to deleting it or you'll have
-a bad day.
+Destroy a subnetwork by specifying the name and region. If a resource is currently using
+the target subnetwork an exception will be raised.
 
 .. code-block:: bash
 
