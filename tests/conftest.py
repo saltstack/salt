@@ -53,7 +53,30 @@ def pytest_addoption(parser):
     '''
     register argparse-style options and ini-style config values.
     '''
+    parser.addoption(
+        '--sysinfo',
+        default=False,
+        action='store_true',
+        help='Print some system information.'
+    )
+    parser.addoption(
+        '--transport',
+        default='zeromq',
+        choices=('zeromq', 'raet', 'tcp'),
+        help=('Select which transport to run the integration tests with, '
+              'zeromq, raet, or tcp. Default: %default')
+    )
     test_selection_group = parser.getgroup('Tests Selection')
+    test_selection_group.addoption(
+        '--ssh',
+        '--ssh-tests',
+        dest='ssh',
+        action='store_true',
+        default=False,
+        help='Run salt-ssh tests. These tests will spin up a temporary '
+             'SSH server on your machine. In certain environments, this '
+             'may be insecure! Default: False'
+    )
     test_selection_group.addoption(
         '--run-destructive',
         action='store_true',
@@ -69,6 +92,20 @@ def pytest_addoption(parser):
         help='Run expensive tests. These tests usually involve costs '
              'like for example bootstrapping a cloud VM. '
              'Default: False'
+    )
+    output_options_group = parser.getgroup('Output Options')
+    output_options_group.addoption(
+        '--output-columns',
+        default=80,
+        type=int,
+        help='Number of maximum columns to use on the output'
+    )
+    output_options_group.addoption(
+        '--no-colors',
+        '--no-colours',
+        default=False,
+        action='store_true',
+        help='Disable colour printing.'
     )
 # <---- CLI Options Setup --------------------------------------------------------------------------------------------
 
@@ -501,14 +538,16 @@ def session_pillar_tree_root_dir(session_integration_files_dir):
 # <---- Fixtures Overrides -------------------------------------------------------------------------------------------
 # ----- Custom Fixtures Definitions --------------------------------------------------------------------------------->
 @pytest.fixture(scope='session', autouse=True)
-def test_daemon():
+def test_daemon(request):
     from collections import namedtuple
     from integration import TestDaemon, PNUM
-    values = ('transport', 'zeromq'), ('sysinfo', True), ('no_colors', False), ('output_columns', PNUM)
-    options_nt = namedtuple('options', [n for n, v in values])
-    options = options_nt(*[v for n, v in values])
-    fake_parser_nt = namedtuple('parser', 'options')
-    fake_parser = fake_parser_nt(options)
+    values = (('transport', request.config.getoption('--transport')),
+              ('sysinfo', request.config.getoption('--sysinfo')),
+              ('no_colors', request.config.getoption('--no-colors')),
+              ('output_columns', request.config.getoption('--output-columns')),
+              ('ssh', request.config.getoption('--ssh')))
+    options = namedtuple('options', [n for n, v in values])(*[v for n, v in values])
+    fake_parser = namedtuple('parser', 'options')(options)
 
     # Transplant configuration
     TestDaemon.transplant_configs(transport=fake_parser.options.transport)
