@@ -26,7 +26,7 @@ import integration
 from salt.config import cloud_providers_config, vm_profiles_config
 from salt.utils.virtualbox import vb_xpcom_to_attribute_dict, vb_clone_vm, vb_destroy_machine, vb_create_machine, \
     vb_get_box, vb_machine_exists, XPCOM_ATTRIBUTES, vb_start_vm, vb_stop_vm, \
-    vb_get_network_addresses, vb_wait_for_network_address, machine_get_machinestate_str
+    vb_get_network_addresses, vb_wait_for_network_address, machine_get_machinestate_str, HAS_LIBS
 
 # Setup logging
 log = logging.getLogger()
@@ -207,7 +207,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
             vb_destroy_machine(INSTANCE_NAME)
 
 
-@skipIf(vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
+@skipIf(HAS_LIBS and vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
         "Bootable VM '{0}' not found. Cannot run tests.".format(BOOTABLE_BASE_BOX_NAME)
         )
 class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
@@ -381,7 +381,7 @@ class CloneVirtualboxTests(VirtualboxTestCase):
         self.assertMachineDoesNotExist(vb_name)
 
 
-@skipIf(vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
+@skipIf(HAS_LIBS and vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
         "Bootable VM '{0}' not found. Cannot run tests.".format(BOOTABLE_BASE_BOX_NAME)
         )
 class BootVirtualboxTests(VirtualboxTestCase):
