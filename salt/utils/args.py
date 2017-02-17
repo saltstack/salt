@@ -61,8 +61,7 @@ def parse_input(args, condition=True):
             # condition_input is called below, but this is the only way to
             # gracefully handle both CLI and API input.
             if arg.pop('__kwarg__', False) is True:
-                for key, val in six.iteritems(arg):
-                    _kwargs[key] = yamlify_arg(val)
+                _kwargs.update(arg)
             else:
                 _args.append(arg)
         else:
