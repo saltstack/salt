@@ -23,7 +23,7 @@ import logging
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # pylint: disable=import-error,no-name-in-module
-from unit.modules.boto_cloudwatch_event_test import BotoCloudWatchEventTestCaseMixin
+from unit.modules.test_boto_cloudwatch_event import BotoCloudWatchEventTestCaseMixin
 
 # pylint: disable=unused-import
 # Import 3rd-party libs
@@ -50,12 +50,13 @@ error_content = {
     'Message': "Test-defined error"
   }
 }
-not_found_error = ClientError({
-    'Error': {
-        'Code': 'ResourceNotFoundException',
-        'Message': "Test-defined error"
-    }
-}, 'msg')
+if HAS_BOTO:
+    not_found_error = ClientError({
+        'Error': {
+            'Code': 'ResourceNotFoundException',
+            'Message': "Test-defined error"
+        }
+    }, 'msg')
 rule_name = 'test_thing_type'
 rule_desc = 'test_thing_type_desc'
 rule_sched = 'rate(20 min)'

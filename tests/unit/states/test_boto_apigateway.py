@@ -24,7 +24,7 @@ import salt.loader
 import yaml
 
 # pylint: disable=import-error,no-name-in-module
-from unit.modules.boto_apigateway_test import BotoApiGatewayTestCaseMixin
+from unit.modules.test_boto_apigateway import BotoApiGatewayTestCaseMixin
 
 # Import 3rd-party libs
 try:

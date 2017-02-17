@@ -16,7 +16,7 @@ import integration
 
 # Import Salt libs
 import salt.utils
-from unit.modules.zcbuildout_test import Base, KNOWN_VIRTUALENV_BINARY_NAMES
+from unit.modules.test_zcbuildout import Base, KNOWN_VIRTUALENV_BINARY_NAMES
 from salt.modules import zcbuildout as modbuildout
 from salt.states import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
