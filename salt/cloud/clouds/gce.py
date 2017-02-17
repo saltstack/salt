@@ -569,15 +569,15 @@ def create_network(kwargs=None, call=None):
         )
         return False
 
-    if 'cidr' not in kwargs and 'mode' not in kwargs:
+    mode = kwargs.get('mode', 'legacy')
+    cidr = kwargs.get('cidr', None)
+    if cidr is None and mode == 'legacy':
         log.error(
             'A network CIDR range must be specified when creating a legacy network.'
         )
         return False
 
     name = kwargs['name']
-    cidr = kwargs['cidr']
-    mode = kwargs.get('mode', 'legacy')
     desc = kwargs.get('description', None)
     conn = get_conn()
 
