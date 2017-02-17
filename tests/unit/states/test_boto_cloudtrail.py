@@ -27,7 +27,7 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 import logging
 
 # pylint: disable=import-error,no-name-in-module,unused-import
-from unit.modules.boto_cloudtrail_test import BotoCloudTrailTestCaseMixin
+from unit.modules.test_boto_cloudtrail import BotoCloudTrailTestCaseMixin
 
 # Import 3rd-party libs
 try:

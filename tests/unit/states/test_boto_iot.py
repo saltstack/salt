@@ -25,7 +25,7 @@ import salt.loader
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,unused-import
-from unit.modules.boto_iot_test import BotoIoTTestCaseMixin
+from unit.modules.test_boto_iot import BotoIoTTestCaseMixin
 
 # Import 3rd-party libs
 try:

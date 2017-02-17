@@ -24,7 +24,7 @@ import logging
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # pylint: disable=import-error,no-name-in-module
-from unit.modules.boto_cognitoidentity_test import BotoCognitoIdentityTestCaseMixin
+from unit.modules.test_boto_cognitoidentity import BotoCognitoIdentityTestCaseMixin
 
 # Import 3rd-party libs
 try:
