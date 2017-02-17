@@ -64,7 +64,7 @@ if HAS_DBUS:
     try:
         bus = dbus.SystemBus()
     except dbus.DBusException as exc:
-        log.error(exc)
+        log.warning(exc)
         system_bus_error = exc
     else:
         if SNAPPER_DBUS_OBJECT in bus.list_activatable_names():
@@ -73,7 +73,7 @@ if HAS_DBUS:
                                                         SNAPPER_DBUS_PATH),
                                          dbus_interface=SNAPPER_DBUS_INTERFACE)
             except (dbus.DBusException, ValueError) as exc:
-                log.error(exc)
+                log.warning(exc)
                 snapper_error = exc
         else:
             snapper_error = 'snapper is missing'
