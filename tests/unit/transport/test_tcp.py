@@ -26,8 +26,8 @@ ensure_in_syspath('../')
 import integration
 
 # Import Salt libs
-from unit.transport.req_test import ReqChannelMixin
-from unit.transport.pub_test import PubChannelMixin
+from unit.transport.test_req import ReqChannelMixin
+from unit.transport.test_pub import PubChannelMixin
 
 
 # TODO: move to a library?

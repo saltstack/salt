@@ -21,7 +21,7 @@ import salt.utils.boto
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error,unused-import
-from unit.modules.boto_vpc_test import BotoVpcTestCaseMixin
+from unit.modules.test_boto_vpc import BotoVpcTestCaseMixin
 
 # Import 3rd-party libs
 try:
