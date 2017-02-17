@@ -33,7 +33,7 @@ except ImportError:
     HAS_TORNADO = False
 
 # Import utility lib from tests
-from unit.utils.event_test import eventpublisher_process, event, SOCK_DIR  # pylint: disable=import-error
+from unit.utils.test_event import eventpublisher_process, event, SOCK_DIR  # pylint: disable=import-error
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')

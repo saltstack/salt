@@ -26,7 +26,7 @@ import salt.loader
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module
-from unit.modules.boto_lambda_test import BotoLambdaTestCaseMixin, TempZipFile
+from unit.modules.test_boto_lambda import BotoLambdaTestCaseMixin, TempZipFile
 
 # Import 3rd-party libs
 try:
