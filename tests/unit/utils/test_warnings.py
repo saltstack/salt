@@ -3,7 +3,7 @@
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
 
-    tests.unit.utils.warnings_test
+    tests.unit.utils.test_warnings
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Test ``salt.utils.warn_until`` and ``salt.utils.kwargs_warn_until``
@@ -69,7 +69,7 @@ class WarnUntilTestCase(TestCase):
         # Let's set version info to (0, 17), a RuntimeError should be raised
         with self.assertRaisesRegexp(
                 RuntimeError,
-                r'The warning triggered on filename \'(.*)warnings_test.py\', '
+                r'The warning triggered on filename \'(.*)test_warnings.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
                 r'0.17.0 is released. Current version is now 0.17.0. '
                 r'Please remove the warning.'):
@@ -78,7 +78,7 @@ class WarnUntilTestCase(TestCase):
         # Let's set version info to (0, 17), a RuntimeError should be raised
         with self.assertRaisesRegexp(
                 RuntimeError,
-                r'The warning triggered on filename \'(.*)warnings_test.py\', '
+                r'The warning triggered on filename \'(.*)test_warnings.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
                 r'(.*) is released. Current version is now '
                 r'([\d.]+). Please remove the warning.'):
@@ -88,7 +88,7 @@ class WarnUntilTestCase(TestCase):
         # because we're only after the RuntimeError
         with self.assertRaisesRegexp(
                 RuntimeError,
-                r'The warning triggered on filename \'(.*)warnings_test.py\', '
+                r'The warning triggered on filename \'(.*)test_warnings.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
                 r'0.17.0 is released. Current version is now '
                 r'(.*). Please remove the warning.'):
@@ -98,7 +98,7 @@ class WarnUntilTestCase(TestCase):
 
         with self.assertRaisesRegexp(
                 RuntimeError,
-                r'The warning triggered on filename \'(.*)warnings_test.py\', '
+                r'The warning triggered on filename \'(.*)test_warnings.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
                 r'(.*) is released. Current version is now '
                 r'(.*). Please remove the warning.'):
@@ -152,7 +152,7 @@ class WarnUntilTestCase(TestCase):
         # regardless of whether or not we pass any **kwargs.
         with self.assertRaisesRegexp(
                 RuntimeError,
-                r'The warning triggered on filename \'(.*)warnings_test.py\', '
+                r'The warning triggered on filename \'(.*)test_warnings.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
                 r'0.17.0 is released. Current version is now 0.17.0. '
                 r'Please remove the warning.'):
@@ -160,7 +160,7 @@ class WarnUntilTestCase(TestCase):
 
         with self.assertRaisesRegexp(
                 RuntimeError,
-                r'The warning triggered on filename \'(.*)warnings_test.py\', '
+                r'The warning triggered on filename \'(.*)test_warnings.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
                 r'0.17.0 is released. Current version is now 0.17.0. '
                 r'Please remove the warning.'):
