@@ -5,6 +5,8 @@ from __future__ import absolute_import
 import json
 import yaml
 import os
+import copy
+import hashlib
 
 # Import Salt Testing Libs
 from salttesting.unit import skipIf
@@ -14,13 +16,12 @@ import integration  # pylint: disable=import-error
 
 # Import Salt libs
 try:
+    from salt.netapi import rest_tornado
     from salt.netapi.rest_tornado import saltnado
-    from salt.netapi.rest_tornado import saltnado_websockets
     HAS_TORNADO = True
 except ImportError:
     HAS_TORNADO = False
 import salt.auth
-
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -286,10 +287,10 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         Test transformations low data of the function _get_lowstate
         '''
         valid_lowstate = [{
-                "client": "local",
-                "tgt": "*",
-                "fun": "test.fib",
-                "arg": ["10"]
+                u"client": u"local",
+                u"tgt": u"*",
+                u"fun": u"test.fib",
+                u"arg": [u"10"]
             }]
 
         # Case 1. dictionary type of lowstate
@@ -308,12 +309,12 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
 
         # Case 2. string type of arg
-        request_lowstate = [{
+        request_lowstate = {
                 "client": "local",
                 "tgt": "*",
                 "fun": "test.fib",
                 "arg": "10"
-            }]
+            }
 
         response = self.fetch('/',
                               method='POST',
@@ -596,14 +597,9 @@ class TestSaltAuthHandler(SaltnadoTestCase):
 class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
 
     def get_app(self):
-
-        urls = [
-            ('/login', saltnado.SaltAuthHandler),
-            (r"/hook/([0-9A-Fa-f]{32})", saltnado_websockets.AllEventsHandler)]
-
-        application = self.build_tornado_app(urls)
-
-        return application
+        opts = copy.deepcopy(self.opts)
+        opts.setdefault('rest_tornado', {})['websockets'] = True
+        return rest_tornado.get_application(opts)
 
     @gen_test
     def test_websocket_handler_upgrade_to_websocket(self):
@@ -613,7 +609,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
                                                 headers={'Content-Type': self.content_type_map['form']})
         token = json.loads(response.body)['return'][0]['token']
 
-        url = 'ws://127.0.0.1:{0}/hook/{1}'.format(self.get_http_port(), token)
+        url = 'ws://127.0.0.1:{0}/all_events/{1}'.format(self.get_http_port(), token)
         request = HTTPRequest(url, headers={'Origin': 'http://example.com',
                                             'Host': 'example.com'})
         ws = yield websocket_connect(request)
@@ -625,9 +621,9 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
         """
         A bad token should returns a 401 during a websocket connect
         """
-        token = 'A'*32
+        token = 'A'*len(getattr(hashlib, self.opts.get('hash_type', 'md5'))().hexdigest())
 
-        url = 'ws://127.0.0.1:{0}/hook/{1}'.format(self.get_http_port(), token)
+        url = 'ws://127.0.0.1:{0}/all_events/{1}'.format(self.get_http_port(), token)
         request = HTTPRequest(url, headers={'Origin': 'http://example.com',
                                             'Host': 'example.com'})
         try:
@@ -645,7 +641,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
                                                 headers={'Content-Type': self.content_type_map['form']})
         token = json.loads(response.body)['return'][0]['token']
 
-        url = 'ws://127.0.0.1:{0}/hook/{1}'.format(self.get_http_port(), token)
+        url = 'ws://127.0.0.1:{0}/all_events/{1}'.format(self.get_http_port(), token)
         request = HTTPRequest(url, headers={'Origin': 'http://foo.bar',
                                             'Host': 'example.com'})
         ws = yield websocket_connect(request)
@@ -661,7 +657,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
                                                 body=urlencode(self.auth_creds),
                                                 headers={'Content-Type': self.content_type_map['form']})
         token = json.loads(response.body)['return'][0]['token']
-        url = 'ws://127.0.0.1:{0}/hook/{1}'.format(self.get_http_port(), token)
+        url = 'ws://127.0.0.1:{0}/all_events/{1}'.format(self.get_http_port(), token)
 
         # Example.com should works
         request = HTTPRequest(url, headers={'Origin': 'http://example.com',
@@ -687,7 +683,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
                                                 body=urlencode(self.auth_creds),
                                                 headers={'Content-Type': self.content_type_map['form']})
         token = json.loads(response.body)['return'][0]['token']
-        url = 'ws://127.0.0.1:{0}/hook/{1}'.format(self.get_http_port(), token)
+        url = 'ws://127.0.0.1:{0}/all_events/{1}'.format(self.get_http_port(), token)
 
         # Example.com should works
         request = HTTPRequest(url, headers={'Origin': 'http://example.com',
