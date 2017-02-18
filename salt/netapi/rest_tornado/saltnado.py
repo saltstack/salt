@@ -539,7 +539,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         data = self.deserialize(self.request.body)
         self.raw_data = copy(data)
 
-        if 'arg' in data and not isinstance(data['arg'], list):
+        if data and 'arg' in data and not isinstance(data['arg'], list):
             data['arg'] = [data['arg']]
 
         if not isinstance(data, list):
