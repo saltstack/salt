@@ -14,10 +14,8 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
 from salt.modules import {{module_name}}
 
-ensure_in_syspath('../../')
 
 SERVICE_NAME = '{{module_name}}'
 {{module_name}}.__salt__ = {}
@@ -39,8 +37,3 @@ class {{module_name|capitalize}}TestCase(ModuleTestCase):
     def test_behaviour(self):
         #  Test inherent behaviours
         pass
-
-if __name__ == '__main__':
-    from unit import run_tests
-    run_tests({{module_name|capitalize}}TestCase)
-
