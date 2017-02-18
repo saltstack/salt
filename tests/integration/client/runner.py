@@ -97,6 +97,35 @@ class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTes
         }
         self.runner.cmd_sync(low)
 
+    def test_cmd_sync_arg_kwarg_parsing(self):
+        low = {
+            'client': 'runner',
+            'fun': 'test.arg',
+            'arg': [
+                'foo',
+                'bar=off',
+                'baz={qux: 123}'
+            ],
+            'kwarg': {
+                'quux': 'Quux',
+            },
+            'quuz': 'on',
+        }
+        low.update(self.eauth_creds)
+
+        ret = self.runner.cmd_sync(low)
+        self.assertEqual(ret, {
+            'args': ['foo'],
+            'kwargs': {
+                'bar': False,
+                'baz': {
+                    'qux': 123,
+                },
+                'quux': 'Quux',
+                'quuz': 'on',
+            },
+        })
+
 
 if __name__ == '__main__':
     from integration import run_tests
