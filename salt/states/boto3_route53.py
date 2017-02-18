@@ -676,7 +676,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         if ResourceRecords != sorted(rrset.get('ResourceRecords'), key=lambda x: x['Value']):
             update = True
 
-    if not create or update:
+    if not create and not update:
         ret['comment'] = ('Route 53 resource record {} with type {} is already in the desired state.'
                          ''.format(Name, Type))
         log.info(ret['comment'])
