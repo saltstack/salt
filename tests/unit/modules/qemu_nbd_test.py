@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 import os.path
 import glob
+import tempfile
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -89,7 +90,7 @@ class QemuNbdTestCase(TestCase):
                                  'mount.mount': mock,
                                  'cmd.retcode': MagicMock(side_effect=[1, 0])}):
                     self.assertDictEqual(qemu_nbd.init('/srv/image.qcow2'),
-                                         {'/tmp/nbd/nbd0/nbd0': '/dev/nbd0'})
+                                         {'{0}/nbd/nbd0/nbd0'.format(tempfile.gettempdir()): '/dev/nbd0'})
 
     # 'clear' function tests: 1
 

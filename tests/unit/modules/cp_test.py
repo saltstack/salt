@@ -6,15 +6,11 @@
 # Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Libs
-from salt.modules import cp
-from salt.utils import templates
-from salt.exceptions import CommandExecutionError
-
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
+    Mock,
     MagicMock,
     mock_open,
     patch,
@@ -23,6 +19,13 @@ from salttesting.mock import (
 )
 
 ensure_in_syspath('../../')
+
+# Import Salt Libs
+from salt.modules import cp
+from salt.utils import templates
+from salt.exceptions import CommandExecutionError
+import salt.utils
+import salt.transport
 
 # Globals
 cp.__salt__ = {}
@@ -129,6 +132,33 @@ class CpTestCase(TestCase):
         ret = False
 
         self.assertEqual(cp.push_dir(path), ret)
+
+    @patch(
+        'salt.modules.cp.os.path',
+        MagicMock(isfile=Mock(return_value=True), wraps=cp.os.path))
+    @patch.multiple(
+        'salt.modules.cp',
+        _auth=MagicMock(**{'return_value.gen_token.return_value': 'token'}),
+        __opts__={'id': 'abc', 'file_buffer_size': 10})
+    @patch('salt.utils.fopen', mock_open(read_data='content'))
+    @patch('salt.transport.Channel.factory', MagicMock())
+    def test_push(self):
+        '''
+        Test if push works with good posix path.
+        '''
+        response = cp.push('/saltines/test.file')
+        self.assertEqual(response, True)
+        self.assertEqual(salt.utils.fopen().read.call_count, 2)
+        salt.transport.Channel.factory({}).send.assert_called_once_with(
+            dict(
+                loc=salt.utils.fopen().tell(),
+                cmd='_file_recv',
+                tok='token',
+                path=['saltines', 'test.file'],
+                data='',  # data is empty here because load['data'] is overwritten
+                id='abc'
+            )
+        )
 
 
 if __name__ == '__main__':

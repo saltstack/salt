@@ -141,7 +141,7 @@ def describe_hosted_zones(zone_id=None, domain_name=None, region=None,
     .. code-block:: bash
 
         salt myminion boto_route53.describe_hosted_zones domain_name=foo.bar.com. \
-                profile='{"region": "us-east-1", "keyd": "A12345678AB", "key": "xblahblahblah"}'
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if zone_id and domain_name:

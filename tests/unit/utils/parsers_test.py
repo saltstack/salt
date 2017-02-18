@@ -5,10 +5,11 @@
 
 # Import python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, destructiveTest
 from salttesting.mock import (
     MagicMock,
     patch,
@@ -103,6 +104,8 @@ class ObjectView(object):  # pylint: disable=too-few-public-methods
         self.__dict__ = d
 
 
+@destructiveTest
+@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
 class LogSettingsParserTests(TestCase):
     '''
     Unit Tests for Log Level Mixin with Salt parsers

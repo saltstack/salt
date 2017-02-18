@@ -338,7 +338,7 @@ call should return.
                 alias='fred')
         self.assertEqual(tgt_ret, 'bob')
 
-Using multiple Salt commands in this manor provides two useful benefits. The first is
+Using multiple Salt commands in this manner provides two useful benefits. The first is
 that it provides some additional coverage for the ``aliases.set_target`` function.
 The second benefit is the call to ``aliases.get_target`` is not dependent on the
 presence of any aliases set outside of this test. Tests should not be dependent on

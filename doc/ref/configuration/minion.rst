@@ -1197,12 +1197,12 @@ below.
     providers:
       service: systemd
 
-``extmod_whitelist``
+``extmod_whitelist/extmod_blacklist``
 --------------------
 
 .. versionadded:: Nitrogen
 
-By using this dictionary, the modules that are synced to the minion's extmod cache using `saltutil.sync_*`can be
+By using this dictionary, the modules that are synced to the minion's extmod cache using `saltutil.sync_*` can be
 limited.  If nothing is set to a specific type, then all modules are accepted.  To block all modules of a specific type,
 whitelist an empty list.
 
@@ -1214,6 +1214,11 @@ whitelist an empty list.
       engines:
         - custom_engine
       pillars: []
+
+    extmod_blacklist:
+      modules:
+        - specific_module
+
 
 Valid options:
   - beacons

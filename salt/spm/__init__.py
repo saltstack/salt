@@ -196,11 +196,12 @@ class SPMClient(object):
                 if args[1] in pkg:
                     version = repo_metadata[repo]['packages'][pkg]['info']['version']
                     release = repo_metadata[repo]['packages'][pkg]['info']['release']
-                    packages.append(
-                        '{0}\t{1}-{2}\t{3}'.format(pkg, version, release, repo)
-                    )
+                    packages.append((pkg, version, release, repo))
         for pkg in sorted(packages):
-            self.ui.status(pkg)
+            self.ui.status(
+                '{0}\t{1}-{2}\t{3}'.format(pkg[0], pkg[1], pkg[2], pkg[3])
+            )
+        return packages
 
     def _repo_list(self, args):
         '''
@@ -272,39 +273,79 @@ class SPMClient(object):
 
         repo_metadata = self._get_repo_metadata()
 
+        dl_list = {}
         for package in to_install:
             if package in file_map:
                 self._install_indv_pkg(package, file_map[package])
             else:
                 for repo in repo_metadata:
                     repo_info = repo_metadata[repo]
-                    if package in repo_metadata[repo]['packages']:
-                        cache_path = '{0}/{1}'.format(
-                            self.opts['spm_cache_dir'],
-                            repo
-                        )
-                        # Download the package
-                        dl_path = '{0}/{1}'.format(
-                            repo_info['info']['url'],
-                            repo_info['packages'][package]['filename']
-                        )
-                        out_file = '{0}/{1}'.format(
-                            cache_path,
-                            repo_info['packages'][package]['filename']
-                        )
-                        if not os.path.exists(cache_path):
-                            os.makedirs(cache_path)
-
-                        if dl_path.startswith('file://'):
-                            dl_path = dl_path.replace('file://', '')
-                            shutil.copyfile(dl_path, out_file)
+                    if package in repo_info['packages']:
+                        dl_package = False
+                        repo_ver = repo_info['packages'][package]['info']['version']
+                        repo_rel = repo_info['packages'][package]['info']['release']
+                        repo_url = repo_info['info']['url']
+                        if package in dl_list:
+                            # Check package version, replace if newer version
+                            if repo_ver == dl_list[package]['version']:
+                                # Version is the same, check release
+                                if repo_rel > dl_list[package]['release']:
+                                    dl_package = True
+                                elif repo_rel == dl_list[package]['release']:
+                                    # Version and release are the same, give
+                                    # preference to local (file://) repos
+                                    if dl_list[package]['source'].startswith('file://'):
+                                        if not repo_url.startswith('file://'):
+                                            dl_package = True
+                            elif repo_ver > dl_list[package]['version']:
+                                dl_package = True
                         else:
-                            response = http.query(dl_path, text=True)
-                            with salt.utils.fopen(out_file, 'w') as outf:
-                                outf.write(response.get("text"))
+                            dl_package = True
 
-                        # Kick off the install
-                        self._install_indv_pkg(package, out_file)
+                        if dl_package is True:
+                            # Put together download directory
+                            cache_path = os.path.join(
+                                self.opts['spm_cache_dir'],
+                                repo
+                            )
+
+                            # Put together download paths
+                            dl_url = '{0}/{1}'.format(
+                                repo_info['info']['url'],
+                                repo_info['packages'][package]['filename']
+                            )
+                            out_file = os.path.join(
+                                cache_path,
+                                repo_info['packages'][package]['filename']
+                            )
+                            dl_list[package] = {
+                                'version': repo_ver,
+                                'release': repo_rel,
+                                'source': dl_url,
+                                'dest_dir': cache_path,
+                                'dest_file': out_file,
+                            }
+
+        for package in dl_list:
+            dl_url = dl_list[package]['source']
+            cache_path = dl_list[package]['dest_dir']
+            out_file = dl_list[package]['dest_file']
+
+            # Make sure download directory exists
+            if not os.path.exists(cache_path):
+                os.makedirs(cache_path)
+
+            # Download the package
+            if dl_url.startswith('file://'):
+                dl_url = dl_url.replace('file://', '')
+                shutil.copyfile(dl_url, out_file)
+            else:
+                response = http.query(dl_url, text=True)
+                with salt.utils.fopen(out_file, 'w') as outf:
+                    outf.write(response.get("text"))
+
+            # Kick off the install
+            self._install_indv_pkg(package, out_file)
         return
 
     def _local_install(self, args, pkg_name=None):
@@ -585,6 +626,7 @@ class SPMClient(object):
         else:
             repo_path = args[1]
 
+        old_files = []
         repo_metadata = {}
         for (dirpath, dirnames, filenames) in os.walk(repo_path):
             for spm_file in filenames:
@@ -598,16 +640,93 @@ class SPMClient(object):
                 spm_fh = tarfile.open(spm_path, 'r:bz2')
                 formula_handle = spm_fh.extractfile('{0}/FORMULA'.format(spm_name))
                 formula_conf = yaml.safe_load(formula_handle.read())
-                repo_metadata[spm_name] = {
-                    'info': formula_conf.copy(),
-                }
-                repo_metadata[spm_name]['filename'] = spm_file
+
+                use_formula = True
+                if spm_name in repo_metadata:
+                    # This package is already in the repo; use the latest
+                    cur_info = repo_metadata[spm_name]['info']
+                    new_info = formula_conf
+                    if int(new_info['version']) == int(cur_info['version']):
+                        # Version is the same, check release
+                        if int(new_info['release']) < int(cur_info['release']):
+                            # This is an old release; don't use it
+                            use_formula = False
+                    elif int(new_info['version']) < int(cur_info['version']):
+                        # This is an old version; don't use it
+                        use_formula = False
+
+                    if use_formula is True:
+                        # Ignore/archive/delete the old version
+                        log.debug(
+                            '{0} {1}-{2} had been added, but {3}-{4} will replace it'.format(
+                                spm_name,
+                                cur_info['version'],
+                                cur_info['release'],
+                                new_info['version'],
+                                new_info['release'],
+                            )
+                        )
+                        old_files.append(repo_metadata[spm_name]['filename'])
+                    else:
+                        # Ignore/archive/delete the new version
+                        log.debug(
+                            '{0} {1}-{2} has been found, but is older than {3}-{4}'.format(
+                                spm_name,
+                                new_info['version'],
+                                new_info['release'],
+                                cur_info['version'],
+                                cur_info['release'],
+                            )
+                        )
+                        old_files.append(spm_file)
+
+                if use_formula is True:
+                    log.debug(
+                        'adding {0}-{1}-{2} to the repo'.format(
+                            formula_conf['name'],
+                            formula_conf['version'],
+                            formula_conf['release'],
+                        )
+                    )
+                    repo_metadata[spm_name] = {
+                        'info': formula_conf.copy(),
+                    }
+                    repo_metadata[spm_name]['filename'] = spm_file
 
         metadata_filename = '{0}/SPM-METADATA'.format(repo_path)
         with salt.utils.fopen(metadata_filename, 'w') as mfh:
             yaml.dump(repo_metadata, mfh, indent=4, canonical=False, default_flow_style=False)
 
         log.debug('Wrote {0}'.format(metadata_filename))
+
+        for file_ in old_files:
+            if self.opts['spm_repo_dups'] == 'ignore':
+                # ignore old packages, but still only add the latest
+                log.debug('{0} will be left in the directory'.format(file_))
+            elif self.opts['spm_repo_dups'] == 'archive':
+                # spm_repo_archive_path is where old packages are moved
+                if not os.path.exists('./archive'):
+                    try:
+                        os.makedirs('./archive')
+                        log.debug('{0} has been archived'.format(file_))
+                    except IOError:
+                        log.error('Unable to create archive directory')
+                try:
+                    shutil.move(file_, './archive')
+                except (IOError, OSError):
+                    log.error(
+                        'Unable to archive {0}'.format(file_)
+                    )
+            elif self.opts['spm_repo_dups'] == 'delete':
+                # delete old packages from the repo
+                try:
+                    os.remove(file_)
+                    log.debug('{0} has been deleted'.format(file_))
+                except IOError:
+                    log.error('Unable to delete {0}'.format(file_))
+                except OSError:
+                    # The file has already been deleted
+                    pass
 
     def _remove(self, args):
         '''

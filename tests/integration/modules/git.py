@@ -583,13 +583,34 @@ class GitModuleTest(integration.ModuleCase):
         Use git.init to init a new repo
         '''
         new_repo = tempfile.mkdtemp(dir=integration.TMP)
+
+        # `tempfile.mkdtemp` gets the path to the Temp directory using
+        # environment variables. As a result, folder names longer than 8
+        # characters are shortened. For example "C:\Users\Administrators"
+        # becomes "C:\Users\Admini~1". However, the "git.init" function returns
+        # the full, unshortened name of the folder. Therefore you can't compare
+        # the path returned by `tempfile.mkdtemp` and the results of `git.init`
+        # exactly.
         if salt.utils.is_windows():
             new_repo = new_repo.replace('\\', '/')
 
-        self.assertEqual(
-            self.run_function('git.init', [new_repo]).lower(),
-            'Initialized empty Git repository in {0}/.git/'.format(new_repo).lower()
-        )
+            # Get the name of the temp directory
+            tmp_dir = os.path.basename(new_repo)
+
+            # Get git output
+            git_ret = self.run_function('git.init', [new_repo]).lower()
+
+            self.assertIn(
+                'Initialized empty Git repository in'.lower(), git_ret)
+            self.assertIn(tmp_dir, git_ret)
+
+        else:
+            self.assertEqual(
+                self.run_function('git.init', [new_repo]).lower(),
+                'Initialized empty Git repository in {0}/.git/'
+                ''.format(new_repo).lower()
+            )
+
         shutil.rmtree(new_repo)
 
     # Test for git.is_worktree is in test_worktree_add_rm

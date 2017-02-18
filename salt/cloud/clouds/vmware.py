@@ -691,7 +691,8 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                                 raise SaltCloudSystemExit('Invalid disk'
                                                           ' backing mode'
                                                           ' specified!')
-                        device_specs.append(disk_spec)
+                        if disk_spec is not None:
+                            device_specs.append(disk_spec)
 
             elif isinstance(device.backing, vim.vm.device.VirtualEthernetCard.NetworkBackingInfo) or isinstance(device.backing, vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
                 # this is a network adapter

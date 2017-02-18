@@ -195,7 +195,6 @@ GPG_PILLAR_DECRYPTED = {
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.which('gpg'), 'GPG is not installed')
-@skipIf(os.geteuid() != 0, 'you must be root to run this test')
 class DecryptGPGPillarTest(integration.ModuleCase):
     '''
     Tests for pillar decryption
