@@ -6,16 +6,16 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import os
 
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 
-# Import Salt libs
-import salt.modules.cmdmod
-
 ensure_in_syspath('../')
+
+# Import Salt libs
+import integration
+import salt.modules.cmdmod
 
 
 class DocTestCase(TestCase):
@@ -34,7 +34,7 @@ class DocTestCase(TestCase):
 
         https://github.com/saltstack/salt/issues/12788
         '''
-        salt_dir = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 2)[0]
+        salt_dir = integration.CODE_DIR
         salt_dir += '/'
         cmd = 'grep -r :doc: ' + salt_dir
 
@@ -52,12 +52,12 @@ class DocTestCase(TestCase):
             # the page that documents to not use ":doc:", or
             # the doc/conf.py file
             if 'man' in key \
-                or key.endswith('doc_test.py') \
-                or key.endswith('doc/conf.py') \
-                or key.endswith('/conventions/documentation.rst') \
-                or key.endswith('doc/topics/releases/2016.11.2.rst') \
-                or key.endswith('doc/topics/releases/2016.11.3.rst') \
-                or key.endswith('doc/topics/releases/2016.3.5.rst'):
+                    or key.endswith('test_doc.py') \
+                    or key.endswith('doc/conf.py') \
+                    or key.endswith('/conventions/documentation.rst') \
+                    or key.endswith('doc/topics/releases/2016.11.2.rst') \
+                    or key.endswith('doc/topics/releases/2016.11.3.rst') \
+                    or key.endswith('doc/topics/releases/2016.3.5.rst'):
                 continue
 
             # Set up test return dict
