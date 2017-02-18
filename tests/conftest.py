@@ -254,6 +254,8 @@ def pytest_collection_modifyitems(items):
     for item in items:
         fspath = str(item.fspath)
         if '/integration/' in fspath:
+            if 'test_daemon' not in item.fixturenames:
+                item.fixturenames.append('test_daemon')
             item.add_marker(pytest.mark.integration)
             for kind in ('cli', 'client', 'cloud', 'fileserver', 'loader', 'minion', 'modules',
                          'netapi', 'output', 'reactor', 'renderers', 'runners', 'sdb', 'shell',
@@ -537,7 +539,7 @@ def session_pillar_tree_root_dir(session_integration_files_dir):
 
 # <---- Fixtures Overrides -------------------------------------------------------------------------------------------
 # ----- Custom Fixtures Definitions --------------------------------------------------------------------------------->
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope='session')
 def test_daemon(request):
     from collections import namedtuple
     from integration import TestDaemon, PNUM
