@@ -656,7 +656,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                     if device.deviceInfo.label in list(devices['disk'].keys()):
                         disk_spec = None
                         if 'size' in devices['disk'][device.deviceInfo.label]:
-                            size_gb = float(devices['disk'][disk_label]['size'])
+                            size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
                             disk_spec = _get_size_spec(device, size_gb)
                             size_kb = size_gb * 1024 * 1024
                         else:
