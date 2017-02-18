@@ -113,7 +113,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
         return mixins.AsyncClientMixin.cmd_async(self, reformatted_low)
 
-    def cmd_sync(self, low, timeout=None):
+    def cmd_sync(self, low, timeout=None, full_return=False):
         '''
         Execute a runner function synchronously; eauth is respected
 
@@ -130,7 +130,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             })
         '''
         reformatted_low = self._reformat_low(low)
-        return mixins.SyncClientMixin.cmd_sync(self, reformatted_low, timeout)
+        return mixins.SyncClientMixin.cmd_sync(self, reformatted_low, timeout, full_return)
 
     def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):
         '''

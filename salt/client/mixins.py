@@ -138,7 +138,7 @@ class SyncClientMixin(object):
                 salt.utils.error.raise_error(**ret['error'])
         return ret
 
-    def cmd_sync(self, low, timeout=None):
+    def cmd_sync(self, low, timeout=None, full_return=False):
         '''
         Execute a runner function synchronously; eauth is respected
 
@@ -166,7 +166,7 @@ class SyncClientMixin(object):
                 "RunnerClient job '{0}' timed out".format(job['jid']),
                 jid=job['jid'])
 
-        return ret['data']['return']
+        return ret if full_return else ret['data']['return']
 
     def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):
         '''
