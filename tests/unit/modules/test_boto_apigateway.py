@@ -146,14 +146,6 @@ usage_plans_ret = dict(
 
 log = logging.getLogger(__name__)
 
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-
-boto_apigateway.__utils__ = utils
-boto_apigateway.__init__(opts)
-boto_apigateway.__salt__ = {}
-
 
 def _has_required_boto():
     '''
@@ -183,9 +175,22 @@ def _has_required_botocore():
 class BotoApiGatewayTestCaseBase(TestCase):
     conn = None
 
-    # Set up MagicMock to replace the boto3 session
+    loader_module = boto_apigateway
+
+    def loader_module_globals(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto3'])
+        return {
+            '__opts__': opts,
+            '__utils__': utils,
+        }
+
     def setUp(self):
-        context.clear()
+        TestCase.setUp(self)
+        # __virtual__ must be caller in order for _get_conn to be injected
+        boto_apigateway.__init__(self.opts)
+
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -217,8 +222,8 @@ class BotoApiGatewayTestCaseMixin(object):
         return False
 
 
-@skipIf(True, 'Skip these tests while investigating failures')
-@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+#@skipIf(True, 'Skip these tests while investigating failures')
+@skipIf(HAS_BOTO is False, 'The boto3 module must be installed.')
 @skipIf(_has_required_boto() is False,
         'The boto3 module must be greater than'
         ' or equal to version {0}'.format(required_boto3_version))
