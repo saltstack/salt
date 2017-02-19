@@ -203,6 +203,14 @@ Functions
 Executing Commands Within a Running Container
 ---------------------------------------------
 
+.. note::
+    With the release of Docker 1.13.1, the Execution Driver has been removed.
+    Starting in versions 2016.3.6, 2016.11.4, and Nitrogen, Salt defaults to
+    using ``docker exec`` to run commands in containers, however for older Salt
+    releases it will be necessary to set the ``docker.exec_driver`` config
+    option to either ``docker-exec`` or ``nsenter`` for Docker versions 1.13.1
+    and newer.
+
 Multiple methods exist for executing commands within Docker containers:
 
 - lxc-attach_: Default for older versions of docker
@@ -264,7 +272,6 @@ import distutils.version  # pylint: disable=import-error,no-name-in-module,unuse
 import fnmatch
 import functools
 import gzip
-import inspect as inspect_module
 import json
 import logging
 import os
@@ -278,6 +285,7 @@ import time
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
+from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.decorators \
     import identical_signature_wrapper as _mimic_signature
 import salt.utils
@@ -288,10 +296,21 @@ import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import docker
-    import docker.utils
     HAS_DOCKER_PY = True
 except ImportError:
     HAS_DOCKER_PY = False
+
+# These next two imports are only necessary to have access to the needed
+# functions so that we can get argspecs for the container config, host config,
+# and networking config (see the get_client_args() function).
+try:
+    import docker.types
+except ImportError:
+    pass
+try:
+    import docker.utils
+except ImportError:
+    pass
 
 try:
     PY_VERSION = sys.version_info[0]
@@ -832,10 +851,12 @@ def _get_exec_driver():
             __context__[contextkey] = from_config
             return from_config
 
-        # For old versions of docker, lxc was the only supported driver.
-        # This is a sane default.
-        driver = info().get('ExecutionDriver', 'lxc-')
-        if driver.startswith('lxc-'):
+        # The execution driver was removed in Docker 1.13.1, docker-exec is now
+        # the default.
+        driver = info().get('ExecutionDriver', 'docker-exec')
+        if driver == 'docker-exec':
+            __context__[contextkey] = driver
+        elif driver.startswith('lxc-'):
             __context__[contextkey] = 'lxc-attach'
         elif driver.startswith('native-') and HAS_NSENTER:
             __context__[contextkey] = 'nsenter'
@@ -2994,7 +3015,7 @@ def create(image,
     # https://docs.docker.com/engine/reference/api/docker_remote_api_v1.15/#create-a-container
     if salt.utils.version_cmp(version()['ApiVersion'], '1.15') > 0:
         client = __context__['docker.client']
-        host_config_args = inspect_module.getargspec(docker.utils.create_host_config).args
+        host_config_args = get_client_args()['host_config']
         create_kwargs['host_config'] = client.create_host_config(
             **dict((arg, create_kwargs.pop(arg, None)) for arg in host_config_args if arg != 'version')
         )
@@ -5492,3 +5513,77 @@ def script_retcode(name,
                    ignore_retcode=ignore_retcode,
                    use_vt=use_vt,
                    keep_env=keep_env)['retcode']
+
+
+def get_client_args():
+    '''
+    .. versionadded:: 2016.3.6,2016.11.4,Nitrogen
+
+    Returns the args for docker-py's `low-level API`_, organized by container
+    config, host config, and networking config.
+
+    .. _`low-level API`: http://docker-py.readthedocs.io/en/stable/api.html
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion docker.get_client_args
+    '''
+    try:
+        config_args = _argspec(docker.types.ContainerConfig.__init__).args
+    except AttributeError:
+        try:
+            config_args = _argspec(docker.utils.create_container_config).args
+        except AttributeError:
+            raise CommandExecutionError(
+                'Failed to get create_container_config argspec'
+            )
+
+    try:
+        host_config_args = \
+            _argspec(docker.types.HostConfig.__init__).args
+    except AttributeError:
+        try:
+            host_config_args = _argspec(docker.utils.create_host_config).args
+        except AttributeError:
+            raise CommandExecutionError(
+                'Failed to get create_host_config argspec'
+            )
+
+    try:
+        endpoint_config_args = \
+            _argspec(docker.types.EndpointConfig.__init__).args
+    except AttributeError:
+        try:
+            endpoint_config_args = \
+                _argspec(docker.utils.create_endpoint_config).args
+        except AttributeError:
+            raise CommandExecutionError(
+                'Failed to get create_host_config argspec'
+            )
+
+    for arglist in (config_args, host_config_args, endpoint_config_args):
+        try:
+            # The API version is passed automagically by the API code that
+            # imports these classes/functions and is not an arg that we will be
+            # passing, so remove it if present.
+            arglist.remove('version')
+        except ValueError:
+            pass
+
+    # Remove any args in host or networking config from the main config dict.
+    # This keeps us from accidentally allowing args that have been moved from
+    # the container config to the host config (but are still accepted by
+    # create_container_config so warnings can be issued).
+    for arglist in (host_config_args, endpoint_config_args):
+        for item in arglist:
+            try:
+                config_args.remove(item)
+            except ValueError:
+                # Arg is not in config_args
+                pass
+
+    return {'config': config_args,
+            'host_config': host_config_args,
+            'networking_config': endpoint_config_args}
