@@ -15,14 +15,11 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     patch
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.ext.six as six
 import salt.loader
-from salt.modules import boto_s3_bucket
+import salt.modules.boto_s3_bucket as boto_s3_bucket
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd-party libs
@@ -45,14 +42,6 @@ except ImportError:
 required_boto3_version = '1.2.1'
 
 log = logging.getLogger(__name__)
-
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-
-boto_s3_bucket.__utils__ = utils
-boto_s3_bucket.__init__(opts)
-boto_s3_bucket.__salt__ = {}
 
 
 def _has_required_boto():
@@ -213,10 +202,19 @@ if _has_required_boto():
 class BotoS3BucketTestCaseBase(TestCase):
     conn = None
 
-    # Set up MagicMock to replace the boto3 session
+    loader_module = boto_s3_bucket
+
+    def loader_module_globals(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        return {
+            '__utils__': utils,
+        }
+
     def setUp(self):
-        boto_s3_bucket.__context__ = {}
-        context.clear()
+        super(BotoS3BucketTestCaseBase, self).setUp()
+        boto_s3_bucket.__init__(self.opts)
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
