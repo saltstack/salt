@@ -8,7 +8,8 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,25 +19,21 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import schedule
+import salt.modules.schedule as schedule
 from salt.utils.event import SaltEvent
 
-# Globals
-schedule.__salt__ = {}
-schedule.__opts__ = {}
-schedule.__pillar__ = {}
-
-SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
+SOCK_DIR = os.path.join(TMP, 'test-socks')
 
 JOB1 = {'function': 'test.ping', 'maxrunning': 1, 'name': 'job1',
         'jid_include': True, 'enabled': True}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ScheduleTestCase(TestCase):
+class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.schedule
     '''
+    loader_module = schedule
 
     # 'purge' function tests: 1
 

@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,17 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import supervisord
+import salt.modules.supervisord as supervisord
 from salt.exceptions import CommandExecutionError
-
-supervisord.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SupervisordTestCase(TestCase):
+class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.supervisord
     '''
+    loader_module = supervisord
+
     @staticmethod
     def _m_all(stdout=True):
         '''
