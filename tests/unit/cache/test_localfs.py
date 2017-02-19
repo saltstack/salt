@@ -18,25 +18,29 @@ from salttesting.mock import (
     patch
 )
 
-
 # Import Salt libs
 import salt.payload
 import salt.utils
-from salt.cache import localfs
+import salt.cache.localfs as localfs
 from salt.exceptions import SaltCacheError
+
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 # Import 3rd-party libs
 import salt.ext.six as six
 
+localfs.__opts__ = {}
 localfs.__context__ = {}
-localfs.__opts__ = {'cachedir': ''}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LocalFSTest(TestCase):
+class LocalFSTest(TestCase, LoaderModuleMockMixin):
     '''
     Validate the functions in the localfs cache
     '''
+
+    loader_module = localfs
 
     def _create_tmp_cache_file(self, tmp_dir, serializer):
         '''
