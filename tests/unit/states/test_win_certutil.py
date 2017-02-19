@@ -4,19 +4,20 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import win_certutil as certutil
+import salt.states.win_certutil as certutil
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch
 )
 
-certutil.__salt__ = {}
 
+class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
-class CertUtilTestCase(TestCase):
+    loader_module = certutil
 
     def test_add_serial(self):
         '''

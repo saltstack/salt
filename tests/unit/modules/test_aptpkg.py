@@ -10,22 +10,15 @@
 from __future__ import absolute_import
 import copy
 
+# Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules import aptpkg
 
-# Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
-)
-
-# Globals
-aptpkg.__salt__ = {}
-aptpkg.__context__ = {}
 
 APT_KEY_LIST = r'''
 pub:-:1024:17:46181433FBB75451:1104433784:::-:::scSC:
@@ -140,10 +133,11 @@ UNINSTALL = {
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class AptPkgTestCase(TestCase):
+class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.aptpkg
     '''
+    loader_module = aptpkg
 
     def test_version(self):
         '''

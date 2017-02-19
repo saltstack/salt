@@ -6,25 +6,21 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    MagicMock,
-    patch)
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt Libs
 from salt.states import boto_ec2
 
-boto_ec2.__salt__ = {}
-boto_ec2.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoEc2TestCase(TestCase):
+class BotoEc2TestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_ec2
     '''
+    loader_module = boto_ec2
+
     # 'key_present' function tests: 1
 
     def test_key_present(self):

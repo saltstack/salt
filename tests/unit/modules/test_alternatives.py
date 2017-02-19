@@ -11,6 +11,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.helpers import TestsLoggingHandler
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
@@ -18,11 +19,10 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 # Import salt libs
 from salt.modules import alternatives
 
-alternatives.__salt__ = alternatives.__grains__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class AlternativesTestCase(TestCase):
+class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
+    loader_module = alternatives
 
     def test_display(self):
         with patch.dict(alternatives.__grains__, {'os_family': 'RedHat'}):

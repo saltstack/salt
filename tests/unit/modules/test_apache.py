@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -20,17 +21,13 @@ from tests.support.mock import (
 from salt.modules import apache
 from salt.ext.six.moves.urllib.error import URLError  # pylint: disable=import-error,no-name-in-module
 
-# Globals
-apache.__grains__ = {}
-apache.__salt__ = {}
-apache.__context__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ApacheTestCase(TestCase):
+class ApacheTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.apache
     '''
+    loader_module = apache
     # 'version' function tests: 1
 
     @patch('salt.modules.apache._detect_os',

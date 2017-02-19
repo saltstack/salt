@@ -6,27 +6,24 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    MagicMock,
-    patch)
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt Libs
 from salt.states import boto_asg
 
-boto_asg.__salt__ = {}
-boto_asg.__opts__ = {}
-boto_asg.__utils__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoAsgTestCase(TestCase):
+class BotoAsgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_asg
     '''
     # 'present' function tests: 1
+
+    loader_module = boto_asg
+
+    maxSize = None
 
     def test_present(self):
         '''
@@ -61,27 +58,32 @@ class BotoAsgTestCase(TestCase):
                         ret
                     )
 
+                def magic_side_effect(value):
+                    if isinstance(value, int):
+                        if value == 1:
+                            return 4
+                        return value
+                    return ''
+
                 comt = 'Autoscale group set to be updated.'
                 ret.update({'comment': comt, 'result': None})
                 ret.update({'changes': {'new': {'min_size': 4},
                                         'old': {'min_size': 2}}})
                 utils_ordered_mock = MagicMock(
-                    side_effect=['', 4, 2, '', '', '', '', '', '']
+                    side_effect=magic_side_effect
                 )
                 with patch.dict(boto_asg.__salt__,
                                 {'config.option': MagicMock(return_value={})}):
                     with patch.dict(boto_asg.__utils__,
                                     {'boto3.ordered': utils_ordered_mock}):
-                        self.assertDictEqual(
-                            boto_asg.present(
-                                name,
-                                launch_config_name,
-                                availability_zones,
-                                min_size,
-                                max_size
-                            ),
-                            ret
+                        call_ret = boto_asg.present(
+                            name,
+                            launch_config_name,
+                            availability_zones,
+                            min_size,
+                            max_size
                         )
+                        self.assertDictEqual(call_ret, ret)
 
                 with patch.dict(boto_asg.__salt__,
                                 {'config.option': MagicMock(return_value={})}):

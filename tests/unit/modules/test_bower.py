@@ -7,27 +7,21 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 from salt.modules import bower
 from salt.exceptions import CommandExecutionError
 
-# Globals
-bower.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BowerTestCase(TestCase):
+class BowerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.bower
     '''
+    loader_module = bower
 
     @patch('salt.modules.bower._check_valid_version',
            MagicMock(return_value=True))

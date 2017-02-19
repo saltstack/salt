@@ -7,6 +7,7 @@ import string
 import logging
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -22,6 +23,7 @@ from salt.modules import boto_cloudtrail
 from salt.utils.versions import LooseVersion
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
+# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,unused-import
 try:
     import boto
@@ -39,14 +41,6 @@ except ImportError:
 required_boto3_version = '1.2.1'
 
 log = logging.getLogger(__name__)
-
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-
-boto_cloudtrail.__utils__ = utils
-boto_cloudtrail.__init__(opts)
-boto_cloudtrail.__salt__ = {}
 
 
 def _has_required_boto():
@@ -103,13 +97,24 @@ if _has_required_boto():
                                        ' or equal to version {0}'
         .format(required_boto3_version))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoCloudTrailTestCaseBase(TestCase):
+class BotoCloudTrailTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    # Set up MagicMock to replace the boto3 session
+    loader_module = boto_cloudtrail
+
+    def loader_module_globals(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        return {
+            '__utils__': utils,
+        }
+
     def setUp(self):
-        boto_cloudtrail.__context__ = {}
-        context.clear()
+        super(BotoCloudTrailTestCaseBase, self).setUp()
+        boto_cloudtrail.__init__(self.opts)
+        del self.opts
+
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -117,10 +122,12 @@ class BotoCloudTrailTestCaseBase(TestCase):
 
         self.patcher = patch('boto3.session.Session')
         self.addCleanup(self.patcher.stop)
+        self.addCleanup(delattr, self, 'patcher')
         mock_session = self.patcher.start()
 
         session_instance = mock_session.return_value
         self.conn = MagicMock()
+        self.addCleanup(delattr, self, 'conn')
         session_instance.client.return_value = self.conn
 
 

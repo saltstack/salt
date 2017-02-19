@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,21 +17,16 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import at
-
-# Import salt libs
 import salt.utils
-
-# Globals
-at.__grains__ = {}
-at.__salt__ = {}
+from salt.modules import at
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class AtTestCase(TestCase):
+class AtTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for the salt.modules.at module
     '''
+    loader_module = at
 
     atq_output = {'jobs': [{'date': '2014-12-11', 'job': 101, 'queue': 'A',
                             'tag': '', 'time': '19:48:47', 'user': 'B'}]}

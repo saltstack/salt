@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -19,10 +20,6 @@ from tests.support.mock import (
 from salt.modules import bluez
 from salt.exceptions import CommandExecutionError
 import salt.utils.validate.net
-
-
-# Globals
-bluez.__salt__ = {}
 
 
 class MockBluetooth(object):
@@ -39,14 +36,15 @@ class MockBluetooth(object):
         '''
         return [['a', 'b', 'c'], ['d', 'e', 'f']]
 
-bluez.bluetooth = MockBluetooth
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BluezTestCase(TestCase):
+class BluezTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.bluez
     '''
+    loader_module = bluez
+    loader_module_globals = {'bluetooth': MockBluetooth()}
+
     def test_version(self):
         '''
             Test if return bluetooth version

@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -17,16 +18,15 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.states import status
 
-status.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class StatusTestCase(TestCase):
+class StatusTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.status
     '''
-    # 'loadavg' function tests: 1
+    loader_module = status
 
+    # 'loadavg' function tests: 1
     def test_loadavg(self):
         '''
         Test to return the current load average for the specified minion.

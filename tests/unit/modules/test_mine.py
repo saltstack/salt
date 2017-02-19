@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -15,19 +16,16 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import mine
-
-
-# Globals
-mine.__salt__ = {}
-mine.__opts__ = {}
+import salt.modules.mine as mine
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MineTestCase(TestCase):
+class MineTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.mine
     '''
+    loader_module = mine
+
     def test_get_docker(self):
         '''
         Test for Get all mine data for 'docker.ps' and run an

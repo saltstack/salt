@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,18 +17,16 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import sysrc
-
-# Globals
-sysrc.__salt__ = {}
-sysrc.__opts__ = {}
+import salt.states.sysrc as sysrc
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SysrcTestCase(TestCase):
+class SysrcTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the sysrc state
     '''
+    loader_module = sysrc
+
     def test_managed(self):
         '''
             Test to ensure a sysrc variable is set to a specific value.

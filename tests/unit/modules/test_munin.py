@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,17 +17,15 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import munin
-
-# Globals
-munin.__salt__ = {}
+import salt.modules.munin as munin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MuninTestCase(TestCase):
+class MuninTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.munin
     '''
+    loader_module = munin
     # 'run' function tests: 1
 
     @patch('salt.modules.munin.list_plugins',

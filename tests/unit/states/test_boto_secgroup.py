@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.case import TestCase
 
 # Import Salt Libs
@@ -11,10 +12,12 @@ from salt.states import boto_secgroup
 from salt.utils.odict import OrderedDict
 
 
-class Boto_SecgroupTestCase(TestCase):
+class Boto_SecgroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.states.boto_secgroup module
     '''
+    loader_module = boto_secgroup
+
     def test__get_rule_changes_no_rules_no_change(self):
         '''
         tests a condition with no rules in present or desired group

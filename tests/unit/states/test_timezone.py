@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salt.exceptions import CommandExecutionError
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -17,18 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import timezone
-
-# Globals
-timezone.__salt__ = {}
-timezone.__opts__ = {}
+from salt.exceptions import CommandExecutionError
+import salt.states.timezone as timezone
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TimezoneTestCase(TestCase):
+class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the timezone state
     '''
+    loader_module = timezone
+
     def test_system(self):
         '''
             Test to set the timezone for the system.

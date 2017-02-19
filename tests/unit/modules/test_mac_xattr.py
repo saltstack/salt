@@ -4,18 +4,19 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
-from salt.modules import mac_xattr as xattr
+import salt.modules.mac_xattr as xattr
 import salt.utils.mac_utils
 
-xattr.__salt__ = {}
 
+class XAttrTestCase(TestCase, LoaderModuleMockMixin):
 
-class XAttrTestCase(TestCase):
+    loader_module = xattr
 
     @patch('salt.utils.mac_utils.execute_return_result',
            MagicMock(return_value='spongebob\nsquidward'))

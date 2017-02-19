@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,15 +17,13 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.states import boto_route53
 
-boto_route53.__salt__ = {}
-boto_route53.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoRoute53TestCase(TestCase):
+class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_route53
     '''
+    loader_module = boto_route53
     # 'present' function tests: 1
 
     def test_present(self):

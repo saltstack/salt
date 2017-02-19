@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -13,18 +14,16 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.states import boto_kinesis
 
-boto_kinesis.__salt__ = {}
-boto_kinesis.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoKinesisTestCase(TestCase):
+class BotoKinesisTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_kinesis
     '''
     # 'present' function tests: 1
 
     maxDiff = None
+    loader_module = boto_kinesis
 
     def test_stream_present(self):
         '''
