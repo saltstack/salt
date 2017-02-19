@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from copy import deepcopy
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
 
@@ -28,8 +29,6 @@ except Exception:
     HAS_LIBS = False
 
 # Global Variables
-vmware.__active_provider_name__ = ''
-vmware.__opts__ = {}
 PROVIDER_CONFIG = {
   'vcenter01': {
     'vmware': {
@@ -51,10 +50,15 @@ PROFILE = {
 }
 
 
-class ExtendedTestCase(TestCase):
+class ExtendedTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Extended TestCase class containing additional helper methods.
     '''
+
+    loader_module = vmware
+
+    def loader_module_globals(self):
+        return {'__active_provider_name__': ''}
 
     def assertRaisesWithMessage(self, exc_type, exc_msg, func, *args, **kwargs):
         try:

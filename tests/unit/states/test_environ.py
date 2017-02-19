@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
@@ -15,30 +16,24 @@ import salt.states.environ as envstate
 import salt.modules.environ as envmodule
 
 
-class TestEnvironState(TestCase):
+class TestEnvironState(TestCase, LoaderModuleMockMixin):
 
-    @classmethod
-    def setUpClass(cls):
-        cls.setup_env = os.environ
+    loader_module = envstate, envmodule
 
-    @classmethod
-    def tearDownClass(cls):
-        os.environ = cls.setup_env
+    def loader_module_globals(self):
+        return {
+            '__env__': 'base',
+            '__opts__': {'test': False},
+            '__salt__': {'environ.setenv': envmodule.setenv}
+        }
 
     def setUp(self):
-        envstate.__env__ = 'base'
-        envstate.__opts__ = {'test': False}
-        envstate.__salt__ = {'environ.setenv': envmodule.setenv}
-        envmodule.__salt__ = {}
+        original_environ = os.environ.copy()
+        os.environ = {'INITIAL': 'initial'}
 
-        shared = {'INITIAL': 'initial'}
-        envstate.os.environ = shared
-        envmodule.os.environ = shared
-
-    def tearDown(self):
-        import os
-        envstate.os.environ = os.environ
-        envmodule.os.environ = os.environ
+        def reset_environ(original_environ):
+            os.environ = original_environ
+        self.addCleanup(reset_environ, original_environ)
 
     def test_setenv(self):
         '''test that a subsequent calls of setenv changes nothing'''

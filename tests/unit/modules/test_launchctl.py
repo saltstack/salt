@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -20,15 +21,14 @@ import salt.ext.six as six
 import salt.utils
 from salt.modules import launchctl
 
-# Globals
-launchctl.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LaunchctlTestCase(TestCase):
+class LaunchctlTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.launchctl
     '''
+    loader_module = launchctl
+
     def test_get_all(self):
         '''
         Test for Return all installed services

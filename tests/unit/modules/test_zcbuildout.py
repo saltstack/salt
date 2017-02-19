@@ -15,16 +15,17 @@ from salt.ext.six.moves.urllib.request import urlopen
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.paths import FILES, TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import requires_network, skip_if_binaries_missing
-import tests.integration as integration
 
 # Import Salt libs
 import salt.utils
 from salt.modules import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
 
-ROOT = os.path.join(integration.FILES, 'file', 'base', 'buildout')
+ROOT = os.path.join(FILES, 'file', 'base', 'buildout')
 
 KNOWN_VIRTUALENV_BINARY_NAMES = (
     'virtualenv',
@@ -32,12 +33,6 @@ KNOWN_VIRTUALENV_BINARY_NAMES = (
     'virtualenv-2.6',
     'virtualenv-2.7'
 )
-
-buildout.__salt__ = {
-    'cmd.run_all': cmd.run_all,
-    'cmd.run': cmd.run,
-    'cmd.retcode': cmd.retcode,
-}
 
 BOOT_INIT = {
     1: [
@@ -57,12 +52,24 @@ def download_to(url, dest):
 
 
 @skipIf(True, 'These tests are not running reliably')
-class Base(TestCase):
+class Base(TestCase, LoaderModuleMockMixin):
+
+    loader_module = buildout
+
+    def loader_module_globals(self):
+        return {
+            '__salt__': {
+                'cmd.run_all': cmd.run_all,
+                'cmd.run': cmd.run,
+                'cmd.retcode': cmd.retcode,
+            }
+        }
+
     @classmethod
     def setUpClass(cls):
-        if not os.path.isdir(integration.TMP):
-            os.makedirs(integration.TMP)
-        cls.rdir = tempfile.mkdtemp(dir=integration.TMP)
+        if not os.path.isdir(TMP):
+            os.makedirs(TMP)
+        cls.rdir = tempfile.mkdtemp(dir=TMP)
         cls.tdir = os.path.join(cls.rdir, 'test')
         for idx, url in six.iteritems(buildout._URL_VERSIONS):
             log.debug('Downloading bootstrap from {0}'.format(url))

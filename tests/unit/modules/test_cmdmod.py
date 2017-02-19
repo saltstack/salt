@@ -13,6 +13,7 @@ from salt.log import LOG_LEVELS
 import salt.utils
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
@@ -22,8 +23,6 @@ from tests.support.mock import (
     patch
 )
 
-cmdmod.__grains__ = {}
-
 DEFAULT_SHELL = 'foo/bar'
 MOCK_SHELL_FILE = '# List of acceptable shells\n' \
                   '\n'\
@@ -31,10 +30,12 @@ MOCK_SHELL_FILE = '# List of acceptable shells\n' \
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class CMDMODTestCase(TestCase):
+class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit tests for the salt.modules.cmdmod module
     '''
+
+    loader_module = cmdmod
 
     mock_loglevels = {'info': 'foo', 'all': 'bar', 'critical': 'bar',
                       'trace': 'bar', 'garbage': 'bar', 'error': 'bar',

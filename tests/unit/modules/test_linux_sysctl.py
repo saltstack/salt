@@ -12,6 +12,7 @@ from salt.modules import systemd
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -21,17 +22,14 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-# Globals
-linux_sysctl.__salt__ = {}
-linux_sysctl.__context__ = {}
-systemd.__context__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LinuxSysctlTestCase(TestCase):
+class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.linux_sysctl module
     '''
+
+    loader_module = linux_sysctl, systemd
 
     def test_get(self):
         '''
@@ -112,15 +110,17 @@ class LinuxSysctlTestCase(TestCase):
         mock_sys_cmd = MagicMock(return_value=sys_cmd)
 
         with patch('salt.utils.fopen', mock_open()) as m_open:
-            with patch.dict(linux_sysctl.__salt__,
-                            {'cmd.run_stdout': mock_sys_cmd,
-                             'cmd.run_all': mock_asn_cmd}):
-                with patch.dict(systemd.__context__,
-                                {'salt.utils.systemd.booted': True}):
-                    linux_sysctl.persist('net.ipv4.ip_forward', 1)
-                    helper_open = m_open()
-                    helper_open.write.assert_called_once_with(
-                        '#\n# Kernel sysctl configuration\n#\n')
+            with patch.dict(linux_sysctl.__context__, {'salt.utils.systemd.version': 232}):
+                with patch.dict(linux_sysctl.__salt__,
+                                {'cmd.run_stdout': mock_sys_cmd,
+                                 'cmd.run_all': mock_asn_cmd}):
+                    with patch.dict(systemd.__context__,
+                                    {'salt.utils.systemd.booted': True,
+                                     'salt.utils.systemd.version': 232}):
+                        linux_sysctl.persist('net.ipv4.ip_forward', 1)
+                        helper_open = m_open()
+                        helper_open.write.assert_called_once_with(
+                            '#\n# Kernel sysctl configuration\n#\n')
 
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.path.exists', MagicMock(return_value=True))
@@ -136,10 +136,11 @@ class LinuxSysctlTestCase(TestCase):
         mock_sys_cmd = MagicMock(return_value=sys_cmd)
 
         with patch('salt.utils.fopen', mock_open()):
-            with patch.dict(linux_sysctl.__salt__,
-                            {'cmd.run_stdout': mock_sys_cmd,
-                             'cmd.run_all': mock_asn_cmd}):
-                with patch.dict(systemd.__context__,
-                                {'salt.utils.systemd.booted': True}):
-                    self.assertEqual(linux_sysctl.persist(
-                                     'net.ipv4.ip_forward', 1), 'Updated')
+            with patch.dict(linux_sysctl.__context__, {'salt.utils.systemd.version': 232}):
+                with patch.dict(linux_sysctl.__salt__,
+                                {'cmd.run_stdout': mock_sys_cmd,
+                                 'cmd.run_all': mock_asn_cmd}):
+                    with patch.dict(systemd.__context__,
+                                    {'salt.utils.systemd.booted': True}):
+                        self.assertEqual(linux_sysctl.persist(
+                                         'net.ipv4.ip_forward', 1), 'Updated')

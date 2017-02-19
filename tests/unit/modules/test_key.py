@@ -5,8 +5,10 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import os.path
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -17,18 +19,16 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
-import os.path
 from salt.modules import key
-
-# Globals
-key.__opts__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class KeyTestCase(TestCase):
+class KeyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.key
     '''
+    loader_module = key
+
     def test_finger(self):
         '''
         Test for finger

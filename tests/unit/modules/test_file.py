@@ -7,6 +7,7 @@ import tempfile
 import textwrap
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import MagicMock, patch
 
@@ -17,20 +18,6 @@ from salt.modules import config as configmod
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError
 
-filemod.__salt__ = {
-    'config.manage_mode': configmod.manage_mode,
-    'cmd.run': cmdmod.run,
-    'cmd.run_all': cmdmod.run_all
-}
-filemod.__opts__ = {
-    'test': False,
-    'file_roots': {'base': 'tmp'},
-    'pillar_roots': {'base': 'tmp'},
-    'cachedir': 'tmp',
-    'grains': {},
-}
-filemod.__grains__ = {'kernel': 'Linux'}
-
 SED_CONTENT = """test
 some
 content
@@ -38,10 +25,27 @@ content
 here
 """
 
-filemod.__pillar__ = {}
 
+class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
+    loader_module = filemod
 
-class FileReplaceTestCase(TestCase):
+    def loader_module_globals(self):
+        return {
+            '__salt__': {
+                'config.manage_mode': configmod.manage_mode,
+                'cmd.run': cmdmod.run,
+                'cmd.run_all': cmdmod.run_all
+            },
+            '__opts__': {
+                'test': False,
+                'file_roots': {'base': 'tmp'},
+                'pillar_roots': {'base': 'tmp'},
+                'cachedir': 'tmp',
+                'grains': {},
+            },
+            '__grains__': {'kernel': 'Linux'}
+        }
+
     MULTILINE_STRING = textwrap.dedent('''\
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam rhoncus
         enim ac bibendum vulputate. Etiam nibh velit, placerat ac auctor in,
@@ -180,7 +184,26 @@ class FileReplaceTestCase(TestCase):
         filemod.replace(self.tfile.name, r'Etiam', 123)
 
 
-class FileBlockReplaceTestCase(TestCase):
+class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
+    loader_module = filemod
+
+    def loader_module_globals(self):
+        return {
+            '__salt__': {
+                'config.manage_mode': MagicMock(),
+                'cmd.run': cmdmod.run,
+                'cmd.run_all': cmdmod.run_all
+            },
+            '__opts__': {
+                'test': False,
+                'file_roots': {'base': 'tmp'},
+                'pillar_roots': {'base': 'tmp'},
+                'cachedir': 'tmp',
+                'grains': {},
+            },
+            '__grains__': {'kernel': 'Linux'}
+        }
+
     MULTILINE_STRING = textwrap.dedent('''\
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam rhoncus
         enim ac bibendum vulputate. Etiam nibh velit, placerat ac auctor in,
@@ -214,11 +237,10 @@ class FileBlockReplaceTestCase(TestCase):
                                                  mode='w+')
         self.tfile.write(self.MULTILINE_STRING)
         self.tfile.close()
-        manage_mode_mock = MagicMock()
-        filemod.__salt__['config.manage_mode'] = manage_mode_mock
 
     def tearDown(self):
         os.remove(self.tfile.name)
+        del self.tfile
 
     def test_replace_multiline(self):
         new_multiline_content = (
@@ -432,7 +454,26 @@ class FileBlockReplaceTestCase(TestCase):
         )
 
 
-class FileModuleTestCase(TestCase):
+class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
+    loader_module = filemod
+
+    def loader_module_globals(self):
+        return {
+            '__salt__': {
+                'config.manage_mode': configmod.manage_mode,
+                'cmd.run': cmdmod.run,
+                'cmd.run_all': cmdmod.run_all
+            },
+            '__opts__': {
+                'test': False,
+                'file_roots': {'base': 'tmp'},
+                'pillar_roots': {'base': 'tmp'},
+                'cachedir': 'tmp',
+                'grains': {},
+            },
+            '__grains__': {'kernel': 'Linux'}
+        }
+
     def test_sed_limit_escaped(self):
         with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             tfile.write(SED_CONTENT)
@@ -695,7 +736,26 @@ class FileModuleTestCase(TestCase):
         os.remove(empty_file.name)
 
 
-class FileBasicsTestCase(TestCase):
+class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
+    loader_module = filemod
+
+    def loader_module_globals(self):
+        return {
+            '__salt__': {
+                'config.manage_mode': configmod.manage_mode,
+                'cmd.run': cmdmod.run,
+                'cmd.run_all': cmdmod.run_all
+            },
+            '__opts__': {
+                'test': False,
+                'file_roots': {'base': 'tmp'},
+                'pillar_roots': {'base': 'tmp'},
+                'cachedir': 'tmp',
+                'grains': {},
+            },
+            '__grains__': {'kernel': 'Linux'}
+        }
+
     def setUp(self):
         self.directory = tempfile.mkdtemp()
         with tempfile.NamedTemporaryFile(delete=False, mode='w+') as self.tfile:
@@ -706,6 +766,7 @@ class FileBasicsTestCase(TestCase):
         os.remove(self.tfile.name)
         os.remove(self.directory + '/a_link')
         os.rmdir(self.directory)
+        del self.tfile
 
     def test_symlink_already_in_desired_state(self):
         os.symlink(self.tfile.name, self.directory + '/a_link')

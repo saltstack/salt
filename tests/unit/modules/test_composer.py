@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -20,18 +21,13 @@ from salt.modules import composer
 from salt.exceptions import CommandExecutionError, CommandNotFoundError, SaltInvocationError
 
 
-# Globals
-composer.__grains__ = {}
-composer.__salt__ = {}
-composer.__context__ = {}
-composer.__opts__ = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ComposerTestCase(TestCase):
+class ComposerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.composer
     '''
+    loader_module = composer
+
     def test_install(self):
         '''
         Test for Install composer dependencies for a directory.

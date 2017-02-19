@@ -7,6 +7,7 @@ from __future__ import absolute_import
 from salt.modules import win_powercfg as powercfg
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,12 +17,14 @@ from tests.support.mock import (
     call
 )
 
-powercfg.__salt__ = {}
-powercfg.__grains__ = {'osrelease': 8}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PowerCfgTestCase(TestCase):
+class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
+    loader_module = powercfg
+
+    def loader_module_globals(self):
+        return {'__grains__': {'osrelease': 8}}
+
     query_ouput = '''Subgroup GUID: 238c9fa8-0aad-41ed-83f4-97be242c8f20  (Hibernate)
                 GUID Alias: SUB_SLEEP
                 Power Setting GUID: 29f6c1db-86da-48c5-9fdb-f2b67b1f44da  (Hibernate after)

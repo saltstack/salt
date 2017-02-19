@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -21,18 +22,14 @@ from salt.modules import daemontools
 from salt.exceptions import CommandExecutionError
 
 
-# Globals
-daemontools.__grains__ = {}
-daemontools.__salt__ = {}
-daemontools.__context__ = {}
-daemontools.__opts__ = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DaemontoolsTestCase(TestCase):
+class DaemontoolsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.daemontools
     '''
+
+    loader_module = daemontools
+
     def test_start(self):
         '''
         Test for Starts service via daemontools

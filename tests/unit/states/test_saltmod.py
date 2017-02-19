@@ -5,8 +5,11 @@
 # Import Python libs
 from __future__ import absolute_import
 import time
+import tempfile
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,19 +19,30 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.jid
 import salt.utils.event
 from salt.states import saltmod
 
-saltmod.__opts__ = {'__role': 'master', 'file_client': 'remote'}
-saltmod.__salt__ = {'saltutil.cmd': MagicMock()}
-saltmod.__env__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltmodTestCase(TestCase):
+class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.saltmod
     '''
+    loader_module = saltmod
+
+    def loader_module_globals(self):
+        return {
+            '__env__': 'base',
+            '__opts__': {
+                '__role': 'master',
+                'file_client': 'remote',
+                'sock_dir': tempfile.mkdtemp(dir=TMP),
+                'transport': 'tcp'
+            },
+            '__salt__': {'saltutil.cmd': MagicMock()},
+            '__orchestration_jid__': salt.utils.jid.gen_jid()
+        }
     # 'state' function tests: 1
 
     def test_state(self):

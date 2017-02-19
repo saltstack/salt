@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -16,18 +17,14 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.modules import gnomedesktop
 
-# Globals
-gnomedesktop.__grains__ = {}
-gnomedesktop.__salt__ = {}
-gnomedesktop.__context__ = {}
-gnomedesktop.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GnomedesktopTestCase(TestCase):
+class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.gnomedesktop
     '''
+    loader_module = gnomedesktop
+
     def test_ping(self):
         '''
         Test for A test to ensure the GNOME module is loaded

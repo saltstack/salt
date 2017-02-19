@@ -4,27 +4,30 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-import salt.modules.rvm
 import salt.states.rvm as rvm
 
 # Import 3rd-party libs
 import salt.ext.six as six
 
-rvm.__salt__ = {}
-rvm.__opts__ = {'test': False}
-
-salt.modules.rvm.__salt__ = {
-    'cmd.has_exec': MagicMock(return_value=True),
-    'config.option': MagicMock(return_value=None)
-}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestRvmState(TestCase):
+class TestRvmState(TestCase, LoaderModuleMockMixin):
+
+    loader_module = rvm
+
+    def loader_module_globals(self):
+        return {
+            '__opts__': {'test': False},
+            '__salt__': {
+                'cmd.has_exec': MagicMock(return_value=True),
+                'config.option': MagicMock(return_value=None)
+            }
+        }
 
     def test__check_rvm(self):
         mock = MagicMock(return_value=True)

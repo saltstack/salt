@@ -7,6 +7,8 @@ unit tests for the cache runner
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -18,15 +20,15 @@ from tests.support.mock import (
 from salt.runners import cache
 import salt.utils
 
-cache.__opts__ = {'cache': 'localfs'}
-cache.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class CacheTest(TestCase):
+class CacheTest(TestCase, LoaderModuleMockMixin):
     '''
     Validate the cache runner
     '''
+    loader_module = cache
+    loader_module_globals = {'__opts__': {'cache': 'localfs', 'pki_dir': TMP, 'key_cache': True}}
+
     def test_grains(self):
         '''
         test cache.grains runner

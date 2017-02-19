@@ -10,15 +10,19 @@ from salt.cloud.clouds import ec2
 from salt.exceptions import SaltCloudSystemExit
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class EC2TestCase(TestCase):
+class EC2TestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.ec2 module.
     '''
+
+    loader_module = ec2
+
     def test__validate_key_path_and_mode(self):
         with tempfile.NamedTemporaryFile() as f:
             key_file = f.name

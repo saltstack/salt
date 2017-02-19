@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -19,17 +20,13 @@ from tests.support.mock import (
 from salt.modules import drac
 
 
-# Globals
-drac.__grains__ = {}
-drac.__salt__ = {}
-drac.__context__ = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DracTestCase(TestCase):
+class DracTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.drac
     '''
+    loader_module = drac
+
     def test_system_info(self):
         '''
         Tests to return System information

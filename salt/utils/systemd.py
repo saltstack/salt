@@ -54,7 +54,7 @@ def version(context=None):
     contextkey = 'salt.utils.systemd.version'
     if isinstance(context, dict):
         # Can't put this if block on the same line as the above if block,
-        # because it willl break the elif below.
+        # because it will break the elif below.
         if contextkey in context:
             return context[contextkey]
     elif context is not None:

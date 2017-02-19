@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -18,14 +19,14 @@ from tests.support.mock import (
 from salt.modules import http
 import salt.utils.http
 
-http.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class HttpTestCase(TestCase):
+class HttpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.http
     '''
+    loader_module = http
+
     def test_query(self):
         '''
         Test for Query a resource, and decode the return data

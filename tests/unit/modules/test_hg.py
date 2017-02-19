@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,15 +19,14 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.modules import hg
 
-# Globals
-hg.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class HgTestCase(TestCase):
+class HgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.hg
     '''
+    loader_module = hg
+
     def test_revision(self):
         '''
         Test for Returns the long hash of a given identifier

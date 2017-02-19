@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,15 +19,13 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.modules import htpasswd
 
-# Globals
-htpasswd.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class HtpasswdTestCase(TestCase):
+class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.htpasswd
     '''
+    loader_module = htpasswd
 
     # 'useradd' function tests: 1
 

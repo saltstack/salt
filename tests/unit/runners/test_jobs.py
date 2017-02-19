@@ -7,6 +7,7 @@ unit tests for the jobs runner
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -18,15 +19,15 @@ from tests.support.mock import (
 from salt.runners import jobs
 import salt.minion
 
-jobs.__opts__ = {'ext_job_cache': None, 'master_job_cache': 'local_cache'}
-jobs.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class JobsTest(TestCase):
+class JobsTest(TestCase, LoaderModuleMockMixin):
     '''
     Validate the jobs runner
     '''
+    loader_module = jobs
+    loader_module_globals = {'__opts__': {'ext_job_cache': None, 'master_job_cache': 'local_cache'}}
+
     def test_list_jobs_with_search_target(self):
         '''
         test jobs.list_jobs runner with search_target args

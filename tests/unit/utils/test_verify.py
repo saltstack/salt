@@ -63,8 +63,8 @@ class TestVerify(TestCase):
 
     def test_zmq_verify_insufficient(self):
         import zmq
-        zmq.__version__ = '2.1.0'
-        self.assertFalse(zmq_version())
+        with patch.object(zmq, '__version__', '2.1.0'):
+            self.assertFalse(zmq_version())
 
     def test_user(self):
         self.assertTrue(check_user(getpass.getuser()))

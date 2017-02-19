@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -19,16 +20,14 @@ from tests.support.mock import (
 from salt.states import bower
 from salt.exceptions import CommandExecutionError
 
-# Globals
-bower.__salt__ = {}
-bower.__opts__ = {'test': False}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BowerTestCase(TestCase):
+class BowerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.bower
     '''
+    loader_module = bower
+    loader_module_globals = {'__opts__': {'test': False}}
 
     def test_removed_not_installed(self):
         '''

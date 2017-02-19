@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 
-# Import Pytohn libs
+# Import Python libs
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.modules.gem as gem
 
-gem.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestGemModule(TestCase):
+class TestGemModule(TestCase, LoaderModuleMockMixin):
+
+    loader_module = gem
 
     def test_gem(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})

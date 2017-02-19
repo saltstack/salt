@@ -3,8 +3,10 @@
 # Import python libs
 from __future__ import absolute_import
 from datetime import datetime
+import os
 import json
 import pprint
+import shutil
 
 try:
     from dateutil.relativedelta import relativedelta
@@ -15,6 +17,7 @@ except ImportError:
 NO_DATEUTIL_REASON = 'python-dateutil is not installed'
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.helpers import destructiveTest
 from tests.support.mock import (
@@ -29,75 +32,72 @@ from tests.support.mock import (
 import yaml
 
 # Import salt libs
+import salt
+import salt.utils
+import salt.utils.files
 import salt.states.file as filestate
 import salt.serializers.yaml as yamlserializer
 import salt.serializers.json as jsonserializer
 import salt.serializers.python as pythonserializer
 from salt.exceptions import CommandExecutionError
-import salt
-import salt.utils
-import salt.utils.files
-import os
-import shutil
-
-filestate.__env__ = 'base'
-filestate.__salt__ = {'file.manage_file': False}
-filestate.__serializers__ = {
-    'yaml.serialize': yamlserializer.serialize,
-    'python.serialize': pythonserializer.serialize,
-    'json.serialize': jsonserializer.serialize
-}
-filestate.__opts__ = {'test': False, 'cachedir': ''}
-filestate.__instance_id__ = ''
-filestate.__grains__ = {}
-filestate.__low__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestFileState(TestCase):
+class TestFileState(TestCase, LoaderModuleMockMixin):
+
+    loader_module = filestate
+
+    def loader_module_globals(self):
+        return {
+            '__env__': 'base',
+            '__salt__': {'file.manage_file': False},
+            '__serializers__': {
+                'yaml.serialize': yamlserializer.serialize,
+                'python.serialize': pythonserializer.serialize,
+                'json.serialize': jsonserializer.serialize
+            },
+            '__opts__': {'test': False, 'cachedir': ''},
+            '__instance_id__': '',
+            '__low__': {}
+        }
 
     def test_serialize(self):
         def returner(contents, *args, **kwargs):
             returner.returned = contents
         returner.returned = None
 
-        filestate.__salt__ = {
-            'file.manage_file': returner
-        }
+        with patch.dict(filestate.__salt__, {'file.manage_file': returner}):
 
-        dataset = {
-            "foo": True,
-            "bar": 42,
-            "baz": [1, 2, 3],
-            "qux": 2.0
-        }
+            dataset = {
+                "foo": True,
+                "bar": 42,
+                "baz": [1, 2, 3],
+                "qux": 2.0
+            }
 
-        filestate.serialize('/tmp', dataset)
-        self.assertEqual(yaml.load(returner.returned), dataset)
+            filestate.serialize('/tmp', dataset)
+            self.assertEqual(yaml.load(returner.returned), dataset)
 
-        filestate.serialize('/tmp', dataset, formatter="yaml")
-        self.assertEqual(yaml.load(returner.returned), dataset)
+            filestate.serialize('/tmp', dataset, formatter="yaml")
+            self.assertEqual(yaml.load(returner.returned), dataset)
 
-        filestate.serialize('/tmp', dataset, formatter="json")
-        self.assertEqual(json.loads(returner.returned), dataset)
+            filestate.serialize('/tmp', dataset, formatter="json")
+            self.assertEqual(json.loads(returner.returned), dataset)
 
-        filestate.serialize('/tmp', dataset, formatter="python")
-        self.assertEqual(returner.returned, pprint.pformat(dataset) + '\n')
+            filestate.serialize('/tmp', dataset, formatter="python")
+            self.assertEqual(returner.returned, pprint.pformat(dataset) + '\n')
 
     def test_contents_and_contents_pillar(self):
         def returner(contents, *args, **kwargs):
             returner.returned = contents
         returner.returned = None
 
-        filestate.__salt__ = {
-            'file.manage_file': returner
-        }
-
         manage_mode_mock = MagicMock()
-        filestate.__salt__['config.manage_mode'] = manage_mode_mock
+        with patch.dict(filestate.__salt__, {'file.manage_file': returner,
+                                             'config.manage_mode': manage_mode_mock}):
 
-        ret = filestate.managed('/tmp/foo', contents='hi', contents_pillar='foo:bar')
-        self.assertEqual(False, ret['result'])
+            ret = filestate.managed('/tmp/foo', contents='hi', contents_pillar='foo:bar')
+            self.assertEqual(False, ret['result'])
 
     def test_contents_pillar_doesnt_add_more_newlines(self):
         # make sure the newline
@@ -116,36 +116,26 @@ class TestFileState(TestCase):
         pillar_path = 'foo:bar'
 
         # the values don't matter here
-        filestate.__salt__['config.manage_mode'] = MagicMock()
-        filestate.__salt__['file.source_list'] = MagicMock(return_value=[None, None])
-        filestate.__salt__['file.get_managed'] = MagicMock(return_value=[None, None, None])
-
-        # pillar.get should return the pillar_value
         pillar_mock = MagicMock(return_value=pillar_value)
-        filestate.__salt__['pillar.get'] = pillar_mock
+        with patch.dict(filestate.__salt__, {'file.manage_file': returner,
+                                             'config.manage_mode': MagicMock(),
+                                             'file.source_list': MagicMock(return_value=[None, None]),
+                                             'file.get_managed': MagicMock(return_value=[None, None, None]),
+                                             'pillar.get': pillar_mock}):
 
-        ret = filestate.managed(path, contents_pillar=pillar_path)
+            ret = filestate.managed(path, contents_pillar=pillar_path)
 
-        # make sure no errors are returned
-        self.assertEqual(None, ret)
+            # make sure no errors are returned
+            self.assertEqual(None, ret)
 
-        # Make sure the contents value matches the expected value.
-        # returner.call_args[0] will be an args tuple containing all the args
-        # passed to the mocked returner for file.manage_file. Any changes to
-        # the arguments for file.manage_file may make this assertion fail.
-        # If the test is failing, check the position of the "contents" param
-        # in the manage_file() function in salt/modules/file.py, the fix is
-        # likely as simple as updating the 2nd index below.
-        self.assertEqual(expected, returner.call_args[0][-5])
-
-
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-class FileTestCase(TestCase):
-
-    '''
-    Test cases for salt.states.file
-    '''
-    # 'symlink' function tests: 1
+            # Make sure the contents value matches the expected value.
+            # returner.call_args[0] will be an args tuple containing all the args
+            # passed to the mocked returner for file.manage_file. Any changes to
+            # the arguments for file.manage_file may make this assertion fail.
+            # If the test is failing, check the position of the "contents" param
+            # in the manage_file() function in salt/modules/file.py, the fix is
+            # likely as simple as updating the 2nd index below.
+            self.assertEqual(expected, returner.call_args[0][-5])
 
     @destructiveTest
     def test_symlink(self):
@@ -1540,7 +1530,7 @@ class FileTestCase(TestCase):
 
     # 'serialize' function tests: 1
 
-    def test_serialize(self):
+    def test_serialize_into_managed_file(self):
         '''
         Test to serializes dataset and store it into managed file.
         '''
@@ -1699,7 +1689,7 @@ class FileTestCase(TestCase):
             while ending < ts:
                 fake_files.append(ts.strftime(format=format))
                 count += 1
-                if maxfiles and count >= maxfiles:
+                if maxfiles and maxfiles == 'all' or maxfiles and count >= maxfiles:
                     break
                 ts -= every
             return fake_files
@@ -1778,7 +1768,7 @@ class FileTestCase(TestCase):
                     # if we generate less than the number of files expected,
                     # then the oldest file will also be retained
                     # (correctly, since it's the first in it's category)
-                    if len(new_retains) < fake_retain[retainable]:
+                    if fake_retain[retainable] == 'all' or len(new_retains) < fake_retain[retainable]:
                         new_retains.add(fake_file_list[0])
                     retained_files |= new_retains
 

@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -19,18 +20,13 @@ from tests.support.mock import (
 from salt.modules import genesis
 
 
-# Globals
-genesis.__grains__ = {}
-genesis.__salt__ = {}
-genesis.__context__ = {}
-genesis.__opts__ = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GenesisTestCase(TestCase):
+class GenesisTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.genesis
     '''
+    loader_module = genesis
+
     def test_bootstrap(self):
         '''
         Test for Create an image for a specific platform.

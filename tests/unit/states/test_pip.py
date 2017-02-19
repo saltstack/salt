@@ -11,7 +11,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.integration import SaltReturnAssertsMixIn
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
@@ -25,15 +26,20 @@ try:
 except ImportError:
     HAS_PIP = False
 
-pip_state.__env__ = 'base'
-pip_state.__opts__ = {'test': False}
-pip_state.__salt__ = {'cmd.which_bin': lambda _: 'pip'}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PIP,
         'The \'pip\' library is not importable(installed system-wide)')
-class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
+class PipStateTest(TestCase, SaltReturnAssertsMixIn, LoaderModuleMockMixin):
+
+    loader_module = pip_state
+
+    def loader_module_globals(self):
+        return {
+            '__env__': 'base',
+            '__opts__': {'test': False},
+            '__salt__': {'cmd.which_bin': lambda _: 'pip'}
+        }
 
     def test_install_requirements_parsing(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
@@ -241,40 +247,27 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 )
 
         # Test VCS installations with version info like >= 0.1
-        try:
-            original_pip_version = pip.__version__
-            pip.__version__ = MagicMock(
-                side_effect=AttributeError(
-                    'Faked missing __version__ attribute'
-                )
-            )
-        except AttributeError:
-            # The pip version being used is already < 1.2
-            pass
-
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
-        pip_install = MagicMock(return_value={
-            'retcode': 0,
-            'stderr': '',
-            'stdout': 'Cloned!'
-        })
-        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
-                                             'pip.list': pip_list,
-                                             'pip.install': pip_install}):
-            with patch.dict(pip_state.__opts__, {'test': False}):
-                ret = pip_state.installed(
-                    'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting>=0.5.0'
-                )
-                self.assertSaltTrueReturn({'test': ret})
-                self.assertInSaltComment(
-                    'were successfully installed',
-                    {'test': ret}
-                )
-
-        # Reset the version attribute if existing
-        if hasattr(pip, '__version__'):
-            pip.__version__ = original_pip_version
+        with patch.object(pip, '__version__', MagicMock(side_effect=AttributeError(
+                                                    'Faked missing __version__ attribute'))):
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
+            pip_install = MagicMock(return_value={
+                'retcode': 0,
+                'stderr': '',
+                'stdout': 'Cloned!'
+            })
+            with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                                 'pip.list': pip_list,
+                                                 'pip.install': pip_install}):
+                with patch.dict(pip_state.__opts__, {'test': False}):
+                    ret = pip_state.installed(
+                        'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting>=0.5.0'
+                    )
+                    self.assertSaltTrueReturn({'test': ret})
+                    self.assertInSaltComment(
+                        'were successfully installed',
+                        {'test': ret}
+                    )
 
     def test_install_in_editable_mode(self):
         '''

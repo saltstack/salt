@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import uuid
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -19,18 +20,13 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.modules import iptables
 
-# Globals
-iptables.__grains__ = {}
-iptables.__salt__ = {}
-iptables.__context__ = {}
-iptables.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IptablesTestCase(TestCase):
+class IptablesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.iptables
     '''
+    loader_module = iptables
     # 'version' function tests: 1
 
     def test_version(self):

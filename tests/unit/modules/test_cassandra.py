@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -19,17 +20,13 @@ import salt.ext.six as six
 from salt.modules import cassandra
 
 
-cassandra.__grains__ = {}
-cassandra.__salt__ = {}
-cassandra.__context__ = {}
-cassandra.__opts__ = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class CassandraTestCase(TestCase):
+class CassandraTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.cassandra
     '''
+    loader_module = cassandra
+
     def test_compactionstats(self):
         '''
         Test for Return compactionstats info

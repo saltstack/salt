@@ -4,8 +4,10 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import inspect
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -14,22 +16,17 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-import inspect
-
 # Import Salt Libs
 from salt.modules import defaults
 
-# Globals
-defaults.__grains__ = {}
-defaults.__salt__ = {}
-defaults.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DefaultsTestCase(TestCase):
+class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.defaults
     '''
+    loader_module = defaults
+
     @patch('salt.modules.defaults.get',
            MagicMock(return_value={'users': {'root': [0]}}))
     def test_get_mock(self):

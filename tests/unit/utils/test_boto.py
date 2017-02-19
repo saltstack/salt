@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 
@@ -130,13 +131,14 @@ def _has_required_moto():
         return True
 
 
-class BotoUtilsTestCaseBase(TestCase):
+class BotoUtilsTestCaseBase(TestCase, LoaderModuleMockMixin):
 
-    def setUp(self):
-        salt.utils.boto.__context__ = {}
-        salt.utils.boto.__opts__ = {}
-        salt.utils.boto.__pillar__ = {}
-        salt.utils.boto.__salt__ = {'config.option': MagicMock(return_value='dummy_opt')}
+    loader_module = salt.utils.boto, salt.utils.boto3
+
+    def loader_module_globals(self):
+        return {
+            '__salt__': {'config.option': MagicMock(return_value='dummy_opt')}
+        }
 
 
 class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
@@ -242,17 +244,6 @@ class BotoUtilsGetErrorTestCase(BotoUtilsTestCaseBase):
                                         ' or equal to version {0}'
         .format(required_boto3_version))
 class BotoBoto3CacheContextCollisionTest(BotoUtilsTestCaseBase):
-
-    def setUp(self):
-        salt.utils.boto.__context__ = {}
-        salt.utils.boto.__opts__ = {}
-        salt.utils.boto.__pillar__ = {}
-        salt.utils.boto.__salt__ = {'config.option': MagicMock(return_value='dummy_opt')}
-
-        salt.utils.boto3.__context__ = salt.utils.boto.__context__
-        salt.utils.boto3.__opts__ = salt.utils.boto.__opts__
-        salt.utils.boto3.__pillar__ = salt.utils.boto.__pillar__
-        salt.utils.boto3.__salt__ = salt.utils.boto.__salt__
 
     def test_context_conflict_between_boto_and_boto3_utils(self):
         salt.utils.boto.assign_funcs(__name__, 'ec2')

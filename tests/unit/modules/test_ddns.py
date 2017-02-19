@@ -15,6 +15,7 @@ except ImportError:
 
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
@@ -27,17 +28,16 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.modules import ddns
 
-# Globals
-ddns.__grains__ = {}
-ddns.__salt__ = {}
-
 
 @skipIf(HAS_DNS is False, 'dnspython libs not installed')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DDNSTestCase(TestCase):
+class DDNSTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for the salt.modules.ddns module
     '''
+
+    loader_module = ddns
+
     @patch('salt.modules.ddns.update')
     def test_add_host(self, ddns_update):
         '''

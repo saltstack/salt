@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -18,16 +19,16 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Libs
 from salt.states import npm
 
-npm.__salt__ = {}
-npm.__opts__ = {'test': False}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NpmTestCase(TestCase):
+class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     '''
     Test cases for salt.states.npm
     '''
+    loader_module = npm
+    loader_module_globals = {'__opts__': {'test': False}}
+
     # 'installed' function tests: 1
 
     def test_installed(self):

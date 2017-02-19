@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -17,9 +18,6 @@ from tests.support.mock import (
 
 # Import Salt Libs
 from salt.modules import keystone
-
-# Globals
-keystone.__salt__ = {}
 
 
 class MockEC2(object):
@@ -423,16 +421,22 @@ class MockClient(object):
             raise Unauthorized
         return True
 
-keystone.client = MockClient()
-keystone.keystoneclient = MockKeystoneClient()
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.keystone.auth', return_value=MockClient())
-class KeystoneTestCase(TestCase):
+class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.keystone
     '''
+
+    loader_module = keystone
+
+    def loader_module_globals(self):
+        return {
+            'client': MockClient(),
+            'keystoneclient': MockKeystoneClient()
+        }
+
     # 'ec2_credentials_create' function tests: 1
 
     def test_ec2_credentials_create(self, mock):

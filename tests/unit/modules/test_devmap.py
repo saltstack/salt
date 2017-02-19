@@ -5,8 +5,10 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import os.path
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -17,21 +19,15 @@ from tests.support.mock import (
 
 # Import Salt Libs
 from salt.modules import devmap
-import os.path
-
-
-# Globals
-devmap.__grains__ = {}
-devmap.__salt__ = {}
-devmap.__context__ = {}
-devmap.__opts__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DevMapTestCase(TestCase):
+class DevMapTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.devmap
     '''
+    loader_module = devmap
+
     def test_multipath_list(self):
         '''
         Test for Device-Mapper Multipath list

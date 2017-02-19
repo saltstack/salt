@@ -15,12 +15,9 @@ import copy
 import salt.ext.six as six
 import salt.states.ldap
 
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    patch,
-)
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # emulates the LDAP database.  each key is the DN of an entry and it
 # maps to a dict which maps attribute names to sets of values.
@@ -167,27 +164,18 @@ def _dump_db(d=None):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LDAPTestCase(TestCase):
+class LDAPTestCase(TestCase, LoaderModuleMockMixin):
 
-    def setUp(self):
-        __opts = getattr(salt.states.ldap, '__opts__', {})
-        salt.states.ldap.__opts__ = __opts
-        __salt = getattr(salt.states.ldap, '__salt__', {})
-        salt.states.ldap.__salt__ = __salt
-        self.patchers = [
-            patch.dict('salt.states.ldap.__opts__', {'test': False}),
-        ]
-        for f in ('connect', 'search', 'add', 'delete', 'change', 'modify'):
-            self.patchers.append(
-                patch.dict('salt.states.ldap.__salt__',
-                           {'ldap3.' + f: globals()['_dummy_' + f]}))
-        for p in self.patchers:
-            p.start()
-        self.maxDiff = None
+    loader_module = salt.states.ldap
 
-    def tearDown(self):
-        for p in reversed(self.patchers):
-            p.stop()
+    def loader_module_globals(self):
+        salt_dunder = {}
+        for fname in ('connect', 'search', 'add', 'delete', 'change', 'modify'):
+            salt_dunder['ldap3.{}'.format(fname)] = globals()['_dummy_' + fname]
+        return {
+            '__opts__': {'test': False},
+            '__salt__': salt_dunder
+        }
 
     def _test_helper(self, init_db, expected_ret, replace,
                      delete_others=False):
