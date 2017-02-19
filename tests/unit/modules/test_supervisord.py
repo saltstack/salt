@@ -15,22 +15,22 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-from salt.exceptions import CommandExecutionError
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
-from salt.modules import supervisord
+import salt.modules.supervisord as supervisord
+from salt.exceptions import CommandExecutionError
 
-supervisord.__salt__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SupervisordTestCase(TestCase):
+class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.supervisord
     '''
+    loader_module = supervisord
+
     @staticmethod
     def _m_all(stdout=True):
         '''
@@ -186,8 +186,3 @@ class SupervisordTestCase(TestCase):
 
             MockConfig.flag = 0
             self.assertDictEqual(supervisord.options('salt'), {'salt': True})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SupervisordTestCase, needs_daemon=False)
