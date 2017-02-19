@@ -18,8 +18,6 @@ except ImportError:
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 import integration
 
@@ -131,8 +129,3 @@ class GitfsConfigTestCase(TestCase):
         self.assertEqual(gitfs.remotes[1].mountpoint('baz'), 'abc')
         self.assertEqual(gitfs.remotes[1].ref('baz'), 'baz_branch')
         self.assertEqual(gitfs.remotes[1].root('baz'), 'baz_root')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GitfsConfigTestCase, needs_daemon=False)
