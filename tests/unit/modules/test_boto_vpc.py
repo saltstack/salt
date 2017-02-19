@@ -14,14 +14,11 @@ import string
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
 import salt.loader
-from salt.modules import boto_vpc
+import salt.modules.boto_vpc as boto_vpc
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 
@@ -74,15 +71,6 @@ dhcp_options_parameters = {'domain_name': 'example.com', 'domain_name_servers': 
                            'netbios_name_servers': ['10.0.0.1'], 'netbios_node_type': 2}
 network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
 dhcp_options_parameters.update(conn_parameters)
-
-opts = salt.config.DEFAULT_MINION_OPTS
-utils = salt.loader.utils(opts, whitelist=['boto', 'boto3'])
-mods = salt.loader.minion_mods(opts)
-
-boto_vpc.__utils__ = utils
-boto_vpc.__salt__ = {}
-if HAS_BOTO:
-    boto_vpc.__init__(opts)
 
 
 def _has_required_boto():
@@ -137,10 +125,17 @@ context = {}
 class BotoVpcTestCaseBase(TestCase):
     conn3 = None
 
+    loader_module = boto_vpc
+
+    def loader_module_globals(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto', 'boto3'])
+        return {'__utils__': utils}
+
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
-        boto_vpc.__context__ = {}
-        context.clear()
+        super(BotoVpcTestCaseBase, self).setUp()
+        boto_vpc.__init__(self.opts)
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
