@@ -13,14 +13,11 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     patch
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
 import salt.loader
-from salt.modules import boto_cloudwatch_event
+import salt.modules.boto_cloudwatch_event as boto_cloudwatch_event
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd-party libs
@@ -38,14 +35,6 @@ except ImportError:
 
 # pylint: enable=import-error,no-name-in-module,unused-import
 log = logging.getLogger(__name__)
-
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-
-boto_cloudwatch_event.__utils__ = utils
-boto_cloudwatch_event.__init__(opts)
-boto_cloudwatch_event.__salt__ = {}
 
 
 def _has_required_boto():
@@ -101,10 +90,20 @@ if _has_required_boto():
 class BotoCloudWatchEventTestCaseBase(TestCase):
     conn = None
 
-    # Set up MagicMock to replace the boto3 session
+    loader_module = boto_cloudwatch_event
+
+    def loader_module_globals(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        return {
+            '__utils__': utils,
+        }
+
     def setUp(self):
-        boto_cloudwatch_event.__context__ = {}
-        context.clear()
+        super(BotoCloudWatchEventTestCaseBase, self).setUp()
+        boto_cloudwatch_event.__init__(self.opts)
+
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -277,8 +276,3 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         self.conn.remove_targets.side_effect = ClientError(error_content, 'remove_targets')
         result = boto_cloudwatch_event.remove_targets(Rule=rule_name, Ids=[], **conn_parameters)
         self.assertEqual(result.get('error', {}).get('message'), error_message.format('remove_targets'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoCloudWatchEventTestCase, needs_daemon=False)
