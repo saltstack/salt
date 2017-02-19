@@ -117,7 +117,7 @@ def _prep_input(kwargs):
     configure in an SLS file as a dictlist. If the data type is a string, then
     skip repacking and let _validate_input() try to sort it out.
     '''
-    for kwarg in ('environment', 'lxc_conf'):
+    for kwarg in ('environment', 'lxc_conf', 'sysctls'):
         kwarg_value = kwargs.get(kwarg)
         if kwarg_value is not None \
                 and not isinstance(kwarg_value, six.string_types):
@@ -450,6 +450,35 @@ def _compare(actual, create_kwargs, defaults_from_image):
             if data != actual_data:
                 ret.update({item: {'old': actual_data, 'new': data}})
                 continue
+
+        elif item == 'sysctls':
+            if actual_data is None:
+                actual_data = []
+            actual_sysctls = {}
+            for sysctl_var in actual_data:
+                try:
+                    key, val = sysctl_var.split('=', 1)
+                except (AttributeError, ValueError):
+                    log.warning(
+                        'Unexpected sysctl variable in inspect '
+                        'output {0}'.format(sysctl_var)
+                    )
+                    continue
+                else:
+                    actual_sysctls[key] = val
+            log.trace('dockerng.running ({0}): munged actual value: {1}'
+                      .format(item, actual_sysctls))
+            sysctls_diff = {}
+            for key in data:
+                actual_val = actual_sysctls.get(key)
+                if data[key] != actual_val:
+                    sysctls_ptr = sysctls_diff.setdefault(item, {})
+                    sysctls_ptr.setdefault('old', {})[key] = actual_val
+                    sysctls_ptr.setdefault('new', {})[key] = data[key]
+            if sysctls_diff:
+                ret.update(sysctls_diff)
+            continue
+
         elif item in ('cmd', 'command', 'entrypoint'):
             if (actual_data is None and item not in create_kwargs and
                     _image_get(config['image_path'])):
@@ -1602,6 +1631,33 @@ def running(name,
             `Configure logging drivers`_ documentation for more information.
 
         .. _`Configure logging drivers`: https://docs.docker.com/engine/admin/logging/overview/
+
+    sysctls
+        Either a list of variable/value mappings, or a list of strings in the
+        format ``VARNAME=value``. The below two examples are equivalent:
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - sysctls:
+                  - VAR1.name.x: value
+                  - VAR2.name.y: value
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - sysctls:
+                  - VAR1.name.x=value
+                  - VAR2.name.y=value
+
+        .. note::
+
+            Values must be strings. Otherwise it will be considered
+            an error.
     '''
     ret = {'name': name,
            'changes': {},
