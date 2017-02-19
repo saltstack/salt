@@ -4,18 +4,11 @@
 from __future__ import absolute_import
 
 # Salt libs
-from salt.beacons import glxinfo
+import salt.beacons.glxinfo as glxinfo
 
 # Salt testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, Mock
-
-# Globals
-
-glxinfo.__salt__ = {}
-
-ensure_in_syspath('../../')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -23,8 +16,10 @@ class GLXInfoBeaconTestCase(TestCase):
     '''
     Test case for salt.beacons.glxinfo
     '''
-    def setUp(self):
-        glxinfo.last_state = {}
+    loader_module = glxinfo
+    loader_module_globals = {
+        'last_state': {},
+    }
 
     def test_no_adb_command(self):
         with patch('salt.utils.which') as mock:
@@ -53,7 +48,6 @@ class GLXInfoBeaconTestCase(TestCase):
         ret = glxinfo.beacon(config)
 
         self.assertEqual(ret, [])
-        log_mock.info.assert_called_once_with('Configuration for glxinfo beacon must be a dict.')
 
     def test_no_user(self):
         config = {'screen_event': True}
@@ -62,10 +56,7 @@ class GLXInfoBeaconTestCase(TestCase):
         glxinfo.log = log_mock
 
         ret = glxinfo.beacon(config)
-
         self.assertEqual(ret, [])
-        log_mock.info.assert_called_once_with('Configuration for glxinfo beacon must include a user as '
-                                              'glxinfo is not available to root.')
 
     def test_screen_state(self):
         config = {'screen_event': True, 'user': 'frank'}
