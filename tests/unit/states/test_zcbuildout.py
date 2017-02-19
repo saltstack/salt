@@ -5,9 +5,9 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
+from tests.support.paths import FILES
 from tests.support.unit import skipIf
 from tests.support.helpers import requires_network
-import tests.integration as integration
 
 # Import Salt libs
 import salt.utils
@@ -16,31 +16,26 @@ from salt.modules import zcbuildout as modbuildout
 from salt.states import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
 
-ROOT = os.path.join(os.path.dirname(integration.__file__),
-                    'files/file/base/buildout')
-
-
-modbuildout.__env__ = 'base'
-modbuildout.__opts__ = {'test': False}
-modbuildout.__salt__ = {
-    'cmd.run_all': cmd.run_all,
-    'cmd.run': cmd.run,
-    'cmd.retcode': cmd.retcode,
-    'buildout.buildout': modbuildout.buildout,
-}
-buildout.__env__ = 'base'
-buildout.__opts__ = {'test': False}
-buildout.__salt__ = {
-    'cmd.run_all': cmd.run_all,
-    'cmd.run': cmd.run,
-    'cmd.retcode': cmd.retcode,
-    'buildout.buildout': modbuildout.buildout,
-}
+ROOT = os.path.join(FILES, 'file/base/buildout')
 
 
 @skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         'The \'virtualenv\' packaged needs to be installed')
 class BuildoutTestCase(Base):
+
+    loader_module = buildout, modbuildout
+
+    def loader_module_globals(self):
+        return {
+            '__env__': 'base',
+            '__opts__': {'test': False},
+            '__salt__': {
+                'cmd.run_all': cmd.run_all,
+                'cmd.run': cmd.run,
+                'cmd.retcode': cmd.retcode,
+                'buildout.buildout': modbuildout.buildout,
+            }
+        }
 
     @requires_network()
     def test_quiet(self):

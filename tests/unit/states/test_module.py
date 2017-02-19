@@ -11,6 +11,7 @@ from inspect import ArgSpec
 from salt.states import module
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -20,9 +21,6 @@ from tests.support.mock import (
 )
 
 CMD = 'foo.bar'
-MOCK = MagicMock()
-module.__salt__ = {CMD: MOCK}
-module.__opts__ = {'test': False}
 
 
 def _mocked_func_named(name, names=('Fred', 'Swen',)):
@@ -56,10 +54,17 @@ def _mocked_none_return(ret=None):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ModuleStateTest(TestCase):
+class ModuleStateTest(TestCase, LoaderModuleMockMixin):
     '''
     Tests module state (salt/states/module.py)
     '''
+    loader_module = module
+
+    def loader_module_globals(self):
+        return {
+            '__opts__': {'test': False},
+            '__salt__': {CMD: MagicMock()}
+        }
 
     aspec = ArgSpec(args=['hello', 'world'],
                     varargs=None,

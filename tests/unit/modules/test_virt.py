@@ -6,6 +6,7 @@ import sys
 import re
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
@@ -19,17 +20,19 @@ import salt.utils
 import yaml
 import salt.ext.six as six
 
-config.__grains__ = {}
-config.__opts__ = {}
-config.__pillar__ = {}
-virt.__salt__ = {
-    'config.get': config.get,
-    'config.option': config.option,
-}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class VirtTestCase(TestCase):
+class VirtTestCase(TestCase, LoaderModuleMockMixin):
+
+    loader_module = virt, config
+
+    def loader_module_globals(self):
+        return {
+            '__salt__': {
+                'config.get': config.get,
+                'config.option': config.option,
+            }
+        }
 
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')
@@ -483,22 +486,22 @@ class VirtTestCase(TestCase):
                    model: virtio
         '''
         mock_config = yaml.load(yaml_config)
-        salt.modules.config.__opts__ = mock_config
+        with patch.dict(salt.modules.config.__opts__, mock_config):
 
-        for name in six.iterkeys(mock_config['virt.nic']):
-            profile = salt.modules.virt._nic_profile(name, 'kvm')
-            self.assertEqual(len(profile), 2)
+            for name in six.iterkeys(mock_config['virt.nic']):
+                profile = salt.modules.virt._nic_profile(name, 'kvm')
+                self.assertEqual(len(profile), 2)
 
-            interface_attrs = profile[0]
-            self.assertIn('source', interface_attrs)
-            self.assertIn('type', interface_attrs)
-            self.assertIn('name', interface_attrs)
-            self.assertIn('model', interface_attrs)
-            self.assertEqual(interface_attrs['model'], 'virtio')
-            self.assertIn('mac', interface_attrs)
-            self.assertTrue(
-                re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$',
-                interface_attrs['mac'], re.I))
+                interface_attrs = profile[0]
+                self.assertIn('source', interface_attrs)
+                self.assertIn('type', interface_attrs)
+                self.assertIn('name', interface_attrs)
+                self.assertIn('model', interface_attrs)
+                self.assertEqual(interface_attrs['model'], 'virtio')
+                self.assertIn('mac', interface_attrs)
+                self.assertTrue(
+                    re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$',
+                    interface_attrs['mac'], re.I))
 
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')

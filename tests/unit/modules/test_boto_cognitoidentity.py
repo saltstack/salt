@@ -7,17 +7,15 @@ import random
 import string
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
 import salt.config
 import salt.loader
 from salt.utils.versions import LooseVersion
 from salt.modules import boto_cognitoidentity
-
-# Import Mock libraries
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import 3rd-party libs
 
@@ -100,14 +98,6 @@ default_pool_role_ret = dict(IdentityPoolId='default_pool_id')
 
 log = logging.getLogger(__name__)
 
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-
-boto_cognitoidentity.__utils__ = utils
-boto_cognitoidentity.__init__(opts)
-boto_cognitoidentity.__salt__ = {}
-
 
 def _has_required_boto():
     '''
@@ -122,13 +112,24 @@ def _has_required_boto():
         return True
 
 
-class BotoCognitoIdentityTestCaseBase(TestCase):
+class BotoCognitoIdentityTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    # Set up MagicMock to replace the boto3 session
+    loader_module = boto_cognitoidentity
+
+    def loader_module_globals(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        return {
+            '__utils__': utils,
+        }
+
     def setUp(self):
-        boto_cognitoidentity.__context__ = {}
-        context.clear()
+        super(BotoCognitoIdentityTestCaseBase, self).setUp()
+        boto_cognitoidentity.__init__(self.opts)
+        del self.opts
+
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -136,10 +137,12 @@ class BotoCognitoIdentityTestCaseBase(TestCase):
 
         self.patcher = patch('boto3.session.Session')
         self.addCleanup(self.patcher.stop)
+        self.addCleanup(delattr, self, 'patcher')
         mock_session = self.patcher.start()
 
         session_instance = mock_session.return_value
         self.conn = MagicMock()
+        self.addCleanup(delattr, self, 'conn')
         session_instance.client.return_value = self.conn
 
 

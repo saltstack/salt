@@ -8,17 +8,24 @@ import json
 from salt.modules import kapacitor
 
 # Import Salt testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import Mock, patch
 
-kapacitor.__salt__ = {
-    'pkg.version': Mock(return_value='9999'),
-    'config.option': Mock(side_effect=lambda key, default: default)
-}
-kapacitor.__env__ = 'test'
 
+class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
 
-class KapacitorTestCase(TestCase):
+    loader_module = kapacitor
+
+    def loader_module_globals(self):
+        return {
+            '__env__': 'test',
+            '__salt__': {
+                'pkg.version': Mock(return_value='9999'),
+                'config.option': Mock(side_effect=lambda key, default: default)
+            }
+        }
+
     def test_get_task_success(self):
         http_body = json.dumps({
             'script': 'test',
