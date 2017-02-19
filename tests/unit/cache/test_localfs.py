@@ -10,7 +10,6 @@ import tempfile
 # Import Salt Testing libs
 import integration
 from salttesting import skipIf, TestCase
-from salttesting.helpers import destructiveTest, ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     NO_MOCK,
@@ -18,16 +17,11 @@ from salttesting.mock import (
     patch
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt libs
 import salt.payload
 import salt.utils
-from salt.cache import localfs
+import salt.cache.localfs as localfs
 from salt.exceptions import SaltCacheError
-
-localfs.__context__ = {}
-localfs.__opts__ = {'cachedir': ''}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -35,6 +29,8 @@ class LocalFSTest(TestCase):
     '''
     Validate the functions in the localfs cache
     '''
+
+    loader_module = localfs
 
     def _create_tmp_cache_file(self, tmp_dir, serializer):
         '''
@@ -79,7 +75,6 @@ class LocalFSTest(TestCase):
         '''
         self.assertRaises(SaltCacheError, localfs.store, bank='', key='', data='', cachedir='')
 
-    @destructiveTest
     def test_store_success(self):
         '''
         Tests that the store function writes the data to the serializer for storage.
@@ -114,7 +109,6 @@ class LocalFSTest(TestCase):
         '''
         self.assertRaises(SaltCacheError, localfs.fetch, bank='', key='', cachedir='')
 
-    @destructiveTest
     def test_fetch_success(self):
         '''
         Tests that the fetch function is able to read the cache file and return its data.
@@ -152,7 +146,6 @@ class LocalFSTest(TestCase):
         '''
         self.assertRaises(SaltCacheError, localfs.updated, bank='', key='', cachedir='')
 
-    @destructiveTest
     def test_updated_success(self):
         '''
         Test that the updated function returns the modification time of the cache file
@@ -228,7 +221,6 @@ class LocalFSTest(TestCase):
         '''
         self.assertRaises(SaltCacheError, localfs.list_, bank='', cachedir='')
 
-    @destructiveTest
     def test_list_success(self):
         '''
         Tests the return of the list function containing bank entries.
@@ -245,7 +237,6 @@ class LocalFSTest(TestCase):
 
     # 'contains' function tests: 1
 
-    @destructiveTest
     def test_contains(self):
         '''
         Test the return of the contains function when key=None and when a key
@@ -264,8 +255,3 @@ class LocalFSTest(TestCase):
         # Now test the return of the contains function when key='key'
         with patch.dict(localfs.__opts__, {'cachedir': tmp_dir}):
             self.assertTrue(localfs.contains(bank='bank', key='key', cachedir=tmp_dir))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LocalFSTest, needs_daemon=False)
