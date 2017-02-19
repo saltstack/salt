@@ -16,9 +16,6 @@ from salttesting.mock import (
     MagicMock,
     patch
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.ext.six as six
@@ -85,22 +82,24 @@ if _has_required_boto():
 
 log = logging.getLogger(__name__)
 
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-
-boto_elasticsearch_domain.__utils__ = utils
-boto_elasticsearch_domain.__init__(opts)
-boto_elasticsearch_domain.__salt__ = {}
-
 
 class BotoElasticsearchDomainTestCaseBase(TestCase):
     conn = None
 
-    # Set up MagicMock to replace the boto3 session
+    loader_module = boto_elasticsearch_domain
+
+    def loader_module_globals(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        return {
+            '__utils__': utils,
+        }
+
     def setUp(self):
-        boto_elasticsearch_domain.__context__ = {}
-        context.clear()
+        super(BotoElasticsearchDomainTestCaseBase, self).setUp()
+        boto_elasticsearch_domain.__init__(self.opts)
+
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -312,8 +311,3 @@ class BotoElasticsearchDomainTestCase(BotoElasticsearchDomainTestCaseBase, BotoE
         self.conn.describe_elasticsearch_domain.return_value = {'DomainStatus': domain_ret}
         result = boto_elasticsearch_domain.list_tags(DomainName=domain_ret['DomainName'], **conn_parameters)
         self.assertTrue(result['error'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoElasticsearchDomainTestCase, needs_daemon=False)
