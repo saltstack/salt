@@ -10,7 +10,6 @@ import platform
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch,
@@ -18,8 +17,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 import salt.ext.six as six
@@ -464,8 +461,3 @@ PATCHLEVEL = 3
         self.assertEqual(os_grains.get('osrelease'), os_release_map['osrelease'])
         self.assertListEqual(list(os_grains.get('osrelease_info')), os_release_map['osrelease_info'])
         self.assertEqual(os_grains.get('osmajorrelease'), os_release_map['osmajorrelease'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CoreGrainsTestCase, needs_daemon=False)
