@@ -7,11 +7,10 @@ import shutil
 import tempfile
 
 # Salt libs
-from salt.beacons import inotify
+import salt.beacons.inotify as inotify
 
 # Salt testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import destructiveTest, ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON
 
 # Third-party libs
@@ -22,17 +21,13 @@ except ImportError:
     HAS_PYINOTIFY = False
 
 
-ensure_in_syspath('../../')
-
-
 @skipIf(not HAS_PYINOTIFY, 'pyinotify is not available')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class INotifyBeaconTestCase(TestCase):
     '''
     Test case for salt.beacons.inotify
     '''
-    def setUp(self):
-        inotify.__context__ = {}
+    loader_module = inotify
 
     def test_empty_config(self, *args, **kwargs):
         config = {}
@@ -52,7 +47,6 @@ class INotifyBeaconTestCase(TestCase):
         self.assertEqual(ret[0]['path'], path)
         self.assertEqual(ret[0]['change'], 'IN_OPEN')
 
-    @destructiveTest
     def test_dir_no_auto_add(self, *args, **kwargs):
         tmpdir = None
         try:
@@ -76,7 +70,6 @@ class INotifyBeaconTestCase(TestCase):
             if tmpdir:
                 shutil.rmtree(tmpdir)
 
-    @destructiveTest
     def test_dir_auto_add(self, *args, **kwargs):
         tmpdir = None
         try:
@@ -104,7 +97,6 @@ class INotifyBeaconTestCase(TestCase):
             if tmpdir:
                 shutil.rmtree(tmpdir)
 
-    @destructiveTest
     def test_dir_recurse(self, *args, **kwargs):
         tmpdir = None
         try:
@@ -134,7 +126,6 @@ class INotifyBeaconTestCase(TestCase):
             if tmpdir:
                 shutil.rmtree(tmpdir)
 
-    @destructiveTest
     def test_dir_recurse_auto_add(self, *args, **kwargs):
         tmpdir = None
         try:
@@ -168,8 +159,3 @@ class INotifyBeaconTestCase(TestCase):
         finally:
             if tmpdir:
                 shutil.rmtree(tmpdir)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(INotifyBeaconTestCase, needs_daemon=False)
