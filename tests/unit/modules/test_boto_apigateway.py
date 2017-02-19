@@ -11,16 +11,15 @@ import string
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.loader
 from salt.modules import boto_apigateway
 
-# Import 3rd-party libs
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
+# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module
 try:
     import boto3
@@ -146,14 +145,6 @@ usage_plans_ret = dict(
 
 log = logging.getLogger(__name__)
 
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-
-boto_apigateway.__utils__ = utils
-boto_apigateway.__init__(opts)
-boto_apigateway.__salt__ = {}
-
 
 def _has_required_boto():
     '''
@@ -180,12 +171,25 @@ def _has_required_botocore():
         return True
 
 
-class BotoApiGatewayTestCaseBase(TestCase):
+class BotoApiGatewayTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    # Set up MagicMock to replace the boto3 session
+    loader_module = boto_apigateway
+
+    def loader_module_globals(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto3'])
+        return {
+            '__opts__': opts,
+            '__utils__': utils,
+        }
+
     def setUp(self):
-        context.clear()
+        TestCase.setUp(self)
+        # __virtual__ must be caller in order for _get_conn to be injected
+        boto_apigateway.__init__(self.opts)
+
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -217,8 +221,8 @@ class BotoApiGatewayTestCaseMixin(object):
         return False
 
 
-@skipIf(True, 'Skip these tests while investigating failures')
-@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+#@skipIf(True, 'Skip these tests while investigating failures')
+@skipIf(HAS_BOTO is False, 'The boto3 module must be installed.')
 @skipIf(_has_required_boto() is False,
         'The boto3 module must be greater than'
         ' or equal to version {0}'.format(required_boto3_version))
@@ -1645,7 +1649,3 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         result = boto_apigateway.detach_usage_plan_from_apis(plan_id='plan1_id', apis=[api], **conn_parameters)
         self.assertEqual(result.get('success'), True)
         self.assertEqual(result.get('result'), detach_ret)
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoApiGatewayTestCase, needs_daemon=False)
