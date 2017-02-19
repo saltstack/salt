@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -11,19 +12,29 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import ssh
+import salt.modules.ssh as ssh
 from salt.exceptions import CommandExecutionError
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SSHAuthKeyTestCase(TestCase):
+class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.ssh
     '''
-    def setUp(self):
-        ssh.__salt__ = {
-            'user.info': lambda u: getattr(self, 'user_info_mock', None),
+    loader_module = ssh
+
+    def loader_module_globals(self):
+        return {
+            '__salt__': {
+                'user.info': lambda u: getattr(self, 'user_info_mock', None),
+            }
         }
+
+    def tearDown(self):
+        try:
+            delattr(self, 'user_info_mock')
+        except AttributeError:
+            pass
 
     def test_expand_user_token(self):
         '''
