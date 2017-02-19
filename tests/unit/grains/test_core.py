@@ -19,20 +19,23 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
-import salt.ext.six as six
 import salt.utils
-from salt.grains import core
+import salt.grains.core as core
 
-# Globals
-core.__salt__ = {}
-core.__opts__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class CoreGrainsTestCase(TestCase):
+class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for core grains
     '''
+    loader_module = core
+
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_gnu_slash_linux_in_os_name(self):
         '''
