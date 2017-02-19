@@ -10,9 +10,6 @@ import string
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
@@ -103,14 +100,6 @@ default_pool_role_ret = dict(IdentityPoolId='default_pool_id')
 
 log = logging.getLogger(__name__)
 
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-
-boto_cognitoidentity.__utils__ = utils
-boto_cognitoidentity.__init__(opts)
-boto_cognitoidentity.__salt__ = {}
-
 
 def _has_required_boto():
     '''
@@ -128,10 +117,20 @@ def _has_required_boto():
 class BotoCognitoIdentityTestCaseBase(TestCase):
     conn = None
 
-    # Set up MagicMock to replace the boto3 session
+    loader_module = boto_cognitoidentity
+
+    def loader_module_globals(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        return {
+            '__utils__': utils,
+        }
+
     def setUp(self):
-        boto_cognitoidentity.__context__ = {}
-        context.clear()
+        super(BotoCognitoIdentityTestCaseBase, self).setUp()
+        boto_cognitoidentity.__init__(self.opts)
+
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -516,7 +515,3 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityTestCaseBase, BotoCognitoId
         result = boto_cognitoidentity.update_identity_pool(IdentityPoolId=second_pool_id, DeveloperProviderName='added_developer_provider', **conn_parameters)
         self.assertIs(result.get('updated'), False)
         self.assertEqual(result.get('error', {}).get('message'), error_message.format('update_identity_pool'))
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoCognitoIdentityTestCase, needs_daemon=False)
