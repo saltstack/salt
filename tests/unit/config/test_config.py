@@ -15,11 +15,8 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.mock import MagicMock, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../')
+from salttesting import skipIf, TestCase
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
 import salt.minion
@@ -494,6 +491,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
     # cloud_config tests
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('salt.config.load_config', MagicMock(return_value={}))
     def test_cloud_config_double_master_path(self):
         '''
@@ -502,6 +500,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
                           master_config_path='foo', master_config='bar')
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('salt.config.load_config', MagicMock(return_value={}))
     def test_cloud_config_double_providers_path(self):
         '''
@@ -510,6 +509,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
                           providers_config_path='foo', providers_config='bar')
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('salt.config.load_config', MagicMock(return_value={}))
     def test_cloud_config_double_profiles_path(self):
         '''
@@ -518,6 +518,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
                           profiles_config_path='foo', profiles_config='bar')
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('salt.config.load_config', MagicMock(return_value={}))
     @patch('salt.config.apply_cloud_config',
            MagicMock(return_value={'providers': 'foo'}))
@@ -529,6 +530,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
                           providers_config='bar')
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('salt.config.load_config', MagicMock(return_value={}))
     @patch('salt.config.apply_cloud_config',
            MagicMock(return_value={'providers': 'foo'}))
@@ -541,6 +543,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
                           providers_config_path='bar')
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('os.path.isdir', MagicMock(return_value=True))
     def test_cloud_config_deploy_scripts_search_path(self):
         '''
@@ -581,6 +584,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertRaises(SaltCloudConfigError, sconfig.apply_cloud_config,
                           overrides, defaults=DEFAULT)
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('salt.config.old_to_new',
            MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
                                    'providers': {'foo': {'bar': {
@@ -594,6 +598,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}}
         self.assertEqual(sconfig.apply_cloud_config(overrides, defaults=DEFAULT), ret)
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('salt.config.old_to_new',
            MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
                                    'providers': {'foo': {'bar': {
@@ -1055,6 +1060,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_include_config_without_errors(self):
         '''
         Tests that include_config function returns valid configuration
@@ -1069,6 +1075,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
         self.assertEqual(config_opts, configuration)
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_include_config_with_errors(self):
         '''
         Tests that include_config function returns valid configuration even on errors
@@ -1083,6 +1090,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
         self.assertEqual(config_opts, configuration)
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_include_config_with_errors_exit(self):
         '''
         Tests that include_config exits on errors
@@ -1097,8 +1105,3 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                                            config_path,
                                            verbose=False,
                                            exit_on_config_errors=True)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ConfigTestCase, needs_daemon=False)
