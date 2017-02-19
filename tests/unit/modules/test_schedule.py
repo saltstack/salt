@@ -15,32 +15,28 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
 
 import os
 import integration
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import schedule
+import salt.modules.schedule as schedule
 from salt.utils.event import SaltEvent
 
-# Globals
-schedule.__salt__ = {}
-schedule.__opts__ = {}
-schedule.__pillar__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 JOB1 = {'function': 'test.ping', 'maxrunning': 1, 'name': 'job1',
         'jid_include': True, 'enabled': True}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ScheduleTestCase(TestCase):
+class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.schedule
     '''
+    loader_module = schedule
 
     # 'purge' function tests: 1
 
@@ -354,8 +350,3 @@ class ScheduleTestCase(TestCase):
                                                      {'comment': comm3,
                                                       'minions': ['minion1'],
                                                       'result': True})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ScheduleTestCase, needs_daemon=False)
