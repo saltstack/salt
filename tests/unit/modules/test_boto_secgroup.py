@@ -10,13 +10,15 @@ from distutils.version import LooseVersion  # pylint: disable=import-error,no-na
 # Import Salt Testing Libs
 from salttesting.unit import skipIf, TestCase
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
 import salt.loader
+from salt.utils.odict import OrderedDict
+import salt.modules.boto_secgroup as boto_secgroup
+
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 # Import Third Party Libs
 # pylint: disable=import-error
@@ -46,10 +48,6 @@ except ImportError:
         return stub_function
 # pylint: enable=import-error
 
-# Import Salt Libs
-from salt.utils.odict import OrderedDict
-from salt.modules import boto_secgroup
-
 
 required_boto_version = '2.4.0'
 vpc_id = 'vpc-mjm05d27'
@@ -58,13 +56,6 @@ access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
 conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
 boto_conn_parameters = {'aws_access_key_id': access_key, 'aws_secret_access_key': secret_key}
-
-opts = salt.config.DEFAULT_MASTER_OPTS
-utils = salt.loader.utils(opts, whitelist=['boto'])
-funcs = salt.loader.minion_mods(opts, utils=utils)
-boto_secgroup.__salt__ = funcs
-boto_secgroup.__utils__ = utils
-boto_secgroup.__virtual__()
 
 
 def _random_group_id():
@@ -96,10 +87,27 @@ def _has_required_boto():
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {0}'
                                        .format(required_boto_version))
-class BotoSecgroupTestCase(TestCase):
+class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.boto_secgroup module
     '''
+
+    loader_module = boto_secgroup
+
+    def loader_module_globals(self):
+        opts = salt.config.DEFAULT_MASTER_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto'])
+        funcs = salt.loader.minion_mods(opts, utils=utils)
+        return {
+            '__opts__': opts,
+            '__utils__': utils,
+            '__salt__': funcs
+        }
+
+    def setUp(self):
+        super(BotoSecgroupTestCase, self).setUp()
+        # __virtual__ must be caller in order for _get_conn to be injected
+        boto_secgroup.__virtual__()
 
     def test__split_rules(self):
         '''
@@ -312,8 +320,3 @@ class BotoSecgroupTestCase(TestCase):
         conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         salt_conn = boto_secgroup._get_conn(**conn_parameters)
         self.assertEqual(conn.__class__, salt_conn.__class__)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoSecgroupTestCase, needs_daemon=False)
