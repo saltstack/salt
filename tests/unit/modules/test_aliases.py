@@ -7,15 +7,12 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import aliases
+import salt.modules.aliases as aliases
 from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -23,6 +20,7 @@ class AliasesTestCase(TestCase):
     '''
     TestCase for salt.modules.aliases module
     '''
+    loader_module = aliases
 
     mock_alias = [('foo', 'bar@example.com', '')]
     mock_alias_mult = [('foo', 'bar@example.com', ''),
@@ -166,8 +164,3 @@ class AliasesTestCase(TestCase):
         '''
         ret = aliases.rm_alias('foo')
         self.assertTrue(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AliasesTestCase, needs_daemon=False)
