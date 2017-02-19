@@ -1857,7 +1857,7 @@ class Events(object):
                     transport=self.opts['transport'],
                     opts=self.opts,
                     listen=True)
-            stream = event.iter_events(full=True)
+            stream = event.iter_events(full=False)
 
             yield u'retry: {0}\n'.format(400)
 
