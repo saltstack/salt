@@ -10,7 +10,6 @@ import os
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salt.exceptions import SaltInvocationError
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch,
@@ -19,17 +18,12 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 import salt.utils
-from salt.modules import state
+import salt.modules.state as state
 
-# Globals
-state.__salt__ = {}
-state.__context__ = {}
-state.__opts__ = {}
-state.__pillar__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 
 class MockState(object):
@@ -331,10 +325,12 @@ class MockJson(object):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.state.salt.state', MockState())
-class StateTestCase(TestCase):
+class StateTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test case for salt.modules.state
     '''
+
+    loader_module = state
 
     def test_running(self):
         '''
@@ -976,7 +972,3 @@ class StateTestCase(TestCase):
                 with patch('salt.utils.fopen', mock_open()):
                     self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
                                               0, "md5"))
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StateTestCase, needs_daemon=False)
