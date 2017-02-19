@@ -17,11 +17,7 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import s6
-
-# Globals
-s6.__salt__ = {}
-s6.SERVICE_DIR = '/etc/service'
+import salt.modules.s6 as s6
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -29,6 +25,9 @@ class S6TestCase(TestCase):
     '''
     Test cases for salt.modules.s6
     '''
+    loader_module = s6
+    loader_module_globals = {'SERVICE_DIR': '/etc/service'}
+
     # 'start' function tests: 1
 
     def test_start(self):
