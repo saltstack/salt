@@ -8,7 +8,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch,
@@ -16,10 +15,8 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import saltcloudmod
+import salt.modules.saltcloudmod as saltcloudmod
 
 
 class MockJson(object):
@@ -41,17 +38,15 @@ class MockJson(object):
         else:
             raise ValueError
 
-saltcloudmod.json = MockJson
-
-# Globals
-saltcloudmod.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltcloudmodTestCase(TestCase):
     '''
         Test cases for salt.modules.saltcloudmod
     '''
+    loader_module = saltcloudmod
+    loader_module_globals = {'json': MockJson}
+
     def test_create(self):
         '''
             Test if create the named vm
@@ -70,8 +65,3 @@ class SaltcloudmodTestCase(TestCase):
                                                      ),
                                  {}
                                  )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SaltcloudmodTestCase, needs_daemon=False)
