@@ -4,29 +4,24 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import status
+import salt.modules.status as status
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch,
     mock_open,
 )
 
-ensure_in_syspath('../../')
-
-# Globals
-status.__salt__ = {}
-status.__grains__ = {}
-
 
 class StatusTestCase(TestCase):
     '''
     test modules.status functions
     '''
+    loader_module = status
+
     def _set_up_test_uptime(self):
         '''
         Define common mock data for status.uptime tests
@@ -149,8 +144,3 @@ class StatusTestCase(TestCase):
         with self.assertRaises(CommandExecutionError):
             with patch.dict(status.__salt__, {'cmd.run': exc_mock}):
                 status.uptime()
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StatusTestCase, needs_daemon=False)
