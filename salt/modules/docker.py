@@ -190,6 +190,13 @@ Functions
 Executing Commands Within a Running Container
 ---------------------------------------------
 
+.. note::
+    With the release of Docker 1.3.1, the Execution Driver has been removed.
+    Starting in Salt 2016.3.6, 2016.11.4, and Nitrogen, Salt defaults to using
+    the ``docker-exec`` driver, however for older Salt releases it will be
+    necessary to set the ``docker.exec_driver`` config option to either
+    ``docker-exec`` or ``nsenter`` for Docker versions 1.3.1 and newer.
+
 Multiple methods exist for executing commands within Docker containers:
 
 - lxc-attach_: Default for older versions of docker
@@ -873,10 +880,12 @@ def _get_exec_driver():
             __context__[contextkey] = from_config
             return from_config
 
-        # For old versions of docker, lxc was the only supported driver.
-        # This is a sane default.
-        driver = info().get('ExecutionDriver', 'lxc-')
-        if driver.startswith('lxc-'):
+        # The execution driver was removed in Docker 1.13.1, docker-exec is now
+        # the default.
+        driver = info().get('ExecutionDriver', 'docker-exec')
+        if driver == 'docker-exec':
+            __context__[contextkey] = driver
+        elif driver.startswith('lxc-'):
             __context__[contextkey] = 'lxc-attach'
         elif driver.startswith('native-') and HAS_NSENTER:
             __context__[contextkey] = 'nsenter'
