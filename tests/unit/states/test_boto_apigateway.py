@@ -12,21 +12,21 @@ import string
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from salttesting.helpers import ensure_in_syspath
 
-ensure_in_syspath('../../')
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 # Import Salt libs
 import salt.config
 import salt.loader
+import salt.states.boto_apigateway as boto_apigateway
 
 # Import 3rd-party libs
-import yaml
-
 # pylint: disable=import-error,no-name-in-module
 from unit.modules.test_boto_apigateway import BotoApiGatewayTestCaseMixin
 
 # Import 3rd-party libs
+import yaml
 try:
     import boto3
     import botocore
@@ -36,9 +36,6 @@ except ImportError:
     HAS_BOTO = False
 
 from salt.ext.six.moves import range
-
-# Import Salt Libs
-from salt.states import boto_apigateway
 
 boto_apigateway.__salt__ = {}
 boto_apigateway.__opts__ = {}
@@ -313,13 +310,6 @@ association_stage_2 = {'apiId': 'apiId1', 'stage': 'stage2'}
 
 log = logging.getLogger(__name__)
 
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-serializers = salt.loader.serializers(opts)
-funcs = salt.loader.minion_mods(opts, context=context, utils=utils, whitelist=['boto_apigateway'])
-salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_apigateway'], serializers=serializers)
-
 
 def _has_required_boto():
     '''
@@ -406,12 +396,20 @@ class TempSwaggerFile(object):
             self.swaggerdict = TempSwaggerFile._tmp_swagger_dict
 
 
-class BotoApiGatewayStateTestCaseBase(TestCase):
+class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
+
+    loader_module = boto_apigateway
 
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
-        context.clear()
+        opts = salt.config.DEFAULT_MINION_OPTS
+        context = {}
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
+        serializers = salt.loader.serializers(opts)
+        self.funcs = funcs = salt.loader.minion_mods(opts, context=context, utils=utils, whitelist=['boto_apigateway'])
+        self.salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_apigateway'],
+                                              serializers=serializers)
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -442,7 +440,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         '''
         result = {}
         with TempSwaggerFile(create_invalid_file=True) as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -464,7 +462,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.update_stage.side_effect = ClientError(error_content, 'update_stage should not be called')
         result = {}
         with TempSwaggerFile() as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -488,7 +486,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.update_stage.return_value = stage1_deployment1_vars_ret
         result = {}
         with TempSwaggerFile() as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -519,7 +517,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
 
         result = {}
         with TempSwaggerFile() as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -560,9 +558,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.put_intgration_response.return_value = method_integration_response_200_ret
 
         result = {}
-        with patch.dict(funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
+        with patch.dict(self.funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
             with TempSwaggerFile() as swagger_file:
-                result = salt_states['boto_apigateway.present'](
+                result = self.salt_states['boto_apigateway.present'](
                             'api present',
                             'unit test api',
                             swagger_file,
@@ -586,7 +584,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
 
         result = {}
         with TempSwaggerFile() as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -615,7 +613,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
 
         result = {}
         with TempSwaggerFile() as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -648,7 +646,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.create_resource.side_effect = ClientError(error_content, 'create_resource')
         result = {}
         with TempSwaggerFile() as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -683,9 +681,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.put_method.side_effect = ClientError(error_content, 'put_method')
 
         result = {}
-        with patch.dict(funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
+        with patch.dict(self.funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
             with TempSwaggerFile() as swagger_file:
-                result = salt_states['boto_apigateway.present'](
+                result = self.salt_states['boto_apigateway.present'](
                             'api present',
                             'unit test api',
                             swagger_file,
@@ -722,9 +720,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.put_integration.side_effect = ClientError(error_content, 'put_integration should not be invoked')
 
         result = {}
-        with patch.dict(funcs, {'boto_lambda.describe_function': MagicMock(return_value={'error': 'no such lambda'})}):
+        with patch.dict(self.funcs, {'boto_lambda.describe_function': MagicMock(return_value={'error': 'no such lambda'})}):
             with TempSwaggerFile() as swagger_file:
-                result = salt_states['boto_apigateway.present'](
+                result = self.salt_states['boto_apigateway.present'](
                             'api present',
                             'unit test api',
                             swagger_file,
@@ -762,9 +760,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.put_integration.side_effect = ClientError(error_content, 'put_integration')
 
         result = {}
-        with patch.dict(funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
+        with patch.dict(self.funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
             with TempSwaggerFile() as swagger_file:
-                result = salt_states['boto_apigateway.present'](
+                result = self.salt_states['boto_apigateway.present'](
                             'api present',
                             'unit test api',
                             swagger_file,
@@ -804,9 +802,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.put_method_response.side_effect = ClientError(error_content, 'put_method_response')
 
         result = {}
-        with patch.dict(funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
+        with patch.dict(self.funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
             with TempSwaggerFile() as swagger_file:
-                result = salt_states['boto_apigateway.present'](
+                result = self.salt_states['boto_apigateway.present'](
                             'api present',
                             'unit test api',
                             swagger_file,
@@ -848,9 +846,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.put_integration_response.side_effect = ClientError(error_content, 'put_integration_response')
 
         result = {}
-        with patch.dict(funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
+        with patch.dict(self.funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
             with TempSwaggerFile() as swagger_file:
-                result = salt_states['boto_apigateway.present'](
+                result = self.salt_states['boto_apigateway.present'](
                             'api present',
                             'unit test api',
                             swagger_file,
@@ -871,7 +869,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.get_rest_apis.return_value = apis_ret
         self.conn.get_stage.side_effect = ClientError(error_content, 'get_stage should not be called')
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'no_such_rest_api',
                     'no_such_stage',
@@ -890,7 +888,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.get_stage.return_value = stage1_deployment1_ret
         self.conn.delete_stage.side_effect = ClientError(error_content, 'delete_stage')
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'unit test api',
                     'no_such_stage',
@@ -909,7 +907,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.get_stages.return_value = no_stages_ret
         self.conn.delete_deployment.return_value = {'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'unit test api',
                     'test',
@@ -927,7 +925,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.delete_stage.return_value = {'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
         self.conn.get_stages.return_value = stages_stage2_ret
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'unit test api',
                     'test',
@@ -947,7 +945,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.get_stages.return_value = no_stages_ret
         self.conn.delete_deployment.side_effect = ClientError(error_content, 'delete_deployment')
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'unit test api',
                     'test',
@@ -968,7 +966,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.get_deployments.return_value = deployments_ret
         self.conn.delete_rest_api.return_value = {'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'unit test api',
                     'test',
@@ -991,7 +989,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.get_deployments.return_value = deployments_ret
         self.conn.delete_rest_api.side_effect = ClientError(error_content, 'unexpected_api_delete')
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'unit test api',
                     'test',
