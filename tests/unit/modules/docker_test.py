@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Unit tests for the dockerng module
+Unit tests for the docker module
 '''
 
 # Import Python Libs
@@ -21,52 +21,52 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.ext.six.moves import range
-from salt.modules import dockerng as dockerng_mod
+from salt.modules import docker as docker_mod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-dockerng_mod.__context__ = {'docker.docker_version': ''}
-dockerng_mod.__salt__ = {}
-dockerng_mod.__opts__ = {}
+docker_mod.__context__ = {'docker.docker_version': ''}
+docker_mod.__salt__ = {}
+docker_mod.__opts__ = {}
 
 
 def _docker_py_version():
-    return dockerng_mod.docker.version_info if dockerng_mod.HAS_DOCKER_PY else (0,)
+    return docker_mod.docker.version_info if docker_mod.HAS_DOCKER_PY else (0,)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DockerngTestCase(TestCase):
+class DockerTestCase(TestCase):
     '''
-    Validate dockerng module
+    Validate docker module
     '''
 
     def test_ps_with_host_true(self):
         '''
-        Check that dockerng.ps called with host is ``True``,
+        Check that docker.ps called with host is ``True``,
         include resutlt of ``network.interfaces`` command in returned result.
         '''
         network_interfaces = Mock(return_value={'mocked': None})
-        with patch.dict(dockerng_mod.__salt__,
+        with patch.dict(docker_mod.__salt__,
                         {'network.interfaces': network_interfaces}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': MagicMock()}):
-                ret = dockerng_mod.ps_(host=True)
+                ret = docker_mod.ps_(host=True)
                 self.assertEqual(ret,
                                  {'host': {'interfaces': {'mocked': None}}})
 
     def test_ps_with_filters(self):
         '''
-        Check that dockerng.ps accept filters parameter.
+        Check that docker.ps accept filters parameter.
         '''
         client = MagicMock()
-        with patch.dict(dockerng_mod.__context__,
+        with patch.dict(docker_mod.__context__,
                         {'docker.client': client}):
-            dockerng_mod.ps_(filters={'label': 'KEY'})
+            docker_mod.ps_(filters={'label': 'KEY'})
             client.containers.assert_called_once_with(
                 all=True,
                 filters={'label': 'KEY'})
 
     @skipIf(_docker_py_version() > 0, 'docker-py needs to be installed for this test to run')
-    @patch.object(dockerng_mod, '_get_exec_driver')
+    @patch.object(docker_mod, '_get_exec_driver')
     def test_check_mine_cache_is_refreshed_on_container_change_event(self, _):
         '''
         Every command that might modify docker containers state.
@@ -85,24 +85,24 @@ class DockerngTestCase(TestCase):
                                    ('_script', ('command',)),
                                    ):
             mine_send = Mock()
-            command = getattr(dockerng_mod, command_name)
+            command = getattr(docker_mod, command_name)
             docker_client = MagicMock()
             docker_client.api_version = '1.12'
-            with patch.dict(dockerng_mod.__salt__,
+            with patch.dict(docker_mod.__salt__,
                             {'mine.send': mine_send,
                              'container_resource.run': MagicMock(),
                              'cp.cache_file': MagicMock(return_value=False)}):
-                with patch.dict(dockerng_mod.__context__,
+                with patch.dict(docker_mod.__context__,
                                 {'docker.client': docker_client}):
                     command('container', *args)
-            mine_send.assert_called_with('dockerng.ps', verbose=True, all=True,
+            mine_send.assert_called_with('docker.ps', verbose=True, all=True,
                                          host=True)
 
     @skipIf(_docker_py_version() < (1, 4, 0),
             'docker module must be installed to run this test or is too old. >=1.4.0')
-    @patch.object(dockerng_mod, 'images', MagicMock())
-    @patch.object(dockerng_mod, 'inspect_image')
-    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    @patch.object(docker_mod, 'images', MagicMock())
+    @patch.object(docker_mod, 'inspect_image')
+    @patch.object(docker_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
     def test_create_with_arg_cmd(self, *args):
         '''
         When cmd argument is passed check it is renamed to command.
@@ -116,11 +116,11 @@ class DockerngTestCase(TestCase):
         client.api_version = '1.19'
         client.create_host_config.return_value = host_config
         client.create_container.return_value = {}
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.create('image', cmd='ls', name='ctn')
+                docker_mod.create('image', cmd='ls', name='ctn')
         client.create_container.assert_called_once_with(
             command='ls',
             host_config=host_config,
@@ -129,9 +129,9 @@ class DockerngTestCase(TestCase):
 
     @skipIf(_docker_py_version() < (1, 4, 0),
             'docker module must be installed to run this test or is too old. >=1.4.0')
-    @patch.object(dockerng_mod, 'images', MagicMock())
-    @patch.object(dockerng_mod, 'inspect_image')
-    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    @patch.object(docker_mod, 'images', MagicMock())
+    @patch.object(docker_mod, 'inspect_image')
+    @patch.object(docker_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
     def test_create_send_host_config(self, *args):
         '''
         Check host_config object is passed to create_container.
@@ -145,11 +145,11 @@ class DockerngTestCase(TestCase):
         client.api_version = '1.19'
         client.create_host_config.return_value = host_config
         client.create_container.return_value = {}
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.create('image', name='ctn', publish_all_ports=True)
+                docker_mod.create('image', name='ctn', publish_all_ports=True)
         client.create_container.assert_called_once_with(
             host_config=host_config,
             image='image',
@@ -157,9 +157,9 @@ class DockerngTestCase(TestCase):
 
     @skipIf(_docker_py_version() < (1, 4, 0),
             'docker module must be installed to run this test or is too old. >=1.4.0')
-    @patch.object(dockerng_mod, 'images', MagicMock())
-    @patch.object(dockerng_mod, 'inspect_image')
-    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    @patch.object(docker_mod, 'images', MagicMock())
+    @patch.object(docker_mod, 'inspect_image')
+    @patch.object(docker_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
     def test_create_with_labels_dict(self, *args):
         '''
         Create container with labels dictionary.
@@ -173,11 +173,11 @@ class DockerngTestCase(TestCase):
         client.api_version = '1.19'
         client.create_host_config.return_value = host_config
         client.create_container.return_value = {}
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.create(
+                docker_mod.create(
                     'image',
                     name='ctn',
                     labels={'KEY': 'VALUE'},
@@ -192,9 +192,9 @@ class DockerngTestCase(TestCase):
 
     @skipIf(_docker_py_version() < (1, 4, 0),
             'docker module must be installed to run this test or is too old. >=1.4.0')
-    @patch.object(dockerng_mod, 'images', MagicMock())
-    @patch.object(dockerng_mod, 'inspect_image')
-    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    @patch.object(docker_mod, 'images', MagicMock())
+    @patch.object(docker_mod, 'inspect_image')
+    @patch.object(docker_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
     def test_create_with_labels_list(self, *args):
         '''
         Create container with labels list.
@@ -208,11 +208,11 @@ class DockerngTestCase(TestCase):
         client.api_version = '1.19'
         client.create_host_config.return_value = host_config
         client.create_container.return_value = {}
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.create(
+                docker_mod.create(
                     'image',
                     name='ctn',
                     labels=['KEY1', 'KEY2'],
@@ -227,9 +227,9 @@ class DockerngTestCase(TestCase):
 
     @skipIf(_docker_py_version() < (1, 4, 0),
             'docker module must be installed to run this test or is too old. >=1.4.0')
-    @patch.object(dockerng_mod, 'images', MagicMock())
-    @patch.object(dockerng_mod, 'inspect_image')
-    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    @patch.object(docker_mod, 'images', MagicMock())
+    @patch.object(docker_mod, 'inspect_image')
+    @patch.object(docker_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
     def test_create_with_labels_error(self, *args):
         '''
         Create container with invalid labels.
@@ -243,12 +243,12 @@ class DockerngTestCase(TestCase):
         client.api_version = '1.19'
         client.create_host_config.return_value = host_config
         client.create_container.return_value = {}
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
                 self.assertRaises(SaltInvocationError,
-                                  dockerng_mod.create,
+                                  docker_mod.create,
                                   'image',
                                   name='ctn',
                                   labels=22,
@@ -257,9 +257,9 @@ class DockerngTestCase(TestCase):
 
     @skipIf(_docker_py_version() < (1, 4, 0),
             'docker module must be installed to run this test or is too old. >=1.4.0')
-    @patch.object(dockerng_mod, 'images', MagicMock())
-    @patch.object(dockerng_mod, 'inspect_image')
-    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    @patch.object(docker_mod, 'images', MagicMock())
+    @patch.object(docker_mod, 'inspect_image')
+    @patch.object(docker_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
     def test_create_with_labels_dictlist(self, *args):
         '''
         Create container with labels dictlist.
@@ -273,11 +273,11 @@ class DockerngTestCase(TestCase):
         client.api_version = '1.19'
         client.create_host_config.return_value = host_config
         client.create_container.return_value = {}
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.create(
+                docker_mod.create(
                     'image',
                     name='ctn',
                     labels=[{'KEY1': 'VALUE1'}, {'KEY2': 'VALUE2'}],
@@ -303,11 +303,11 @@ class DockerngTestCase(TestCase):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.networks(
+                docker_mod.networks(
                     names=['foo'],
                     ids=['01234'],
                 )
@@ -329,11 +329,11 @@ class DockerngTestCase(TestCase):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.create_network(
+                docker_mod.create_network(
                     'foo',
                     driver='bridge',
                 )
@@ -355,11 +355,11 @@ class DockerngTestCase(TestCase):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.remove_network('foo')
+                docker_mod.remove_network('foo')
         client.remove_network.assert_called_once_with('foo')
 
     @skipIf(_docker_py_version() < (1, 5, 0),
@@ -375,11 +375,11 @@ class DockerngTestCase(TestCase):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.inspect_network('foo')
+                docker_mod.inspect_network('foo')
         client.inspect_network.assert_called_once_with('foo')
 
     @skipIf(_docker_py_version() < (1, 5, 0),
@@ -395,13 +395,16 @@ class DockerngTestCase(TestCase):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
-        with patch.dict(dockerng_mod.__dict__,
+
+        context = {'docker.client': client,
+                   'docker.exec_driver': 'docker-exec'}
+
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
-                            {'docker.client': client}):
-                dockerng_mod.connect_container_to_network('container', 'foo')
+            with patch.dict(docker_mod.__context__, context):
+                docker_mod.connect_container_to_network('container', 'foo')
         client.connect_container_to_network.assert_called_once_with(
-            'container', 'foo')
+            'container', 'foo', None)
 
     @skipIf(_docker_py_version() < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
@@ -416,11 +419,11 @@ class DockerngTestCase(TestCase):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.disconnect_container_from_network('container', 'foo')
+                docker_mod.disconnect_container_from_network('container', 'foo')
         client.disconnect_container_from_network.assert_called_once_with(
             'container', 'foo')
 
@@ -436,11 +439,11 @@ class DockerngTestCase(TestCase):
         }
         client = Mock()
         client.api_version = '1.21'
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.volumes(
+                docker_mod.volumes(
                     filters={'dangling': [True]},
                 )
         client.volumes.assert_called_once_with(
@@ -459,11 +462,11 @@ class DockerngTestCase(TestCase):
         }
         client = Mock()
         client.api_version = '1.21'
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.create_volume(
+                docker_mod.create_volume(
                     'foo',
                     driver='bridge',
                     driver_opts={},
@@ -486,11 +489,11 @@ class DockerngTestCase(TestCase):
         }
         client = Mock()
         client.api_version = '1.21'
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.remove_volume('foo')
+                docker_mod.remove_volume('foo')
         client.remove_volume.assert_called_once_with('foo')
 
     @skipIf(_docker_py_version() < (1, 5, 0),
@@ -505,26 +508,26 @@ class DockerngTestCase(TestCase):
         }
         client = Mock()
         client.api_version = '1.21'
-        with patch.dict(dockerng_mod.__dict__,
+        with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(dockerng_mod.__context__,
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod.inspect_volume('foo')
+                docker_mod.inspect_volume('foo')
         client.inspect_volume.assert_called_once_with('foo')
 
     def test_wait_success(self):
         client = Mock()
         client.api_version = '1.21'
         client.wait = Mock(return_value=0)
-        dockerng_inspect_container = Mock(side_effect=[
+        docker_inspect_container = Mock(side_effect=[
             {'State': {'Running': True}},
             {'State': {'Stopped': True}}])
-        with patch.object(dockerng_mod, 'inspect_container',
-                          dockerng_inspect_container):
-            with patch.dict(dockerng_mod.__context__,
+        with patch.object(docker_mod, 'inspect_container',
+                          docker_inspect_container):
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod._clear_context()
-                result = dockerng_mod.wait('foo')
+                docker_mod._clear_context()
+                result = docker_mod.wait('foo')
         self.assertEqual(result, {'result': True,
                                   'exit_status': 0,
                                   'state': {'new': 'stopped',
@@ -534,16 +537,16 @@ class DockerngTestCase(TestCase):
         client = Mock()
         client.api_version = '1.21'
         client.wait = Mock(return_value=0)
-        dockerng_inspect_container = Mock(side_effect=[
+        docker_inspect_container = Mock(side_effect=[
             {'State': {'Stopped': True}},
             {'State': {'Stopped': True}},
         ])
-        with patch.object(dockerng_mod, 'inspect_container',
-                          dockerng_inspect_container):
-            with patch.dict(dockerng_mod.__context__,
+        with patch.object(docker_mod, 'inspect_container',
+                          docker_inspect_container):
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod._clear_context()
-                result = dockerng_mod.wait('foo')
+                docker_mod._clear_context()
+                result = docker_mod.wait('foo')
         self.assertEqual(result, {'result': False,
                                   'comment': "Container 'foo' already stopped",
                                   'exit_status': 0,
@@ -554,16 +557,16 @@ class DockerngTestCase(TestCase):
         client = Mock()
         client.api_version = '1.21'
         client.wait = Mock(return_value=0)
-        dockerng_inspect_container = Mock(side_effect=[
+        docker_inspect_container = Mock(side_effect=[
             {'State': {'Stopped': True}},
             {'State': {'Stopped': True}},
         ])
-        with patch.object(dockerng_mod, 'inspect_container',
-                          dockerng_inspect_container):
-            with patch.dict(dockerng_mod.__context__,
+        with patch.object(docker_mod, 'inspect_container',
+                          docker_inspect_container):
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod._clear_context()
-                result = dockerng_mod.wait('foo', ignore_already_stopped=True)
+                docker_mod._clear_context()
+                result = docker_mod.wait('foo', ignore_already_stopped=True)
         self.assertEqual(result, {'result': True,
                                   'comment': "Container 'foo' already stopped",
                                   'exit_status': 0,
@@ -573,13 +576,13 @@ class DockerngTestCase(TestCase):
     def test_wait_success_absent_container(self):
         client = Mock()
         client.api_version = '1.21'
-        dockerng_inspect_container = Mock(side_effect=CommandExecutionError)
-        with patch.object(dockerng_mod, 'inspect_container',
-                          dockerng_inspect_container):
-            with patch.dict(dockerng_mod.__context__,
+        docker_inspect_container = Mock(side_effect=CommandExecutionError)
+        with patch.object(docker_mod, 'inspect_container',
+                          docker_inspect_container):
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod._clear_context()
-                result = dockerng_mod.wait('foo', ignore_already_stopped=True)
+                docker_mod._clear_context()
+                result = docker_mod.wait('foo', ignore_already_stopped=True)
         self.assertEqual(result, {'result': True,
                                   'comment': "Container 'foo' absent"})
 
@@ -587,15 +590,15 @@ class DockerngTestCase(TestCase):
         client = Mock()
         client.api_version = '1.21'
         client.wait = Mock(return_value=1)
-        dockerng_inspect_container = Mock(side_effect=[
+        docker_inspect_container = Mock(side_effect=[
             {'State': {'Running': True}},
             {'State': {'Stopped': True}}])
-        with patch.object(dockerng_mod, 'inspect_container',
-                          dockerng_inspect_container):
-            with patch.dict(dockerng_mod.__context__,
+        with patch.object(docker_mod, 'inspect_container',
+                          docker_inspect_container):
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod._clear_context()
-                result = dockerng_mod.wait('foo', fail_on_exit_status=True)
+                docker_mod._clear_context()
+                result = docker_mod.wait('foo', fail_on_exit_status=True)
         self.assertEqual(result, {'result': False,
                                   'exit_status': 1,
                                   'state': {'new': 'stopped',
@@ -605,15 +608,15 @@ class DockerngTestCase(TestCase):
         client = Mock()
         client.api_version = '1.21'
         client.wait = Mock(return_value=1)
-        dockerng_inspect_container = Mock(side_effect=[
+        docker_inspect_container = Mock(side_effect=[
             {'State': {'Stopped': True}},
             {'State': {'Stopped': True}}])
-        with patch.object(dockerng_mod, 'inspect_container',
-                          dockerng_inspect_container):
-            with patch.dict(dockerng_mod.__context__,
+        with patch.object(docker_mod, 'inspect_container',
+                          docker_inspect_container):
+            with patch.dict(docker_mod.__context__,
                             {'docker.client': client}):
-                dockerng_mod._clear_context()
-                result = dockerng_mod.wait('foo',
+                docker_mod._clear_context()
+                result = docker_mod.wait('foo',
                                            ignore_already_stopped=True,
                                            fail_on_exit_status=True)
         self.assertEqual(result, {'result': False,
@@ -659,16 +662,15 @@ class DockerngTestCase(TestCase):
             })
 
         ret = None
-        with patch.dict(dockerng_mod.__salt__, {
-                'dockerng.start': docker_start_mock,
-                'dockerng.create': docker_create_mock,
-                'dockerng.stop': docker_stop_mock,
-                'dockerng.commit': docker_commit_mock,
-                'dockerng.sls': docker_sls_mock}):
-            ret = dockerng_mod.sls_build(
-                'foo',
-                mods='foo',
-            )
+        with patch.object(docker_mod, 'start', docker_start_mock):
+            with patch.object(docker_mod, 'create', docker_create_mock):
+                with patch.object(docker_mod, 'stop', docker_stop_mock):
+                    with patch.object(docker_mod, 'commit', docker_commit_mock):
+                        with patch.object(docker_mod, 'sls', docker_sls_mock):
+                            ret = docker_mod.sls_build(
+                                'foo',
+                                mods='foo',
+                            )
         docker_create_mock.assert_called_once_with(
             cmd='sleep infinity',
             image='opensuse/python', interactive=True, name='foo', tty=True)
@@ -716,17 +718,16 @@ class DockerngTestCase(TestCase):
             })
 
         ret = None
-        with patch.dict(dockerng_mod.__salt__, {
-                'dockerng.start': docker_start_mock,
-                'dockerng.create': docker_create_mock,
-                'dockerng.stop': docker_stop_mock,
-                'dockerng.rm': docker_rm_mock,
-                'dockerng.sls': docker_sls_mock}):
-            ret = dockerng_mod.sls_build(
-                'foo',
-                mods='foo',
-                dryrun=True
-            )
+        with patch.object(docker_mod, 'start', docker_start_mock):
+            with patch.object(docker_mod, 'create', docker_create_mock):
+                with patch.object(docker_mod, 'stop', docker_stop_mock):
+                    with patch.object(docker_mod, 'rm_', docker_rm_mock):
+                        with patch.object(docker_mod, 'sls', docker_sls_mock):
+                            ret = docker_mod.sls_build(
+                                'foo',
+                                mods='foo',
+                                dryrun=True
+                            )
         docker_create_mock.assert_called_once_with(
             cmd='sleep infinity',
             image='opensuse/python', interactive=True, name='foo', tty=True)
@@ -778,18 +779,22 @@ class DockerngTestCase(TestCase):
         client = Mock()
         client.put_archive = Mock()
 
-        with patch.dict(dockerng_mod.__opts__, {'cachedir': '/tmp'}):
-            with patch.dict(dockerng_mod.__salt__, {'dockerng.run_all': docker_run_all_mock,
-                                                    'dockerng.copy_to': docker_copy_to_mock,
-                                                    'config.option': docker_config_mock}):
-                with patch.dict(dockerng_mod.__context__, {'docker.client': client}):
-                    # call twice to verify tmp path later
-                    for i in range(2):
-                        ret = dockerng_mod.call(
-                            'ID',
-                            'test.arg',
-                            1, 2,
-                            arg1='val1')
+        context = {'docker.client': client,
+                   'docker.exec_driver': 'docker-exec'}
+        salt_dunder = {'config.option': docker_config_mock}
+
+        with patch.object(docker_mod, 'run_all', docker_run_all_mock):
+            with patch.object(docker_mod, 'copy_to', docker_copy_to_mock):
+                with patch.dict(docker_mod.__opts__, {'cachedir': '/tmp'}):
+                    with patch.dict(docker_mod.__salt__, salt_dunder):
+                        with patch.dict(docker_mod.__context__, context):
+                            # call twice to verify tmp path later
+                            for i in range(2):
+                                ret = docker_mod.call(
+                                    'ID',
+                                    'test.arg',
+                                    1, 2,
+                                    arg1='val1')
 
         # Check that the directory is different each time
         # [ call(name, [args]), ...
@@ -823,14 +828,14 @@ class DockerngTestCase(TestCase):
                           {'Id': 'sha256:abcdef'},
                           {'Id': 'sha256:abcdefg',
                            'RepoTags': ['image:latest']}])
-        with patch.dict(dockerng_mod.__context__,
+        with patch.dict(docker_mod.__context__,
                         {'docker.client': client}):
-            dockerng_mod._clear_context()
-            result = dockerng_mod.images()
+            docker_mod._clear_context()
+            result = docker_mod.images()
         self.assertEqual(result,
                          {'sha256:abcdefg': {'RepoTags': ['image:latest']}})
 
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(DockerngTestCase, needs_daemon=False)
+    run_tests(DockerTestCase, needs_daemon=False)
