@@ -4,18 +4,11 @@
 from __future__ import absolute_import
 
 # Salt libs
-from salt.beacons import adb
+import salt.beacons.adb as adb
 
 # Salt testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, Mock
-
-# Globals
-
-adb.__salt__ = {}
-
-ensure_in_syspath('../../')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -23,9 +16,12 @@ class ADBBeaconTestCase(TestCase):
     '''
     Test case for salt.beacons.adb
     '''
-    def setUp(self):
-        adb.last_state = {}
-        adb.last_state_extra = {'no_devices': False}
+
+    loader_module = adb
+    loader_module_globals = {
+        'last_state': {},
+        'last_state_extra': {'no_devices': False}
+    }
 
     def test_no_adb_command(self):
         with patch('salt.utils.which') as mock:
@@ -208,7 +204,7 @@ class ADBBeaconTestCase(TestCase):
     def test_with_user(self):
         config = {'states': ['device'], 'user': 'fred'}
 
-        mock = Mock(return_value='* daemon started successfully *\nList of devices attached\nHTC\tdevice',)
+        mock = Mock(return_value='* daemon started successfully *\nList of devices attached\nHTC\tdevice')
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.beacon(config)
             mock.assert_called_once_with('adb devices', runas='fred')
