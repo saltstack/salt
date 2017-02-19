@@ -47,14 +47,11 @@ except ImportError:
 import salt.config
 import salt.ext.six as six
 import salt.loader
-from salt.modules import boto_elb
+import salt.modules.boto_elb as boto_elb
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 log = logging.getLogger(__name__)
 
@@ -67,13 +64,6 @@ boto_conn_parameters = {'aws_access_key_id': access_key,
                         'aws_secret_access_key': secret_key}
 instance_parameters = {'instance_type': 't1.micro'}
 
-opts = salt.config.DEFAULT_MASTER_OPTS
-utils = salt.loader.utils(opts, whitelist=['boto'])
-funcs = salt.loader.minion_mods(opts, utils=utils)
-boto_elb.__salt__ = funcs
-boto_elb.__utils__ = utils
-boto_elb.__virtual__()
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(six.PY3, 'Running tests with Python 3. These tests need to be rewritten to support Py3.')
@@ -83,6 +73,24 @@ class BotoElbTestCase(TestCase):
     '''
     TestCase for salt.modules.boto_elb module
     '''
+
+    loader_module = boto_elb
+
+    def loader_module_globals(self):
+        opts = salt.config.DEFAULT_MASTER_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto'])
+        funcs = salt.loader.minion_mods(opts, utils=utils)
+        return {
+            '__opts__': opts,
+            '__utils__': utils,
+            '__salt__': funcs
+        }
+
+    def setUp(self):
+        TestCase.setUp(self)
+        # __virtual__ must be caller in order for _get_conn to be injected
+        boto_elb.__virtual__()
+
     @mock_ec2
     @mock_elb
     def test_register_instances_valid_id_result_true(self):
@@ -200,7 +208,3 @@ class BotoElbTestCase(TestCase):
         actual_instances = [instance.id for instance in
                             load_balancer_refreshed.instances]
         self.assertEqual(actual_instances, expected_instances)
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoElbTestCase, needs_daemon=False)
