@@ -13,23 +13,23 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.engines import sqs_events
+import salt.engines.sqs_events as sqs_events
 
-sqs_events.__salt__ = {}
-sqs_events.__opts__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 
+@skipIf(sqs_events.HAS_BOTO is False, 'The boto library is not installed')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.engines.sqs_events.boto.sqs')
-class EngineSqsEventTestCase(TestCase):
+class EngineSqsEventTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.engine.sqs_events
     '''
+
+    loader_module = sqs_events
+
     def sample_msg(self):
         fake_msg = MagicMock()
         fake_msg.get_body.return_value = "This is a test message"
@@ -77,8 +77,3 @@ class EngineSqsEventTestCase(TestCase):
         sqs_events._process_queue(q, q_name, mock_fire)
         self.assertTrue(mock_sqs.queue.Queue().get_messages.called, len(msgs))
         self.assertTrue(mock_fire.called, len(msgs))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(EngineSqsEventTestCase, needs_daemon=False)
