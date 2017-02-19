@@ -395,13 +395,16 @@ class DockerTestCase(TestCase):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
+
+        context = {'docker.client': client,
+                   'docker.exec_driver': 'docker-exec'}
+
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.dict(docker_mod.__context__, context):
                 docker_mod.connect_container_to_network('container', 'foo')
         client.connect_container_to_network.assert_called_once_with(
-            'container', 'foo')
+            'container', 'foo', None)
 
     @skipIf(_docker_py_version() < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
@@ -659,16 +662,15 @@ class DockerTestCase(TestCase):
             })
 
         ret = None
-        with patch.dict(docker_mod.__salt__, {
-                'docker.start': docker_start_mock,
-                'docker.create': docker_create_mock,
-                'docker.stop': docker_stop_mock,
-                'docker.commit': docker_commit_mock,
-                'docker.sls': docker_sls_mock}):
-            ret = docker_mod.sls_build(
-                'foo',
-                mods='foo',
-            )
+        with patch.object(docker_mod, 'start', docker_start_mock):
+            with patch.object(docker_mod, 'create', docker_create_mock):
+                with patch.object(docker_mod, 'stop', docker_stop_mock):
+                    with patch.object(docker_mod, 'commit', docker_commit_mock):
+                        with patch.object(docker_mod, 'sls', docker_sls_mock):
+                            ret = docker_mod.sls_build(
+                                'foo',
+                                mods='foo',
+                            )
         docker_create_mock.assert_called_once_with(
             cmd='sleep infinity',
             image='opensuse/python', interactive=True, name='foo', tty=True)
@@ -716,17 +718,16 @@ class DockerTestCase(TestCase):
             })
 
         ret = None
-        with patch.dict(docker_mod.__salt__, {
-                'docker.start': docker_start_mock,
-                'docker.create': docker_create_mock,
-                'docker.stop': docker_stop_mock,
-                'docker.rm': docker_rm_mock,
-                'docker.sls': docker_sls_mock}):
-            ret = docker_mod.sls_build(
-                'foo',
-                mods='foo',
-                dryrun=True
-            )
+        with patch.object(docker_mod, 'start', docker_start_mock):
+            with patch.object(docker_mod, 'create', docker_create_mock):
+                with patch.object(docker_mod, 'stop', docker_stop_mock):
+                    with patch.object(docker_mod, 'rm_', docker_rm_mock):
+                        with patch.object(docker_mod, 'sls', docker_sls_mock):
+                            ret = docker_mod.sls_build(
+                                'foo',
+                                mods='foo',
+                                dryrun=True
+                            )
         docker_create_mock.assert_called_once_with(
             cmd='sleep infinity',
             image='opensuse/python', interactive=True, name='foo', tty=True)
@@ -778,18 +779,22 @@ class DockerTestCase(TestCase):
         client = Mock()
         client.put_archive = Mock()
 
-        with patch.dict(docker_mod.__opts__, {'cachedir': '/tmp'}):
-            with patch.dict(docker_mod.__salt__, {'docker.run_all': docker_run_all_mock,
-                                                  'docker.copy_to': docker_copy_to_mock,
-                                                  'config.option': docker_config_mock}):
-                with patch.dict(docker_mod.__context__, {'docker.client': client}):
-                    # call twice to verify tmp path later
-                    for i in range(2):
-                        ret = docker_mod.call(
-                            'ID',
-                            'test.arg',
-                            1, 2,
-                            arg1='val1')
+        context = {'docker.client': client,
+                   'docker.exec_driver': 'docker-exec'}
+        salt_dunder = {'config.option': docker_config_mock}
+
+        with patch.object(docker_mod, 'run_all', docker_run_all_mock):
+            with patch.object(docker_mod, 'copy_to', docker_copy_to_mock):
+                with patch.dict(docker_mod.__opts__, {'cachedir': '/tmp'}):
+                    with patch.dict(docker_mod.__salt__, salt_dunder):
+                        with patch.dict(docker_mod.__context__, context):
+                            # call twice to verify tmp path later
+                            for i in range(2):
+                                ret = docker_mod.call(
+                                    'ID',
+                                    'test.arg',
+                                    1, 2,
+                                    arg1='val1')
 
         # Check that the directory is different each time
         # [ call(name, [args]), ...
