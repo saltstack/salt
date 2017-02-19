@@ -430,6 +430,10 @@ def salt_cloud():
     '''
     The main function for salt-cloud
     '''
+    # Define 'salt' global so we may use it after ImportError. Otherwise,
+    # UnboundLocalError will be raised.
+    global salt
+
     try:
         # Late-imports for CLI performance
         import salt.cloud
