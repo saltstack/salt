@@ -14,14 +14,11 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     patch
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
 import salt.loader
-from salt.modules import boto_iot
+import salt.modules.boto_iot as boto_iot
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd-party libs
@@ -136,10 +133,20 @@ if _has_required_boto():
 class BotoIoTTestCaseBase(TestCase):
     conn = None
 
-    # Set up MagicMock to replace the boto3 session
+    loader_module = boto_iot
+
+    def loader_module_globals(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        return {
+            '__utils__': utils,
+        }
+
     def setUp(self):
-        boto_iot.__context__ = {}
-        context.clear()
+        super(BotoIoTTestCaseBase, self).setUp()
+        boto_iot.__init__(self.opts)
+
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -771,9 +778,3 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         self.conn.list_topic_rules.side_effect = ClientError(error_content, 'list_topic_rules')
         result = boto_iot.list_topic_rules(**conn_parameters)
         self.assertEqual(result.get('error', {}).get('message'), error_message.format('list_topic_rules'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoIoTPolicyTestCase, needs_daemon=False)
-    run_tests(BotoIoTTopicRuleTestCase, needs_daemon=False)
