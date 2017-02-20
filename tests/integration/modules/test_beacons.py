@@ -8,18 +8,13 @@ from __future__ import absolute_import
 import os
 
 # Salt Libs
-from salt.modules import beacons
 from salt.exceptions import CommandExecutionError
 import integration
 import salt.utils
 
 # Salttesting libs
 from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
 
-ensure_in_syspath('../../')
-
-beacons.__opts__ = {}
 
 BEACON_CONF_DIR = os.path.join(integration.TMP, 'minion.d')
 if not os.path.exists(BEACON_CONF_DIR):
@@ -37,8 +32,6 @@ else:
     IS_ADMIN = os.geteuid() == 0
 
 
-@skipIf(not IS_ADMIN, 'You must be root to run these tests')
-@destructiveTest
 class BeaconsAddDeleteTest(integration.ModuleCase):
     '''
     Tests the add and delete functions
@@ -62,8 +55,6 @@ class BeaconsAddDeleteTest(integration.ModuleCase):
         self.run_function('beacons.save')
 
 
-@skipIf(not IS_ADMIN, 'You must be root to run these tests')
-@destructiveTest
 class BeaconsTest(integration.ModuleCase):
     '''
     Tests the beacons execution module
@@ -143,8 +134,3 @@ class BeaconsTest(integration.ModuleCase):
             self.assertEqual(ret, {'ps': {'apache2': 'stopped'}, 'enabled': True})
         else:
             self.assertEqual(ret, {'ps': {'apache': 'stopped'}})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests([BeaconsAddDeleteTest, BeaconsTest])
