@@ -14,16 +14,8 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import boto_elb
-
-boto_elb.__salt__ = {}
-boto_elb.__opts__ = {}
-boto_elb.__states__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -31,6 +23,7 @@ class BotoElbTestCase(TestCase):
     '''
     Test cases for salt.states.boto_elb
     '''
+    loader_module = boto_elb
     # 'present' function tests: 1
 
     def test_present(self):
@@ -180,8 +173,3 @@ class BotoElbTestCase(TestCase):
                 comt = ('ELB {0} is set to be removed.'.format(name))
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(boto_elb.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoElbTestCase, needs_daemon=False)
