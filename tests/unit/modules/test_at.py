@@ -21,16 +21,13 @@ from salt.modules import at
 # Import salt libs
 import salt.utils
 
-# Globals
-at.__grains__ = {}
-at.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class AtTestCase(TestCase):
     '''
     TestCase for the salt.modules.at module
     '''
+    loader_module = at
 
     atq_output = {'jobs': [{'date': '2014-12-11', 'job': 101, 'queue': 'A',
                             'tag': '', 'time': '19:48:47', 'user': 'B'}]}
@@ -199,7 +196,3 @@ class AtTestCase(TestCase):
         with patch.object(at, '_cmd',
                           return_value='101\tThu Dec 11 19:48:47 2014 A B'):
             self.assertEqual(at.atc(101), '101\tThu Dec 11 19:48:47 2014 A B')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AtTestCase, needs_daemon=False)
