@@ -10,15 +10,8 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import boto_kinesis
-
-boto_kinesis.__salt__ = {}
-boto_kinesis.__opts__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -29,6 +22,7 @@ class BotoKinesisTestCase(TestCase):
     # 'present' function tests: 1
 
     maxDiff = None
+    loader_module = boto_kinesis
 
     def test_stream_present(self):
         '''
@@ -144,8 +138,3 @@ class BotoKinesisTestCase(TestCase):
                 ret.update({'comment': comt, 'result': True,
                             'changes': changes})
                 self.assertDictEqual(boto_kinesis.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoKinesisTestCase, needs_daemon=False)
