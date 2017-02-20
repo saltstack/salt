@@ -126,7 +126,6 @@ def present(host, groups, interfaces, templates=None, **kwargs):
 
     interfaces_formated = _interface_format(interfaces)
 
-
     # Ensure groups are all groupid
     groupids = []
     for group in groups:
@@ -140,7 +139,6 @@ def present(host, groups, interfaces, templates=None, **kwargs):
         else:
             groupids.append(group)
     groups = groupids
-
 
     host_exists = __salt__['zabbix.host_exists'](host, **kwargs)
 

@@ -1562,4 +1562,3 @@ def template_list(**connection_args):
             raise KeyError
     except KeyError:
         return False
-
