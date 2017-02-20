@@ -2511,10 +2511,9 @@ def create(vm_=None, call=None):
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
-    if deploy or (deploy and win_password == 'auto'):
+    if deploy:
         # The private_key and keyname settings are only needed for bootstrapping
-        # new instances when deploy is True, or when win_password is set to 'auto'
-        # and deploy is also True.
+        # new instances when deploy is True
         if key_filename is None:
             raise SaltCloudSystemExit(
                 'The required \'private_key\' configuration setting is missing from the '
