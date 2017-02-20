@@ -18,15 +18,17 @@ from salttesting.mock import (
 # Import Salt Libs
 from salt.modules import bridge
 
-# Globals
-bridge.__grains__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BridgeTestCase(TestCase):
+class BridgeTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.bridge
     '''
+    loader_module = bridge
+
     def test_show(self):
         '''
         Test for Returns bridges interfaces
@@ -118,8 +120,3 @@ class BridgeTestCase(TestCase):
 
         with patch.dict(bridge.__grains__, {'kernel': None}):
             self.assertFalse(bridge.stp())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BridgeTestCase, needs_daemon=False)
