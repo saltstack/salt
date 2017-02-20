@@ -12,19 +12,16 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
+from salttesting.helpers import TestsLoggingHandler
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import alternatives
 
-alternatives.__salt__ = alternatives.__grains__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class AlternativesTestCase(TestCase):
+    loader_module = alternatives
 
     def test_display(self):
         with patch.dict(alternatives.__grains__, {'os_family': 'RedHat'}):
@@ -196,8 +193,3 @@ class AlternativesTestCase(TestCase):
                     ['alternatives', '--remove', 'better-world',
                      '/usr/bin/better-world'], python_shell=False
                 )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AlternativesTestCase, needs_daemon=False)
