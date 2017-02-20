@@ -93,7 +93,7 @@ def xccdf(params):
         tempdir = tempfile.mkdtemp()
         proc = Popen(
             shlex.split(cmd), stdout=PIPE, stderr=PIPE, cwd=tempdir)
-        (stdoutdata, stderrdata) = proc.communicate()
+        (stdoutdata, error) = proc.communicate()
         success = _OSCAP_EXIT_CODES_MAP[proc.returncode]
         returncode = proc.returncode
         if success:
@@ -101,8 +101,6 @@ def xccdf(params):
             caller.cmd('cp.push_dir', tempdir)
             shutil.rmtree(tempdir, ignore_errors=True)
             upload_dir = tempdir
-        else:
-            error = stderrdata
 
     return dict(
         success=success,

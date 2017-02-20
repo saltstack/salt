@@ -72,7 +72,8 @@ class OpenscapTestCase(TestCase):
             response,
             {
                 'upload_dir': self.random_temp_dir,
-                'error': None, 'success': True,
+                'error': '',
+                'success': True,
                 'returncode': 0
             }
         )
@@ -81,7 +82,7 @@ class OpenscapTestCase(TestCase):
        'salt.modules.openscap.Popen',
        MagicMock(
            return_value=Mock(
-               **{'returncode': 2, 'communicate.return_value': ('', '')}
+               **{'returncode': 2, 'communicate.return_value': ('', 'some error')}
            )
        )
     )
@@ -112,7 +113,7 @@ class OpenscapTestCase(TestCase):
             response,
             {
                 'upload_dir': self.random_temp_dir,
-                'error': None,
+                'error': 'some error',
                 'success': True,
                 'returncode': 2
             }
@@ -135,7 +136,7 @@ class OpenscapTestCase(TestCase):
        'salt.modules.openscap.Popen',
        MagicMock(
            return_value=Mock(
-               **{'returncode': 2, 'communicate.return_value': ('', '')}
+               **{'returncode': 2, 'communicate.return_value': ('', 'some error')}
            )
        )
     )
@@ -146,7 +147,7 @@ class OpenscapTestCase(TestCase):
             response,
             {
                 'upload_dir': self.random_temp_dir,
-                'error': None,
+                'error': 'some error',
                 'success': True,
                 'returncode': 2
             }
@@ -190,14 +191,6 @@ class OpenscapTestCase(TestCase):
             }
         )
 
-    @patch(
-       'salt.modules.openscap.Popen',
-       MagicMock(
-           return_value=Mock(**{
-               'communicate.return_value': ('', 'evaluation error')
-           })
-       )
-    )
     def test_openscap_xccdf_eval_fail_not_implemented_action(self):
         response = openscap.xccdf('info {0}'.format(self.policy_file))
 
