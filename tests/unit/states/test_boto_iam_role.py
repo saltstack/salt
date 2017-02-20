@@ -13,22 +13,19 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import boto_iam_role
 
-boto_iam_role.__salt__ = {}
-boto_iam_role.__opts__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoIAMRoleTestCase(TestCase):
+class BotoIAMRoleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_iam_role
     '''
+    loader_module = boto_iam_role
     # 'present' function tests: 1
 
     def test_present(self):
@@ -178,8 +175,3 @@ class BotoIAMRoleTestCase(TestCase):
                         'does not exist. Failed to delete myrole iam role.')
                 ret.update({'comment': comt, 'changes': {}})
                 self.assertDictEqual(boto_iam_role.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoIAMRoleTestCase, needs_daemon=False)
