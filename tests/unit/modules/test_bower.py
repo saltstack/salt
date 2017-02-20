@@ -15,23 +15,20 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import bower
 from salt.exceptions import CommandExecutionError
 
-# Globals
-bower.__salt__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BowerTestCase(TestCase):
+class BowerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.bower
     '''
+    loader_module = bower
 
     @patch('salt.modules.bower._check_valid_version',
            MagicMock(return_value=True))
@@ -129,8 +126,3 @@ class BowerTestCase(TestCase):
         with patch.dict(bower.__salt__, {'cmd.run_all': mock}):
             self.assertEqual(bower.list_('/path/to/project'),
                              {'underscore': {}, 'jquery': {}})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BowerTestCase, needs_daemon=False)
