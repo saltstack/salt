@@ -13,22 +13,19 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import boto_sqs
 
-boto_sqs.__salt__ = {}
-boto_sqs.__opts__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoSqsTestCase(TestCase):
+class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_sqs
     '''
+    loader_module = boto_sqs
     # 'present' function tests: 1
 
     def test_present(self):
@@ -93,8 +90,3 @@ class BotoSqsTestCase(TestCase):
                 comt = ('AWS SQS queue {0} is set to be removed.'.format(name))
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(boto_sqs.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoSqsTestCase, needs_daemon=False)
