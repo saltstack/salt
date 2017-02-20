@@ -13,22 +13,20 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import boto_cloudwatch_alarm
 
-boto_cloudwatch_alarm.__salt__ = {}
-boto_cloudwatch_alarm.__opts__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoCloudwatchAlarmTestCase(TestCase):
+class BotoCloudwatchAlarmTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_cloudwatch_alarm
     '''
+    loader_module = boto_cloudwatch_alarm
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -96,8 +94,3 @@ class BotoCloudwatchAlarmTestCase(TestCase):
                 comt = ('my test alarm does not exist in None.')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(boto_cloudwatch_alarm.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoCloudwatchAlarmTestCase, needs_daemon=False)
