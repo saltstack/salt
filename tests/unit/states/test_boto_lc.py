@@ -13,23 +13,20 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-from salt.exceptions import SaltInvocationError
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import boto_lc
+from salt.exceptions import SaltInvocationError
 
-boto_lc.__salt__ = {}
-boto_lc.__opts__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoLcTestCase(TestCase):
+class BotoLcTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_lc
     '''
+    loader_module = boto_lc
     # 'present' function tests: 1
 
     def test_present(self):
@@ -83,8 +80,3 @@ class BotoLcTestCase(TestCase):
                 comt = ('Launch configuration set to be deleted.')
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(boto_lc.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoLcTestCase, needs_daemon=False)
