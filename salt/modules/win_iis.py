@@ -13,6 +13,7 @@ from __future__ import absolute_import
 import json
 import logging
 import os
+import decimal
 
 # Import salt libs
 from salt.ext.six.moves import range
@@ -75,6 +76,22 @@ def _list_certs(certificatestore='My'):
         ret[item['Thumbprint']] = cert_info
 
     return ret
+
+
+def _iisVersion():
+    pscmd = []
+    pscmd.append(r"Get-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\InetStp\\")
+    pscmd.append(' | Select-Object MajorVersion, MinorVersion')
+
+    cmd_ret = _srvmgr(func=str().join(pscmd), as_json=True)
+
+    try:
+        items = json.loads(cmd_ret['stdout'], strict=False)
+    except ValueError:
+        _LOG.error('Unable to parse return data as Json.')
+        return -1
+
+    return decimal.Decimal("{0}.{1}".format(items[0]['MajorVersion'], items[0]['MinorVersion']))
 
 
 def _srvmgr(func, as_json=False):
@@ -492,8 +509,17 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443, sslf
         _LOG.error('Certificate not present: %s', name)
         return False
 
-    pscmd.append("New-Item -Path '{0}' -Thumbprint '{1}'".format(binding_path, name))
-    pscmd.append(" -SSLFlags {0}".format(sslflags))
+    if _iisVersion() < 8:
+        # IIS 7.5 and earlier have different syntax for associating a certificate with a site
+        iis7path = binding_path.rpartition("!")[0]
+
+        # Modify IP spec to IIS 7.5 format
+        iis7path = iis7path.replace(r"\*!", "\\0.0.0.0!")
+
+        pscmd.append("New-Item -Path '{0}' -Thumbprint '{1}'".format(iis7path, name))
+    else:
+        pscmd.append("New-Item -Path '{0}' -Thumbprint '{1}'".format(binding_path, name))
+        pscmd.append(" -SSLFlags {0}".format(sslflags))
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
@@ -507,6 +533,7 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443, sslf
         if name == new_cert_bindings[binding_info]['certificatehash']:
             _LOG.debug('Certificate binding created successfully: %s', name)
             return True
+
     _LOG.error('Unable to create certificate binding: %s', name)
     return False
 
