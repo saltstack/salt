@@ -131,7 +131,7 @@ def present(host, groups, interfaces, templates=None, **kwargs):
     groupids = []
     for group in groups:
         if isinstance(group, six.string_types):
-            groupid = __salt__['zabbix.hostgroup_get'](name=group)
+            groupid = __salt__['zabbix.hostgroup_get'](name=group, **kwargs)
             try:
                 groupids.append(int(groupid[0]['groupid']))
             except TypeError:
@@ -164,7 +164,7 @@ def present(host, groups, interfaces, templates=None, **kwargs):
         hosttemplates = __salt__['zabbix.template_get'](hostids=hostid, **kwargs)
         cur_templates = list()
 
-        if not hosttemplates and not templates is None:
+        if not hosttemplates and templates is not None:
             update_templates = True
         elif not hosttemplates and templates is None:
             update_templates = False
@@ -234,7 +234,7 @@ def present(host, groups, interfaces, templates=None, **kwargs):
             if update_interfaces:
                 if hostinterfaces:
                     for interface in hostinterfaces:
-                        __salt__['zabbix.hostinterface_delete'](interfaceids=interface['interfaceid'])
+                        __salt__['zabbix.hostinterface_delete'](interfaceids=interface['interfaceid'], **kwargs)
 
                 hostid = __salt__['zabbix.host_get'](name=host, **kwargs)[0]['hostid']
 
@@ -245,7 +245,7 @@ def present(host, groups, interfaces, templates=None, **kwargs):
                                                                          main=interface['main'],
                                                                          type=interface['type'],
                                                                          useip=interface['useip'],
-                                                                         port=interface['port'])
+                                                                         port=interface['port'], **kwargs)
 
                     if 'error' in updatedint:
                         error.append(updatedint['error'])
@@ -374,7 +374,7 @@ def assign_templates(host, templates, **kwargs):
     requested_template_ids = list()
     hostid = ''
 
-    host_exists = __salt__['zabbix.host_exists'](host)
+    host_exists = __salt__['zabbix.host_exists'](host, **kwargs)
 
     # Fail out if host does not exist
     if not host_exists:
@@ -382,7 +382,7 @@ def assign_templates(host, templates, **kwargs):
         ret['comment'] = comment_host_templates_notupdated
         return ret
 
-    host_info = __salt__['zabbix.host_get'](name=host)[0]
+    host_info = __salt__['zabbix.host_get'](name=host, **kwargs)[0]
     hostid = host_info['hostid']
 
     if not templates:
@@ -390,14 +390,14 @@ def assign_templates(host, templates, **kwargs):
 
     # Get current templateids for host
     host_templates = __salt__['zabbix.host_get'](hostids=hostid,
-                                                 output='[{"hostid"}]', selectParentTemplates='["templateid"]')
+                                                 output='[{"hostid"}]', selectParentTemplates='["templateid"]', **kwargs)
     for template_id in host_templates[0]['parentTemplates']:
         curr_template_ids.append(template_id['templateid'])
 
     # Get requested templateids
     for template in templates:
         try:
-            template_id = __salt__['zabbix.template_get'](host=template)[0]['templateid']
+            template_id = __salt__['zabbix.template_get'](host=template, *kwargs)[0]['templateid']
             requested_template_ids.append(template_id)
         except TypeError:
             ret['result'] = False
@@ -427,7 +427,7 @@ def assign_templates(host, templates, **kwargs):
     # Attempt to perform update
     ret['result'] = True
     if update_host_templates:
-        update_output = __salt__['zabbix.host_update'](hostid, templates=(requested_template_ids))
+        update_output = __salt__['zabbix.host_update'](hostid, templates=(requested_template_ids), **kwargs)
         if update_output is False:
             ret['result'] = False
             ret['comment'] = comment_host_templates_notupdated

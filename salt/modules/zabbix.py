@@ -50,6 +50,7 @@ def __virtual__():
         return __virtualname__
     return (False, 'The zabbix execution module cannot be loaded: zabbix not installed.')
 
+
 def _frontend_url():
     '''
     Tries to guess the url of zabbix frontend.
