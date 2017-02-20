@@ -20,17 +20,16 @@ from salttesting.mock import (
 from salt.modules import apache
 from salt.ext.six.moves.urllib.error import URLError  # pylint: disable=import-error,no-name-in-module
 
-# Globals
-apache.__grains__ = {}
-apache.__salt__ = {}
-apache.__context__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ApacheTestCase(TestCase):
+class ApacheTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.apache
     '''
+    loader_module = apache
     # 'version' function tests: 1
 
     @patch('salt.modules.apache._detect_os',
@@ -204,8 +203,3 @@ class ApacheTestCase(TestCase):
         with patch('salt.utils.fopen', mock_open()):
             self.assertEqual(apache.config('/ports.conf',
                                            [{'Listen': '22'}]), 'Listen 22')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ApacheTestCase, needs_daemon=False)
