@@ -21,6 +21,9 @@ try:
 except ImportError:
     from pipes import quote as _quote
 
+# Import third party libs
+import salt.ext.six as six
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 try:
     import rarfile
     HAS_RARFILE = True
@@ -29,8 +32,6 @@ except ImportError:
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.ext.six import string_types, integer_types
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 import salt.utils
 import salt.utils.files
 import salt.utils.itertools
@@ -186,7 +187,7 @@ def list_(name,
                         raise CommandExecutionError('Invalid CLI options')
                 else:
                     if salt.utils.which('xz') \
-                            and __salt__['cmd.retcode'](['xz', '-l', cached],
+                            and __salt__['cmd.retcode'](['xz', '-t', cached],
                                                         python_shell=False,
                                                         ignore_retcode=True) == 0:
                         decompress_cmd = 'xz --decompress --stdout'
@@ -436,9 +437,9 @@ def _expand_sources(sources):
     '''
     if sources is None:
         return []
-    if isinstance(sources, string_types):
+    if isinstance(sources, six.string_types):
         sources = [x.strip() for x in sources.split(',')]
-    elif isinstance(sources, (float, integer_types)):
+    elif isinstance(sources, (float, six.integer_types)):
         sources = [str(sources)]
     return [path
             for source in sources
@@ -897,9 +898,9 @@ def cmd_unzip(zip_file,
 
         salt '*' archive.cmd_unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
     '''
-    if isinstance(excludes, string_types):
+    if isinstance(excludes, six.string_types):
         excludes = [x.strip() for x in excludes.split(',')]
-    elif isinstance(excludes, (float, integer_types)):
+    elif isinstance(excludes, (float, six.integer_types)):
         excludes = [str(excludes)]
 
     cmd = ['unzip']
@@ -1035,7 +1036,6 @@ def unzip(zip_file,
         os.seteuid(uinfo['uid'])
 
     try:
-        exc = None
         # Define cleaned_files here so that an exception will not prevent this
         # variable from being defined and cause a NameError in the return
         # statement at the end of the function.
@@ -1043,9 +1043,9 @@ def unzip(zip_file,
         with contextlib.closing(zipfile.ZipFile(zip_file, "r")) as zfile:
             files = zfile.namelist()
 
-            if isinstance(excludes, string_types):
+            if isinstance(excludes, six.string_types):
                 excludes = [x.strip() for x in excludes.split(',')]
-            elif isinstance(excludes, (float, integer_types)):
+            elif isinstance(excludes, (float, six.integer_types)):
                 excludes = [str(excludes)]
 
             cleaned_files.extend([x for x in files if x not in excludes])
@@ -1062,18 +1062,19 @@ def unzip(zip_file,
                     if extract_perms:
                         os.chmod(os.path.join(dest, target), zfile.getinfo(target).external_attr >> 16)
     except Exception as exc:
-        pass
+        if runas:
+            os.seteuid(euid)
+            os.setegid(egid)
+        # Wait to raise the exception until euid/egid are restored to avoid
+        # permission errors in writing to minion log.
+        raise CommandExecutionError(
+            'Exception encountered unpacking zipfile: {0}'.format(exc)
+        )
     finally:
         # Restore the euid/egid
         if runas:
             os.seteuid(euid)
             os.setegid(egid)
-        if exc is not None:
-            # Wait to raise the exception until euid/egid are restored to avoid
-            # permission errors in writing to minion log.
-            raise CommandExecutionError(
-                'Exception encountered unpacking zipfile: {0}'.format(exc)
-            )
 
     return _trim_files(cleaned_files, trim_output)
 
@@ -1224,7 +1225,7 @@ def unrar(rarfile, dest, excludes=None, template=None, runas=None, trim_output=F
         salt '*' archive.unrar /tmp/rarfile.rar /home/strongbad/ excludes=file_1,file_2
 
     '''
-    if isinstance(excludes, string_types):
+    if isinstance(excludes, six.string_types):
         excludes = [entry.strip() for entry in excludes.split(',')]
 
     cmd = [salt.utils.which_bin(('unrar', 'rar')),

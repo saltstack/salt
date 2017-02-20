@@ -20,6 +20,8 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import group
+from salt.utils.odict import OrderedDict
+
 
 # Globals
 group.__salt__ = {}
@@ -53,9 +55,12 @@ class GroupTestCase(TestCase):
                                            delusers=['a']), ret)
 
         ret.update({'comment': 'The following group attributes are set'
-                    ' to be changed:\nkey1: value1\nkey0: value0\n'})
-        mock = MagicMock(side_effect=[{'key0': 'value0',
-                                       'key1': 'value1'}, False, False, False])
+                    ' to be changed:\nkey0: value0\nkey1: value1\n'})
+
+        mock = MagicMock(side_effect=[OrderedDict((('key0', 'value0'), ('key1', 'value1'))),
+                                      False,
+                                      False,
+                                      False])
         with patch.object(group, '_changes', mock):
             with patch.dict(group.__opts__, {"test": True}):
                 self.assertDictEqual(group.present("salt"), ret)

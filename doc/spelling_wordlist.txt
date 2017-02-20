@@ -188,7 +188,6 @@ dnspython
 dnsservers
 dnsutil
 dockerfile
-dockerio
 docstring
 docstrings
 dpkg

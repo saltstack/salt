@@ -40,6 +40,7 @@ __opts__ = {
     'force': False,
     'verbose': False,
     'cache': 'localfs',
+    'spm_repo_dups': 'ignore',
 }
 
 _F1 = {

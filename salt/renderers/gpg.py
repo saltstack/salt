@@ -266,6 +266,8 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
     proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
     decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
+        if six.PY3:
+            cipher = cipher.decode(__salt_system_encoding__)
         log.warning(
             'Could not decrypt cipher %s, received: %s',
             cipher,
@@ -273,7 +275,7 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
         )
         return cipher
     else:
-        if six.PY3:
+        if six.PY3 and isinstance(decrypted_data, bytes):
             decrypted_data = decrypted_data.decode(__salt_system_encoding__)
         return str(decrypted_data)
 

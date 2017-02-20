@@ -472,7 +472,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         for integration tests or unit tests
         '''
         # Get current limits
-        prev_soft, prev_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        if salt.utils.is_windows():
+            import win32file
+            prev_hard = win32file._getmaxstdio()
+            prev_soft = 512
+        else:
+            prev_soft, prev_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
 
         # Get required limits
         min_soft = MAX_OPEN_FILES[limits]['soft_limit']
@@ -503,7 +508,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 '{0}, hard: {1}'.format(soft, hard)
             )
             try:
-                resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
+                if salt.utils.is_windows():
+                    hard = 2048 if hard > 2048 else hard
+                    win32file._setmaxstdio(hard)
+                else:
+                    resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
             except Exception as err:
                 print(
                     'ERROR: Failed to raise the max open files settings -> '

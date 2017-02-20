@@ -38,6 +38,11 @@ __proxyenabled__ = ['napalm']
 GRAINS_CACHE = {}
 DEVICE_CACHE = {}
 
+_FORBIDDEN_OPT_ARGS = [
+    'secret',  # used by IOS to enter in enable mode
+    'enable_password'  # used by EOS
+]
+
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
 # ----------------------------------------------------------------------------------------------------------------------
@@ -250,7 +255,9 @@ def interfaces(proxy=None):
 
 def username(proxy=None):
     '''
-    Return the username
+    Return the username.
+
+    .. versionadded:: Nitrogen
 
     CLI Example - select all devices using `foobar` as username for connection:
 
@@ -275,7 +282,7 @@ def username(proxy=None):
 
 def hostname(proxy=None):
     '''
-    Return the hostname as configured on the device.
+    Return the hostname as configured on the network device.
 
     CLI Example:
 
@@ -297,11 +304,60 @@ def hostname(proxy=None):
     return {'hostname': _get_grain('hostname', proxy=proxy)}
 
 
+def host(proxy=None):
+    '''
+    This grain is set by the NAPALM grain module
+    only when running in a proxy minion.
+    When Salt is installed directly on the network device,
+    thus running a regular minion, the ``host`` grain
+    provides the physical hostname of the network device,
+    as it would be on an ordinary minion server.
+    When running in a proxy minion, ``host`` points to the
+    value configured in the pillar: :mod:`NAPALM proxy module <salt.proxies.napalm>`.
+
+    .. note::
+
+        The diference betwen ``host`` and ``hostname`` is that
+        ``host`` provides the physical location - either domain name or IP address,
+        while ``hostname`` provides the hostname as configured on the device.
+        They are not necessarily the same.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'device*' grains.get host
+
+    Output:
+
+    .. code-block:: yaml
+
+        device1:
+            ip-172-31-13-136.us-east-2.compute.internal
+        device2:
+            ip-172-31-11-193.us-east-2.compute.internal
+        device3:
+            ip-172-31-2-181.us-east-2.compute.internal
+    '''
+    if proxy and salt.utils.napalm.is_proxy(__opts__):
+        # this grain is set only when running in a proxy minion
+        # otherwise will use the default Salt grains
+        return {'host': _get_device_grain('hostname')}
+
+
 def optional_args():
     '''
     Return the connection optional args.
 
-    CLI Example - select all devices connection via port 1234:
+    .. note::
+
+        Sensible data will not be returned.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example - select all devices connecting via port 1234:
 
     .. code-block:: bash
 
@@ -316,4 +372,8 @@ def optional_args():
         device2:
             True
     '''
-    return {'optional_args': _get_device_grain('optional_args')}
+    opt_args = _get_device_grain('optional_args')
+    if _FORBIDDEN_OPT_ARGS:
+        for arg in _FORBIDDEN_OPT_ARGS:
+            opt_args.pop(arg, None)
+    return {'optional_args': opt_args}

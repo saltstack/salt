@@ -1545,7 +1545,7 @@ def _get_line_indent(src, line, indent):
     '''
     Indent the line with the source line.
     '''
-    if not (indent or line):
+    if not indent:
         return line
 
     idt = []
@@ -1755,7 +1755,6 @@ def line(path, content=None, match=None, mode=None, location=None,
     elif mode == 'ensure':
         after = after and after.strip()
         before = before and before.strip()
-        content = content and content.strip()
 
         if before and after:
             _assert_occurrence(body, before, 'before')
@@ -3012,6 +3011,13 @@ def symlink(src, path):
         salt '*' file.symlink /path/to/file /path/to/link
     '''
     path = os.path.expanduser(path)
+
+    try:
+        if os.path.normpath(os.readlink(path)) == os.path.normpath(src):
+            log.debug('link already in correct state: %s -> %s', path, src)
+            return True
+    except OSError:
+        pass
 
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')

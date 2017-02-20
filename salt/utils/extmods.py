@@ -36,18 +36,27 @@ def _listdir_recursively(rootdir):
     return file_list
 
 
-def sync(opts, form, saltenv=None, extmod_whitelist=None):
+def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
     '''
     Sync custom modules into the extension_modules directory
     '''
     if saltenv is None:
         saltenv = ['base']
+
     if extmod_whitelist is None:
         extmod_whitelist = opts['extmod_whitelist']
     elif isinstance(extmod_whitelist, six.string_types):
         extmod_whitelist = {form: extmod_whitelist.split(',')}
     elif not isinstance(extmod_whitelist, dict):
         log.error('extmod_whitelist must be a string or dictionary: {0}'.format(extmod_whitelist))
+
+    if extmod_blacklist is None:
+        extmod_blacklist = opts['extmod_blacklist']
+    elif isinstance(extmod_blacklist, six.string_types):
+        extmod_blacklist = {form: extmod_blacklist.split(',')}
+    elif not isinstance(extmod_blacklist, dict):
+        log.error('extmod_blacklist must be a string or dictionary: {0}'.format(extmod_blacklist))
+
     if isinstance(saltenv, six.string_types):
         saltenv = saltenv.split(',')
     ret = []
@@ -93,6 +102,8 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None):
                 relpath = os.path.relpath(fn_, local_cache_dir)
                 relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
                 if extmod_whitelist and form in extmod_whitelist and relname not in extmod_whitelist[form]:
+                    continue
+                if extmod_blacklist and form in extmod_blacklist and relname in extmod_blacklist[form]:
                     continue
                 remote.add(relpath)
                 dest = os.path.join(mod_dir, relpath)

@@ -33,7 +33,7 @@ class MineTestCase(TestCase):
     '''
     def test_get_docker(self):
         '''
-        Test for Get all mine data for 'dockerng.ps' and run an
+        Test for Get all mine data for 'docker.ps' and run an
         aggregation.
         '''
         ps_response = {
@@ -69,16 +69,19 @@ class MineTestCase(TestCase):
                 },
             }}
         with patch.object(mine, 'get', return_value=ps_response):
-            self.assertEqual(mine.get_docker(),
+            ret = mine.get_docker()
+            # Sort ifaces since that will change between py2 and py3
+            ret['image:latest']['ipv4'][80] = sorted(ret['image:latest']['ipv4'][80])
+            self.assertEqual(ret,
                              {'image:latest': {
-                                 'ipv4': {80: [
+                                 'ipv4': {80: sorted([
                                      '172.17.42.1:80',
                                      '192.168.0.1:80',
-                                 ]}}})
+                                 ])}}})
 
     def test_get_docker_with_container_id(self):
         '''
-        Test for Get all mine data for 'dockerng.ps' and run an
+        Test for Get all mine data for 'docker.ps' and run an
         aggregation.
         '''
         ps_response = {
@@ -114,12 +117,15 @@ class MineTestCase(TestCase):
                                          },
             }}
         with patch.object(mine, 'get', return_value=ps_response):
-            self.assertEqual(mine.get_docker(with_container_id=True),
+            ret = mine.get_docker(with_container_id=True)
+            # Sort ifaces since that will change between py2 and py3
+            ret['image:latest']['ipv4'][80] = sorted(ret['image:latest']['ipv4'][80])
+            self.assertEqual(ret,
                              {'image:latest': {
-                                 'ipv4': {80: [
+                                 'ipv4': {80: sorted([
                                      ('172.17.42.1:80', 'abcdefhjhi1234567899'),
                                      ('192.168.0.1:80', 'abcdefhjhi1234567899'),
-                                 ]}}})
+                                 ])}}})
 
 
 if __name__ == '__main__':

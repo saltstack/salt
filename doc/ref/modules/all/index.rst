@@ -108,8 +108,7 @@ execution modules
     dnsmasq
     dnsutil
     dockercompose
-    dockerio
-    dockerng
+    docker
     dpkg
     drac
     dracr
@@ -248,6 +247,7 @@ execution modules
     namecheap_ns
     namecheap_ssl
     namecheap_users
+    napalm
     napalm_bgp
     napalm_network
     napalm_ntp

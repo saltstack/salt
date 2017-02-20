@@ -314,6 +314,26 @@ In the current release, the following modules were included:
 - :mod:`SNMP configuration management state <salt.states.netsnmp>`
 - :mod:`Users management state <salt.states.netusers>`
 
+Cisco NXOS Proxy Minion
+=======================
+
+Beginning with 2016.11.0, there is a proxy minion that can be used to configure
+nxos cisco devices over ssh.
+
+- :mod:`Proxy Minion <salt.proxy.nxos>`
+- :mod:`Execution Module <salt.modules.nxos>`
+- :mod:`State Module <salt.states.nxos>`
+
+Cisco Network Services Orchestrator Proxy Minion
+================================================
+
+Beginning with 2016.11.0, there is a proxy minion to use the Cisco Network
+Services Orchestrator as a proxy minion.
+
+- :mod:`Proxy Minion <salt.proxy.cisconso>`
+- :mod:`Execution Module <salt.modules.cisconso>`
+- :mod:`State Module <salt.states.cisconso>`
+
 Junos Module Changes
 ====================
 

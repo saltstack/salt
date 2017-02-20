@@ -17,6 +17,7 @@ import sys
 # Import third party libs
 import jinja2
 import jinja2.ext
+import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
@@ -32,8 +33,6 @@ import salt.utils.jinja
 import salt.utils.network
 from salt.utils.odict import OrderedDict
 from salt import __path__ as saltpath
-from salt.ext.six import string_types
-import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -128,7 +127,7 @@ def wrap_tmpl_func(render_str):
             context['sls_path'] = slspath.replace('/', '_')
             context['slspath'] = slspath
 
-        if isinstance(tmplsrc, string_types):
+        if isinstance(tmplsrc, six.string_types):
             if from_str:
                 tmplstr = tmplsrc
             else:
@@ -155,7 +154,9 @@ def wrap_tmpl_func(render_str):
             tmplstr = tmplsrc.read()
             tmplsrc.close()
         try:
-            output = render_str(tmplstr, context, tmplpath).encode(SLS_ENCODING)
+            output = render_str(tmplstr, context, tmplpath)
+            if six.PY2:
+                output = output.encode(SLS_ENCODING)
             if salt.utils.is_windows():
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
@@ -170,6 +171,8 @@ def wrap_tmpl_func(render_str):
             if to_str:  # then render as string
                 return dict(result=True, data=output)
             with tempfile.NamedTemporaryFile('wb', delete=False, prefix=salt.utils.files.TEMPFILE_PREFIX) as outf:
+                if six.PY3:
+                    output = output.encode(SLS_ENCODING)
                 outf.write(output)
                 # Note: If nothing is replaced or added by the rendering
                 #       function, then the contents of the output file will
@@ -395,7 +398,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     decoded_context = {}
     for key, value in six.iteritems(context):
-        if not isinstance(value, string_types):
+        if not isinstance(value, six.string_types):
             decoded_context[key] = value
             continue
 

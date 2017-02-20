@@ -362,11 +362,14 @@ class Pillar(object):
             opts['grains'] = {}
         else:
             opts['grains'] = grains
-        if not opts.get('environment'):
-            opts['environment'] = saltenv
+        # Allow minion/CLI saltenv/pillarenv to take precedence over master
+        opts['environment'] = saltenv \
+            if saltenv is not None \
+            else opts.get('environment')
+        opts['pillarenv'] = pillarenv \
+            if pillarenv is not None \
+            else opts.get('pillarenv')
         opts['id'] = self.minion_id
-        if not opts.get('pillarenv'):
-            opts['pillarenv'] = pillarenv
         if opts['state_top'].startswith('salt://'):
             opts['state_top'] = opts['state_top']
         elif opts['state_top'].startswith('/'):
