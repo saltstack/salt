@@ -5,23 +5,19 @@ from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 import random
 import string
+import logging
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
 import salt.config
 import salt.loader
+import salt.states.boto_cognitoidentity as boto_cognitoidentity
 
-# Import 3rd-party libs
-import logging
-
-# Import Mock libraries
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 # pylint: disable=import-error,no-name-in-module
 from unit.modules.test_boto_cognitoidentity import BotoCognitoIdentityTestCaseMixin
@@ -116,13 +112,6 @@ default_pool_role_ret = dict(IdentityPoolId=default_pool_id)
 
 log = logging.getLogger(__name__)
 
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-serializers = salt.loader.serializers(opts)
-funcs = salt.loader.minion_mods(opts, context=context, utils=utils, whitelist=['boto_cognitoidentity'])
-salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_cognitoidentity'], serializers=serializers)
-
 
 def _has_required_boto():
     '''
@@ -137,12 +126,22 @@ def _has_required_boto():
         return True
 
 
-class BotoCognitoIdentityStateTestCaseBase(TestCase):
+class BotoCognitoIdentityStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
+
+    loader_module = boto_cognitoidentity
 
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
-        context.clear()
+        opts = salt.config.DEFAULT_MINION_OPTS
+        context = {}
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
+        serializers = salt.loader.serializers(opts)
+        self.funcs = funcs = salt.loader.minion_mods(opts, context=context, utils=utils, whitelist=['boto_cognitoidentity'])
+        self.salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_cognitoidentity'],
+                                              serializers=serializers)
+
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -182,7 +181,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         '''
         self.conn.list_identity_pools.return_value = identity_pools_ret
         self.conn.describe_identity_pool.side_effect = ClientError(error_content, 'error on describe identity pool')
-        result = salt_states['boto_cognitoidentity.pool_present'](
+        result = self.salt_states['boto_cognitoidentity.pool_present'](
                              name='test pool present',
                              IdentityPoolName=first_pool_name,
                              AuthenticatedRole='my_auth_role',
@@ -197,7 +196,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         '''
         self.conn.list_identity_pools.return_value = identity_pools_ret
         self.conn.describe_identity_pool.side_effect = self._describe_identity_pool_side_effect
-        result = salt_states['boto_cognitoidentity.pool_present'](
+        result = self.salt_states['boto_cognitoidentity.pool_present'](
                              name='test pool present',
                              IdentityPoolName=first_pool_name,
                              AuthenticatedRole='my_auth_role',
@@ -213,7 +212,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         self.conn.list_identity_pools.return_value = identity_pools_ret
         self.conn.describe_identity_pool.side_effect = self._describe_identity_pool_side_effect
         self.conn.create_identity_pool.side_effect = ClientError(error_content, 'error on create_identity_pool')
-        result = salt_states['boto_cognitoidentity.pool_present'](
+        result = self.salt_states['boto_cognitoidentity.pool_present'](
                             name='test pool present',
                             IdentityPoolName=default_pool_name,
                             AuthenticatedRole='my_auth_role',
@@ -230,7 +229,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         self.conn.list_identity_pools.return_value = identity_pools_ret
         self.conn.describe_identity_pool.side_effect = self._describe_identity_pool_side_effect
         self.conn.update_identity_pool.side_effect = ClientError(error_content, 'error on update_identity_pool')
-        result = salt_states['boto_cognitoidentity.pool_present'](
+        result = self.salt_states['boto_cognitoidentity.pool_present'](
                             name='test pool present',
                             IdentityPoolName=second_pool_name,
                             AuthenticatedRole='my_auth_role',
@@ -260,7 +259,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         self.conn.describe_identity_pool.side_effect = self._describe_identity_pool_side_effect
         self.conn.update_identity_pool.return_value = second_pool_update_ret
         self.conn.get_identity_pool_roles.side_effect = ClientError(error_content, 'error on get_identity_pool_roles')
-        result = salt_states['boto_cognitoidentity.pool_present'](
+        result = self.salt_states['boto_cognitoidentity.pool_present'](
                              name='test pool present',
                              IdentityPoolName=second_pool_name,
                              AuthenticatedRole='my_auth_role',
@@ -282,8 +281,8 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         self.conn.update_identity_pool.return_value = second_pool_update_ret
         self.conn.get_identity_pool_roles.return_value = second_pool_role_ret
         self.conn.set_identity_pool_roles.side_effect = ClientError(error_content, 'error on set_identity_pool_roles')
-        with patch.dict(funcs, {'boto_iam.describe_role': MagicMock(return_value={'arn': 'my_auth_role_arn'})}):
-            result = salt_states['boto_cognitoidentity.pool_present'](
+        with patch.dict(self.funcs, {'boto_iam.describe_role': MagicMock(return_value={'arn': 'my_auth_role_arn'})}):
+            result = self.salt_states['boto_cognitoidentity.pool_present'](
                                  name='test pool present',
                                  IdentityPoolName=second_pool_name,
                                  AuthenticatedRole='my_auth_role',
@@ -304,8 +303,8 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         self.conn.create_identity_pool.side_effect = self._describe_identity_pool_side_effect
         self.conn.get_identity_pool_roles.return_value = default_pool_role_ret
         self.conn.set_identity_pool_roles.return_value = None
-        with patch.dict(funcs, {'boto_iam.describe_role': MagicMock(return_value={'arn': 'my_auth_role_arn'})}):
-            result = salt_states['boto_cognitoidentity.pool_present'](
+        with patch.dict(self.funcs, {'boto_iam.describe_role': MagicMock(return_value={'arn': 'my_auth_role_arn'})}):
+            result = self.salt_states['boto_cognitoidentity.pool_present'](
                                  name='test pool present',
                                  IdentityPoolName=default_pool_name,
                                  AuthenticatedRole='my_auth_role',
@@ -334,8 +333,8 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         self.conn.update_identity_pool.return_value = second_pool_update_ret
         self.conn.get_identity_pool_roles.return_value = second_pool_role_ret
         self.conn.set_identity_pool_roles.return_value = None
-        with patch.dict(funcs, {'boto_iam.describe_role': MagicMock(return_value={'arn': 'my_auth_role_arn'})}):
-            result = salt_states['boto_cognitoidentity.pool_present'](
+        with patch.dict(self.funcs, {'boto_iam.describe_role': MagicMock(return_value={'arn': 'my_auth_role_arn'})}):
+            result = self.salt_states['boto_cognitoidentity.pool_present'](
                                  name='test pool present',
                                  IdentityPoolName=second_pool_name,
                                  AuthenticatedRole='my_auth_role',
@@ -356,7 +355,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         Tests absent on an identity pool that does not exist.
         '''
         self.conn.list_identity_pools.return_value = identity_pools_ret
-        result = salt_states['boto_cognitoidentity.pool_absent'](
+        result = self.salt_states['boto_cognitoidentity.pool_absent'](
                              name='test pool absent',
                              IdentityPoolName='no_such_pool_name',
                              RemoveAllMatched=False,
@@ -372,7 +371,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         '''
         self.conn.list_identity_pools.return_value = identity_pools_ret
         self.conn.describe_identity_pool.side_effect = self._describe_identity_pool_side_effect
-        result = salt_states['boto_cognitoidentity.pool_absent'](
+        result = self.salt_states['boto_cognitoidentity.pool_absent'](
                              name='test pool absent',
                              IdentityPoolName=first_pool_name,
                              RemoveAllMatched=False,
@@ -387,7 +386,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         '''
         self.conn.list_identity_pools.return_value = identity_pools_ret
         self.conn.describe_identity_pool.side_effect = ClientError(error_content, 'error on describe identity pool')
-        result = salt_states['boto_cognitoidentity.pool_absent'](
+        result = self.salt_states['boto_cognitoidentity.pool_absent'](
                              name='test pool absent',
                              IdentityPoolName=first_pool_name,
                              RemoveAllMatched=False,
@@ -402,7 +401,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         self.conn.list_identity_pools.return_value = identity_pools_ret
         self.conn.describe_identity_pool.side_effect = self._describe_identity_pool_side_effect
         self.conn.delete_identity_pool.side_effect = ClientError(error_content, 'error on delete identity pool')
-        result = salt_states['boto_cognitoidentity.pool_absent'](
+        result = self.salt_states['boto_cognitoidentity.pool_absent'](
                              name='test pool absent',
                              IdentityPoolName=first_pool_name,
                              RemoveAllMatched=True,
@@ -419,7 +418,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         self.conn.list_identity_pools.return_value = identity_pools_ret
         self.conn.describe_identity_pool.return_value = second_pool_ret
         self.conn.delete_identity_pool.return_value = None
-        result = salt_states['boto_cognitoidentity.pool_absent'](
+        result = self.salt_states['boto_cognitoidentity.pool_absent'](
                              name='test pool absent',
                              IdentityPoolName=second_pool_name,
                              RemoveAllMatched=False,
@@ -439,7 +438,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
         self.conn.list_identity_pools.return_value = identity_pools_ret
         self.conn.describe_identity_pool.side_effect = self._describe_identity_pool_side_effect
         self.conn.delete_identity_pool.return_value = None
-        result = salt_states['boto_cognitoidentity.pool_absent'](
+        result = self.salt_states['boto_cognitoidentity.pool_absent'](
                              name='test pool absent',
                              IdentityPoolName=first_pool_name,
                              RemoveAllMatched=True,
