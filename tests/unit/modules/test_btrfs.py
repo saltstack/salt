@@ -14,20 +14,11 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 import salt
 import salt.utils.fsutils
 from salt.modules import btrfs
 from salt.exceptions import CommandExecutionError
-
-# Globals
-btrfs.__grains__ = {}
-btrfs.__salt__ = {}
-btrfs.__context__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -35,6 +26,7 @@ class BtrfsTestCase(TestCase):
     '''
     Test cases for salt.modules.btrfs
     '''
+    loader_module = btrfs
     # 'version' function tests: 1
 
     def test_version(self):
@@ -368,8 +360,3 @@ class BtrfsTestCase(TestCase):
         '''
         self.assertRaises(CommandExecutionError, btrfs.properties,
                           '/dev/sda1', 'subvol', True)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BtrfsTestCase, needs_daemon=False)
