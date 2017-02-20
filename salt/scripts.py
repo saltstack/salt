@@ -438,17 +438,13 @@ def salt_cloud():
         # Late-imports for CLI performance
         import salt.cloud
         import salt.cloud.cli
-        has_saltcloud = True
     except ImportError as e:
-        log.error("Error importing salt cloud {0}".format(e))
         # No salt cloud on Windows
-        has_saltcloud = False
-    if '' in sys.path:
-        sys.path.remove('')
-
-    if not has_saltcloud:
+        log.error("Error importing salt cloud {0}".format(e))
         print('salt-cloud is not available in this system')
         sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
+    if '' in sys.path:
+        sys.path.remove('')
 
     client = salt.cloud.cli.SaltCloud()
     _install_signal_handlers(client)
