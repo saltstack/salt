@@ -72,7 +72,8 @@ class OpenscapTestCase(TestCase):
             response,
             {
                 'upload_dir': self.random_temp_dir,
-                'error': None, 'success': True
+                'error': None, 'success': True,
+                'returncode': 0
             }
         )
 
@@ -112,7 +113,8 @@ class OpenscapTestCase(TestCase):
             {
                 'upload_dir': self.random_temp_dir,
                 'error': None,
-                'success': True
+                'success': True,
+                'returncode': 2
             }
         )
 
@@ -124,7 +126,8 @@ class OpenscapTestCase(TestCase):
             {
                 'error': 'argument --profile is required',
                 'upload_dir': None,
-                'success': False
+                'success': False,
+                'returncode': None
             }
         )
 
@@ -144,7 +147,8 @@ class OpenscapTestCase(TestCase):
             {
                 'upload_dir': self.random_temp_dir,
                 'error': None,
-                'success': True
+                'success': True,
+                'returncode': 2
             }
         )
         expected_cmd = [
@@ -181,7 +185,8 @@ class OpenscapTestCase(TestCase):
             {
                 'upload_dir': None,
                 'error': 'evaluation error',
-                'success': False
+                'success': False,
+                'returncode': 1
             }
         )
 
@@ -189,7 +194,6 @@ class OpenscapTestCase(TestCase):
        'salt.modules.openscap.Popen',
        MagicMock(
            return_value=Mock(**{
-               'returncode': 1,
                'communicate.return_value': ('', 'evaluation error')
            })
        )
@@ -202,6 +206,7 @@ class OpenscapTestCase(TestCase):
             {
                 'upload_dir': None,
                 'error': "argument action: invalid choice: 'info' (choose from 'eval')",
-                'success': False
+                'success': False,
+                'returncode': None
             }
         )
