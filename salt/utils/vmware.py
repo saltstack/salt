@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Connection library for VMWare
+Connection library for VMware
 
 .. versionadded:: 2015.8.2
 
-This is a base library used by a number of VMWare services such as VMWare
+This is a base library used by a number of VMware services such as VMware
 ESX, ESXi, and vCenter servers.
 
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
