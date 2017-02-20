@@ -13,22 +13,19 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import boto_route53
 
-boto_route53.__salt__ = {}
-boto_route53.__opts__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoRoute53TestCase(TestCase):
+class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_route53
     '''
+    loader_module = boto_route53
     # 'present' function tests: 1
 
     def test_present(self):
@@ -99,8 +96,3 @@ class BotoRoute53TestCase(TestCase):
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(boto_route53.absent(name, zone,
                                                          record_type), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoRoute53TestCase, needs_daemon=False)
