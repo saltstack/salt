@@ -16,14 +16,15 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     patch
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.ext.six as six
 import salt.loader
+import salt.states.boto_s3_bucket as boto_s3_bucket
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 # pylint: disable=import-error,no-name-in-module,unused-import
 from unit.modules.test_boto_s3_bucket import BotoS3BucketTestCaseMixin
@@ -45,13 +46,6 @@ except ImportError:
 required_boto3_version = '1.2.1'
 
 log = logging.getLogger(__name__)
-
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-serializers = salt.loader.serializers(opts)
-funcs = salt.loader.minion_mods(opts, context=context, utils=utils, whitelist=['boto_s3_bucket'])
-salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_s3_bucket'], serializers=serializers)
 
 
 def _has_required_boto():
@@ -277,12 +271,21 @@ if _has_required_boto():
                                        ' or equal to version {0}'
         .format(required_boto3_version))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoS3BucketStateTestCaseBase(TestCase):
+class BotoS3BucketStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
+
+    loader_module = boto_s3_bucket
 
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
-        context.clear()
+        opts = salt.config.DEFAULT_MINION_OPTS
+        context = {}
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
+        serializers = salt.loader.serializers(opts)
+        self.funcs = funcs = salt.loader.minion_mods(opts, context=context, utils=utils, whitelist=['boto_s3_bucket'])
+        self.salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_s3_bucket'],
+                                              serializers=serializers)
+
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -311,8 +314,8 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
         self.conn.create_bucket.return_value = bucket_ret
         for key, value in six.iteritems(config_ret):
             getattr(self.conn, key).return_value = deepcopy(value)
-        with patch.dict(funcs, {'boto_iam.get_account_id': MagicMock(return_value='111111222222')}):
-            result = salt_states['boto_s3_bucket.present'](
+        with patch.dict(self.funcs, {'boto_iam.get_account_id': MagicMock(return_value='111111222222')}):
+            result = self.salt_states['boto_s3_bucket.present'](
                          'bucket present',
                          Bucket='testbucket',
                          **config_in
@@ -325,8 +328,8 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
         self.conn.list_buckets.return_value = deepcopy(list_ret)
         for key, value in six.iteritems(config_ret):
             getattr(self.conn, key).return_value = deepcopy(value)
-        with patch.dict(funcs, {'boto_iam.get_account_id': MagicMock(return_value='111111222222')}):
-            result = salt_states['boto_s3_bucket.present'](
+        with patch.dict(self.funcs, {'boto_iam.get_account_id': MagicMock(return_value='111111222222')}):
+            result = self.salt_states['boto_s3_bucket.present'](
                          'bucket present',
                          Bucket='testbucket',
                          **config_in
@@ -339,8 +342,8 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
         self.conn.list_buckets.return_value = deepcopy(list_ret)
         for key, value in six.iteritems(config_ret):
             getattr(self.conn, key).return_value = deepcopy(value)
-        with patch.dict(funcs, {'boto_iam.get_account_id': MagicMock(return_value='111111222222')}):
-            result = salt_states['boto_s3_bucket.present'](
+        with patch.dict(self.funcs, {'boto_iam.get_account_id': MagicMock(return_value='111111222222')}):
+            result = self.salt_states['boto_s3_bucket.present'](
                          'bucket present',
                          Bucket='testbucket',
                          LocationConstraint=config_in['LocationConstraint']
@@ -353,8 +356,8 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
         self.conn.head_bucket.side_effect = [not_found_error, None]
         self.conn.list_buckets.return_value = deepcopy(list_ret)
         self.conn.create_bucket.side_effect = ClientError(error_content, 'create_bucket')
-        with patch.dict(funcs, {'boto_iam.get_account_id': MagicMock(return_value='111111222222')}):
-            result = salt_states['boto_s3_bucket.present'](
+        with patch.dict(self.funcs, {'boto_iam.get_account_id': MagicMock(return_value='111111222222')}):
+            result = self.salt_states['boto_s3_bucket.present'](
                          'bucket present',
                          Bucket='testbucket',
                          **config_in
@@ -367,17 +370,17 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
         Tests absent on a bucket that does not exist.
         '''
         self.conn.head_bucket.side_effect = [not_found_error, None]
-        result = salt_states['boto_s3_bucket.absent']('test', 'mybucket')
+        result = self.salt_states['boto_s3_bucket.absent']('test', 'mybucket')
         self.assertTrue(result['result'])
         self.assertEqual(result['changes'], {})
 
     def test_absent_when_bucket_exists(self):
-        result = salt_states['boto_s3_bucket.absent']('test', 'testbucket')
+        result = self.salt_states['boto_s3_bucket.absent']('test', 'testbucket')
         self.assertTrue(result['result'])
         self.assertEqual(result['changes']['new']['bucket'], None)
 
     def test_absent_with_failure(self):
         self.conn.delete_bucket.side_effect = ClientError(error_content, 'delete_bucket')
-        result = salt_states['boto_s3_bucket.absent']('test', 'testbucket')
+        result = self.salt_states['boto_s3_bucket.absent']('test', 'testbucket')
         self.assertFalse(result['result'])
         self.assertTrue('Failed to delete bucket' in result['comment'])
