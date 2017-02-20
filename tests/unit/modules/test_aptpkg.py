@@ -16,19 +16,12 @@ from salt.modules import aptpkg
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON,
 )
-
-ensure_in_syspath('../../')
-
-# Globals
-aptpkg.__salt__ = {}
-aptpkg.__context__ = {}
 
 APT_KEY_LIST = r'''
 pub:-:1024:17:46181433FBB75451:1104433784:::-:::scSC:
@@ -147,6 +140,7 @@ class AptPkgTestCase(TestCase):
     '''
     Test cases for salt.modules.aptpkg
     '''
+    loader_module = aptpkg
 
     def test_version(self):
         '''
@@ -344,8 +338,3 @@ class AptPkgTestCase(TestCase):
         }
         with patch.multiple(aptpkg, **patch_kwargs):
             self.assertEqual(aptpkg.upgrade(), dict())
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(AptPkgTestCase, needs_daemon=False)
