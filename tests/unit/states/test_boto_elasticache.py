@@ -13,22 +13,21 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import boto_elasticache
 
-boto_elasticache.__salt__ = {}
-boto_elasticache.__opts__ = {}
+# Import test suite libs
+from tests.utils.mixins import LoaderModuleMockMixin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoElasticacheTestCase(TestCase):
+class BotoElasticacheTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_elasticache
     '''
+    loader_module = boto_elasticache
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -122,8 +121,3 @@ class BotoElasticacheTestCase(TestCase):
             self.assertDictEqual(boto_elasticache.creategroup
                                  (name, primary_cluster_id,
                                   replication_group_description), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoElasticacheTestCase, needs_daemon=False)
