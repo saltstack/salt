@@ -203,3 +203,9 @@ class OpenscapTestCase(TestCase):
                 'returncode': None
             }
         )
+
+    @patch('salt.modules.openscap.xccdf', Mock())
+    def test_openscap_eval(self):
+        response = openscap.xccdf_eval('Default', self.policy_file)
+        openscap.xccdf.assert_called_once_with(
+            'eval --profile Default {0}'.format(self.policy_file))

@@ -107,3 +107,7 @@ def xccdf(params):
         upload_dir=upload_dir,
         error=error,
         returncode=returncode)
+
+
+def xccdf_eval(profile=None, policy=None):
+    return xccdf('eval --profile {0} {1}'.format(profile, policy))
