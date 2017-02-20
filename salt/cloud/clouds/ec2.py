@@ -2481,6 +2481,31 @@ def wait_for_instance(
 
     return vm_
 
+def _validate_key_path_and_mode(key_filename):
+    if key_filename is None:
+        raise SaltCloudSystemExit(
+            'The required \'private_key\' configuration setting is missing from the '
+            '\'ec2\' driver.'
+        )
+
+    if not os.path.exists(key_filename):
+        raise SaltCloudSystemExit(
+            'The EC2 key file \'{0}\' does not exist.\n'.format(
+                key_filename
+            )
+        )
+
+    key_mode = str(
+        oct(stat.S_IMODE(os.stat(key_filename).st_mode))
+    )
+    if key_mode not in ('0400', '0600'):
+        raise SaltCloudSystemExit(
+            'The EC2 key file \'{0}\' needs to be set to mode 0400 or 0600.\n'.format(
+                key_filename
+            )
+        )
+
+    return True
 
 def create(vm_=None, call=None):
     '''
@@ -2514,28 +2539,7 @@ def create(vm_=None, call=None):
     if deploy:
         # The private_key and keyname settings are only needed for bootstrapping
         # new instances when deploy is True
-        if key_filename is None:
-            raise SaltCloudSystemExit(
-                'The required \'private_key\' configuration setting is missing from the '
-                '\'ec2\' driver.'
-            )
-
-        if not os.path.exists(key_filename):
-            raise SaltCloudSystemExit(
-                'The EC2 key file \'{0}\' does not exist.\n'.format(
-                    key_filename
-                )
-            )
-
-        key_mode = str(
-            oct(stat.S_IMODE(os.stat(key_filename).st_mode))
-        )
-        if key_mode not in ('0400', '0600'):
-            raise SaltCloudSystemExit(
-                'The EC2 key file \'{0}\' needs to be set to mode 0400 or 0600.\n'.format(
-                    key_filename
-                )
-            )
+        _validate_key_path_and_mode(key_filename)
 
     __utils__['cloud.fire_event'](
         'event',
