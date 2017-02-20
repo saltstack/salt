@@ -8,13 +8,11 @@ import string
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
 import salt.loader
+import salt.states.boto_cloudwatch_event as boto_cloudwatch_event
 
 # Import 3rd-party libs
 import logging
@@ -74,13 +72,6 @@ rule_ret = dict(
 
 log = logging.getLogger(__name__)
 
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-serializers = salt.loader.serializers(opts)
-funcs = salt.loader.minion_mods(opts, context=context, utils=utils, whitelist=['boto_cloudwatch_event'])
-salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_cloudwatch_event'], serializers=serializers)
-
 
 def _has_required_boto():
     '''
@@ -96,9 +87,19 @@ def _has_required_boto():
 class BotoCloudWatchEventStateTestCaseBase(TestCase):
     conn = None
 
+    loader_module = boto_cloudwatch_event
+
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
-        context.clear()
+        opts = salt.config.DEFAULT_MINION_OPTS
+        context = {}
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
+        serializers = salt.loader.serializers(opts)
+        self.funcs = funcs = salt.loader.minion_mods(opts, context=context, utils=utils, whitelist=['boto_cloudwatch_event'])
+        self.salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_cloudwatch_event'],
+                                              serializers=serializers)
+
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -121,7 +122,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         Tests exceptions when checking rule existence
         '''
         self.conn.list_rules.side_effect = ClientError(error_content, 'error on list rules')
-        result = salt_states['boto_cloudwatch_event.present'](
+        result = self.salt_states['boto_cloudwatch_event.present'](
                              name='test present',
                              Name=rule_name,
                              Description=rule_desc,
@@ -141,7 +142,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         '''
         self.conn.list_rules.return_value = {'Rules': []}
         self.conn.put_rule.side_effect = ClientError(error_content, 'put_rule')
-        result = salt_states['boto_cloudwatch_event.present'](
+        result = self.salt_states['boto_cloudwatch_event.present'](
                              name='test present',
                              Name=rule_name,
                              Description=rule_desc,
@@ -162,7 +163,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         self.conn.list_rules.return_value = {'Rules': []}
         self.conn.put_rule.return_value = rule_ret
         self.conn.describe_rule.side_effect = ClientError(error_content, 'describe_rule')
-        result = salt_states['boto_cloudwatch_event.present'](
+        result = self.salt_states['boto_cloudwatch_event.present'](
                              name='test present',
                              Name=rule_name,
                              Description=rule_desc,
@@ -184,7 +185,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         self.conn.put_rule.return_value = rule_ret
         self.conn.describe_rule.return_value = rule_ret
         self.conn.put_targets.side_effect = ClientError(error_content, 'put_targets')
-        result = salt_states['boto_cloudwatch_event.present'](
+        result = self.salt_states['boto_cloudwatch_event.present'](
                              name='test present',
                              Name=rule_name,
                              Description=rule_desc,
@@ -206,7 +207,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         self.conn.put_rule.return_value = rule_ret
         self.conn.describe_rule.return_value = rule_ret
         self.conn.put_targets.return_value = {'FailedEntryCount': 0}
-        result = salt_states['boto_cloudwatch_event.present'](
+        result = self.salt_states['boto_cloudwatch_event.present'](
                              name='test present',
                              Name=rule_name,
                              Description=rule_desc,
@@ -224,7 +225,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         '''
         self.conn.list_rules.return_value = {'Rules': [rule_ret]}
         self.conn.describe_rule.side_effect = ClientError(error_content, 'describe_rule')
-        result = salt_states['boto_cloudwatch_event.present'](
+        result = self.salt_states['boto_cloudwatch_event.present'](
                              name='test present',
                              Name=rule_name,
                              Description=rule_desc,
@@ -246,7 +247,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         self.conn.put_rule.return_value = rule_ret
         self.conn.describe_rule.return_value = rule_ret
         self.conn.list_targets_by_rule.side_effect = ClientError(error_content, 'list_targets')
-        result = salt_states['boto_cloudwatch_event.present'](
+        result = self.salt_states['boto_cloudwatch_event.present'](
                              name='test present',
                              Name=rule_name,
                              Description=rule_desc,
@@ -269,7 +270,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         self.conn.describe_rule.return_value = rule_ret
         self.conn.list_targets.return_value = {'Targets': []}
         self.conn.put_targets.side_effect = ClientError(error_content, 'put_targets')
-        result = salt_states['boto_cloudwatch_event.present'](
+        result = self.salt_states['boto_cloudwatch_event.present'](
                              name='test present',
                              Name=rule_name,
                              Description=rule_desc,
@@ -292,7 +293,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         self.conn.describe_rule.return_value = rule_ret
         self.conn.list_targets.return_value = {'Targets': []}
         self.conn.put_targets.return_value = {'FailedEntryCount': 0}
-        result = salt_states['boto_cloudwatch_event.present'](
+        result = self.salt_states['boto_cloudwatch_event.present'](
                              name='test present',
                              Name=rule_name,
                              Description=rule_desc,
@@ -314,7 +315,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         self.conn.describe_rule.return_value = rule_ret
         self.conn.list_targets.return_value = {'Targets': [{'Id': 'target1'}, {'Id': 'target2'}]}
         self.conn.put_targets.return_value = {'FailedEntryCount': 0}
-        result = salt_states['boto_cloudwatch_event.present'](
+        result = self.salt_states['boto_cloudwatch_event.present'](
                              name='test present',
                              Name=rule_name,
                              Description=rule_desc,
@@ -331,7 +332,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         Tests exceptions when checking rule existence
         '''
         self.conn.list_rules.side_effect = ClientError(error_content, 'error on list rules')
-        result = salt_states['boto_cloudwatch_event.absent'](
+        result = self.salt_states['boto_cloudwatch_event.absent'](
                              name='test present',
                              Name=rule_name,
                              **conn_parameters)
@@ -343,7 +344,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         Tests absent on an non-existing rule
         '''
         self.conn.list_rules.return_value = {'Rules': []}
-        result = salt_states['boto_cloudwatch_event.absent'](
+        result = self.salt_states['boto_cloudwatch_event.absent'](
                              name='test absent',
                              Name=rule_name,
                              **conn_parameters)
@@ -356,7 +357,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         '''
         self.conn.list_rules.return_value = {'Rules': [rule_ret]}
         self.conn.list_targets_by_rule.side_effect = ClientError(error_content, 'list_targets')
-        result = salt_states['boto_cloudwatch_event.absent'](
+        result = self.salt_states['boto_cloudwatch_event.absent'](
                              name='test absent',
                              Name=rule_name,
                              **conn_parameters)
@@ -370,7 +371,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         self.conn.list_rules.return_value = {'Rules': [rule_ret]}
         self.conn.list_targets_by_rule.return_value = {'Targets': [{'Id': 'target1'}]}
         self.conn.remove_targets.side_effect = ClientError(error_content, 'remove_targets')
-        result = salt_states['boto_cloudwatch_event.absent'](
+        result = self.salt_states['boto_cloudwatch_event.absent'](
                              name='test absent',
                              Name=rule_name,
                              **conn_parameters)
@@ -384,7 +385,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         self.conn.list_rules.return_value = {'Rules': [rule_ret]}
         self.conn.list_targets_by_rule.return_value = {'Targets': [{'Id': 'target1'}]}
         self.conn.remove_targets.return_value = {'FailedEntryCount': 1}
-        result = salt_states['boto_cloudwatch_event.absent'](
+        result = self.salt_states['boto_cloudwatch_event.absent'](
                              name='test absent',
                              Name=rule_name,
                              **conn_parameters)
@@ -398,7 +399,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         self.conn.list_targets_by_rule.return_value = {'Targets': [{'Id': 'target1'}]}
         self.conn.remove_targets.return_value = {'FailedEntryCount': 0}
         self.conn.delete_rule.side_effect = ClientError(error_content, 'delete_rule')
-        result = salt_states['boto_cloudwatch_event.absent'](
+        result = self.salt_states['boto_cloudwatch_event.absent'](
                              name='test absent',
                              Name=rule_name,
                              **conn_parameters)
@@ -412,7 +413,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         self.conn.list_rules.return_value = {'Rules': [rule_ret]}
         self.conn.list_targets_by_rule.return_value = {'Targets': [{'Id': 'target1'}]}
         self.conn.remove_targets.return_value = {'FailedEntryCount': 0}
-        result = salt_states['boto_cloudwatch_event.absent'](
+        result = self.salt_states['boto_cloudwatch_event.absent'](
                              name='test absent',
                              Name=rule_name,
                              **conn_parameters)
