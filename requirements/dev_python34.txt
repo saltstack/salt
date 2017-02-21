@@ -5,4 +5,5 @@ apache-libcloud>=0.14.0
 boto>=2.32.1
 boto3>=1.2.1
 moto>=0.3.6
-SaltTesting>=2015.2.16
+SaltTesting>=2016.10.26
+SaltPyLint
