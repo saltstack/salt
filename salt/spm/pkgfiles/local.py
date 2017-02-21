@@ -39,6 +39,8 @@ def check_existing(package, pkg_files, formula_def, conn=None):
     if conn is None:
         conn = init()
 
+    node_type = str(__opts__.get('spm_node_type'))
+
     existing_files = []
     for member in pkg_files:
         if member.isdir():
@@ -50,8 +52,17 @@ def check_existing(package, pkg_files, formula_def, conn=None):
             continue
 
         if member.name.startswith('{0}/_'.format(package)):
-            # Module files are distributed via _modules, _states, etc
-            out_file = os.path.join(conn['formula_path'], new_name)
+            if node_type in ('master', 'minion'):
+                # Module files are distributed via extmods directory
+                out_file = os.path.join(
+                    salt.syspaths.CACHE_DIR,
+                    node_type,
+                    'extmods',
+                    new_name.replace('_', ''),
+                )
+            else:
+                # Module files are distributed via _modules, _states, etc
+                out_file = os.path.join(conn['formula_path'], new_name)
         elif member.name == '{0}/pillar.example'.format(package):
             # Pillars are automatically put in the pillar_path
             new_name = '{0}.sls.orig'.format(package)
@@ -83,6 +94,8 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
     if conn is None:
         conn = init()
 
+    node_type = str(__opts__.get('spm_node_type'))
+
     out_path = conn['formula_path']
 
     tld = formula_def.get('top_level_dir', package)
@@ -91,10 +104,19 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
         log.debug('{0} not in top level directory, not installing'.format(new_name))
         return False
 
-    if member.name.startswith('{0}/_'.format(package)):
-        # Module files are distributed via _modules, _states, etc
-        member.name = member.name.replace('{0}/'.format(package), '')
-    elif member.name == '{0}/pillar.example'.format(package):
+    if new_name.startswith('{0}/_'.format(package)):
+        if node_type in ('master', 'minion'):
+            # Module files are distributed via extmods directory
+            member.name = member.name.replace('{0}/_'.format(package), '')
+            out_path = os.path.join(
+                salt.syspaths.CACHE_DIR,
+                node_type,
+                'extmods',
+            )
+        else:
+            # Module files are distributed via _modules, _states, etc
+            member.name = member.name.replace('{0}/'.format(package), '')
+    elif new_name == '{0}/pillar.example'.format(package):
         # Pillars are automatically put in the pillar_path
         member.name = '{0}.sls.orig'.format(package)
         out_path = conn['pillar_path']
