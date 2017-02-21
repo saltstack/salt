@@ -17,7 +17,6 @@ import ctypes
 import sys
 import time
 import datetime
-from subprocess import list2cmdline
 import logging
 
 log = logging.getLogger(__name__)
