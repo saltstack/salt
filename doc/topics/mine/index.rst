@@ -184,11 +184,21 @@ the output:
             network.ip_addrs:
                 - eth0
 
+Mine data is typically only updated on the master every 60 minutes, this can
+be modified by setting:
+
 :file:`/etc/salt/minion.d/mine.conf`:
 
 .. code-block:: yaml
 
     mine_interval: 5
+
+To force the mine data to update immediately run:
+
+.. code-block:: bash
+
+    salt '*' mine.update
+
 
 :file:`/srv/salt/haproxy.sls`:
 
