@@ -80,7 +80,7 @@ def execute(tgt,
             **kwargs):
     '''
     .. versionadded:: Nitrogen
-    
+
     Execute ``fun`` on all minions matched by ``tgt`` and ``tgt_type``.
     Parameter ``fun`` is the name of execution module function to call.
 
