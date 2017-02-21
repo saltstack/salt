@@ -229,7 +229,10 @@ def alias_get_collections(alias_name, **kwargs):
     if not isinstance(alias_name, six.string_types):
         raise ValueError('Alias name must be a string')
 
-    collection_aliases = [(k_v[0], k_v[1]["aliases"]) for k_v in six.iteritems(cluster_status(**kwargs)["collections"])]
+    collection_aliases = [
+        (k_v[0], k_v[1]["aliases"])
+        for k_v in six.iteritems(cluster_status(**kwargs)["collections"])
+        if "aliases" in k_v[1]]
     aliases = [k_v1[0] for k_v1 in [k_v for k_v in collection_aliases if alias_name in k_v[1]]]
 
     return aliases
