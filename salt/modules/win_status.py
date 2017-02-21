@@ -12,7 +12,15 @@ or for problem solving if your minion is having problems.
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
+import ctypes
+import sys
+import time
+import datetime
+from subprocess import list2cmdline
 import logging
+
+log = logging.getLogger(__name__)
 
 # Import Salt Libs
 import salt.utils
@@ -20,39 +28,41 @@ import salt.ext.six as six
 import salt.utils.event
 from salt._compat import subprocess
 from salt.utils.network import host_to_ips as _host_to_ips
+from salt.modules.status import master, ping_master, time_
+from salt.utils import namespaced_function as _namespaced_function
 
-import os
-import ctypes
-import sys
-import time
-import datetime
-from subprocess import list2cmdline
-
-log = logging.getLogger(__name__)
-
-try:
+# Import 3rd Party Libs
+if salt.utils.is_windows():
     import wmi
     import salt.utils.winapi
-    has_required_packages = True
-except ImportError:
-    if salt.utils.is_windows():
-        log.exception('pywin32 and wmi python packages are required '
-                      'in order to use the status module.')
-    has_required_packages = False
+    HAS_WMI = True
+else:
+    HAS_WMI = False
 
 __opts__ = {}
-
-# Define the module's virtual name
 __virtualname__ = 'status'
 
 
 def __virtual__():
     '''
-    Only works on Windows systems
+    Only works on Windows systems with WMI and WinAPI
     '''
-    if salt.utils.is_windows() and has_required_packages:
-        return __virtualname__
-    return (False, 'Cannot load win_status module on non-windows')
+    if not salt.utils.is_windows():
+        return False, 'win_status.py: Requires Windows'
+
+    if not HAS_WMI:
+        return False, 'win_status.py: Requires WMI and WinAPI'
+
+    # Namespace modules from `status.py`
+    global ping_master, time_
+    ping_master = _namespaced_function(ping_master, globals())
+    time_ = _namespaced_function(time_, globals())
+
+    return __virtualname__
+
+__func_alias__ = {
+    'time_': 'time'
+}
 
 
 def cpuload():
