@@ -44,6 +44,11 @@ the example below:
         interface: eth0
         cidr: '10.0.0.0/8'
 
+In the example above :py:mod:`salt.modules.network.ip_addrs` has additional
+filters to help narrow down the results.  In the above example IP addresses
+are only returned if they are on a eth0 interface and in the 10.0.0.0/8 IP
+range.
+
 Mine Functions Aliases
 ----------------------
 
