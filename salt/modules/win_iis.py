@@ -474,6 +474,11 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443, sslf
     pscmd = list()
     name = str(name).upper()
     binding_info = _get_binding_info(hostheader, ipaddress, port)
+
+    if _iisVersion() < 8:
+        # IIS 7.5 and earlier don't support SNI for HTTPS, therefore cert bindings don't contain the host header
+        binding_info = binding_info.rpartition(':')[0] + ':'
+
     binding_path = r"IIS:\SslBindings\{0}".format(binding_info.replace(':', '!'))
 
     if sslflags not in _VALID_SSL_FLAGS:
@@ -511,10 +516,8 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443, sslf
 
     if _iisVersion() < 8:
         # IIS 7.5 and earlier have different syntax for associating a certificate with a site
-        iis7path = binding_path.rpartition("!")[0]
-
         # Modify IP spec to IIS 7.5 format
-        iis7path = iis7path.replace(r"\*!", "\\0.0.0.0!")
+        iis7path = binding_path.replace(r"\*!", "\\0.0.0.0!")
 
         pscmd.append("New-Item -Path '{0}' -Thumbprint '{1}'".format(iis7path, name))
     else:
