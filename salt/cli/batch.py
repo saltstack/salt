@@ -190,7 +190,7 @@ class Batch(object):
             for ping_ret in self.ping_gen:
                 if ping_ret is None:
                     break
-                m = next(ping_ret.iterkeys())
+                m = next(six.iterkeys(ping_ret))
                 if m not in self.minions:
                     self.minions.append(m)
                     to_run.append(m)

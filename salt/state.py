@@ -1929,7 +1929,7 @@ class State(object):
         }
         validated_retry_data = {}
         if isinstance(retry_data, dict):
-            for expected_key, value_type in expected_data.iteritems():
+            for expected_key, value_type in six.iteritems(expected_data):
                 if expected_key in retry_data:
                     if isinstance(retry_data[expected_key], value_type):
                         validated_retry_data[expected_key] = retry_data[expected_key]

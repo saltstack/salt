@@ -12,13 +12,16 @@ Useful for playing the game: *"some of these things are not like the others..."*
 when identifying discrepancies in a large infrastructure managed by salt.
 '''
 
-from __future__ import print_function
+# Import python libs
+from __future__ import absolute_import, print_function
 
-from __future__ import absolute_import
-
+# Import salt libs
 import salt.client
-from salt.ext.six.moves import range
 from salt.exceptions import SaltClientError
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 
 def hash(*args, **kwargs):
@@ -157,7 +160,7 @@ def _get_pool_results(*args, **kwargs):
     if tgt_type not in ['compound', 'pcre']:
         tgt_type = 'compound'
 
-    kwargs_passthru = dict((k, kwargs[k]) for k in kwargs.iterkeys() if not k.startswith('_'))
+    kwargs_passthru = dict((k, kwargs[k]) for k in six.iterkeys(kwargs) if not k.startswith('_'))
 
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
