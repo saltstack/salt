@@ -31,8 +31,10 @@ Mine Functions
 To enable the Salt Mine the ``mine_functions`` option needs to be applied to a
 Minion. This option can be applied via the Minion's configuration file, or the
 Minion's Pillar. The ``mine_functions`` option dictates what functions are
-being executed and allows for arguments to be passed in. If no arguments are
-passed, an empty list must be added:
+being executed and allows for arguments to be passed in.  The list of
+functions are available in the :py:mod:`salt.module`.  If no arguments
+are passed, an empty list must be added like in the ``test.ping`` function in
+the example below:
 
 .. code-block:: yaml
 
