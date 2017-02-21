@@ -98,17 +98,19 @@ def _validate_core_properties(properties):
     props_string = ""
 
     for prop_name, prop_value in six.iteritems(properties):
-        if prop_name in STRING_PROPS_LIST:
-            if not isinstance(prop_value, six.string_types):
-                raise ValueError('In option "properties", core property "'+prop_name+'" value must be a string')
-
-            props_string = props_string+"&"+prop_name+"="+prop_value
-
-        elif prop_name in BOOL_PROPS_LIST:
+        if prop_name in BOOL_PROPS_LIST:
             if not isinstance(prop_value, bool):
                 raise ValueError('Option "'+prop_name+'" value must be an boolean')
 
             props_string = props_string+"&property."+prop_name+"="+("true" if prop_value else "false")
+        elif prop_name in STRING_PROPS_LIST:
+            if not isinstance(prop_value, six.string_types):
+                raise ValueError('In option "properties", core property "'+prop_name+'" value must be a string')
+
+            props_string = props_string+"&property."+prop_name+"="+prop_value
+
+        else:
+            props_string = props_string+"&property."+str(prop_name)+"="+str(prop_value)
 
     return props_string
 
