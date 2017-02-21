@@ -159,6 +159,19 @@ to add them to the pool of load balanced servers.
     mine_functions:
       network.ip_addrs: [eth0]
 
+Then trigger the minions to refresh their pillar data by running:
+
+.. code-block:: bash
+
+    salt '*' saltutil.refresh_pillar
+
+Verify that the results are showing up in the pillar on the minions by
+executing the following and checking for ``network.ip_addrs`` in the output:
+
+.. code-block:: bash
+
+    salt '*' pillar.items
+
 :file:`/etc/salt/minion.d/mine.conf`:
 
 .. code-block:: yaml
