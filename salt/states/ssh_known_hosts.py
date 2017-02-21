@@ -27,6 +27,25 @@ import os
 import salt.utils
 from salt.exceptions import CommandNotFoundError
 
+# Define the state's virtual name
+__virtualname__ = 'ssh_known_hosts'
+
+
+def __virtual__():
+    '''
+    Does not work on Windows, requires ssh module functions
+    '''
+    if salt.utils.is_windows():
+        return False, 'ssh_known_hosts: Does not support Windows'
+
+    if 'ssh.set_known_host' not in __salt__ \
+            or 'ssh.check_known_host' not in __salt__ \
+            or 'ssh.get_known_host' not in __salt__ \
+            or 'ssh.rm_known_host' not in __salt__:
+        return False, 'ssh_known_hosts: Missing required module "ssh"'
+
+    return __virtualname__
+
 
 def present(
         name,
