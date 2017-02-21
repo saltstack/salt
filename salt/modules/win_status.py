@@ -28,7 +28,10 @@ import salt.ext.six as six
 import salt.utils.event
 from salt._compat import subprocess
 from salt.utils.network import host_to_ips as _host_to_ips
-from salt.modules.status import master, ping_master, time_
+# pylint: disable=W0611
+from salt.modules.status import ping_master, time_
+import copy
+# pylint: enable=W0611
 from salt.utils import namespaced_function as _namespaced_function
 
 # Import 3rd Party Libs
