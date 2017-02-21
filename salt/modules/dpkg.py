@@ -248,7 +248,7 @@ def file_dict(*packages):
     return {'errors': errors, 'packages': ret}
 
 
-def _get_pkg_info(failhard=True, *packages):
+def _get_pkg_info(*packages, **kwargs):
     '''
     Return list of package information. If 'packages' parameter is empty,
     then data about all installed packages will be returned.
@@ -257,6 +257,10 @@ def _get_pkg_info(failhard=True, *packages):
     :param failhard: Throw an exception if no packages found.
     :return:
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    failhard = kwargs.pop('failhard', True)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
 
     if __grains__['os'] == 'Ubuntu' and __grains__['osrelease_info'] < (12, 4):
         bin_var = '${binary}'
@@ -373,7 +377,7 @@ def _get_pkg_ds_avail():
     return ret
 
 
-def info(failhard=True, *packages):
+def info(*packages, **kwargs):
     '''
     Returns a detailed summary of package information for provided package names.
     If no packages are specified, all packages will be returned.
@@ -387,6 +391,8 @@ def info(failhard=True, *packages):
         Whether to throw an exception if none of the packages are installed.
         Defaults to True.
 
+        .. versionadded:: 2016.11.3
+
     CLI example:
 
     .. code-block:: bash
@@ -398,6 +404,11 @@ def info(failhard=True, *packages):
     # Get the missing information from the /var/lib/dpkg/available, if it is there.
     # However, this file is operated by dselect which has to be installed.
     dselect_pkg_avail = _get_pkg_ds_avail()
+
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    failhard = kwargs.pop('failhard', True)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
 
     ret = dict()
     for pkg in _get_pkg_info(*packages, failhard=failhard):
