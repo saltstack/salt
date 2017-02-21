@@ -172,6 +172,18 @@ executing the following and checking for ``network.ip_addrs`` in the output:
 
     salt '*' pillar.items
 
+Which should show that the function is present on the minion, but not include
+the output:
+
+.. code-block:: shell
+
+    minion1.example.com:
+        ----------
+        mine_functions:
+            ----------
+            network.ip_addrs:
+                - eth0
+
 :file:`/etc/salt/minion.d/mine.conf`:
 
 .. code-block:: yaml
