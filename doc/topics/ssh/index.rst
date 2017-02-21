@@ -226,6 +226,9 @@ Boolean-style options should be specified in their YAML representation.
     `Saltfile` with a capital `S` and be readable by the user running
     salt-ssh.
 
+At last you can create ``~/.salt/Saltfile`` and ``salt-ssh``
+will automatically load it by default.
+
 Debugging salt-ssh
 ==================
 

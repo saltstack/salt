@@ -477,7 +477,7 @@ class Client(object):
                     'Path \'{0}\' is not absolute'.format(url_path)
                 )
             if dest is None:
-                with salt.utils.fopen(url_data.path, 'r') as fp_:
+                with salt.utils.fopen(url_path, 'r') as fp_:
                     data = fp_.read()
                 return data
             return url_path
