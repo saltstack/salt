@@ -199,7 +199,7 @@ To force the mine data to update immediately run:
 
     salt '*' mine.update
 
-
+Setup the :py:mod:`salt.states.file.managed` state in
 :file:`/srv/salt/haproxy.sls`:
 
 .. code-block:: yaml
@@ -210,7 +210,7 @@ To force the mine data to update immediately run:
         - source: salt://haproxy_config
         - template: jinja
 
-:file:`/srv/salt/haproxy_config`:
+Create the Jinja template in :file:`/srv/salt/haproxy_config`:
 
 .. code-block:: yaml
 
@@ -221,6 +221,8 @@ To force the mine data to update immediately run:
     {% endfor %}
 
     <...file contents snipped...>
+
+In the above example, ``server`` will be expanded to the ``minion_id``.
 
 .. note::
     The expr_form argument will be renamed to ``tgt_type`` in the Nitrogen
