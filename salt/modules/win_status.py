@@ -82,11 +82,8 @@ def cpuload():
     '''
 
     # Pull in the information from WMIC
-    cmd = list2cmdline(['wmic', 'cpu', 'get', 'loadpercentage', '/value'])
-    info = __salt__['cmd.run'](cmd).split('=')
-
-    # Return pull it out of the informatin and cast it to an int
-    return int(info[1])
+    cmd = ['wmic', 'cpu', 'get', 'loadpercentage', '/value']
+    return int(__salt__['cmd.run'](cmd).split('=')[1])
 
 
 def diskusage(human_readable=False, path=None):
@@ -210,7 +207,7 @@ def uptime(human_readable=False):
     '''
 
     # Open up a subprocess to get information from WMIC
-    cmd = list2cmdline(['wmic', 'os', 'get', 'lastbootuptime', '/value'])
+    cmd = ['wmic', 'os', 'get', 'lastbootuptime', '/value']
     startup_time = __salt__['cmd.run'](cmd).split('=')[1][:14]
 
     # Convert to time struct
