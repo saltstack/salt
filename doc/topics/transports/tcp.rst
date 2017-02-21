@@ -53,8 +53,11 @@ master configuration file:
       certfile: <path_to_certfile>
       ssl_version: PROTOCOL_TLSv1_2
 
-The `ssl` option in the minion configuration file looks like this:
+The minimal `ssl` option in the minion configuration file looks like this:
 
+.. code-block:: yaml
+
+    ssl: {}
 
 .. note::
 
