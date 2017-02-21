@@ -787,10 +787,10 @@ def _get_client(timeout=None):
             client_kwargs['version'] = 'auto'
 
         try:
-            __context__['docker.client'] = docker.Client(**client_kwargs)
-        except AttributeError:
             # docker-py 2.0 renamed this client attribute
             __context__['docker.client'] = docker.APIClient(**client_kwargs)
+        except AttributeError:
+            __context__['docker.client'] = docker.Client(**client_kwargs)
 
     # Set a new timeout if one was passed
     if timeout is not None and __context__['docker.client'].timeout != timeout:
