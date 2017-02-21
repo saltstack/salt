@@ -150,7 +150,8 @@ import logging
 from salt.utils import dictupdate
 import salt.utils.vmware
 
-# Import third party libs
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     from pyVmomi import vim
     from pyVim.connect import Disconnect
@@ -479,7 +480,7 @@ def _recurse_config_to_dict(t_data):
             return t_list
         elif isinstance(t_data, dict):
             t_dict = {}
-            for k, v in t_data.iteritems():
+            for k, v in six.iteritems(t_data):
                 t_dict[k] = _recurse_config_to_dict(v)
             return t_dict
         else:

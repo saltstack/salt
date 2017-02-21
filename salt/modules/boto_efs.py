@@ -55,6 +55,8 @@ import logging
 from distutils.version import LooseVersion as _LooseVersion
 
 
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     import boto3
     HAS_BOTO3 = True
@@ -255,7 +257,7 @@ def create_tags(filesystemid,
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     new_tags = []
-    for k, v in tags.iteritems():
+    for k, v in six.iteritems(tags):
         new_tags.append({'Key': k, 'Value': v})
 
     client.create_tags(FileSystemId=filesystemid, Tags=new_tags)

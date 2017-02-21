@@ -353,11 +353,11 @@ def create_node(**kwargs):
         create_data['locality'] = locality
 
     if metadata is not None:
-        for key, value in metadata.iteritems():
+        for key, value in six.iteritems(metadata):
             create_data['metadata.{0}'.format(key)] = value
 
     if tag is not None:
-        for key, value in tag.iteritems():
+        for key, value in six.iteritems(tag):
             create_data['tag.{0}'.format(key)] = value
 
     if firewall_enabled is not None:
