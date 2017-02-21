@@ -667,14 +667,14 @@ def _pull_query_results(resultset):
     Parses a ResultSet returned from InfluxDB into a dictionary of results,
     grouped by series names and optional JSON-encoded grouping tags.
     '''
-    _results = collections.defaultdict(lambda: collections.OrderedDict())
+    _results = collections.defaultdict(lambda: {})
     for _header, _values in resultset.items():
         _header, _group_tags = _header
         if _group_tags:
             _results[_header][json.dumps(_group_tags)] = [_value for _value in _values]
         else:
             _results[_header] = [_value for _value in _values]
-    return _results
+    return dict(sorted(_results.items()))
 
 
 def query(database, query, **client_args):
