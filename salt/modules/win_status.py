@@ -82,17 +82,11 @@ def cpuload():
     '''
 
     # Pull in the information from WMIC
-    cmd = list2cmdline(['wmic', 'cpu'])
-    info = __salt__['cmd.run'](cmd).split('\r\n')
-
-    # Find the location of LoadPercentage
-    column = info[0].index('LoadPercentage')
-
-    # Get the end of the number.
-    end = info[1].index(' ', column+1)
+    cmd = list2cmdline(['wmic', 'cpu', 'get', 'loadpercentage', '/value'])
+    info = __salt__['cmd.run'](cmd).split('=')
 
     # Return pull it out of the informatin and cast it to an int
-    return int(info[1][column:end])
+    return int(info[1])
 
 
 def diskusage(human_readable=False, path=None):
@@ -216,18 +210,9 @@ def uptime(human_readable=False):
     '''
 
     # Open up a subprocess to get information from WMIC
-    cmd = list2cmdline(['wmic', 'os', 'get', 'lastbootuptime'])
-    outs = __salt__['cmd.run'](cmd)
+    cmd = list2cmdline(['wmic', 'os', 'get', 'lastbootuptime', '/value'])
+    startup_time = __salt__['cmd.run'](cmd).split('=')[1][:14]
 
-    # Get the line that has when the computer started in it:
-    stats_line = ''
-    # use second line from output
-    stats_line = outs.split('\r\n')[1]
-
-    # Extract the time string from the line and parse
-    #
-    # Get string, just use the leading 14 characters
-    startup_time = stats_line[:14]
     # Convert to time struct
     startup_time = time.strptime(startup_time, '%Y%m%d%H%M%S')
     # Convert to datetime object
