@@ -4680,14 +4680,6 @@ def _lookup_admin_template(policy_name,
     return (False, None, [], 'Unable to find {0} policy {1}'.format(policy_class, policy_name))
 
 
-def list_configurable_policies(policy_class='Machine',
-                               include_administrative_templates=True,
-                               adml_language='en-US'):
-    '''
-    list the policies that the execution module can configure
-    '''
-
-
 def get_policy_info(policy_name,
                     policy_class,
                     adml_language='en-US'):
