@@ -186,7 +186,7 @@ class LinuxLVMTestCase(TestCase):
                 with patch.dict(linux_lvm.__salt__, {'cmd.run_all': cmd_mock}):
                     self.assertEqual(linux_lvm.pvcreate('A', metadatasize=1000),
                                      True)
-                    cmd_mock.assert_not_called()
+                    self.assertTrue(cmd_mock.call_count == 0)
 
     def test_pvremove(self):
         '''

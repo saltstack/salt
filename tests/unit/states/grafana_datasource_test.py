@@ -80,7 +80,7 @@ class GrafanaDatasourceTestCase(TestCase):
         with patch('requests.get', mock_json_response([])):
             with patch('requests.delete') as rdelete:
                 ret = grafana_datasource.absent('test', profile=profile)
-                rdelete.assert_not_called()
+                self.assertTrue(rdelete.call_count == 0)
                 self.assertTrue(ret['result'])
                 self.assertEqual(ret['comment'], 'Data source test already absent')
 

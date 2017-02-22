@@ -412,7 +412,7 @@ class SystemdScopeTestCase(TestCase):
                         # Test not masked (should take no action and return True)
                         self.assertTrue(systemd.unmask(self.unit_name))
                         # Also should not have called cmd.run_all
-                        mock_not_run.assert_not_called()
+                        self.assertTrue(mock_not_run.call_count == 0)
 
             with patch.object(systemd, 'masked', masked_mock):
 

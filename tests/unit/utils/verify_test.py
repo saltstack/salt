@@ -247,7 +247,7 @@ class TestVerify(TestCase):
         mock_info = MagicMock()
         with patch.object(log, 'warning', mock_info):
             verify_log({'log_level': 'info'})
-            mock_info.assert_not_called()
+            self.assertTrue(mock_info.call_count == 0)
 
 
 if __name__ == '__main__':
