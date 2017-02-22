@@ -6,4 +6,4 @@ boto>=2.32.1
 boto3>=1.2.1
 moto>=0.3.6
 SaltTesting
-SaltPyLint
+SaltPyLint>=v2017.2.22
