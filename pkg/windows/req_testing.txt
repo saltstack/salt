@@ -2,7 +2,7 @@ mock
 boto
 boto3
 moto
-SaltPyLint
+SaltPyLint>=v2017.2.22
 apache-libcloud
 virtualenv
 
