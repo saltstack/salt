@@ -82,7 +82,7 @@ def _active_mountinfo(ret):
                              'root': comps[3],
                              'opts': _resolve_user_group_names(comps[5].split(',')),
                              'fstype': comps[_sep + 1],
-                             'device': device_name,
+                             'device': device_name.replace('\\040','\\ '),
                              'alt_device': _list.get(comps[4], None),
                              'superopts': _resolve_user_group_names(comps[_sep + 3].split(',')),
                              'device_uuid': device_uuid,
@@ -102,6 +102,7 @@ def _active_mounts(ret):
 
     with salt.utils.fopen(filename) as ifile:
         for line in ifile:
+            log.info('in _active_mounts line: {}'.format(line))
             comps = line.split()
             ret[comps[1]] = {'device': comps[0],
                              'alt_device': _list.get(comps[1], None),
@@ -539,7 +540,7 @@ def set_fstab(
     # preserve arguments for updating
     entry_args = {
         'name': name,
-        'device': device,
+        'device': device.replace('\\ ','\\040'),
         'fstype': fstype,
         'opts': opts,
         'dump': dump,
