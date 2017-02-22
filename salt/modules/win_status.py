@@ -12,7 +12,14 @@ or for problem solving if your minion is having problems.
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
+import ctypes
+import sys
+import time
+import datetime
 import logging
+
+log = logging.getLogger(__name__)
 
 # Import Salt Libs
 import salt.utils
@@ -20,39 +27,44 @@ import salt.ext.six as six
 import salt.utils.event
 from salt._compat import subprocess
 from salt.utils.network import host_to_ips as _host_to_ips
+# pylint: disable=W0611
+from salt.modules.status import ping_master, time_
+import copy
+# pylint: enable=W0611
+from salt.utils import namespaced_function as _namespaced_function
 
-import os
-import ctypes
-import sys
-import time
-import datetime
-from subprocess import list2cmdline
-
-log = logging.getLogger(__name__)
-
-try:
+# Import 3rd Party Libs
+if salt.utils.is_windows():
     import wmi
     import salt.utils.winapi
-    has_required_packages = True
-except ImportError:
-    if salt.utils.is_windows():
-        log.exception('pywin32 and wmi python packages are required '
-                      'in order to use the status module.')
-    has_required_packages = False
+    HAS_WMI = True
+else:
+    HAS_WMI = False
 
 __opts__ = {}
-
-# Define the module's virtual name
 __virtualname__ = 'status'
 
 
 def __virtual__():
     '''
-    Only works on Windows systems
+    Only works on Windows systems with WMI and WinAPI
     '''
-    if salt.utils.is_windows() and has_required_packages:
-        return __virtualname__
-    return (False, 'Cannot load win_status module on non-windows')
+    if not salt.utils.is_windows():
+        return False, 'win_status.py: Requires Windows'
+
+    if not HAS_WMI:
+        return False, 'win_status.py: Requires WMI and WinAPI'
+
+    # Namespace modules from `status.py`
+    global ping_master, time_
+    ping_master = _namespaced_function(ping_master, globals())
+    time_ = _namespaced_function(time_, globals())
+
+    return __virtualname__
+
+__func_alias__ = {
+    'time_': 'time'
+}
 
 
 def cpuload():
@@ -69,17 +81,8 @@ def cpuload():
     '''
 
     # Pull in the information from WMIC
-    cmd = list2cmdline(['wmic', 'cpu'])
-    info = __salt__['cmd.run'](cmd).split('\r\n')
-
-    # Find the location of LoadPercentage
-    column = info[0].index('LoadPercentage')
-
-    # Get the end of the number.
-    end = info[1].index(' ', column+1)
-
-    # Return pull it out of the informatin and cast it to an int
-    return int(info[1][column:end])
+    cmd = ['wmic', 'cpu', 'get', 'loadpercentage', '/value']
+    return int(__salt__['cmd.run'](cmd).split('=')[1])
 
 
 def diskusage(human_readable=False, path=None):
@@ -203,18 +206,9 @@ def uptime(human_readable=False):
     '''
 
     # Open up a subprocess to get information from WMIC
-    cmd = list2cmdline(['wmic', 'os', 'get', 'lastbootuptime'])
-    outs = __salt__['cmd.run'](cmd)
+    cmd = ['wmic', 'os', 'get', 'lastbootuptime', '/value']
+    startup_time = __salt__['cmd.run'](cmd).split('=')[1][:14]
 
-    # Get the line that has when the computer started in it:
-    stats_line = ''
-    # use second line from output
-    stats_line = outs.split('\r\n')[1]
-
-    # Extract the time string from the line and parse
-    #
-    # Get string, just use the leading 14 characters
-    startup_time = stats_line[:14]
     # Convert to time struct
     startup_time = time.strptime(startup_time, '%Y%m%d%H%M%S')
     # Convert to datetime object
