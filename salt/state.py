@@ -213,6 +213,7 @@ def find_name(name, state, high):
 def find_sls_ids(sls, high):
     '''
     Scan for all ids in the given sls and return them in a dict; {name: state}
+    LOREM IPSUM MENTIONBOT TEST PLEASE IGNORE
     '''
     ret = []
     for nid, item in six.iteritems(high):
