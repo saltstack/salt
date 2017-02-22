@@ -74,7 +74,7 @@ def query(host=None, quiet=False):
             if not isinstance(info, dict):
                 continue
             chunk = {}
-            id_ = next(info.iterkeys())
+            id_ = next(six.iterkeys(info))
             if host:
                 if host != id_:
                     continue

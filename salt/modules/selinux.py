@@ -511,7 +511,7 @@ def fcontext_apply_policy(name, recursive=False):
             old = _context_string_to_dict(item[1])
             new = _context_string_to_dict(item[2])
             intersect = {}
-            for key, value in old.iteritems():
+            for key, value in six.iteritems(old):
                 if new.get(key) == value:
                     intersect.update({key: value})
             for key in intersect.keys():

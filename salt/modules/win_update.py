@@ -61,6 +61,7 @@ import logging
 
 # Import 3rd-party libs
 # pylint: disable=import-error
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=no-name-in-module,redefined-builtin
 try:
     import win32com.client
@@ -416,8 +417,8 @@ class PyWinUpdater(object):
     def SetSkips(self, skips):
         if skips:
             for i in skips:
-                value = i[next(i.iterkeys())]
-                skip = next(i.iterkeys())
+                value = i[next(six.iterkeys(i))]
+                skip = next(six.iterkeys(i))
                 self.SetSkip(skip, value)
                 log.debug('was asked to set {0} to {1}'.format(skip, value))
 
