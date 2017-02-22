@@ -29,6 +29,7 @@ class ZipFileMock(MagicMock):
             files = ['salt']
         MagicMock.__init__(self, **kwargs)
         self._files = files
+        self.external_attr = 0o0777 << 16
 
     def namelist(self):
         return self._files
@@ -44,6 +45,7 @@ archive.__opts__ = {}
 class ArchiveTestCase(TestCase):
 
     @patch('salt.utils.which', lambda exe: exe)
+    @patch('glob.glob', lambda pathname: [pathname])
     def test_tar(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
@@ -131,6 +133,7 @@ class ArchiveTestCase(TestCase):
             self.assertFalse(mock.called)
 
     @patch('salt.utils.which', lambda exe: exe)
+    @patch('glob.glob', lambda pathname: [pathname])
     def test_cmd_zip(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
@@ -163,6 +166,7 @@ class ArchiveTestCase(TestCase):
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.path.isdir', MagicMock(return_value=False))
     @patch('zipfile.ZipFile', MagicMock())
+    @patch('glob.glob', lambda pathname: [pathname])
     def test_zip(self):
         ret = archive.zip_(
             '/tmp/salt.{{grains.id}}.zip',
@@ -323,6 +327,7 @@ class ArchiveTestCase(TestCase):
             self.assertFalse(mock.called)
 
     @patch('salt.utils.which', lambda exe: exe)
+    @patch('glob.glob', lambda pathname: [pathname])
     def test_rar(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):

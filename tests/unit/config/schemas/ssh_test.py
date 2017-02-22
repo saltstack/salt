@@ -7,6 +7,7 @@
 '''
 # Import python libs
 from __future__ import absolute_import, print_function
+from distutils.version import LooseVersion as _LooseVersion
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -19,14 +20,18 @@ from salt.config.schemas import ssh as ssh_schemas
 from salt.config.schemas.minion import MinionConfiguration
 
 # Import 3rd-party libs
+import salt.ext.six as six
 try:
     import jsonschema
     import jsonschema.exceptions
     HAS_JSONSCHEMA = True
+    JSONSCHEMA_VERSION = _LooseVersion(jsonschema.__version__)
 except ImportError:
     HAS_JSONSCHEMA = False
+    JSONSCHEMA_VERSION = _LooseVersion('0')
 
 
+@skipIf(six.PY3, 'Tests disabled under Python 3')
 class RoosterEntryConfigTest(TestCase):
     def test_config(self):
         config = ssh_schemas.RosterEntryConfig()
@@ -296,7 +301,13 @@ class RosterItemTest(TestCase):
                 ssh_schemas.RosterItem.serialize(),
                 format_checker=jsonschema.FormatChecker()
             )
-        self.assertIn(
-            'Additional properties are not allowed (\'target-1:1\' was unexpected)',
-            excinfo.exception.message
-        )
+        if JSONSCHEMA_VERSION < _LooseVersion('2.6.0'):
+            self.assertIn(
+                'Additional properties are not allowed (\'target-1:1\' was unexpected)',
+                excinfo.exception.message
+            )
+        else:
+            self.assertIn(
+                '\'target-1:1\' does not match any of the regexes',
+                excinfo.exception.message
+            )

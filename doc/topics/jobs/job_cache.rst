@@ -67,6 +67,6 @@ Many deployments may wish to use an external database to maintain a long term
 register of executed jobs. Salt comes with two main mechanisms to do this, the
 master job cache and the external job cache.
 
-See :ref:`Storing Job Results in an External System <external-master-cache>`.
+See :ref:`Storing Job Results in an External System <external-job-cache>`.
 
 

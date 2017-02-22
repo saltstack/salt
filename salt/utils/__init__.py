@@ -32,6 +32,7 @@ import types
 import warnings
 import string
 import subprocess
+import getpass
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -1015,7 +1016,8 @@ def build_whitespace_split_regex(text):
 def format_call(fun,
                 data,
                 initial_ret=None,
-                expected_extra_kws=()):
+                expected_extra_kws=(),
+                is_class_method=None):
     '''
     Build the required arguments and keyword arguments required for the passed
     function.
@@ -1027,6 +1029,13 @@ def format_call(fun,
                         None
     :param expected_extra_kws: Any expected extra keyword argument names which
                                should not trigger a :ref:`SaltInvocationError`
+    :param is_class_method: Pass True if you are sure that the function being passed
+                            is a class method. The reason for this is that on Python 3
+                            ``inspect.ismethod`` only returns ``True`` for bound methods,
+                            while on Python 2, it returns ``True`` for bound and unbound
+                            methods. So, on Python 3, in case of a class method, you'd
+                            need the class to which the function belongs to be instantiated
+                            and this is not always wanted.
     :returns: A dictionary with the function required arguments and keyword
               arguments.
     '''
@@ -1035,7 +1044,7 @@ def format_call(fun,
     ret['args'] = []
     ret['kwargs'] = {}
 
-    aspec = salt.utils.args.get_function_argspec(fun)
+    aspec = salt.utils.args.get_function_argspec(fun, is_class_method=is_class_method)
 
     arg_data = arg_lookup(fun, aspec)
     args = arg_data['args']
@@ -1876,6 +1885,8 @@ def normalize_mode(mode):
         return None
     if not isinstance(mode, six.string_types):
         mode = str(mode)
+    if six.PY3:
+        mode = mode.replace('0o', '0')
     # Strip any quotes any initial zeroes, then though zero-pad it up to 4.
     # This ensures that somethign like '00644' is normalized to '0644'
     return mode.strip('"').strip('\'').lstrip('0').zfill(4)
@@ -2913,7 +2924,7 @@ def chugid_and_umask(runas, umask):
     Helper method for for subprocess.Popen to initialise uid/gid and umask
     for the new process.
     '''
-    if runas is not None:
+    if runas is not None and runas != getpass.getuser():
         chugid(runas)
     if umask is not None:
         os.umask(umask)
@@ -3187,10 +3198,10 @@ def filter_by(lookup_dict,
     # Iterate over the list of values to match against patterns in the
     # lookup_dict keys
     for each in val if isinstance(val, list) else [val]:
-        for key in sorted(lookup_dict):
-            if key not in six.string_types:
-                key = str(key)
-            if fnmatch.fnmatchcase(each, key):
+        for key in lookup_dict:
+            test_key = key if isinstance(key, six.string_types) else str(key)
+            test_each = each if isinstance(each, six.string_types) else str(each)
+            if fnmatch.fnmatchcase(test_each, test_key):
                 ret = lookup_dict[key]
                 break
         if ret is not None:

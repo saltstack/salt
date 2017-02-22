@@ -2503,17 +2503,11 @@ def mod_repo(repo, basedir=None, **kwargs):
         )
 
     # Build a list of keys to be deleted
-    todelete = ['disabled']
+    todelete = []
     for key in repo_opts:
         if repo_opts[key] != 0 and not repo_opts[key]:
             del repo_opts[key]
             todelete.append(key)
-
-    # convert disabled to enabled respectively from pkgrepo state
-    if 'enabled' not in repo_opts:
-        repo_opts['enabled'] = int(str(repo_opts.pop('disabled', False)).lower() != 'true')
-    else:
-        repo_opts.pop('disabled', False)
 
     # Add baseurl or mirrorlist to the 'todelete' list if the other was
     # specified in the repo_opts
@@ -2586,6 +2580,7 @@ def mod_repo(repo, basedir=None, **kwargs):
         if key in six.iterkeys(filerepos[repo].copy()):
             del filerepos[repo][key]
 
+    _bool_to_str = lambda x: '1' if x else '0'
     # Old file or new, write out the repos(s)
     filerepos[repo].update(repo_opts)
     content = header
@@ -2596,7 +2591,12 @@ def mod_repo(repo, basedir=None, **kwargs):
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
         for line in six.iterkeys(filerepos[stanza]):
-            content += '\n{0}={1}'.format(line, filerepos[stanza][line])
+            content += '\n{0}={1}'.format(
+                line,
+                filerepos[stanza][line]
+                    if not isinstance(filerepos[stanza][line], bool)
+                    else _bool_to_str(filerepos[stanza][line])
+            )
         content += '\n{0}\n'.format(comments)
 
     with salt.utils.fopen(repofile, 'w') as fileout:
@@ -2642,9 +2642,6 @@ def _parse_repo_file(filename):
                         'Failed to parse line in %s, offending line was '
                         '\'%s\'', filename, line.rstrip()
                     )
-                # YUM uses enabled field - create the disabled field so that comparisons works correctly in state
-                if comps[0].strip() == 'enabled':
-                    repos[repo]['disabled'] = comps[1] != "1"
 
     return (header, repos)
 

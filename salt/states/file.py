@@ -267,6 +267,7 @@ import difflib
 import itertools
 import logging
 import os
+import re
 import shutil
 import sys
 import traceback
@@ -766,8 +767,8 @@ def _check_directory_win(name,
                     user = salt.utils.win_dacl.get_name(user)
 
                     # Get the proper applies_to text
-                    at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][applies_to]
-                    applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+                    at_flag = salt.utils.win_dacl.flags().ace_prop['file'][applies_to]
+                    applies_to_text = salt.utils.win_dacl.flags().ace_prop['file'][at_flag]
 
                     if 'grant' in perms[user]:
                         if not perms[user]['grant']['applies to'] == applies_to_text:
@@ -814,8 +815,8 @@ def _check_directory_win(name,
                     user = salt.utils.win_dacl.get_name(user)
 
                     # Get the proper applies_to text
-                    at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][applies_to]
-                    applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+                    at_flag = salt.utils.win_dacl.flags().ace_prop['file'][applies_to]
+                    applies_to_text = salt.utils.win_dacl.flags().ace_prop['file'][at_flag]
 
                     if 'deny' in perms[user]:
                         if not perms[user]['deny']['applies to'] == applies_to_text:
@@ -1029,7 +1030,10 @@ def _get_template_texts(source_list=None,
         if rndrd_templ_fn:
             tmplines = None
             with salt.utils.fopen(rndrd_templ_fn, 'rb') as fp_:
-                tmplines = fp_.readlines()
+                tmplines = fp_.read()
+                if six.PY3:
+                    tmplines = tmplines.decode(__salt_system_encoding__)
+                tmplines = tmplines.splitlines(True)
             if not tmplines:
                 msg = 'Failed to read rendered template file {0} ({1})'
                 log.debug(msg.format(rndrd_templ_fn, source))
@@ -4107,7 +4111,9 @@ def comment(name, regex, char='#', backup='.bak'):
     if not check_res:
         return _error(ret, check_msg)
 
-    unanchor_regex = regex.lstrip('^').rstrip('$')
+    # remove (?i)-like flags, ^ and $
+    unanchor_regex = re.sub(r'^(\(\?[iLmsux]\))?\^?(.*?)\$?$', r'\2', regex)
+
     comment_regex = char + unanchor_regex
 
     # Check if the line is already commented
@@ -4131,13 +4137,19 @@ def comment(name, regex, char='#', backup='.bak'):
         ret['result'] = None
         return ret
     with salt.utils.fopen(name, 'rb') as fp_:
-        slines = fp_.readlines()
+        slines = fp_.read()
+        if six.PY3:
+            slines = slines.decode(__salt_system_encoding__)
+        slines = slines.splitlines(True)
 
     # Perform the edit
     __salt__['file.comment_line'](name, regex, char, True, backup)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        nlines = fp_.readlines()
+        nlines = fp_.read()
+        if six.PY3:
+            nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.splitlines(True)
 
     # Check the result
     ret['result'] = __salt__['file.search'](name, unanchor_regex, multiline=True)
@@ -4233,13 +4245,19 @@ def uncomment(name, regex, char='#', backup='.bak'):
         return ret
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        slines = fp_.readlines()
+        slines = fp_.read()
+        if six.PY3:
+            slines = slines.decode(__salt_system_encoding__)
+        slines = slines.splitlines(True)
 
     # Perform the edit
     __salt__['file.comment_line'](name, regex, char, False, backup)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        nlines = fp_.readlines()
+        nlines = fp_.read()
+        if six.PY3:
+            nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.splitlines(True)
 
     # Check the result
     ret['result'] = __salt__['file.search'](
@@ -4486,7 +4504,10 @@ def append(name,
     text = _validate_str_list(text)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        slines = fp_.read().splitlines()
+        slines = fp_.read()
+        if six.PY3:
+            slines = slines.decode(__salt_system_encoding__)
+        slines = slines.splitlines()
 
     append_lines = []
     try:
@@ -4534,7 +4555,10 @@ def append(name,
         ret['comment'] = 'File {0} is in correct state'.format(name)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        nlines = fp_.read().splitlines()
+        nlines = fp_.read()
+        if six.PY3:
+            nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.splitlines()
 
     if slines != nlines:
         if not salt.utils.istextfile(name):
@@ -4672,7 +4696,10 @@ def prepend(name,
     text = _validate_str_list(text)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        slines = fp_.readlines()
+        slines = fp_.read()
+        if six.PY3:
+            slines = slines.decode(__salt_system_encoding__)
+        slines = slines.splitlines(True)
 
     count = 0
     test_lines = []
@@ -4719,7 +4746,11 @@ def prepend(name,
     if header:
         with salt.utils.fopen(name, 'rb') as fp_:
             # read as many lines of target file as length of user input
-            target_head = fp_.readlines()[0:len(preface)]
+            contents = fp_.read()
+            if six.PY3:
+                contents = contents.decode(__salt_system_encoding__)
+            contents = contents.splitlines(True)
+            target_head = contents[0:len(preface)]
             target_lines = []
             # strip newline chars from list entries
             for chunk in target_head:
@@ -4735,7 +4766,10 @@ def prepend(name,
         __salt__['file.prepend'](name, *preface)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        nlines = fp_.readlines()
+        nlines = fp_.read()
+        if six.PY3:
+            nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.splitlines(True)
 
     if slines != nlines:
         if not salt.utils.istextfile(name):
@@ -4780,8 +4814,9 @@ def patch(name,
     hash
         Hash of the patched file. If the hash of the target file matches this
         value then the patch is assumed to have been applied. The hash string
-        is the hash algorithm followed by the hash of the file:
-        md5=e138491e9d5b97023cea823fe17bac22
+        is as string in the form <hash_type>:<hash_value>. For example:
+        md5:e138491e9d5b97023cea823fe17bac22. For more informations, check the
+        :mod:`file.check_hash <salt.modules.file.check_hash>` module.
 
     options
         Extra options to pass to patch.
@@ -4802,7 +4837,7 @@ def patch(name,
         /opt/file.txt:
           file.patch:
             - source: salt://file.patch
-            - hash: md5=e138491e9d5b97023cea823fe17bac22
+            - hash: md5:e138491e9d5b97023cea823fe17bac22
     '''
     if 'env' in kwargs:
         salt.utils.warn_until(

@@ -8,7 +8,7 @@ Salt's Test Suite: An Introduction
 
     This tutorial makes a couple of assumptions. The first assumption is that
     you have a basic knowledge of Salt. To get up to speed, check out the
-    :ref:`Salt Walkthrough </topics/tutorials/walkthrough>`.
+    :ref:`Salt Walkthrough <tutorial-salt-walk-through>`.
 
     The second assumption is that your Salt development environment is already
     configured and that you have a basic understanding of contributing to the
@@ -338,7 +338,7 @@ call should return.
                 alias='fred')
         self.assertEqual(tgt_ret, 'bob')
 
-Using multiple Salt commands in this manor provides two useful benefits. The first is
+Using multiple Salt commands in this manner provides two useful benefits. The first is
 that it provides some additional coverage for the ``aliases.set_target`` function.
 The second benefit is the call to ``aliases.get_target`` is not dependent on the
 presence of any aliases set outside of this test. Tests should not be dependent on

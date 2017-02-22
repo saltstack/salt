@@ -56,6 +56,7 @@ class DocTestCase(TestCase):
                 or key.endswith('doc/conf.py') \
                 or key.endswith('/conventions/documentation.rst') \
                 or key.endswith('doc/topics/releases/2016.11.2.rst') \
+                or key.endswith('doc/topics/releases/2016.11.3.rst') \
                 or key.endswith('doc/topics/releases/2016.3.5.rst'):
                 continue
 

@@ -138,6 +138,27 @@ class ADBBeaconTestCase(TestCase):
         config = {'states': ['offline', 'device'], 'no_devices_event': True}
 
         out = [
+            'List of devices attached\nHTC\tdevice',
+            'List of devices attached',
+            'List of devices attached'
+        ]
+
+        mock = Mock(side_effect=out)
+        with patch.dict(adb.__salt__, {'cmd.run': mock}):
+
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'}])
+
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{'tag': 'no_devices'}])
+
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [])
+
+    def test_no_devices(self):
+        config = {'states': ['offline', 'device'], 'no_devices_event': True}
+
+        out = [
             'List of devices attached',
             'List of devices attached'
         ]

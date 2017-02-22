@@ -39,6 +39,8 @@ __opts__ = {
     'assume_yes': True,
     'force': False,
     'verbose': False,
+    'cache': 'localfs',
+    'spm_repo_dups': 'ignore',
 }
 
 _F1 = {

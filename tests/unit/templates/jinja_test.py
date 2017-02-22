@@ -558,7 +558,10 @@ class TestCustomExtensions(TestCase):
         dataset = u"str value"
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
-        self.assertEqual("!!python/unicode str value", rendered)
+        if six.PY3:
+            self.assertEqual("str value", rendered)
+        else:
+            self.assertEqual("!!python/unicode str value", rendered)
 
     def test_serialize_python(self):
         dataset = {
@@ -946,13 +949,13 @@ class TestCustomExtensions(TestCase):
         '''Test the `min` Jinja filter.'''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | min }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'1.0')
+        self.assertEqual(rendered, u'1')
 
     def test_max(self):
         '''Test the `max` Jinja filter.'''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | max }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'3.0')
+        self.assertEqual(rendered, u'3')
 
     def test_avg(self):
         '''Test the `avg` Jinja filter.'''

@@ -1710,8 +1710,8 @@ def check_perms(path,
             # Get the proper applies_to text
             if 'applies_to' in deny_perms[user]:
                 applies_to = deny_perms[user]['applies_to']
-                at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][applies_to]
-                applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+                at_flag = salt.utils.win_dacl.flags().ace_prop['file'][applies_to]
+                applies_to_text = salt.utils.win_dacl.flags().ace_prop['file'][at_flag]
 
             else:
                 applies_to = None
@@ -1759,12 +1759,12 @@ def check_perms(path,
                 if 'applies_to' not in changes[user]:
                     # Get current "applies to" settings from the file
                     if user_name in cur_perms and 'deny' in cur_perms[user_name]:
-                        for flag in salt.utils.win_dacl.Flags.ace_prop['file']:
-                            if salt.utils.win_dacl.Flags.ace_prop['file'][flag] == \
+                        for flag in salt.utils.win_dacl.flags().ace_prop['file']:
+                            if salt.utils.win_dacl.flags().ace_prop['file'][flag] == \
                                     cur_perms[user_name]['deny']['applies to']:
                                 at_flag = flag
-                                for flag1 in salt.utils.win_dacl.Flags.ace_prop['file']:
-                                    if salt.utils.win_dacl.Flags.ace_prop['file'][flag1] == at_flag:
+                                for flag1 in salt.utils.win_dacl.flags().ace_prop['file']:
+                                    if salt.utils.win_dacl.flags().ace_prop['file'][flag1] == at_flag:
                                         applies_to = flag1
                     if not applies_to:
                         applies_to = 'this_folder_subfolders_files'
@@ -1776,20 +1776,20 @@ def check_perms(path,
                     # Get current perms
                     # Check for basic perms
                     for perm in cur_perms[user_name]['deny']['permissions']:
-                        for flag in salt.utils.win_dacl.Flags.ace_perms['file']['basic']:
-                            if salt.utils.win_dacl.Flags.ace_perms['file']['basic'][flag] == perm:
+                        for flag in salt.utils.win_dacl.flags().ace_perms['file']['basic']:
+                            if salt.utils.win_dacl.flags().ace_perms['file']['basic'][flag] == perm:
                                 perm_flag = flag
-                                for flag1 in salt.utils.win_dacl.Flags.ace_perms['file']['basic']:
-                                    if salt.utils.win_dacl.Flags.ace_perms['file']['basic'][flag1] == perm_flag:
+                                for flag1 in salt.utils.win_dacl.flags().ace_perms['file']['basic']:
+                                    if salt.utils.win_dacl.flags().ace_perms['file']['basic'][flag1] == perm_flag:
                                         perms = flag1
                     # Make a list of advanced perms
                     if not perms:
                         for perm in cur_perms[user_name]['deny']['permissions']:
-                            for flag in salt.utils.win_dacl.Flags.ace_perms['file']['advanced']:
-                                if salt.utils.win_dacl.Flags.ace_perms['file']['advanced'][flag] == perm:
+                            for flag in salt.utils.win_dacl.flags().ace_perms['file']['advanced']:
+                                if salt.utils.win_dacl.flags().ace_perms['file']['advanced'][flag] == perm:
                                     perm_flag = flag
-                                    for flag1 in salt.utils.win_dacl.Flags.ace_perms['file']['advanced']:
-                                        if salt.utils.win_dacl.Flags.ace_perms['file']['advanced'][flag1] == perm_flag:
+                                    for flag1 in salt.utils.win_dacl.flags().ace_perms['file']['advanced']:
+                                        if salt.utils.win_dacl.flags().ace_perms['file']['advanced'][flag1] == perm_flag:
                                             perms.append(flag1)
                 else:
                     perms = changes[user]['perms']
@@ -1822,8 +1822,8 @@ def check_perms(path,
             # Get the proper applies_to text
             if 'applies_to' in grant_perms[user]:
                 applies_to = grant_perms[user]['applies_to']
-                at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][applies_to]
-                applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+                at_flag = salt.utils.win_dacl.flags().ace_prop['file'][applies_to]
+                applies_to_text = salt.utils.win_dacl.flags().ace_prop['file'][at_flag]
 
             else:
                 applies_to = None
@@ -1870,12 +1870,12 @@ def check_perms(path,
                 if 'applies_to' not in changes[user]:
                     # Get current "applies_to" settings from the file
                     if user_name in cur_perms and 'grant' in cur_perms[user_name]:
-                        for flag in salt.utils.win_dacl.Flags.ace_prop['file']:
-                            if salt.utils.win_dacl.Flags.ace_prop['file'][flag] == \
+                        for flag in salt.utils.win_dacl.flags().ace_prop['file']:
+                            if salt.utils.win_dacl.flags().ace_prop['file'][flag] == \
                                     cur_perms[user_name]['grant']['applies to']:
                                 at_flag = flag
-                                for flag1 in salt.utils.win_dacl.Flags.ace_prop['file']:
-                                    if salt.utils.win_dacl.Flags.ace_prop['file'][flag1] == at_flag:
+                                for flag1 in salt.utils.win_dacl.flags().ace_prop['file']:
+                                    if salt.utils.win_dacl.flags().ace_prop['file'][flag1] == at_flag:
                                         applies_to = flag1
                     if not applies_to:
                         applies_to = 'this_folder_subfolders_files'
@@ -1886,20 +1886,20 @@ def check_perms(path,
                 if 'perms' not in changes[user]:
                     # Check for basic perms
                     for perm in cur_perms[user_name]['grant']['permissions']:
-                        for flag in salt.utils.win_dacl.Flags.ace_perms['file']['basic']:
-                            if salt.utils.win_dacl.Flags.ace_perms['file']['basic'][flag] == perm:
+                        for flag in salt.utils.win_dacl.flags().ace_perms['file']['basic']:
+                            if salt.utils.win_dacl.flags().ace_perms['file']['basic'][flag] == perm:
                                 perm_flag = flag
-                                for flag1 in salt.utils.win_dacl.Flags.ace_perms['file']['basic']:
-                                    if salt.utils.win_dacl.Flags.ace_perms['file']['basic'][flag1] == perm_flag:
+                                for flag1 in salt.utils.win_dacl.flags().ace_perms['file']['basic']:
+                                    if salt.utils.win_dacl.flags().ace_perms['file']['basic'][flag1] == perm_flag:
                                         perms = flag1
                     # Make a list of advanced perms
                     if not perms:
                         for perm in cur_perms[user_name]['grant']['permissions']:
-                            for flag in salt.utils.win_dacl.Flags.ace_perms['file']['advanced']:
-                                if salt.utils.win_dacl.Flags.ace_perms['file']['advanced'][flag] == perm:
+                            for flag in salt.utils.win_dacl.flags().ace_perms['file']['advanced']:
+                                if salt.utils.win_dacl.flags().ace_perms['file']['advanced'][flag] == perm:
                                     perm_flag = flag
-                                    for flag1 in salt.utils.win_dacl.Flags.ace_perms['file']['advanced']:
-                                        if salt.utils.win_dacl.Flags.ace_perms['file']['advanced'][flag1] == perm_flag:
+                                    for flag1 in salt.utils.win_dacl.flags().ace_perms['file']['advanced']:
+                                        if salt.utils.win_dacl.flags().ace_perms['file']['advanced'][flag1] == perm_flag:
                                             perms.append(flag1)
                 else:
                     perms = changes[user]['perms']
@@ -1998,7 +1998,7 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True):
     ret = {}
 
     # Get the DACL for the directory
-    dacl = salt.utils.win_dacl.Dacl(path)
+    dacl = salt.utils.win_dacl.dacl(path)
 
     # Get current file/folder permissions
     cur_perms = salt.utils.win_dacl.get_permissions(path)
@@ -2019,12 +2019,12 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True):
             if 'applies_to' not in deny_perms[user]:
                 # Get current "applies to" settings from the file
                 if user_name in cur_perms and 'deny' in cur_perms[user_name]:
-                    for flag in salt.utils.win_dacl.Flags.ace_prop['file']:
-                        if salt.utils.win_dacl.Flags.ace_prop['file'][flag] == \
+                    for flag in salt.utils.win_dacl.flags().ace_prop['file']:
+                        if salt.utils.win_dacl.flags().ace_prop['file'][flag] == \
                                 cur_perms[user_name]['deny']['applies to']:
                             at_flag = flag
-                            for flag1 in salt.utils.win_dacl.Flags.ace_prop['file']:
-                                if salt.utils.win_dacl.Flags.ace_prop['file'][flag1] == at_flag:
+                            for flag1 in salt.utils.win_dacl.flags().ace_prop['file']:
+                                if salt.utils.win_dacl.flags().ace_prop['file'][flag1] == at_flag:
                                     applies_to = flag1
                 if not applies_to:
                     applies_to = 'this_folder_subfolders_files'
@@ -2052,12 +2052,12 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True):
             if 'applies_to' not in grant_perms[user]:
                 # Get current "applies to" settings from the file
                 if user_name in cur_perms and 'grant' in cur_perms[user_name]:
-                    for flag in salt.utils.win_dacl.Flags.ace_prop['file']:
-                        if salt.utils.win_dacl.Flags.ace_prop['file'][flag] == \
+                    for flag in salt.utils.win_dacl.flags().ace_prop['file']:
+                        if salt.utils.win_dacl.flags().ace_prop['file'][flag] == \
                                 cur_perms[user_name]['grant']['applies to']:
                             at_flag = flag
-                            for flag1 in salt.utils.win_dacl.Flags.ace_prop['file']:
-                                if salt.utils.win_dacl.Flags.ace_prop['file'][flag1] == at_flag:
+                            for flag1 in salt.utils.win_dacl.flags().ace_prop['file']:
+                                if salt.utils.win_dacl.flags().ace_prop['file'][flag1] == at_flag:
                                     applies_to = flag1
                 if not applies_to:
                     applies_to = 'this_folder_subfolders_files'

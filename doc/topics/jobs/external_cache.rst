@@ -1,4 +1,4 @@
-.. _external-master-cache:
+.. _external-job-cache:
 
 =========================================
 Storing Job Results in an External System

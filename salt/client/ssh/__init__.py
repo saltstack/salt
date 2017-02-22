@@ -899,6 +899,15 @@ class Single(object):
             opts_pkg['id'] = self.id
 
             retcode = 0
+
+            # Restore master grains
+            for grain in conf_grains:
+                opts_pkg['grains'][grain] = conf_grains[grain]
+            # Enable roster grains support
+            if 'grains' in self.target:
+                for grain in self.target['grains']:
+                    opts_pkg['grains'][grain] = self.target['grains'][grain]
+
             popts = {}
             popts.update(opts_pkg['__master_opts__'])
             popts.update(opts_pkg)
