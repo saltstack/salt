@@ -220,7 +220,10 @@ def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None,
         rds = conn.describe_db_subnet_groups(DBSubnetGroupName=name)
         return {'exists': bool(rds)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        if "DBSubnetGroupNotFoundFault" in e.message:
+            return {'exists': False}
+        else:
+            return {'error': salt.utils.boto3.get_error(e)}
 
 
 def create(name, allocated_storage, db_instance_class, engine,
@@ -548,7 +551,7 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
                     'CopyTagsToSnapshot', 'MonitoringInterval',
                     'MonitoringRoleArn', 'PromotionTier',
                     'DomainMemberships')
-            return {'rds': dict([(k, rds.get(k)) for k in keys])}
+            return {'rds': dict([(k, rds.get('DBInstances', [{}])[0].get(k)) for k in keys])}
         else:
             return {'rds': None}
     except ClientError as e:

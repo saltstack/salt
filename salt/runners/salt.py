@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: 2016.11.0
-
 This runner makes Salt's
 execution modules available
 on the salt master.
 
+.. versionadded:: 2016.11.0
+
 .. _salt_salt_runner:
+
 Salt's execution modules are normally available
 on the salt minion. Use this runner to call
 execution modules on the salt master.
 Salt :ref:`execution modules <writing-execution-modules>`
 are the functions called by the ``salt`` command.
 
-Execution modules can be
-called with ``salt-run``:
+Execution modules can be called with ``salt-run``:
 
 .. code-block:: bash
 
@@ -45,7 +45,7 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 def cmd(fun, *args, **kwargs):
     '''
     Execute ``fun`` with the given ``args`` and ``kwargs``.
-    Parameter ``fun`` should be the string :ref:`name <all-salt_modules>`
+    Parameter ``fun`` should be the string :ref:`name <all-salt.modules>`
     of the execution module to call.
 
     Note that execution modules will be *loaded every time*
@@ -79,8 +79,10 @@ def execute(tgt,
             kwarg=None,
             **kwargs):
     '''
-    Execute `fun` on all minions matched by `tgt` and `tgt_type`.
-    Parameter `fun` is the name of execution module function to call.
+    .. versionadded:: Nitrogen
+
+    Execute ``fun`` on all minions matched by ``tgt`` and ``tgt_type``.
+    Parameter ``fun`` is the name of execution module function to call.
 
     This function should mainly be used as a helper for runner modules,
     in order to avoid redundant code.
@@ -92,7 +94,20 @@ def execute(tgt,
         ret1 = __salt__['salt.execute']('*', 'mod.fun')
         ret2 = __salt__['salt.execute']('my_nodegroup', 'mod2.fun2', tgt_type='nodegroup')
 
-    .. versionadded:: Nitrogen
+    It can also be used to schedule jobs directly on the master, for example:
+
+    .. code-block:: yaml
+
+        schedule:
+            collect_bgp_stats:
+                function: salt.execute
+                args:
+                    - edge-routers
+                    - bgp.neighbors
+                kwargs:
+                    tgt_type: nodegroup
+                days: 1
+                returner: redis
     '''
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
