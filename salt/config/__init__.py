@@ -1615,6 +1615,9 @@ DEFAULT_SPM_OPTS = {
     'spm_db': os.path.join(salt.syspaths.CACHE_DIR, 'spm', 'packages.db'),
     'cache': 'localfs',
     'spm_repo_dups': 'ignore',
+    # If set, spm_node_type will be either master or minion, but they should
+    # NOT be a default
+    'spm_node_type': '',
     # <---- Salt master settings overridden by SPM ----------------------
 }
 
