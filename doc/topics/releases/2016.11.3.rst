@@ -826,7 +826,7 @@ Changes:
   * f8a6863 Merge pull request `#39087`_ from lomeroe/`bp-37375`_
   * c3aaa53 _in_range_inclusive class method incorrectly called isinstance
 
-  * ce263f9 set_computer_policy and set_user_policy call "set" by the original function name (set) instead of the aliased function name set_
+  * ce263f9 set_computer_policy and set_user_policy call "set" by the original function name (set) instead of the aliased function name ``set_``
 
   * ff7d74b correct tool extension guid for user registry policies
 
