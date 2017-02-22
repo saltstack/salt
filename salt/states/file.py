@@ -4814,8 +4814,9 @@ def patch(name,
     hash
         Hash of the patched file. If the hash of the target file matches this
         value then the patch is assumed to have been applied. The hash string
-        is the hash algorithm followed by the hash of the file:
-        md5=e138491e9d5b97023cea823fe17bac22
+        is as string in the form <hash_type>:<hash_value>. For example:
+        md5:e138491e9d5b97023cea823fe17bac22. For more informations, check the
+        :mod:`file.check_hash <salt.modules.file.check_hash>` module.
 
     options
         Extra options to pass to patch.
@@ -4836,7 +4837,7 @@ def patch(name,
         /opt/file.txt:
           file.patch:
             - source: salt://file.patch
-            - hash: md5=e138491e9d5b97023cea823fe17bac22
+            - hash: md5:e138491e9d5b97023cea823fe17bac22
     '''
     if 'env' in kwargs:
         salt.utils.warn_until(
