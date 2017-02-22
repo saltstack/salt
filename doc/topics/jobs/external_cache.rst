@@ -89,12 +89,33 @@ A simpler returner, such as Slack or HipChat, requires:
 Step 2: Configure the Returner
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-After you understand the configuration and have the external system ready, add
-the returner configuration settings to the Salt Minion configuration file for
-the External Job Cache, or to the Salt Master configuration file for the Master
-Job Cache.
+After you understand the configuration and have the external system ready, the
+configuration requirements must be declared.
 
-For example, MySQL requires:
+External Job Cache
+""""""""""""""""""
+
+The returner configuration settings can be declared in the Salt Minion
+configuration file, the Minion's pillar data, or the Minion's grains.
+
+If ``external_job_cache`` configuration settings are specified in more than
+one place, the options are retrieved in the following order. The first
+configuration location that is found is the one that will be used.
+
+- Minion configuration file
+- Minion's grains
+- Minion's pillar data
+
+Master Job Cache
+""""""""""""""""
+
+The returner configuration settings for the Master Job Cache should be
+declared in the Salt Master's configuration file.
+
+Configuration File Examples
+"""""""""""""""""""""""""""
+
+MySQL requires:
 
 .. code-block:: yaml
 
