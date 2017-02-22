@@ -8,7 +8,11 @@ Manage Lambda Functions
 Create and destroy Lambda Functions. Be aware that this interacts with Amazon's services,
 and so may incur charges.
 
-This module uses ``boto3``, which can be installed via package, or pip.
+:depends:
+    - boto
+    - boto3
+
+The dependencies listed above can be installed via package or pip.
 
 This module accepts explicit vpc credentials but can also utilize
 IAM roles assigned to the instance through Instance Profiles. Dynamic
