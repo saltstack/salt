@@ -5557,11 +5557,15 @@ def get_client_args():
     except AttributeError:
         try:
             endpoint_config_args = \
-                _argspec(docker.utils.create_endpoint_config).args
+                _argspec(docker.utils.utils.create_endpoint_config).args
         except AttributeError:
-            raise CommandExecutionError(
-                'Failed to get create_host_config argspec'
-            )
+            try:
+                endpoint_config_args = \
+                    _argspec(docker.utils.create_endpoint_config).args
+            except AttributeError:
+                raise CommandExecutionError(
+                    'Failed to get create_endpoint_config argspec'
+                )
 
     for arglist in (config_args, host_config_args, endpoint_config_args):
         try:
