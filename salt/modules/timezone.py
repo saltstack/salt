@@ -107,6 +107,8 @@ def _get_zone_etc_localtime():
                 return get_zonecode()
             raise CommandExecutionError(tzfile + ' does not exist')
         elif exc.errno == errno.EINVAL:
+            if 'FreeBSD' in __grains__['os_family']:
+                return get_zonecode()
             log.warning(
                 tzfile + ' is not a symbolic link, attempting to match ' +
                 tzfile + ' to zoneinfo files'

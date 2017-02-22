@@ -2221,14 +2221,21 @@ def query_instance(vm_=None, call=None):
 
         log.debug('Returned query data: {0}'.format(data))
 
-        if ssh_interface(vm_) == 'public_ips' and 'ipAddress' in data[0]['instancesSet']['item']:
-            log.error(
-                'Public IP not detected.'
-            )
-            return data
-        if ssh_interface(vm_) == 'private_ips' and \
-           'privateIpAddress' in data[0]['instancesSet']['item']:
-            return data
+        if ssh_interface(vm_) == 'public_ips':
+            if 'ipAddress' in data[0]['instancesSet']['item']:
+                return data
+            else:
+                log.error(
+                    'Public IP not detected.'
+                )
+
+        if ssh_interface(vm_) == 'private_ips':
+            if 'privateIpAddress' in data[0]['instancesSet']['item']:
+                return data
+            else:
+                log.error(
+                    'Private IP not detected.'
+                )
 
     try:
         data = salt.utils.cloud.wait_for_ip(
