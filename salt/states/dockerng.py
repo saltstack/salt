@@ -51,7 +51,6 @@ from salt.modules.dockerng import (
     VALID_CREATE_OPTS,
     _validate_input,
     _get_repo_tag,
-    _get_docker_py_versioninfo,
 )
 # pylint: enable=no-name-in-module,import-error
 import salt.utils
