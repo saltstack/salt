@@ -5,12 +5,12 @@ unit tests for the localfs cache
 
 # Import Python libs
 from __future__ import absolute_import
+import shutil
 import tempfile
 
 # Import Salt Testing libs
 import integration
 from salttesting import skipIf, TestCase
-from salttesting.helpers import destructiveTest, ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     NO_MOCK,
@@ -18,13 +18,15 @@ from salttesting.mock import (
     patch
 )
 
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.payload
 import salt.utils
 from salt.cache import localfs
 from salt.exceptions import SaltCacheError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 localfs.__context__ = {}
 localfs.__opts__ = {'cachedir': ''}
@@ -41,6 +43,7 @@ class LocalFSTest(TestCase):
         Helper function that creates a temporary cache file using localfs.store. This
         is to used to create DRY unit tests for the localfs cache.
         '''
+        self.addCleanup(shutil.rmtree, tmp_dir)
         with patch.dict(localfs.__opts__, {'cachedir': tmp_dir}):
             with patch.dict(localfs.__context__, {'serial': serializer}):
                 localfs.store(bank='bank', key='key', data='payload data', cachedir=tmp_dir)
@@ -79,7 +82,6 @@ class LocalFSTest(TestCase):
         '''
         self.assertRaises(SaltCacheError, localfs.store, bank='', key='', data='', cachedir='')
 
-    @destructiveTest
     def test_store_success(self):
         '''
         Tests that the store function writes the data to the serializer for storage.
@@ -91,9 +93,9 @@ class LocalFSTest(TestCase):
         self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
 
         # Read in the contents of the key.p file and assert "payload data" was written
-        with salt.utils.fopen(tmp_dir + '/bank/key.p') as fh_:
+        with salt.utils.fopen(tmp_dir + '/bank/key.p', 'rb') as fh_:
             for line in fh_:
-                self.assertIn('payload data', line)
+                self.assertIn(six.b('payload data'), line)
 
     # 'fetch' function tests: 3
 
@@ -114,7 +116,6 @@ class LocalFSTest(TestCase):
         '''
         self.assertRaises(SaltCacheError, localfs.fetch, bank='', key='', cachedir='')
 
-    @destructiveTest
     def test_fetch_success(self):
         '''
         Tests that the fetch function is able to read the cache file and return its data.
@@ -152,7 +153,6 @@ class LocalFSTest(TestCase):
         '''
         self.assertRaises(SaltCacheError, localfs.updated, bank='', key='', cachedir='')
 
-    @destructiveTest
     def test_updated_success(self):
         '''
         Test that the updated function returns the modification time of the cache file
@@ -228,7 +228,6 @@ class LocalFSTest(TestCase):
         '''
         self.assertRaises(SaltCacheError, localfs.list_, bank='', cachedir='')
 
-    @destructiveTest
     def test_list_success(self):
         '''
         Tests the return of the list function containing bank entries.
@@ -245,7 +244,6 @@ class LocalFSTest(TestCase):
 
     # 'contains' function tests: 1
 
-    @destructiveTest
     def test_contains(self):
         '''
         Test the return of the contains function when key=None and when a key
@@ -264,8 +262,3 @@ class LocalFSTest(TestCase):
         # Now test the return of the contains function when key='key'
         with patch.dict(localfs.__opts__, {'cachedir': tmp_dir}):
             self.assertTrue(localfs.contains(bank='bank', key='key', cachedir=tmp_dir))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LocalFSTest, needs_daemon=False)
