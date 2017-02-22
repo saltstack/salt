@@ -1531,7 +1531,7 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
     except KeyError:
         return ret
 
-    
+
 def run_query(method, params, **connection_args):
     '''
     Send Zabbix API call
