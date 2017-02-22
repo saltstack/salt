@@ -17,6 +17,7 @@ ensure_in_syspath('../..')
 import integration
 from salt.fileserver import roots
 from salt import fileclient
+import salt.utils
 
 roots.__opts__ = {}
 
@@ -66,21 +67,39 @@ class RootsTest(integration.ModuleCase):
             fnd = {'path': os.path.join(integration.FILES, 'file', 'base', 'testfile'),
                    'rel': 'testfile'}
             ret = roots.serve_file(load, fnd)
+
+            data = 'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  ' \
+                   'ARTHUR:  And this enchanter of whom you speak, he ' \
+                   'has seen the grail?\n  OLD MAN:  Ha ha he he he ' \
+                   'he!\n  ARTHUR:  Where does he live?  Old man, where ' \
+                   'does he live?\n  OLD MAN:  He knows of a cave, a ' \
+                   'cave which no man has entered.\n  ARTHUR:  And the ' \
+                   'Grail... The Grail is there?\n  OLD MAN:  Very much ' \
+                   'danger, for beyond the cave lies the Gorge\n      ' \
+                   'of Eternal Peril, which no man has ever crossed.\n  ' \
+                   'ARTHUR:  But the Grail!  Where is the Grail!?\n  ' \
+                   'OLD MAN:  Seek you the Bridge of Death.\n  ARTHUR:  ' \
+                   'The Bridge of Death, which leads to the Grail?\n  ' \
+                   'OLD MAN:  Hee hee ha ha!\n\n'
+            if salt.utils.is_windows():
+                data = 'Scene 24\r\n\r\n \r\n  OLD MAN:  Ah, hee he he ' \
+                       'ha!\r\n  ARTHUR:  And this enchanter of whom you ' \
+                       'speak, he has seen the grail?\r\n  OLD MAN:  Ha ha ' \
+                       'he he he he!\r\n  ARTHUR:  Where does he live?  Old ' \
+                       'man, where does he live?\r\n  OLD MAN:  He knows of ' \
+                       'a cave, a cave which no man has entered.\r\n  ' \
+                       'ARTHUR:  And the Grail... The Grail is there?\r\n  ' \
+                       'OLD MAN:  Very much danger, for beyond the cave lies ' \
+                       'the Gorge\r\n      of Eternal Peril, which no man ' \
+                       'has ever crossed.\r\n  ARTHUR:  But the Grail!  ' \
+                       'Where is the Grail!?\r\n  OLD MAN:  Seek you the ' \
+                       'Bridge of Death.\r\n  ARTHUR:  The Bridge of Death, ' \
+                       'which leads to the Grail?\r\n  OLD MAN:  Hee hee ha ' \
+                       'ha!\r\n\r\n'
+
             self.assertDictEqual(
                 ret,
-                {'data': 'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  '
-                         'ARTHUR:  And this enchanter of whom you speak, he '
-                         'has seen the grail?\n  OLD MAN:  Ha ha he he he '
-                         'he!\n  ARTHUR:  Where does he live?  Old man, where '
-                         'does he live?\n  OLD MAN:  He knows of a cave, a '
-                         'cave which no man has entered.\n  ARTHUR:  And the '
-                         'Grail... The Grail is there?\n  OLD MAN:  Very much '
-                         'danger, for beyond the cave lies the Gorge\n      '
-                         'of Eternal Peril, which no man has ever crossed.\n  '
-                         'ARTHUR:  But the Grail!  Where is the Grail!?\n  '
-                         'OLD MAN:  Seek you the Bridge of Death.\n  ARTHUR:  '
-                         'The Bridge of Death, which leads to the Grail?\n  '
-                         'OLD MAN:  Hee hee ha ha!\n\n',
+                {'data': data,
                  'dest': 'testfile'})
 
     @skipIf(True, "Update test not yet implemented")
@@ -104,10 +123,17 @@ class RootsTest(integration.ModuleCase):
                 'rel': 'testfile'
             }
             ret = roots.file_hash(load, fnd)
+
+            # Hashes are different in Windows. May be how git translates line
+            # endings
+            hsum = 'baba5791276eb99a7cc498fb1acfbc3b4bd96d24cfe984b4ed6b5be2418731df'
+            if salt.utils.is_windows():
+                hsum = '754aa260e1f3e70f43aaf92149c7d1bad37f708c53304c37660e628d7553f687'
+
             self.assertDictEqual(
                 ret,
                 {
-                    'hsum': 'baba5791276eb99a7cc498fb1acfbc3b4bd96d24cfe984b4ed6b5be2418731df',
+                    'hsum': hsum,
                     'hash_type': 'sha256'
                 }
             )
@@ -153,6 +179,10 @@ class RootsTest(integration.ModuleCase):
             ret = roots.dir_list({'saltenv': 'base'})
             self.assertIn('empty_dir', ret)
 
+    # Git doesn't handle symlinks in Windows. See the thread below:
+    # http://stackoverflow.com/questions/5917249/git-symlinks-in-windows
+    @skipIf(salt.utils.is_windows(),
+            'Git doesn\'t handle symlinks properly on Windows')
     def test_symlink_list(self):
         with patch.dict(roots.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'file_roots': self.master_opts['file_roots'],
