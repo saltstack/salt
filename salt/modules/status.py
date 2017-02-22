@@ -25,8 +25,8 @@ import salt.config
 import salt.minion
 import salt.utils
 import salt.utils.event
-from salt.utils.minion import connected_masters as _connected_masters
 from salt.utils.network import host_to_ips as _host_to_ips
+from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
 from salt.exceptions import CommandExecutionError
 
@@ -1055,7 +1055,8 @@ def master(master=None, connected=True):
         return
 
     master_connection_status = False
-    connected_ips = _connected_masters()
+    port = __salt__['config.get']('publish_port', default=4505)
+    connected_ips = _remote_port_tcp(port)
 
     # Get connection status for master
     for master_ip in master_ips:
