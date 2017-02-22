@@ -554,6 +554,12 @@ VALID_CREATE_OPTS = {
         'min_docker': (1, 5, 0),
         'default': '',
     },
+    'ulimits': {
+        'path': 'HostConfig:Ulimits',
+        'min_docker': (1, 6, 0),
+        'min_docker_py': (1, 2, 0),
+        'default': [],
+    },
 }
 
 
@@ -787,10 +793,10 @@ def _get_client(timeout=None):
             client_kwargs['version'] = 'auto'
 
         try:
-            __context__['docker.client'] = docker.Client(**client_kwargs)
-        except AttributeError:
             # docker-py 2.0 renamed this client attribute
             __context__['docker.client'] = docker.APIClient(**client_kwargs)
+        except AttributeError:
+            __context__['docker.client'] = docker.Client(**client_kwargs)
 
     # Set a new timeout if one was passed
     if timeout is not None and __context__['docker.client'].timeout != timeout:
@@ -1791,6 +1797,44 @@ def _validate_input(kwargs,
                     kwargs['labels'] = new_labels
             else:
                 kwargs['labels'] = salt.utils.repack_dictlist(kwargs['labels'])
+
+    def _valid_ulimits():  # pylint: disable=unused-variable
+        '''
+        Must be a string or list of strings with bind mount information
+        '''
+        if kwargs.get('ulimits') is None:
+            # No need to validate
+            return
+        err = (
+            'Invalid ulimits configuration. See the documentation for proper '
+            'usage.'
+        )
+        try:
+            _valid_dictlist('ulimits')
+            # If this was successful then assume the correct API value was
+            # passed on on the CLI and do not proceed with validation.
+            return
+        except SaltInvocationError:
+            pass
+        try:
+            _valid_stringlist('ulimits')
+        except SaltInvocationError:
+            raise SaltInvocationError(err)
+
+        new_ulimits = []
+        for ulimit in kwargs['ulimits']:
+            ulimit_name, comps = ulimit.strip().split('=', 1)
+            try:
+                comps = [int(x) for x in comps.split(':', 1)]
+            except ValueError:
+                raise SaltInvocationError(err)
+            if len(comps) == 1:
+                comps *= 2
+            soft_limit, hard_limit = comps
+            new_ulimits.append({'Name': ulimit_name,
+                                'Soft': soft_limit,
+                                'Hard': hard_limit})
+        kwargs['ulimits'] = new_ulimits
 
     # And now, the actual logic to perform the validation
     if 'docker.docker_version' not in __context__:
