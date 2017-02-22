@@ -192,7 +192,6 @@ def _compare(actual, create_kwargs, defaults_from_image):
                     if key not in data:
                         env_ptr = env_diff.setdefault(item, {})
                         env_ptr.setdefault('old', {})[key] = actual_val
-                        
             if env_diff:
                 ret.update(env_diff)
             continue
