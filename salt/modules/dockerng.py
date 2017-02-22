@@ -583,6 +583,7 @@ VALID_CREATE_OPTS = {
             'Type': None,
             'Config': {},
         }
+    },
     'ulimits': {
         'path': 'HostConfig:Ulimits',
         'min_docker': (1, 6, 0),
