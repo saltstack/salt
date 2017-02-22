@@ -351,7 +351,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
             )
 
-        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+        if (self.opts['ipv6'] is True or ':' in self.opts['master_ip']) and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self._socket.setsockopt(zmq.IPV4ONLY, 0)
 
