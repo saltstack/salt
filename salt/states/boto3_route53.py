@@ -271,9 +271,11 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
                     PrivateZone else 'public', Name)
             ret['result'] = None
             return ret
+        vpc_id = fixed_vpcs[0].get('VPCId') if fixed_vpcs else None
+        vpc_region = fixed_vpcs[0].get('VPCRegion') if fixed_vpcs else None
         newzone = __salt__['boto3_route53.create_hosted_zone'](Name=Name,
-                CallerReference=CallerReference, Comment=Comment, PrivateZone=PrivateZone,
-                VPCId=fixed_vpcs[0]['VPCId'], VPCRegion=fixed_vpcs[0]['VPCRegion'],
+                CallerReference=CallerReference, Comment=Comment,
+                PrivateZone=PrivateZone, VPCId=vpc_id, VPCRegion=vpc_region,
                 region=region, key=key, keyid=keyid, profile=profile)
         if newzone:
             newzone = newzone[0]
@@ -676,7 +678,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         if ResourceRecords != sorted(rrset.get('ResourceRecords'), key=lambda x: x['Value']):
             update = True
 
-    if not create or update:
+    if not create and not update:
         ret['comment'] = ('Route 53 resource record {} with type {} is already in the desired state.'
                          ''.format(Name, Type))
         log.info(ret['comment'])
