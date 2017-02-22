@@ -80,6 +80,7 @@ class MapConfTest(TestCase):
     Validate evaluation of salt-cloud map configuration
     '''
 
+    @patch('salt.config.check_driver_dependencies', MagicMock(return_value=True))
     @patch('salt.cloud.Map.read', MagicMock(return_value=EXAMPLE_MAP))
     def test_cloud_map_merge_conf(self):
         '''
