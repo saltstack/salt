@@ -12,6 +12,7 @@
 # Import Python libs
 from __future__ import absolute_import
 import os
+import tempfile
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
@@ -123,6 +124,20 @@ class CloudUtilsTestCase(TestCase):
             cloud.sftp_file("/tmp/test", "ТЕСТ test content")
         # we successful pass the place with os.write(tmpfd, ...
         self.assertNotEqual("a bytes-like object is required, not 'str'", str(context.exception))
+
+    def test_check_key_path_and_mode(self):
+        with tempfile.NamedTemporaryFile() as f:
+            key_file = f.name
+
+            os.chmod(key_file, 0o644)
+            self.assertFalse(cloud.check_key_path_and_mode('foo', key_file))
+            os.chmod(key_file, 0o600)
+            self.assertTrue(cloud.check_key_path_and_mode('foo', key_file))
+            os.chmod(key_file, 0o400)
+            self.assertTrue(cloud.check_key_path_and_mode('foo', key_file))
+
+        # tmp file removed
+        self.assertFalse(cloud.check_key_path_and_mode('foo', key_file))
 
 if __name__ == '__main__':
     from integration import run_tests
