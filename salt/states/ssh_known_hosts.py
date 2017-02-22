@@ -38,12 +38,6 @@ def __virtual__():
     if salt.utils.is_windows():
         return False, 'ssh_known_hosts: Does not support Windows'
 
-    if 'ssh.set_known_host' not in __salt__ \
-            or 'ssh.check_known_host' not in __salt__ \
-            or 'ssh.get_known_host' not in __salt__ \
-            or 'ssh.rm_known_host' not in __salt__:
-        return False, 'ssh_known_hosts: Missing required module "ssh"'
-
     return __virtualname__
 
 
