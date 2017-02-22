@@ -138,13 +138,13 @@ import json
 import os
 
 # Import Salt Libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 import salt.utils
 import salt.utils.odict as odict
 import salt.utils.dictupdate as dictupdate
-from salt.ext import six
 
 # Import 3rd party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 try:
     from salt._compat import ElementTree as ET
     HAS_ELEMENT_TREE = True
@@ -161,7 +161,7 @@ if six.PY2:
         # Note that we intentionally don't treat odicts here - they won't compare equal
         # in many circumstances where AWS treats them the same...
         if isinstance(thing, dict):
-            return dict([(_byteify(k), _byteify(v)) for k, v in thing.iteritems()])
+            return dict([(_byteify(k), _byteify(v)) for k, v in six.iteritems(thing)])
         elif isinstance(thing, list):
             return [_byteify(m) for m in thing]
         elif isinstance(thing, unicode):  # pylint: disable=W1699
