@@ -69,6 +69,17 @@ def _sconnect(host=None, port=None, password=None):
     return redis.StrictRedis(host, port, password=password)
 
 
+def _get_kwargs_opts(**options):
+    '''
+    Return the Redis connection details from kwargs.
+    '''
+    host = options.get('host', None)
+    port = options.get('port', None)
+    database = options.get('db', None)
+    password = options.get('password', None)
+    return (host, port, database, password)
+
+
 def bgrewriteaof(host=None, port=None, db=None, password=None):
     '''
     Asynchronously rewrite the append-only file
@@ -254,10 +265,7 @@ def hdel(key, *fields, **options):
 
         salt '*' redis.hdel foo_hash bar_field1 bar_field2
     '''
-    host = options.get('host', None)
-    port = options.get('port', None)
-    database = options.get('db', None)
-    password = options.get('password', None)
+    (host, port, databse, password) = _get_kwargs_opts(**options)
     server = _connect(host, port, database, password)
     return server.hdel(key, *fields)
 
@@ -356,10 +364,7 @@ def hmget(key, *fields, **options):
 
         salt '*' redis.hmget foo_hash bar_field1 bar_field2
     '''
-    host = options.get('host', None)
-    port = options.get('port', None)
-    database = options.get('db', None)
-    password = options.get('password', None)
+    (host, port, databse, password) = _get_kwargs_opts(**options)
     server = _connect(host, port, database, password)
     return server.hmget(key, *fields)
 
@@ -634,11 +639,8 @@ def sadd(key, *members, **options):
 
         salt '*' redis.sadd foo_set foo_member bar_member
     '''
-    host = options.get('host', None)
-    port = options.get('port', None)
-    database = options.get('db', None)
-    password = options.get('password', None)
-    server = _connect(host, port, db, password)
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
     return server.sadd(key, *members)
 
 
@@ -679,11 +681,8 @@ def sdiff(key, *keys, **options):
 
         salt '*' redis.sdiff foo_set bar_set baz_set
     '''
-    host = options.get('host', None)
-    port = options.get('port', None)
-    database = options.get('db', None)
-    password = options.get('password', None)
-    server = _connect(host, port, db, password)
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
     return server.sdiff(key, *keys)
 
 
@@ -704,11 +703,8 @@ def sdiffstore(destination, key, *keys, **options):
 
         salt '*' redis.sdiffstore destination_set foo_set bar_set baz_set
     '''
-    host = options.get('host', None)
-    port = options.get('port', None)
-    database = options.get('db', None)
-    password = options.get('password', None)
-    server = _connect(host, port, db, password)
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
     return server.sdiffstore(destination, key, *keys)
 
 
@@ -732,11 +728,8 @@ def sinter(key, *keys, **options):
 
         salt '*' redis.sinter foo_set bar_set baz_set
     '''
-    host = options.get('host', None)
-    port = options.get('port', None)
-    database = options.get('db', None)
-    password = options.get('password', None)
-    server = _connect(host, port, db, password)
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
     return server.sinter(key, *keys)
 
 
@@ -757,11 +750,8 @@ def sinterstore(destination, key, *keys, **options):
 
         salt '*' redis.sinterstore dest foo_set bar_set baz_set
     '''
-    host = options.get('host', None)
-    port = options.get('port', None)
-    database = options.get('db', None)
-    password = options.get('password', None)
-    server = _connect(host, port, db, password)
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
     return server.sinterstore(destination, key, *keys)
 
 
@@ -896,11 +886,8 @@ def srem(key, *members, **options):
 
         salt '*' redis.srem foo_set bar_member baz_member
     '''
-    host = options.get('host', None)
-    port = options.get('port', None)
-    database = options.get('db', None)
-    password = options.get('password', None)
-    server = _connect(host, port, db, password)
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
     return server.srem(key, *members)
 
 
@@ -920,11 +907,8 @@ def sunion(key, *keys, **options):
 
         salt '*' redis.sunion foo_set bar_set baz_set
     '''
-    host = options.get('host', None)
-    port = options.get('port', None)
-    database = options.get('db', None)
-    password = options.get('password', None)
-    server = _connect(host, port, db, password)
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
     return server.sunion(key, *keys)
 
 
@@ -945,11 +929,8 @@ def sunionstore(destination, key, *keys, **options):
 
         salt '*' redis.sunionstore destination_set foo_set bar_set baz_set
     '''
-    host = options.get('host', None)
-    port = options.get('port', None)
-    database = options.get('db', None)
-    password = options.get('password', None)
-    server = _connect(host, port, db, password)
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
     return server.sunionstore(destination, key, *keys)
 
 
