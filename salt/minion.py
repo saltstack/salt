@@ -1692,7 +1692,7 @@ class Minion(MinionBase):
         self.opts['grains'] = salt.loader.grains(
             self.opts,
             force_refresh=True,
-            proxy=salt.utils.is_proxy())
+            proxy=getattr(self, 'proxy', None))
 
     def module_refresh(self, force_refresh=False, notify=False):
         '''
