@@ -41,8 +41,8 @@ def until(name,
           m_args=None,
           m_kwargs=None,
           condition=None,
-          period=None,
-          timeout=None):
+          period=0,
+          timeout=604800):
     '''
     Loop over an execution module until a condition is met.
 
@@ -72,23 +72,23 @@ def until(name,
            'comment': ''}
 
     if name not in __salt__:
-        ret['comment'] = "Can't find module {0}".format(name)
+        ret['comment'] = 'Cannot find module {0}'.format(name)
         return ret
     if condition is None:
         ret['comment'] = 'An exit condition must be specified'
         return ret
-    try:
-        period = int(period)
-    except ValueError:
-        ret['comment'] = 'Period must be specified in seconds'
-    try:
-        timeout = int(timeout)
-    except ValueError:
-        ret['comment'] = 'Timeout must be specified in seconds'
+    if not isinstance(period, int):
+        ret['comment'] = 'Period must be specified as an integer in seconds'
+        return ret
+    if not isinstance(timeout, int):
+        ret['comment'] = 'Timeout must be specified as an integer in seconds'
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'The execution module {0} will be run'.format(name)
+        ret['result'] = None
+        return ret
 
     def timed_out():
-        if timeout is None:
-            return False
         if time.time() >= timeout:
             return True
         return False
