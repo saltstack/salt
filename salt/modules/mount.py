@@ -102,7 +102,6 @@ def _active_mounts(ret):
 
     with salt.utils.fopen(filename) as ifile:
         for line in ifile:
-            log.info('in _active_mounts line: {}'.format(line))
             comps = line.split()
             ret[comps[1]] = {'device': comps[0],
                              'alt_device': _list.get(comps[1], None),
