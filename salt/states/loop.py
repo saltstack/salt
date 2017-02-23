@@ -18,6 +18,12 @@ Allows for looping over execution modules.
             keyid: {{ access_key }}
             key: {{ secret_key }}
             instances: "{{ instance }}"
+
+.. warning::
+
+    This state allows arbitrary python code to be executed through the condition
+    parameter which is literally evaluated within the state. Please use caution.
+
 '''
 from __future__ import absolute_import
 
