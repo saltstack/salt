@@ -7,7 +7,6 @@ python:
 addons:
   apt:
     packages:
-    - build-essentials
     - python-dev
 
 install:
