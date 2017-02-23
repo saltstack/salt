@@ -3178,8 +3178,7 @@ def line(name, content, match=None, mode=None, location=None,
     if not name:
         return _error(ret, 'Must provide name to file.line')
 
-    if create and not os.path.isfile(name):
-        managed(name, create=create, user=user, group=group, mode=file_mode)
+    managed(name, create=create, user=user, group=group, mode=file_mode)
 
     check_res, check_msg = _check_file(name)
     if not check_res:
