@@ -298,16 +298,16 @@ class SystemModuleTest(integration.ModuleCase):
         self._test_hwclock_sync()
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_get_computer_desc(self):
+    def test_get_hostname(self):
         '''
         Test getting the system hostname
         '''
-        res = self.run_function('system.get_computer_desc')
+        res = self.run_function('system.get_hostname')
 
         hostname_cmd = salt.utils.which('hostnamectl')
         if hostname_cmd:
-            desc = self.run_function('cmd.run', ["hostnamectl status --pretty"])
-            self.assertEqual(res, desc)
+            hname = self.run_function('cmd.run', ["hostnamectl status --pretty"])
+            self.assertEqual(res, hname)
         else:
             if not os.path.isfile('/etc/machine-info'):
                 self.assertFalse(res)
@@ -318,17 +318,45 @@ class SystemModuleTest(integration.ModuleCase):
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_set_computer_desc(self):
+    def test_set_hostname(self):
         '''
         Test setting the system hostname
         '''
         self._save_machine_info()
-        desc = "test"
-        ret = self.run_function('system.set_computer_desc', [desc])
-        computer_desc = self.run_function('system.get_computer_desc')
+        hname = "test"
+        ret = self.run_function('system.set_hostname', [hname])
+        hostname = self.run_function('system.get_hostname')
 
         self.assertTrue(ret)
-        self.assertIn(desc, computer_desc)
+        self.assertEqual(hostname, hname)
+
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_get_computer_desc(self):
+        '''
+        Test getting the system computer description
+        '''
+        res = self.run_function('system.get_computer_desc')
+
+        if not os.path.isfile('/etc/machine-info'):
+            self.assertFalse(res)
+        else:
+            with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+                data = mach_info.read()
+                self.assertIn(res, data.decode('string_escape'))
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_set_computer_desc(self):
+        '''
+        Test setting the system computer description
+        '''
+        self._save_machine_info()
+        desc = "test description"
+        ret = self.run_function('system.set_computer_desc', [desc])
+        description = self.run_function('system.get_computer_desc')
+
+        self.assertTrue(ret)
+        self.assertEqual(description, desc)
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_has_hwclock(self):
