@@ -58,21 +58,21 @@ class Batch(object):
         # Broadcast to targets
         fret = set()
         nret = set()
-        try:
-            for ret in ping_gen:
-                if ('minions' and 'jid') in ret:
-                    for minion in ret['minions']:
-                        nret.add(minion)
-                    continue
-                else:
+        for ret in ping_gen:
+            if ('minions' and 'jid') in ret:
+                for minion in ret['minions']:
+                    nret.add(minion)
+                continue
+            else:
+                try:
                     m = next(six.iterkeys(ret))
-                    if m is not None:
-                        fret.add(m)
-            return (list(fret), ping_gen, nret.difference(fret))
-        except StopIteration:
-            if not self.quiet:
-                print_cli('No minions matched the target.')
-        return list(fret), ping_gen
+                except StopIteration:
+                    if not self.quiet:
+                        print_cli('No minions matched the target.')
+                    break
+                if m is not None:
+                    fret.add(m)
+        return (list(fret), ping_gen, nret.difference(fret))
 
     def get_bnum(self):
         '''
