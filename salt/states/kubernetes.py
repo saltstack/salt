@@ -87,7 +87,7 @@ def _error(ret, err_msg):
     return ret
 
 
-def deployment_absent(name, namespace="default"):
+def deployment_absent(name, namespace='default'):
     '''
     Ensures that the named deployment is absent from the given namespace.
 
@@ -128,11 +128,11 @@ def deployment_absent(name, namespace="default"):
 
 def deployment_present(
         name,
-        namespace="default",
+        namespace='default',
         metadata=None,
         spec=None,
-        source="",
-        template=""):
+        source='',
+        template=''):
     '''
     Ensures that the named deployment is present inside of the specified
     namespace with the given metadata and spec.
@@ -142,7 +142,7 @@ def deployment_present(
         The name of the deployment.
 
     namespace
-        The namespace holding the deployment. The "default" one is going to be
+        The namespace holding the deployment. The 'default' one is going to be
         used unless a different one is specified.
 
     metadata
@@ -190,7 +190,7 @@ def deployment_present(
                                                        source=source,
                                                        template=template,
                                                        saltenv=__env__)
-        ret['changes']["{}.{}".format(namespace, name)] = {
+        ret['changes']['{}.{}'.format(namespace, name)] = {
             'old': {},
             'new': res}
     else:
@@ -202,7 +202,7 @@ def deployment_present(
             ret['result'] = None
             return ret
         # TODO: improve checks
-        log.info("Forcing the recreation of the deploymentv")
+        log.info('Forcing the recreation of the deploymentv')
         res = __salt__['kubernetes.replace_deployment'](
             name=name,
             namespace=namespace,
@@ -219,11 +219,11 @@ def deployment_present(
 
 def service_present(
         name,
-        namespace="default",
+        namespace='default',
         metadata=None,
         spec=None,
-        source="",
-        template=""):
+        source='',
+        template=''):
     '''
     Ensures that the named service is present inside of the specified namespace
     with the given metadata and spec.
@@ -233,7 +233,7 @@ def service_present(
         The name of the service.
 
     namespace
-        The namespace holding the service. The "default" one is going to be
+        The namespace holding the service. The 'default' one is going to be
         used unless a different one is specified.
 
     metadata
@@ -281,7 +281,7 @@ def service_present(
                                                     source=source,
                                                     template=template,
                                                     saltenv=__env__)
-        ret['changes']["{}.{}".format(namespace, name)] = {
+        ret['changes']['{}.{}'.format(namespace, name)] = {
             'old': {},
             'new': res}
     else:
@@ -293,7 +293,7 @@ def service_present(
             ret['result'] = None
             return ret
         # TODO: improve checks
-        log.info("Forcing the recreation of the service")
+        log.info('Forcing the recreation of the service')
         res = __salt__['kubernetes.replace_service'](
             name=name,
             namespace=namespace,
@@ -309,7 +309,7 @@ def service_present(
     return ret
 
 
-def service_absent(name, namespace="default"):
+def service_absent(name, namespace='default'):
     '''
     Ensures that the named service is absent from the given namespace.
 

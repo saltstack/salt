@@ -11,7 +11,7 @@ Module for handling kubernetes calls.
 '''
 # Import Python Futures
 from __future__ import absolute_import
-from six import iteritems
+from salt.ext.six import iteritems
 from salt.exceptions import CommandExecutionError
 import salt.utils
 import salt.utils.templates
@@ -54,7 +54,7 @@ def ping():
     status = True
     try:
         nodes()
-    except:
+    except Exception:
         status = False
 
     return status
@@ -113,9 +113,7 @@ def show_deployment(name, namespace):
         if exc.status == 404:
             return None
         else:
-            print(
-                "Exception when calling "
-                "ExtensionsV1beta1Api->read_namespaced_deployment: %s\n" % exc)
+            log.exception(exc)
             raise exc
 
 
@@ -138,9 +136,7 @@ def show_service(name, namespace):
         if exc.status == 404:
             return None
         else:
-            print(
-                "Exception when calling CoreV1Api->read_namespaced_service: "
-                "%s\n" % exc)
+            log.exception(exc)
             raise exc
 
 
@@ -168,10 +164,7 @@ def delete_deployment(name, namespace):
         if exc.status == 404:
             return None
         else:
-            print(
-                "Exception when calling "
-                "ExtensionsV1beta1Api->delete_namespaced_deployment: "
-                "%s\n" % exc)
+            log.exception(exc)
             raise exc
 
 
@@ -197,9 +190,7 @@ def delete_service(name, namespace):
         if exc.status == 404:
             return None
         else:
-            print(
-                "Exception when calling CoreV1Api->delete_namespaced_service: "
-                "%s\n" % exc)
+            log.exception(exc)
             raise exc
 
 
@@ -238,10 +229,7 @@ def create_deployment(
         if exc.status == 404:
             return None
         else:
-            print(
-                "Exception when calling "
-                "ExtensionsV1beta1Api->create_namespaced_deployment: "
-                "%s\n" % exc)
+            log.exception(exc)
             raise exc
 
 
@@ -282,9 +270,7 @@ def create_service(
         if exc.status == 404:
             return None
         else:
-            print(
-                "Exception when calling CoreV1Api->create_namespaced_service: "
-                "%s\n" % exc)
+            log.exception(exc)
             raise exc
 
 
@@ -323,10 +309,7 @@ def replace_deployment(name,
         if exc.status == 404:
             return None
         else:
-            print(
-                "Exception when calling "
-                "ExtensionsV1beta1Api->replace_namespaced_deployment: "
-                "%s\n" % exc)
+            log.exception(exc)
             raise exc
 
 
@@ -356,8 +339,8 @@ def replace_service(name,
 
     # Some attributes have to be preserved
     # otherwise exceptions will be thrown
-    body.spec.cluster_ip = old_service["spec"]["cluster_ip"]
-    body.metadata.resource_version = old_service["metadata"]["resource_version"]
+    body.spec.cluster_ip = old_service['spec']['cluster_ip']
+    body.metadata.resource_version = old_service['metadata']['resource_version']
 
     _setup_conn()
 
@@ -371,9 +354,7 @@ def replace_service(name,
         if exc.status == 404:
             return None
         else:
-            print(
-                "Exception when calling "
-                "CoreV1Api->replace_namespaced_service: %s\n" % exc)
+            log.exception(exc)
             raise exc
 
 
@@ -394,7 +375,7 @@ def __create_object_body(kind,
         sfn = __salt__['cp.cache_file'](source, saltenv)
         if not sfn:
             raise CommandExecutionError(
-                "Source file \'{0}\' not found".format(source))
+                'Source file \'{0}\' not found'.format(source))
 
         with salt.utils.fopen(sfn, 'r') as src:
             contents = src.read()
@@ -417,8 +398,8 @@ def __create_object_body(kind,
                     if not data['result']:
                         # Failed to render the template
                         raise CommandExecutionError(
-                            "Failed to render file path with error: "
-                            "%s" % data['data'])
+                            'Failed to render file path with error: '
+                            '%s' % data['data'])
 
                     contents = data['data'].encode('utf-8')
                 else:
@@ -433,8 +414,8 @@ def __create_object_body(kind,
                     src_obj['kind'] != kind
                ):
                     raise CommandExecutionError(
-                        "The source file should define only "
-                        "a {0} object".format(kind))
+                        'The source file should define only '
+                        'a {0} object'.format(kind))
 
             if 'metadata' in src_obj:
                 metadata = src_obj['metadata']
@@ -447,9 +428,9 @@ def __create_object_body(kind,
 
 
 def __dict_to_object_meta(name, namespace, metadata):
-    """
+    '''
     Converts a dictionary into kubernetes ObjectMetaV1 instance.
-    """
+    '''
     meta_obj = kubernetes.client.V1ObjectMeta()
     meta_obj.namespace = namespace
     for key, value in iteritems(metadata):
@@ -458,17 +439,17 @@ def __dict_to_object_meta(name, namespace, metadata):
 
     if meta_obj.name != name:
         log.warning(
-            "The object already has a name attribute, overwriting it with "
-            "the one defined inside of salt")
+            'The object already has a name attribute, overwriting it with '
+            'the one defined inside of salt')
         meta_obj.name = name
 
     return meta_obj
 
 
 def __dict_to_deployment_spec(spec):
-    """
+    '''
     Converts a dictionary into kubernetes V1beta1DeploymentSpec instance.
-    """
+    '''
     spec_obj = kubernetes.client.V1beta1DeploymentSpec()
     for key, value in iteritems(spec):
         if hasattr(spec_obj, key):
@@ -478,12 +459,12 @@ def __dict_to_deployment_spec(spec):
 
 
 def __dict_to_service_spec(spec):
-    """
+    '''
     Converts a dictionary into kubernetes V1ServiceSpec instance.
-    """
+    '''
     spec_obj = kubernetes.client.V1ServiceSpec()
     for key, value in iteritems(spec):
-        if key == "ports":
+        if key == 'ports':
             spec_obj.ports = []
             for port in value:
                 kube_port = kubernetes.client.V1ServicePort()
