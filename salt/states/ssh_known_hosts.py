@@ -25,6 +25,7 @@ import os
 
 # Import salt libs
 from salt.exceptions import CommandNotFoundError
+import salt.utils
 
 # Define the state's virtual name
 __virtualname__ = 'ssh_known_hosts'
