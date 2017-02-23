@@ -1775,7 +1775,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         src_file, ret = self.do_patch('hello_dolly')
         self.assertSaltFalseReturn(ret)
         self.assertInSaltComment(
-            'File {0} hash mismatch after patch was applied'.format(src_file),
+            'Hash mismatch after patch was applied',
             ret
         )
 
