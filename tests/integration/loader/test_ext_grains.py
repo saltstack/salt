@@ -10,9 +10,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
 from salttesting.unit import skipIf
-ensure_in_syspath('../')
 
 # Import salt libs
 import integration
@@ -26,10 +24,10 @@ class LoaderGrainsTest(integration.ModuleCase):
     Test the loader standard behavior with external grains
     '''
 
-    def setUp(self):
-        self.opts = minion_config(None)
-        self.opts['disable_modules'] = ['pillar']
-        self.opts['grains'] = grains(self.opts)
+    #def setUp(self):
+    #    self.opts = minion_config(None)
+    #    self.opts['disable_modules'] = ['pillar']
+    #    self.opts['grains'] = grains(self.opts)
 
     def test_grains_overwrite(self):
         grains = self.run_function('grains.items')
@@ -58,9 +56,3 @@ class LoaderGrainsMergeTest(integration.ModuleCase):
         self.assertIn('a_custom', __grain__)
         # Check that the grains are merged
         self.assertEqual({'k1': 'v1', 'k2': 'v2'}, __grain__['a_custom'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LoaderGrainsTest)
-    run_tests(LoaderGrainsMergeTest)
