@@ -69,11 +69,14 @@ try:
     from twisted.internet.protocol import DatagramProtocol
     from twisted.internet import reactor, threads
     from pyparsing import Word, alphas, Suppress, Combine, nums, string, \
-        Optional, Regex, Literal, OneOrMore, LineEnd, LineStart, StringEnd, \
-        delimitedList
+        Optional, Regex, LineEnd, StringEnd, delimitedList
     HAS_TWISTED_AND_PYPARSING = True
 except ImportError:
     HAS_TWISTED_AND_PYPARSING = False
+
+    # Fallback class
+    class DatagramProtocol(object):
+        pass
 
 from salt.utils import event
 from salt.ext.six import moves
@@ -122,7 +125,7 @@ class Parser(object):
         hostname = Word(alphas + nums + "_" + "-" + ".")
 
         # daemon
-        daemon = Word(alphas + "/" + "-" + "_" + ".") + Optional(
+        daemon = Word(alphas + nums + "/" + "-" + "_" + ".") + Optional(
             Suppress("[") + ints + Suppress("]")) + Suppress(":")
 
         # message

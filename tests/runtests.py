@@ -8,6 +8,7 @@ Discover all instances of unittest.TestCase in this directory.
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
+import sys
 import time
 
 # Import salt libs
@@ -386,6 +387,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             source=[os.path.join(SALT_ROOT, 'salt')],
         )
 
+        # Print out which version of python this test suite is running on
+        print(' * Python Version: {0}'.format(' '.join(sys.version.split())))
+
         # Transplant configuration
         TestDaemon.transplant_configs(transport=self.options.transport)
 
@@ -468,7 +472,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         for integration tests or unit tests
         '''
         # Get current limits
-        prev_soft, prev_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        if salt.utils.is_windows():
+            import win32file
+            prev_hard = win32file._getmaxstdio()
+            prev_soft = 512
+        else:
+            prev_soft, prev_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
 
         # Get required limits
         min_soft = MAX_OPEN_FILES[limits]['soft_limit']
@@ -499,7 +508,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 '{0}, hard: {1}'.format(soft, hard)
             )
             try:
-                resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
+                if salt.utils.is_windows():
+                    hard = 2048 if hard > 2048 else hard
+                    win32file._setmaxstdio(hard)
+                else:
+                    resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
             except Exception as err:
                 print(
                     'ERROR: Failed to raise the max open files settings -> '

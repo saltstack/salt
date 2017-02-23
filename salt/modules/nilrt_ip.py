@@ -9,17 +9,25 @@ from __future__ import absolute_import
 import logging
 import time
 
-
-log = logging.getLogger(__name__)
-
 # Import salt libs
 import salt.utils
 import salt.utils.validate.net
 import salt.exceptions
-# Import third party libs
-import pyconnman
-import dbus
 
+# Import 3rd-party libs
+import salt.ext.six as six
+try:
+    import pyconnman
+    HAS_PYCONNMAN = True
+except ImportError:
+    HAS_PYCONNMAN = False
+try:
+    import dbus
+    HAS_DBUS = True
+except ImportError:
+    HAS_DBUS = False
+
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'ip'
@@ -32,6 +40,10 @@ def __virtual__():
     '''
     Confine this module to NI Linux Real-Time based distros
     '''
+    if not HAS_PYCONNMAN:
+        return False, 'The python package pyconnman is not installed'
+    if not HAS_DBUS:
+        return False, 'The python DBus package is not installed'
     if __grains__['os_family'] == 'NILinuxRT':
         try:
             state = _get_state
@@ -426,7 +438,7 @@ def build_interface(iface, iface_type, enable, **settings):
         netmask = settings['netmask']
         gateway = settings['gateway']
         dns = []
-        for key, val in settings.iteritems():
+        for key, val in six.iteritems(settings):
             if 'dns' in key or 'domain' in key:
                 dns += val
     if enable:
