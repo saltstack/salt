@@ -1085,7 +1085,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
         self.assertIn('changes', result)
         self.assertEqual(result['changes'], {})
 
-        boto_apigateway.__salt__['boto_apigateway.update_usage_plan'].assert_not_called()
+        self.assertTrue(boto_apigateway.__salt__['boto_apigateway.update_usage_plan'].call_count == 0)
 
     @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{
                                                                                                                 'id': 'planid',
@@ -1106,7 +1106,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
         self.assertEqual(result['comment'], 'a new usage plan plan_name would be updated')
         self.assertIn('result', result)
         self.assertEqual(result['result'], None)
-        boto_apigateway.__salt__['boto_apigateway.update_usage_plan'].assert_not_called()
+        self.assertTrue(boto_apigateway.__salt__['boto_apigateway.update_usage_plan'].call_count == 0)
 
     @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{
                                                                                                                 'id': 'planid',

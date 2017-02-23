@@ -46,7 +46,7 @@ class IpsetSetPresentTestCase(TestCase):
         if new_set_assertion:
             mock_new_set.assert_called_once_with(self.fake_name, self.fake_set_type, 'ipv4')
         else:
-            mock_new_set.assert_not_called()
+            self.assertTrue(mock_new_set.call_count == 0)
         self.assertDictEqual(actual_ret, expected_ret)
 
     def test_already_exists(self):
@@ -108,11 +108,11 @@ class IpsetSetAbsentTestCase(TestCase):
         if flush_assertion:
             mock_flush.assert_called_once_with(self.fake_name, 'ipv4')
         else:
-            mock_flush.assert_not_called()
+            self.assertTrue(mock_flush.call_count == 0)
         if delete_set_assertion:
             mock_delete_set.assert_called_once_with(self.fake_name, 'ipv4')
         else:
-            mock_delete_set.assert_not_called()
+            self.assertTrue(mock_delete_set.call_count == 0)
         self.assertDictEqual(actual_ret, expected_ret)
 
     def test_already_absent(self):
@@ -170,7 +170,7 @@ class IpsetPresentTestCase(TestCase):
                 expected_calls = expected_calls[:1]
             mock_add.assert_has_calls(expected_calls, any_order=True)
         else:
-            mock_add.assert_not_called()
+            self.assertTrue(mock_add.call_count == 0)
         self.assertDictEqual(actual_ret, expected_ret)
 
     def test_entries_already_present(self):
@@ -242,7 +242,7 @@ class IpsetAbsentTestCase(TestCase):
                 expected_calls = expected_calls[:1]
             mock_delete.assert_has_calls(expected_calls, any_order=True)
         else:
-            mock_delete.assert_not_called()
+            self.assertTrue(mock_delete.call_count == 0)
         self.assertDictEqual(actual_ret, expected_ret)
 
     def test_already_absent(self):
@@ -310,7 +310,7 @@ class IpsetFlushTestCase(TestCase):
         if flush_assertion:
             mock_flush.assert_called_once_with(self.fake_name, 'ipv4')
         else:
-            mock_flush.assert_not_called()
+            self.assertTrue(mock_flush.call_count == 0)
         self.assertDictEqual(actual_ret, expected_ret)
 
     def test_no_set(self):

@@ -582,7 +582,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper.__zypper__.xml.call.call_args_list,
                 [call('ar', url, name)]
             )
-            zypper.__zypper__.refreshable.xml.call.assert_not_called()
+            self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
 
     def test_repo_noadd_nomod_noref(self):
         '''
@@ -604,8 +604,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             self.assertEqual(
                 out['comment'],
                 'Specified arguments did not result in modification of repo')
-            zypper.__zypper__.xml.call.assert_not_called()
-            zypper.__zypper__.refreshable.xml.call.assert_not_called()
+            self.assertTrue(zypper.__zypper__.xml.call.call_count == 0)
+            self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
 
     def test_repo_noadd_modbaseurl_ref(self):
         '''
@@ -634,8 +634,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 'cache': False,
                 'keeppackages': False,
                 'type': 'rpm-md'}
-            assert zypper.mod_repo.call_count == 2
-            assert zypper.mod_repo.mock_calls[1] == call(name, **expected_params)
+            self.assertTrue(zypper.mod_repo.call_count == 2)
+            self.assertTrue(zypper.mod_repo.mock_calls[1] == call(name, **expected_params))
 
     def test_repo_add_mod_noref(self):
         '''
@@ -673,7 +673,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             'salt.modules.zypper', **self.zypper_patcher_config)
         with zypper_patcher:
             zypper.mod_repo(name, **{'url': url, 'refresh': True})
-            zypper.__zypper__.xml.call.assert_not_called()
+            self.assertTrue(zypper.__zypper__.xml.call.call_count == 0)
             zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
                 'mr', '--refresh', name
             )
@@ -699,7 +699,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                     call('--gpg-auto-import-keys', 'refresh', name)
                 ]
             )
-            zypper.__zypper__.refreshable.xml.call.assert_not_called()
+            self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
 
     def test_repo_noadd_nomod_ref(self):
         '''
@@ -723,7 +723,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper.__zypper__.xml.call.call_args_list,
                 [call('--gpg-auto-import-keys', 'refresh', name)]
             )
-            zypper.__zypper__.refreshable.xml.call.assert_not_called()
+            self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
 
     def test_repo_add_mod_ref(self):
         '''

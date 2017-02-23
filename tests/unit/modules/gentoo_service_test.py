@@ -250,14 +250,14 @@ class GentooServicesTestCase(TestCase):
         with patch.dict(gentoo_service.__salt__, {'cmd.run': level_list_mock}):
             with patch.dict(gentoo_service.__salt__, {'cmd.retcode': rc_update_mock}):
                 self.assertTrue(gentoo_service.enable('name', runlevels='l1'))
-        rc_update_mock.assert_not_called()
+        self.assertTrue(rc_update_mock.call_count == 0)
         rc_update_mock.reset_mock()
 
         # same as above with the list instead of the string
         with patch.dict(gentoo_service.__salt__, {'cmd.run': level_list_mock}):
             with patch.dict(gentoo_service.__salt__, {'cmd.retcode': rc_update_mock}):
                 self.assertTrue(gentoo_service.enable('name', runlevels=['l1']))
-        rc_update_mock.assert_not_called()
+        self.assertTrue(rc_update_mock.call_count == 0)
         rc_update_mock.reset_mock()
 
         # add service to 'l2' runlevel
@@ -367,7 +367,7 @@ class GentooServicesTestCase(TestCase):
         with patch.dict(gentoo_service.__salt__, {'cmd.run': level_list_mock}):
             with patch.dict(gentoo_service.__salt__, {'cmd.retcode': rc_update_mock}):
                 self.assertTrue(gentoo_service.disable('name', runlevels=['l1']))
-        rc_update_mock.assert_not_called()
+        self.assertTrue(rc_update_mock.call_count == 0)
         rc_update_mock.reset_mock()
 
         # remove from 'l1' and 'l3', leave at 'l2'

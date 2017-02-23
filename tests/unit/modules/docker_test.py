@@ -30,7 +30,9 @@ docker_mod.__opts__ = {}
 
 
 def _docker_py_version():
-    return docker_mod.docker.version_info if docker_mod.HAS_DOCKER_PY else (0,)
+    if docker_mod.HAS_DOCKER_PY:
+        return docker_mod.docker.version_info
+    return (0,)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -65,7 +67,7 @@ class DockerTestCase(TestCase):
                 all=True,
                 filters={'label': 'KEY'})
 
-    @skipIf(_docker_py_version() > 0, 'docker-py needs to be installed for this test to run')
+    @skipIf(docker_mod.HAS_DOCKER_PY is False, 'docker-py needs to be installed for this test to run')
     @patch.object(docker_mod, '_get_exec_driver')
     def test_check_mine_cache_is_refreshed_on_container_change_event(self, _):
         '''

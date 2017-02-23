@@ -197,7 +197,7 @@ class BotoIoTThingTypeTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
         )
         self.assertTrue(result['result'])
         self.assertEqual(result['changes'], {})
-        self.conn.create_thing_type.assert_not_called()
+        self.assertTrue(self.conn.create_thing_type.call_count == 0)
 
     def test_present_with_failure(self):
         self.conn.describe_thing_type.side_effect = [not_found_error, thing_type_ret]
@@ -229,7 +229,7 @@ class BotoIoTThingTypeTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
         result = salt_states['boto_iot.thing_type_absent']('test', thing_type_name, **conn_parameters)
         self.assertTrue(result['result'])
         self.assertEqual(result['changes']['new']['thing_type'], None)
-        self.conn.deprecate_thing_type.assert_not_called()
+        self.assertTrue(self.conn.deprecate_thing_type.call_count == 0)
 
     def test_absent_with_deprecate_failure(self):
         self.conn.describe_thing_type.return_value = thing_type_ret
@@ -238,7 +238,7 @@ class BotoIoTThingTypeTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
         self.assertFalse(result['result'])
         self.assertTrue('An error occurred' in result['comment'])
         self.assertTrue('deprecate_thing_type' in result['comment'])
-        self.conn.delete_thing_type.assert_not_called()
+        self.assertTrue(self.conn.delete_thing_type.call_count == 0)
 
     def test_absent_with_delete_failure(self):
         self.conn.describe_thing_type.return_value = deprecated_thing_type_ret
@@ -247,7 +247,7 @@ class BotoIoTThingTypeTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
         self.assertFalse(result['result'])
         self.assertTrue('An error occurred' in result['comment'])
         self.assertTrue('delete_thing_type' in result['comment'])
-        self.conn.deprecate_thing_type.assert_not_called()
+        self.assertTrue(self.conn.deprecate_thing_type.call_count == 0)
 
 
 class BotoIoTPolicyTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):

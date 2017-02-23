@@ -1503,9 +1503,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             res = boto_apigateway.update_usage_plan('plan1_id', quota=quota, **conn_parameters)
             self.assertNotEqual(None, res.get('error'))
 
-        self.conn.get_usage_plans.assert_not_called()
-        self.conn.create_usage_plan.assert_not_called()
-        self.conn.update_usage_plan.assert_not_called()
+        self.assertTrue(self.conn.get_usage_plans.call_count == 0)
+        self.assertTrue(self.conn.create_usage_plan.call_count == 0)
+        self.assertTrue(self.conn.update_usage_plan.call_count == 0)
 
     def test_that_when_creating_a_usage_plan_and_create_usage_plan_throws_an_exception_that_an_error_is_returned(self):
         '''
@@ -1542,7 +1542,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         result = boto_apigateway.update_usage_plan(plan_id='plan1_id', throttle=None, quota=None, **conn_parameters)
         self.assertEqual(result.get('updated'), True)
         self.assertEqual(result.get('result'), ret)
-        self.conn.update_usage_plan.assert_called_once()
+        self.assertTrue(self.conn.update_usage_plan.call_count >= 1)
 
     def test_that_when_deleting_usage_plan_and_describe_usage_plans_had_error_that_the_same_error_is_returned(self):
         '''
@@ -1552,7 +1552,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_usage_plans.side_effect = ClientError(error_content, ret)
         result = boto_apigateway.delete_usage_plan(plan_id='some plan id', **conn_parameters)
         self.assertEqual(result.get('error').get('message'), error_message.format(ret))
-        self.conn.delete_usage_plan.assert_not_called()
+        self.assertTrue(self.conn.delete_usage_plan.call_count == 0)
 
     def test_that_when_deleting_usage_plan_and_plan_exists_that_the_functions_returns_deleted_true(self):
         self.conn.get_usage_plans.return_value = usage_plans_ret
@@ -1561,7 +1561,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         result = boto_apigateway.delete_usage_plan(plan_id='plan1_id', **conn_parameters)
         self.assertEqual(result.get('deleted'), True)
         self.assertEqual(result.get('usagePlanId'), 'plan1_id')
-        self.conn.delete_usage_plan.assert_called_once()
+        self.assertTrue(self.conn.delete_usage_plan.call_count >= 1)
 
     def test_that_when_deleting_usage_plan_and_plan_does_not_exist_that_the_functions_returns_deleted_true(self):
         '''
@@ -1575,7 +1575,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         result = boto_apigateway.delete_usage_plan(plan_id='plan1_id', **conn_parameters)
         self.assertEqual(result.get('deleted'), True)
         self.assertEqual(result.get('usagePlanId'), 'plan1_id')
-        self.conn.delete_usage_plan.assert_not_called()
+        self.assertTrue(self.conn.delete_usage_plan.call_count == 0)
 
     def test_that_when_deleting_usage_plan_and_delete_usage_plan_throws_exception_that_an_error_is_returned(self):
         '''
@@ -1586,7 +1586,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.delete_usage_plan.side_effect = ClientError(error_content, error_msg)
         result = boto_apigateway.delete_usage_plan(plan_id='plan1_id', **conn_parameters)
         self.assertEqual(result.get('error').get('message'), error_message.format(error_msg))
-        self.conn.delete_usage_plan.assert_called_once()
+        self.assertTrue(self.conn.delete_usage_plan.call_count >= 1)
 
     def test_that_attach_or_detach_usage_plan_when_apis_is_empty_that_success_is_returned(self):
         '''
@@ -1595,12 +1595,12 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         result = boto_apigateway.attach_usage_plan_to_apis(plan_id='plan1_id', apis=[], **conn_parameters)
         self.assertEqual(result.get('success'), True)
         self.assertEqual(result.get('result', 'no result?'), None)
-        self.conn.update_usage_plan.assert_not_called()
+        self.assertTrue(self.conn.update_usage_plan.call_count == 0)
 
         result = boto_apigateway.detach_usage_plan_from_apis(plan_id='plan1_id', apis=[], **conn_parameters)
         self.assertEqual(result.get('success'), True)
         self.assertEqual(result.get('result', 'no result?'), None)
-        self.conn.update_usage_plan.assert_not_called()
+        self.assertTrue(self.conn.update_usage_plan.call_count == 0)
 
     def test_that_attach_or_detach_usage_plan_when_api_does_not_contain_apiId_or_stage_that_an_error_is_returned(self):
         '''
@@ -1613,7 +1613,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result = boto_apigateway.detach_usage_plan_from_apis(plan_id='plan1_id', apis=[api], **conn_parameters)
             self.assertNotEqual(result.get('error'), None)
 
-        self.conn.update_usage_plan.assert_not_called()
+        self.assertTrue(self.conn.update_usage_plan.call_count == 0)
 
     def test_that_attach_or_detach_usage_plan_and_update_usage_plan_throws_exception_that_an_error_is_returned(self):
         '''

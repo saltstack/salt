@@ -12,9 +12,6 @@ from salt.exceptions import SaltCloudSystemExit
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../../')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -39,8 +36,3 @@ class EC2TestCase(TestCase):
         self.assertRaises(SaltCloudSystemExit,
                           ec2._validate_key_path_and_mode,
                           key_file)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(EC2TestCase, needs_daemon=False)

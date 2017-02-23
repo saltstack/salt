@@ -153,7 +153,7 @@ class DimensionDataTestCase(ExtendedTestCase):
             get_deps = dimensiondata.get_dependencies()
             self.assertEqual(get_deps, True)
             if LooseVersion(mock.__version__) >= LooseVersion('2.0.0'):
-                p.assert_called_once()
+                self.assertTrue(p.call_count >= 1)
 
     def test_provider_matches(self):
         """

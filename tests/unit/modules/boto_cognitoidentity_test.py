@@ -185,7 +185,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityTestCaseBase, BotoCognitoId
         self.conn.describe_identity_pool.return_value = third_pool_ret
         result = boto_cognitoidentity.describe_identity_pools(IdentityPoolName='', IdentityPoolId=third_pool_id, **conn_parameters)
         self.assertEqual(result.get('identity_pools'), [third_pool_ret])
-        self.conn.list_identity_pools.assert_not_called()
+        self.assertTrue(self.conn.list_identity_pools.call_count == 0)
 
     def test_that_when_describing_a_named_identity_pool_and_pool_does_not_exist_the_describe_identity_pool_method_returns_none(self):
         '''

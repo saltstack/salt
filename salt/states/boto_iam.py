@@ -164,7 +164,7 @@ if six.PY2:
             return dict([(_byteify(k), _byteify(v)) for k, v in six.iteritems(thing)])
         elif isinstance(thing, list):
             return [_byteify(m) for m in thing]
-        elif isinstance(thing, unicode):  # pylint: disable=W1699
+        elif isinstance(thing, six.text_type):  # pylint: disable=W1699
             return thing.encode('utf-8')
         else:
             return thing

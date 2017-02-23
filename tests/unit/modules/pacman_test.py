@@ -69,7 +69,7 @@ class PacmanTestCase(TestCase):
             self.assertDictEqual(pacman.list_pkgs(True), mock_ret)
 
         sortmock.assert_called_with(mock_ret)
-        stringifymock.assert_not_called()
+        self.assertTrue(stringifymock.call_count == 0)
 
     def test_group_list(self):
         '''
