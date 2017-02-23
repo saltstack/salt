@@ -105,8 +105,8 @@ def _get_users(token):
 
 def start(token,
           aliases=None,
-          valid_users=[],
-          valid_commands=[],
+          valid_users=None,
+          valid_commands=None,
           control=False,
           trigger="!",
           groups=None,
@@ -114,6 +114,13 @@ def start(token,
     '''
     Listen to Slack events and forward them to Salt
     '''
+
+    if valid_users is None:
+        valid_users = []
+
+    if valid_commands is None:
+        valid_commands = []
+
     if __opts__.get('__role') == 'master':
         fire_master = salt.utils.event.get_master_event(
             __opts__,
