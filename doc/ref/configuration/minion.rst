@@ -81,9 +81,10 @@ The option can also be set to a list of masters, enabling
 ``ipv6``
 --------
 
-Default: ``False``
+Default: ``None``
 
-Whether the master should be connected over IPv6.
+Whether the master should be connected over IPv6. By default salt minion
+will try to automatically detect IPv6 connectivity to master.
 
 .. code-block:: yaml
 
