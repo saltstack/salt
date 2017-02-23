@@ -2481,6 +2481,7 @@ def wait_for_instance(
 
     return vm_
 
+
 def _validate_key_path_and_mode(key_filename):
     if key_filename is None:
         raise SaltCloudSystemExit(
@@ -2504,6 +2505,7 @@ def _validate_key_path_and_mode(key_filename):
         )
 
     return True
+
 
 def create(vm_=None, call=None):
     '''
