@@ -16,5 +16,6 @@ install:
   - "pip install nose"
   - "pip install mock"
   - "pip install unittest2"
+  - "pip install salttesting"
 
 script: python tests/runtests.py -n unit.modules.junos_test
