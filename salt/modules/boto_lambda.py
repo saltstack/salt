@@ -4,6 +4,12 @@ Connection module for Amazon Lambda
 
 .. versionadded:: 2016.3.0
 
+:depends:
+    - boto
+    - boto3
+
+The dependencies listed above can be installed via package or pip.
+
 :configuration: This module accepts explicit Lambda credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
@@ -68,8 +74,6 @@ Connection module for Amazon Lambda
 
         error:
           message: error message
-
-:depends: boto3
 
 '''
 # keep lint from choking on _get_conn and _cache_id
