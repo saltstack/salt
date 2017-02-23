@@ -119,7 +119,7 @@ __ssl_options__ = __ssl_options_parameterized__ + [
     'X509'
 ]
 
-''' # TODO
+r'''
 DEVELOPER NOTE: ABOUT arguments management, escapes, formats, arguments and
 security of SQL.
 
