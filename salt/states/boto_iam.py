@@ -141,10 +141,10 @@ import os
 import salt.utils
 import salt.utils.odict as odict
 import salt.utils.dictupdate as dictupdate
-
-# Import 3rd party libs
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
+# Import 3rd party libs
 try:
     from salt._compat import ElementTree as ET
     HAS_ELEMENT_TREE = True
