@@ -253,7 +253,7 @@ def shutdown(name, **kwargs):
     return ret
 
 
-def install_config(name, path=None, **kwargs):
+def install_config(name, **kwargs):
     '''
     Loads and commits the configuration provided.
 
@@ -320,7 +320,7 @@ def install_config(name, path=None, **kwargs):
               :py:func:`cp.push <salt.modules.cp.push>`
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
-    ret['changes'] = __salt__['junos.install_config'](path, **kwargs)
+    ret['changes'] = __salt__['junos.install_config'](name, **kwargs)
     return ret
 
 
