@@ -40,7 +40,8 @@ EXCLUDED_FILES = [
     'tests/modparser.py',
     'tests/committer_parser.py',
     'tests/integration/utils/testprogram.py',
-    'tests/utils/cptestcase.py'
+    'tests/utils/cptestcase.py',
+    'tests/utils/mixins.py'
 ]
 
 
