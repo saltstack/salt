@@ -76,7 +76,10 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
 
         self.wheel.cmd_sync(low)
 
-    @skipIf(salt.utils.is_windows(), 'Causes pickling error on Windows')
+    # Remove this skipIf when Issue #39616 is resolved
+    # https://github.com/saltstack/salt/issues/39616
+    @skipIf(salt.utils.is_windows(),
+            'Causes pickling error on Windows: Issue #39616')
     def test_cmd_async(self):
         low = {
             'client': 'wheel_async',
