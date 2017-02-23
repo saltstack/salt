@@ -72,6 +72,7 @@ Function Get-Settings {
             "SSLeay"     = "ssleay32.dll"
             "OpenSSLLic" = "OpenSSL_License.txt"
             "libsodium"  = "libsodium.dll"
+            "mfc90"      = "mfc90.dll"
             "msvcr"      = "msvcr120.dll"
         }
         $ini.Add("64bitDLLs", $64bitDLLs)
@@ -82,6 +83,7 @@ Function Get-Settings {
             "SSLeay"     = "ssleay32.dll"
             "OpenSSLLic" = "OpenSSL_License.txt"
             "libsodium"  = "libsodium.dll"
+            "mfc90"      = "mfc90.dll"
             "msvcr"      = "msvcr120.dll"
         }
         $ini.Add("32bitDLLs", $32bitDLLs)
