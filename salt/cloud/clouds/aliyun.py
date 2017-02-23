@@ -1031,7 +1031,7 @@ def destroy(name, call=None):
         'Action': 'StopInstance',
         'InstanceId': instanceId
     }
-    stop_status = query(stop_params)
+    query(stop_params)
 
     params = {
         'Action': 'DeleteInstance',
