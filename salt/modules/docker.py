@@ -792,7 +792,10 @@ def _get_client(timeout=None):
         - docker.version: API version to use (default: "auto")
     '''
     if 'docker.client' not in __context__:
-        client_kwargs = {}
+        if timeout is None:
+            client_kwargs = {}
+        else:
+            client_kwargs['timeout'] = timeout
         for key, val in (('base_url', 'docker.url'),
                          ('version', 'docker.version')):
             param = __salt__['config.get'](val, NOTSET)
@@ -832,10 +835,6 @@ def _get_client(timeout=None):
         except AttributeError:
             # docker-py 2.0 renamed this client attribute
             __context__['docker.client'] = docker.APIClient(**client_kwargs)
-
-    # Set a new timeout if one was passed
-    if timeout is not None and __context__['docker.client'].timeout != timeout:
-        __context__['docker.client'].timeout = timeout
 
 
 def _get_md5(name, path):
