@@ -155,8 +155,10 @@ def db_remove(name, user=None, password=None, host=None, port=None, authdb=None)
 
     return True
 
+
 def _version(mdb):
     return mdb.command('buildInfo')['version']
+
 
 def version(user=None, password=None, host=None, port=None, database='admin', authdb=None):
     '''
@@ -182,6 +184,7 @@ def version(user=None, password=None, host=None, port=None, database='admin', au
             )
         )
         return str(err)
+
 
 def user_list(user=None, password=None, host=None, port=None, database='admin', authdb=None):
     '''
