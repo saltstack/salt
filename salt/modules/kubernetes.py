@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for handling kubernetes calls.
 
@@ -11,6 +12,7 @@ Module for handling kubernetes calls.
 '''
 # Import Python Futures
 from __future__ import absolute_import
+import logging
 from salt.ext.six import iteritems
 from salt.exceptions import CommandExecutionError
 import salt.utils
@@ -27,7 +29,6 @@ except ImportError:
     HAS_LIBS = False
 
 
-import logging
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'kubernetes'
@@ -399,7 +400,7 @@ def __create_object_body(kind,
                         # Failed to render the template
                         raise CommandExecutionError(
                             'Failed to render file path with error: '
-                            '%s' % data['data'])
+                            '{0}'.format(data['data']))
 
                     contents = data['data'].encode('utf-8')
                 else:
@@ -413,9 +414,9 @@ def __create_object_body(kind,
                     'kind' not in src_obj or
                     src_obj['kind'] != kind
                ):
-                    raise CommandExecutionError(
-                        'The source file should define only '
-                        'a {0} object'.format(kind))
+                raise CommandExecutionError(
+                    'The source file should define only '
+                    'a {0} object'.format(kind))
 
             if 'metadata' in src_obj:
                 metadata = src_obj['metadata']
