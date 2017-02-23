@@ -310,6 +310,34 @@ def sync_states(saltenv=None, refresh=True):
     return ret
 
 
+def refresh_grains(refresh=True):
+    '''
+    .. versionadded:: 2016.3.6,2016.11.4,Nitrogen
+
+    Refresh the minion's grains without syncing custom grains modules from
+    ``salt://_grains``.
+
+    refresh : True
+        If ``True``, refresh the available execution modules and recompile
+        pillar data for the minion. Set to ``False`` to prevent this refresh.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.refresh_grains
+    '''
+    try:
+        ret = __salt__['event.fire']({}, 'grains_refresh_manual')
+    except Exception:
+        log.error('Failed to refresh grains', exc_info=True)
+        return False
+    if refresh:
+        refresh_modules()
+        refresh_pillar()
+    return ret
+
+
 def sync_grains(saltenv=None, refresh=True):
     '''
     .. versionadded:: 0.10.0
