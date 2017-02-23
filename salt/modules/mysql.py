@@ -734,7 +734,7 @@ def file_query(database, file_name, **connection_args):
     ret['query time']['raw'] = round(float(ret['query time']['raw']), 5)
 
     # Remove empty keys in ret
-    ret = dict((k, v) for k, v in ret.iteritems() if v)
+    ret = dict((k, v) for k, v in six.iteritems(ret) if v)
 
     return ret
 

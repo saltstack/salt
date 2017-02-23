@@ -761,7 +761,7 @@ def install_config(path=None, **kwargs):
     Parameters:
       Required
         * path:
-          Path where the configuration file is present. If the file has a \
+          Path where the configuration/template file is present. If the file has a \
           '*.conf' extension,
           the content is treated as text format. If the file has a '*.xml' \
           extension,
@@ -794,7 +794,8 @@ def install_config(path=None, **kwargs):
               :py:func:`cp.push <salt.modules.cp.push>`
             * template_vars:
               Variables to be passed into the template processing engine in addition
-              to those present in __pillar__, __opts__, __grains__, etc. You may reference these variables like so:
+              to those present in __pillar__, __opts__, __grains__, etc.
+              You may reference these variables in your template like so:
               {{ template_vars["var_name"] }}
 
     '''
