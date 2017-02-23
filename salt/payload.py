@@ -226,8 +226,8 @@ class Serial(object):
                     for key, value in six.iteritems(obj.copy()):
                         encodedkey = datetime_encoder(key)
                         if key != encodedkey:
-                           del obj[key]
-                           key = encodedkey
+                            del obj[key]
+                            key = encodedkey
                         obj[key] = datetime_encoder(value)
                     return dict(obj)
                 elif isinstance(obj, (list, tuple)):
