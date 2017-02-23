@@ -1275,6 +1275,8 @@ def comment_line(path,
             # Loop through each line of the file and look for a match
             for line in r_file:
                 # Is it in this line
+                if six.PY3:
+                    line = line.decode(__salt_system_encoding__)
                 if re.match(regex, line):
                     # Load lines into dictionaries, set found to True
                     orig_file.append(line)
@@ -1316,17 +1318,22 @@ def comment_line(path,
                                       buffering=bufsize) as r_file:
                     # Loop through each line of the file and look for a match
                     for line in r_file:
+                        if six.PY3:
+                            line = line.decode(__salt_system_encoding__)
                         try:
                             # Is it in this line
                             if re.match(regex, line):
                                 # Write the new line
                                 if cmnt:
-                                    w_file.write('{0}{1}'.format(char, line))
+                                    wline = '{0}{1}'.format(char, line)
                                 else:
-                                    w_file.write(line.lstrip(char))
+                                    wline = line.lstrip(char)
                             else:
                                 # Write the existing line (no change)
-                                w_file.write(line)
+                                wline = line
+                            if six.PY3:
+                                wline = wline.encode(__salt_system_encoding__)
+                            w_file.write(wline)
                         except (OSError, IOError) as exc:
                             raise CommandExecutionError(
                                 "Unable to write file '{0}'. Contents may "
@@ -1538,7 +1545,7 @@ def _get_line_indent(src, line, indent):
     '''
     Indent the line with the source line.
     '''
-    if not (indent or line):
+    if not indent:
         return line
 
     idt = []
@@ -1748,7 +1755,6 @@ def line(path, content=None, match=None, mode=None, location=None,
     elif mode == 'ensure':
         after = after and after.strip()
         before = before and before.strip()
-        content = content and content.strip()
 
         if before and after:
             _assert_occurrence(body, before, 'before')
@@ -3006,6 +3012,13 @@ def symlink(src, path):
     '''
     path = os.path.expanduser(path)
 
+    try:
+        if os.path.normpath(os.readlink(path)) == os.path.normpath(src):
+            log.debug('link already in correct state: %s -> %s', path, src)
+            return True
+    except OSError:
+        pass
+
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
 
@@ -3644,6 +3657,9 @@ def apply_template_on_contents(
             opts=__opts__)['data']
         if six.PY2:
             contents = contents.encode('utf-8')
+        elif six.PY3:
+            # bytes -> str
+            contents = contents.decode('utf-8')
     else:
         ret = {}
         ret['result'] = False
@@ -3767,16 +3783,22 @@ def get_managed(
 
     if source and (template or parsed_scheme in salt.utils.files.REMOTE_PROTOS):
         # Check if we have the template or remote file cached
+        cache_refetch = False
         cached_dest = __salt__['cp.is_cached'](source, saltenv)
         if cached_dest and (source_hash or skip_verify):
             htype = source_sum.get('hash_type', 'sha256')
             cached_sum = get_hash(cached_dest, form=htype)
-            if skip_verify or cached_sum == source_sum['hsum']:
+            if cached_sum != source_sum['hsum']:
+                cache_refetch = True
+            elif skip_verify:
+                # prev: if skip_verify or cached_sum == source_sum['hsum']:
+                # but `cached_sum == source_sum['hsum']` is elliptical as prev if
                 sfn = cached_dest
                 source_sum = {'hsum': cached_sum, 'hash_type': htype}
 
         # If we didn't have the template or remote file, let's get it
-        if not sfn:
+        # Similarly when the file has been updated and the cache has to be refreshed
+        if not sfn or cache_refetch:
             try:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             except Exception as exc:

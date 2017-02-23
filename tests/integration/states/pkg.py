@@ -58,6 +58,8 @@ _PKG_TARGETS_EPOCH = {
     'RedHat': {'7': 'comps-extras'},
 }
 
+_WILDCARDS_SUPPORTED = ('Arch', 'Debian', 'RedHat')
+
 
 def pkgmgr_avail(run_function, grains):
     '''
@@ -596,6 +598,75 @@ class PkgTest(integration.ModuleCase,
                 ret['pkg_|-{0}_|-{0}_|-latest'.format(target)]['comment'],
                 'Package {0} is already up-to-date'.format(target)
             )
+
+    @requires_system_grains
+    def test_pkg_013_installed_with_wildcard_version(self, grains=None):
+        '''
+        This is a destructive test as it installs and then removes a package
+        '''
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
+
+        os_family = grains.get('os_family', '')
+
+        if os_family not in _WILDCARDS_SUPPORTED:
+            self.skipTest(
+                'Wildcards only supported on {0}'.format(
+                    ', '.join(_WILDCARDS_SUPPORTED)
+                )
+            )
+
+        pkg_targets = _PKG_TARGETS.get(os_family, [])
+
+        # Make sure that we have targets that match the os_family. If this
+        # fails then the _PKG_TARGETS dict above needs to have an entry added,
+        # with two packages that are not installed before these tests are run
+        self.assertTrue(pkg_targets)
+
+        target = pkg_targets[0]
+        version = self.run_function('pkg.version', [target])
+
+        # If this assert fails, we need to find new targets, this test needs to
+        # be able to test successful installation of packages, so this package
+        # needs to not be installed before we run the states below
+        self.assertFalse(version)
+
+        ret = self.run_state(
+            'pkg.installed',
+            name=target,
+            version='*',
+            refresh=False,
+        )
+        self.assertSaltTrueReturn(ret)
+
+        # Repeat state, should pass
+        ret = self.run_state(
+            'pkg.installed',
+            name=target,
+            version='*',
+            refresh=False,
+        )
+
+        expected_comment = (
+            'All specified packages are already installed and are at the '
+            'desired version'
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertEqual(ret[next(iter(ret))]['comment'], expected_comment)
+
+        # Repeat one more time with unavailable version, test should fail
+        ret = self.run_state(
+            'pkg.installed',
+            name=target,
+            version='93413*',
+            refresh=False,
+        )
+        self.assertSaltFalseReturn(ret)
+
+        # Clean up
+        ret = self.run_state('pkg.removed', name=target)
+        self.assertSaltTrueReturn(ret)
 
     @requires_salt_modules('pkg.group_install')
     @requires_system_grains

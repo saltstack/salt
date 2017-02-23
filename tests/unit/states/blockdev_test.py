@@ -77,21 +77,23 @@ class BlockdevTestCase(TestCase):
             self.assertDictEqual(blockdev.formatted(name), ret)
 
             mock_ext4 = MagicMock(return_value='ext4')
-            mock_t = MagicMock(return_value=True)
-            mock_e = MagicMock(return_value='')
-            with patch.dict(blockdev.__salt__, {'cmd.run': mock_ext4,
-                                                'disk.format_': mock_t,
-                                                'disk.fstype': mock_e}):
-                comt = ('{0} already formatted with '.format(name))
-                ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(blockdev.formatted(name, fs_type=''), ret)
 
-                ret.update({'comment': 'Invalid fs_type: ext4',
+            # Test state return when block device is already in the correct state
+            with patch.dict(blockdev.__salt__, {'cmd.run': mock_ext4}):
+                comt = '{0} already formatted with ext4'.format(name)
+                ret.update({'comment': comt, 'result': True})
+                self.assertDictEqual(blockdev.formatted(name), ret)
+
+            # Test state return when provided block device is an invalid fs_type
+            with patch.dict(blockdev.__salt__, {'cmd.run': MagicMock(return_value='')}):
+                ret.update({'comment': 'Invalid fs_type: foo-bar',
                             'result': False})
                 with patch.object(salt.utils, 'which',
                                   MagicMock(return_value=False)):
-                    self.assertDictEqual(blockdev.formatted(name), ret)
+                    self.assertDictEqual(blockdev.formatted(name, fs_type='foo-bar'), ret)
 
+            # Test state return when provided block device state will change and test=True
+            with patch.dict(blockdev.__salt__, {'cmd.run': MagicMock(return_value='new-thing')}):
                 comt = ('Changes to {0} will be applied '.format(name))
                 ret.update({'comment': comt, 'result': None})
                 with patch.object(salt.utils, 'which',
@@ -99,6 +101,9 @@ class BlockdevTestCase(TestCase):
                     with patch.dict(blockdev.__opts__, {'test': True}):
                         self.assertDictEqual(blockdev.formatted(name), ret)
 
+            # Test state return when block device format fails
+            with patch.dict(blockdev.__salt__, {'cmd.run': MagicMock(return_value=mock_ext4),
+                                                'disk.format_': MagicMock(return_value=True)}):
                 comt = ('Failed to format {0}'.format(name))
                 ret.update({'comment': comt, 'result': False})
                 with patch.object(salt.utils, 'which',

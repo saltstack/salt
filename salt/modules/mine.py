@@ -407,7 +407,7 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
         cidrs = cidr_
 
     # Get docker info
-    cmd = 'dockerng.ps'
+    cmd = 'docker.ps'
     docker_hosts = get('*', cmd)
 
     proxy_lists = {}

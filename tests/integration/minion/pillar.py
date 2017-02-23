@@ -23,12 +23,15 @@ from subprocess import Popen, PIPE, STDOUT
 
 log = logging.getLogger(__name__)
 
+# Import 3rd-party libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('..')
+import salt.ext.six as six
+
 # Import salt libs
 import integration
 import salt.utils
 from salt import pillar
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('..')
 
 
 GPG_HOMEDIR = os.path.join(integration.TMP_CONF_DIR, 'gpgkeys')
@@ -192,7 +195,6 @@ GPG_PILLAR_DECRYPTED = {
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.which('gpg'), 'GPG is not installed')
-@skipIf(os.geteuid() != 0, 'you must be root to run this test')
 class DecryptGPGPillarTest(integration.ModuleCase):
     '''
     Tests for pillar decryption
@@ -224,7 +226,7 @@ class DecryptGPGPillarTest(integration.ModuleCase):
                            stdin=PIPE,
                            stdout=PIPE,
                            stderr=STDOUT,
-                           shell=False).communicate(input=TEST_KEY)[0]
+                           shell=False).communicate(input=six.b(TEST_KEY))[0]
             log.debug('Result:\n%s', output)
 
             os.makedirs(PILLAR_BASE)

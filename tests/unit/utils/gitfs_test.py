@@ -39,20 +39,18 @@ class TestGitFSProvider(TestCase):
                               MagicMock(return_value=True)):
                 with patch.object(role_class, 'verify_pygit2',
                                   MagicMock(return_value=False)):
-                    with patch.object(role_class, 'verify_dulwich',
-                                      MagicMock(return_value=False)):
-                        args = [OPTS]
-                        if role_name == 'winrepo':
-                            args.append('/tmp/winrepo-dir')
-                        with patch.dict(OPTS, {key: provider}):
-                            # Try to create an instance with uppercase letters in
-                            # provider name. If it fails then a
-                            # FileserverConfigError will be raised, so no assert is
-                            # necessary.
-                            role_class(*args)
-                            # Now try to instantiate an instance with all lowercase
-                            # letters. Again, no need for an assert here.
-                            role_class(*args)
+                    args = [OPTS]
+                    if role_name == 'winrepo':
+                        args.append('/tmp/winrepo-dir')
+                    with patch.dict(OPTS, {key: provider}):
+                        # Try to create an instance with uppercase letters in
+                        # provider name. If it fails then a
+                        # FileserverConfigError will be raised, so no assert is
+                        # necessary.
+                        role_class(*args)
+                        # Now try to instantiate an instance with all lowercase
+                        # letters. Again, no need for an assert here.
+                        role_class(*args)
 
     def test_valid_provider(self):
         '''
@@ -77,36 +75,20 @@ class TestGitFSProvider(TestCase):
                     verify = 'verify_pygit2'
                     mock2 = _get_mock(verify, provider)
                     with patch.object(role_class, verify, mock2):
-                        verify = 'verify_dulwich'
-                        mock3 = _get_mock(verify, provider)
-                        with patch.object(role_class, verify, mock3):
-                            args = [OPTS]
-                            if role_name == 'winrepo':
-                                args.append('/tmp/winrepo-dir')
-                            with patch.dict(OPTS, {key: provider}):
-                                if role_name == 'gitfs' \
-                                        or (role_name != 'gitfs'
-                                            and provider != 'dulwich'):
-                                    # This is a valid provider, so this should
-                                    # pass without raising an exception.
-                                    role_class(*args)
-                                else:
-                                    # Dulwich is not supported for git_pillar nor
-                                    # winrepo, so trying to use it should raise an
-                                    # exception.
-                                    self.assertRaises(
-                                        FileserverConfigError,
-                                        role_class,
-                                        *args
-                                    )
+                        args = [OPTS]
+                        if role_name == 'winrepo':
+                            args.append('/tmp/winrepo-dir')
 
-                            with patch.dict(OPTS, {key: 'foo'}):
-                                # Set the provider name to a known invalid provider
-                                # and make sure it raises an exception.
-                                self.assertRaises(
-                                    FileserverConfigError,
-                                    role_class,
-                                    *args
+                        with patch.dict(OPTS, {key: provider}):
+                            role_class(*args)
+
+                        with patch.dict(OPTS, {key: 'foo'}):
+                            # Set the provider name to a known invalid provider
+                            # and make sure it raises an exception.
+                            self.assertRaises(
+                                FileserverConfigError,
+                                role_class,
+                                *args
                                 )
 
 

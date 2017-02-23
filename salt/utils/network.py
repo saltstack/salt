@@ -342,7 +342,8 @@ def is_ipv4_filter(ip, options=None):
     options
         CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
     '''
-    return _is_ipv(ip, 4, options=options)
+    _is_ipv4 = _is_ipv(ip, 4, options=options)
+    return isinstance(_is_ipv4, six.string_types)
 
 
 def is_ipv6_filter(ip, options=None):
@@ -358,28 +359,24 @@ def is_ipv6_filter(ip, options=None):
     options
         CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
     '''
-    return _is_ipv(ip, 6, options=options)
+    _is_ipv6 = _is_ipv(ip, 6, options=options)
+    return isinstance(_is_ipv6, six.string_types)
 
 
 def _ipv_filter(value, version, options=None):
-    fun = None
-    if version == 4:
-        fun = is_ipv4_filter
-    elif version == 6:
-        fun = is_ipv6_filter
 
-    if not fun:  # indeed, that's not fun...
+    if version not in (4, 6):
         return
 
     if isinstance(value, (six.string_types, six.text_type, six.binary_type)):
-        return fun(value, options=options)  # calls is_ipv4 or is_ipv6 for `value`
+        return _is_ipv(value, version, options=options)  # calls is_ipv4 or is_ipv6 for `value`
     elif isinstance(value, (list, tuple, types.GeneratorType)):
         # calls is_ipv4 or is_ipv6 for each element in the list
         # os it filters and returns only those elements having the desired IP version
         return [
-            fun(addr, options=options)
+            _is_ipv(addr, version, options=options)
             for addr in value
-            if fun(addr, options=options) is not None
+            if _is_ipv(addr, version, options=options) is not None
         ]
     return None
 
@@ -436,7 +433,9 @@ def ip_host(value, options=None, version=None):
     ipaddr_filter_out = _filter_ipaddr(value, options=options, version=version)
     if not ipaddr_filter_out:
         return
-    return [ipaddress.ip_interface(ip_a) for ip_a in ipaddr_filter_out]
+    if not isinstance(value, (list, tuple, types.GeneratorType)):
+        return str(ipaddress.ip_interface(ipaddr_filter_out[0]))
+    return [str(ipaddress.ip_interface(ip_a)) for ip_a in ipaddr_filter_out]
 
 
 def _network_hosts(ip_addr_entry):
@@ -1342,23 +1341,23 @@ def _netbsd_remotes_on(port, which_end):
     Parses output of shell 'sockstat' (NetBSD)
     to get connections
 
-    $ sudo sockstat -4
+    $ sudo sockstat -4 -n
     USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
-    root    python2.7   1456    29  tcp4   *.4505           *.*
-    root    python2.7   1445    17  tcp4   *.4506           *.*
-    root    python2.7   1294    14  tcp4   127.0.0.1.11813  127.0.0.1.4505
-    root    python2.7   1294    41  tcp4   127.0.0.1.61115  127.0.0.1.4506
+    root    python2.7   1456    29  tcp    *.4505           *.*
+    root    python2.7   1445    17  tcp    *.4506           *.*
+    root    python2.7   1294    14  tcp    127.0.0.1.11813  127.0.0.1.4505
+    root    python2.7   1294    41  tcp    127.0.0.1.61115  127.0.0.1.4506
 
-    $ sudo sockstat -4 -c -p 4506
+    $ sudo sockstat -4 -c -n -p 4506
     USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
-    root    python2.7   1294    41  tcp4   127.0.0.1.61115  127.0.0.1.4506
+    root    python2.7   1294    41  tcp    127.0.0.1.61115  127.0.0.1.4506
     '''
 
     port = int(port)
     remotes = set()
 
     try:
-        cmd = salt.utils.shlex_split('sockstat -4 -c -p {0}'.format(port))
+        cmd = salt.utils.shlex_split('sockstat -4 -c -n -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
@@ -1370,7 +1369,7 @@ def _netbsd_remotes_on(port, which_end):
         chunks = line.split()
         if not chunks:
             continue
-        # ['root', 'python2.7', '1456', '37', 'tcp4',
+        # ['root', 'python2.7', '1456', '37', 'tcp',
         #  '127.0.0.1.4505-', '127.0.0.1.55703']
         # print chunks
         if 'COMMAND' in chunks[1]:

@@ -52,6 +52,8 @@ class GitfsConfigTestCase(TestCase):
             'gitfs_global_lock': True,
             'gitfs_ssl_verify': True,
             'gitfs_saltenv': [],
+            'gitfs_refspecs': ['+refs/heads/*:refs/remotes/origin/*',
+                               '+refs/tags/*:refs/tags/*'],
         }
 
     def tearDown(self):

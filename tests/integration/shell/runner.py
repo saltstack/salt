@@ -11,6 +11,7 @@ import yaml
 import shutil
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -175,6 +176,7 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
             stdout=stdout, stderr=stderr
         )
 
+    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     def test_salt_run_with_eauth_all_args(self):
         '''
         test salt-run with eauth
@@ -189,6 +191,7 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
             self.assertEqual(expect, run_cmd)
         self._remove_user()
 
+    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     def test_salt_run_with_eauth_bad_passwd(self):
         '''
         test salt-run with eauth and bad password

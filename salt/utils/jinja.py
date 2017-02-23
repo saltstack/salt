@@ -6,6 +6,8 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 # Import python libs
 from __future__ import absolute_import
 import collections
+import uuid
+import pipes
 import json
 import pprint
 import logging
@@ -36,9 +38,12 @@ __all__ = [
     'SerializerExtension'
 ]
 
+GLOBAL_UUID = uuid.UUID('91633EBF-1C86-5E33-935A-28061F4B480E')
 
 # To dump OrderedDict objects as regular dicts. Used by the yaml
 # template filter.
+
+
 class OrderedDictDumper(yaml.Dumper):  # pylint: disable=W0232
     pass
 
@@ -182,7 +187,7 @@ def ensure_sequence_filter(data):
 
         ensure that parsed data is a sequence
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set my_string = "foo" %}
         {% set my_list = ["bar", ] %}
@@ -204,6 +209,303 @@ def ensure_sequence_filter(data):
     if not isinstance(data, (list, tuple, set, dict)):
         return [data]
     return data
+
+
+def to_bool(val):
+    '''
+    Returns the logical value.
+
+    .. code-block:: jinja
+
+        {{ 'yes' | to_bool }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        True
+    '''
+    if val is None:
+        return False
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, (six.text_type, six.string_types)):
+        return val.lower() in ('yes', '1', 'true')
+    if isinstance(val, six.integer_types):
+        return val > 0
+    if not isinstance(val, collections.Hashable):
+        return len(val) > 0
+    return False
+
+
+def quote(txt):
+    '''
+    Wraps a text around quotes.
+
+    .. code-block:: jinja
+
+        {% set my_text = 'my_text' %}
+        {{ my_text | quote }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        'my_text'
+    '''
+    return pipes.quote(txt)
+
+
+def regex_search(txt, rgx, ignorecase=False, multiline=False):
+    '''
+    Searches for a pattern in the text.
+
+    .. code-block:: jinja
+
+        {% set my_text = 'abcd' %}
+        {{ my_text | regex_search('^(.*)BC(.*)$', ignorecase=True) }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        ('a', 'd')
+    '''
+    flag = 0
+    if ignorecase:
+        flag |= re.I
+    if multiline:
+        flag |= re.M
+    obj = re.search(rgx, txt, flag)
+    if not obj:
+        return
+    return obj.groups()
+
+
+def regex_match(txt, rgx, ignorecase=False, multiline=False):
+    '''
+    Searches for a pattern in the text.
+
+    .. code-block:: jinja
+
+        {% set my_text = 'abcd' %}
+        {{ my_text | regex_match('^(.*)BC(.*)$', ignorecase=True) }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        ('a', 'd')
+    '''
+    flag = 0
+    if ignorecase:
+        flag |= re.I
+    if multiline:
+        flag |= re.M
+    obj = re.match(rgx, txt, flag)
+    if not obj:
+        return
+    return obj.groups()
+
+
+def regex_replace(txt, rgx, val, ignorecase=False, multiline=False):
+    r'''
+    Searches for a pattern and replaces with a sequence of characters.
+
+    .. code-block:: jinja
+
+        {% set my_text = 'lets replace spaces' %}
+        {{ my_text | regex_replace('\s+', '__') }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        lets__replace__spaces
+    '''
+    flag = 0
+    if ignorecase:
+        flag |= re.I
+    if multiline:
+        flag |= re.M
+    compiled_rgx = re.compile(rgx, flag)
+    return compiled_rgx.sub(val, txt)
+
+
+def uuid_(val):
+    '''
+    Returns a UUID corresponding to the value passed as argument.
+
+    .. code-block:: jinja
+
+        {{ 'example' | uuid }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        f4efeff8-c219-578a-bad7-3dc280612ec8
+    '''
+    return str(uuid.uuid5(GLOBAL_UUID, str(val)))
+
+
+### List-related filters
+
+
+def unique(lst):
+    '''
+    Removes duplicates from a list.
+
+    .. code-block:: jinja
+
+        {% set my_list = ['a', 'b', 'c', 'a', 'b'] -%}
+        {{ my_list | unique }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        ['a', 'b', 'c']
+    '''
+    if not isinstance(lst, collections.Hashable):
+        return list(set(lst))
+    return lst
+
+
+def lst_min(obj):
+    '''
+    Returns the min value.
+
+    .. code-block:: jinja
+
+        {% set my_list = [1,2,3,4] -%}
+        {{ my_list | min }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        1
+    '''
+    return min(obj)
+
+
+def lst_max(obj):
+    '''
+    Returns the max value.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | max }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        4
+    '''
+    return max(obj)
+
+
+def lst_avg(lst):
+    '''
+    Returns the average value of a list.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | avg }}
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        2.5
+    '''
+    if not isinstance(lst, collections.Hashable):
+        return float(sum(lst)/len(lst))
+    return float(lst)
+
+
+def union(lst1, lst2):
+    '''
+    Returns the union of two lists.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | union([2, 4, 6]) }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        [1, 2, 3, 4, 6]
+    '''
+    if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
+        return set(lst1) | set(lst2)
+    return unique(lst1 + lst2)
+
+
+def intersect(lst1, lst2):
+    '''
+    Returns the intersection of two lists.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | intersect([2, 4, 6]) }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        [2, 4]
+    '''
+    if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
+        return set(lst1) & set(lst2)
+    return unique([ele for ele in lst1 if ele in lst2])
+
+
+def difference(lst1, lst2):
+    '''
+    Returns the difference of two lists.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | difference([2, 4, 6]) }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        [1, 3, 6]
+    '''
+    if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
+        return set(lst1) - set(lst2)
+    return unique([ele for ele in lst1 if ele not in lst2])
+
+
+def symmetric_difference(lst1, lst2):
+    '''
+    Returns the symmetric difference of two lists.
+
+    .. code-block:: jinja
+
+        {% my_list = [1,2,3,4] -%}
+        {{ set my_list | symmetric_difference([2, 4, 6]) }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        [1, 3]
+    '''
+    if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
+        return set(lst1) ^ set(lst2)
+    return unique([ele for ele in union(lst1, lst2) if ele not in intersect(lst1, lst2)])
 
 
 @jinja2.contextfunction

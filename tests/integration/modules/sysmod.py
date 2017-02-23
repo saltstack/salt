@@ -36,6 +36,12 @@ class SysModuleTest(integration.ModuleCase):
             'glance.warn_until',
             'ipset.long_range',
             'libcloud_dns.get_driver',
+            'log.critical',
+            'log.debug',
+            'log.error',
+            'log.exception',
+            'log.info',
+            'log.warning',
             'lowpkg.bin_pkg_info',
             'lxc.run_cmd',
             'nspawn.restart',
@@ -92,7 +98,7 @@ class SysModuleTest(integration.ModuleCase):
                     continue
                 if fun in allow_failure:
                     continue
-                if not isinstance(docs[fun], six.string_types):
+                if isinstance(docs, dict) and not isinstance(docs[fun], six.string_types):
                     nodoc.add(fun)
                 elif not re.search(r'([E|e]xample(?:s)?)+(?:.*)::?', docs[fun]):
                     noexample.add(fun)

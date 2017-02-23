@@ -4,14 +4,18 @@ Use a postgresql server for the master job cache. This helps the job cache to
 cope with scale.
 
 .. note::
-    :mod:`returners.postgres <salt.returners.postgres>` is also available if
-    you are not using PostgreSQL as a :ref:`master job cache
-    <external-master-cache>`.  These two modules provide different
-    functionality so you should compare each to see which module best suits
-    your particular needs.
+    There are three PostgreSQL returners.  Any can function as an external
+    :ref:`master job cache <external-job-cache>`. but each has different
+    features.  SaltStack recommends
+    :mod:`returners.pgjsonb <salt.returners.pgjsonb>` if you are working with
+    a version of PostgreSQL that has the appropriate native binary JSON types.
+    Otherwise, review
+    :mod:`returners.postgres <salt.returners.postgres>` and
+    :mod:`returners.postgres_local_cache <salt.returners.postgres_local_cache>`
+    to see which module best suits your particular needs.
 
 :maintainer:    gjredelinghuys@gmail.com
-:maturity:      New
+:maturity:      Stable
 :depends:       psycopg2
 :platform:      all
 

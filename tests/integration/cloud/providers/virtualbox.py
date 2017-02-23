@@ -139,7 +139,10 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         names = machines.keys()
         self.assertGreaterEqual(len(names), 1, "No machines found")
         for name, machine in six.iteritems(machines):
-            self.assertItemsEqual(expected_attributes, machine.keys())
+            if six.PY3:
+                self.assertCountEqual(expected_attributes, machine.keys())
+            else:
+                self.assertItemsEqual(expected_attributes, machine.keys())
 
         self.assertIn(BASE_BOX_NAME, names)
 
@@ -168,7 +171,10 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         names = machines.keys()
         self.assertGreaterEqual(len(names), 1, "No machines found")
         for name, machine in six.iteritems(machines):
-            self.assertItemsEqual(expected_attributes, machine.keys())
+            if six.PY3:
+                self.assertCountEqual(expected_attributes, machine.keys())
+            else:
+                self.assertItemsEqual(expected_attributes, machine.keys())
 
         self.assertIn(BASE_BOX_NAME, names)
 

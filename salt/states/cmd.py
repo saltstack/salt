@@ -589,7 +589,7 @@ def wait_script(name,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies.>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':

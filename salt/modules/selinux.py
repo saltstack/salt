@@ -100,6 +100,27 @@ def getenforce():
         return 'Disabled'
 
 
+def getconfig():
+    '''
+    Return the selinux mode from the config file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.getconfig
+    '''
+    try:
+        config = '/etc/selinux/config'
+        with salt.utils.fopen(config, 'r') as _fp:
+            for line in _fp:
+                if line.strip().startswith('SELINUX='):
+                    return line.split('=')[1].capitalize().strip()
+    except (IOError, OSError, AttributeError):
+        return None
+    return None
+
+
 def setenforce(mode):
     '''
     Set the SELinux enforcing mode
@@ -490,7 +511,7 @@ def fcontext_apply_policy(name, recursive=False):
             old = _context_string_to_dict(item[1])
             new = _context_string_to_dict(item[2])
             intersect = {}
-            for key, value in old.iteritems():
+            for key, value in six.iteritems(old):
                 if new.get(key) == value:
                     intersect.update({key: value})
             for key in intersect.keys():

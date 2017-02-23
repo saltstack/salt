@@ -157,10 +157,14 @@ def _date_bin_set_datetime(new_date):
     return True
 
 
-def _has_settable_hwclock():
+def has_settable_hwclock():
     '''
-    Returns True if the system has a harware clock capable of being
+    Returns True if the system has a hardware clock capable of being
     set from software.
+
+    CLI Example:
+
+    salt '*' system.has_settable_hwclock
     '''
     if salt.utils.which_bin(['hwclock']) is not None:
         res = __salt__['cmd.run_all'](['hwclock', '--test', '--systohc'], python_shell=False)
@@ -378,7 +382,7 @@ def set_system_date_time(years=None,
     if not _date_bin_set_datetime(new_datetime):
         return False
 
-    if _has_settable_hwclock():
+    if has_settable_hwclock():
         # Now that we've successfully set the software clock, we should
         # update hardware clock for time to persist though reboot.
         return _swclock_to_hwclock()

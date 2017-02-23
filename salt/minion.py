@@ -540,7 +540,7 @@ class MinionBase(object):
                 if attempts != 0:
                     # Give up a little time between connection attempts
                     # to allow the IOLoop to run any other scheduled tasks.
-                    yield tornado.gen.sleep(1)
+                    yield tornado.gen.sleep(opts['acceptance_wait_time'])
                 attempts += 1
                 if tries > 0:
                     log.debug('Connecting to master. Attempt {0} '
@@ -605,7 +605,7 @@ class MinionBase(object):
                 if attempts != 0:
                     # Give up a little time between connection attempts
                     # to allow the IOLoop to run any other scheduled tasks.
-                    yield tornado.gen.sleep(1)
+                    yield tornado.gen.sleep(opts['acceptance_wait_time'])
                 attempts += 1
                 if tries > 0:
                     log.debug('Connecting to master. Attempt {0} '
@@ -698,7 +698,6 @@ class SMinion(MinionBase):
         # Below, when pillar data is compiled, we will update this dict with
         # the compiled pillar data.
         self.opts['pillar'] = {}
-
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.serializers = salt.loader.serializers(self.opts)
@@ -721,8 +720,7 @@ class SMinion(MinionBase):
             self.opts['id'],
             self.opts['environment'],
             pillarenv=self.opts.get('pillarenv'),
-            funcs=self.functions,
-            rend=self.rend,
+            funcs=self.functions
         ).compile_pillar()
 
         # Update the existing (empty) pillar dict with the compiled pillar
