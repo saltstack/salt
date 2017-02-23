@@ -573,7 +573,6 @@ def ping(dest_ip=None, **kwargs):
     else:
         op.update(kwargs)
 
-
     op['count'] = str(op.pop('count', 5))
     if 'ttl' in op:
         op['ttl'] = str(op['ttl'])
