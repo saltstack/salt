@@ -101,11 +101,13 @@ releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
 RedHat Pygit2 Issues
 ~~~~~~~~~~~~~~~~~~~~
 
-Around the time of the release of RedHat 7.3, RedHat effectively broke pygit2_
-by upgrading python-cffi_ to a release incompatible with the version of pygit2_
-available in their repositories. This prevents Python from importing the
-pygit2_ module at all, leading to a master that refuses to start, and leaving
-the following errors in the master log file:
+The release of RedHat/CentOS 7.3 upgraded both ``python-cffi`` and
+``http-parser``, both of which are dependencies for pygit2_/libgit2_. Both
+pygit2_ and libgit2_ (which are from the EPEL repository and not managed
+directly by RedHat) need to be rebuilt against these updated dependencies.
+
+The below errors will show up in the master log if an incompatible
+``python-pygit2`` package is installed:
 
 .. code-block:: text
 
@@ -114,34 +116,37 @@ the following errors in the master log file:
     2017-02-10 09:07:34,907 [salt.utils.gitfs ][CRITICAL][11211] No suitable gitfs provider module is installed.
     2017-02-10 09:07:34,912 [salt.master ][CRITICAL][11211] Master failed pre flight checks, exiting
 
-This issue has been reported on the `RedHat Bugzilla`_. In the meantime, you
-can work around it by downgrading python-cffi_. To do this, go to `this page`_
-and download the appropriate python-cffi_ 0.8.6 RPM. Then copy that RPM to the
-master and downgrade using the ``rpm`` command. For example:
+The below errors will show up in the master log if an incompatible ``libgit2``
+package is installed:
+
+.. code-block:: text
+
+    2017-02-15 18:04:45,211 [salt.utils.gitfs ][ERROR   ][6211] Error occurred fetching gitfs remote 'https://foo.com/bar.git': No Content-Type header in response
+
+As of 15 February 2017, ``python-pygit2`` has been rebuilt and is in the stable
+EPEL repository. However, ``libgit2`` remains broken (a `bug report`_ has been
+filed to get it rebuilt).
+
+In the meantime, you can work around this by downgrading ``http-parser``. To do
+this, go to `this page`_ and download the appropriate ``http-parser`` RPM for
+the OS architecture you are using (x86_64, etc.). Then downgrade using the
+``rpm`` command. For example:
 
 .. code-block:: bash
 
-    # rpm -Uvh --oldpackage python-cffi-0.8.6-1.el7.x86_64.rpm
+    [root@784e8a8c5028 /]# curl --silent -O https://kojipkgs.fedoraproject.org//packages/http-parser/2.0/5.20121128gitcd01361.el7/x86_64/http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
+    [root@784e8a8c5028 /]# rpm -Uvh --oldpackage http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
     Preparing...                          ################################# [100%]
     Updating / installing...
-       1:python-cffi-0.8.6-1.el7          ################################# [ 50%]
+       1:http-parser-2.0-5.20121128gitcd01################################# [ 50%]
     Cleaning up / removing...
-       2:python-cffi-1.6.0-5.el7          ################################# [100%]
-    # rpm -q python-cffi
-    python-cffi-0.8.6-1.el7.x86_64
+       2:http-parser-2.7.1-3.el7          ################################# [100%]
 
-To confirm that pygit2_ is now "fixed", you can test trying to import it like so:
+A restart of the salt-master daemon may be required to allow http(s)
+repositories to continue to be fetched.
 
-.. code-block:: bash
-
-    # python -c 'import pygit2'
-    #
-
-If the command produces no output, then your master should work when you start
-it again.
-
-.. _`this page`: https://koji.fedoraproject.org/koji/buildinfo?buildID=569520
-.. _`RedHat Bugzilla`: https://bugzilla.redhat.com/show_bug.cgi?id=1400668
+.. _`this page`: https://koji.fedoraproject.org/koji/buildinfo?buildID=703753
+.. _`bug report`: https://bugzilla.redhat.com/show_bug.cgi?id=1422583
 
 
 GitPython
