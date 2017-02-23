@@ -1,5 +1,6 @@
 integration.client.runner
 integration.fileserver.fileclient_test
+integration.loader.custom_grains
 integration.loader.globals
 integration.loader.interfaces
 integration.loader.loader

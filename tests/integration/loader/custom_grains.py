@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 '''
-    integration.loader.ext_grains
+    integration.loader.custom_grains
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Test Salt's loader regarding external grains
+    Test Salt's loader regarding custom grains
 '''
 
 # Import Python libs
 from __future__ import absolute_import
+import os
+import time
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -16,32 +18,39 @@ ensure_in_syspath('../')
 
 # Import salt libs
 import integration
+import salt.utils
 from salt.config import minion_config
-
 from salt.loader import grains
+
+MINION_CONF = os.path.join(integration.CONF_DIR, 'minion')
 
 
 class LoaderGrainsTest(integration.ModuleCase):
     '''
-    Test the loader standard behavior with external grains
+    Test the loader standard behavior with custom grains
     '''
 
     def setUp(self):
-        self.opts = minion_config(None)
+        self.opts = minion_config(MINION_CONF)
         self.opts['disable_modules'] = ['pillar']
         self.opts['grains'] = grains(self.opts)
 
+        # For some reason there's a race condition here in Windows. The custom
+        # grains need a little time to run and be applied.
+        if salt.utils.is_windows():
+            time.sleep(30)
+
     def test_grains_overwrite(self):
-        grains = self.run_function('grains.items')
+        grains_items = self.run_function('grains.items')
 
         # Check that custom grains are overwritten
-        self.assertEqual({'k2': 'v2'}, grains['a_custom'])
+        self.assertEqual({'k2': 'v2'}, grains_items['a_custom'])
 
 
 @skipIf(True, "needs a way to reload minion after config change")
 class LoaderGrainsMergeTest(integration.ModuleCase):
     '''
-    Test the loader deep merge behavior with external grains
+    Test the loader deep merge behavior with custom grains
     '''
 
     def setUp(self):

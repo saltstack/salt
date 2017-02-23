@@ -653,17 +653,16 @@ def grains(opts, force_refresh=False, proxy=None):
                     except (IOError, OSError):
                         pass
                 else:
-                    if force_refresh:
-                        log.debug('Grains refresh requested. Refreshing grains.')
-                    else:
-                        log.debug('Grains cache last modified {0} seconds ago and '
-                                  'cache expiration is set to {1}. '
-                                  'Grains cache expired. Refreshing.'.format(
-                                      grains_cache_age,
-                                      opts.get('grains_cache_expiration', 300)
-                                  ))
+                    log.debug('Grains cache last modified {0} seconds ago and '
+                              'cache expiration is set to {1}. '
+                              'Grains cache expired. Refreshing.'.format(
+                                  grains_cache_age,
+                                  opts.get('grains_cache_expiration', 300)
+                              ))
             else:
                 log.debug('Grains cache file does not exist.')
+    else:
+        log.debug('Grains refresh requested. Refreshing grains.')
 
     if opts.get('skip_grains', False):
         return {}
