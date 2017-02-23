@@ -224,7 +224,7 @@ def apiinfo_version(**connection_args):
         salt '*' zabbix.apiinfo_version
     '''
     conn_args = _login(**connection_args)
-
+    ret = False
     try:
         if conn_args:
             method = 'apiinfo.version'
@@ -264,6 +264,7 @@ def user_create(alias, passwd, usrgrps, **connection_args):
         salt '*' zabbix.user_create james password007 '[7, 12]' firstname='James Bond'
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'user.create'
@@ -302,6 +303,7 @@ def user_delete(users, **connection_args):
         salt '*' zabbix.user_delete 15
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'user.delete'
@@ -337,6 +339,7 @@ def user_exists(alias, **connection_args):
         salt '*' zabbix.user_exists james
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'user.get'
@@ -346,7 +349,7 @@ def user_exists(alias, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def user_get(alias=None, userids=None, **connection_args):
@@ -369,6 +372,7 @@ def user_get(alias=None, userids=None, **connection_args):
         salt '*' zabbix.user_get james
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'user.get'
@@ -385,7 +389,7 @@ def user_get(alias=None, userids=None, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def user_update(userid, **connection_args):
@@ -409,6 +413,7 @@ def user_update(userid, **connection_args):
         salt '*' zabbix.user_update 16 visible_name='James Brown'
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'user.update'
@@ -444,6 +449,7 @@ def user_getmedia(userids=None, **connection_args):
         salt '*' zabbix.user_getmedia
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'usermedia.get'
@@ -457,7 +463,7 @@ def user_getmedia(userids=None, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def user_addmedia(userids, active, mediatypeid, period, sendto, severity, **connection_args):
@@ -486,6 +492,7 @@ def user_addmedia(userids, active, mediatypeid, period, sendto, severity, **conn
 
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'user.addmedia'
@@ -526,6 +533,7 @@ def user_deletemedia(mediaids, **connection_args):
         salt '*' zabbix.user_deletemedia 27
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'user.deletemedia'
@@ -559,6 +567,7 @@ def user_list(**connection_args):
         salt '*' zabbix.user_list
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'user.get'
@@ -592,6 +601,7 @@ def usergroup_create(name, **connection_args):
         salt '*' zabbix.usergroup_create GroupName
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'usergroup.create'
@@ -623,6 +633,7 @@ def usergroup_delete(usergroupids, **connection_args):
         salt '*' zabbix.usergroup_delete 28
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'usergroup.delete'
@@ -660,6 +671,7 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
     '''
     conn_args = _login(**connection_args)
     zabbix_version = apiinfo_version(**connection_args)
+    ret = False
     try:
         if conn_args:
             # usergroup.exists deprecated
@@ -688,7 +700,7 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
@@ -714,6 +726,7 @@ def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
         salt '*' zabbix.usergroup_get Guests
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'usergroup.get'
@@ -733,7 +746,7 @@ def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def usergroup_update(usrgrpid, **connection_args):
@@ -757,6 +770,7 @@ def usergroup_update(usrgrpid, **connection_args):
         salt '*' zabbix.usergroup_update 8 name=guestsRenamed
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'usergroup.update'
@@ -788,6 +802,7 @@ def usergroup_list(**connection_args):
         salt '*' zabbix.usergroup_list
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'usergroup.get'
@@ -797,7 +812,7 @@ def usergroup_list(**connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def host_create(host, groups, interfaces, **connection_args):
@@ -828,6 +843,7 @@ def host_create(host, groups, interfaces, **connection_args):
         visible_name='Host Visible Name'
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'host.create'
@@ -871,6 +887,7 @@ def host_delete(hostids, **connection_args):
         salt '*' zabbix.host_delete 10106
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'host.delete'
@@ -910,7 +927,7 @@ def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **co
     '''
     conn_args = _login(**connection_args)
     zabbix_version = apiinfo_version(**connection_args)
-
+    ret = False
     try:
         if conn_args:
             # hostgroup.exists deprecated
@@ -948,7 +965,7 @@ def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **co
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def host_get(host=None, name=None, hostids=None, **connection_args):
@@ -975,6 +992,7 @@ def host_get(host=None, name=None, hostids=None, **connection_args):
         salt '*' zabbix.host_get 'Zabbix server'
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'host.get'
@@ -993,7 +1011,7 @@ def host_get(host=None, name=None, hostids=None, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def host_update(hostid, **connection_args):
@@ -1020,6 +1038,7 @@ def host_update(hostid, **connection_args):
         salt '*' zabbix.host_update 10084 name='Zabbix server2'
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'host.update'
@@ -1051,6 +1070,7 @@ def host_list(**connection_args):
         salt '*' zabbix.host_list
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'host.get'
@@ -1060,7 +1080,7 @@ def host_list(**connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def hostgroup_create(name, **connection_args):
@@ -1084,6 +1104,7 @@ def hostgroup_create(name, **connection_args):
         salt '*' zabbix.hostgroup_create MyNewGroup
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'hostgroup.create'
@@ -1116,6 +1137,7 @@ def hostgroup_delete(hostgroupids, **connection_args):
         salt '*' zabbix.hostgroup_delete 23
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'hostgroup.delete'
@@ -1154,6 +1176,7 @@ def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connect
     '''
     conn_args = _login(**connection_args)
     zabbix_version = apiinfo_version(**connection_args)
+    ret = False
     try:
         if conn_args:
             # hostgroup.exists deprecated
@@ -1187,7 +1210,7 @@ def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connect
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def hostgroup_get(name=None, groupids=None, hostids=None, **connection_args):
@@ -1216,6 +1239,7 @@ def hostgroup_get(name=None, groupids=None, hostids=None, **connection_args):
         salt '*' zabbix.hostgroup_get MyNewGroup
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'hostgroup.get'
@@ -1235,7 +1259,7 @@ def hostgroup_get(name=None, groupids=None, hostids=None, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def hostgroup_update(groupid, name=None, **connection_args):
@@ -1260,6 +1284,7 @@ def hostgroup_update(groupid, name=None, **connection_args):
         salt '*' zabbix.hostgroup_update 24 name='Renamed Name'
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'hostgroup.update'
@@ -1293,6 +1318,7 @@ def hostgroup_list(**connection_args):
         salt '*' zabbix.hostgroup_list
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'hostgroup.get'
@@ -1302,7 +1328,7 @@ def hostgroup_list(**connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def hostinterface_get(hostids, **connection_args):
@@ -1326,6 +1352,7 @@ def hostinterface_get(hostids, **connection_args):
         salt '*' zabbix.hostinterface_get 101054
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'hostinterface.get'
@@ -1338,7 +1365,7 @@ def hostinterface_get(hostids, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def hostinterface_create(hostid, ip, dns='', main=1, type=1, useip=1, port=None, **connection_args):
@@ -1369,6 +1396,7 @@ def hostinterface_create(hostid, ip, dns='', main=1, type=1, useip=1, port=None,
         salt '*' zabbix.hostinterface_create 10105 192.193.194.197
     '''
     conn_args = _login(**connection_args)
+    ret = False
 
     if not port:
         port = INTERFACE_DEFAULT_PORTS[type]
@@ -1405,6 +1433,7 @@ def hostinterface_delete(interfaceids, **connection_args):
         salt '*' zabbix.hostinterface_delete 50
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'hostinterface.delete'
@@ -1441,6 +1470,7 @@ def hostinterface_update(interfaceid, **connection_args):
         salt '*' zabbix.hostinterface_update 6 ip=0.0.0.2
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'hostinterface.update'
@@ -1482,6 +1512,7 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
         salt '*' zabbix.template_get templateids="['10050', '10001']"
     '''
     conn_args = _login(**connection_args)
+    ret = False
     try:
         if conn_args:
             method = 'template.get'
@@ -1498,7 +1529,7 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def run_query(method, params, **connection_args):
