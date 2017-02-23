@@ -1,5 +1,7 @@
 integration.client.runner
+integration.client.standard
 integration.fileserver.fileclient_test
+integration.fileserver.roots_test
 integration.loader.globals
 integration.loader.interfaces
 integration.loader.loader
@@ -26,3 +28,5 @@ integration.runners.winrepo
 integration.states.host
 integration.states.renderers
 integration.utils.testprogram
+integration.wheel.client
+integration.wheel.key
