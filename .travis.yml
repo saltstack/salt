@@ -23,14 +23,13 @@ before_script:
   - "/home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/pylint --rcfile=.testing.pylintrc salt/ && echo 'Finished Pylint Check Cleanly' || echo 'Finished Pylint Check With Errors'"
   - "/home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/pep8 --ignore=E501,E12 salt/ && echo 'Finished PEP-8 Check Cleanly' || echo 'Finished PEP-8 Check With Errors'"
 
-#script: "sudo -E /home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/python setup.py test --runtests-opts='--run-destructive --sysinfo -v --coverage'"
-script: "sudo python tests/runtests.py -n unit.modules.junos_test"
+script: "sudo -E /home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/python setup.py test --runtests-opts='--run-destructive --sysinfo -v --coverage'"
 
 after_success:
   - coveralls
 
-#notifications:
-#  irc:
-#    channels: "irc.freenode.org#salt-devel"
-#    on_success: change
-#    on_failure: change
+notifications:
+  irc:
+    channels: "irc.freenode.org#salt-devel"
+    on_success: change
+    on_failure: change
