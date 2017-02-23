@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage kubernetes resources as salt states
 ==========================================
@@ -190,7 +191,7 @@ def deployment_present(
                                                        source=source,
                                                        template=template,
                                                        saltenv=__env__)
-        ret['changes']['{}.{}'.format(namespace, name)] = {
+        ret['changes']['{0}.{1}'.format(namespace, name)] = {
             'old': {},
             'new': res}
     else:
@@ -281,7 +282,7 @@ def service_present(
                                                     source=source,
                                                     template=template,
                                                     saltenv=__env__)
-        ret['changes']['{}.{}'.format(namespace, name)] = {
+        ret['changes']['{0}.{1}'.format(namespace, name)] = {
             'old': {},
             'new': res}
     else:
