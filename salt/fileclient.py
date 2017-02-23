@@ -1341,6 +1341,7 @@ class FSClient(RemoteClient):
     '''
     def __init__(self, opts):  # pylint: disable=W0231
         self.opts = opts
+        self.utils = salt.loader.utils(opts)
         self.channel = salt.fileserver.FSChan(opts)
         self.auth = DumbAuth()
 
