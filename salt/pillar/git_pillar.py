@@ -483,7 +483,8 @@ except ImportError:
     HAS_GITPYTHON = False
 # pylint: enable=import-error
 
-PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify', 'refspecs', 'mountpoint')
+PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify', 'refspecs')
+PER_REMOTE_ONLY = ('name', 'mountpoint')
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -537,7 +538,7 @@ def ext_pillar(minion_id, repo, pillar_dirs):
         opts['pillar_roots'] = {}
         opts['__git_pillar'] = True
         pillar = salt.utils.gitfs.GitPillar(opts)
-        pillar.init_remotes(repo, PER_REMOTE_OVERRIDES)
+        pillar.init_remotes(repo, PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
         if __opts__.get('__role') == 'minion':
             # If masterless, fetch the remotes. We'll need to remove this once
             # we make the minion daemon able to run standalone.
