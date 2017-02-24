@@ -28,6 +28,29 @@ prefaced with a ``!``.
                    list_commands:
                        cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
 
+    :configuration: Example configuration using groups
+    .. versionadded: Nitrogen
+
+        engines:
+            slack:
+               token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
+               control: True
+               groups:
+                 gods:
+                   users:
+                     - garethgreenaway
+                   commands:
+                     - test.ping
+                     - cmd.run
+                     - list_jobs
+                     - list_commands
+               aliases:
+                   list_jobs:
+                       cmd: jobs.list_jobs
+                   list_commands:
+                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
+
+
 :depends: slackclient
 '''
 
@@ -86,10 +109,18 @@ def start(token,
           valid_commands=None,
           control=False,
           trigger="!",
+          groups=None,
           tag='salt/engines/slack'):
     '''
     Listen to Slack events and forward them to Salt
     '''
+
+    if valid_users is None:
+        valid_users = []
+
+    if valid_commands is None:
+        valid_commands = []
+
     if __opts__.get('__role') == 'master':
         fire_master = salt.utils.event.get_master_event(
             __opts__,
@@ -136,6 +167,21 @@ def start(token,
                         if _text:
                             if _text.startswith(trigger) and control:
 
+                                # Get groups
+                                if groups:
+                                    for group in groups:
+                                        if 'users' in groups[group]:
+                                            # Add users to valid_users
+                                            valid_users.extend(groups[group]['users'])
+
+                                            # Add commands to valid_commands
+                                            if 'commands' in groups[group]:
+                                                valid_commands.extend(groups[group]['commands'])
+
+                                            # Add group aliases to aliases
+                                            if 'aliases' in groups[group]:
+                                                aliases.update(groups[group]['aliases'])
+
                                 # Ensure the user is allowed to run commands
                                 if valid_users:
                                     log.debug('{0} {1}'.format(all_users, _m['user']))
@@ -165,17 +211,17 @@ def start(token,
                                 args = []
                                 kwargs = {}
 
-                                # Ensure the command is allowed
-                                if valid_commands:
-                                    if cmd not in valid_commands:
-                                        channel.send_message('Using {0} is not allowed.'.format(cmd))
-                                        return
-
                                 # Evaluate aliases
                                 if aliases and isinstance(aliases, dict) and cmd in aliases.keys():
                                     cmdline = aliases[cmd].get('cmd')
                                     cmdline = salt.utils.shlex_split(cmdline)
                                     cmd = cmdline[0]
+
+                                # Ensure the command is allowed
+                                if valid_commands:
+                                    if cmd not in valid_commands:
+                                        channel.send_message('{0} is not allowed to use command {1}.'.format(all_users[_m['user']], cmd))
+                                        return
 
                                 # Parse args and kwargs
                                 if len(cmdline) > 1:
