@@ -77,6 +77,8 @@ class CPModuleTest(integration.ModuleCase):
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
+            if six.PY3:
+                data = salt.utils.to_bytes(data)
             self.assertEqual(hash_str, hashlib.md5(data).hexdigest())
 
     def test_get_file_makedirs(self):
