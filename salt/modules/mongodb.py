@@ -172,7 +172,9 @@ def version(user=None, password=None, host=None, port=None, database='admin', au
     '''
     conn = _connect(user, password, host, port, authdb=authdb)
     if not conn:
-        return 'Failed to connect to mongo database'
+	err_msg = "Failed to connect to MongoDB database {0}:{1}".format(host, port)
+	log.error(err_msg)
+        return (False, err_msg)
 
     try:
         mdb = pymongo.database.Database(conn, database)
@@ -253,8 +255,8 @@ def user_exists(name, user=None, password=None, host=None, port=None,
     return False
 
 
-def user_create(name, passwd, roles=None, user=None, password=None, host=None, port=None,
-                database='admin', authdb=None):
+def user_create(name, passwd, user=None, password=None, host=None, port=None,
+                database='admin', authdb=None, roles=None):
     '''
     Create a Mongodb user
 
