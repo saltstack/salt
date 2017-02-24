@@ -200,7 +200,10 @@ Functions
       <salt.modules.dockerng.connect_container_to_network>`
     - :py:func:`dockerng.disconnect_container_from_network
       <salt.modules.dockerng.disconnect_container_from_network>`
-
+- Salt Functions and States Execution
+    - :py:func:`dockerng.call <salt.modules.dockerng.call>`
+    - :py:func:`dockerng.sls <salt.modules.dockerng.sls>`
+    - :py:func:`dockerng.sls_build <salt.modules.dockerng.sls_build>`
 
 
 .. _docker-execution-driver:
@@ -5791,20 +5794,24 @@ def _gather_pillar(pillarenv, pillar_override, **grains):
 
 def call(name, function, *args, **kwargs):
     '''
-    Executes a salt function inside a container
+    Executes a Salt function inside a running container
+
+    .. versionadded:: 2016.11.0
+
+    The container does not need to have Salt installed, but Python is required.
+
+    name
+        Container name or ID
+
+    function
+        Salt execution module function
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion dockerng.call test.ping
-        salt myminion test.arg arg1 arg2 key1=val1
-
-    The container does not need to have Salt installed, but Python
-    is required.
-
-    .. versionadded:: 2016.11.0
-
+        salt myminion dockerng.call compassionate_mirzakhani test.ping
+        salt myminion dockerng.call compassionate_mirzakhani test.arg arg1 arg2 key1=val1
     '''
     # where to put the salt-thin
     thin_dest_path = _generate_tmp_path()
@@ -5859,22 +5866,29 @@ def call(name, function, *args, **kwargs):
 
 def sls(name, mods=None, saltenv='base', **kwargs):
     '''
-    Apply the highstate defined by the specified modules.
+    Apply the states defined by the specified SLS modules to the running
+    container
 
-    For example, if your master defines the states ``web`` and ``rails``, you
-    can apply them to a container:
-    states by doing:
+    .. versionadded:: 2016.11.0
+
+    The container does not need to have Salt installed, but Python is required.
+
+    name
+        Container name or ID
+
+    mods : None
+        A string containing comma-separated list of SLS with defined states to
+        apply to the container.
+
+    saltenv : base
+        Specify the environment from which to retrieve the SLS indicated by the
+        `mods` parameter.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion dockerng.sls compassionate_mirzakhani mods=rails,web
-
-    The container does not need to have Salt installed, but Python
-    is required.
-
-    .. versionadded:: 2016.11.0
     '''
     mods = [item.strip() for item in mods.split(',')] if mods else []
 
@@ -5931,24 +5945,32 @@ def sls(name, mods=None, saltenv='base', **kwargs):
 def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
               **kwargs):
     '''
-    Build a docker image using the specified sls modules and base image.
+    Build a Docker image using the specified SLS modules on top of base image
 
-    For example, if your master defines the states ``web`` and ``rails``, you
-    can build a docker image inside myminion that results of applying those
-    states by doing:
+    .. versionadded:: 2016.11.0
+
+    The base image does not need to have Salt installed, but Python is required.
+
+    name
+        Image name to be built and committed
+
+    base : opensuse/python
+        Name or ID of the base image
+
+    mods : None
+        A string containing comma-separated list of SLS with defined states to
+        apply to the base image.
+
+    saltenv : base
+        Specify the environment from which to retrieve the SLS indicated by the
+        `mods` parameter.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion dockerng.sls_build imgname base=mybase mods=rails,web
-
-    The base image does not need to have Salt installed, but Python
-    is required.
-
-    .. versionadded:: 2016.11.0
     '''
-
     create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
     for key in ('image', 'name', 'cmd', 'interactive', 'tty'):
         try:
