@@ -7,13 +7,11 @@ Integration Tests for restcherry salt-api with pam eauth
 from __future__ import absolute_import
 import os
 
-# Import salttesting libs
+# Import test support libs
+import tests.integration as integration
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
-
-# Import test support libs
 import tests.support.cherrypy_testclasses as cptc
-import tests.integration as integration
 
 # Import Salt Libs
 import salt.utils
