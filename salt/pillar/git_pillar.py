@@ -554,10 +554,17 @@ def ext_pillar(minion_id, repo, pillar_dirs):
             False
         )
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
-            log.debug(
-                'git_pillar is processing pillar SLS from %s for pillar '
-                'env \'%s\'', pillar_dir, env
-            )
+            if pillar_dir in pillar.pillar_linked_dirs:
+                log.debug(
+                    'git_pillar is skipping processing on %s as it is a '
+                    'mounted repo', pillar_dir
+                )
+                continue
+            else:
+                log.debug(
+                    'git_pillar is processing pillar SLS from %s for pillar '
+                    'env \'%s\'', pillar_dir, env
+                )
 
             if env == '__env__':
                 env = opts.get('pillarenv') \
