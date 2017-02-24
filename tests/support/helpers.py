@@ -67,11 +67,11 @@ def flaky(caller=None, condition=True):
         for attempt in range(0, 4):
             try:
                 return caller(cls)
-            except AssertionError as exc:
+            except Exception as exc:
                 if attempt == 4:
                     raise exc
                 backoff_time = attempt ** 2
-                log.info('Found AssertionError. Waiting %s seconds to retry.', backoff_time)
+                log.info('Found Exception. Waiting %s seconds to retry.', backoff_time)
                 time.sleep(backoff_time)
         return cls
     return wrap
