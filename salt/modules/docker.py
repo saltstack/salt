@@ -5981,7 +5981,6 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
 
     # start a new container
     ret = create(image=base,
-                 name=name,
                  cmd='sleep infinity',
                  interactive=True, tty=True,
                  **create_kwargs)
@@ -5994,13 +5993,12 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
         # fail if the state was not successful
         if not dryrun and not salt.utils.check_state_result(ret):
             raise CommandExecutionError(ret)
+        if dryrun is False:
+            ret = commit(id_, name)
     finally:
         stop(id_)
-
-    if dryrun:
         rm_(id_)
-        return ret
-    return commit(id_, name)
+    return ret
 
 
 def get_client_args():
