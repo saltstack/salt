@@ -401,6 +401,8 @@ the example configuration above. In the second group of git_pillar remotes, the
 ``abc`` remote would not have access to the SLS files from the ``foo``,
 ``bar``, and ``baz`` remotes, and vice-versa.
 
+.. _git-pillar-mountpoints:
+
 Mountpoints
 ~~~~~~~~~~~
 
@@ -456,11 +458,11 @@ of reorganizing the git repository, you would just need to adjust the
 mountpoint to ``web/`` (and restart the ``salt-master`` daemon).
 
 .. note::
-    Leading and trailing slashes on the mountpoints are optional.
-
-.. important::
-    Use of the ``mountpoint`` feature requires that
-    :conf_master:`git_pillar_includes` is not disabled.
+    - Leading and trailing slashes on the mountpoints are optional.
+    - Use of the ``mountpoint`` feature requires that
+      :conf_master:`git_pillar_includes` is not disabled.
+    - Content from mounted git_pillar repos can only be referenced by a top
+      file in the same pillar environment.
 '''
 from __future__ import absolute_import
 
