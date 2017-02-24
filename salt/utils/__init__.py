@@ -3038,10 +3038,10 @@ def to_unicode(s, encoding=None):
     '''
     Given str or unicode, return unicode (str for python 3)
     '''
-    if not isinstance(s, (bytes, six.string_types)):
+    if not isinstance(s, (bytes, bytearray, six.string_types)):
         return s
     if six.PY3:
-        if isinstance(s, bytes):
+        if isinstance(s, (bytes, bytearray)):
             return to_str(s, encoding)
     else:
         if isinstance(s, str):
