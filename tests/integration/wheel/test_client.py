@@ -5,10 +5,12 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 import integration
+from salttesting import skipIf
 
 # Import Salt libs
 import salt.auth
 import salt.wheel
+import salt.utils
 
 
 class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixIn):
@@ -74,6 +76,10 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
 
         self.wheel.cmd_sync(low)
 
+    # Remove this skipIf when Issue #39616 is resolved
+    # https://github.com/saltstack/salt/issues/39616
+    @skipIf(salt.utils.is_windows(),
+            'Causes pickling error on Windows: Issue #39616')
     def test_cmd_async(self):
         low = {
             'client': 'wheel_async',
