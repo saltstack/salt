@@ -11,7 +11,7 @@ from salttesting import skipIf, TestCase
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, Mock
 
 # Import test suite libs
-from tests.utils.mixins import LoaderModuleMockMixin
+from tests.support.mixins import LoaderModuleMockMixin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
