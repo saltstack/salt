@@ -835,18 +835,21 @@ class MinionManager(MinionBase):
         '''
         last = 0  # never have we signed in
         auth_wait = minion.opts['acceptance_wait_time']
+        failed = False
         while True:
             try:
-                yield minion.connect_master()
+                yield minion.connect_master(failed=failed)
                 minion.tune_in(start=False)
                 break
             except SaltClientError as exc:
+                failed = True
                 log.error('Error while bringing up minion for multi-master. Is master at {0} responding?'.format(minion.opts['master']))
                 last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
                 yield tornado.gen.sleep(auth_wait)  # TODO: log?
             except Exception as e:
+                failed = True
                 log.critical('Unexpected error while connecting to {0}'.format(minion.opts['master']), exc_info=True)
 
     # Multi Master Tune In
@@ -969,7 +972,7 @@ class Minion(MinionBase):
         time.sleep(1)
         sys.exit(0)
 
-    def sync_connect_master(self, timeout=None):
+    def sync_connect_master(self, timeout=None, failed=False):
         '''
         Block until we are connected to a master
         '''
@@ -980,7 +983,7 @@ class Minion(MinionBase):
             self._sync_connect_master_success = True
             self.io_loop.stop()
 
-        self._connect_master_future = self.connect_master()
+        self._connect_master_future = self.connect_master(failed=failed)
         # finish connecting to master
         self._connect_master_future.add_done_callback(on_connect_master_future_done)
         if timeout:
@@ -1000,11 +1003,11 @@ class Minion(MinionBase):
             raise SaltDaemonNotRunning('Failed to connect to the salt-master')
 
     @tornado.gen.coroutine
-    def connect_master(self):
+    def connect_master(self, failed=False):
         '''
         Return a future which will complete when you are connected to a master
         '''
-        master, self.pub_channel = yield self.eval_master(self.opts, self.timeout, self.safe)
+        master, self.pub_channel = yield self.eval_master(self.opts, self.timeout, self.safe, failed)
         yield self._post_master_init(master)
 
     # TODO: better name...
@@ -2477,6 +2480,7 @@ class SyndicManager(MinionBase):
         '''
         last = 0  # never have we signed in
         auth_wait = opts['acceptance_wait_time']
+        failed = False
         while True:
             log.debug('Syndic attempting to connect to {0}'.format(opts['master']))
             try:
@@ -2485,7 +2489,7 @@ class SyndicManager(MinionBase):
                                 safe=False,
                                 io_loop=self.io_loop,
                                 )
-                yield syndic.connect_master()
+                yield syndic.connect_master(failed=failed)
                 # set up the syndic to handle publishes (specifically not event forwarding)
                 syndic.tune_in_no_block()
 
@@ -2495,6 +2499,7 @@ class SyndicManager(MinionBase):
                 log.info('Syndic successfully connected to {0}'.format(opts['master']))
                 break
             except SaltClientError as exc:
+                failed = True
                 log.error('Error while bringing up syndic for multi-syndic. Is master at {0} responding?'.format(opts['master']))
                 last = time.time()
                 if auth_wait < self.max_auth_wait:
@@ -2503,6 +2508,7 @@ class SyndicManager(MinionBase):
             except KeyboardInterrupt:
                 raise
             except:  # pylint: disable=W0702
+                failed = True
                 log.critical('Unexpected error while connecting to {0}'.format(opts['master']), exc_info=True)
 
         raise tornado.gen.Return(syndic)
