@@ -188,6 +188,35 @@ def version(user=None, password=None, host=None, port=None, database='admin', au
         return str(err)
 
 
+def user_find(name, user=None, password=None, host=None, port=None,
+                database='admin', authdb=None):
+    '''
+    Get single user from MongoDB
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_find <name> <user> <password> <host> <port> <database> <authdb>
+    '''
+    conn = _connect(user, password, host, port, authdb=authdb)
+    if not conn:
+        err_msg = "Failed to connect to MongoDB database {0}:{1}".format(host, port)
+        log.error(err_msg)
+        return (False, err_msg)
+
+    mdb = pymongo.database.Database(conn, database)
+    try:
+        return mdb.command("usersInfo", name)["users"]
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Listing users failed with error: {0}'.format(
+                str(err)
+            )
+        )
+        return (False, str(err))
+
+
 def user_list(user=None, password=None, host=None, port=None, database='admin', authdb=None):
     '''
     List users of a Mongodb database
