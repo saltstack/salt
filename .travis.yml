@@ -13,9 +13,8 @@ install:
   - if [ "$TRAVIS_PYTHON_VERSION" == "2.6" ]; then pip install importlib; fi
   - "pip install junos-eznc"
   - "pip install jxmlease"
+  - "pip install -r requirements/dev_python26.txt"
+  - "pip install -r requirements/zeromq.txt"
   - "pip install nose"
-  - "pip install mock"
-  - "pip install unittest2"
-  - "pip install salttesting"
 
 script: python tests/runtests.py -n unit.modules.junos_test
