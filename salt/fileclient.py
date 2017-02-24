@@ -630,7 +630,7 @@ class Client(object):
             if 'handle' not in query:
                 raise MinionError('Error: {0} reading {1}'.format(query['error'], url))
             if no_cache:
-                return ''.join(result)
+                return six.b('').join(result)
             else:
                 destfp.close()
                 destfp = None
