@@ -219,6 +219,8 @@ def list_(dir, runas=None, env=None):
 
 def prune(dir, runas=None, env=None):
     '''
+    .. versionadded:: Nitrogen
+
     Remove extraneous local Bower packages, i.e. those not referenced in bower.json
 
     dir

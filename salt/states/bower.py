@@ -275,6 +275,8 @@ def bootstrap(name, user=None):
 
 def pruned(name, user=None, env=None):
     '''
+    .. versionadded:: Nitrogen
+
     Cleans up local bower_components directory.
 
     Will execute 'bower prune' on the specified directory (param: name)
