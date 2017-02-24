@@ -61,7 +61,7 @@ def fetch(bank, key, cachedir):
     key_file = os.path.join(cachedir, os.path.normpath(bank), '{0}.p'.format(key))
     if not os.path.isfile(key_file):
         log.debug('Cache file "%s" does not exist', key_file)
-        return None
+        return {}
     try:
         with salt.utils.fopen(key_file, 'rb') as fh_:
             return __context__['serial'].load(fh_)

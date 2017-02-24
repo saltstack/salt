@@ -104,7 +104,7 @@ def fetch(bank, key):
     try:
         _, value = api.kv.get(c_key)
         if value is None:
-            return value
+            return {}
         return __context__['serial'].loads(value['Value'])
     except Exception as exc:
         raise SaltCacheError(
