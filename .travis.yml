@@ -17,4 +17,4 @@ install:
   - "pip install -r requirements/zeromq.txt"
   - "pip install nose"
 
-script: nosetests tests/unit/modules/junos_test.py
+script: nosetests -v tests/unit/modules/junos_test.py
