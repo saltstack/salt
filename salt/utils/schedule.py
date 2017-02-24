@@ -916,6 +916,26 @@ class Schedule(object):
         '''
         Evaluate and execute the schedule
         '''
+
+        def _splay(splaytime):
+            '''
+            Calculate splaytime
+            '''
+            splay_ = None
+            if isinstance(splaytime, dict):
+                if splaytime['end'] >= splaytime['start']:
+                    splay_ = random.randint(splaytime['start'],
+                                            splaytime['end'])
+                else:
+                    log.error('schedule.handle_func: Invalid Splay, '
+                              'end must be larger than start. Ignoring splay.')
+            else:
+                splay_ = random.randint(1, splaytime)
+            if splay_:
+                log.debug('schedule.handle_func: Adding splay of '
+                          '{0} seconds to next run.'.format(splay_))
+            return splay_
+
         schedule = self.option('schedule')
         if not isinstance(schedule, dict):
             raise ValueError('Schedule must be of type dict.')
@@ -946,10 +966,18 @@ class Schedule(object):
                 )
             if 'name' not in data:
                 data['name'] = job
-            # Add up how many seconds between now and then
-            when = 0
-            seconds = 0
-            cron = 0
+
+            if '_next_fire_time' not in data:
+                data['_next_fire_time'] = None
+
+            if '_splay' not in data:
+                data['_splay'] = None
+
+            if 'run_on_start' in data and \
+                    data['run_on_start'] and \
+                    '_run_on_start' not in data:
+                data['_run_on_start'] = True
+
             now = int(time.time())
 
             if 'until' in data:
@@ -1005,11 +1033,20 @@ class Schedule(object):
                 continue
 
             if True in [True for item in time_elements if item in data]:
-                # Add up how many seconds between now and then
-                seconds += int(data.get('seconds', 0))
-                seconds += int(data.get('minutes', 0)) * 60
-                seconds += int(data.get('hours', 0)) * 3600
-                seconds += int(data.get('days', 0)) * 86400
+                if '_seconds' not in data:
+                    interval = int(data.get('seconds', 0))
+                    interval += int(data.get('minutes', 0)) * 60
+                    interval += int(data.get('hours', 0)) * 3600
+                    interval += int(data.get('days', 0)) * 86400
+
+                    data['_seconds'] = interval
+
+                    if not data['_next_fire_time']:
+                        data['_next_fire_time'] = now + data['_seconds']
+
+                    if interval < self.loop_interval:
+                        self.loop_interval = interval
+
             elif 'once' in data:
                 once_fmt = data.get('once_fmt', '%Y-%m-%dT%H:%M:%S')
 
@@ -1021,10 +1058,8 @@ class Schedule(object):
                             data['once'], once_fmt)
                     continue
 
-                if now != once:
-                    continue
-                else:
-                    seconds = 1
+                if not data['_next_fire_time']:
+                    data['_next_fire_time'] = once
 
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
@@ -1071,35 +1106,18 @@ class Schedule(object):
                         when = int(time.mktime(when__.timetuple()))
                         if when >= now:
                             _when.append(when)
+
+                    if data['_splay']:
+                        _when.append(data['_splay'])
+
                     _when.sort()
                     if _when:
                         # Grab the first element
                         # which is the next run time
                         when = _when[0]
-
-                        # If we're switching to the next run in a list
-                        # ensure the job can run
-                        if '_when' in data and data['_when'] != when:
-                            data['_when_run'] = True
-                            data['_when'] = when
-                        seconds = when - now
-
-                        # scheduled time is in the past and the run was not triggered before
-                        if seconds < 0 and not data.get('_when_run', False):
-                            continue
-
-                        if '_when_run' not in data:
-                            data['_when_run'] = True
-
-                        # Backup the run time
-                        if '_when' not in data:
-                            data['_when'] = when
-
-                        # A new 'when' ensure _when_run is True
-                        if when > data['_when']:
-                            data['_when'] = when
-                            data['_when_run'] = True
-
+                        if not data['_next_fire_time'] or \
+                                now > data['_next_fire_time']:
+                            data['_next_fire_time'] = when
                     else:
                         continue
 
@@ -1134,91 +1152,44 @@ class Schedule(object):
                             log.error('Invalid date string. Ignoring')
                             continue
                     when = int(time.mktime(when__.timetuple()))
-                    now = int(time.time())
-                    seconds = when - now
 
-                    # scheduled time is in the past and the run was not triggered before
-                    if seconds < 0 and not data.get('_when_run', False):
-                        continue
-
-                    if '_when_run' not in data:
-                        data['_when_run'] = True
-
-                    # Backup the run time
-                    if '_when' not in data:
-                        data['_when'] = when
-
-                    # A new 'when' ensure _when_run is True
-                    if when > data['_when']:
-                        data['_when'] = when
-                        data['_when_run'] = True
+                    if not data['_next_fire_time'] or \
+                            now > data['_next_fire_time']:
+                        data['_next_fire_time'] = when
 
             elif 'cron' in data:
                 if not _CRON_SUPPORTED:
                     log.error('Missing python-croniter. Ignoring job {0}'.format(job))
                     continue
 
-                now = int(time.mktime(datetime.datetime.now().timetuple()))
-                try:
-                    cron = int(croniter.croniter(data['cron'], now).get_next())
-                except (ValueError, KeyError):
-                    log.error('Invalid cron string. Ignoring')
-                    continue
-                seconds = cron - now
+                if not data['_next_fire_time'] or \
+                        now > data['_next_fire_time']:
+                    try:
+                        data['_next_fire_time'] = int(
+                            croniter.croniter(data['cron'], now).get_next())
+                    except (ValueError, KeyError):
+                        log.error('Invalid cron string. Ignoring')
+                        continue
+
             else:
                 continue
 
-            # Check if the seconds variable is lower than current lowest
-            # loop interval needed. If it is lower than overwrite variable
-            # external loops using can then check this variable for how often
-            # they need to reschedule themselves
-            # Not used with 'when' parameter, causes run away jobs and CPU
-            # spikes.
-            if 'when' not in data:
-                if seconds < self.loop_interval:
-                    self.loop_interval = seconds
             run = False
+            seconds = data['_next_fire_time'] - now
+            if data['_splay']:
+                seconds = data['_splay'] - now
+            if -1 < seconds <= 0:
+                run = True
 
-            if 'splay' in data:
-                if 'when' in data:
-                    log.error('Unable to use "splay" with "when" option at this time. Ignoring.')
-                elif 'cron' in data:
-                    log.error('Unable to use "splay" with "cron" option at this time. Ignoring.')
-                else:
-                    if '_seconds' not in data:
-                        log.debug('The _seconds parameter is missing, '
-                                  'most likely the first run or the schedule '
-                                  'has been refreshed refresh.')
-                        if 'seconds' in data:
-                            data['_seconds'] = data['seconds']
-                        else:
-                            data['_seconds'] = 0
+            if '_run_on_start' in data and data['_run_on_start']:
+                run = True
+                data['_run_on_start'] = False
+            elif run:
+                if 'splay' in data and not data['_splay']:
+                    run = False
+                    splay = _splay(data['splay'])
+                    data['_splay'] = data['_next_fire_time'] + splay
 
-            if 'when' in data:
-                # scheduled time is now or in the past, and the run was triggered before
-                if seconds <= 0 and data['_when_run']:
-                    data['_when_run'] = False
-                    run = True
-            elif 'cron' in data:
-                if seconds == 1:
-                    run = True
-            else:
-                if job in self.intervals:
-                    if now - self.intervals[job] >= seconds:
-                        run = True
-                else:
-                    # If run_on_start is True, the job will run when the Salt
-                    # minion start.  If the value is False will run at the next
-                    # scheduled run.  Default is True.
-                    if 'run_on_start' in data:
-                        if data['run_on_start']:
-                            run = True
-                        else:
-                            self.intervals[job] = int(time.time())
-                    else:
-                        run = True
-
-            if run:
                 if 'range' in data:
                     if not _RANGE_SUPPORTED:
                         log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
@@ -1242,7 +1213,7 @@ class Schedule(object):
                                     else:
                                         run = False
                                 else:
-                                    if now >= start and now <= end:
+                                    if start <= now <= end:
                                         run = True
                                     else:
                                         run = False
@@ -1257,30 +1228,8 @@ class Schedule(object):
 
             if not run:
                 continue
-            else:
-                if 'splay' in data:
-                    if 'when' in data:
-                        log.error('Unable to use "splay" with "when" option at this time. Ignoring.')
-                    else:
-                        if isinstance(data['splay'], dict):
-                            if data['splay']['end'] >= data['splay']['start']:
-                                splay = random.randint(data['splay']['start'], data['splay']['end'])
-                            else:
-                                log.error('schedule.handle_func: Invalid Splay, end must be larger than start. \
-                                         Ignoring splay.')
-                                splay = None
-                        else:
-                            splay = random.randint(0, data['splay'])
 
-                        if splay:
-                            log.debug('schedule.handle_func: Adding splay of '
-                                      '{0} seconds to next run.'.format(splay))
-                            if 'seconds' in data:
-                                data['seconds'] = data['_seconds'] + splay
-                            else:
-                                data['seconds'] = 0 + splay
-
-                log.info('Running scheduled job: {0}'.format(job))
+            log.info('Running scheduled job: {0}'.format(job))
 
             if 'jid_include' not in data or data['jid_include']:
                 data['jid_include'] = True
@@ -1322,7 +1271,9 @@ class Schedule(object):
                 if multiprocessing_enabled:
                     proc.join()
             finally:
-                self.intervals[job] = now
+                if '_seconds' in data:
+                    data['_next_fire_time'] = now + data['_seconds']
+                data['_splay'] = None
             if salt.utils.is_windows():
                 # Restore our function references.
                 self.functions = functions
