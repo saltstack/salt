@@ -453,7 +453,7 @@ repository:
 
 Now, if the top file changed the SLS target from ``web.server.nginx``, instead
 of reorganizing the git repository, you would just need to adjust the
-mountpoint to ``web/``
+mountpoint to ``web/`` (and restart the ``salt-master`` daemon).
 
 .. note::
     Leading and trailing slashes on the mountpoints are optional.
