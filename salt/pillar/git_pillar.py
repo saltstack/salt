@@ -457,6 +457,10 @@ mountpoint to ``web/``
 
 .. note::
     Leading and trailing slashes on the mountpoints are optional.
+
+.. important::
+    Use of the ``mountpoint`` feature requires that
+    :conf_master:`git_pillar_includes` is not disabled.
 '''
 from __future__ import absolute_import
 
