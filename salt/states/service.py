@@ -65,7 +65,6 @@ import time
 # Import Salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
-import salt.utils
 
 # Import 3rd-party libs
 import salt.ext.six as six
