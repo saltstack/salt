@@ -335,6 +335,7 @@ updated pillar data, but :py:func:`pillar.item <salt.modules.pillar.item>`,
 <salt.modules.pillar.raw>` will not see this data unless refreshed using
 :py:func:`saltutil.refresh_pillar <salt.modules.saltutil.refresh_pillar>`.
 
+.. _pillar-environments:
 
 How Pillar Environments Are Handled
 ===================================

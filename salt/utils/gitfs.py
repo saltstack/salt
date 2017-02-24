@@ -24,6 +24,7 @@ import salt.utils
 import salt.utils.itertools
 import salt.utils.url
 import salt.fileserver
+from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running as pid_exists
 from salt.exceptions import (
     FileserverConfigError,
@@ -85,13 +86,15 @@ try:
         GitError = pygit2.errors.GitError
     except AttributeError:
         GitError = Exception
-except Exception as err:  # cffi VerificationError also may happen
-    HAS_PYGIT2 = False    # and pygit2 requrests re-compilation
-                          # on a production system (!),
-                          # but cffi might be absent as well!
-                          # Therefore just a generic Exception class.
-    if not isinstance(err, ImportError):
-        log.error('Import pygit2 failed: %s', err)
+except Exception as exc:
+    # Exceptions other than ImportError can be raised in cases where there is a
+    # problem with cffi (such as when python-cffi is upgraded and pygit2 tries
+    # to rebuild itself against the newer cffi). Therefore, we simply will
+    # catch a generic exception, and log the exception if it is anything other
+    # than an ImportError.
+    HAS_PYGIT2 = False
+    if not isinstance(exc, ImportError):
+        log.exception('Failed to import pygit2')
 
 # pylint: enable=import-error
 
@@ -243,10 +246,10 @@ class GitProvider(object):
                 else:
                     msg = (
                         'Invalid {0} configuration parameter \'{1}\' in '
-                        'remote {2}. Valid parameters are: {3}.'.format(
+                        'remote \'{2}\'. Valid parameters are: {3}.'.format(
                             self.role,
                             param,
-                            self.url,
+                            self.id,
                             ', '.join(valid_per_remote_params)
                         )
                     )
@@ -314,11 +317,8 @@ class GitProvider(object):
 
         if not isinstance(self.url, six.string_types):
             log.critical(
-                'Invalid {0} remote \'{1}\'. Remotes must be strings, you '
-                'may need to enclose the URL in quotes'.format(
-                    self.role,
-                    self.id
-                )
+                'Invalid %s remote \'%s\'. Remotes must be strings, you '
+                'may need to enclose the URL in quotes', self.role, self.id
             )
             failhard(self.role)
 
@@ -330,6 +330,15 @@ class GitProvider(object):
             self.hash = hash_type(self.id).hexdigest()
         self.cachedir_basename = getattr(self, 'name', self.hash)
         self.cachedir = salt.utils.path_join(cache_root, self.cachedir_basename)
+        self.linkdir = salt.utils.path_join(cache_root,
+                                            'links',
+                                            self.cachedir_basename)
+        try:
+            # Remove linkdir if it exists
+            salt.utils.rm_rf(self.linkdir)
+        except OSError:
+            pass
+
         if not os.path.isdir(self.cachedir):
             os.makedirs(self.cachedir)
 
@@ -340,7 +349,7 @@ class GitProvider(object):
                    '{2}'.format(self.role, self.id, exc))
             if isinstance(self, GitPython):
                 msg += ' Perhaps git is not available.'
-            log.critical(msg, exc_info_on_loglevel=logging.DEBUG)
+            log.critical(msg, exc_info=True)
             failhard(self.role)
 
     def _get_envs_from_ref_paths(self, refs):
@@ -665,7 +674,7 @@ class GitProvider(object):
                     self._get_lock_file(lock_type),
                     exc
                 )
-                log.error(msg, exc_info_on_loglevel=logging.DEBUG)
+                log.error(msg, exc_info=True)
                 raise GitLockError(exc.errno, msg)
         msg = 'Set {0} lock for {1} remote \'{2}\''.format(
             lock_type,
@@ -1255,7 +1264,7 @@ class Pygit2(GitProvider):
                     log.error(
                         'pygit2 was unable to get SHA for %s in %s remote '
                         '\'%s\'', local_ref, self.role, self.id,
-                        exc_info_on_loglevel=logging.DEBUG
+                        exc_info=True
                     )
                     return None
 
@@ -1333,7 +1342,7 @@ class Pygit2(GitProvider):
                                 'Unable to resolve %s from %s remote \'%s\' '
                                 'to either an annotated or non-annotated tag',
                                 tag_ref, self.role, self.id,
-                                exc_info_on_loglevel=logging.DEBUG
+                                exc_info=True
                             )
                             return None
 
@@ -1349,7 +1358,7 @@ class Pygit2(GitProvider):
             log.error(
                 'Failed to checkout %s from %s remote \'%s\': %s',
                 tgt_ref, self.role, self.id, exc,
-                exc_info_on_loglevel=logging.DEBUG
+                exc_info=True
             )
             return None
         log.error(
@@ -1506,19 +1515,19 @@ class Pygit2(GitProvider):
                     'You may need to add ssh:// to the repo string or '
                     'libgit2 must be compiled with libssh2 to support '
                     'SSH authentication.', self.role, self.id,
-                    exc_info_on_loglevel=logging.DEBUG
+                    exc_info=True
                 )
             elif 'authentication required but no callback set' in exc_str:
                 log.error(
                     '%s remote \'%s\' requires authentication, but no '
                     'authentication configured', self.role, self.id,
-                    exc_info_on_loglevel=logging.DEBUG
+                    exc_info=True
                 )
             else:
                 log.error(
                     'Error occurred fetching %s remote \'%s\': %s',
                     self.role, self.id, exc,
-                    exc_info_on_loglevel=logging.DEBUG
+                    exc_info=True
                 )
             return False
         try:
@@ -1800,13 +1809,21 @@ class GitBase(object):
     Base class for gitfs/git_pillar
     '''
     def __init__(self, opts, valid_providers=VALID_PROVIDERS, cache_root=None):
+        '''
+        IMPORTANT: If specifying a cache_root, understand that this is also
+        where the remotes will be cloned. A non-default cache_root is only
+        really designed right now for winrepo, as its repos need to be checked
+        out into the winrepo locations and not within the cachedir.
+        '''
         self.opts = opts
         self.valid_providers = valid_providers
         self.get_provider()
         if cache_root is not None:
-            self.cache_root = cache_root
+            self.cache_root = self.remote_root = cache_root
         else:
-            self.cache_root = salt.utils.path_join(self.opts['cachedir'], self.role)
+            self.cache_root = salt.utils.path_join(self.opts['cachedir'],
+                                                   self.role)
+            self.remote_root = salt.utils.path_join(self.cache_root, 'remotes')
         self.env_cache = salt.utils.path_join(self.cache_root, 'envs.p')
         self.hash_cachedir = salt.utils.path_join(
             self.cache_root, 'hash')
@@ -2035,7 +2052,7 @@ class GitBase(object):
                 log.error(
                     'Exception caught while fetching %s remote \'%s\': %s',
                     self.role, repo.id, exc,
-                    exc_info_on_loglevel=logging.DEBUG
+                    exc_info=True
                 )
         return changed
 
@@ -2317,7 +2334,7 @@ class GitBase(object):
                         repo.role,
                         repo.id,
                         exc,
-                        exc_info_on_loglevel=logging.DEBUG
+                        exc_info=True
                     )
                     break
         else:
@@ -2641,7 +2658,8 @@ class GitPillar(GitBase):
         '''
         Checkout the targeted branches/tags from the git_pillar remotes
         '''
-        self.pillar_dirs = {}
+        self.pillar_dirs = OrderedDict()
+        self.pillar_linked_dirs = []
         for repo in self.remotes:
             cachedir = self.do_checkout(repo)
             if cachedir is not None:
@@ -2651,7 +2669,71 @@ class GitPillar(GitBase):
                 else:
                     base_branch = self.opts['{0}_base'.format(self.role)]
                     env = 'base' if repo.branch == base_branch else repo.branch
-                self.pillar_dirs[cachedir] = env
+                if repo._mountpoint:
+                    if self.link_mountpoint(repo, cachedir):
+                        self.pillar_dirs[repo.linkdir] = env
+                        self.pillar_linked_dirs.append(repo.linkdir)
+                else:
+                    self.pillar_dirs[cachedir] = env
+
+    def link_mountpoint(self, repo, cachedir):
+        '''
+        Ensure that the mountpoint is linked to the passed cachedir
+        '''
+        lcachelink = salt.utils.path_join(repo.linkdir, repo._mountpoint)
+        if not os.path.islink(lcachelink):
+            ldirname = os.path.dirname(lcachelink)
+            try:
+                os.symlink(cachedir, lcachelink)
+            except OSError as exc:
+                if exc.errno == errno.ENOENT:
+                    # The parent dir does not exist, create it and then
+                    # re-attempt to create the symlink
+                    try:
+                        os.makedirs(ldirname)
+                    except OSError as exc:
+                        log.error(
+                            'Failed to create path %s: %s',
+                            ldirname, exc.__str__()
+                        )
+                        return False
+                    else:
+                        try:
+                            os.symlink(cachedir, lcachelink)
+                        except OSError:
+                            log.error(
+                                'Could not create symlink to %s at path %s: %s',
+                                cachedir, lcachelink, exc.__str__()
+                            )
+                            return False
+                elif exc.errno == errno.EEXIST:
+                    # A file or dir already exists at this path, remove it and
+                    # then re-attempt to create the symlink
+                    try:
+                        salt.utils.rm_rf(lcachelink)
+                    except OSError as exc:
+                        log.error(
+                            'Failed to remove file/dir at path %s: %s',
+                            lcachelink, exc.__str__()
+                        )
+                        return False
+                    else:
+                        try:
+                            os.symlink(cachedir, lcachelink)
+                        except OSError:
+                            log.error(
+                                'Could not create symlink to %s at path %s: %s',
+                                cachedir, lcachelink, exc.__str__()
+                            )
+                            return False
+                else:
+                    # Other kind of error encountered
+                    log.error(
+                        'Could not create symlink to %s at path %s: %s',
+                        cachedir, lcachelink, exc.__str__()
+                    )
+                    return False
+        return True
 
     def update(self):
         '''

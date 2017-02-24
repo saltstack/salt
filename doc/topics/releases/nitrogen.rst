@@ -156,6 +156,11 @@ feature works can be found :ref:`here <gitfs-custom-refspecs>` in the GitFS
 Walkthrough. The git_pillar and winrepo versions of this feature work the same
 as their GitFS counterpart.
 
+git_pillar "mountpoints" Feature Added
+======================================
+
+See :ref:`here <git-pillar-mountpoints>` for detailed documentation.
+
 ``dockerng`` State/Execution Module Renamed to ``docker``
 =========================================================
 

@@ -10,6 +10,8 @@ import os
 import collections
 import logging
 import tornado.gen
+import sys
+import traceback
 
 # Import salt libs
 import salt.loader
@@ -817,8 +819,13 @@ class Pillar(object):
                                                         pillar_dirs,
                                                         key)
                 except Exception as exc:
-                    errors.append('Failed to load ext_pillar {0}: {1}'.format(
-                        key, exc))
+                    errors.append(
+                        'Failed to load ext_pillar {0}: {1}\n{2}'.format(
+                            key,
+                            exc.__str__(),
+                            ''.join(traceback.format_tb(sys.exc_info()[2])),
+                        )
+                    )
             if ext:
                 pillar = merge(
                     pillar,
