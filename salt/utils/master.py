@@ -134,6 +134,8 @@ class MasterPillarUtil(object):
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
             mdata = self.cache.fetch('minions/{0}'.format(minion_id), 'data')
+            if not isinstance(mdata, dict):
+                continue
             if 'grains' in mdata:
                 grains[minion_id] = mdata['grains']
             if 'pillar' in mdata:
