@@ -3,26 +3,36 @@
 Module for handling kubernetes calls.
 
 :optdepends:    - kubernetes Python client
-:configuration: This module is not usable until the following are specified
-    either in a pillar or in the minion's config file::
+:configuration: The k8s API settings are provided either in a pillar, in
+    the minion's config file, or in master's config file::
 
         kubernetes.user: admin
         kubernetes.password: verybadpass
         kubernetes.api_url: 'http://127.0.0.1:8080'
+
+These settings can be also overrided by adding `api_url`, `api_user`,
+or `api_password` parameters when calling a function:
+
+.. code-block:: bash
+    salt '*' kubernetes.nodes api_url=http://k8s-api-server:port api_user=myuser api_password=pass
+
 '''
+
 # Import Python Futures
 from __future__ import absolute_import
 import logging
-from salt.ext.six import iteritems
-from salt.exceptions import CommandExecutionError
-import salt.utils
-import salt.utils.templates
 import yaml
 
+from salt.exceptions import CommandExecutionError
+from salt.ext.six import iteritems
+import salt.utils
+import salt.utils.templates
+
 try:
-    import kubernetes
+    import kubernetes  # pylint: disable=import-self
     import kubernetes.client
     from kubernetes.client.rest import ApiException
+    from urllib3.exceptions import HTTPError
 
     HAS_LIBS = True
 except ImportError:
@@ -41,10 +51,41 @@ def __virtual__():
     if HAS_LIBS:
         return __virtualname__
 
-    return False
+    return False, 'python kubernetes library not found'
 
 
-def ping():
+# pylint: disable=no-member
+def _setup_conn(**kwargs):
+    '''
+    Setup kubernetes API connection singleton
+    '''
+    host = __salt__['config.option']('kubernetes.api_url',
+                                     'http://localhost:8080')
+    username = __salt__['config.option']('kubernetes.user')
+    password = __salt__['config.option']('kubernetes.password')
+
+    # Override default API settings when settings are provided
+    if kwargs.get('api_url'):
+        host = kwargs['api_url']
+
+    if kwargs.get('api_user'):
+        username = kwargs['api_user']
+
+    if kwargs.get('api_password'):
+        password = kwargs['api_password']
+
+    if (kubernetes.client.configuration.host != host or
+       kubernetes.client.configuration.user != username or
+       kubernetes.client.configuration.password != password):
+        # Recreates API connection if settings are changed
+        kubernetes.client.configuration.__init__()
+
+    kubernetes.client.configuration.host = host
+    kubernetes.client.configuration.user = username
+    kubernetes.client.configuration.passwd = password
+
+
+def ping(**kwargs):
     '''
     Checks connections with the kubernetes API server.
     Returns True if the connection can be established, False otherwise.
@@ -54,25 +95,34 @@ def ping():
     '''
     status = True
     try:
-        nodes()
-    except Exception:
+        nodes(**kwargs)
+    except CommandExecutionError:
         status = False
 
     return status
 
 
-def nodes():
+def nodes(**kwargs):
     '''
     Return the names of the nodes composing the kubernetes cluster
 
     CLI Examples::
 
         salt '*' kubernetes.nodes
+        salt '*' kubernetes.nodes api_url=http://myhost:port api_user=my-user
     '''
-    _setup_conn()
-
-    api_instance = kubernetes.client.CoreV1Api()
-    api_response = api_instance.list_node()
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.list_node()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling CoreV1Api->list_node: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
 
     ret = []
 
@@ -82,75 +132,174 @@ def nodes():
     return ret
 
 
-def _setup_conn():
+def deployments(namespace="default", **kwargs):
     '''
-    Setup kubernetes API connection singleton
+    Return a list of kubernetes deployments defined in the namespace
+
+    CLI Examples::
+
+        salt '*' kubernetes.deployments
+        salt '*' kubernetes.deployments namespace=default
     '''
-    host = __salt__['config.option']('kubernetes.api_url',
-                                     'http://localhost:8080')
-    username = __salt__['config.option']('kubernetes.user')
-    password = __salt__['config.option']('kubernetes.password')
-    kubernetes.client.configuration.host = host
-    kubernetes.client.configuration.user = username
-    kubernetes.client.configuration.passwd = password
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.ExtensionsV1beta1Api()
+        api_response = api_instance.list_namespaced_deployment(namespace)
+
+        return api_response.to_dict().get('items')
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling "
+                "ExtensionsV1beta1Api->list_namespaced_deployment: "
+                "{0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
 
 
-def show_deployment(name, namespace):
+def services(namespace="default", **kwargs):
+    '''
+    Return a list of kubernetes services defined in the namespace
+
+    CLI Examples::
+
+        salt '*' kubernetes.services
+        salt '*' kubernetes.services namespace=default
+    '''
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.list_namespaced_service(namespace)
+
+        return api_response.to_dict().get('items')
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling "
+                "CoreV1Api->list_namespaced_service: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
+def pods(namespace="default", **kwargs):
+    '''
+    Return a list of kubernetes pods defined in the namespace
+
+    CLI Examples::
+
+        salt '*' kubernetes.pods
+        salt '*' kubernetes.pods namespace=default
+    '''
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.list_namespaced_pod(namespace)
+
+        return api_response.to_dict().get('items')
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling "
+                "CoreV1Api->list_namespaced_pod: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
+def show_deployment(name, namespace="default", **kwargs):
     '''
     Return the kubernetes deployment defined by name and namespace
 
     CLI Examples::
 
-        salt '*' kubernetes.show_deployment my-nginx,default
-        salt '*' kubernetes.show_deployment name=my-nginx,namespace=default
+        salt '*' kubernetes.show_deployment my-nginx default
+        salt '*' kubernetes.show_deployment name=my-nginx namespace=default
     '''
-    _setup_conn()
+    _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.ExtensionsV1beta1Api()
         api_response = api_instance.read_namespaced_deployment(name, namespace)
 
         return api_response.to_dict()
-    except ApiException as exc:
-        if exc.status == 404:
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(exc)
-            raise exc
+            log.exception(
+                "Exception when calling "
+                "ExtensionsV1beta1Api->read_namespaced_deployment: "
+                "{0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
 
 
-def show_service(name, namespace):
+def show_service(name, namespace="default", **kwargs):
     '''
     Return the kubernetes service defined by name and namespace
 
     CLI Examples::
 
-        salt '*' kubernetes.show_service my-nginx,default
-        salt '*' kubernetes.show_service name=my-nginx,namespace=default
+        salt '*' kubernetes.show_service my-nginx default
+        salt '*' kubernetes.show_service name=my-nginx namespace=default
     '''
-    _setup_conn()
+    _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.read_namespaced_service(name, namespace)
 
         return api_response.to_dict()
-    except ApiException as exc:
-        if exc.status == 404:
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(exc)
-            raise exc
+            log.exception(
+                "Exception when calling "
+                "CoreV1Api->read_namespaced_service: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
 
 
-def delete_deployment(name, namespace):
+def show_pod(name, namespace="default", **kwargs):
+    '''
+    Return POD information for a given pod name defined in the namespace
+
+    CLI Examples::
+
+        salt '*' kubernetes.show_pod guestbook-708336848-fqr2x
+        salt '*' kubernetes.show_pod guestbook-708336848-fqr2x namespace=default
+    '''
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.read_namespaced_pod(name, namespace)
+
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling "
+                "CoreV1Api->read_namespaced_pod: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
+def delete_deployment(name, namespace="default", **kwargs):
     '''
     Deletes the kubernetes deployment defined by name and namespace
 
     CLI Examples::
 
-        salt '*' kubernetes.delete_deployment my-nginx,default
-        salt '*' kubernetes.delete_deployment name=my-nginx,namespace=default
+        salt '*' kubernetes.delete_deployment my-nginx
+        salt '*' kubernetes.delete_deployment name=my-nginx namespace=default
     '''
-    _setup_conn()
+    _setup_conn(**kwargs)
     body = kubernetes.client.V1DeleteOptions(orphan_dependents=True)
 
     try:
@@ -159,26 +308,29 @@ def delete_deployment(name, namespace):
             name=name,
             namespace=namespace,
             body=body)
-
         return api_response.to_dict()
-    except ApiException as exc:
-        if exc.status == 404:
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(exc)
-            raise exc
+            log.exception(
+                "Exception when calling "
+                "ExtensionsV1beta1Api->delete_namespaced_deployment: "
+                "{0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
 
 
-def delete_service(name, namespace):
+def delete_service(name, namespace="default", **kwargs):
     '''
     Deletes the kubernetes service defined by name and namespace
 
     CLI Examples::
 
-        salt '*' kubernetes.delete_service my-nginx,default
-        salt '*' kubernetes.delete_service name=my-nginx,namespace=default
+        salt '*' kubernetes.delete_service my-nginx default
+        salt '*' kubernetes.delete_service name=my-nginx namespace=default
     '''
-    _setup_conn()
+    _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.CoreV1Api()
@@ -187,12 +339,46 @@ def delete_service(name, namespace):
             namespace=namespace)
 
         return api_response.to_dict()
-    except ApiException as exc:
-        if exc.status == 404:
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(exc)
-            raise exc
+            log.exception(
+                "Exception when calling CoreV1Api->delete_namespaced_service: "
+                "{0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
+def delete_pod(name, namespace="default", **kwargs):
+    '''
+    Deletes the kubernetes pod defined by name and namespace
+
+    CLI Examples::
+
+        salt '*' kubernetes.delete_pod guestbook-708336848-5nl8c default
+        salt '*' kubernetes.delete_pod name=guestbook-708336848-5nl8c namespace=default
+    '''
+    _setup_conn(**kwargs)
+    body = kubernetes.client.V1DeleteOptions(orphan_dependents=True)
+
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.delete_namespaced_pod(
+            name=name,
+            namespace=namespace,
+            body=body)
+
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling "
+                "CoreV1Api->delete_namespaced_pod: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
 
 
 def create_deployment(
@@ -202,7 +388,8 @@ def create_deployment(
         spec,
         source,
         template,
-        saltenv):
+        saltenv,
+        **kwargs):
     '''
     Creates the kubernetes deployment as defined by the user.
     '''
@@ -218,7 +405,7 @@ def create_deployment(
         template=template,
         saltenv=saltenv)
 
-    _setup_conn()
+    _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.ExtensionsV1beta1Api()
@@ -226,12 +413,16 @@ def create_deployment(
             namespace, body)
 
         return api_response.to_dict()
-    except ApiException as exc:
-        if exc.status == 404:
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(exc)
-            raise exc
+            log.exception(
+                "Exception when calling "
+                "ExtensionsV1beta1Api->create_namespaced_deployment: "
+                "{0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
 
 
 def create_service(
@@ -241,7 +432,8 @@ def create_service(
         spec,
         source,
         template,
-        saltenv):
+        saltenv,
+        **kwargs):
     '''
     Creates the kubernetes service as defined by the user.
     '''
@@ -257,9 +449,7 @@ def create_service(
         template=template,
         saltenv=saltenv)
 
-    _setup_conn()
-
-    log.warning(body)
+    _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.CoreV1Api()
@@ -267,21 +457,25 @@ def create_service(
             namespace, body)
 
         return api_response.to_dict()
-    except ApiException as exc:
-        if exc.status == 404:
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(exc)
-            raise exc
+            log.exception(
+                "Exception when calling "
+                "CoreV1Api->create_namespaced_service: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
 
 
 def replace_deployment(name,
-                       namespace,
                        metadata,
                        spec,
                        source,
                        template,
-                       saltenv):
+                       saltenv,
+                       namespace="default",
+                       **kwargs):
     '''
     Replaces an existing deployment with a new one defined by name and
     namespace, having the specificed metadata and spec.
@@ -298,7 +492,7 @@ def replace_deployment(name,
         template=template,
         saltenv=saltenv)
 
-    _setup_conn()
+    _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.ExtensionsV1beta1Api()
@@ -306,22 +500,27 @@ def replace_deployment(name,
             name, namespace, body)
 
         return api_response.to_dict()
-    except ApiException as exc:
-        if exc.status == 404:
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(exc)
-            raise exc
+            log.exception(
+                "Exception when calling "
+                "ExtensionsV1beta1Api->replace_namespaced_deployment: "
+                "{0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
 
 
 def replace_service(name,
-                    namespace,
                     metadata,
                     spec,
                     source,
                     template,
                     old_service,
-                    saltenv):
+                    saltenv,
+                    namespace="default",
+                    **kwargs):
     '''
     Replaces an existing service with a new one defined by name and namespace,
     having the specificed metadata and spec.
@@ -343,7 +542,7 @@ def replace_service(name,
     body.spec.cluster_ip = old_service['spec']['cluster_ip']
     body.metadata.resource_version = old_service['metadata']['resource_version']
 
-    _setup_conn()
+    _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.CoreV1Api()
@@ -351,12 +550,15 @@ def replace_service(name,
             name, namespace, body)
 
         return api_response.to_dict()
-    except ApiException as exc:
-        if exc.status == 404:
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(exc)
-            raise exc
+            log.exception(
+                "Exception when calling "
+                "CoreV1Api->replace_namespaced_service: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
 
 
 def __create_object_body(kind,
@@ -383,7 +585,7 @@ def __create_object_body(kind,
 
             if template:
                 if template in salt.utils.templates.TEMPLATE_REGISTRY:
-                    # TODO: should we allow user to set also `context` like
+                    # TODO: should we allow user to set also `context` like  # pylint: disable=fixme
                     # `file.managed` does?
                     # Apply templating
                     data = salt.utils.templates.TEMPLATE_REGISTRY[template](
@@ -400,7 +602,8 @@ def __create_object_body(kind,
                         # Failed to render the template
                         raise CommandExecutionError(
                             'Failed to render file path with error: '
-                            '{0}'.format(data['data']))
+                            '{0}'.format(data['data'])
+                        )
 
                     contents = data['data'].encode('utf-8')
                 else:
@@ -464,7 +667,7 @@ def __dict_to_service_spec(spec):
     Converts a dictionary into kubernetes V1ServiceSpec instance.
     '''
     spec_obj = kubernetes.client.V1ServiceSpec()
-    for key, value in iteritems(spec):
+    for key, value in iteritems(spec):  # pylint: disable=too-many-nested-blocks
         if key == 'ports':
             spec_obj.ports = []
             for port in value:
