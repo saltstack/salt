@@ -52,9 +52,21 @@ Grains Changes
   may need to be adjusted to account for this change.
 - Add ability to specify disk backing mode in the VMWare salt cloud profile.
 
+State Module Changes
+====================
+
+- The :py:func:`service.running <salt.states.service.running>` and
+  :py:func:`service.dead <salt.states.service.dead>` states now support a
+  ``no_block`` argument which, when set to ``True`` on systemd minions, will
+  start/stop the service using the ``--no-block`` flag in the ``systemctl``
+  command. On non-systemd minions, a warning will be issued.
+
 Execution Module Changes
 ========================
 
+- Several functions in the :mod:`systemd <salt.modules.systemd>` execution
+  module have gained a ``no_block`` argument, which when set to ``True`` will
+  use ``--no-block`` in the ``systemctl`` command.
 - In the :mod:`solarisips <salt.modules.solarisips>` ``pkg`` module, the
   default value for the ``refresh`` argument to the ``list_upgrades`` function
   has been changed from ``False`` to ``True``. This makes the function more
