@@ -10,19 +10,19 @@ ext_pillar, simply ported to use mako instead of jinja2 for templating.
 It supports the following features:
 
 - multiple config files that are mako templates with support for ``pillar``,
-  ``__grains__``, ``__salt__``, ``__opts__`` objects
+  ``__grains__``, ``__salt__``, ``__opts__`` objects.
 - a config file renders as an ordered list of files. Unless absolute, the paths
   of these files are relative to the current config file - if absolute, they
   will be treated literally.
-- this list of files are read in ordered as mako templates with support for
-  ``stack``, ``pillar``, ``__grains__``, ``__salt__``, ``__opts__`` objects
-- all these rendered files are then parsed as ``yaml``
-- then all yaml dicts are merged in order with support for the following
+- this list of files are read in order as mako templates with support for
+  ``stack``, ``pillar``, ``__grains__``, ``__salt__``, ``__opts__`` objects.
+- all these rendered files are then parsed as ``yaml``.
+- then all yaml dicts are merged in order, with support for the following.
   merging strategies: ``merge-first``, ``merge-last``, ``remove``, and
-  ``overwrite``
+  ``overwrite``.
 - stack config files can be matched based on ``pillar``, ``grains``, or
   ``opts`` values, which make it possible to support kind of self-contained
-  environments
+  environments.
 
 Configuration in Salt
 ---------------------
@@ -41,7 +41,7 @@ MakoStack config file like below:
 .. code:: yaml
 
     ext_pillar:
-      - stack: /path/to/stack.cfg
+      - makostack: /path/to/stack.cfg
 
 List of config files
 ~~~~~~~~~~~~~~~~~~~~
@@ -51,7 +51,7 @@ You can also provide a list of config files:
 .. code:: yaml
 
     ext_pillar:
-      - stack:
+      - makostack:
           - /path/to/stack1.cfg
           - /path/to/stack2.cfg
 
@@ -67,7 +67,7 @@ Here is an example of such a configuration, which should speak by itself:
 .. code:: yaml
 
     ext_pillar:
-      - stack:
+      - makostack:
           pillar:environment:
             dev: /path/to/dev/stack.cfg
             prod: /path/to/prod/stack.cfg
@@ -77,7 +77,6 @@ Here is an example of such a configuration, which should speak by itself:
               - /path/to/stack2.cfg
           opts:custom:opt:
             value: /path/to/stack0.cfg
-
 
 Grafting data from files to arbitrary namespaces
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -431,7 +430,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         else:
             namespace = None
         if not os.path.isfile(cfg):
-            log.warning('Ignoring pillar stack cfg "{0}": '
+            log.warning('Ignoring Stack cfg "{0}": '
                         'file does not exist'.format(cfg))
             continue
         stack = _process_stack_cfg(cfg, stack, minion_id, pillar, namespace)
@@ -459,18 +458,19 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace):
                                                  pillar=pillar, stack=stack)
             obj = yaml.safe_load(p)
             if not isinstance(obj, dict):
-                log.info('Ignoring pillar stack template "{0}": Can\'t parse '
+                log.info('Ignoring Stack template "{0}": Can\'t parse '
                          'as a valid yaml dictionary'.format(path))
                 continue
             if namespace:
                 for sub in namespace.split(':')[::-1]:
                     obj = {sub: obj}
             stack = _merge_dict(stack, obj)
+            log.info('Stack template {0} parsed'.format(path))
         except exceptions.TopLevelLookupException as e:
             log.info('Stack template "{0}" not found.'.format(path))
             continue
         except Exception as e:
-            log.info('Ignoring pillar stack template "{0}":'.format(path))
+            log.info('Ignoring Stack template "{0}":'.format(path))
             log.info('{0}'.format(exceptions.text_error_template().render()))
             continue
     return stack
