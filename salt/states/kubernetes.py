@@ -88,7 +88,7 @@ def _error(ret, err_msg):
     return ret
 
 
-def deployment_absent(name, namespace='default'):
+def deployment_absent(name, namespace='default', **kwargs):
     '''
     Ensures that the named deployment is absent from the given namespace.
 
@@ -104,26 +104,26 @@ def deployment_absent(name, namespace='default'):
            'result': False,
            'comment': ''}
 
-    deployment = __salt__['kubernetes.show_deployment'](name, namespace)
+    deployment = __salt__['kubernetes.show_deployment'](name, namespace, **kwargs)
 
     if deployment is None:
-        ret['result'] = True
+        ret['result'] = True if not __opts__['test'] else None
         ret['comment'] = 'The deployment does not exist'
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'The deployment is not absent'
+        ret['comment'] = 'The deployment is going to be deleted'
         ret['result'] = None
         return ret
 
-    res = __salt__['kubernetes.delete_deployment'](name, namespace)
+    res = __salt__['kubernetes.delete_deployment'](name, namespace, **kwargs)
     if res['code'] == 200:
         ret['result'] = True
         ret['changes'] = {
             'kubernetes.deployment': {
                 'new': 'absent', 'old': 'present'}}
-    ret['comment'] = res['message']
 
+    ret['comment'] = res['message']
     return ret
 
 
@@ -133,7 +133,8 @@ def deployment_present(
         metadata=None,
         spec=None,
         source='',
-        template=''):
+        template='',
+        **kwargs):
     '''
     Ensures that the named deployment is present inside of the specified
     namespace with the given metadata and spec.
@@ -177,12 +178,12 @@ def deployment_present(
     if spec is None:
         spec = {}
 
-    deployment = __salt__['kubernetes.show_deployment'](name, namespace)
+    deployment = __salt__['kubernetes.show_deployment'](name, namespace, **kwargs)
 
     if deployment is None:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'The deployment does not exist'
+            ret['comment'] = 'The deployment is going to be created'
             return ret
         res = __salt__['kubernetes.create_deployment'](name=name,
                                                        namespace=namespace,
@@ -190,20 +191,18 @@ def deployment_present(
                                                        spec=spec,
                                                        source=source,
                                                        template=template,
-                                                       saltenv=__env__)
+                                                       saltenv=__env__,
+                                                       **kwargs)
         ret['changes']['{0}.{1}'.format(namespace, name)] = {
             'old': {},
             'new': res}
     else:
-        ret['changes'] = {
-            'metadata': metadata,
-            'spec': spec}
         if __opts__['test']:
-            ret['comment'] = 'The deployment is already present'
             ret['result'] = None
             return ret
-        # TODO: improve checks
-        log.info('Forcing the recreation of the deploymentv')
+
+        # TODO: improve checks  # pylint: disable=fixme
+        log.info('Forcing the recreation of the deployment')
         res = __salt__['kubernetes.replace_deployment'](
             name=name,
             namespace=namespace,
@@ -211,10 +210,15 @@ def deployment_present(
             spec=spec,
             source=source,
             template=template,
-            saltenv=__env__)
+            saltenv=__env__,
+            **kwargs)
 
+    ret['changes'] = {
+        'metadata': metadata,
+        'spec': spec
+    }
+    ret['comment'] = 'The deployment is already present. Forcing recreation'
     ret['result'] = True
-
     return ret
 
 
@@ -224,7 +228,8 @@ def service_present(
         metadata=None,
         spec=None,
         source='',
-        template=''):
+        template='',
+        **kwargs):
     '''
     Ensures that the named service is present inside of the specified namespace
     with the given metadata and spec.
@@ -268,12 +273,12 @@ def service_present(
     if spec is None:
         spec = {}
 
-    service = __salt__['kubernetes.show_service'](name, namespace)
+    service = __salt__['kubernetes.show_service'](name, namespace, **kwargs)
 
     if service is None:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'The service does not exist'
+            ret['comment'] = 'The service is going to be created'
             return ret
         res = __salt__['kubernetes.create_service'](name=name,
                                                     namespace=namespace,
@@ -281,19 +286,17 @@ def service_present(
                                                     spec=spec,
                                                     source=source,
                                                     template=template,
-                                                    saltenv=__env__)
+                                                    saltenv=__env__,
+                                                    **kwargs)
         ret['changes']['{0}.{1}'.format(namespace, name)] = {
             'old': {},
             'new': res}
     else:
-        ret['changes'] = {
-            'metadata': metadata,
-            'spec': spec}
         if __opts__['test']:
-            ret['comment'] = 'The service is already present'
             ret['result'] = None
             return ret
-        # TODO: improve checks
+
+        # TODO: improve checks  # pylint: disable=fixme
         log.info('Forcing the recreation of the service')
         res = __salt__['kubernetes.replace_service'](
             name=name,
@@ -303,14 +306,19 @@ def service_present(
             source=source,
             template=template,
             old_service=service,
-            saltenv=__env__)
+            saltenv=__env__,
+            **kwargs)
 
+    ret['changes'] = {
+        'metadata': metadata,
+        'spec': spec
+    }
+    ret['comment'] = 'The service is already present. Forcing recreation'
     ret['result'] = True
-
     return ret
 
 
-def service_absent(name, namespace='default'):
+def service_absent(name, namespace='default', **kwargs):
     '''
     Ensures that the named service is absent from the given namespace.
 
@@ -326,24 +334,23 @@ def service_absent(name, namespace='default'):
            'result': False,
            'comment': ''}
 
-    service = __salt__['kubernetes.show_service'](name, namespace)
+    service = __salt__['kubernetes.show_service'](name, namespace, **kwargs)
 
     if service is None:
-        ret['result'] = True
+        ret['result'] = True if not __opts__['test'] else None
         ret['comment'] = 'The service does not exist'
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'The service is not absent'
+        ret['comment'] = 'The service is going to be deleted'
         ret['result'] = None
         return ret
 
-    res = __salt__['kubernetes.delete_service'](name, namespace)
+    res = __salt__['kubernetes.delete_service'](name, namespace, **kwargs)
     if res['code'] == 200:
         ret['result'] = True
         ret['changes'] = {
             'kubernetes.service': {
                 'new': 'absent', 'old': 'present'}}
     ret['comment'] = res['message']
-
     return ret
