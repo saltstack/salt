@@ -17,6 +17,7 @@ dns.srv_name('ldap/tcp', 'example.com')
 
 
 # should replace/augment
+https://github.com/saltstack/salt/pull/39615/files
 https://blog.widodh.nl/2016/07/calculating-ds-record-from-dnskey-with-python-3/
 https://github.com/saltstack/salt/pull/36180
 - modules:
@@ -38,12 +39,13 @@ from __future__ import print_function, absolute_import
 import itertools
 import socket
 import string
+from salt.ext.six.moves import zip
+from salt._compat import ipaddress
+from salt.utils.odict import OrderedDict
 
 # Salt
 import salt.modules.cmdmod
 import salt.utils
-from salt._compat import ipaddress
-from salt.utils.odict import OrderedDict #, DefaultOrderedDict
 
 # Debug & Logging
 import logging
@@ -56,6 +58,7 @@ try:
 except ImportError as e:
     HAS_PYDNS = False
 HAS_DIG = salt.utils.which('dig') is not None
+HAS_DRILL = salt.utils.which('drill') is not None
 HAS_HOST = salt.utils.which('host') is not None
 HAS_NSLOOKUP = salt.utils.which('nslookup') is not None
 
@@ -213,17 +216,74 @@ def _query_dig(name, rdtype, timeout=None, servers=[], secure=None):
         if rtype == 'CNAME' and rdtype != 'CNAME':
             continue
         elif rtype == 'RRSIG':
-            validated = True  # TODO: Or not
+            validated = True
             continue
         res.append(rdata.strip(string.whitespace + '"'))
 
-    if secure and not validated:
-        if res:
+    if res and secure and not validated:
+        return False
+    else:
+        return res
+
+
+def _query_drill(name, rdtype, timeout=None, servers=[], secure=None):
+    '''
+    Use drill to lookup addresses
+    :param name: Name of record to search
+    :param rdtype: DNS record type
+    :param timeout: command return timeout
+    :return: [] of records or False if error
+    '''
+    cmd = 'drill '
+    if secure:
+        cmd += '-D -o ad '
+    cmd += '{0} {1} '.format(name, rdtype)
+    if servers:
+        cmd += ''.join(['@{0} '.format(srv) for srv in servers])
+
+    cmd = __salt__['cmd.run_all'](
+        cmd + str(name), timeout=timeout,
+        python_shell=False, output_loglevel='quiet')
+
+    # In this case, 0 is not the same as False
+    if cmd['retcode'] != 0:
+        log.warning(
+            'drill returned ({0}): {1}'.format(
+                cmd['retcode'], cmd['stderr']
+            ))
+        return False
+
+    # ppr(cmd['stdout'].splitlines())
+
+    lookup_res = iter(cmd['stdout'].splitlines())
+    res = []
+    try:
+        while 'ANSWER SECTION' not in line:
+            line = next(lookup_res)
+
+        while True:
+            line = next(lookup_res)
+            # ppr('{}: now at {}'.format(name, line))
+            line = line.strip()
+            if not line or line.startswith(';;'):
+                break
+
+            l_type, l_rec = line.split(None, 4)[-2:]
+            if l_type == 'CNAME' and rdtype != 'CNAME':
+                continue
+            elif l_type == 'RRSIG':
+                validated = True
+                continue
+
+            res.append(line.strip(string.whitespace + '"'))
+
+    except StopIteration:
+        pass
+    finally:
+        if res and secure and not validated:
             return False
         else:
-            return []
-
-    return res
+            return res
 
 
 def _query_host(name, rdtype, timeout=None, server=None):
@@ -394,6 +454,7 @@ def query(
         ('simple',   _query_simple,   not any((rdtype not in ('A', 'AAAA'), servers, secure))),
         ('pydns',    _query_pydns,    HAS_PYDNS),
         ('dig',      _query_dig,      HAS_DIG),
+        ('drill',    _query_drill,    HAS_DRILL),
         ('host',     _query_host,     HAS_HOST and not secure),
         ('nslookup', _query_nslookup, HAS_NSLOOKUP and not secure),
     )
@@ -425,7 +486,7 @@ def query(
     else:
         if not isinstance(servers, (list, tuple)):
             servers = [servers]
-        if method in ('pydns', 'dig'):
+        if method in ('pydns', 'dig', 'drill'):
             res_kwargs['servers'] = servers
             res = resolver(**res_kwargs)
         else:
