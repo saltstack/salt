@@ -2262,6 +2262,7 @@ def _hw_data(osdata):
         hwdata = {
             'manufacturer': 'manufacturer',
             'serialnumber': 'serial#',
+            'productname': 'DeviceDesc',
         }
         for grain_name, cmd_key in six.iteritems(hwdata):
             result = __salt__['cmd.run_all']('fw_printenv {0}'.format(cmd_key))
