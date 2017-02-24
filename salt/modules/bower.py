@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import json
 import logging
 import distutils.version  # pylint: disable=import-error,no-name-in-module
+import shlex
 
 # Import salt libs
 import salt.utils
@@ -61,14 +62,13 @@ def _construct_bower_command(bower_command):
     Create bower command line string
     '''
     if not bower_command:
-        raise CommandExecutionError('bower_command, e.g. install, must be specified')
+        raise CommandExecutionError(
+            'bower_command, e.g. install, must be specified')
 
-    cmd = 'bower {0}'.format(bower_command)
-    cmd += ' --config.analytics false'
-    cmd += ' --config.interactive false'
-    cmd += ' --allow-root'
-    cmd += ' --json'
-
+    cmd = ['bower'] + shlex.split(bower_command)
+    cmd.extend(['--config.analytics', 'false',
+                '--config.interactive', 'false',
+                '--allow-root', '--json'])
     return cmd
 
 
@@ -115,9 +115,9 @@ def install(pkg,
     cmd = _construct_bower_command('install')
 
     if pkg:
-        cmd += ' "{0}"'.format(pkg)
+        cmd.append(pkg)
     elif pkgs:
-        cmd += ' "{0}"'.format('" "'.join(pkgs))
+        cmd.extend(pkgs)
 
     result = __salt__['cmd.run_all'](cmd,
                                      cwd=dir,
@@ -162,7 +162,7 @@ def uninstall(pkg, dir, runas=None, env=None):
     _check_valid_version()
 
     cmd = _construct_bower_command('uninstall')
-    cmd += ' "{0}"'.format(pkg)
+    cmd.append(pkg)
 
     result = __salt__['cmd.run_all'](cmd,
                                      cwd=dir,
@@ -203,7 +203,7 @@ def list_(dir, runas=None, env=None):
     _check_valid_version()
 
     cmd = _construct_bower_command('list')
-    cmd += ' --offline'
+    cmd.append('--offline')
 
     result = __salt__['cmd.run_all'](cmd,
                                      cwd=dir,
