@@ -10,6 +10,7 @@ addons:
     - python-dev
 
 install:
+  - "if [ "$TRAVIS_PYTHON_VERSION" == "2.6" ]; then pip install importlib; fi"
   - "pip install junos-eznc"
   - "pip install jxmlease"
   - "pip install -r requirements/dev_python26.txt"
