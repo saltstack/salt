@@ -3022,14 +3022,15 @@ def to_unicode(s, encoding=None):
     '''
     Given str or unicode, return unicode (str for python 3)
     '''
+    if not isinstance(s, (bytes, six.string_types)):
+        return s
     if six.PY3:
         if isinstance(s, bytes):
             return to_str(s, encoding)
-        return s
     else:
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
-        return unicode(s)  # pylint: disable=incompatible-py3-code,undefined-variable
+    return s
 
 
 def is_list(value):
