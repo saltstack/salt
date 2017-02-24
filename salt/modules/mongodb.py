@@ -172,8 +172,8 @@ def version(user=None, password=None, host=None, port=None, database='admin', au
     '''
     conn = _connect(user, password, host, port, authdb=authdb)
     if not conn:
-	err_msg = "Failed to connect to MongoDB database {0}:{1}".format(host, port)
-	log.error(err_msg)
+        err_msg = "Failed to connect to MongoDB database {0}:{1}".format(host, port)
+        log.error(err_msg)
         return (False, err_msg)
 
     try:
