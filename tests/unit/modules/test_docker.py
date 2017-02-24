@@ -30,8 +30,11 @@ docker_mod.__opts__ = {}
 
 
 def _docker_py_version():
-    if docker_mod.HAS_DOCKER_PY:
-        return docker_mod.docker.version_info
+    try:
+        if docker_mod.HAS_DOCKER_PY:
+            return docker_mod.docker.version_info
+    except AttributeError:
+        pass
     return (0,)
 
 

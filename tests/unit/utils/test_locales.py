@@ -37,6 +37,9 @@ class TestLocales(TestCase):
                 self.assertEqual(locales.sdecode(b), b)  # no decode
         with patch('salt.utils.locales.get_encodings', return_value=['utf-8']):
             self.assertEqual(locales.sdecode(b), u)
+        # Non strings are left untouched
+        with patch('salt.utils.locales.get_encodings', return_value=['utf-8']):
+            self.assertEqual(locales.sdecode(1), 1)
 
     def test_split_locale(self):
         self.assertDictEqual(

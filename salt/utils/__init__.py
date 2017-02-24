@@ -1478,9 +1478,9 @@ def subdict_match(data,
             # We might want to search for a key
             return True
         elif subdict_match(target,
-                         pattern,
-                         regex_match=regex_match,
-                         exact_match=exact_match):
+                           pattern,
+                           regex_match=regex_match,
+                           exact_match=exact_match):
             return True
         if wildcard:
             for key in target.keys():
@@ -1629,7 +1629,7 @@ def sanitize_win_path_string(winpath):
     '''
     intab = '<>:|?*'
     outtab = '_' * len(intab)
-    trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)
+    trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)  # pylint: disable=no-member
     if isinstance(winpath, str):
         winpath = winpath.translate(trantab)
     elif isinstance(winpath, six.text_type):
@@ -2218,8 +2218,8 @@ def date_cast(date):
         if HAS_TIMELIB:
             raise ValueError('Unable to parse {0}'.format(date))
 
-        raise RuntimeError('Unable to parse {0}.'
-            ' Consider installing timelib'.format(date))
+        raise RuntimeError(
+                'Unable to parse {0}. Consider installing timelib'.format(date))
 
 
 def date_format(date=None, format="%Y-%m-%d"):
@@ -2398,7 +2398,7 @@ def kwargs_warn_until(kwargs,
             version,
             message='The following parameter(s) have been deprecated and '
                     'will be removed in \'{0}\': {1}.'.format(version.string,
-                                                            arg_names),
+                                                              arg_names),
             category=category,
             stacklevel=stacklevel,
             _version_info_=_version_.info,
@@ -2639,7 +2639,7 @@ def is_bin_str(data):
         trans = ''.maketrans('', '', text_characters)
         nontext = data.translate(trans)
     else:
-        trans = string.maketrans('', '')
+        trans = string.maketrans('', '')  # pylint: disable=no-member
         nontext = data.translate(trans, text_characters)
 
     # If more than 30% non-text characters, then
@@ -2996,7 +2996,7 @@ def to_str(s, encoding=None):
     else:
         if isinstance(s, bytearray):
             return str(s)
-        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             return s.encode(encoding or __salt_system_encoding__)
         raise TypeError('expected str, bytearray, or unicode')
 
@@ -3022,12 +3022,15 @@ def to_unicode(s, encoding=None):
     '''
     Given str or unicode, return unicode (str for python 3)
     '''
+    if not isinstance(s, (bytes, six.string_types)):
+        return s
     if six.PY3:
-        return to_str(s, encoding)
+        if isinstance(s, bytes):
+            return to_str(s, encoding)
     else:
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
-        return unicode(s)  # pylint: disable=incompatible-py3-code
+    return s
 
 
 def is_list(value):
