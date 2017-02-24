@@ -71,6 +71,7 @@ disable=R,
   E1101,
   E1103,
   E1136,
+  E1320,
   E8114,
   C0102,
   C0103,
@@ -131,6 +132,7 @@ disable=R,
 # E1101 (no-member) [pylint isn't smart enough]
 # E1103 (maybe-no-member)
 # E1136 (unsubscriptable-object)
+# E1320 (un-indexed-curly-braces-error)
 # E8114 (indentation-is-not-a-multiple-of-four-comment)
 # C0102 (blacklisted-name) [because it activates C0103 too]
 # C0103 (invalid-name)

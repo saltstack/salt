@@ -403,7 +403,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         Run an integration test suite
         '''
         full_path = os.path.join(TEST_DIR, path)
-        return self.run_suite(full_path, display_name)
+        return self.run_suite(full_path, display_name, suffix='test_*.py')
 
     def start_daemons_only(self):
         if not salt.utils.is_windows():
@@ -566,7 +566,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 for name in self.options.name:
                     if name.startswith('unit.'):
                         continue
-                    results = self.run_suite('', name, load_from_name=True)
+                    results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
                     status.append(results)
             for suite in TEST_SUITES:
                 if suite != 'unit' and getattr(self.options, suite):
@@ -595,7 +595,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.set_filehandle_limits('unit')
 
             results = self.run_suite(
-                os.path.join(TEST_DIR, 'unit'), 'Unit', '*_test.py'
+                os.path.join(TEST_DIR, 'unit'), 'Unit', suffix='test_*.py'
             )
             status.append(results)
             # We executed ALL unittests, we can skip running unittests by name
@@ -604,7 +604,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         for name in named_unit_test:
             results = self.run_suite(
-                os.path.join(TEST_DIR, 'unit'), name, load_from_name=True
+                os.path.join(TEST_DIR, 'unit'), name, suffix='test_*.py', load_from_name=True
             )
             status.append(results)
         return status
