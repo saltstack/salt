@@ -2625,12 +2625,18 @@ def is_bin_file(path):
     a bin, False if the file is not and None if the file is not available.
     '''
     if not os.path.isfile(path):
-        return None
+        return False
     try:
-        with fopen(path, 'r') as fp_:
-            return is_bin_str(fp_.read(2048))
+        with fopen(path, 'rb') as fp_:
+            try:
+                data = fp_.read(2048)
+                if six.PY3:
+                    data = data.decode(__salt_system_encoding__)
+                return is_bin_str(data)
+            except UnicodeDecodeError:
+                return True
     except os.error:
-        return None
+        return False
 
 
 def is_bin_str(data):
