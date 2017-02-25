@@ -37,9 +37,11 @@ https://github.com/saltstack/salt/issues/20275
 from __future__ import print_function, absolute_import
 # Python
 import base64
+import binascii
 import hashlib
 import itertools
 import socket
+import ssl
 import string
 from salt.ext.six.moves import zip
 from salt._compat import ipaddress
@@ -439,7 +441,7 @@ def query(
     :param method: simple, pydns, dig, drill, host, nslookup or auto (default)
     :param servers: (list of) server(s) to try in-order
     :param timeout: query timeout or a valiant approximation of that
-    :param secure: return only DNSSEC validated responses
+    :param secure: return only DNSSEC secured responses
     :return: [] of record data
     '''
     # opts = __opts__.get('dns', {})
@@ -511,7 +513,7 @@ def records(
     :param method: simple, pydns, dig, drill, host, nslookup or auto (default)
     :param servers: (list of) server(s) to try in-order
     :param timeout: query timeout or a valiant approximation of that
-    :param secure: return only validated responses
+    :param secure: return only DNSSEC secured response
     :return: [] of records
     '''
     rdtype = rdtype.upper()
@@ -523,13 +525,73 @@ def records(
         ares = {
             'A': a_rec,
             'AAAA': aaaa_rec,
-            'SRV': srv_rec
+            'MX': mx_rec,
+            'SRV': srv_rec,
+            'SOA': soa_rec,
         }
         if rdtype in ares:
             answer = ares[rdtype](answer)
         res.append(answer)
 
     return res
+
+
+def a_rec(rdata):
+    rschema = OrderedDict((
+        ('address', ipaddress.IPv4Address),
+    ))
+    return _data2rec(rschema, rdata)
+
+
+def aaaa_rec(rdata):
+    rschema = OrderedDict((
+        ('address', ipaddress.IPv6Address),
+    ))
+    return _data2rec(rschema, rdata)
+
+
+def _weight_pick(domain):
+    pass
+
+
+def weighted_choice(choices):
+
+    qres = records(domain, 'MX')
+
+    total = sum(rec['weight'])
+    count = len(qres)
+
+    values, weights = zip(*choices)
+    total = 0
+    cum_weights = []
+    for w in weights:
+        total += w
+        cum_weights.append(total)
+    x = random() * total
+    i = bisect(cum_weights, x)
+    return values[i]
+
+
+def mx_data(target, preference=10):
+    '''
+    Generate SRV record data
+    :param target: server
+    :param preference: preference number
+    :return:
+    '''
+    return _rec2data(int(preference), target)
+
+
+def mx_rec(rdata):
+    '''
+    Generate MX record from data
+    :return:
+    '''
+    rschema = OrderedDict((
+        ('preference', int),
+        ('name', str),
+    ))
+    return _data2rec(rschema, rdata)
 
 
 def ptr_name(rdata):
@@ -554,20 +616,6 @@ def soa_rec(rdata):
         ('retry', int),
         ('expire', int),
         ('minimum', int),
-    ))
-    return _data2rec(rschema, rdata)
-
-
-def a_rec(rdata):
-    rschema = OrderedDict((
-        ('address', ipaddress.IPv4Address),
-    ))
-    return _data2rec(rschema, rdata)
-
-
-def aaaa_rec(rdata):
-    rschema = OrderedDict((
-        ('address', ipaddress.IPv6Address),
     ))
     return _data2rec(rschema, rdata)
 
@@ -635,6 +683,32 @@ def sshfp_data(key_t, hash_t, pub):
     fp = hasher.hexdigest()
 
     return _rec2data(key_t, hash_t, fp)
+
+
+def tlsa_data(pub, usage, selector, matching):
+    '''
+    Generate a TLSA rec
+    :param pub: Pub key in PEM format
+    :param usage:
+    :param selector:
+    :param matching:
+    :return: TLSA data portion
+    '''
+    usage = RFC.validate(usage, RFC.TLSA_USAGE)
+    selector = RFC.validate(selector, RFC.TLSA_SELECT)
+    matching = RFC.validate(matching, RFC.TLSA_MATCHING)
+
+    pub = ssl.PEM_cert_to_DER_cert(pub.strip())
+    if matching == 0:
+        fp = binascii.b2a_hex(pub)
+    else:
+        hasher = hashlib.new(RFC.TLSA_MATCHING[matching])
+        hasher.update(
+            pub
+        )
+        fp = hasher.hexdigest()
+
+    return _rec2data(usage, selector, matching, fp)
 
 
 def parse_resolv(src='/etc/resolv.conf'):
