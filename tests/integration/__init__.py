@@ -60,6 +60,7 @@ import salt.runner
 import salt.output
 import salt.version
 import salt.utils
+import salt.utils.network
 import salt.utils.process
 import salt.log.setup as salt_log_setup
 from salt.ext import six
@@ -67,6 +68,12 @@ from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
+
+try:
+    from salt.utils.gitfs import HAS_GITPYTHON, HAS_PYGIT2
+    HAS_GITFS = HAS_GITPYTHON or HAS_PYGIT2
+except ImportError:
+    HAS_GITFS = False
 
 try:
     from shlex import quote as _quote  # pylint: disable=E0611
@@ -695,6 +702,14 @@ class TestDaemon(object):
         # Set up PATH to mockbin
         self._enter_mockbin()
 
+        if not HAS_GITFS:
+            sys.stdout.write(
+                ' * {LIGHT_RED}No suitable provider for git_pillar is installed. Install\n'
+                '   GitPython or Pygit2.{ENDC}\n'.format(
+                    **self.colors
+                )
+            )
+
         if self.parser.options.transport == 'zeromq':
             self.start_zeromq_daemons()
         elif self.parser.options.transport == 'raet':
@@ -761,6 +776,13 @@ class TestDaemon(object):
         '''
         Fire up the daemons used for zeromq tests
         '''
+        if not salt.utils.network.ip_addrs():
+            sys.stdout.write(
+                ' * {LIGHT_RED}Unable to list IPv4 addresses. Test suite startup will be\n'
+                '   slower. Install iproute/ifconfig to fix this.{ENDC}\n'.format(
+                    **self.colors
+                )
+            )
         self.log_server = ThreadedSocketServer(('localhost', SALT_LOG_PORT), SocketServerRequestHandler)
         self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
         self.log_server_process.daemon = True
