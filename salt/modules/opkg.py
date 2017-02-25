@@ -38,7 +38,7 @@ from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
 
-REPO_REGEXP = r'^#?\s*(src|src/gz)\s+[^\s<>]+\s+[^\s<>]+'
+REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
 OPKG_CONFDIR = '/etc/opkg'
 ATTR_MAP = {
     'Architecture': 'arch',
@@ -993,7 +993,7 @@ def list_repos():
                             line = line[1:]
                         else:
                             repo['enabled'] = True
-                        cols = line.strip().split()
+                        cols = salt.utils.shlex_split(line.strip())
                         if cols[0] in 'src':
                             repo['compressed'] = False
                         else:
@@ -1038,7 +1038,7 @@ def _del_repo_from_file(alias, filepath):
             if regex.search(line):
                 if line.startswith('#'):
                     line = line[1:]
-                cols = line.strip().split()
+                cols = salt.utils.shlex_split(line.strip())
                 if alias != cols[1]:
                     output.append(line)
     with open(filepath, 'w') as fhandle:
@@ -1051,7 +1051,11 @@ def _add_new_repo(alias, uri, compressed, enabled=True):
     '''
     repostr = '# ' if not enabled else ''
     repostr += 'src/gz ' if compressed else 'src '
-    repostr += alias + ' ' + uri + '\n'
+    if ' ' in alias:
+        repostr += '"' + alias + '" '
+    else:
+        repostr += alias + ' '
+    repostr += uri + '\n'
     conffile = os.path.join(OPKG_CONFDIR, alias + '.conf')
 
     with open(conffile, 'a') as fhandle:
@@ -1065,7 +1069,8 @@ def _mod_repo_in_file(alias, repostr, filepath):
     with open(filepath) as fhandle:
         output = []
         for line in fhandle:
-            if alias not in line:
+            cols = salt.utils.shlex_split(line.strip())
+            if alias not in cols:
                 output.append(line)
             else:
                 output.append(repostr + '\n')
@@ -1161,7 +1166,11 @@ def mod_repo(alias, **kwargs):
                 repostr += 'src/gz ' if kwargs['compressed'] else 'src'
             else:
                 repostr += 'src/gz' if source['compressed'] else 'src'
-            repostr += ' {0}'.format(kwargs['alias'] if 'alias' in kwargs else alias)
+            repo_alias = kwargs['alias'] if 'alias' in kwargs else alias
+            if ' ' in repo_alias:
+                repostr += ' "{0}"'.format(repo_alias)
+            else:
+                repostr += ' {0}'.format(repo_alias)
             repostr += ' {0}'.format(kwargs['uri'] if 'uri' in kwargs else source['uri'])
             _mod_repo_in_file(alias, repostr, source['file'])
         elif uri and source['uri'] == uri:
