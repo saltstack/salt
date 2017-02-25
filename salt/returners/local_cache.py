@@ -239,6 +239,7 @@ def save_minions(jid, minions, syndic_id=None):
     '''
     Save/update the serialized list of minions for a given job
     '''
+    minions = list(minions)
     log.debug(
         'Adding minions for job %s%s: %s',
         jid,
