@@ -7,3 +7,4 @@ boto3>=1.2.1
 moto>=0.3.6
 SaltTesting
 SaltPyLint>=v2017.2.22
+GitPython>=0.3
