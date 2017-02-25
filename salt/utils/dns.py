@@ -237,12 +237,11 @@ def _query_drill(name, rdtype, timeout=None, servers=[], secure=None):
     cmd = 'drill '
     if secure:
         cmd += '-D -o ad '
-    cmd += '{0} {1} '.format(name, rdtype)
+    cmd += '{0} {1} '.format(rdtype, name)
     if servers:
         cmd += ''.join(['@{0} '.format(srv) for srv in servers])
-
     cmd = __salt__['cmd.run_all'](
-        cmd + str(name), timeout=timeout,
+        cmd, timeout=timeout,
         python_shell=False, output_loglevel='quiet')
 
     # In this case, 0 is not the same as False
@@ -253,17 +252,14 @@ def _query_drill(name, rdtype, timeout=None, servers=[], secure=None):
             ))
         return False
 
-    # ppr(cmd['stdout'].splitlines())
-
     lookup_res = iter(cmd['stdout'].splitlines())
     res = []
     try:
+        line = ''
         while 'ANSWER SECTION' not in line:
             line = next(lookup_res)
-
         while True:
             line = next(lookup_res)
-            # ppr('{}: now at {}'.format(name, line))
             line = line.strip()
             if not line or line.startswith(';;'):
                 break
@@ -275,7 +271,7 @@ def _query_drill(name, rdtype, timeout=None, servers=[], secure=None):
                 validated = True
                 continue
 
-            res.append(line.strip(string.whitespace + '"'))
+            res.append(l_rec.strip(string.whitespace + '"'))
 
     except StopIteration:
         pass
@@ -409,13 +405,11 @@ def _query_nslookup(name, rdtype, timeout=None, server=None):
                 line = next(lookup_res)
                 line = line.split(':', 1)
             elif line.startswith(name):
-                # ppr('NAME!!!: {} DATA! {}'.format(name, line))
                 if '=' in line:
                     line = line.split('=', 1)
                 else:
                     line = line.split(' ')
 
-            # ppr('NAME: {} DATA! {}'.format(name, line))
             res.append(line[-1].strip(string.whitespace + '"'))
             line = next(lookup_res)
 
@@ -440,7 +434,7 @@ def query(
     Lookup DNS records
     :param name: name to lookup
     :param rdtype: DNS record type
-    :param method: simple, pydns, dig, host, nslookup or auto (default)
+    :param method: simple, pydns, dig, drill, host, nslookup or auto (default)
     :param servers: (list of) server(s) to try in-order
     :param timeout: query timeout or a valiant approximation of that
     :param secure: return only DNSSEC validated responses
@@ -512,6 +506,7 @@ def records(
     Parse DNS records
     :param name: name to lookup
     :param rdtype: DNS record type
+    :param method: simple, pydns, dig, drill, host, nslookup or auto (default)
     :param servers: (list of) server(s) to try in-order
     :param timeout: query timeout or a valiant approximation of that
     :param secure: return only validated responses
