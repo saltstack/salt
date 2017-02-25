@@ -36,6 +36,8 @@ https://github.com/saltstack/salt/issues/20275
 '''
 from __future__ import print_function, absolute_import
 # Python
+import base64
+import hashlib
 import itertools
 import socket
 import string
@@ -570,6 +572,18 @@ def aaaa_rec(rdata):
     return _data2rec(rschema, rdata)
 
 
+def srv_data(target, port, prio=10, weight=10):
+    '''
+    Generate SRV record data
+    :param target:
+    :param port:
+    :param prio:
+    :param weight:
+    :return:
+    '''
+    return _rec2data(prio, weight, port, target)
+
+
 def srv_name(svc, name=None):
     '''
     Generate SRV record name
@@ -589,18 +603,6 @@ def srv_name(svc, name=None):
     return '_{0}._{1}{2}'.format(svc, proto, name)
 
 
-def srv_data(target, port, prio=10, weight=10):
-    '''
-    Generate SRV record data
-    :param target:
-    :param port:
-    :param prio:
-    :param weight:
-    :return:
-    '''
-    return _rec2data(prio, weight, port, target)
-
-
 def srv_rec(rdata):
     '''
     Parse SRV record fields
@@ -614,6 +616,25 @@ def srv_rec(rdata):
         ('name', str),
     ))
     return _data2rec(rschema, rdata)
+
+
+def sshfp_data(key_t, hash_t, pub):
+    '''
+    Generate an SSHFP record
+    :param key_t: rsa/dsa/ecdsa/ed25519
+    :param hash_t: sha1/sha256
+    :param pub: the SSH public key
+    '''
+    key_t = RFC.validate(key_t, RFC.SSHFP_ALGO, 'in')
+    hash_t = RFC.validate(hash_t, RFC.SSHFP_HASH)
+
+    hasher = hashlib.new(hash_t)
+    hasher.update(
+        base64.b64decode(pub)
+    )
+    fp = hasher.hexdigest()
+
+    return _rec2data(key_t, hash_t, fp)
 
 
 def parse_resolv(src='/etc/resolv.conf'):
