@@ -1138,6 +1138,13 @@ class TestDaemon(object):
                 TMP_PRODENV_STATE_TREE
             ]
         }
+        master_opts.setdefault('reactor', []).append(
+            {
+                'salt/minion/*/start': [
+                    os.path.join(FILES, 'reactor-sync-minion.sls')
+                ],
+            }
+        )
         for opts_dict in (master_opts, syndic_master_opts):
             if 'ext_pillar' not in opts_dict:
                 opts_dict['ext_pillar'] = []

@@ -679,7 +679,13 @@ class SMinion(MinionBase):
 
     def gen_modules(self, initial_load=False):
         '''
-        Load all of the modules for the minion
+        Tell the minion to reload the execution modules
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' sys.reload_modules
         '''
         self.opts['pillar'] = salt.pillar.get_pillar(
             self.opts,
@@ -734,7 +740,13 @@ class MasterMinion(object):
 
     def gen_modules(self, initial_load=False):
         '''
-        Load all of the modules for the minion
+        Tell the minion to reload the execution modules
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' sys.reload_modules
         '''
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(
