@@ -101,21 +101,27 @@ def present(name, **kwargs):
             ret['comment'] = comment_usergroup_updated
 
             if update_debug_mode:
-                updated_debug = __salt__['zabbix.usergroup_update'](usrgrpid, debug_mode=kwargs['debug_mode'], **connection_args)
+                updated_debug = __salt__['zabbix.usergroup_update'](usrgrpid,
+                                                                    debug_mode=kwargs['debug_mode'],
+                                                                    **connection_args)
                 if 'error' in updated_debug:
                     error.append(updated_debug['error'])
                 else:
                     ret['changes']['debug_mode'] = kwargs['debug_mode']
 
             if update_gui_access:
-                updated_gui = __salt__['zabbix.usergroup_update'](usrgrpid, gui_access=kwargs['gui_access'], **connection_args)
+                updated_gui = __salt__['zabbix.usergroup_update'](usrgrpid,
+                                                                  gui_access=kwargs['gui_access'],
+                                                                  **connection_args)
                 if 'error' in updated_gui:
                     error.append(updated_gui['error'])
                 else:
                     ret['changes']['gui_access'] = kwargs['gui_access']
 
             if update_users_status:
-                updated_status = __salt__['zabbix.usergroup_update'](usrgrpid, users_status=kwargs['users_status'], **connection_args)
+                updated_status = __salt__['zabbix.usergroup_update'](usrgrpid,
+                                                                     users_status=kwargs['users_status'],
+                                                                     **connection_args)
                 if 'error' in updated_status:
                     error.append(updated_status['error'])
                 else:
