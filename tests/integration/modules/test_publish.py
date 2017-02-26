@@ -25,7 +25,8 @@ class PublishModuleTest(integration.ModuleCase,
 
         ret = self.run_function(
             'publish.publish',
-            ['minion', 'test.kwarg', 'arg="cheese=spam"']
+            ['minion', 'test.kwarg'],
+            f_arg='cheese=spam'
         )
         ret = ret['minion']
 
@@ -45,7 +46,7 @@ class PublishModuleTest(integration.ModuleCase,
             self.assertTrue(name in ret)
 
         self.assertEqual(ret['cheese'], 'spam')
-        self.assertEqual(ret['__pub_arg'], ['cheese=spam'])
+        self.assertEqual(ret['__pub_arg'], [{'cheese': 'spam'}])
         self.assertEqual(ret['__pub_id'], 'minion')
         self.assertEqual(ret['__pub_fun'], 'test.kwarg')
 
@@ -99,7 +100,8 @@ class PublishModuleTest(integration.ModuleCase,
         '''
         ret = self.run_function(
             'publish.full_data',
-            ['minion', 'test.kwarg', 'arg="cheese=spam"']
+            ['minion', 'test.kwarg'],
+            f_arg='cheese=spam'
         )
         ret = ret['minion']['ret']
 
@@ -119,13 +121,14 @@ class PublishModuleTest(integration.ModuleCase,
             self.assertTrue(name in ret)
 
         self.assertEqual(ret['cheese'], 'spam')
-        self.assertEqual(ret['__pub_arg'], ['cheese=spam'])
+        self.assertEqual(ret['__pub_arg'], [{'cheese': 'spam'}])
         self.assertEqual(ret['__pub_id'], 'minion')
         self.assertEqual(ret['__pub_fun'], 'test.kwarg')
 
         ret = self.run_function(
             'publish.full_data',
-            ['minion', 'test.kwarg', 'cheese=spam']
+            ['minion', 'test.kwarg'],
+            cheese='spam'
         )
         self.assertIn(
             'The following keyword arguments are not valid', ret
