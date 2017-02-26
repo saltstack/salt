@@ -688,7 +688,7 @@ def _virtual(osdata):
             break
     else:
         if osdata['kernel'] not in skip_cmds:
-            log.warning(
+            log.debug(
                 'All tools for virtual hardware identification failed to '
                 'execute because they do not exist on the system running this '
                 'instance or the user does not have the necessary permissions '
