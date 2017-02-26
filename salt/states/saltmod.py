@@ -26,6 +26,8 @@ from __future__ import absolute_import
 # Import python libs
 import fnmatch
 import logging
+import sys
+import threading
 import time
 
 # Import salt libs
@@ -58,6 +60,47 @@ def _fire_args(tag_data):
         log.debug(
             'Unable to fire args event due to missing __orchestration_jid__'
         )
+
+
+def _parallel_map(func, inputs):
+    '''
+    Applies a function to each element of a list, returning the resulting list.
+
+    A separate thread is created for each element in the input list and the
+    passed function is called for each of the elements. When all threads have
+    finished execution a list with the results corresponding to the inputs is
+    returned.
+
+    If one of the threads fails (because the function throws an exception),
+    that exception is reraised. If more than one thread fails, the exception
+    from the first thread (according to the index of the input element) is
+    reraised.
+
+    func:
+        function that is applied on each input element.
+    inputs:
+        list of elements that shall be processed. The length of this list also
+        defines the number of threads created.
+    '''
+    outputs = len(inputs) * [None]
+    errors = len(inputs) * [None]
+    def create_thread(index):
+        def run_thread():
+            try:
+                outputs[index] = func(inputs[index])
+            except:
+                errors[index] = sys.exc_info()
+        thread = threading.Thread(target=run_thread)
+        thread.start()
+        return thread
+    threads = list(six.moves.map(create_thread, six.moves.range(len(inputs))))
+    for thread in threads:
+        thread.join()
+    for error in errors:
+        if error is not None:
+            exc_type, exc_value, exc_traceback = error
+            six.reraise(exc_type, exc_value, exc_traceback)
+    return outputs
 
 
 def state(name,
@@ -685,6 +728,137 @@ def runner(name, **kwargs):
     ret['__orchestration__'] = True
     if 'jid' in out:
         ret['__jid__'] = out['jid']
+
+    return ret
+
+
+def parallel_runners(name, runners):
+    '''
+    Executes multiple runner modules on the master in parallel.
+
+    .. versionadded:: 2017.x.0 (Nitrogen)
+
+    A separate process is spawned for each runner. This state is intended to be
+    used with the orchestrate runner in place of the ``saltmod.runner`` state
+    when different tasks should be run in parallel. In general, Salt states are
+    not safe when used concurrently, so ensure that they are used in a safe way
+    (e.g. by only targeting separate minions in parallel tasks).
+
+    name:
+        name identifying this state. The name is provided as part of the
+        output, but not used for anything else.
+
+    runners:
+        list of runners that should be run in parallel. Each element of the
+        list has to be a dictionary. This dictionary's name entry stores the
+        name of the runner function that shall be invoked. The optional kwarg
+        entry stores a dictionary of named arguments that are passed to the
+        runner function.
+
+    .. code-block:: yaml
+
+        parallel-state:
+           saltext.parallel-runner:
+             - runners:
+               - name: state.orchestrate
+                 kwarg:
+                   mods: orchestrate_state_1
+               - name: state.orcestrate
+                 kwarg:
+                   mods: orchestrate_state_2
+    '''
+    try:
+        jid = __orchestration_jid__
+    except NameError:
+        log.debug(
+            'Unable to fire args event due to missing __orchestration_jid__')
+        jid = None
+
+    def call_runner(runner_config):
+        return __salt__['saltutil.runner'](runner_config['name'],
+                                           __orchestration_jid__=jid,
+                                           __env__=__env__,
+                                           full_return=True,
+                                           **(runner_config['kwarg']))
+
+    outputs = _parallel_map(call_runner, runners)
+
+    success = six.moves.reduce(
+        lambda x, y: x and y,
+        [not ('success' in out and not out['success']) for out in outputs],
+        True)
+
+    def find_new_and_old_in_changes(data, prefix):
+        if isinstance(data, dict) and data:
+            if 'new' in data and 'old' in data:
+                return [(prefix, {'new': data['new'], 'old': data['old']})]
+            else:
+                return [
+                    change_item
+                    for key, value in six.iteritems(data)
+                    for change_item in find_new_and_old_in_changes(
+                        value, prefix + '[' + str(key) + ']')
+                ]
+        if isinstance(data, list) and list:
+            return [
+                change_item
+                for index, value in six.moves.zip(
+                    six.moves.range(len(data)), data)
+                for change_item in find_new_and_old_in_changes(
+                    value, prefix + '[' + str(index) + ']')
+            ]
+        else:
+            return []
+    def find_changes(data, prefix):
+        if isinstance(data, dict) and data:
+            if 'changes' in data:
+                return find_new_and_old_in_changes(data['changes'], prefix)
+            else:
+                return [
+                    change_item
+                    for key, value in six.iteritems(data)
+                    for change_item in find_changes(
+                        value, prefix + '[' + str(key) + ']')
+                ]
+        else:
+            return []
+    def find_changes_in_output(output, index):
+        try:
+            data = output['return']['data']
+        except KeyError:
+            data = {}
+        return find_changes(data, '[' + str(index) + ']')
+    changes = dict([
+        change_item
+        for change_items in six.moves.map(
+            find_changes_in_output, outputs, six.moves.range(len(outputs)))
+        for change_item in change_items
+    ])
+
+    def generate_comment(index, out):
+        runner_failed = 'success' in out and not out['success']
+        runner_return = out.get('return')
+        comment = (
+            'Runner ' + str(index) + ' was '
+            + ('not ' if runner_failed else '')
+            + 'successful and returned '
+            + (str(runner_return) if runner_return else ' nothing') + '.')
+        return comment
+    comment = '\n'.join(six.moves.map(generate_comment,
+                                      six.moves.range(len(outputs)),
+                                      outputs))
+
+    ret = {
+        'name': name,
+        'result': success,
+        'changes': changes,
+        'comment': comment
+    }
+
+    ret['__orchestration__'] = True
+    # The 'runner' function includes out['jid'] as '__jid__' in the returned
+    # dict, but we cannot do this here because we have more than one JID if
+    # we have more than one runner.
 
     return ret
 
