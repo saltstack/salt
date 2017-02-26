@@ -212,7 +212,8 @@ def present(host, groups, interfaces, **kwargs):
             if update_interfaces:
                 if hostinterfaces:
                     for interface in hostinterfaces:
-                        __salt__['zabbix.hostinterface_delete'](interfaceids=interface['interfaceid'], **connection_args)
+                        __salt__['zabbix.hostinterface_delete'](interfaceids=interface['interfaceid'],
+                                                                **connection_args)
 
                 hostid = __salt__['zabbix.host_get'](name=host, **connection_args)[0]['hostid']
 
@@ -423,7 +424,6 @@ def assign_templates(host, templates, **kwargs):
     if update_host_templates:
         update_output = __salt__['zabbix.host_update'](hostid, templates=(requested_template_ids), **connection_args)
         if update_output is False:
-            print("Failing out: update_output fale")
             ret['result'] = False
             ret['comment'] = comment_host_templates_notupdated
             return ret
