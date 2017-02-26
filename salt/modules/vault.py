@@ -38,8 +38,25 @@ Functions to interact with Hashicorp Vault.
         Grains are also available, for example like this:
         ``my-policies/{grains[os]}``
 
-        Optional. If policies is not configured, saltstack/minions and
-        saltstack/{minion} are used as defaults.
+        If a template contains a grain which evaluates to a list, it will be
+        expanded into multiple policies. For example, given the template
+        ``saltstack/by-role/{grains[roles]}``, and a minion having these grains:
+
+        .. code-block: yaml
+
+            grains:
+                roles:
+                    - web
+                    - database
+
+        The minion will have the policies ``saltstack/by-role/web`` and
+        ``saltstack/by-role/database``. Note however that list members which do
+        not have simple string representations, such as dictionaries or objects,
+        do not work and will throw an exception. Strings and numbers are
+        examples of types which work well.
+
+        Optional. If policies is not configured, ``saltstack/minions`` and
+        ``saltstack/{minion}`` are used as defaults.
 
 
     Add this segment to the master configuration file, or
