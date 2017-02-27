@@ -738,7 +738,7 @@ def parallel_runners(name, runners):
 
     .. versionadded:: 2017.x.0 (Nitrogen)
 
-    A separate process is spawned for each runner. This state is intended to be
+    A separate thread is spawned for each runner. This state is intended to be
     used with the orchestrate runner in place of the ``saltmod.runner`` state
     when different tasks should be run in parallel. In general, Salt states are
     not safe when used concurrently, so ensure that they are used in a safe way
