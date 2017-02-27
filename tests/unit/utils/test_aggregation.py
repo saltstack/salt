@@ -5,8 +5,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils.aggregation import aggregate, Map, Scalar
@@ -139,8 +137,3 @@ class TestAggregation(TestCase):
                 'another': 'value'
             }
         }, result
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestAggregation, needs_daemon=False)
