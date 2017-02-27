@@ -243,6 +243,7 @@ class AESReqServerMixin(object):
                         fp_.write(load['pub'])
                     eload = {'result': False,
                              'id': load['id'],
+                             'act': 'denied',
                              'pub': load['pub']}
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                     return {'enc': 'clear',
@@ -331,6 +332,7 @@ class AESReqServerMixin(object):
                             fp_.write(load['pub'])
                         eload = {'result': False,
                                  'id': load['id'],
+                                 'act': 'denied',
                                  'pub': load['pub']}
                         self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                         return {'enc': 'clear',
