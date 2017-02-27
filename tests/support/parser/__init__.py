@@ -27,16 +27,20 @@ import warnings
 from functools import partial
 from contextlib import closing
 
-import six
 from tests.support import helpers
 from tests.support.unit import TestLoader, TextTestRunner
 from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
+
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     from tests.support.ext import console
     WIDTH, HEIGHT = console.getTerminalSize()
     PNUM = WIDTH
 except Exception:  # pylint: disable=broad-except
     PNUM = 70
+
+log = logging.getLogger(__name__)
 
 # This is a completely random and meaningful number intended to identify our
 # own signal triggering.
@@ -436,7 +440,7 @@ class SaltTestingParser(optparse.OptionParser):
                 logging_level = logging.ERROR
             consolehandler.setLevel(logging_level)
             logging.root.addHandler(consolehandler)
-            logging.getLogger(__name__).info('Runtests logging has been setup')
+            log.info('Runtests logging has been setup')
 
     def pre_execution_cleanup(self):
         '''
@@ -607,15 +611,20 @@ class SaltTestingParser(optparse.OptionParser):
         '''
         Run the finalization procedures. Show report, clean-up file-system, etc
         '''
+        # Collect any child processes still laying around
+        children = helpers.collect_child_processes(os.getpid())
         if self.options.no_report is False:
             self.print_overall_testsuite_report()
         self.post_execution_cleanup()
-        # Brute force approach to terminate this process and it's children
-        logging.getLogger(__name__).info('Terminating test suite child processes.')
-        helpers.terminate_process_pid(os.getpid(), only_children=True)
-        logging.getLogger(__name__).info('Terminating test suite child processes if any are still found running.')
-        helpers.terminate_process_pid(os.getpid(), only_children=True)
-        logging.getLogger(__name__).info(
+        # Brute force approach to terminate this process and its children
+        if children:
+            log.info('Terminating test suite child processes: %s', children)
+            helpers.terminate_process(children=children, kill_children=True)
+            children = helpers.collect_child_processes(os.getpid())
+            if children:
+                log.info('Second run at terminating test suite child processes: %s', children)
+                helpers.terminate_process(children=children, kill_children=True)
+        log.info(
             'Test suite execution finalized with exit code: {0}'.format(
                 exit_code
             )
@@ -742,7 +751,7 @@ class SaltTestingParser(optparse.OptionParser):
                 calling_args.append(option.get_opt_string())
 
             elif option.action == 'append':
-                for val in (value is not None and value or default):
+                for val in value is not None and value or default:
                     calling_args.extend([option.get_opt_string(), str(val)])
             elif option.action == 'count':
                 calling_args.extend([option.get_opt_string()] * value)
