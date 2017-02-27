@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import print_function
+
 __author__ = "Rajvi Dhimar"
 
 import unittest2 as unittest
@@ -18,8 +21,11 @@ class Test_Junos_Module(unittest.TestCase):
 
     @patch('ncclient.manager.connect')
     def make_connect(self, mock_connect):
-        self.dev = self.dev = Device(host='1.1.1.1', user='test', password='test123',
-                          gather_facts=False)
+        self.dev = self.dev = Device(
+            host='1.1.1.1',
+            user='test',
+            password='test123',
+            gather_facts=False)
         self.dev.open()
         self.dev.bind(cu=Config)
         self.dev.bind(sw=SW)
@@ -31,7 +37,7 @@ class Test_Junos_Module(unittest.TestCase):
     def raise_exception(self, **kwargs):
         raise Exception('dummy exception')
 
-    def raise_exception_for_load(self, string, format):
+    def raise_exception_for_load(self, string=None, path=None, format=None):
         raise Exception('dummy exception')
 
     def raise_exception_for_zeroize(self, str):
@@ -65,7 +71,8 @@ class Test_Junos_Module(unittest.TestCase):
     def test_set_hostname_load_called_with_valid_name(self):
         with patch('jnpr.junos.utils.config.Config.load') as mock_load:
             junos.set_hostname('dummy-name')
-            mock_load.assert_called_with('set system host-name dummy-name', format='set')
+            mock_load.assert_called_with(
+                'set system host-name dummy-name', format='set')
 
     @patch('jnpr.junos.utils.config.Config.load')
     def test_set_hostname_raise_exception_for_load(self, mock_load):
@@ -76,7 +83,8 @@ class Test_Junos_Module(unittest.TestCase):
         self.assertEqual(junos.set_hostname('dummy-name'), ret)
 
     @patch('jnpr.junos.utils.config.Config.commit_check')
-    def test_set_hostname_raise_exception_for_commit_check(self, mock_commit_check):
+    def test_set_hostname_raise_exception_for_commit_check(
+            self, mock_commit_check):
         mock_commit_check.side_effect = self.raise_exception
         ret = dict()
         ret['message'] = 'Could not commit check due to error "dummy exception"'
@@ -86,12 +94,14 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('jnpr.junos.utils.config.Config.load')
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
-    def test_set_hostname_one_arg_parsed_correctly(self, mock_commit, mock_commit_check, mock_load):
+    def test_set_hostname_one_arg_parsed_correctly(
+            self, mock_commit, mock_commit_check, mock_load):
         mock_commit_check.return_value = True
-        args = {'comment': 'Committed via salt', '__pub_user': 'root', '__pub_arg':
-            ['dummy-name', {'comment': 'Committed via salt'}], '__pub_fun': 'junos.set_hostname',
-                '__pub_jid': '20170220210915624885', '__pub_tgt': 'mac_min', '__pub_tgt_type':
-                    'glob', '__pub_ret': ''}
+        args = {'comment': 'Committed via salt', '__pub_user': 'root',
+                '__pub_arg': ['dummy-name', {'comment': 'Committed via salt'}],
+                '__pub_fun': 'junos.set_hostname', '__pub_jid':
+                    '20170220210915624885', '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob', '__pub_ret': ''}
 
         junos.set_hostname('dummy-name', **args)
         mock_commit.assert_called_with(comment='Committed via salt')
@@ -99,26 +109,38 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('jnpr.junos.utils.config.Config.load')
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
-    def test_set_hostname_more_than_one_args_parsed_correctly(self, mock_commit, mock_commit_check, mock_load):
+    def test_set_hostname_more_than_one_args_parsed_correctly(
+            self, mock_commit, mock_commit_check, mock_load):
         mock_commit_check.return_value = True
-        args = {'comment': 'Committed via salt', '__pub_user': 'root', '__pub_arg':
-            ['dummy-name', {'comment': 'Committed via salt', 'confirm': 5}], '__pub_fun': 'junos.set_hostname',
-                '__pub_jid': '20170220210915624885', '__pub_tgt': 'mac_min', '__pub_tgt_type':
-                    'glob', '__pub_ret': ''}
+        args = {'comment': 'Committed via salt',
+                '__pub_user': 'root',
+                '__pub_arg': ['dummy-name',
+                              {'comment': 'Committed via salt',
+                               'confirm': 5}],
+                '__pub_fun': 'junos.set_hostname',
+                '__pub_jid': '20170220210915624885',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
 
         junos.set_hostname('dummy-name', **args)
         mock_commit.assert_called_with(comment='Committed via salt', confirm=5)
 
-
     @patch('jnpr.junos.utils.config.Config.load')
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
-    def test_set_hostname_successful_return_message(self, mock_commit, mock_commit_check, mock_load):
+    def test_set_hostname_successful_return_message(
+            self, mock_commit, mock_commit_check, mock_load):
         mock_commit_check.return_value = True
-        args = {'comment': 'Committed via salt', '__pub_user': 'root', '__pub_arg':
-            ['dummy-name', {'comment': 'Committed via salt'}], '__pub_fun': 'junos.set_hostname',
-                '__pub_jid': '20170220210915624885', '__pub_tgt': 'mac_min', '__pub_tgt_type':
-                    'glob', '__pub_ret': ''}
+        args = {'comment': 'Committed via salt',
+                '__pub_user': 'root',
+                '__pub_arg': ['dummy-name',
+                              {'comment': 'Committed via salt'}],
+                '__pub_fun': 'junos.set_hostname',
+                '__pub_jid': '20170220210915624885',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
         ret = dict()
         ret['message'] = 'Successfully changed hostname.'
         ret['out'] = True
@@ -134,7 +156,8 @@ class Test_Junos_Module(unittest.TestCase):
 
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('salt.modules.junos.rollback')
-    def test_set_hostname_fail_commit_check(self, mock_rollback, mock_commit_check):
+    def test_set_hostname_fail_commit_check(
+            self, mock_rollback, mock_commit_check):
         mock_commit_check.return_value = False
         ret = dict()
         ret['out'] = False
@@ -154,14 +177,15 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('jnpr.junos.utils.config.Config.commit_check')
     def test_commit_raise_commit_check_exeception(self, mock_commit_check):
         mock_commit_check.side_effect = self.raise_exception
-        ret = dict ()
+        ret = dict()
         ret['message'] = 'Could not perform commit check due to "dummy exception"'
         ret['out'] = False
         self.assertEqual(junos.commit(), ret)
 
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
-    def test_commit_raise_commit_exception(self, mock_commit, mock_commit_check):
+    def test_commit_raise_commit_exception(
+            self, mock_commit, mock_commit_check):
         mock_commit_check.return_value = True
         mock_commit.side_effect = self.raise_exception
         ret = dict()
@@ -183,19 +207,29 @@ class Test_Junos_Module(unittest.TestCase):
 
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
-    def test_commit_with_multiple_arguments(self, mock_commit, mock_commit_check):
+    def test_commit_with_multiple_arguments(
+            self, mock_commit, mock_commit_check):
         mock_commit_check.return_value = True
-        args = {'comment': 'comitted via salt', '__pub_user': 'root', '__pub_arg':
-                [{'comment': 'comitted via salt', 'confirm': 3, 'detail': True}],
-                'confirm': 3, 'detail': True, '__pub_fun': 'junos.commit',
-                '__pub_jid': '20170221182856987820', '__pub_tgt': 'mac_min',
-                '__pub_tgt_type': 'glob', '__pub_ret': ''}
+        args = {'comment': 'comitted via salt',
+                '__pub_user': 'root',
+                '__pub_arg': [{'comment': 'comitted via salt',
+                               'confirm': 3,
+                               'detail': True}],
+                'confirm': 3,
+                'detail': True,
+                '__pub_fun': 'junos.commit',
+                '__pub_jid': '20170221182856987820',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
         junos.commit(**args)
-        mock_commit.assert_called_with(comment='comitted via salt', detail=True, confirm=3)
+        mock_commit.assert_called_with(
+            comment='comitted via salt', detail=True, confirm=3)
 
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
-    def test_commit_pyez_commit_returning_false(self, mock_commit, mock_commit_check):
+    def test_commit_pyez_commit_returning_false(
+            self, mock_commit, mock_commit_check):
         mock_commit.return_value = False
         mock_commit_check.return_value = True
         ret = dict()
@@ -214,7 +248,8 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.rollback')
-    def test_rollback_without_args_success(self, mock_rollback, mock_commit, mock_commit_check):
+    def test_rollback_without_args_success(
+            self, mock_rollback, mock_commit, mock_commit_check):
         mock_commit_check.return_value = True
         mock_rollback.return_value = True
         ret = dict()
@@ -233,7 +268,11 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.rollback')
-    def test_rollback_with_id(self, mock_rollback, mock_commit, mock_commit_check):
+    def test_rollback_with_id(
+            self,
+            mock_rollback,
+            mock_commit,
+            mock_commit_check):
         mock_commit_check.return_value = True
         junos.rollback(id=5)
         mock_rollback.assert_called_with(5)
@@ -241,7 +280,8 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.rollback')
-    def test_rollback_with_id_and_single_arg(self, mock_rollback, mock_commit, mock_commit_check):
+    def test_rollback_with_id_and_single_arg(
+            self, mock_rollback, mock_commit, mock_commit_check):
         mock_commit_check.return_value = True
         args = {'__pub_user': 'root', '__pub_arg': [2, {'confirm': 2}],
                 'confirm': 2, '__pub_fun': 'junos.rollback',
@@ -254,25 +294,41 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.rollback')
-    def test_rollback_with_id_and_multiple_args(self, mock_rollback, mock_commit, mock_commit_check):
+    def test_rollback_with_id_and_multiple_args(
+            self, mock_rollback, mock_commit, mock_commit_check):
         mock_commit_check.return_value = True
-        args = {'comment': 'Comitted via salt', '__pub_user': 'root', 'dev_timeout': 40,
-                '__pub_arg': [2, {'comment': 'Comitted via salt', 'timeout': 40,
-                'confirm': 1}], 'confirm': 1, '__pub_fun': 'junos.rollback',
-                '__pub_jid': '20170221192708251721', '__pub_tgt': 'mac_min',
-                '__pub_tgt_type': 'glob', '__pub_ret': ''}
+        args = {'comment': 'Comitted via salt',
+                '__pub_user': 'root',
+                'dev_timeout': 40,
+                '__pub_arg': [2,
+                              {'comment': 'Comitted via salt',
+                               'timeout': 40,
+                               'confirm': 1}],
+                'confirm': 1,
+                '__pub_fun': 'junos.rollback',
+                '__pub_jid': '20170221192708251721',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
         junos.rollback(id=2, **args)
         mock_rollback.assert_called_with(2)
-        mock_commit.assert_called_with(comment='Comitted via salt', confirm=1, timeout=40)
+        mock_commit.assert_called_with(
+            comment='Comitted via salt', confirm=1, timeout=40)
 
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.rollback')
-    def test_rollback_with_only_single_arg(self, mock_rollback, mock_commit, mock_commit_check):
+    def test_rollback_with_only_single_arg(
+            self, mock_rollback, mock_commit, mock_commit_check):
         mock_commit_check.return_value = True
-        args = {'__pub_user': 'root', '__pub_arg': [{'sync': True}], 'sync': True,
-                '__pub_fun': 'junos.rollback', '__pub_jid': '20170221193615696475',
-                '__pub_tgt': 'mac_min', '__pub_tgt_type': 'glob', '__pub_ret': ''}
+        args = {'__pub_user': 'root',
+                '__pub_arg': [{'sync': True}],
+                'sync': True,
+                '__pub_fun': 'junos.rollback',
+                '__pub_jid': '20170221193615696475',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
         junos.rollback(**args)
         mock_rollback.assert_called_once_with(0)
         mock_commit.assert_called_once_with(sync=True)
@@ -280,28 +336,44 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.rollback')
-    def test_rollback_with_only_multiple_args_no_id(self, mock_rollback, mock_commit, mock_commit_check):
+    def test_rollback_with_only_multiple_args_no_id(
+            self, mock_rollback, mock_commit, mock_commit_check):
         mock_commit_check.return_value = True
-        args = {'comment': 'Comitted via salt', '__pub_user': 'root',
-                '__pub_arg': [{'comment': 'Comitted via salt', 'confirm': 3, 'sync': True}],
-                'confirm': 3, 'sync': True, '__pub_fun': 'junos.rollback',
-                '__pub_jid': '20170221193945996362', '__pub_tgt': 'mac_min',
-                '__pub_tgt_type': 'glob', '__pub_ret': ''}
+        args = {'comment': 'Comitted via salt',
+                '__pub_user': 'root',
+                '__pub_arg': [{'comment': 'Comitted via salt',
+                               'confirm': 3,
+                               'sync': True}],
+                'confirm': 3,
+                'sync': True,
+                '__pub_fun': 'junos.rollback',
+                '__pub_jid': '20170221193945996362',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
         junos.rollback(**args)
         mock_rollback.assert_called_with(0)
-        mock_commit.assert_called_once_with(sync=True, confirm=3, comment='Comitted via salt')
+        mock_commit.assert_called_once_with(
+            sync=True, confirm=3, comment='Comitted via salt')
 
     @patch('salt.modules.junos.fopen')
     @patch('jnpr.junos.utils.config.Config.diff')
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.rollback')
-    def test_rollback_with_diffs_file_option_when_diff_is_None(self, mock_rollback, mock_commit, mock_commit_check, mock_diff, mock_fopen):
+    def test_rollback_with_diffs_file_option_when_diff_is_None(
+            self, mock_rollback, mock_commit, mock_commit_check, mock_diff, mock_fopen):
         mock_commit_check.return_value = True
         mock_diff.return_value = 'diff'
-        args = {'__pub_user': 'root', '__pub_arg': [{'diffs_file': '/home/regress/diff', 'confirm': 2}],
-                'confirm': 2, '__pub_fun': 'junos.rollback', '__pub_jid': '20170221205153884009',
-                '__pub_tgt': 'mac_min', '__pub_tgt_type': 'glob', '__pub_ret': '',
+        args = {'__pub_user': 'root',
+                '__pub_arg': [{'diffs_file': '/home/regress/diff',
+                               'confirm': 2}],
+                'confirm': 2,
+                '__pub_fun': 'junos.rollback',
+                '__pub_jid': '20170221205153884009',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': '',
                 'diffs_file': '/home/regress/diff'}
         junos.rollback(**args)
         mock_fopen.assert_called_with('/home/regress/diff', 'w')
@@ -311,12 +383,24 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.rollback')
-    def test_rollback_with_diffs_file_option(self, mock_rollback, mock_commit, mock_commit_check, mock_diff, mock_fopen):
+    def test_rollback_with_diffs_file_option(
+            self,
+            mock_rollback,
+            mock_commit,
+            mock_commit_check,
+            mock_diff,
+            mock_fopen):
         mock_commit_check.return_value = True
         mock_diff.return_value = None
-        args = {'__pub_user': 'root', '__pub_arg': [{'diffs_file': '/home/regress/diff', 'confirm': 2}],
-                'confirm': 2, '__pub_fun': 'junos.rollback', '__pub_jid': '20170221205153884009',
-                '__pub_tgt': 'mac_min', '__pub_tgt_type': 'glob', '__pub_ret': '',
+        args = {'__pub_user': 'root',
+                '__pub_arg': [{'diffs_file': '/home/regress/diff',
+                               'confirm': 2}],
+                'confirm': 2,
+                '__pub_fun': 'junos.rollback',
+                '__pub_jid': '20170221205153884009',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': '',
                 'diffs_file': '/home/regress/diff'}
         junos.rollback(**args)
         assert not mock_fopen.called
@@ -337,7 +421,6 @@ class Test_Junos_Module(unittest.TestCase):
         ret['out'] = False
         self.assertEqual(junos.ping(), ret)
 
-
     def test_ping_with_host_ip_only(self):
         print
 
@@ -346,6 +429,15 @@ class Test_Junos_Module(unittest.TestCase):
         ret['message'] = 'Please provide the CLI command to be executed.'
         ret['out'] = False
         self.assertEqual(junos.cli(), ret)
+
+    @patch('jnpr.junos.device.Device.cli')
+    def test_cli(self, mock_cli):
+        mock_cli.return_vale = 'CLI result'
+        ret = dict()
+        ret['message'] = 'CLI result'
+        ret['out'] = True
+        junos.cli('show version')
+        mock_cli.assert_called_with('show version', 'text', warning=False)
 
     def test_shutdown_without_args(self):
         ret = dict()
@@ -391,20 +483,31 @@ class Test_Junos_Module(unittest.TestCase):
 
     @patch('salt.modules.junos.SW.poweroff')
     def test_shutdown_with_in_min_arg(self, mock_poweroff):
-        args = {'__pub_user': 'root', 'in_min': 10, '__pub_arg': [{'in_min': 10,
-                'shutdown': True}], 'reboot': True, '__pub_fun': 'junos.shutdown',
-                '__pub_jid': '20170222231445709212', '__pub_tgt': 'mac_min',
-                '__pub_tgt_type': 'glob', '__pub_ret': ''}
+        args = {'__pub_user': 'root',
+                'in_min': 10,
+                '__pub_arg': [{'in_min': 10,
+                               'shutdown': True}],
+                'reboot': True,
+                '__pub_fun': 'junos.shutdown',
+                '__pub_jid': '20170222231445709212',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
         junos.shutdown(**args)
         mock_poweroff.assert_called_with(in_min=10)
 
     @patch('salt.modules.junos.SW.reboot')
     def test_shutdown_with_at_arg(self, mock_reboot):
-        args = {'__pub_user': 'root', '__pub_arg': [{'at': '12:00 pm',
-                'reboot': True}], 'reboot': True,
-                '__pub_fun': 'junos.shutdown', '__pub_jid': '201702276857',
-                'at': '12:00 pm', '__pub_tgt': 'mac_min',
-                '__pub_tgt_type': 'glob', '__pub_ret': ''}
+        args = {'__pub_user': 'root',
+                '__pub_arg': [{'at': '12:00 pm',
+                               'reboot': True}],
+                'reboot': True,
+                '__pub_fun': 'junos.shutdown',
+                '__pub_jid': '201702276857',
+                'at': '12:00 pm',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
         junos.shutdown(**args)
         mock_reboot.assert_called_with(at='12:00 pm')
 
@@ -435,7 +538,6 @@ class Test_Junos_Module(unittest.TestCase):
         ret['out'] = False
         self.assertEqual(junos.install_config('path'), ret)
 
-
     @patch('os.path.isfile')
     @patch('os.path.getsize')
     def test_install_config_file_cp_fails(self, mock_getsize, mock_isfile):
@@ -446,15 +548,438 @@ class Test_Junos_Module(unittest.TestCase):
         ret['out'] = False
         self.assertEqual(junos.install_config('path'), ret)
 
+    @patch('jnpr.junos.utils.config.Config.commit')
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.diff')
+    @patch('jnpr.junos.utils.config.Config.load')
+    @patch('salt.modules.junos.safe_rm')
+    @patch('salt.modules.junos.files.mkstemp')
+    @patch('os.path.isfile')
+    @patch('os.path.getsize')
+    def test_install_config(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load,
+            mock_diff,
+            mock_commit_check,
+            mock_commit):
+        mock_isfile.return_value = True
+        mock_getsize.return_value = 10
+        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_diff.return_value = 'diff'
+        mock_commit_check.return_value = True
 
+        ret = dict()
+        ret['message'] = 'Successfully loaded and committed!'
+        ret['out'] = True
+        self.assertEqual(junos.install_config('actual/path/config.set'), ret)
+        mock_load.assert_called_with(path='dummy/path/config', format='set')
 
+    @patch('jnpr.junos.utils.config.Config.commit')
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.diff')
+    @patch('jnpr.junos.utils.config.Config.load')
+    @patch('salt.modules.junos.safe_rm')
+    @patch('salt.modules.junos.files.mkstemp')
+    @patch('os.path.isfile')
+    @patch('os.path.getsize')
+    def test_install_config_xml_file(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load,
+            mock_diff,
+            mock_commit_check,
+            mock_commit):
+        mock_isfile.return_value = True
+        mock_getsize.return_value = 10
+        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_diff.return_value = 'diff'
+        mock_commit_check.return_value = True
 
+        ret = dict()
+        ret['message'] = 'Successfully loaded and committed!'
+        ret['out'] = True
+        self.assertEqual(junos.install_config('actual/path/config.xml'), ret)
+        mock_load.assert_called_with(path='dummy/path/config', format='xml')
 
+    @patch('jnpr.junos.utils.config.Config.commit')
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.diff')
+    @patch('jnpr.junos.utils.config.Config.load')
+    @patch('salt.modules.junos.safe_rm')
+    @patch('salt.modules.junos.files.mkstemp')
+    @patch('os.path.isfile')
+    @patch('os.path.getsize')
+    def test_install_config_text_file(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load,
+            mock_diff,
+            mock_commit_check,
+            mock_commit):
+        mock_isfile.return_value = True
+        mock_getsize.return_value = 10
+        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_diff.return_value = 'diff'
+        mock_commit_check.return_value = True
 
+        ret = dict()
+        ret['message'] = 'Successfully loaded and committed!'
+        ret['out'] = True
+        self.assertEqual(junos.install_config('actual/path/config'), ret)
+        mock_load.assert_called_with(path='dummy/path/config', format='text')
 
+    @patch('jnpr.junos.utils.config.Config.commit')
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.diff')
+    @patch('jnpr.junos.utils.config.Config.load')
+    @patch('salt.modules.junos.safe_rm')
+    @patch('salt.modules.junos.files.mkstemp')
+    @patch('os.path.isfile')
+    @patch('os.path.getsize')
+    def test_install_config_replace(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load,
+            mock_diff,
+            mock_commit_check,
+            mock_commit):
+        mock_isfile.return_value = True
+        mock_getsize.return_value = 10
+        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_diff.return_value = 'diff'
+        mock_commit_check.return_value = True
 
+        args = {'__pub_user': 'root', '__pub_arg': [{'replace': True}],
+                'replace': True, '__pub_fun': 'junos.install_config',
+                '__pub_jid': '20170222213858582619', '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob', '__pub_ret': ''}
 
+        ret = dict()
+        ret['message'] = 'Successfully loaded and committed!'
+        ret['out'] = True
+        self.assertEqual(
+            junos.install_config(
+                'actual/path/config.set',
+                **args),
+            ret)
+        mock_load.assert_called_with(
+            path='dummy/path/config',
+            format='set',
+            merge=False)
 
+    @patch('jnpr.junos.utils.config.Config.commit')
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.diff')
+    @patch('jnpr.junos.utils.config.Config.load')
+    @patch('salt.modules.junos.safe_rm')
+    @patch('salt.modules.junos.files.mkstemp')
+    @patch('os.path.isfile')
+    @patch('os.path.getsize')
+    def test_install_config_overwrite(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load,
+            mock_diff,
+            mock_commit_check,
+            mock_commit):
+        mock_isfile.return_value = True
+        mock_getsize.return_value = 10
+        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_diff.return_value = 'diff'
+        mock_commit_check.return_value = True
+
+        args = {'__pub_user': 'root', '__pub_arg': [{'overwrite': True}],
+                'overwrite': True, '__pub_fun': 'junos.install_config',
+                '__pub_jid': '20170222213858582619', '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob', '__pub_ret': ''}
+
+        ret = dict()
+        ret['message'] = 'Successfully loaded and committed!'
+        ret['out'] = True
+        self.assertEqual(
+            junos.install_config(
+                'actual/path/config.xml',
+                **args),
+            ret)
+        mock_load.assert_called_with(
+            path='dummy/path/config',
+            format='xml',
+            overwrite=True)
+
+    @patch('jnpr.junos.utils.config.Config.commit')
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.diff')
+    @patch('jnpr.junos.utils.config.Config.load')
+    @patch('salt.modules.junos.safe_rm')
+    @patch('salt.modules.junos.files.mkstemp')
+    @patch('os.path.isfile')
+    @patch('os.path.getsize')
+    def test_install_config_overwrite_false(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load,
+            mock_diff,
+            mock_commit_check,
+            mock_commit):
+        mock_isfile.return_value = True
+        mock_getsize.return_value = 10
+        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_diff.return_value = 'diff'
+        mock_commit_check.return_value = True
+
+        args = {'__pub_user': 'root', '__pub_arg': [{'overwrite': False}],
+                'overwrite': False, '__pub_fun': 'junos.install_config',
+                '__pub_jid': '20170222213858582619', '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob', '__pub_ret': ''}
+
+        ret = dict()
+        ret['message'] = 'Successfully loaded and committed!'
+        ret['out'] = True
+        self.assertEqual(
+            junos.install_config(
+                'actual/path/config',
+                **args),
+            ret)
+        mock_load.assert_called_with(
+            path='dummy/path/config', format='text', merge=True)
+
+    @patch('jnpr.junos.utils.config.Config.load')
+    @patch('salt.modules.junos.safe_rm')
+    @patch('salt.modules.junos.files.mkstemp')
+    @patch('os.path.isfile')
+    @patch('os.path.getsize')
+    def test_install_config_load_causes_exception(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load):
+        mock_isfile.return_value = True
+        mock_getsize.return_value = 10
+        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_load.side_effect = self.raise_exception_for_load
+        ret = dict()
+        ret['message'] = 'Could not load configuration due to : "dummy exception"'
+        ret['format'] = 'set'
+        ret['out'] = False
+        self.assertEqual(
+            junos.install_config(
+                path='actual/path/config.set'), ret)
+
+    @patch('jnpr.junos.utils.config.Config.diff')
+    @patch('jnpr.junos.utils.config.Config.load')
+    @patch('salt.modules.junos.safe_rm')
+    @patch('salt.modules.junos.files.mkstemp')
+    @patch('os.path.isfile')
+    @patch('os.path.getsize')
+    def test_install_config_no_diff(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load,
+            mock_diff):
+        mock_isfile.return_value = True
+        mock_getsize.return_value = 10
+        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_diff.return_value = None
+        ret = dict()
+        ret['message'] = 'Configuration already applied!'
+        ret['out'] = True
+        self.assertEqual(junos.install_config('actual/path/config'), ret)
+
+    @patch('salt.modules.junos.fopen')
+    @patch('jnpr.junos.utils.config.Config.commit')
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.diff')
+    @patch('jnpr.junos.utils.config.Config.load')
+    @patch('salt.modules.junos.safe_rm')
+    @patch('salt.modules.junos.files.mkstemp')
+    @patch('os.path.isfile')
+    @patch('os.path.getsize')
+    def test_install_config_write_diff(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load,
+            mock_diff,
+            mock_commit_check,
+            mock_commit,
+            mock_fopen):
+        mock_isfile.return_value = True
+        mock_getsize.return_value = 10
+        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_diff.return_value = 'diff'
+        mock_commit_check.return_value = True
+
+        args = {'__pub_user': 'root',
+                '__pub_arg': [{'diffs_file': 'copy/config/here'}],
+                'diffs_file': 'copy/config/here',
+                '__pub_fun': 'junos.install_config',
+                '__pub_jid': '20170222213858582619',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
+
+        ret = dict()
+        ret['message'] = 'Successfully loaded and committed!'
+        ret['out'] = True
+        self.assertEqual(
+            junos.install_config(
+                'actual/path/config',
+                **args),
+            ret)
+        mock_fopen.assert_called_with('copy/config/here', 'w')
+
+    @patch('jnpr.junos.utils.config.Config.commit')
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.diff')
+    @patch('jnpr.junos.utils.config.Config.load')
+    @patch('salt.modules.junos.safe_rm')
+    @patch('salt.modules.junos.files.mkstemp')
+    @patch('os.path.isfile')
+    @patch('os.path.getsize')
+    def test_install_config_commit_params(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load,
+            mock_diff,
+            mock_commit_check,
+            mock_commit):
+        mock_isfile.return_value = True
+        mock_getsize.return_value = 10
+        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_diff.return_value = 'diff'
+        mock_commit_check.return_value = True
+        args = {'comment': 'comitted via salt',
+                '__pub_user': 'root',
+                '__pub_arg': [{'comment': 'comitted via salt',
+                               'confirm': 3}],
+                'confirm': 3,
+                '__pub_fun': 'junos.commit',
+                '__pub_jid': '20170221182856987820',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
+        ret = dict()
+        ret['message'] = 'Successfully loaded and committed!'
+        ret['out'] = True
+        self.assertEqual(
+            junos.install_config(
+                'actual/path/config',
+                **args),
+            ret)
+        mock_commit.assert_called_with(comment='comitted via salt', confirm=3)
+
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.diff')
+    @patch('jnpr.junos.utils.config.Config.load')
+    @patch('salt.modules.junos.safe_rm')
+    @patch('salt.modules.junos.files.mkstemp')
+    @patch('os.path.isfile')
+    @patch('os.path.getsize')
+    def test_install_config_commit_check_exception(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load,
+            mock_diff,
+            mock_commit_check):
+        mock_isfile.return_value = True
+        mock_getsize.return_value = 10
+        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_diff.return_value = 'diff'
+        mock_commit_check.side_effect = self.raise_exception
+
+        ret = dict()
+        ret['message'] = 'Commit check threw the following exception: "dummy exception"'
+        ret['out'] = False
+        self.assertEqual(junos.install_config('actual/path/config.xml'), ret)
+
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.diff')
+    @patch('jnpr.junos.utils.config.Config.load')
+    @patch('salt.modules.junos.safe_rm')
+    @patch('salt.modules.junos.files.mkstemp')
+    @patch('os.path.isfile')
+    @patch('os.path.getsize')
+    def test_install_config_commit_check_fails(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load,
+            mock_diff,
+            mock_commit_check):
+        mock_isfile.return_value = True
+        mock_getsize.return_value = 10
+        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_diff.return_value = 'diff'
+        mock_commit_check.return_value = False
+
+        ret = dict()
+        ret['message'] = 'Loaded configuration but commit check failed.'
+        ret['out'] = False
+        self.assertEqual(junos.install_config('actual/path/config.xml'), ret)
+
+    @patch('jnpr.junos.utils.config.Config.commit')
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.diff')
+    @patch('jnpr.junos.utils.config.Config.load')
+    @patch('salt.modules.junos.safe_rm')
+    @patch('salt.modules.junos.files.mkstemp')
+    @patch('os.path.isfile')
+    @patch('os.path.getsize')
+    def test_install_config_commit_exception(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load,
+            mock_diff,
+            mock_commit_check,
+            mock_commit):
+        mock_isfile.return_value = True
+        mock_getsize.return_value = 10
+        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_diff.return_value = 'diff'
+        mock_commit_check.return_value = True
+        mock_commit.side_effect = self.raise_exception
+        ret = dict()
+        ret['message'] = \
+            'Commit check successful but commit failed with "dummy exception"'
+        ret['out'] = False
+        self.assertEqual(junos.install_config('actual/path/config'), ret)
 
     @patch('jnpr.junos.device.Device.cli')
     def test_zeroize(self, mock_cli):
@@ -492,7 +1017,8 @@ class Test_Junos_Module(unittest.TestCase):
 
     @patch('os.path.isfile')
     @patch('os.path.getsize')
-    def test_install_os_image_cp_fails(self, mock_getsize, mock_isfile):  # , mock_mkstemp):
+    def test_install_os_image_cp_fails(
+            self, mock_getsize, mock_isfile):  # , mock_mkstemp):
         mock_getsize.return_value = 0
         mock_isfile.return_value = True
         ret = dict()
@@ -500,13 +1026,18 @@ class Test_Junos_Module(unittest.TestCase):
         ret['out'] = False
         self.assertEqual(junos.install_os('/image/path/'), ret)
 
-
     @patch('jnpr.junos.utils.sw.SW.install')
     @patch('salt.modules.junos.safe_rm')
     @patch('salt.modules.junos.files.mkstemp')
     @patch('os.path.isfile')
     @patch('os.path.getsize')
-    def test_install_os(self, mock_getsize, mock_isfile, mock_mkstemp, mock_safe_rm, mock_install):
+    def test_install_os(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_install):
         mock_getsize.return_value = 10
         mock_isfile.return_value = True
         ret = dict()
@@ -520,7 +1051,14 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('salt.modules.junos.files.mkstemp')
     @patch('os.path.isfile')
     @patch('os.path.getsize')
-    def test_install_os_with_reboot_arg(self, mock_getsize, mock_isfile, mock_mkstemp, mock_safe_rm, mock_install, mock_reboot):
+    def test_install_os_with_reboot_arg(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_install,
+            mock_reboot):
         mock_getsize.return_value = 10
         mock_isfile.return_value = True
         args = {'__pub_user': 'root', '__pub_arg': [{'reboot': True}],
@@ -537,7 +1075,13 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('salt.modules.junos.files.mkstemp')
     @patch('os.path.isfile')
     @patch('os.path.getsize')
-    def test_install_os_pyez_install_throws_exception(self, mock_getsize, mock_isfile, mock_mkstemp, mock_safe_rm, mock_install):
+    def test_install_os_pyez_install_throws_exception(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_install):
         mock_getsize.return_value = 10
         mock_isfile.return_value = True
         mock_install.side_effect = self.raise_exception_for_install
@@ -552,8 +1096,14 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('salt.modules.junos.files.mkstemp')
     @patch('os.path.isfile')
     @patch('os.path.getsize')
-    def test_install_os_with_reboot_raises_exception(self, mock_getsize, mock_isfile, mock_mkstemp, mock_safe_rm, mock_install,
-                                        mock_reboot):
+    def test_install_os_with_reboot_raises_exception(
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_install,
+            mock_reboot):
         mock_getsize.return_value = 10
         mock_isfile.return_value = True
         mock_reboot.side_effect = self.raise_exception
