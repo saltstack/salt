@@ -25,7 +25,7 @@ Example output::
 '''
 from __future__ import absolute_import
 # Import python libs
-import collections
+import salt.utils.odict
 from numbers import Number
 
 # Import salt libs
@@ -130,7 +130,7 @@ class NestDisplay(object):
                 )
 
             # respect key ordering of ordered dicts
-            if isinstance(ret, collections.OrderedDict):
+            if isinstance(ret, salt.utils.odict.OrderedDict):
                 keys = ret.keys()
             else:
                 keys = sorted(ret)

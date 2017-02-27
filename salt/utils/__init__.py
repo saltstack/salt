@@ -751,10 +751,11 @@ def ip_bracket(addr):
     return addr
 
 
-def dns_check(addr, safe=False, ipv6=False):
+def dns_check(addr, port, safe=False, ipv6=None, connect=True):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception. Obeys system preference for IPv4/6 address resolution.
+    Tries to connect to the address before considering it useful.
     '''
     error = False
     lookup = addr
@@ -769,18 +770,30 @@ def dns_check(addr, safe=False, ipv6=False):
         if not hostnames:
             error = True
         else:
-            addr = False
+            resolved = False
             for h in hostnames:
-                if h[0] == socket.AF_INET:
-                    addr = ip_bracket(h[4][0])
+                if h[0] == socket.AF_INET and ipv6 is True:
+                    continue
+                if h[0] == socket.AF_INET6 and ipv6 is False:
+                    continue
+                if h[0] == socket.AF_INET6 and connect is False and ipv6 is None:
+                    continue
+
+                candidate_addr = ip_bracket(h[4][0])
+
+                if not connect:
+                    resolved = candidate_addr
+
+                s = socket.socket(h[0], socket.SOCK_STREAM)
+                try:
+                    s.connect((candidate_addr.strip('[]'), port))
+                    s.close()
+
+                    resolved = candidate_addr
                     break
-                elif h[0] == socket.AF_INET6:
-                    if not ipv6:
-                        seen_ipv6 = True
-                        continue
-                    addr = ip_bracket(h[4][0])
-                    break
-            if not addr:
+                except socket.error:
+                    pass
+            if not resolved:
                 error = True
     except TypeError:
         err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
@@ -789,10 +802,7 @@ def dns_check(addr, safe=False, ipv6=False):
         error = True
 
     if error:
-        if seen_ipv6 and not addr:
-            err = ('DNS lookup of \'{0}\' failed, but ipv6 address ignored. Enable ipv6 in config to use it.').format(lookup)
-        else:
-            err = ('DNS lookup of \'{0}\' failed.').format(lookup)
+        err = ('DNS lookup or connection check of \'{0}\' failed.').format(addr)
         if safe:
             if salt.log.is_console_configured():
                 # If logging is not configured it also means that either
@@ -801,7 +811,7 @@ def dns_check(addr, safe=False, ipv6=False):
                 log.error(err)
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
-    return addr
+    return resolved
 
 
 def required_module_list(docstring=None):

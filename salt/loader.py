@@ -1046,7 +1046,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.pack = {} if pack is None else pack
         if opts is None:
             opts = {}
-        self.context_dict = salt.utils.context.ContextDict()
+        threadsafety = not opts.get('multiprocessing')
+        self.context_dict = salt.utils.context.ContextDict(threadsafe=threadsafety)
         self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
