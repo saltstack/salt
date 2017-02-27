@@ -6,8 +6,8 @@ import errno
 import os
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import Mock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import Mock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
 from salt.exceptions import SaltInvocationError

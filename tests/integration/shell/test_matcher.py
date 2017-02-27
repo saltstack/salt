@@ -8,7 +8,7 @@ import shutil
 import time
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -20,7 +20,7 @@ def minion_in_returns(minion, lines):
     return bool([True for line in lines if line == '{0}:'.format(minion)])
 
 
-class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
+class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
     '''
     Test salt matchers
     '''

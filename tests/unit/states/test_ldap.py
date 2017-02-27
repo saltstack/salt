@@ -15,9 +15,9 @@ import copy
 import salt.ext.six as six
 import salt.states.ldap
 
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.helpers import ensure_in_syspath
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     patch,

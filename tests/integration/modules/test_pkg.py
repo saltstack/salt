@@ -3,7 +3,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import (
+from tests.support.helpers import (
     destructiveTest,
     requires_network,
     requires_salt_modules,

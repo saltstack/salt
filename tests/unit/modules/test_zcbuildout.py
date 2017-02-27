@@ -15,8 +15,8 @@ from salt.ext.six.moves.urllib.request import urlopen
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import (
     ensure_in_syspath,
     requires_network,
     skip_if_binaries_missing

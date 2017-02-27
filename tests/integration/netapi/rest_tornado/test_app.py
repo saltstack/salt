@@ -12,8 +12,8 @@ from salt.netapi.rest_tornado import saltnado
 from unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import skipIf
+from tests.support.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../../')
 

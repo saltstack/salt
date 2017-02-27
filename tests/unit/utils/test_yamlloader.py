@@ -12,9 +12,9 @@ from salt.utils.yamlloader import SaltYamlSafeLoader
 import salt.utils
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON, mock_open
+from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import ensure_in_syspath
+from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON, mock_open
 
 
 ensure_in_syspath('../../')

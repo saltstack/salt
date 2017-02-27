@@ -16,8 +16,8 @@ import glob
 import shutil
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
     with_system_user

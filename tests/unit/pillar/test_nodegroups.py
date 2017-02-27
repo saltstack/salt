@@ -4,9 +4,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, MagicMock
+from tests.support.unit import TestCase
+from tests.support.helpers import ensure_in_syspath
+from tests.support.mock import patch, MagicMock
 
 ensure_in_syspath('../../')
 

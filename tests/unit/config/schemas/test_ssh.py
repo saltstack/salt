@@ -10,8 +10,8 @@ from __future__ import absolute_import, print_function
 from distutils.version import LooseVersion as _LooseVersion
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 

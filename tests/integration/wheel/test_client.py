@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 import integration
-from salttesting import skipIf
+from tests.support.unit import skipIf
 
 # Import Salt libs
 import salt.auth

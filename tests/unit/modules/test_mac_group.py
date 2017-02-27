@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import grp
 
 # Import Salt Testing Libs
-from salttesting import TestCase
-from salttesting.mock import MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
 from salt.modules import mac_group

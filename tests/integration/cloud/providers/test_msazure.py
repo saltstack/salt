@@ -11,8 +11,8 @@ import string
 from distutils.version import LooseVersion
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, expensiveTest
+from tests.support.unit import skipIf
+from tests.support.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
 

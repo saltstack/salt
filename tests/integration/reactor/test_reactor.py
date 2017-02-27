@@ -11,7 +11,7 @@
 from __future__ import absolute_import
 
 # Import Salt testing libs
-from salttesting.helpers import ensure_in_syspath
+from tests.support.helpers import ensure_in_syspath
 
 ensure_in_syspath('../')
 

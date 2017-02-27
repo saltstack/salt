@@ -11,9 +11,9 @@ from __future__ import absolute_import
 from copy import deepcopy
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.helpers import ensure_in_syspath
 from salt import config
 
 ensure_in_syspath('../../../')

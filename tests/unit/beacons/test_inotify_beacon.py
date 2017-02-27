@@ -10,9 +10,9 @@ import tempfile
 from salt.beacons import inotify
 
 # Salt testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import skipIf, TestCase
+from tests.support.helpers import destructiveTest, ensure_in_syspath
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Third-party libs
 try:

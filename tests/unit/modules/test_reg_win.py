@@ -13,8 +13,8 @@ from __future__ import unicode_literals
 import sys
 import time
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import destructiveTest
+from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import destructiveTest
 # Import Salt Libs
 from salt.modules import reg as win_mod_reg
 from salt.ext import six

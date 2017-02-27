@@ -12,7 +12,7 @@ from __future__ import absolute_import
 import integration
 
 # Salttesting libs
-from salttesting.helpers import destructiveTest, ensure_in_syspath
+from tests.support.helpers import destructiveTest, ensure_in_syspath
 
 ensure_in_syspath('../../')
 

@@ -10,8 +10,8 @@ import logging
 import socket
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import skipIf
+from tests.support.helpers import ensure_in_syspath
 
 from integration.cloud.helpers.virtualbox import VirtualboxTestCase, VirtualboxCloudTestCase, CONFIG_NAME, \
     PROVIDER_NAME, \

@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import os
 
 # Import salttesting libs
-from salttesting.unit import skipIf
-from salttesting.helpers import destructiveTest
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
 # Import test support libs
 import tests.support.cherrypy_testclasses as cptc

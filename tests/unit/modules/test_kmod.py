@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, patch
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
 from salt.modules import kmod

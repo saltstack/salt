@@ -12,9 +12,9 @@ import pprint
 import re
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf, TestCase
-from salttesting.case import ModuleCase
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import skipIf, TestCase
+from tests.support.case import ModuleCase
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs

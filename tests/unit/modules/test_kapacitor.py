@@ -8,8 +8,8 @@ import json
 from salt.modules import kapacitor
 
 # Import Salt testing libs
-from salttesting import TestCase
-from salttesting.mock import Mock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import Mock, patch
 
 kapacitor.__salt__ = {
     'pkg.version': Mock(return_value='9999'),

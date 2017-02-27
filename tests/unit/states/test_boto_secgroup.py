@@ -4,8 +4,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting.case import TestCase
-from salttesting.helpers import ensure_in_syspath
+from tests.support.case import TestCase
+from tests.support.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 

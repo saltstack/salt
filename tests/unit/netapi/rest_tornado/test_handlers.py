@@ -9,8 +9,8 @@ import copy
 import hashlib
 
 # Import Salt Testing Libs
-from salttesting.unit import skipIf
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import skipIf
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('../../..')
 import integration  # pylint: disable=import-error
 
@@ -43,7 +43,7 @@ import salt.ext.six as six
 from salt.ext.six.moves.urllib.parse import urlencode, urlparse  # pylint: disable=no-name-in-module
 # pylint: enable=import-error
 
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')  # pylint: disable=W0223

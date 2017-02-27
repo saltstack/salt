@@ -7,8 +7,8 @@ tests for pkgrepo states
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
     ensure_in_syspath,
     requires_system_grains

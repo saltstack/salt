@@ -7,15 +7,15 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf
+from tests.support.unit import skipIf
 from tests.unit import ModuleTestCase, hasDependency
-from salttesting.mock import (
+from tests.support.mock import (
     patch,
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
+from tests.support.helpers import ensure_in_syspath
 from salt.states import libcloud_dns
 
 ensure_in_syspath('../../')

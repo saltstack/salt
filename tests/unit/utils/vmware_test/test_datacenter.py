@@ -9,8 +9,8 @@ Tests for datacenter related functions in salt.utils.vmware
 from __future__ import absolute_import
 import logging
 # Import Salt testing libraries
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 
 from salt.exceptions import VMwareObjectRetrievalError, VMwareApiError, \
         VMwareRuntimeError

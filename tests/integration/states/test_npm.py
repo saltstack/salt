@@ -8,8 +8,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath, requires_network
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, ensure_in_syspath, requires_network
 ensure_in_syspath('../../')
 
 # Import salt libs

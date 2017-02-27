@@ -47,14 +47,12 @@ if CODE_DIR not in sys.path:
 # Import salt tests support dirs
 from tests.support.paths import *  # pylint: disable=wildcard-import
 from tests.support.processes import *  # pylint: disable=wildcard-import
-
-# Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.case import ShellTestCase
-from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
-from salttesting.parser import PNUM, print_header, SaltTestcaseParser
-from salttesting.helpers import requires_sshd_server
-from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
+from tests.support.unit import TestCase
+from tests.support.case import ShellTestCase
+from tests.support.mixins import CheckShellBinaryNameAndVersionMixin, ShellCaseCommonTestsMixin
+from tests.support.parser import PNUM, print_header, SaltTestcaseParser
+from tests.support.helpers import requires_sshd_server
+from tests.support.helpers import ensure_in_syspath, RedirectStdStreams
 
 # Import Salt libs
 import salt
@@ -109,92 +107,6 @@ from tornado import ioloop
 
 # Import salt tests support libs
 from tests.support.processes import SaltMaster, SaltMinion, SaltSyndic
-try:
-    from salttesting.helpers import terminate_process_pid
-except ImportError:
-    # Once the latest salt-testing works against salt's develop branch
-    # uncomment the following 2 lines and delete the function defined
-    # in this except
-    #print('Please upgrade your version of salt-testing')
-    #sys.exit(1)
-
-    import psutil
-
-    def terminate_process_pid(pid, only_children=False):
-        children = []
-        process = None
-
-        # Let's begin the shutdown routines
-        try:
-            process = psutil.Process(pid)
-            if hasattr(process, 'children'):
-                children = process.children(recursive=True)
-        except psutil.NoSuchProcess:
-            log.info('No process with the PID %s was found running', pid)
-
-        if process and only_children is False:
-            try:
-                cmdline = process.cmdline()
-            except psutil.AccessDenied:
-                # macOS denies us access to the above information
-                cmdline = None
-            if not cmdline:
-                try:
-                    cmdline = process.as_dict()
-                except psutil.NoSuchProcess as exc:
-                    log.debug('No such process found. Stacktrace: {0}'.format(exc))
-
-            if psutil.pid_exists(pid):
-                log.info('Terminating process: %s', cmdline)
-                process.terminate()
-                try:
-                    process.wait(timeout=10)
-                except psutil.TimeoutExpired:
-                    pass
-
-            if psutil.pid_exists(pid):
-                log.warning('Killing process: %s', cmdline)
-                process.kill()
-
-            if psutil.pid_exists(pid):
-                log.warning('Process left behind which we were unable to kill: %s', cmdline)
-        if children:
-            # Lets log and kill any child processes which salt left behind
-            def kill_children(_children, kill=False):
-                for child in _children[:][::-1]:  # Iterate over a reversed copy of the list
-                    try:
-                        if not kill and child.status() == psutil.STATUS_ZOMBIE:
-                            # Zombie processes will exit once child processes also exit
-                            continue
-                        try:
-                            cmdline = child.cmdline()
-                        except psutil.AccessDenied as err:
-                            log.debug('Cannot obtain child process cmdline: %s', err)
-                            cmdline = ''
-                        if not cmdline:
-                            cmdline = child.as_dict()
-                        if kill:
-                            log.warning('Killing child process left behind: %s', cmdline)
-                            child.kill()
-                        else:
-                            log.warning('Terminating child process left behind: %s', cmdline)
-                            child.terminate()
-                        if not psutil.pid_exists(child.pid):
-                            _children.remove(child)
-                    except psutil.NoSuchProcess:
-                        _children.remove(child)
-            try:
-                kill_children([child for child in children if child.is_running()
-                               and not any(sys.argv[0] in cmd for cmd in child.cmdline())])
-            except psutil.AccessDenied:
-                # OSX denies us access to the above information
-                kill_children(children)
-
-            if children:
-                psutil.wait_procs(children, timeout=3, callback=lambda proc: kill_children(children, kill=True))
-
-            if children:
-                psutil.wait_procs(children, timeout=1, callback=lambda proc: kill_children(children, kill=True))
 
 RUNTIME_CONFIGS = {}
 
@@ -1827,67 +1739,6 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-cloud', arg_str, catch_stderr,
                                timeout=timeout)
-
-
-class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
-
-    _call_binary_expected_version_ = salt.version.__version__
-
-    def test_salt_with_git_version(self):
-        if getattr(self, '_call_binary_', None) is None:
-            self.skipTest('\'_call_binary_\' not defined.')
-        from salt.utils import which
-        from salt.version import __version_info__, SaltStackVersion
-        git = which('git')
-        if not git:
-            self.skipTest('The git binary is not available')
-
-        # Let's get the output of git describe
-        process = subprocess.Popen(
-            [git, 'describe', '--tags', '--first-parent', '--match', 'v[0-9]*'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            close_fds=True,
-            cwd=CODE_DIR
-        )
-        out, err = process.communicate()
-        if process.returncode != 0:
-            process = subprocess.Popen(
-                [git, 'describe', '--tags', '--match', 'v[0-9]*'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                close_fds=True,
-                cwd=CODE_DIR
-            )
-            out, err = process.communicate()
-        if not out:
-            self.skipTest(
-                'Failed to get the output of \'git describe\'. '
-                'Error: \'{0}\''.format(
-                    salt.utils.to_str(err)
-                )
-            )
-
-        parsed_version = SaltStackVersion.parse(out)
-
-        if parsed_version.info < __version_info__:
-            self.skipTest(
-                'We\'re likely about to release a new version. This test '
-                'would fail. Parsed(\'{0}\') < Expected(\'{1}\')'.format(
-                    parsed_version.info, __version_info__
-                )
-            )
-        elif parsed_version.info != __version_info__:
-            self.skipTest(
-                'In order to get the proper salt version with the '
-                'git hash you need to update salt\'s local git '
-                'tags. Something like: \'git fetch --tags\' or '
-                '\'git fetch --tags upstream\' if you followed '
-                'salt\'s contribute documentation. The version '
-                'string WILL NOT include the git hash.'
-            )
-        out = '\n'.join(self.run_script(self._call_binary_, '--version'))
-        self.assertIn(parsed_version.string, out)
 
 
 @requires_sshd_server

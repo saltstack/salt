@@ -5,8 +5,8 @@ from __future__ import absolute_import
 import os
 
 # Import salt testing libs
-from salttesting.case import ModuleCase
-from salttesting.mixins import RUNTIME_VARS
+from tests.support.case import ModuleCase
+from tests.support.mixins import RUNTIME_VARS
 
 # Import Salt libs
 import salt.config

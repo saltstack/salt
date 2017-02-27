@@ -8,9 +8,9 @@ from salt.modules import status
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase
+from tests.support.helpers import ensure_in_syspath
+from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,

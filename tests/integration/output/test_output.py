@@ -9,8 +9,8 @@ import os
 import traceback
 
 # Import Salt Testing Libs
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mixins import RUNTIME_VARS
+from tests.support.helpers import ensure_in_syspath
+from tests.support.mixins import RUNTIME_VARS
 
 ensure_in_syspath('../../')
 

@@ -17,7 +17,7 @@ except ImportError:
     HAS_GITPYTHON = False
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf
 
 import integration
 

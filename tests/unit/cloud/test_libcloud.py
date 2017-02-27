@@ -10,13 +10,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase
+from tests.support.unit import TestCase
 
 # Import Salt Libs
 import salt.cloud.libcloudfuncs as libcloud
 
 # Import Salt Testing Libs
-from salttesting.helpers import ensure_in_syspath
+from tests.support.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 

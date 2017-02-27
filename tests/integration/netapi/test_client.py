@@ -6,7 +6,7 @@ import os
 
 # Import Salt Testing libs
 from integration import TMP_CONF_DIR
-from salttesting import TestCase
+from tests.support.unit import TestCase
 
 # Import Salt libs
 import salt.config

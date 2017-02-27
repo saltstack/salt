@@ -16,7 +16,7 @@ import shutil
 import logging
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -28,7 +28,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
-class SyndicTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
+class SyndicTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixin):
     '''
     Test the salt-syndic command
     '''

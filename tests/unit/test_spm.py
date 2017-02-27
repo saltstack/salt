@@ -7,8 +7,8 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath, destructiveTest
+from tests.support.unit import TestCase
+from tests.support.helpers import ensure_in_syspath, destructiveTest
 
 import salt.config
 import salt.spm

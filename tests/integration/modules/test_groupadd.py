@@ -6,7 +6,7 @@ import string
 import random
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, destructiveTest
+from tests.support.helpers import ensure_in_syspath, destructiveTest
 ensure_in_syspath('../../')
 
 # Import salt libs

@@ -4,8 +4,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     ensure_in_syspath,
     requires_salt_modules,
     requires_system_grains,

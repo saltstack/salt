@@ -15,13 +15,13 @@ import tempfile
 import socket
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.helpers import (
     ensure_in_syspath,
     requires_network,
     TestsLoggingHandler
 )
-from salttesting.mock import (
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,

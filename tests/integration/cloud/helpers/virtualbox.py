@@ -8,7 +8,7 @@ import os
 import unittest
 
 # Import Salt Testing libs
-from salttesting import skipIf
+from tests.support.unit import skipIf
 
 # Import Salt libs
 import salt.ext.six as six

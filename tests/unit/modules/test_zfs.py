@@ -10,11 +10,11 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import skipIf, TestCase
+from tests.support.helpers import ensure_in_syspath
 
 # Import Mock libraries
-from salttesting.mock import (
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,

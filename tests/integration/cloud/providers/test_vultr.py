@@ -11,7 +11,7 @@ import string
 import time
 
 # Import Salt Testing Libs
-from salttesting.helpers import ensure_in_syspath, expensiveTest
+from tests.support.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
 

@@ -14,9 +14,9 @@ import errno
 import threading
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath, MockWraps
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.unit import skipIf, TestCase
+from tests.support.helpers import ensure_in_syspath, MockWraps
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 ensure_in_syspath('../')
 
 # Import salt libs

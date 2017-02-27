@@ -8,7 +8,7 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -20,7 +20,7 @@ USERA_PWD = 'saltdev'
 HASHED_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
 
 
-class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
+class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
     '''
     Test salt-key script
     '''

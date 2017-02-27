@@ -13,9 +13,9 @@ import threading
 import time
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from tests.support.unit import TestCase
 from salt.ext.six.moves import range
-from salttesting.helpers import ensure_in_syspath
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt libs

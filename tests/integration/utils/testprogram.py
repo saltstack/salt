@@ -26,7 +26,7 @@ import salt.utils.psutil_compat as psutils
 import salt.defaults.exitcodes as exitcodes
 import salt.ext.six as six
 
-from salttesting import TestCase
+from tests.support.unit import TestCase
 
 import integration
 

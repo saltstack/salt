@@ -15,7 +15,7 @@ import signal
 import shutil
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -25,7 +25,7 @@ from integration.utils import testprogram
 import salt.utils
 
 
-class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
+class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-master'
 

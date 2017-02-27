@@ -7,9 +7,9 @@ from __future__ import absolute_import
 from salt.beacons import adb
 
 # Salt testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, Mock
+from tests.support.unit import skipIf, TestCase
+from tests.support.helpers import ensure_in_syspath
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, Mock
 
 # Globals
 

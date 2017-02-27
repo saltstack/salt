@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
+from tests.support.helpers import ensure_in_syspath, skip_if_binaries_missing
 ensure_in_syspath('../../')
 
 # Import salt libs

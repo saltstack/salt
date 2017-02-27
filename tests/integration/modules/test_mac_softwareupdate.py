@@ -7,7 +7,7 @@ integration tests for mac_softwareupdate
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, destructiveTest
+from tests.support.helpers import ensure_in_syspath, destructiveTest
 ensure_in_syspath('../../')
 
 # Import salt libs

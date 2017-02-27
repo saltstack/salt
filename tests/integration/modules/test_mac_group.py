@@ -10,8 +10,8 @@ import random
 import string
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import (
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
     ensure_in_syspath,
     requires_system_grains

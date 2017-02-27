@@ -8,9 +8,9 @@ from salt.ext.six import text_type as text
 from salt.utils.sanitizers import clean
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 

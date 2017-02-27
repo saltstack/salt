@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.case import ModuleCase
+from tests.support.case import ModuleCase
 
 # Import Salt libs
 import salt.loader

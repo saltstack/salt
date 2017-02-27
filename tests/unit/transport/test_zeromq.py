@@ -28,7 +28,7 @@ import salt.exceptions
 
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf
 
 # Import test support libs
 import tests.integration as integration

@@ -9,8 +9,8 @@ import random
 import string
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
+from tests.support.unit import skipIf
+from tests.support.helpers import ensure_in_syspath, destructiveTest
 from salt.ext.six.moves import range
 ensure_in_syspath('../../')
 

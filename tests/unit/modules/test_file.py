@@ -7,9 +7,9 @@ import tempfile
 import textwrap
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.helpers import ensure_in_syspath
+from tests.support.mock import MagicMock, patch
 
 ensure_in_syspath('../../')
 

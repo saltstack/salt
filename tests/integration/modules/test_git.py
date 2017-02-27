@@ -21,8 +21,8 @@ import tempfile
 
 # Import Salt Testing libs
 from distutils.version import LooseVersion
-from salttesting import skipIf
-from salttesting.helpers import (
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
     ensure_in_syspath,
     skip_if_binaries_missing

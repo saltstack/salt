@@ -13,9 +13,9 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import destructiveTest, ensure_in_syspath
+from tests.support.mock import (
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,

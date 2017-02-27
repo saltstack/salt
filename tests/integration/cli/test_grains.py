@@ -21,7 +21,7 @@ import integration
 import salt.utils
 
 # Import Salt Testing Libs
-from salttesting.helpers import ensure_in_syspath
+from tests.support.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 

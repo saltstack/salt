@@ -5,8 +5,8 @@ from subprocess import PIPE
 
 from salt.modules import openscap
 
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     Mock,
     MagicMock,
     patch,

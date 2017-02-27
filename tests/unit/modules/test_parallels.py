@@ -9,9 +9,9 @@ from salt.modules import parallels
 from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.helpers import ensure_in_syspath
 
 # Import third party libs
 import salt.ext.six as six

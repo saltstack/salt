@@ -15,7 +15,7 @@ import pipes
 import shutil
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -26,7 +26,7 @@ import salt.utils
 import salt.ext.six as six
 
 
-class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
+class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-cp'
 

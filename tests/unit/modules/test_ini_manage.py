@@ -6,8 +6,8 @@ import os
 import tempfile
 
 # Import Salt Testing libs
-from salttesting.unit import TestCase
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import TestCase
+from tests.support.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 

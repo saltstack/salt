@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from tests.support.unit import TestCase
 
 
 # Import Salt libs

@@ -13,15 +13,15 @@ from salt.log import LOG_LEVELS
 import salt.utils
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     mock_open,
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
     patch
 )
-from salttesting.helpers import ensure_in_syspath
+from tests.support.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 

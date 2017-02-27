@@ -7,8 +7,8 @@ integration tests for mac_power
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
+from tests.support.unit import skipIf
+from tests.support.helpers import ensure_in_syspath, destructiveTest
 
 # Import salt libs
 import integration

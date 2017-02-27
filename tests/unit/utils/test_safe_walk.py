@@ -8,8 +8,8 @@ from shutil import rmtree
 from tempfile import mkdtemp
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import TestCase
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs

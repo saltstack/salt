@@ -8,9 +8,9 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.helpers import ensure_in_syspath, destructiveTest
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,

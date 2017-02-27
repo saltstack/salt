@@ -8,13 +8,13 @@ import textwrap
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
     ensure_in_syspath,
     skip_if_binaries_missing
 )
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 ensure_in_syspath('../../')
 
 # Import salt libs

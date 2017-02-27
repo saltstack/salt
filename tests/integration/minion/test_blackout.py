@@ -10,7 +10,7 @@ from time import sleep
 import textwrap
 
 # Import Salt Testing libs
-from salttesting.helpers import destructiveTest, ensure_in_syspath
+from tests.support.helpers import destructiveTest, ensure_in_syspath
 
 ensure_in_syspath('../')
 

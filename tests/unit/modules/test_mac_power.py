@@ -7,9 +7,9 @@ mac_power tests
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import ensure_in_syspath
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 ensure_in_syspath('../../')
 

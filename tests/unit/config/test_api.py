@@ -7,9 +7,9 @@ tests.unit.api_config_test
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import destructiveTest
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.helpers import destructiveTest
+from tests.support.mock import (
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,

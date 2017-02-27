@@ -5,9 +5,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, requires_system_grains
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import skipIf
+from tests.support.helpers import ensure_in_syspath, requires_system_grains
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 ensure_in_syspath('../..')
 
@@ -24,7 +24,7 @@ from subprocess import Popen, PIPE, STDOUT
 log = logging.getLogger(__name__)
 
 # Import 3rd-party libs
-from salttesting.helpers import ensure_in_syspath
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('..')
 import salt.ext.six as six
 

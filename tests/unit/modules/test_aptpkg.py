@@ -15,9 +15,9 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules import aptpkg
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import ensure_in_syspath
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,

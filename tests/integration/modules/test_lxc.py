@@ -8,12 +8,12 @@ Test the lxc module
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import (
+from tests.support.helpers import (
     ensure_in_syspath,
     skip_if_not_root,
     skip_if_binaries_missing
 )
-from salttesting import skipIf
+from tests.support.unit import skipIf
 ensure_in_syspath('../../')
 
 # Import salt libs

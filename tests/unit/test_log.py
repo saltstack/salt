@@ -15,8 +15,8 @@ import logging
 from salt.ext.six.moves import StringIO
 
 # Import Salt Testing libs
-from salttesting.case import TestCase
-from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
+from tests.support.case import TestCase
+from tests.support.helpers import ensure_in_syspath, TestsLoggingHandler
 
 ensure_in_syspath('../')
 
