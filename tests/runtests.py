@@ -51,7 +51,6 @@ except ImportError as exc:
     except ImportError:
         print('Unable to import salt test module')
         print('PYTHONPATH:', os.environ.get('PYTHONPATH'))
-        pass
     print('Current sys.path:')
     import pprint
     pprint.pprint(sys.path)
@@ -66,9 +65,6 @@ if not salt.utils.is_windows():
 # Import Salt Testing libs
 from tests.support.parser import PNUM, print_header
 from tests.support.parser.cover import SaltCoverageTestingParser
-
-# Import test support libs
-from tests.support.processes import collect_child_processes, terminate_process
 
 XML_OUTPUT_DIR = os.environ.get(
     'SALT_XML_TEST_REPORTS_DIR',
@@ -648,11 +644,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             )
             status.append(results)
         return status
-
-    def print_overall_testsuite_report(self):
-        children = collect_child_processes(os.getpid())
-        SaltCoverageTestingParser.print_overall_testsuite_report(self)
-        terminate_process(children=children)
 
 
 def main():

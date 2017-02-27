@@ -1163,7 +1163,10 @@ def terminate_process(pid=None, process=None, children=None, kill_children=False
     process_list = []
 
     def on_process_terminated(proc):
-        log.info('Process %s terminated with exit code: %s', getattr(proc, '_cmdline', proc), proc.returncode)
+        if proc.returncode:
+            log.info('Process %s terminated with exit code: %s', getattr(proc, '_cmdline', proc), proc.returncode)
+        else:
+            log.info('Process %s terminated', getattr(proc, '_cmdline', proc))
 
     if pid and not process:
         try:
