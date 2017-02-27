@@ -54,7 +54,7 @@ def output(data):
     '''
     try:
         if 'output_indent' not in __opts__:
-            return json.dumps(data, default=repr, indent=4)
+            return json.dumps(data, default=repr, indent=4, encoding='latin1')
 
         indent = __opts__.get('output_indent')
         sort_keys = False
