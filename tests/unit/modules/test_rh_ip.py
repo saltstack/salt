@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import rh_ip
 import jinja2.exceptions
@@ -208,8 +204,3 @@ class RhipTestCase(TestCase):
                                               return_value='A'):
                                 self.assertEqual(rh_ip.build_network_settings
                                                  (test=None), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RhipTestCase, needs_daemon=False)

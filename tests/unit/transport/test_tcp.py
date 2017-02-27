@@ -21,13 +21,11 @@ import salt.exceptions
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../')
-import integration
+import tests.integration as integration
 
 # Import Salt libs
-from unit.transport.test_req import ReqChannelMixin
-from unit.transport.test_pub import PubChannelMixin
+from tests.unit.transport.test_req import ReqChannelMixin
+from tests.unit.transport.test_pub import PubChannelMixin
 
 
 # TODO: move to a library?
@@ -198,8 +196,3 @@ class AsyncPubChannelTest(BaseTCPPubCase, PubChannelMixin):
     '''
     Tests around the publish system
     '''
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ClearReqTestCases, needs_daemon=False)
-    run_tests(AESReqTestCases, needs_daemon=False)

@@ -10,9 +10,6 @@ from salt.utils.sanitizers import clean
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -50,8 +47,3 @@ class SanitizersTestCase(TestCase):
         assert response == 'somedubioushostname'
 
     test_sanitized_id = test_sanitized_hostname
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SanitizersTestCase, needs_daemon=False)

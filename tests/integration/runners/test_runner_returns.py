@@ -10,11 +10,9 @@ import tempfile
 import yaml
 
 # Import Salt Testing libs
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
 
 # Import salt libs
-import integration
 import salt.payload
 import salt.utils
 import salt.utils.jid

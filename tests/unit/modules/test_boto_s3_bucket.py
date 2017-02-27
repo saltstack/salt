@@ -15,9 +15,6 @@ from tests.support.mock import (
     NO_MOCK_REASON,
     patch
 )
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.ext.six as six
@@ -719,8 +716,3 @@ class BotoS3BucketTestCase(BotoS3BucketTestCaseBase, BotoS3BucketTestCaseMixin):
                                         **conn_parameters)
         self.assertEqual(result.get('error', {}).get('message'),
                         error_message.format('delete_bucket_website'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoS3BucketTestCase, needs_daemon=False)

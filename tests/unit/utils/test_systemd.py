@@ -280,8 +280,3 @@ class SystemdTestCase(TestCase):
         # Test with invalid context data
         with self.assertRaises(SaltInvocationError):
             _systemd.has_scope(99999)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SystemdTestCase, needs_daemon=False)

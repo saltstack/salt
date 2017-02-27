@@ -14,9 +14,6 @@ from tests.support.mock import (
     NO_MOCK_REASON,
     patch
 )
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
@@ -771,9 +768,3 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         self.conn.list_topic_rules.side_effect = ClientError(error_content, 'list_topic_rules')
         result = boto_iot.list_topic_rules(**conn_parameters)
         self.assertEqual(result.get('error', {}).get('message'), error_message.format('list_topic_rules'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoIoTPolicyTestCase, needs_daemon=False)
-    run_tests(BotoIoTTopicRuleTestCase, needs_daemon=False)

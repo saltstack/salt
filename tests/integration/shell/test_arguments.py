@@ -7,12 +7,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from tests.support.helpers import ensure_in_syspath, requires_salt_modules
-
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.helpers import requires_salt_modules
 
 # Import Salt libs
-import integration
 import salt.utils.args
 
 
@@ -56,8 +54,3 @@ class ArgumentTestCase(integration.ModuleCase):
             self.run_function('test.echo', [arg]),
             arg
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ArgumentTestCase)

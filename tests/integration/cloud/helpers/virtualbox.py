@@ -12,7 +12,7 @@ from tests.support.unit import skipIf
 
 # Import Salt libs
 import salt.ext.six as six
-import integration
+import tests.integration as integration
 import salt.utils.virtualbox
 
 # Create the cloud instance name to be used throughout the tests

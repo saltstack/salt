@@ -15,10 +15,7 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from tests.support.helpers import ensure_in_syspath
 from salt.modules import libcloud_dns
-
-ensure_in_syspath('../../')
 
 SERVICE_NAME = 'libcloud_dns'
 libcloud_dns.__salt__ = {}
@@ -63,7 +60,3 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         with patch('salt.utils.compat.pack_dunder', return_value=False) as dunder:
             libcloud_dns.__init__(None)
             dunder.assert_called_with('salt.modules.libcloud_dns')
-
-if __name__ == '__main__':
-    from unit import run_tests
-    run_tests(LibcloudDnsModuleTestCase)

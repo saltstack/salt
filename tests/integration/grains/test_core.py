@@ -7,13 +7,10 @@ Test the core grains
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import salt libs
-import integration
 import salt.utils
 if salt.utils.is_windows():
     try:

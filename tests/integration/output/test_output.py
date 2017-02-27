@@ -9,16 +9,12 @@ import os
 import traceback
 
 # Import Salt Testing Libs
-from tests.support.helpers import ensure_in_syspath
+import tests.integration as integration
 from tests.support.mixins import RUNTIME_VARS
 
-ensure_in_syspath('../../')
-
 # Import Salt libs
-import integration
 import salt.config
 from salt.output import display_output
-import salt.config
 
 
 class OutputReturnTest(integration.ShellCase):
@@ -115,8 +111,3 @@ class OutputReturnTest(integration.ShellCase):
                     delattr(self, 'maxDiff')
                 else:
                     self.maxDiff = old_max_diff
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(OutputReturnTest)

@@ -14,8 +14,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import immutabletypes
@@ -83,8 +81,3 @@ class ImmutableTypesTestCase(TestCase):
         with self.assertRaises(TypeError):
             flist = frozen[4]
             flist[0] = 5
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ImmutableTypesTestCase, needs_daemon=False)

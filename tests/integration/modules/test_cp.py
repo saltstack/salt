@@ -8,12 +8,10 @@ import hashlib
 import tempfile
 
 # Import Salt Testing libs
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
 
 # Import salt libs
 import salt.ext.six as six
-import integration
 import salt.utils
 
 
@@ -526,7 +524,3 @@ class CPModuleTest(integration.ModuleCase):
             self.assertTrue(os.path.isfile(tgt_cache_file), 'File was not cached on the master')
         finally:
             os.unlink(tgt_cache_file)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CPModuleTest)

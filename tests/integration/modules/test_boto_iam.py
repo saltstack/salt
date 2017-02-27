@@ -7,12 +7,8 @@ Validate the boto_iam module
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import Salt libs
-import integration
 
 # Import 3rd-party libs
 NO_BOTO_MODULE = True
