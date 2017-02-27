@@ -119,7 +119,7 @@ def _iisVersion():
     try:
         items = json.loads(cmd_ret['stdout'], strict=False)
     except ValueError:
-        _LOG.error('Unable to parse return data as Json.')
+        log.error('Unable to parse return data as Json.')
         return -1
 
     return decimal.Decimal("{0}.{1}".format(items[0]['MajorVersion'], items[0]['MinorVersion']))
