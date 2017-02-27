@@ -4,6 +4,8 @@ Loop state
 
 Allows for looping over execution modules.
 
+.. versionadded:: Nitrogen
+
 .. code-block:: yaml
 
     wait_for_service_to_be_healthy:
@@ -25,14 +27,11 @@ Allows for looping over execution modules.
     parameter which is literally evaluated within the state. Please use caution.
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import time
-
-# Import salt libs
-import salt.utils
 
 # Initialize logging
 log = logging.getLogger(__name__)
@@ -40,8 +39,10 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'loop'
 
+
 def __virtual__():
     return True
+
 
 def until(name,
           m_args=None,
@@ -103,7 +104,7 @@ def until(name,
 
     while not timed_out():
         m_ret = __salt__[name](*m_args, **m_kwargs)
-        if eval(condition):
+        if eval(condition):  # pylint: disable=W0123
             ret['result'] = True
             ret['comment'] = 'Condition {0} was met'.format(condition)
             return ret
