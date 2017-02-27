@@ -872,17 +872,15 @@ def install_config(path=None, **kwargs):
     finally:
         safe_rm(template_cached_path)
 
+    config_diff = conn.cu.diff()
+    if config_diff is None:
+        ret['message'] = 'Configuration already applied!'
+        ret['out'] = True
+        return ret
     try:
-        config_diff = conn.cu.diff()
-        if config_diff is None:
-            ret['message'] = 'Configuration already applied!'
-            ret['out'] = True
-            return ret
-
         if write_diff and config_diff is not None:
             with fopen(write_diff, 'w') as fp:
                 fp.write(config_diff)
-
     except Exception as exception:
         ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
             exception)
@@ -898,7 +896,9 @@ def install_config(path=None, **kwargs):
     try:
         check = conn.cu.commit_check()
     except Exception as exception:
-        ret['message'] = 'Commit check failed with "{0}"'.format(exception)
+        ret['message'] = \
+            'Commit check threw the following exception: "{0}"'\
+                .format(exception)
         ret['out'] = False
         return ret
 
@@ -907,8 +907,9 @@ def install_config(path=None, **kwargs):
             conn.cu.commit(**commit_params)
             ret['message'] = 'Successfully loaded and committed!'
         except Exception as exception:
-            ret['message'] = 'Commit check successful but \
-            commit failed with "{0}"'.format(exception)
+            ret['message'] = \
+                'Commit check successful but commit failed with "{0}"'\
+                    .format(exception)
             ret['out'] = False
             return ret
     else:
