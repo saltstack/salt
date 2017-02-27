@@ -41,6 +41,7 @@ __opts__ = {
     'verbose': False,
     'cache': 'localfs',
     'spm_repo_dups': 'ignore',
+    'spm_share_dir': '/usr/share/salt/spm',
 }
 
 _F1 = {

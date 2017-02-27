@@ -1621,6 +1621,7 @@ DEFAULT_SPM_OPTS = {
     # If set, spm_node_type will be either master or minion, but they should
     # NOT be a default
     'spm_node_type': '',
+    'spm_share_dir': '/usr/share/salt/spm'
     # <---- Salt master settings overridden by SPM ----------------------
 }
 
