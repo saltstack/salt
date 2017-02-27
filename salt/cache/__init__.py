@@ -143,8 +143,8 @@ class Cache(object):
             added by the driver itself.
 
         :return:
-            Return a python object fetched from the cache or None if the given
-            path or key not found.
+            Return a python object fetched from the cache or an empty dict if
+            the given path or key not found.
 
         :raises SaltCacheError:
             Raises an exception if cache driver detected an error accessing data
