@@ -12,8 +12,8 @@ import time
 from subprocess import Popen, PIPE
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
+from tests.support.unit import TestCase
+from tests.support.helpers import ensure_in_syspath, skip_if_binaries_missing
 
 ensure_in_syspath('../../')
 

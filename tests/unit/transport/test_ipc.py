@@ -24,8 +24,8 @@ from salt.ext.six.moves import range
 
 # Import Salt Testing libs
 import integration
-from salttesting.mock import MagicMock
-from salttesting.helpers import ensure_in_syspath
+from tests.support.mock import MagicMock
+from tests.support.helpers import ensure_in_syspath
 
 log = logging.getLogger(__name__)
 

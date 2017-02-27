@@ -9,8 +9,8 @@ import signal
 import multiprocessing
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs

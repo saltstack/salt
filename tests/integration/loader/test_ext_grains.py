@@ -10,7 +10,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf
+from tests.support.unit import skipIf
 
 # Import salt libs
 import integration

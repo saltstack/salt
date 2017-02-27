@@ -5,8 +5,8 @@ from __future__ import absolute_import
 import re
 
 # Import salt testing libs
-from salttesting.unit import TestCase
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import TestCase
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 from salt.modules import jboss7_cli

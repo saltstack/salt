@@ -9,8 +9,8 @@ import types
 import salt.ext.six as six
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import skipIf, TestCase
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # wmi and pythoncom modules are platform specific...
@@ -20,7 +20,7 @@ sys.modules['wmi'] = wmi
 pythoncom = types.ModuleType('pythoncom')
 sys.modules['pythoncom'] = pythoncom
 
-from salttesting.mock import NO_MOCK, Mock, patch, ANY
+from tests.support.mock import NO_MOCK, Mock, patch, ANY
 
 if NO_MOCK is False:
     WMI = Mock()

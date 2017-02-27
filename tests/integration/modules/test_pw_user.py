@@ -12,8 +12,8 @@ import string
 import random
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs

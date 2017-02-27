@@ -4,9 +4,9 @@
 from __future__ import absolute_import
 
 # salt testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import ensure_in_syspath
+from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 # salt libs
 ensure_in_syspath('../../')

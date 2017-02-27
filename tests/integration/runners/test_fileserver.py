@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import contextlib
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from tests.support.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
