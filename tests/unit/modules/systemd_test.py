@@ -514,6 +514,9 @@ class SystemdScopeTestCase(TestCase):
     def test_enable(self):
         self._change_state('enable')
 
+    def test_disable(self):
+        self._change_state('disable')
+
     def test_mask(self):
         self._mask_unmask('mask', False)
 

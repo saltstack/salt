@@ -928,7 +928,7 @@ def disable(name, **kwargs):  # pylint: disable=unused-argument
     return __salt__['cmd.retcode'](
         _systemctl_cmd('disable', name, systemd_scope=True),
         python_shell=False,
-        ignore_recode=True) == 0
+        ignore_retcode=True) == 0
 
 
 # The unused kwargs argument is required to maintain consistency with the API
