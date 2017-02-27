@@ -95,9 +95,9 @@ def present(name,
         return ret
 
     # check if user exists
-    user_exists = __salt__['mongodb.user_exists'](name, user, password, host, port, database, authdb)
-    if user_exists is True:
-        # obtain users specified by name query
+    users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
+    if len(users) > 0:
+        # check each user occurrence
         users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
         # check each user occurrence
         for usr in users:
