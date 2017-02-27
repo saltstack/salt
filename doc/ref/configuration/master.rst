@@ -282,6 +282,7 @@ Valid options:
   - pillar
   - utils
   - sdb
+  - cache
 
 .. conf_master:: module_dirs
 
