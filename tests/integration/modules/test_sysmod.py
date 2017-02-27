@@ -100,7 +100,7 @@ class SysModuleTest(integration.ModuleCase):
                     continue
                 if isinstance(docs, dict) and not isinstance(docs[fun], six.string_types):
                     nodoc.add(fun)
-                elif not re.search(r'([E|e]xample(?:s)?)+(?:.*)::?', docs[fun]):
+                elif isinstance(docs, dict) and not re.search(r'([E|e]xample(?:s)?)+(?:.*)::?', docs[fun]):
                     noexample.add(fun)
             start += batch_size
             end += batch_size
