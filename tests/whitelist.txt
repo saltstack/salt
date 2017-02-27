@@ -22,6 +22,7 @@ integration.modules.state
 integration.modules.sysmod
 integration.modules.test
 integration.modules.useradd
+integration.runners.test_fileserver
 integration.runners.jobs
 integration.runners.salt
 integration.runners.winrepo
