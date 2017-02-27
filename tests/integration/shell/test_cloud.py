@@ -13,11 +13,9 @@ from __future__ import absolute_import, print_function
 
 # Import salt testing libs
 from tests.support.unit import skipIf
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../')
 
 # Import salt libs
-import integration  # pylint: disable=import-error
+import tests.integration as integration
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -96,8 +94,3 @@ class SaltCloudCliTest(integration.ShellCase,
             if len(test_options) <= 1:
                 # Only one left? Stop iterating
                 break
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(SaltCloudCliTest)

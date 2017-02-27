@@ -13,10 +13,7 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
 from salt.exceptions import CommandExecutionError
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import openstack_config
@@ -98,8 +95,3 @@ class OpenstackConfigTestCase(TestCase):
             ret.update({'comment': comt, 'changes': {'Value': 'Deleted'}})
             self.assertDictEqual(openstack_config.absent(name, filename,
                                                          section), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(OpenstackConfigTestCase, needs_daemon=False)

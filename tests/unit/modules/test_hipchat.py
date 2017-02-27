@@ -90,8 +90,3 @@ class HipchatTestCase(TestCase):
         self.assertEqual(hipchat.send_message('Development Room',
                                               'Build is done',
                                               'Build Server'), False)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HipchatTestCase, needs_daemon=False)

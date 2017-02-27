@@ -8,9 +8,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../')
 
 # Import Salt libs
 from salt import template
@@ -50,7 +47,3 @@ class TemplateTestCase(TestCase):
         self.assertListEqual([], ret)
         ret = template.check_render_pipe_str('jinja|json', self.render_dict, ['jinja'], ['jinja', 'json'])
         self.assertListEqual([('fake_json_func', '')], ret)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TemplateTestCase, needs_daemon=False)

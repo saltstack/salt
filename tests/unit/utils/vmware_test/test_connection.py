@@ -826,12 +826,3 @@ class GetServiceInstanceFromManagedObjectTestCase(TestCase):
                 self.mock_mo_ref)
         self.assertEqual(ret, self.mock_si)
         self.assertEqual(ret._stub, self.mock_stub)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GssapiTokenTest, needs_daemon=False)
-    run_tests(PrivateGetServiceInstanceTestCase, needs_daemon=False)
-    run_tests(GetServiceInstanceTestCase, needs_daemon=False)
-    run_tests(IsConnectionToAVCenterTestCase, needs_daemon=False)
-    run_tests(GetServiceInstanceFromManagedObjectTestCase, needs_daemon=False)

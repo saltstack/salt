@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import at
 
@@ -216,8 +212,3 @@ class AtTestCase(TestCase):
                         'comment': ret['comment'].replace('2', '1'),
                     })
                     self.assertDictEqual(at.absent(name, tag=tag), ret_tag)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AtTestCase, needs_daemon=False)

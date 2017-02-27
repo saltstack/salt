@@ -7,16 +7,13 @@ unit tests for the cache runner
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.runners import queue as queue_mod
@@ -61,8 +58,3 @@ class QueueTest(TestCase):
         queue_pop.assert_called_once_with(queue='salt', quantity=1, backend='pgjsonb')
         test_stdout_print.assert_called_once_with()
         queue_pop.assert_called_once_with(queue='salt', quantity=1, backend='pgjsonb')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(QueueTest, needs_daemon=False)

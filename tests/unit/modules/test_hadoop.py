@@ -68,8 +68,3 @@ class HadoopTestCase(TestCase):
         '''
         with patch.object(hadoop, '_hadoop_cmd', return_value='A'):
             self.assertEqual(hadoop.namenode_format('force'), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HadoopTestCase, needs_daemon=False)

@@ -13,9 +13,6 @@ from distutils.version import LooseVersion as _LooseVersion
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.utils import schema
@@ -2328,9 +2325,3 @@ class ComplexSchemaTestCase(TestCase):
                 serialized)
         self.assertIn('\'hungry\' is a required property',
                       excinfo.exception.message)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ConfigTestCase, needs_daemon=False)
-    run_tests(ComplexSchemaTestCase, needs_daemon=False)

@@ -119,8 +119,3 @@ class GnomedesktopTestCase(TestCase):
         '''
         with patch.object(gsettings_mock, '_get', return_value=True):
             self.assertTrue(gnomedesktop.set_())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GnomedesktopTestCase, needs_daemon=False)

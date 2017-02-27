@@ -13,7 +13,6 @@ from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     mock_open,
@@ -21,8 +20,6 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Globals
 linux_sysctl.__salt__ = {}
@@ -146,8 +143,3 @@ class LinuxSysctlTestCase(TestCase):
                                 {'salt.utils.systemd.booted': True}):
                     self.assertEqual(linux_sysctl.persist(
                                      'net.ipv4.ip_forward', 1), 'Updated')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LinuxSysctlTestCase, needs_daemon=False)

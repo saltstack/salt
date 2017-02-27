@@ -14,10 +14,6 @@ from tests.support.mock import (
     patch
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import quota
 
@@ -69,8 +65,3 @@ class QuotaTestCase(TestCase):
                 comt = ('Failed to set quota for / to on')
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
                 self.assertDictEqual(quota.mode(name, mode, quotatype), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(QuotaTestCase, needs_daemon=False)

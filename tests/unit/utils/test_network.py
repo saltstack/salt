@@ -5,9 +5,7 @@ from __future__ import absolute_import
 # Import Salt Testing libs
 from tests.support.unit import skipIf
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import network
@@ -386,8 +384,3 @@ class NetworkTestCase(TestCase):
         :return:
         '''
         self.assertEqual(network.generate_minion_id(), '1.2.3.4')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NetworkTestCase, needs_daemon=False)

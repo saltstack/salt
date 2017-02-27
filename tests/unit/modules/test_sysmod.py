@@ -14,10 +14,6 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import sysmod
 
@@ -373,8 +369,3 @@ class SysmodTestCase(TestCase):
         self.assertListEqual(sysmod.list_renderers('user.info'), ['user.info'])
 
         self.assertListEqual(sysmod.list_renderers('syst*'), ['system.halt', 'system.reboot'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SysmodTestCase, needs_daemon=False)

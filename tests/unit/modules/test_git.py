@@ -163,8 +163,3 @@ class GitTestCase(TestCase):
                     dict([(x, worktree_ret[x]) for x in WORKTREE_INFO
                           if WORKTREE_INFO[x].get('stale', False)])
                 )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GitTestCase, needs_daemon=False)

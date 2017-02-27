@@ -9,9 +9,6 @@ import string
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
@@ -24,7 +21,7 @@ import logging
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # pylint: disable=import-error,no-name-in-module
-from unit.modules.test_boto_cognitoidentity import BotoCognitoIdentityTestCaseMixin
+from tests.unit.modules.test_boto_cognitoidentity import BotoCognitoIdentityTestCaseMixin
 
 # Import 3rd-party libs
 try:

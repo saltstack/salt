@@ -9,12 +9,9 @@ import uuid
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../')
 
 # Import Salt libs
-import integration
+import tests.integration as integration
 import salt.config
 import salt.state
 import salt.utils
@@ -448,8 +445,3 @@ class SaltObjectTests(TestCase):
         self.assertRaises(AttributeError, attr_fail)
         self.assertEqual(Salt.math.times2, times2)
         self.assertEqual(Salt.math.times2(2), 4)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StateTests, RendererTests, MapTests, SaltObjectTests, needs_daemon=False)

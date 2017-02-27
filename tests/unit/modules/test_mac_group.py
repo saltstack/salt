@@ -181,8 +181,3 @@ class MacGroupTestCase(TestCase):
                         {'file.group_to_gid': mock_pre_gid}):
             with patch.dict(mac_group.__salt__, {'cmd.retcode': mock_ret}):
                 self.assertTrue(mac_group.chgid('test', 500))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacGroupTestCase, needs_daemon=False)

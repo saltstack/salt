@@ -240,10 +240,3 @@ class UpdateClusterTestCase(TestCase):
                                       self.mock_cluster_spec)
         mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_cluster', 'ClusterUpdateTask')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GetClusterTestCase, needs_daemon=False)
-    run_tests(CreateClusterTestCase, needs_daemon=False)
-    run_tests(UpdateClusterTestCase, needs_daemon=False)

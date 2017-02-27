@@ -54,8 +54,3 @@ class DevMapTestCase(TestCase):
             mock = MagicMock(return_value='A')
             with patch.dict(devmap.__salt__, {'cmd.run': mock}):
                 self.assertEqual(devmap.multipath_flush('device'), ['A'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DevMapTestCase, needs_daemon=False)

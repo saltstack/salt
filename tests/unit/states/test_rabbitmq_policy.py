@@ -14,10 +14,6 @@ from tests.support.mock import (
     patch
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import rabbitmq_policy
 
@@ -87,8 +83,3 @@ class RabbitmqPolicyTestCase(TestCase):
                 changes = {'new': '', 'old': 'HA'}
                 ret.update({'comment': comment, 'result': None, 'changes': changes})
                 self.assertDictEqual(rabbitmq_policy.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RabbitmqPolicyTestCase, needs_daemon=False)

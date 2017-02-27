@@ -8,22 +8,7 @@ from __future__ import absolute_import
 from tests.support.case import TestCase
 from tests.support.parser import SaltTestcaseParser
 
-__all__ = ['run_tests', 'ModuleTestCase']
-
-
-def run_tests(*test_cases, **kwargs):
-    '''
-    Run unit tests for the chosen test cases.
-
-    :param test_cases: The list of test cases to execute
-    :type  test_cases: ``list`` of :class:`TestCase`
-    '''
-    parser = SaltTestcaseParser()
-    parser.parse_args()
-    for case in test_cases:
-        if parser.run_testcase(case) is False:
-            parser.finalize(1)
-    parser.finalize(0)
+__all__ = ['ModuleTestCase']
 
 
 def hasDependency(module, fake_module=None):

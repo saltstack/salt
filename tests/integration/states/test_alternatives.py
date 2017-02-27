@@ -8,12 +8,9 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
+import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.helpers import destructiveTest
 
 NO_ALTERNATIVES = False
 if not os.path.exists('/etc/alternatives'):

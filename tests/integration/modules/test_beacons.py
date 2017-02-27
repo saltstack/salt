@@ -9,7 +9,7 @@ import os
 
 # Salt Libs
 from salt.exceptions import CommandExecutionError
-import integration
+import tests.integration as integration
 import salt.utils
 
 # Salttesting libs

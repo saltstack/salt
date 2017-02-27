@@ -15,10 +15,6 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import serverdensity_device
 from salt.exceptions import CommandExecutionError
@@ -242,8 +238,3 @@ class ServerdensityDeviceTestCase(TestCase):
                     self.assertTrue(
                         serverdensity_device.install_agent(
                             '51f7e', agent_version=2))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ServerdensityDeviceTestCase, needs_daemon=False)

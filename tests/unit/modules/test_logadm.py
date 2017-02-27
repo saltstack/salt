@@ -70,8 +70,3 @@ class LogadmTestCase(TestCase):
                          MagicMock(return_value={'retcode': 0,
                                                  'stderr': 'stderr'})}):
             self.assertEqual(logadm.remove('name'), {'Result': 'Success'})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LogadmTestCase, needs_daemon=False)

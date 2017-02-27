@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import lvs_server
 
@@ -129,8 +125,3 @@ class LvsServerTestCase(TestCase):
                     ' so it cannot be removed')
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(lvs_server.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LvsServerTestCase, needs_daemon=False)

@@ -14,10 +14,6 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import haproxyconn
 
@@ -169,8 +165,3 @@ class HaproxyConnTestCase(TestCase):
         Test if it get a value from etcd, by direct path
         '''
         self.assertTrue(haproxyconn.show_backends())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HaproxyConnTestCase, needs_daemon=False)

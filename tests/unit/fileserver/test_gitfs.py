@@ -19,7 +19,7 @@ except ImportError:
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
-import integration
+import tests.integration as integration
 
 # Import salt libs
 import salt.utils.gitfs

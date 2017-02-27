@@ -8,13 +8,10 @@ from salt.states import win_dism as dism
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 dism.__salt__ = {}
 dism.__opts__ = {}
@@ -521,8 +518,3 @@ class WinDismTestCase(TestCase):
                     mock_removed.assert_called_once_with()
                     assert not mock_remove.called
                     self.assertEqual(out, expected)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinDismTestCase, needs_daemon=False)

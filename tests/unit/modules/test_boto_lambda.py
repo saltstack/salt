@@ -15,9 +15,6 @@ from tests.support.mock import (
     NO_MOCK_REASON,
     patch
 )
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
@@ -817,8 +814,3 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
             **conn_parameters)
         self.assertEqual(result.get('error', {}).get('message'),
                          error_message.format('update_event_source_mapping'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoLambdaFunctionTestCase, needs_daemon=False)

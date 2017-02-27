@@ -22,7 +22,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 import salt.minion
 import salt.utils
 import salt.utils.network
-import integration
+import tests.integration as integration
 from salt.syspaths import CONFIG_DIR
 from salt import config as sconfig
 from salt.exceptions import (

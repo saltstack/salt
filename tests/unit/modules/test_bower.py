@@ -15,10 +15,6 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import bower
 from salt.exceptions import CommandExecutionError
@@ -129,8 +125,3 @@ class BowerTestCase(TestCase):
         with patch.dict(bower.__salt__, {'cmd.run_all': mock}):
             self.assertEqual(bower.list_('/path/to/project'),
                              {'underscore': {}, 'jquery': {}})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BowerTestCase, needs_daemon=False)

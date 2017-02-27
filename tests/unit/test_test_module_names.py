@@ -13,7 +13,7 @@ from tests.support.unit import TestCase
 
 
 # Import Salt libs
-import integration
+import tests.integration as integration
 
 EXCLUDED_DIRS = [
     'tests/pkg',

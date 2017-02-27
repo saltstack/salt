@@ -9,7 +9,6 @@ from datetime import datetime
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     patch,
@@ -17,7 +16,6 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.modules import win_system
 
@@ -296,8 +294,3 @@ class WinSystemTestCase(TestCase):
             ret = win_system.get_hostname()
             self.assertEqual(ret, "MINION")
         cmd_run_mock.assert_called_once_with(cmd="hostname")
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinSystemTestCase, needs_daemon=False)

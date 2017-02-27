@@ -8,7 +8,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     Mock,
@@ -16,8 +15,6 @@ from tests.support.mock import (
     NO_MOCK_REASON,
     patch
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.ext.six.moves import range
@@ -842,8 +839,3 @@ class DockerTestCase(TestCase):
             result = docker_mod.images()
         self.assertEqual(result,
                          {'sha256:abcdefg': {'RepoTags': ['image:latest']}})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DockerTestCase, needs_daemon=False)

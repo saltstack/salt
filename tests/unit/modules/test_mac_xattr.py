@@ -5,10 +5,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import MagicMock, patch
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
@@ -135,8 +132,3 @@ class XAttrTestCase(TestCase):
         Test clearing all attributes on a file
         '''
         self.assertRaises(CommandExecutionError, xattr.clear, '/path/to/file')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(XAttrTestCase, needs_daemon=False)

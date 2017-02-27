@@ -14,10 +14,6 @@ from tests.support.mock import (
     patch
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import scsi
 import os
@@ -96,8 +92,3 @@ class ScsiTestCase(TestCase):
             with patch.dict(scsi.__salt__,
                             {'cmd.run': MagicMock(return_value='A')}):
                 self.assertListEqual(scsi.rescan_all('host'), ['A'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ScsiTestCase, needs_daemon=False)

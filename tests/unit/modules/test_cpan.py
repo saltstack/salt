@@ -136,8 +136,3 @@ class CpanTestCase(TestCase):
         mock = MagicMock(return_value='')
         with patch.dict(cpan.__salt__, {'cmd.run': mock}):
             self.assertDictEqual(cpan.show_config(), {})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CpanTestCase, needs_daemon=False)

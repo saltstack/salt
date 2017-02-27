@@ -6,15 +6,12 @@ import copy
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.exceptions import SaltException
@@ -607,8 +604,3 @@ class GrainsModuleTestCase(TestCase):
                                           OrderedDict([('l23', 'l23val')])]),
                                   ('z', 'zval'),
                                   ]))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GrainsModuleTestCase, needs_daemon=False)

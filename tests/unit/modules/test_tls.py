@@ -32,7 +32,7 @@ from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 from salt.modules import tls
-import integration
+import tests.integration as integration
 
 
 # Globals
@@ -812,7 +812,3 @@ class TLSAddTestCase(TestCase):
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TLSAddTestCase, needs_daemon=False)

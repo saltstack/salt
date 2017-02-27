@@ -150,8 +150,3 @@ class GetHostsTestCase(TestCase):
                    MagicMock(return_value=[self.mock_prop_host1])):
             res = salt.utils.vmware.get_hosts(self.mock_si, get_all_hosts=True)
         self.assertEqual(res, [self.mock_host1])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GetHostsTestCase, needs_daemon=False)

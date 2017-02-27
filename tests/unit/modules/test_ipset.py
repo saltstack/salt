@@ -247,8 +247,3 @@ comment support')
             with patch.dict(ipset.__salt__, {'cmd.run': mock}):
                 self.assertTrue(ipset.flush('set'))
                 self.assertFalse(ipset.flush('set'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(IpsetTestCase, needs_daemon=False)

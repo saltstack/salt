@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import sensors
 
@@ -36,8 +32,3 @@ class SensorTestCase(TestCase):
         with patch.dict(sensors.__salt__,
                         {'cmd.run': MagicMock(return_value='A:a B:b C:c D:d')}):
             self.assertDictEqual(sensors.sense('chip'), {'A': 'a B'})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SensorTestCase, needs_daemon=False)

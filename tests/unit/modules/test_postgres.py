@@ -7,9 +7,7 @@ import re
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import postgres
@@ -1480,7 +1478,3 @@ class PostgresTestCase(TestCase):
         name = '/var/lib/pgsql/data'
         ret = postgres.datadir_exists(name)
         self.assertTrue(ret)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PostgresTestCase, needs_daemon=False)

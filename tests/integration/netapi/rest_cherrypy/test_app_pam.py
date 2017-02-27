@@ -13,7 +13,7 @@ from tests.support.helpers import destructiveTest
 
 # Import test support libs
 import tests.support.cherrypy_testclasses as cptc
-from tests import integration
+import tests.integration as integration
 
 # Import Salt Libs
 import salt.utils

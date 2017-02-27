@@ -10,14 +10,11 @@ import pwd
 import shutil
 
 # Import Salt Testing libs
+import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
-ensure_in_syspath('../..')
-
 # Import salt libs
-import integration
 from salt.fileserver import gitfs
 
 gitfs.__opts__ = {'cachedir': '/tmp/gitfs_test_cache',
@@ -133,6 +130,3 @@ class GitFSTest(integration.ModuleCase):
                                          '__role': self.master_opts['__role']}):
             ret = gitfs.envs()
             self.assertIn('base', ret)
-
-if __name__ == '__main__':
-    integration.run_tests(GitFSTest)

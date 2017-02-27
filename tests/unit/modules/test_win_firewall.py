@@ -14,10 +14,6 @@ from tests.support.mock import (
     call
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import win_firewall
 import salt.utils
@@ -206,8 +202,3 @@ class WinFirewallTestCase(TestCase):
                                               'dir=in',
                                               'remoteip=any'],
                                              python_shell=False)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinFirewallTestCase, needs_daemon=False)

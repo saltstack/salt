@@ -85,7 +85,3 @@ class EventTestCase(TestCase):
         '''
         with patch.object(event, 'fire_master', return_value='B'):
             self.assertEqual(event.send('tag'), 'B')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(EventTestCase, needs_daemon=False)

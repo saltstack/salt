@@ -6,12 +6,8 @@ Tests for the salt-run command
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
 
 
 class ManageTest(integration.ShellCase):
@@ -41,8 +37,3 @@ class ManageTest(integration.ShellCase):
         '''
         ret = self.run_run_plus('jobs.list_jobs')
         self.assertIsInstance(ret['return'], dict)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ManageTest)

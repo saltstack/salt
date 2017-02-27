@@ -12,10 +12,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.returners import smtp_return as smtp
@@ -86,6 +83,3 @@ else:
             self._test_returner(mocked_smtplib, *args)
 
 SMTPReturnerTestCase.test_returner = test_returner
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SMTPReturnerTestCase, needs_daemon=False)

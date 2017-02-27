@@ -8,9 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import MagicMock, patch
-ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.modules import disk
@@ -162,8 +160,3 @@ class DiskTestCase(TestCase):
         with patch.dict(disk.__salt__, {'cmd.run_all': mock}):
             disk.resize2fs(device)
             mock.assert_called_once_with('resize2fs {0}'.format(device), python_shell=False)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DiskTestCase, needs_daemon=False)

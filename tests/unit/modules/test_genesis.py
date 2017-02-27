@@ -84,8 +84,3 @@ class GenesisTestCase(TestCase):
         '''
         with patch.object(genesis, '_untar', return_value='untar'):
             self.assertEqual(genesis.unpack('name', 'root'), None)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GenesisTestCase, needs_daemon=False)

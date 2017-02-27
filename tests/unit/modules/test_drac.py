@@ -261,8 +261,3 @@ class DracTestCase(TestCase):
         mock = MagicMock(return_value=False)
         with patch.object(drac, '__execute_cmd', mock):
             self.assertFalse(drac.server_pxe())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DracTestCase, needs_daemon=False)

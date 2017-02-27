@@ -5,13 +5,11 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
+import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
-ensure_in_syspath('../../')
 
 # Import salt libs
-import integration
 import salt.utils
 
 
@@ -118,8 +116,3 @@ class TestWhich(integration.TestCase):
                         # The returned path should return the .exe suffix
                         '/bin/this-binary-exists-under-windows.CMD'
                     )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestWhich, needs_daemon=False)

@@ -9,13 +9,10 @@ import os
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
 )
-
-ensure_in_syspath('../')
 
 # Import Salt libs
 import salt.config
@@ -187,8 +184,3 @@ class ConfTest(TestCase):
                     conf_file
                 )
             )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ConfTest, needs_daemon=False)

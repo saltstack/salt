@@ -130,8 +130,3 @@ class DaemontoolsTestCase(TestCase):
         mock = MagicMock(return_value='A')
         with patch.object(os, 'listdir', mock):
             self.assertEqual(daemontools.get_all(), ['A'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DaemontoolsTestCase, needs_daemon=False)

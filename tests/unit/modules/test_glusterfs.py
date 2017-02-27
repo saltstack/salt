@@ -677,8 +677,3 @@ class GlusterfsTestCase(TestCase):
                 mock_run.return_value = xml_command_fail
                 self.assertFalse(glusterfs.add_volume_bricks('Newvolume1',
                                                              ['new:/path']))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GlusterfsTestCase, needs_daemon=False)

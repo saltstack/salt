@@ -354,7 +354,3 @@ class DebApacheTestCase(TestCase):
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
             self.assertEqual(str(deb_apache.a2disconf('security')),
                 'error')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DebApacheTestCase, needs_daemon=False)

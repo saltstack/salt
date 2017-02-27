@@ -19,8 +19,6 @@ import time
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.utils
@@ -213,8 +211,3 @@ class VTTestCase(TestCase):
             self.assertIsNone(stdout)
         finally:
             term.close(terminate=True, kill=True)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VTTestCase, needs_daemon=False)

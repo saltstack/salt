@@ -8,13 +8,10 @@ from salt.states import mac_package as macpackage
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 macpackage.__salt__ = {}
 macpackage.__grains__ = {}
@@ -367,7 +364,3 @@ class MacPackageTestCase(TestCase):
         with patch.dict(macpackage.__salt__, {'cmd.retcode': mock}):
             out = macpackage.installed('/path/to/file.pkg', unless='some command')
             self.assertEqual(out, expected)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacPackageTestCase, needs_daemon=False)

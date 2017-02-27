@@ -39,8 +39,3 @@ class DefaultsTestCase(TestCase):
         with patch.object(inspect, 'stack', MagicMock(return_value=[])):
             self.assertEqual(defaults.get('core:users:root'),
                              {'users': {'root': [0]}})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DefaultsTestCase, needs_daemon=False)

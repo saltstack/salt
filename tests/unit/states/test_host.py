@@ -10,15 +10,12 @@ from salt.states import host
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 host.__salt__ = {}
 host.__opts__ = {}
@@ -126,8 +123,3 @@ class HostTestCase(TestCase):
                     self.assertDictEqual(
                         expected,
                         host.only("127.0.1.1", ['foo.bar', 'foo']))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HostTestCase, needs_daemon=False)

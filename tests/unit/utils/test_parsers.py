@@ -9,7 +9,7 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath, destructiveTest
+from tests.support.helpers import destructiveTest
 from tests.support.mock import (
     MagicMock,
     patch,
@@ -22,8 +22,6 @@ import salt.utils.parsers
 import salt.log.setup as log
 import salt.config
 import salt.syspaths
-
-ensure_in_syspath('../../')
 
 
 class ErrorMock(object):  # pylint: disable=too-few-public-methods
@@ -933,20 +931,3 @@ class SaltAPIParserTestCase(LogSettingsParserTests):
 
 # Hide the class from unittest framework when it searches for TestCase classes in the module
 del LogSettingsParserTests
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error,wrong-import-position
-    run_tests(MasterOptionParserTestCase,
-              MinionOptionParserTestCase,
-              ProxyMinionOptionParserTestCase,
-              SyndicOptionParserTestCase,
-              SaltCMDOptionParserTestCase,
-              SaltCPOptionParserTestCase,
-              SaltKeyOptionParserTestCase,
-              SaltCallOptionParserTestCase,
-              SaltRunOptionParserTestCase,
-              SaltSSHOptionParserTestCase,
-              SaltCloudParserTestCase,
-              SPMParserTestCase,
-              SaltAPIParserTestCase,
-              needs_daemon=False)

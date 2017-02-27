@@ -8,14 +8,11 @@ from salt.states import mac_keychain as keychain
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     patch,
     call
 )
-
-ensure_in_syspath('../../')
 
 keychain.__salt__ = {}
 
@@ -235,8 +232,3 @@ class KeychainTestCase(TestCase):
             uninstall_mock.assert_called_once_with('Friendly Name', '/Library/Keychains/System.keychain',
                                                    keychain_password=None)
             self.assertEqual(out, expected)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KeychainTestCase, needs_daemon=False)

@@ -9,9 +9,6 @@ import json
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.output import json_out
@@ -67,8 +64,3 @@ class JsonTestCase(TestCase):
             self.assertEqual(expect, ret)
         else:
             self.assertEqual(json.loads(ret), data)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(JsonTestCase, needs_daemon=False)

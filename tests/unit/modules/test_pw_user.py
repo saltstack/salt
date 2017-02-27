@@ -358,7 +358,3 @@ class PwUserTestCase(TestCase):
             mock = MagicMock(side_effect=[{'name': ''}, False, {'name': ''}])
             with patch.object(pw_user, 'info', mock):
                 self.assertFalse(pw_user.rename('name', 'name'))
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PwUserTestCase, needs_daemon=False)

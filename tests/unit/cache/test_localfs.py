@@ -9,7 +9,7 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-import integration
+import tests.integration as integration
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,

@@ -184,8 +184,3 @@ class IncronTestCase(TestCase):
                     self.assertEqual(incron.rm_job('cybage', '/home/cybage',
                                                    'IN_MODIFY',
                                                    'echo "SALT"'), 'absent')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(IncronTestCase, needs_daemon=False)

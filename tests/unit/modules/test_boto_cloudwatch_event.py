@@ -13,9 +13,6 @@ from tests.support.mock import (
     NO_MOCK_REASON,
     patch
 )
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
@@ -277,8 +274,3 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         self.conn.remove_targets.side_effect = ClientError(error_content, 'remove_targets')
         result = boto_cloudwatch_event.remove_targets(Rule=rule_name, Ids=[], **conn_parameters)
         self.assertEqual(result.get('error', {}).get('message'), error_message.format('remove_targets'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoCloudWatchEventTestCase, needs_daemon=False)

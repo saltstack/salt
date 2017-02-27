@@ -11,7 +11,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
 
 # Import Mock libraries
 from tests.support.mock import (
@@ -20,8 +19,6 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Execution module to test
 from salt.modules import zpool
@@ -159,9 +156,3 @@ class ZpoolTestCase(TestCase):
             ret = zpool.get('mypool', 'readonly')
             res = OrderedDict([('mypool', OrderedDict([('readonly', 'off')]))])
             self.assertEqual(res, ret)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ZpoolTestCase, needs_daemon=False)
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

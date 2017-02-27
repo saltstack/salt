@@ -16,15 +16,12 @@ from salt.modules import aptpkg
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON,
 )
-
-ensure_in_syspath('../../')
 
 # Globals
 aptpkg.__salt__ = {}
@@ -344,8 +341,3 @@ class AptPkgTestCase(TestCase):
         }
         with patch.multiple(aptpkg, **patch_kwargs):
             self.assertEqual(aptpkg.upgrade(), dict())
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(AptPkgTestCase, needs_daemon=False)

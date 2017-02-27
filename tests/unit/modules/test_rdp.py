@@ -61,8 +61,3 @@ class RdpTestCase(TestCase):
         mock = MagicMock(return_value='1')
         with patch.dict(rdp.__salt__, {'cmd.run': mock}):
             self.assertTrue(rdp.status())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RdpTestCase, needs_daemon=False)

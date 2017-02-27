@@ -66,8 +66,3 @@ class DrbdTestCase(TestCase):
         UpToDate/partner syncbar None 50 50')
         with patch.dict(drbd.__salt__, {'cmd.run': mock}):
             self.assertDictEqual(drbd.overview(), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DrbdTestCase, needs_daemon=False)

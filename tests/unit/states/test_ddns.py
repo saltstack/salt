@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import ddns
 
@@ -79,8 +75,3 @@ class DdnsTestCase(TestCase):
                     comt = ('No matching DNS record(s) present')
                     ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(ddns.absent(name, zone, data), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DdnsTestCase, needs_daemon=False)

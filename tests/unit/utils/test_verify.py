@@ -17,7 +17,6 @@ import socket
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
 from tests.support.helpers import (
-    ensure_in_syspath,
     requires_network,
     TestsLoggingHandler
 )
@@ -27,11 +26,10 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.utils
-import integration
+import tests.integration as integration
 from salt.utils.verify import (
     check_user,
     verify_env,
@@ -248,8 +246,3 @@ class TestVerify(TestCase):
         with patch.object(log, 'warning', mock_info):
             verify_log({'log_level': 'info'})
             self.assertTrue(mock_info.call_count == 0)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestVerify, needs_daemon=False)

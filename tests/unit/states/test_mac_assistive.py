@@ -8,13 +8,10 @@ from salt.states import mac_assistive as assistive
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 assistive.__salt__ = {}
 
@@ -119,8 +116,3 @@ class AssistiveTestCase(TestCase):
             enable_mock.assert_called_once_with('com.apple.Chess', False)
             assert not install_mock.called
             self.assertEqual(out, expected)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AssistiveTestCase, needs_daemon=False)

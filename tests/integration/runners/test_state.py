@@ -16,11 +16,8 @@ import threading
 from salt.ext.six.moves import queue
 
 # Import Salt Testing Libs
+import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-import integration
 
 # Import Salt Libs
 import salt.utils
@@ -212,9 +209,3 @@ class OrchEventTest(integration.ShellCase):
                     break
         finally:
             signal.alarm(0)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StateRunnerTest)
-    run_tests(OrchEventTest)

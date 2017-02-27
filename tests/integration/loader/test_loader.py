@@ -19,11 +19,7 @@ log = logging.getLogger(__name__)
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
-import integration  # pylint: disable=import-error
+import tests.integration as integration
 
 # Import Salt libs
 import salt.utils

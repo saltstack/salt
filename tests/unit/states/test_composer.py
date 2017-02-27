@@ -13,10 +13,7 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
 from salt.exceptions import SaltException
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import composer
@@ -109,8 +106,3 @@ class ComposerTestCase(TestCase):
                     ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(composer.update(name, quiet=True),
                                          ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ComposerTestCase, needs_daemon=False)

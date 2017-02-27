@@ -8,7 +8,6 @@ from salt.modules import proxy as proxy
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -16,8 +15,6 @@ from tests.support.mock import (
     patch,
     call
 )
-
-ensure_in_syspath('../../')
 
 proxy.__salt__ = {}
 proxy.__grains__ = {'os': 'Darwin'}
@@ -405,7 +402,3 @@ class ProxyTestCase(TestCase):
             mock_reg.assert_has_calls(calls)
             mock_cmd.assert_called_once_with('netsh winhttp import proxy source=ie')
             self.assertTrue(out)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ProxyTestCase, needs_daemon=False)

@@ -8,15 +8,12 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import service
@@ -241,8 +238,3 @@ class ServiceTestCase(TestCase):
                                          ret[3])
 
         self.assertDictEqual(service.mod_watch("salt", "stack"), ret[1])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ServiceTestCase, needs_daemon=False)

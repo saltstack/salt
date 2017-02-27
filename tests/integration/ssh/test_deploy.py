@@ -5,13 +5,9 @@ salt-ssh testing
 # Import Python libs
 from __future__ import absolute_import
 
-# Import salttesting libs
+# Import salt testing libs
 from tests.support.unit import skipIf
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import Salt libs
-import integration
+import tests.integration as integration
 
 
 @skipIf(True, 'Not ready for production')

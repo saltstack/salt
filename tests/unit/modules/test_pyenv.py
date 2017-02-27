@@ -15,10 +15,6 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import pyenv
 
@@ -212,8 +208,3 @@ class PyenvTestCase(TestCase):
                                          'cmd.run_all': mock_all}):
             self.assertFalse(pyenv.do_with_python('2.0.0-p0',
                                                   'gem list bundler'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PyenvTestCase, needs_daemon=False)

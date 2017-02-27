@@ -12,10 +12,6 @@ from tests.support.mock import (
     patch
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 from salt.states import postgres_language
 
 

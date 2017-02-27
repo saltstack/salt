@@ -51,8 +51,7 @@ from tests.support.unit import TestCase
 from tests.support.case import ShellTestCase
 from tests.support.mixins import CheckShellBinaryNameAndVersionMixin, ShellCaseCommonTestsMixin
 from tests.support.parser import PNUM, print_header, SaltTestcaseParser
-from tests.support.helpers import requires_sshd_server
-from tests.support.helpers import ensure_in_syspath, RedirectStdStreams
+from tests.support.helpers import requires_sshd_server, RedirectStdStreams
 
 # Import Salt libs
 import salt
@@ -165,67 +164,6 @@ atexit.register(close_open_sockets, _RUNTESTS_PORTS)
 
 
 SALT_LOG_PORT = get_unused_localhost_port()
-
-
-def run_tests(*test_cases, **kwargs):
-    '''
-    Run integration tests for the chosen test cases.
-
-    Function uses optparse to set up test environment
-    '''
-
-    needs_daemon = kwargs.pop('needs_daemon', True)
-    if kwargs:
-        raise RuntimeError(
-            'The \'run_tests\' function only accepts \'needs_daemon\' as a '
-            'keyword argument'
-        )
-
-    class TestcaseParser(SaltTestcaseParser):
-        def setup_additional_options(self):
-            self.add_option(
-                '--sysinfo',
-                default=False,
-                action='store_true',
-                help='Print some system information.'
-            )
-            self.output_options_group.add_option(
-                '--no-colors',
-                '--no-colours',
-                default=False,
-                action='store_true',
-                help='Disable colour printing.'
-            )
-            if needs_daemon:
-                self.add_option(
-                    '--transport',
-                    default='zeromq',
-                    choices=('zeromq', 'raet', 'tcp'),
-                    help=('Select which transport to run the integration tests with, '
-                          'zeromq, raet, or tcp. Default: %default')
-                )
-
-        def validate_options(self):
-            SaltTestcaseParser.validate_options(self)
-            # Transplant configuration
-            transport = None
-            if needs_daemon:
-                transport = self.options.transport
-            TestDaemon.transplant_configs(transport=transport)
-
-        def run_testcase(self, testcase, needs_daemon=True):  # pylint: disable=W0221
-            if needs_daemon:
-                print(' * Setting up Salt daemons to execute tests')
-                with TestDaemon(self):
-                    return SaltTestcaseParser.run_testcase(self, testcase)
-            return SaltTestcaseParser.run_testcase(self, testcase)
-
-    parser = TestcaseParser()
-    parser.parse_args()
-    for case in test_cases:
-        if parser.run_testcase(case, needs_daemon=needs_daemon) is False:
-            parser.finalize(1)
-    parser.finalize(0)
 
 
 class ThreadingMixIn(socketserver.ThreadingMixIn):

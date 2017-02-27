@@ -25,7 +25,7 @@ from multiprocessing import Process
 from tests.support.unit import expectedFailure, skipIf, TestCase
 
 # Import salt libs
-import integration
+import tests.integration as integration
 from salt.utils.process import clean_proc
 from salt.utils import event, to_bytes
 

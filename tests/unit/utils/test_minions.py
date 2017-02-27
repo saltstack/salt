@@ -8,9 +8,6 @@ from salt.utils import minions
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 NODEGROUPS = {
     'group1': 'L@host1,host2,host3',
@@ -39,8 +36,3 @@ class MinionsTestCase(TestCase):
             expected = EXPECTED[nodegroup]
             ret = minions.nodegroup_comp(nodegroup, NODEGROUPS)
             self.assertEqual(ret, expected)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MinionsTestCase, needs_daemon=False)

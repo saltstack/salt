@@ -10,9 +10,6 @@ import ssl
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import cassandra_cql
@@ -80,8 +77,3 @@ class CassandraCQLReturnerTestCase(TestCase):
 
         self.assertEqual(cassandra_cql._get_ssl_opts(),  # pylint: disable=protected-access
                          None)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CassandraCQLReturnerTestCase, needs_daemon=False)

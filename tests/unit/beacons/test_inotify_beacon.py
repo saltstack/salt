@@ -11,7 +11,7 @@ from salt.beacons import inotify
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import destructiveTest, ensure_in_syspath
+from tests.support.helpers import destructiveTest
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Third-party libs
@@ -20,9 +20,6 @@ try:
     HAS_PYINOTIFY = True
 except ImportError:
     HAS_PYINOTIFY = False
-
-
-ensure_in_syspath('../../')
 
 
 @skipIf(not HAS_PYINOTIFY, 'pyinotify is not available')
@@ -168,8 +165,3 @@ class INotifyBeaconTestCase(TestCase):
         finally:
             if tmpdir:
                 shutil.rmtree(tmpdir)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(INotifyBeaconTestCase, needs_daemon=False)

@@ -9,17 +9,15 @@ import os
 import shutil
 
 # Import Salt Testing libs
+import tests.integration as integration
 from tests.support.unit import skipIf
 from tests.support.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     with_system_user,
     skip_if_binaries_missing
 )
-ensure_in_syspath('../../')
 
 # Import salt libs
-import integration
 import salt.utils
 
 KNOWN_HOSTS = os.path.join(integration.TMP, 'known_hosts')
@@ -251,8 +249,3 @@ class SSHAuthStateTests(integration.ModuleCase,
                 fhr.read(),
                 'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
             )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests([SSHKnownHostsStateTest, SSHAuthStateTests])

@@ -111,8 +111,3 @@ class OpenbsdpkgTestCase(TestCase):
         ]
         run_all_mock.assert_has_calls(expected_calls, any_order=True)
         self.assertEqual(run_all_mock.call_count, 3)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(OpenbsdpkgTestCase, needs_daemon=False)

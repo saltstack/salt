@@ -15,8 +15,6 @@ import shutil
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.config
@@ -95,8 +93,3 @@ class CacheContextTestCase(TestCase):
 
         self.assertEqual(cache_test_func()['called'], 0)
         self.assertEqual(cache_test_func()['called'], 1)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CacheDictTestCase, needs_daemon=False)

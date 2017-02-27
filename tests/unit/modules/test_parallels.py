@@ -11,12 +11,10 @@ from salt.exceptions import SaltInvocationError
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-from tests.support.helpers import ensure_in_syspath
 
 # Import third party libs
 import salt.ext.six as six
 
-ensure_in_syspath('../../')
 parallels.__salt__ = {}
 
 
@@ -602,8 +600,3 @@ class ParallelsTestCase(TestCase):
                 mock_delete.assert_called_once_with('snapshot-switch',
                                                     [name, '--id', snap_id],
                                                     runas=None)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ParallelsTestCase, needs_daemon=False)

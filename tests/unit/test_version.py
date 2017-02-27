@@ -15,9 +15,6 @@ import re
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../')
 
 # Import Salt libs
 from salt.version import SaltStackVersion
@@ -74,8 +71,3 @@ class VersionTestCase(TestCase):
 
         with self.assertRaises(ValueError):
             SaltStackVersion.parse('Drunk')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VersionTestCase, needs_daemon=False)

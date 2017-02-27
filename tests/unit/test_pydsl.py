@@ -11,12 +11,9 @@ import copy
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../')
 
 # Import Salt libs
-import integration
+import tests.integration as integration
 import salt.loader
 import salt.config
 import salt.utils
@@ -457,9 +454,3 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
 def write_to(fpath, content):
     with salt.utils.fopen(fpath, 'w') as f:
         f.write(content)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    tests = [PyDSLRendererTestCase]
-    run_tests(*tests, needs_daemon=False)

@@ -7,9 +7,7 @@ import re
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import virt
@@ -538,8 +536,3 @@ class VirtTestCase(TestCase):
         nic = nics[list(nics)[0]]
         self.assertEqual('bridge', nic['type'])
         self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VirtTestCase, needs_daemon=False)

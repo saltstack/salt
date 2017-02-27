@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.engines import sqs_events
 
@@ -77,8 +73,3 @@ class EngineSqsEventTestCase(TestCase):
         sqs_events._process_queue(q, q_name, mock_fire)
         self.assertTrue(mock_sqs.queue.Queue().get_messages.called, len(msgs))
         self.assertTrue(mock_fire.called, len(msgs))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(EngineSqsEventTestCase, needs_daemon=False)

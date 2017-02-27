@@ -5,7 +5,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -16,8 +15,6 @@ from tests.support.mock import (
 
 # Import 3rd-party libs
 import salt.ext.six as six
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import proxy as proxy
@@ -195,8 +192,3 @@ class ProxyTestCase(TestCase):
 
             assert not set_proxy_mock.called
             self.assertEqual(out, expected)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ProxyTestCase, needs_daemon=False)

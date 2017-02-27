@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import rsync
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -56,8 +52,3 @@ class RsyncTestCase(TestCase):
             self.assertRaises(CommandExecutionError, rsync.version)
 
             self.assertEqual(rsync.version(), 'C')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RsyncTestCase, needs_daemon=False)

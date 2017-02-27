@@ -6,8 +6,6 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../..')
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -33,7 +31,7 @@ except ImportError:
     HAS_TORNADO = False
 
 # Import utility lib from tests
-from unit.utils.test_event import eventpublisher_process, event, SOCK_DIR  # pylint: disable=import-error
+from tests.unit.utils.test_event import eventpublisher_process, event, SOCK_DIR  # pylint: disable=import-error
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')

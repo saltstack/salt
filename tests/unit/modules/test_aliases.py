@@ -13,9 +13,6 @@ from salt.exceptions import SaltInvocationError
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -166,8 +163,3 @@ class AliasesTestCase(TestCase):
         '''
         ret = aliases.rm_alias('foo')
         self.assertTrue(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AliasesTestCase, needs_daemon=False)

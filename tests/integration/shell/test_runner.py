@@ -11,13 +11,11 @@ import yaml
 import shutil
 
 # Import Salt Testing libs
+import tests.integration as integration
+from tests.integration.utils import testprogram
 from tests.support.unit import skipIf
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
-import integration
-from integration.utils import testprogram
 import salt.utils
 
 USERA = 'saltdev'
@@ -211,7 +209,3 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
                                test.arg arg kwarg=kwarg1'.format(USERA, USERA_PWD))
         expect = ['The specified external authentication system "wrongeauth" is not available']
         self.assertEqual(expect, run_cmd)
-
-
-if __name__ == '__main__':
-    integration.run_tests(RunTest)

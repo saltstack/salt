@@ -14,10 +14,6 @@ from tests.support.mock import (
     call,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import ipset
 

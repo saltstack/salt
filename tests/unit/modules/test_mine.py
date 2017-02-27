@@ -13,9 +13,6 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import mine
@@ -126,8 +123,3 @@ class MineTestCase(TestCase):
                                      ('172.17.42.1:80', 'abcdefhjhi1234567899'),
                                      ('192.168.0.1:80', 'abcdefhjhi1234567899'),
                                  ])}}})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MineTestCase, needs_daemon=False)

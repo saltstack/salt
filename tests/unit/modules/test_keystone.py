@@ -15,10 +15,6 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import keystone
 
@@ -895,8 +891,3 @@ class KeystoneTestCase(TestCase):
                                                      tenant_name='nova'),
                              {'nova': {'id': '113', 'name': 'nova',
                                        'tenant_id': '446', 'user_id': '446'}})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KeystoneTestCase, needs_daemon=False)

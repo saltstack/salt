@@ -442,8 +442,3 @@ class GentooServicesTestCase(TestCase):
 
     def __services(self, services):
         return '\n'.join([' | '.join([svc, ' '.join(services[svc])]) for svc in services])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GentooServicesTestCase, needs_daemon=False)

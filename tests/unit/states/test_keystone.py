@@ -14,10 +14,6 @@ from tests.support.mock import (
     patch
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import keystone
 
@@ -359,8 +355,3 @@ class KeystoneTestCase(TestCase):
                         .format(name))
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(keystone.endpoint_absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KeystoneTestCase, needs_daemon=False)

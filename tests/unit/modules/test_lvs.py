@@ -14,9 +14,6 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import lvs
@@ -197,8 +194,3 @@ class LvsTestCase(TestCase):
                     with patch.object(lvs, 'get_rules', return_value='C'):
                         self.assertEqual(lvs.check_server('p', 's'),
                                          'Error: server not exists')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LvsTestCase, needs_daemon=False)

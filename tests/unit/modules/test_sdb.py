@@ -13,10 +13,6 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import sdb
 
@@ -47,8 +43,3 @@ class SdbTestCase(TestCase):
         sdb://<profile>/<key>
         '''
         self.assertFalse(sdb.set_('sdb://mymemcached/foo', 'bar'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SdbTestCase, needs_daemon=False)

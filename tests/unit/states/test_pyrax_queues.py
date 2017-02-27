@@ -14,10 +14,6 @@ from tests.support.mock import (
     patch
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import pyrax_queues
 
@@ -87,8 +83,3 @@ class PyraxQueuesTestCase(TestCase):
                 comt = ('Rackspace queue myqueue is set to be removed.')
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(pyrax_queues.absent(name, provider), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PyraxQueuesTestCase, needs_daemon=False)

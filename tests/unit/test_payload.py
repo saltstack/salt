@@ -15,9 +15,8 @@ import threading
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath, MockWraps
+from tests.support.helpers import MockWraps
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
-ensure_in_syspath('../')
 
 # Import salt libs
 import salt.payload
@@ -170,9 +169,3 @@ class SREQTestCase(TestCase):
         # ensure no exceptions when we go to destroy the sreq, since __del__
         # swallows exceptions, we have to call destroy directly
         sreq.destroy()
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PayloadTestCase, needs_daemon=False)
-    run_tests(SREQTestCase, needs_daemon=False)

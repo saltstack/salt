@@ -118,8 +118,3 @@ class BridgeTestCase(TestCase):
 
         with patch.dict(bridge.__grains__, {'kernel': None}):
             self.assertFalse(bridge.stp())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BridgeTestCase, needs_daemon=False)

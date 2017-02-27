@@ -5,9 +5,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
-ensure_in_syspath('../../')
 
 # Import Salt Module
 from salt.modules import nginx
@@ -50,8 +48,3 @@ class NginxTestCase(TestCase):
         other_path = 'http://localhost/path'
         result = nginx.status(other_path)
         nginx._urlopen.assert_called_once_with(other_path)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NginxTestCase, needs_daemon=False)

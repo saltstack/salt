@@ -15,10 +15,6 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import pacman
 
@@ -136,7 +132,3 @@ class PacmanTestCase(TestCase):
                 }):
             results = pacman.group_diff('testgroup')
             self.assertEqual(results['default'], {'installed': ['A'], 'not installed': ['C']})
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PacmanTestCase, needs_daemon=False)

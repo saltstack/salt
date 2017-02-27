@@ -207,7 +207,3 @@ class HostsTestCase(TestCase):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
                 self.assertTrue(hosts.add_host('10.10.10.10', 'Salt1'))
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HostsTestCase, needs_daemon=False)

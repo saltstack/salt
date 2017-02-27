@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import debconfmod
 
@@ -86,8 +82,3 @@ class DebconfmodTestCase(TestCase):
             with patch.dict(debconfmod.__opts__, {'test': True}):
                 ret.update({'changes': changes})
                 self.assertDictEqual(debconfmod.set(name, data), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DebconfmodTestCase, needs_daemon=False)

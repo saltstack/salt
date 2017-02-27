@@ -12,7 +12,6 @@ from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     mock_open,
@@ -21,8 +20,6 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Globals
 mac_sysctl.__salt__ = {}
@@ -101,8 +98,3 @@ class DarwinSysctlTestCase(TestCase):
             helper_open = m_open()
             calls_list = helper_open.method_calls
             self.assertEqual(calls_list, m_calls_list)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DarwinSysctlTestCase, needs_daemon=False)

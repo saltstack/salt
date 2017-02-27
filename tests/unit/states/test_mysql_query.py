@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import mysql_query
 import os
@@ -124,8 +120,3 @@ class MysqlQueryTestCase(TestCase):
                             'changes': {'query': 'Executed'}})
                 self.assertDictEqual(mysql_query.run(name, database, query),
                                      ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MysqlQueryTestCase, needs_daemon=False)

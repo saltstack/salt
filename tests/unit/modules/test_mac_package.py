@@ -8,14 +8,11 @@ from salt.modules import mac_package as macpackage
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     patch,
     call
 )
-
-ensure_in_syspath('../../')
 
 macpackage.__salt__ = {}
 
@@ -254,7 +251,3 @@ class MacPackageTestCase(TestCase):
             cmd = '/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier" \'/tmp/dmg-X/*.pkg/Contents/Info.plist\''
             mock.assert_called_once_with(cmd, python_shell=True)
             self.assertEqual(out, expected)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacPackageTestCase, needs_daemon=False)

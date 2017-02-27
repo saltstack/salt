@@ -11,15 +11,12 @@ from salt.states import tomcat
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Globals
 tomcat.__salt__ = {}
@@ -220,9 +217,3 @@ class TomcatTestCase(TestCase):
                 ret.update({'changes': {'undeploy': 1},
                             'comment': '', 'result': True})
                 self.assertDictEqual(tomcat.undeployed('salt'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-
-    run_tests(TomcatTestCase, needs_daemon=False)

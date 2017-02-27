@@ -15,11 +15,6 @@ from tests.support.unit import TestCase
 # Import Salt Libs
 import salt.cloud.libcloudfuncs as libcloud
 
-# Import Salt Testing Libs
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 
 class LibcloudTestCase(TestCase):
     def test_node_state_libcloud_020(self):
@@ -29,8 +24,3 @@ class LibcloudTestCase(TestCase):
     def test_node_state_libcloud_100(self):
         state = libcloud.node_state('terminated')
         self.assertEqual('TERMINATED', state)
-
-
-if __name__ == '__main__':
-    from unit import run_tests
-    run_tests(LibcloudTestCase, needs_daemon=False)

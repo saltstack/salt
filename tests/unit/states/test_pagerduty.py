@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import pagerduty
 
@@ -61,8 +57,3 @@ class PagerdutyTestCase(TestCase):
                 self.assertDictEqual(pagerduty.create_event(name, details,
                                                             service_key,
                                                             profile), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PagerdutyTestCase, needs_daemon=False)

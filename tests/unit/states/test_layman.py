@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import layman
 
@@ -76,8 +72,3 @@ class LaymanTestCase(TestCase):
                 comt = ('Overlay {0} is set to be deleted'.format(name))
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(layman.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LaymanTestCase, needs_daemon=False)

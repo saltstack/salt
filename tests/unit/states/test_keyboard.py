@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import keyboard
 
@@ -100,8 +96,3 @@ class KeyboardTestCase(TestCase):
                 comt = ('Failed to set XOrg keyboard layout')
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
                 self.assertDictEqual(keyboard.xorg(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KeyboardTestCase, needs_daemon=False)

@@ -29,10 +29,8 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
+# Import salt libs
 from salt.modules.inspectlib.collector import Inspector
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

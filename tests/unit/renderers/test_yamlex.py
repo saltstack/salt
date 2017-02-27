@@ -5,9 +5,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../..')
 
 # Import Salt libs
 import salt.state
@@ -61,7 +58,3 @@ class RendererTests(TestCase, RendererMixin):
                 }
             }
         }, sls_obj
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RendererTests, needs_daemon=False)

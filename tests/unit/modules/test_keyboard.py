@@ -14,9 +14,6 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import keyboard
@@ -70,8 +67,3 @@ class KeyboardTestCase(TestCase):
         mock = MagicMock(return_value='us')
         with patch.dict(keyboard.__salt__, {'cmd.run': mock}):
             self.assertEqual(keyboard.set_x('us'), 'us')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KeyboardTestCase, needs_daemon=False)

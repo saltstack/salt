@@ -11,14 +11,10 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.ext.six as six
 from salt.config import minion_config
-
 import salt.loader
 
 # TODO: the rest of the public interfaces
@@ -38,7 +34,3 @@ class RawModTest(TestCase):
         self.opts = minion_config(None)
         testmod = salt.loader.raw_mod(self.opts, 'module_we_do_not_have', None)
         self.assertEqual(testmod, {})
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RawModTest)

@@ -9,7 +9,6 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     mock_open,
     MagicMock,
@@ -17,8 +16,6 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 import salt.utils
@@ -185,7 +182,3 @@ class PuppetTestCase(TestCase):
                 self.assertEqual(puppet.fact("salt"), "")
 
                 self.assertTrue(puppet.fact("salt"))
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PuppetTestCase, needs_daemon=False)

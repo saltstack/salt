@@ -14,10 +14,6 @@ from tests.support.mock import (
     patch
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import postgres_extension
 
@@ -94,8 +90,3 @@ class PostgresExtensionTestCase(TestCase):
                     .format(name))
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(postgres_extension.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PostgresExtensionTestCase, needs_daemon=False)

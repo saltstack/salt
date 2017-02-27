@@ -8,14 +8,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON
-)
-
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 import salt.utils.http
@@ -36,7 +28,6 @@ def check_status():
 
 
 @skipIf(not check_status(), 'random.org is not available')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class RandomOrgTestCase(TestCase):
     '''
     Test cases for salt.modules.random_org
@@ -307,8 +298,3 @@ class RandomOrgTestCase(TestCase):
                                                       api_version='1',
                                                       number=5, size=8,
                                                       format='hex'), ret6)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RandomOrgTestCase, needs_daemon=False)

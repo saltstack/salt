@@ -15,8 +15,6 @@ import time
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import cache
@@ -57,8 +55,3 @@ class CacheDiskTestCase(TestCase):
 
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CacheDiskTestCase, needs_daemon=False)

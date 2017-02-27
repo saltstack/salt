@@ -5,13 +5,10 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import (
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
@@ -139,8 +136,3 @@ class AssistiveTestCase(TestCase):
         with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}):
             self.assertRaises(CommandExecutionError,
                               assistive._get_assistive_access)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AssistiveTestCase, needs_daemon=False)

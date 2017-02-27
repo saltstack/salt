@@ -8,11 +8,9 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
 
 # Import salt libs
-import integration
 import salt.utils
 
 USERA = 'saltdev'
@@ -274,8 +272,3 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
             self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KeyTest)

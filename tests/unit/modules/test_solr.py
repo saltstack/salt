@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import solr
 import os
@@ -541,8 +537,3 @@ class SolrTestCase(TestCase):
                                                  {'A': 'a'})
 
                             self.assertEqual(solr.import_status('h'), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SolrTestCase, needs_daemon=False)

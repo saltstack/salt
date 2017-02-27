@@ -11,9 +11,6 @@ from distutils.version import LooseVersion as _LooseVersion
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.config.schemas import ssh as ssh_schemas

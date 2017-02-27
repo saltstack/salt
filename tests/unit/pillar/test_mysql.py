@@ -6,9 +6,6 @@ from __future__ import absolute_import
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.pillar import mysql
@@ -572,8 +569,3 @@ class MysqlPillarTestCase(TestCase):
             ]},
              return_data.result
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MysqlPillarTestCase, needs_daemon=False)

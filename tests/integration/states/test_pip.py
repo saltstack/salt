@@ -23,7 +23,7 @@ from tests.support.helpers import (
     with_system_user
 )
 # Import salt libs
-import integration
+import tests.integration as integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.exceptions import CommandExecutionError

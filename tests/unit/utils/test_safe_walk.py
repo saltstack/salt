@@ -9,11 +9,9 @@ from tempfile import mkdtemp
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
-import integration
+import tests.integration as integration
 import salt.utils
 import salt.utils.find
 
@@ -47,8 +45,3 @@ class TestUtils(TestCase):
                 )
         finally:
             rmtree(tmp)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestUtils, needs_daemon=False)

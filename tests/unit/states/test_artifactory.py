@@ -13,10 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import artifactory
 
@@ -57,8 +53,3 @@ class ArtifactoryTestCase(TestCase):
             ret = artifactory.downloaded(name, artifact)
             self.assertEqual(ret['result'], False)
             self.assertEqual(repr(ret['comment']), repr(Exception('error')))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ArtifactoryTestCase, needs_daemon=False)

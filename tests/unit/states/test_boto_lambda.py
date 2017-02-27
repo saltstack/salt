@@ -16,9 +16,6 @@ from tests.support.mock import (
     NO_MOCK_REASON,
     patch
 )
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
@@ -26,7 +23,7 @@ import salt.loader
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module
-from unit.modules.test_boto_lambda import BotoLambdaTestCaseMixin, TempZipFile
+from tests.unit.modules.test_boto_lambda import BotoLambdaTestCaseMixin, TempZipFile
 
 # Import 3rd-party libs
 try:

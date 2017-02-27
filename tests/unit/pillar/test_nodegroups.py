@@ -5,10 +5,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import patch, MagicMock
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.pillar import nodegroups

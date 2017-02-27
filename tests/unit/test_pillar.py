@@ -13,9 +13,7 @@ import tempfile
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import ensure_in_syspath
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-ensure_in_syspath('../')
 
 # Import salt libs
 import salt.pillar
@@ -275,8 +273,3 @@ p2:
             }[sls]
 
         client.get_state.side_effect = get_state
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PillarTestCase, needs_daemon=False)

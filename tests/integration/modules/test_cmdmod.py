@@ -8,17 +8,15 @@ import textwrap
 import tempfile
 
 # Import Salt Testing libs
+import tests.integration as integration
 from tests.support.unit import skipIf
 from tests.support.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     skip_if_binaries_missing
 )
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
-ensure_in_syspath('../../')
 
 # Import salt libs
-import integration
 import salt.utils
 
 
@@ -294,7 +292,3 @@ class CMDModuleTest(integration.ModuleCase):
             pass
         else:
             raise RuntimeError
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CMDModuleTest)

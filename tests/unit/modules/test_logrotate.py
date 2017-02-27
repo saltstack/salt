@@ -18,9 +18,6 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Globals
 logrotate.__salt__ = {}
@@ -93,8 +90,3 @@ class LogrotateTestCase(TestCase):
                   'value': '/var/log/wtmp',
                   'setting': '2'}
         self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(LogrotateTestCase, needs_daemon=False)

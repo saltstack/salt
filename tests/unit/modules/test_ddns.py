@@ -126,8 +126,3 @@ class DDNSTestCase(TestCase):
                     with patch.object(ddns, '_get_keyring', return_value=None):
                         with patch.object(ddns, '_config', return_value=None):
                             self.assertTrue(ddns.delete(zone='A', name='B'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DDNSTestCase, needs_daemon=False)

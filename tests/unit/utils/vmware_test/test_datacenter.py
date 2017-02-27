@@ -174,8 +174,3 @@ class CreateDatacenterTestCase(TestCase):
                    MagicMock(return_value=self.mock_root_folder)):
             res = vmware.create_datacenter(self.mock_si, 'fake_dc')
         self.assertEqual(res, self.mock_dc)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GetDatacenterTestCase, needs_daemon=False)
-    run_tests(CreateDatacenterTestCase, needs_daemon=False)

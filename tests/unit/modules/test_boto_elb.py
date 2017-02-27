@@ -52,9 +52,6 @@ from salt.modules import boto_elb
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 log = logging.getLogger(__name__)
 
@@ -200,7 +197,3 @@ class BotoElbTestCase(TestCase):
         actual_instances = [instance.id for instance in
                             load_balancer_refreshed.instances]
         self.assertEqual(actual_instances, expected_instances)
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoElbTestCase, needs_daemon=False)

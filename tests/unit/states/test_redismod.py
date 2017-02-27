@@ -14,10 +14,6 @@ from tests.support.mock import (
     patch
 )
 
-from tests.support.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import redismod
 
@@ -81,8 +77,3 @@ class RedismodTestCase(TestCase):
             ret.update({'comment': comt,
                         'changes': {'deleted': ['key_in_redis']}})
             self.assertDictEqual(redismod.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RedismodTestCase, needs_daemon=False)
