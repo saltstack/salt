@@ -25,6 +25,7 @@ integration.modules.useradd
 integration.runners.jobs
 integration.runners.salt
 integration.runners.winrepo
+integration.sdb.test_env
 integration.states.host
 integration.states.renderers
 integration.utils.testprogram
