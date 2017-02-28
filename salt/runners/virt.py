@@ -370,7 +370,7 @@ def force_off(name):
     try:
         cmd_ret = client.cmd_iter(
                 host,
-                'virt.destroy',
+                'virt.stop',
                 [name],
                 timeout=600)
     except SaltClientError as client_error:
