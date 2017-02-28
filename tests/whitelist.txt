@@ -2,6 +2,7 @@ integration.client.runner
 integration.client.standard
 integration.fileserver.fileclient_test
 integration.fileserver.roots_test
+integration.loader.custom_grains
 integration.loader.globals
 integration.loader.interfaces
 integration.loader.loader
