@@ -108,10 +108,10 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
 
     tld = formula_def.get('top_level_dir', package)
     new_name = member.name.replace('{0}/'.format(package), '', 1)
-    if not new_name.startswith(tld) and not new_name.startswith('_') \
-        and not new_name.startswith('pillar.example') and not new_name.startswith('README'):
-            log.debug('{0} not in top level directory, not installing'.format(new_name))  # pylint: disable=W0311
-            return False  # pylint: disable=W0311
+    if not new_name.startswith(tld) and not new_name.startswith('_') and not \
+            new_name.startswith('pillar.example') and not new_name.startswith('README'):
+        log.debug('{0} not in top level directory, not installing'.format(new_name))
+        return False
 
     for line in formula_def.get('files', []):
         tag = ''
