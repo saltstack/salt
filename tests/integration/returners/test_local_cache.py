@@ -129,7 +129,7 @@ class Local_CacheTest(integration.ShellCase):
                     time.sleep(1)
                     os.rename(lock_dir, new_jid_dir)
                     break
-                except WindowsError:
+                except WindowsError:  # pylint: disable=E0602
                     continue
 
         # check dir exists
