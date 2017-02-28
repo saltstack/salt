@@ -1763,6 +1763,10 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         know_to_return_none = (
             'file.chown', 'file.chgrp', 'ssh.recv_known_host'
         )
+        if 'f_arg' in kwargs:
+            kwargs['arg'] = kwargs.pop('f_arg')
+        if 'f_timeout' in kwargs:
+            kwargs['timeout'] = kwargs.pop('f_timeout')
         orig = self.client.cmd(
             minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
         )

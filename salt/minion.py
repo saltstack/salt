@@ -285,24 +285,15 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                 # above, that would result in a 2nd call to
                 # salt.utils.cli.yamlify_arg(), which could mangle the input.
                 _args.append(arg)
-            elif string_kwarg:
-                salt.utils.warn_until(
-                    'Nitrogen',
-                    'The list of function args and kwargs should be parsed '
-                    'by salt.utils.args.parse_input() before calling '
-                    'salt.minion.load_args_and_kwargs().'
+            if string_kwarg:
+                log.critical(
+                    'String kwarg(s) %s passed to '
+                    'salt.minion.load_args_and_kwargs(). This is no longer '
+                    'supported, so the kwarg(s) will be ignored. Arguments '
+                    'passed to salt.minion.load_args_and_kwargs() should be '
+                    'passed to salt.utils.args.parse_input() first to load '
+                    'and condition them properly.', string_kwarg
                 )
-                if argspec.keywords or next(six.iterkeys(string_kwarg)) in argspec.args:
-                    # Function supports **kwargs or is a positional argument to
-                    # the function.
-                    _kwargs.update(string_kwarg)
-                else:
-                    # **kwargs not in argspec and parsed argument name not in
-                    # list of positional arguments. This keyword argument is
-                    # invalid.
-                    for key, val in six.iteritems(string_kwarg):
-                        invalid_kwargs.append('{0}={1}'.format(key, val))
-                continue
 
         # if the arg is a dict with __kwarg__ == True, then its a kwarg
         elif isinstance(arg, dict) and arg.pop('__kwarg__', False) is True:

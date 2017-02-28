@@ -29,6 +29,7 @@ import salt.minion
 import salt.search
 import salt.key
 import salt.fileserver
+import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
@@ -851,7 +852,7 @@ class RemoteFuncs(object):
         opts = {}
         opts.update(self.opts)
         opts.update({'fun': load['fun'],
-                'arg': load['arg'],
+                'arg': salt.utils.args.parse_input(load['arg']),
                 'id': load['id'],
                 'doc': False,
                 'conf_file': self.opts['conf_file']})
@@ -901,7 +902,7 @@ class RemoteFuncs(object):
         # Set up the publication payload
         pub_load = {
             'fun': load['fun'],
-            'arg': load['arg'],
+            'arg': salt.utils.args.parse_input(load['arg']),
             'tgt_type': load.get('tgt_type', 'glob'),
             'tgt': load['tgt'],
             'ret': load['ret'],
@@ -954,7 +955,7 @@ class RemoteFuncs(object):
         # Set up the publication payload
         pub_load = {
             'fun': load['fun'],
-            'arg': load['arg'],
+            'arg': salt.utils.args.parse_input(load['arg']),
             'tgt_type': load.get('tgt_type', 'glob'),
             'tgt': load['tgt'],
             'ret': load['ret'],
@@ -1530,7 +1531,7 @@ class LocalFuncs(object):
                 'tgt': load['tgt'],
                 'user': load['user'],
                 'fun': load['fun'],
-                'arg': load['arg'],
+                'arg': salt.utils.args.parse_input(load['arg']),
                 'minions': minions,
             }
 
@@ -1582,7 +1583,7 @@ class LocalFuncs(object):
         # way that won't have a negative impact.
         pub_load = {
             'fun': load['fun'],
-            'arg': load['arg'],
+            'arg': salt.utils.args.parse_input(load['arg']),
             'tgt': load['tgt'],
             'jid': load['jid'],
             'ret': load['ret'],
