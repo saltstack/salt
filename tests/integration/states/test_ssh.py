@@ -76,7 +76,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
 
         # then add a record for IP address
-        ret = self.run_state('ssh_known_hosts.present',
+        ret = self.run_state('ssh_known_hosts.present',  # pylint: disable=repeated-keyword
                              **dict(kwargs, name=GITHUB_IP))
         try:
             self.assertSaltStateChangesEqual(
