@@ -484,7 +484,7 @@ class SPMClient(object):
             tgt = formula_def['pre_tgt_state']['tgt']
             ret = client.run_job(
                 tgt=formula_def['pre_tgt_state']['tgt'],
-                'state.high',
+                fun='state.high',
                 tgt_type=formula_def['pre_tgt_state'].get('tgt_type', 'glob'),
                 timout=self.opts['timeout'],
                 data=high_data,
@@ -538,7 +538,7 @@ class SPMClient(object):
             tgt = formula_def['post_tgt_state']['tgt']
             ret = client.run_job(
                 tgt=formula_def['post_tgt_state']['tgt'],
-                'state.high',
+                fun='state.high',
                 tgt_type=formula_def['post_tgt_state'].get('tgt_type', 'glob'),
                 timout=self.opts['timeout'],
                 data=high_data,
