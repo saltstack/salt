@@ -107,6 +107,45 @@ A comma-separated list of optional packages that are recommended to be
 installed with the package. This list is displayed in an informational message
 when the package is installed to SPM.
 
+files
+~~~~~
+A files section can be added, to specify a list of files to add to the SPM.
+Such a section might look like:
+
+.. code-block:: yaml
+
+    files:
+      - _pillar
+      - FORMULA
+      - _runners
+      - d|mymodule/index.rst
+      - r|README.rst
+
+When ``files`` are specified, then only those files will be added to the SPM,
+regardless of what other files exist in the directory. They will also be added
+in the order specified, which is useful if you have a need to lay down files in
+a specific order.
+
+As can be seen in the example above, you may also tag files as being a specific
+type. This is done by pre-pending a filename with its type, followed by a pipe
+(``|``) character. The above example contains a document file and a readme. The
+available file types are:
+
+* ``c``: config file
+* ``d``: documentation file
+* ``g``: ghost file (i.e. the file contents are not included in the package payload)
+* ``l``: license file
+* ``r``: readme file
+* ``s``: SLS file
+* ``m``: Salt module
+
+The first 5 of these types (``c``, ``d``, ``g``, ``l``, ``r``) will be placed in
+``/usr/share/salt/spm/`` by default. This can be changed by setting an
+``spm_share_dir`` value in your ``/etc/salt/spm`` configuration file.
+
+The last two types (``s`` and ``m``) are currently ignored, but they are
+reserved for future use.
+
 Building a Package
 ------------------
 Once a ``FORMULA`` file has been created, it is placed into the root of the
