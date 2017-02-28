@@ -341,7 +341,10 @@ def _file_lists(load, form):
             for item in items:
                 abs_path = os.path.join(parent_dir, item)
                 log.trace('roots: Processing %s', abs_path)
-                is_link = salt.utils.win_symlink.is_link(abs_path)
+                if salt.utils.is_windows():
+                    is_link = salt.utils.win_symlink.is_link(abs_path)
+                else:
+                    is_link = os.path.islink(abs_path)
                 log.trace(
                     'roots: %s is %sa link',
                     abs_path, 'not ' if not is_link else ''
