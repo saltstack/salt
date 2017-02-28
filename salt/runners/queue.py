@@ -277,7 +277,7 @@ def insert_runner(fun, args=None, kwargs=None, queue=None, backend=None):
         kwargs = {}
     queue_kwargs = __get_queue_opts(queue=queue, backend=backend)
     data = {'fun': fun, 'args': args, 'kwargs': kwargs}
-    return __salt__['queue.insert'](items=data, **queue_kwargs)
+    return insert(items=data, **queue_kwargs)
 
 
 def process_runner(quantity=1, queue=None, backend=None):
