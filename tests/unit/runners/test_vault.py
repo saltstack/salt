@@ -111,7 +111,8 @@ class VaultTest(TestCase):
                     'deeply-nested-list:{grains[deep][foo][bar][baz]}': [
                         'deeply-nested-list:hello',
                         'deeply-nested-list:world'
-                    ]
+                    ],
+                    'should-not-cause-an-exception,but-result-empty:{foo}': []
                 }
 
         with patch('salt.utils.minions.get_minion_data',
