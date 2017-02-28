@@ -493,10 +493,13 @@ def present(
     if not instance_ids:
         instance_ids = []
     if instance_names:
+        # AWS borks on adding instances in "non-running" states, so filter 'em out.
+        running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
         for n in instance_names:
             instance_ids += __salt__['boto_ec2.find_instances'](name=n, region=region,
                                                                 key=key, keyid=keyid,
-                                                                profile=profile)
+                                                                profile=profile,
+                                                                in_states=running_states)
     # Backwards compat:  Only touch attached instances if requested (e.g. if some are defined).
     if instance_ids:
         if __opts__['test']:
