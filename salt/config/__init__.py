@@ -584,6 +584,7 @@ VALID_OPTS = {
     'git_pillar_passphrase': str,
     'git_pillar_refspecs': list,
     'git_pillar_includes': bool,
+    'git_pillar_verify_config': bool,
     'gitfs_remotes': list,
     'gitfs_mountpoint': str,
     'gitfs_root': str,
@@ -685,6 +686,7 @@ VALID_OPTS = {
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
     'fileserver_limit_traversal': bool,
+    'fileserver_verify_config': bool,
 
     # The number of open files a daemon is allowed to have open. Frequently needs to be increased
     # higher than the system default in order to account for the way zeromq consumes file handles.
@@ -1319,6 +1321,7 @@ DEFAULT_MASTER_OPTS = {
     'git_pillar_passphrase': '',
     'git_pillar_refspecs': _DFLT_REFSPECS,
     'git_pillar_includes': True,
+    'git_pillar_verify_config': True,
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -1393,6 +1396,7 @@ DEFAULT_MASTER_OPTS = {
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
     'fileserver_limit_traversal': False,
+    'fileserver_verify_config': True,
     'max_open_files': 100000,
     'hash_type': 'sha256',
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'master'),
