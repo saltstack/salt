@@ -583,6 +583,7 @@ VALID_OPTS = {
     'git_pillar_pubkey': str,
     'git_pillar_passphrase': str,
     'git_pillar_refspecs': list,
+    'git_pillar_includes': bool,
     'gitfs_remotes': list,
     'gitfs_mountpoint': str,
     'gitfs_root': str,
@@ -976,7 +977,7 @@ VALID_OPTS = {
     # http://docs.python.org/2/library/ssl.html#ssl.wrap_socket
     # Note: to set enum arguments values like `cert_reqs` and `ssl_version` use constant names
     # without ssl module prefix: `CERT_REQUIRED` or `PROTOCOL_SSLv23`.
-    'ssl': (dict, None),
+    'ssl': (dict, bool, type(None)),
 
     # Controls how a multi-function job returns its data. If this is False,
     # it will return its data using a dictionary with the function name as
@@ -1095,6 +1096,7 @@ DEFAULT_MINION_OPTS = {
     'git_pillar_pubkey': '',
     'git_pillar_passphrase': '',
     'git_pillar_refspecs': _DFLT_REFSPECS,
+    'git_pillar_includes': True,
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -1316,6 +1318,7 @@ DEFAULT_MASTER_OPTS = {
     'git_pillar_pubkey': '',
     'git_pillar_passphrase': '',
     'git_pillar_refspecs': _DFLT_REFSPECS,
+    'git_pillar_includes': True,
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -1615,6 +1618,9 @@ DEFAULT_SPM_OPTS = {
     'spm_db': os.path.join(salt.syspaths.CACHE_DIR, 'spm', 'packages.db'),
     'cache': 'localfs',
     'spm_repo_dups': 'ignore',
+    # If set, spm_node_type will be either master or minion, but they should
+    # NOT be a default
+    'spm_node_type': '',
     # <---- Salt master settings overridden by SPM ----------------------
 }
 
@@ -3166,7 +3172,11 @@ def _update_ssl_config(opts):
     '''
     Resolves string names to integer constant in ssl configuration.
     '''
-    if opts['ssl'] is None:
+    if opts['ssl'] in (None, False):
+        opts['ssl'] = None
+        return
+    if opts['ssl'] is True:
+        opts['ssl'] = {}
         return
     import ssl
     for key, prefix in (('cert_reqs', 'CERT_'),

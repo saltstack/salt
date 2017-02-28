@@ -111,6 +111,8 @@ from salt.exceptions import (
 # Import salt.cloud libs
 import salt.utils.cloud
 
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     from profitbricks.client import (
         ProfitBricksService, Server,
@@ -428,7 +430,7 @@ def get_image(vm_):
     )
 
     images = avail_images()
-    for key, value in images.iteritems():
+    for key in six.iterkeys(images):
         if vm_image and vm_image in (images[key]['id'], images[key]['name']):
             return images[key]
 
@@ -1015,7 +1017,7 @@ def _get_data_volumes(vm_):
     '''
     ret = []
     volumes = vm_['volumes']
-    for key, value in volumes.iteritems():
+    for key, value in six.iteritems(volumes):
         # Verify the required 'disk_size' property is present in the cloud
         # profile config
         if 'disk_size' not in volumes[key].keys():
@@ -1048,7 +1050,7 @@ def _get_firewall_rules(firewall_rules):
     Construct a list of optional firewall rules from the cloud profile.
     '''
     ret = []
-    for key, value in firewall_rules.iteritems():
+    for key, value in six.iteritems(firewall_rules):
         # Verify the required 'protocol' property is present in the cloud
         # profile config
         if 'protocol' not in firewall_rules[key].keys():

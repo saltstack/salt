@@ -656,7 +656,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                     if device.deviceInfo.label in list(devices['disk'].keys()):
                         disk_spec = None
                         if 'size' in devices['disk'][device.deviceInfo.label]:
-                            size_gb = float(devices['disk'][disk_label]['size'])
+                            size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
                             disk_spec = _get_size_spec(device, size_gb)
                             size_kb = size_gb * 1024 * 1024
                         else:
@@ -2570,8 +2570,8 @@ def create(vm_):
             global_ip = vim.vm.customization.GlobalIPSettings()
             if 'dns_servers' in list(vm_.keys()):
                 global_ip.dnsServerList = vm_['dns_servers']
-            hostName, domainName = split(r'[^\w-]', vm_name, maxsplit=1)
-            domainName = domainName.split('.', maxsplit=1)[-1]
+            hostName = split(r'[^\w-]', vm_name, maxsplit=1)[0]
+            domainName = vm_name.split('.', 1)[-1]
             if 'Windows' not in object_ref.config.guestFullName:
                 identity = vim.vm.customization.LinuxPrep()
                 identity.hostName = vim.vm.customization.FixedName(name=hostName)

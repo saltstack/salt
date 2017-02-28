@@ -1193,7 +1193,7 @@ def extracted(name,
                     except tarfile.ReadError:
                         if salt.utils.which('xz'):
                             if __salt__['cmd.retcode'](
-                                    ['xz', '-l', cached_source],
+                                    ['xz', '-t', cached_source],
                                     python_shell=False,
                                     ignore_retcode=True) == 0:
                                 # XZ-compressed data

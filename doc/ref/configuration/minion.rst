@@ -1778,12 +1778,14 @@ the environment setting, but for pillar instead of states.
 
 .. code-block:: yaml
 
-    pillarenv: None
+    pillarenv: dev
 
 .. conf_minion:: pillarenv_from_saltenv
 
 ``pillarenv_from_saltenv``
 --------------------------
+
+.. versionadded:: Nitrogen
 
 Default: ``False``
 

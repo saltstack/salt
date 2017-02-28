@@ -47,7 +47,7 @@ class LazyDict(collections.MutableMapping):
         Clear the dict
         '''
         # create a dict to store loaded values in
-        self._dict = {}
+        self._dict = getattr(self, 'mod_dict_class', dict)()
 
         # have we already loded everything?
         self.loaded = False

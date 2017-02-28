@@ -298,6 +298,171 @@ instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
 
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
+
+.. _git-pillar-multiple-repos:
+
+How Multiple Remotes Are Handled
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As noted above, multiple remotes can be included in the same ``git`` ext_pillar
+configuration. Consider the following:
+
+.. code-block:: yaml
+
+    my_etcd_config:
+      etcd.host: 127.0.0.1
+      etcd.port: 4001
+
+    ext_pillar:
+      - etcd: my_etcd_config
+      - git:
+        - master https://mydomain.tld/foo.git:
+          - root: pillar
+        - master https://mydomain.tld/bar.git
+        - master https://mydomain.tld/baz.git
+        - dev https://mydomain.tld/qux.git
+      - git:
+        - master https://mydomain.tld/abc.git
+        - dev https://mydomain.tld/123.git
+
+To understand how pillar data from these repos will be compiled, it's important
+to know how Salt will process them. The following points should be kept in
+mind:
+
+1. Each ext_pillar is called separately from the others. So, in the above
+   example, the :mod:`etcd <salt.pillar.etcd>` ext_pillar will be evaluated
+   first, with the first group of git_pillar remotes evaluated next (and merged
+   into the etcd pillar data). Lastly, the second group of git_pillar remotes
+   will be evaluated, and then merged into the ext_pillar data evaluated before
+   it.
+
+2. Within a single group of git_pillar remotes, each remote will be evaluated in
+   order, with results merged together as each remote is evaluated.
+
+   .. note::
+       Prior to the Nitrogen release, remotes would be evaluated in a
+       non-deterministic order.
+
+3. By default, when a repo is evaluated, other remotes' which share its pillar
+   environment will have their files made available to the remote being
+   processed.
+
+The first point should be straightforward enough, but the second and third
+could use some additional clarification.
+
+First, point #2. In the first group of git_pillar remotes, the top file and
+pillar SLS files in the ``foo`` remote will be evaluated first. The ``bar``
+remote will be evaluated next, and its results will be merged into the pillar
+data compiled when the ``foo`` remote was evaluated. As the subsequent remotes
+are evaluated, their data will be merged in the same fashion.
+
+But wait, don't these repositories belong to more than one pillar environments?
+Well, yes. The default method of generating pillar data compiles pillar data
+from all environments. This behavior can be overridden using a ``pillarenv``.
+Setting a :conf_minion:`pillarenv` in the minion config file will make that
+minion tell the master to ignore any pillar data from environments which don't
+match that pillarenv. A pillarenv can also be specified for a given minion or
+set of minions when :mod:`running states <salt.modules.state>`, by using he
+``pillarenv`` argument. The CLI pillarenv will override one set in the minion
+config file. So, assuming that a pillarenv of ``base`` was set for a minion, it
+would not get any of the pillar variables configured in the ``qux`` remote,
+since that remote is assigned to the ``dev`` environment. The only way to get
+its pillar data would be to specify a pillarenv of ``dev``, which would mean
+that it would then ignore any items from the ``base`` pillarenv. A more
+detailed explanation of pillar environments can be found :ref:`here
+<pillar-environments>`.
+
+Moving on to point #3, and looking at the example ext_pillar configuration, as
+the ``foo`` remote is evaluated, it will also have access to the files from the
+``bar`` and ``baz`` remotes, since all three are assigned to the ``base``
+pillar environment. So, if an SLS file referenced by the ``foo`` remotes's top
+file does not exist in the ``foo`` remote, it will be searched for in the
+``bar`` remote, followed by the ``baz`` remote. When it comes time to evaluate
+the ``bar`` remote, SLS files referenced by the ``bar`` remote's top file will
+first be looked for in the ``bar`` remote, followed by ``foo``, and ``baz``,
+and when the ``baz`` remote is processed, SLS files will be looked for in
+``baz``, followed by ``foo`` and ``bar``. This "failover" logic is called a
+:ref:`directory overlay <file-roots-directory-overlay>`, and it is also used by
+:conf_master:`file_roots` and :conf_minion`pillar_roots`. The ordering of which
+remote is checked for SLS files is determined by the order they are listed.
+First the remote being processed is checked, then the others that share the
+same environment are checked. However, before the Nitrogen release, since
+evaluation was unordered, the remote being processed would be checked, followed
+in no specific order by the other repos which share the same environment.
+
+Beginning with the Nitrogen release, this behavior of git_pillar remotes having
+access to files in other repos which share the same environment can be disabled
+by setting :conf_master:`git_pillar_includes` to ``False``. If this is done,
+then all git_pillar remotes will only have access to their own SLS files.
+Another way of ensuring that a git_pillar remote will not have access to SLS
+files from other git_pillar remotes which share the same pillar environment is
+to put them in a separate ``git`` section under ``ext_pillar``. Look again at
+the example configuration above. In the second group of git_pillar remotes, the
+``abc`` remote would not have access to the SLS files from the ``foo``,
+``bar``, and ``baz`` remotes, and vice-versa.
+
+.. _git-pillar-mountpoints:
+
+Mountpoints
+~~~~~~~~~~~
+
+.. versionadded:: Nitrogen
+
+Assume the following pillar top file:
+
+.. code-block:: yaml
+
+    base:
+      'web*':
+        - common
+        - web.server.nginx
+        - web.server.appdata
+
+Now, assume that you would like to configure the ``web.server.nginx`` and
+``web.server.appdata`` SLS files in separate repos. This could be done using
+the following ext_pillar configuration (assuming that
+:conf_master:`git_pillar_includes` has not been set to ``False``):
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git:
+        - master https://mydomain.tld/pillar-common.git
+        - master https://mydomain.tld/pillar-nginx.git
+        - master https://mydomain.tld/pillar-appdata.git
+
+However, in order to get the files in the second and third git_pillar remotes
+to work, you would need to first create the directory structure underneath it
+(i.e. place them underneath ``web/server/`` in the repository). This also makes
+it tedious to reorganize the configuration, as changing ``web.server.nginx`` to
+``web.nginx`` in the top file would require you to also move the SLS files in
+the ``pillar-nginx`` up a directory level.
+
+For these reasons, much like gitfs, git_pillar now supports a "mountpoint"
+feature. Using the following ext_pillar configuration, the SLS files in the
+second and third git_pillar remotes can be placed in the root of the git
+repository:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git:
+        - master https://mydomain.tld/pillar-common.git
+        - master https://mydomain.tld/pillar-nginx.git:
+          - mountpoint: web/server/
+        - master https://mydomain.tld/pillar-appdata.git:
+          - mountpoint: web/server/
+
+Now, if the top file changed the SLS target from ``web.server.nginx``, instead
+of reorganizing the git repository, you would just need to adjust the
+mountpoint to ``web/`` (and restart the ``salt-master`` daemon).
+
+.. note::
+    - Leading and trailing slashes on the mountpoints are optional.
+    - Use of the ``mountpoint`` feature requires that
+      :conf_master:`git_pillar_includes` is not disabled.
+    - Content from mounted git_pillar repos can only be referenced by a top
+      file in the same pillar environment.
 '''
 from __future__ import absolute_import
 
@@ -325,6 +490,7 @@ except ImportError:
 # pylint: enable=import-error
 
 PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify', 'refspecs')
+PER_REMOTE_ONLY = ('name', 'mountpoint')
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -378,7 +544,7 @@ def ext_pillar(minion_id, repo, pillar_dirs):
         opts['pillar_roots'] = {}
         opts['__git_pillar'] = True
         pillar = salt.utils.gitfs.GitPillar(opts)
-        pillar.init_remotes(repo, PER_REMOTE_OVERRIDES)
+        pillar.init_remotes(repo, PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
         if __opts__.get('__role') == 'minion':
             # If masterless, fetch the remotes. We'll need to remove this once
             # we make the minion daemon able to run standalone.
@@ -394,21 +560,37 @@ def ext_pillar(minion_id, repo, pillar_dirs):
             False
         )
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
-            log.debug(
-                'git_pillar is processing pillar SLS from {0} for pillar '
-                'env \'{1}\''.format(pillar_dir, env)
-            )
-            all_dirs = [d for (d, e) in six.iteritems(pillar.pillar_dirs)
-                        if env == e]
+            if pillar_dir in pillar.pillar_linked_dirs:
+                log.debug(
+                    'git_pillar is skipping processing on %s as it is a '
+                    'mounted repo', pillar_dir
+                )
+                continue
+            else:
+                log.debug(
+                    'git_pillar is processing pillar SLS from %s for pillar '
+                    'env \'%s\'', pillar_dir, env
+                )
 
-            # Ensure that the current pillar_dir is first in the list, so that
-            # the pillar top.sls is sourced from the correct location.
-            pillar_roots = [pillar_dir]
-            pillar_roots.extend([x for x in all_dirs if x != pillar_dir])
             if env == '__env__':
                 env = opts.get('pillarenv') \
                     or opts.get('environment') \
                     or opts.get('git_pillar_base')
+                log.debug('__env__ maps to %s', env)
+
+            pillar_roots = [pillar_dir]
+
+            if __opts__['git_pillar_includes']:
+                # Add the rest of the pillar_dirs in this environment to the
+                # list, excluding the current pillar_dir being processed. This
+                # is because it was already specified above as the first in the
+                # list, so that its top file is sourced from the correct
+                # location and not from another git_pillar remote.
+                pillar_roots.extend(
+                    [d for (d, e) in six.iteritems(pillar.pillar_dirs)
+                     if env == e and d != pillar_dir]
+                )
+
             opts['pillar_roots'] = {env: pillar_roots}
 
             local_pillar = Pillar(opts, __grains__, minion_id, env)
@@ -449,9 +631,10 @@ class _LegacyGitPillar(object):
             self.repo = git.Repo.init(rp_)
         except (git.exc.NoSuchPathError,
                 git.exc.InvalidGitRepositoryError) as exc:
-            log.error('GitPython exception caught while '
-                      'initializing the repo: {0}. Maybe '
-                      'git is not available.'.format(exc))
+            log.error(
+                'GitPython exception caught while initializing the repo: %s. '
+                'Maybe the git CLI program is not available.', exc
+            )
         except Exception as exc:
             log.exception('Undefined exception in git pillar. '
                     'This may be a bug should be reported to the '
@@ -502,8 +685,10 @@ class _LegacyGitPillar(object):
             log.debug('Legacy git_pillar: Updating \'%s\'', self.rp_location)
             self.repo.git.fetch()
         except git.exc.GitCommandError as exc:
-            log.error('Unable to fetch the latest changes from remote '
-                      '{0}: {1}'.format(self.rp_location, exc))
+            log.error(
+                'Unable to fetch the latest changes from remote %s: %s',
+                self.rp_location, exc
+            )
             return False
 
         try:

@@ -495,7 +495,7 @@ The above command is equivalent to the following command at the CLI:
 
 .. code-block:: bash
 
-    salt 'haproxy*' state.apply haproxy.refresh_pool 'pillar={new_minion: minionid}'
+    salt 'haproxy*' state.apply haproxy.refresh_pool pillar='{new_minion: minionid}'
 
 This works with Orchestrate files as well:
 

@@ -52,9 +52,21 @@ Grains Changes
   may need to be adjusted to account for this change.
 - Add ability to specify disk backing mode in the VMWare salt cloud profile.
 
+State Module Changes
+====================
+
+- The :py:func:`service.running <salt.states.service.running>` and
+  :py:func:`service.dead <salt.states.service.dead>` states now support a
+  ``no_block`` argument which, when set to ``True`` on systemd minions, will
+  start/stop the service using the ``--no-block`` flag in the ``systemctl``
+  command. On non-systemd minions, a warning will be issued.
+
 Execution Module Changes
 ========================
 
+- Several functions in the :mod:`systemd <salt.modules.systemd>` execution
+  module have gained a ``no_block`` argument, which when set to ``True`` will
+  use ``--no-block`` in the ``systemctl`` command.
 - In the :mod:`solarisips <salt.modules.solarisips>` ``pkg`` module, the
   default value for the ``refresh`` argument to the ``list_upgrades`` function
   has been changed from ``False`` to ``True``. This makes the function more
@@ -139,10 +151,29 @@ Custom Refspecs in GitFS / git_pillar / winrepo
 ===============================================
 
 It is now possible to specify the refspecs to use when fetching from remote
-repositores for GitFS, git_pillar, and winrepo. More information on how this
+repositories for GitFS, git_pillar, and winrepo. More information on how this
 feature works can be found :ref:`here <gitfs-custom-refspecs>` in the GitFS
 Walkthrough. The git_pillar and winrepo versions of this feature work the same
 as their GitFS counterpart.
+
+git_pillar "mountpoints" Feature Added
+======================================
+
+See :ref:`here <git-pillar-mountpoints>` for detailed documentation.
+
+``dockerng`` State/Execution Module Renamed to ``docker``
+=========================================================
+
+The old ``docker`` state and execution modules have been moved to
+salt-contrib_. The ``dockerng`` state and execution module have been renamed to
+``docker`` and now serve as the official Docker state and execution modules.
+
+These state and execution modules can be used interchangeably both with
+``docker`` and ``dockerng`` to preserve backward-compatibility, but it is
+recommended to update your SLS files to use ``docker`` instead of ``dockerng``
+in event that the ``dockerng`` alias is dropped in a future release.
+
+.. _salt-contrib: https://github.com/saltstack/salt-contrib
 
 Deprecations
 ============

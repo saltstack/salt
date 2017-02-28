@@ -35,6 +35,7 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 import salt.utils
 import salt.utils.files
 import salt.utils.itertools
+import salt.utils.templates
 
 # TODO: Check that the passed arguments are correct
 
@@ -187,7 +188,7 @@ def list_(name,
                         raise CommandExecutionError('Invalid CLI options')
                 else:
                     if salt.utils.which('xz') \
-                            and __salt__['cmd.retcode'](['xz', '-l', cached],
+                            and __salt__['cmd.retcode'](['xz', '-t', cached],
                                                         python_shell=False,
                                                         ignore_retcode=True) == 0:
                         decompress_cmd = 'xz --decompress --stdout'

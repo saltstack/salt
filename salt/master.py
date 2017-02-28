@@ -323,11 +323,8 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             for pillar in self.git_pillar:
                 pillar.update()
         except Exception as exc:
-            log.error(
-                'Exception \'{0}\' caught while updating git_pillar'
-                .format(exc),
-                exc_info_on_loglevel=logging.DEBUG
-            )
+            log.error('Exception caught while updating git_pillar',
+                      exc_info=True)
 
     def handle_schedule(self):
         '''
@@ -492,12 +489,15 @@ class Master(SMaster):
             try:
                 new_opts = copy.deepcopy(self.opts)
                 from salt.pillar.git_pillar \
-                    import PER_REMOTE_OVERRIDES as overrides
+                    import PER_REMOTE_OVERRIDES as per_remote_overrides, \
+                    PER_REMOTE_ONLY as per_remote_only
                 for repo in non_legacy_git_pillars:
                     new_opts['ext_pillar'] = [repo]
                     try:
                         git_pillar = salt.utils.gitfs.GitPillar(new_opts)
-                        git_pillar.init_remotes(repo['git'], overrides)
+                        git_pillar.init_remotes(repo['git'],
+                                                per_remote_overrides,
+                                                per_remote_only)
                     except FileserverConfigError as exc:
                         critical_errors.append(exc.strerror)
             finally:
