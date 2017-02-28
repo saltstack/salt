@@ -43,7 +43,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     for minion_id, full_info in minions.items():
         profile, provider = full_info.get('profile', None), full_info.get('provider', None)
         vm_ = {
-            'provider': provider,
+            'driver': provider,
             'profile': profile,
         }
         public_ips = full_info.get('public_ips', [])
