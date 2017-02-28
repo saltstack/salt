@@ -41,7 +41,7 @@ __opts__ = {
     'verbose': False,
     'cache': 'localfs',
     'spm_repo_dups': 'ignore',
-    'spm_share_dir': '/usr/share/salt/spm',
+    'spm_share_dir': os.path.join(_TMP_SPM, 'share'),
 }
 
 _F1 = {

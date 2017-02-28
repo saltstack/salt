@@ -74,6 +74,19 @@ if CONFIG_DIR is None:
     else:
         CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
 
+SHARE_DIR = __generated_syspaths.SHARE_DIR
+if SHARE_DIR is None:
+    if __PLATFORM.startswith('win'):
+        SHARE_DIR = os.path.join(ROOT_DIR, 'share')
+    elif 'freebsd' in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'local', 'share', 'salt')
+    elif 'netbsd' in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'share', 'salt')
+    elif 'sunos5' in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'share', 'salt')
+    else:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'share', 'salt')
+
 CACHE_DIR = __generated_syspaths.CACHE_DIR
 if CACHE_DIR is None:
     CACHE_DIR = os.path.join(ROOT_DIR, 'var', 'cache', 'salt')
