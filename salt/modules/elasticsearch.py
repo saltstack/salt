@@ -116,7 +116,7 @@ def _get_instance(hosts=None, profile=None):
                     ca_certs=ca_certs,
                     verify_certs=verify_certs,
                 )
-        elif username and passowrd:
+        elif username and password:
             es = elasticsearch.Elasticsearch(
                     hosts,
                     use_ssl=use_ssl,
