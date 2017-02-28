@@ -190,3 +190,4 @@ def process_queue(queue, quantity=1, backend='sqlite'):
             'queue': queue,
             }
     event.fire_event(data, tagify([queue, 'process'], prefix='queue'))
+    return data
