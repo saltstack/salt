@@ -30,7 +30,7 @@ class ServiceTest(integration.ModuleCase,
         '''
         check_status = self.run_function('service.status', name=SERVICE_NAME)
         if check_status is not exp_return:
-            self.assertFalse('status of service is not returning correctly')
+            self.fail('status of service is not returning correctly')
 
     def test_service_dead(self):
         '''
