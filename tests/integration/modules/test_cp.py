@@ -106,11 +106,8 @@ class CPModuleTest(integration.ModuleCase):
         tgt = os.path.join(integration.TMP, 'scene33')
         self.run_function(
                 'cp.get_template',
-                [
-                    'salt://grail/scene33',
-                    tgt,
-                    'spam=bacon',
-                ])
+                ['salt://grail/scene33', tgt],
+                spam='bacon')
         with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
             self.assertIn('bacon', data)
