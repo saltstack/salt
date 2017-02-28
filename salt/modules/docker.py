@@ -1950,7 +1950,7 @@ def _validate_input(kwargs,
                         .format(sysctl_var)
                     )
                 else:
-                    if key in sysctl_env:
+                    if key in repacked_sysctl:
                         raise SaltInvocationError(
                             'Duplicate sysctl variable \'{0}\''
                             .format(key)
