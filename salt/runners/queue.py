@@ -191,3 +191,33 @@ def process_queue(queue, quantity=1, backend='sqlite'):
             }
     event.fire_event(data, tagify([queue, 'process'], prefix='queue'))
     return data
+
+
+def __get_queue_opts():
+    '''
+    '''
+    queue = __opts__.get('runner_queue', {}).get('queue')
+    backend = __opts__.get('runner_queue', {}).get('backend', 'pgjsonb')
+    return {'backend': backend,
+            'queue': queue}
+
+
+def insert_runner(fun, args=None, kwargs=None):
+    '''
+    '''
+    if args is None:
+        args = []
+    if kwargs is None:
+        kwargs = {}
+    queue_kwargs = __get_queue_opts()
+    data = {'fun': fun, 'args': args, 'kwargs': kwargs}
+    return __salt__['queue.insert'](items=data, **queue_kwargs)
+
+
+def process_runner(quantity=1):
+    '''
+    '''
+    queue_kwargs = __get_queue_opts()
+    data = process_queue(quantity=quantity, **queue_kwargs)
+    for job in data['items']:
+        __salt__[job['fun']](*job['args'], **job['kwargs'])
