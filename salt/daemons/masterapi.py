@@ -37,7 +37,7 @@ import salt.utils.gzip_util
 import salt.utils.jid
 from salt.pillar import git_pillar
 from salt.utils.event import tagify
-from salt.exceptions import SaltMasterError
+from salt.exceptions import FileserverConfigError, SaltMasterError
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -87,13 +87,19 @@ def init_git_pillar(opts):
                     )
             else:
                 # New git_pillar code
-                pillar = salt.utils.gitfs.GitPillar(opts)
-                pillar.init_remotes(
-                    opts_dict['git'],
-                    git_pillar.PER_REMOTE_OVERRIDES,
-                    git_pillar.PER_REMOTE_ONLY
-                )
-                ret.append(pillar)
+                try:
+                    pillar = salt.utils.gitfs.GitPillar(opts)
+                    pillar.init_remotes(
+                        opts_dict['git'],
+                        git_pillar.PER_REMOTE_OVERRIDES,
+                        git_pillar.PER_REMOTE_ONLY
+                    )
+                    ret.append(pillar)
+                except FileserverConfigError:
+                    if opts.get('git_pillar_verify_config', True):
+                        raise
+                    else:
+                        log.critical('Could not initialize git_pillar')
     return ret
 
 

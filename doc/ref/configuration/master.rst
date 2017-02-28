@@ -1605,6 +1605,25 @@ on a large number of minions.
 
     fileserver_list_cache_time: 5
 
+.. conf_master:: fileserver_verify_config
+
+``fileserver_verify_config``
+------------------------------
+
+.. versionadded:: Nitrogen
+
+Default: ``True``
+
+By default, as the master starts it performs some sanity checks on the
+configured fileserver backends. If any of these sanity checks fail (such as
+when an invalid configuration is used), the master daemon will abort.
+
+To skip these sanity checks, set this option to ``False``.
+
+.. code-block:: yaml
+
+    fileserver_verify_config: False
+
 .. conf_master:: hash_type
 
 ``hash_type``
@@ -3167,6 +3186,25 @@ configured both globally and for individual remotes.
       - '+refs/tags/*:refs/tags/*'
       - '+refs/pull/*/head:refs/remotes/origin/pr/*'
       - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
+.. conf_master:: git_pillar_verify_config
+
+``git_pillar_verify_config``
+----------------------------
+
+.. versionadded:: Nitrogen
+
+Default: ``True``
+
+By default, as the master starts it performs some sanity checks on the
+configured git_pillar repositories. If any of these sanity checks fail (such as
+when an invalid configuration is used), the master daemon will abort.
+
+To skip these sanity checks, set this option to ``False``.
+
+.. code-block:: yaml
+
+    git_pillar_verify_config: False
 
 .. _pillar-merging-opts:
 
