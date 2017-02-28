@@ -481,8 +481,27 @@ def _refresh_db_conditional(saltenv, **kwargs):
 
 def refresh_db(**kwargs):
     '''
-    Fectches metadata files and calls :py:func:`pkg.genrepo
+    Fetches metadata files and calls :py:func:`pkg.genrepo
     <salt.modules.win_pkg.genrepo>` to compile updated repository metadata.
+
+    Kwargs:
+        saltenv (str): Salt environment. Default: ``base``
+        verbose (bool):
+            Return verbose data structure which includes 'success_list', a list
+            of all sls files and the package names contained within. Default
+            'False'
+        failhard (bool):
+            If ``True``, an error will be raised if any repo SLS files failed to
+            process. If ``False``, no error will be raised, and a dictionary
+            containing the full results will be returned.
+
+    Returns:
+        dict: A dictionary containing the results of the database refresh.
+
+    .. Warning::
+        When calling this command from a state using `module.run` be sure to
+        pass `failhard: False`. Otherwise the state will report failure if it
+        encounters a bad software definition file.
 
     CLI Example:
 
