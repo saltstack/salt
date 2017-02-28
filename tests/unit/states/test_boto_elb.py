@@ -178,7 +178,7 @@ class BotoElbTestCase(TestCase):
 
             with patch.dict(boto_elb.__opts__, {'test': True}):
                 comt = ('ELB {0} is set to be removed.'.format(name))
-                ret.update({'comment': comt, 'result': None})
+                ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(boto_elb.absent(name), ret)
 
 
