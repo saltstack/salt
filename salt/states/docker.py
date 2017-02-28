@@ -32,7 +32,7 @@ from salt.modules.docker import (
     STOP_TIMEOUT,
     VALID_CREATE_OPTS,
     _validate_input,
-    _get_repo_tag
+    _get_repo_tag,
 )
 # pylint: enable=no-name-in-module,import-error
 import salt.utils
@@ -223,6 +223,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 ret.update({item: {'old': actual_ports,
                                    'new': desired_ports}})
             continue
+
         elif item == 'volumes':
             if actual_data is None:
                 actual_data = []
@@ -390,6 +391,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             # sometimes `[]`. We have to deal with it.
             if bool(actual_data) != bool(data):
                 ret.update({item: {'old': actual_data, 'new': data}})
+
         elif item == 'labels':
             if actual_data is None:
                 actual_data = {}
@@ -416,6 +418,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             if data != actual_data:
                 ret.update({item: {'old': actual_data, 'new': data}})
             continue
+
         elif item == 'devices':
             if data:
                 keys = ['PathOnHost', 'PathInContainer', 'CgroupPermissions']
@@ -433,6 +436,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             if data != actual_data:
                 ret.update({item: {'old': actual_data, 'new': data}})
                 continue
+
         elif item == 'security_opt':
             if actual_data is None:
                 actual_data = []
@@ -448,6 +452,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 ret.update({item: {'old': actual_data,
                                    'new': desired_data}})
             continue
+
         elif item in ('cmd', 'command', 'entrypoint'):
             if (actual_data is None and item not in create_kwargs and
                     _image_get(config['image_path'])):
@@ -1566,6 +1571,29 @@ def running(name,
         .. note::
 
             This option requires Docker 1.5.0 or newer.
+
+    ulimits
+        List of ulimits. These limits should be passed in
+        the format ``<ulimit_name>:<soft_limit>:<hard_limit>``, with the hard
+        limit being optional.
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - ulimits: nofile=1024:1024,nproc=60
+
+        Ulimits can be passed as a YAML list instead of a comma-separated list:
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - ulimits:
+                  - nofile=1024:1024
+                  - nproc=60
 
     labels
         Add Metadata to the container. Can be a list of strings/dictionaries

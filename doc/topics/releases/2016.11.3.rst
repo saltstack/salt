@@ -10,16 +10,151 @@ Changes for v2016.11.2..v2016.11.3
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2017-02-16T16:48:51Z*
+*Generated at: 2017-02-22T23:01:16Z*
 
 Statistics:
 
-- Total Merges: **126**
-- Total Issue references: **75**
-- Total PR references: **199**
+- Total Merges: **139**
+- Total Issue references: **78**
+- Total PR references: **217**
 
 Changes:
 
+
+- **PR** `#39536`_: (*twangboy*) Namespace 'status' functions in 'win_status'
+  @ *2017-02-21T23:45:31Z*
+
+  - **PR** `#39005`_: (*cro*) Ungate the status.py module and raise unsupported errors in functions not executable on Windows.
+    | refs: `#39536`_
+  * 40f72db Merge pull request `#39536`_ from twangboy/fix_win_status
+  * d5453e2 Remove unused import (lint)
+
+  * 837c32e Remove list2cmdline
+
+  * c258cb3 Streamline wmic command returns for easier parsing
+
+  * 6d2cf81 Fix 'ping_master' function
+
+  * d946d10 Namespace 'status' functions in 'win_status'
+
+- **PR** `#39534`_: (*rallytime*) Fix breakage in aptpkg and dpkg execution modules
+  @ *2017-02-21T20:31:15Z*
+
+  - **PR** `#39418`_: (*anlutro*) Allow aptpkg.info_installed on package names that aren't installed
+    | refs: `#39534`_
+  * dc8f578 Merge pull request `#39534`_ from rallytime/fix-pkg-function-specs
+  * d34a8fe Fix breakage in aptpkg and dpkg execution modules
+
+* 1d0d7b2 Upgrade SaltTesting to run test suite for 2016.11 and add SaltPyLint (`#39521`_)
+
+  - **ISSUE** `#34712`_: (*richardscollin*) Salt Test Suite Error - develop
+    | refs: `#37366`_
+  - **PR** `#39521`_: (*vutny*) Upgrade SaltTesting to run test suite for 2016.11 and add SaltPyLint
+  - **PR** `#37366`_: (*eradman*) dev_python*.txt: use current SaltTesting and SaltPyLint modules
+    | refs: `#39521`_
+
+- **PR** `#39370`_: (*twangboy*) Gate win_osinfo and winservice
+  @ *2017-02-17T23:53:58Z*
+
+  * e4c7168 Merge pull request `#39370`_ from twangboy/gate_win_utils
+  * 167cdb3 Gate windows specific imports, add __virtual__
+
+  * e67387d Add option to return a Non instantiated class
+
+  * 315b0cc Clarify return value for win_osinfo
+
+  * 994314e Fix more docs
+
+  * 2bbe3cb Fix some docs
+
+  * 4103563 Merge branch 'gate_win_utils' of https://github.com/twangboy/salt into gate_win_utils
+
+    * 24c1bd0 Remove extra newlines
+
+  * 82a86ce Add helper function for winservice
+
+  * 0051b5a Put the win_osinfo classes in a helper function
+
+  * 4e08534 Gate win_osinfo and winservice better
+
+- **PR** `#39486`_: (*twangboy*) Remove orphaned function list_configurable_policies
+  @ *2017-02-17T22:21:50Z*
+
+  * a3e71b6 Merge pull request `#39486`_ from twangboy/win_remove_orphaned
+  * 1328055 Remove orphaned function list_configurable_policies
+
+- **PR** `#39418`_: (*anlutro*) Allow aptpkg.info_installed on package names that aren't installed
+  | refs: `#39534`_
+  @ *2017-02-17T18:34:19Z*
+
+  * 87b269f Merge pull request `#39418`_ from alprs/fix-aptpkg_info_nonexistent_pkg
+  * 246bf1e add failhard argument to various apt pkg functions
+
+- **PR** `#39438`_: (*mirceaulinic*) file.get_managed: refetch source when file hashsum is changed
+  @ *2017-02-17T17:58:29Z*
+
+  * e816d6c Merge pull request `#39438`_ from cloudflare/fix_39422
+  * 8453800 file.get_managed: refetch cached file when hashsum chnaged
+
+- **PR** `#39432`_: (*dmaziuk*) Quick and dirty fix for GECOS fields with more than 3 commas
+  @ *2017-02-17T17:57:30Z*
+
+  - **ISSUE** `#39203`_: (*dmaziuk*) salt.users gecos field
+    | refs: `#39432`_ `#39432`_
+  * a5fe8f0 Merge pull request `#39432`_ from dmaziuk/issue39203
+  * 41c0463 Remove #
+
+  * 4f877c6 Quick and dirty fix for GECOS fields with more than 3 commas
+
+- **PR** `#39484`_: (*corywright*) The Reactor docs should use pillar='{}' instead of 'pillar={}'
+  @ *2017-02-17T17:50:57Z*
+
+  * 3665229 Merge pull request `#39484`_ from corywright/fix-reactor-docs-pillar-keyword-args
+  * cc90d0d The Reactor docs should use pillar='{}' instead of 'pillar={}'
+
+- **PR** `#39456`_: (*twangboy*) Add salt icon to buildenv directory
+  @ *2017-02-16T22:47:58Z*
+
+  * 2e3a9c5 Merge pull request `#39456`_ from twangboy/win_fix_icon
+  * 8dd915d Add salt icon to buildenv directory
+
+- **PR** `#39462`_: (*twangboy*) Use url_path instead of url_data.path
+  @ *2017-02-16T22:44:18Z*
+
+  * 63adc03 Merge pull request `#39462`_ from twangboy/win_fix_fileclient
+  * a96bc13 Use url_path instead of url_data.path
+
+- **PR** `#39458`_: (*rallytime*) Fix more warnings in doc build
+  @ *2017-02-16T21:45:52Z*
+
+  * e9b034f Merge pull request `#39458`_ from rallytime/fixup-more-doc-build-warnings
+  * e698bc3 Fix more warnings in doc build
+
+- **PR** `#39437`_: (*sakateka*) Fixes about saltfile
+  @ *2017-02-16T20:32:15Z*
+
+  * e4f8c2b Merge pull request `#39437`_ from sakateka/fixes_about_saltfile
+  * ab68524 less pylint: salt/utils/parsers.py
+
+  * 9e7d9dc Revert "pylint: salt/utils/parsers.py"
+
+  * f3f129c document ~/.salt/Saltfile
+
+  * 33f3614 pylint: salt/utils/parsers.py
+
+  * 0f36e10 expand config_dir and '~/.salt/Saltfile' as last resort
+
+* 1acf00d add 2016.11.3 changelog to release notes (`#39451`_)
+
+  - **PR** `#39451`_: (*Ch3LL*) add 2016.11.3 changelog to release notes
+
+- **PR** `#39448`_: (*gtmanfred*) Add release notes for cisco proxy minions added in Carbon
+  @ *2017-02-16T17:29:48Z*
+
+  - **ISSUE** `#38032`_: (*meggiebot*) Add missing Carbon docs
+    | refs: `#39448`_
+  * 8e2cbd2 Merge pull request `#39448`_ from gtmanfred/2016.11
+  * 3172e88 Add release notes for cisco proxy minions added in Carbon
 
 - **PR** `#39428`_: (*rallytime*) [2016.11] Merge forward from 2016.3 to 2016.11
   @ *2017-02-16T00:01:15Z*
@@ -846,6 +981,7 @@ Changes:
 * a7fc02e Ungate the status.py module and raise unsupported errors in functions not executeable on Windows. (`#39005`_)
 
   - **PR** `#39005`_: (*cro*) Ungate the status.py module and raise unsupported errors in functions not executable on Windows.
+    | refs: `#39536`_
 
 - **PR** `#39012`_: (*terminalmage*) Fix "invalid lexer" errors in docs build
   @ *2017-01-28T06:47:45Z*
@@ -1252,6 +1388,7 @@ Changes:
 .. _`#33890`: https://github.com/saltstack/salt/issues/33890
 .. _`#34280`: https://github.com/saltstack/salt/pull/34280
 .. _`#34551`: https://github.com/saltstack/salt/issues/34551
+.. _`#34712`: https://github.com/saltstack/salt/issues/34712
 .. _`#34780`: https://github.com/saltstack/salt/issues/34780
 .. _`#35055`: https://github.com/saltstack/salt/pull/35055
 .. _`#35777`: https://github.com/saltstack/salt/issues/35777
@@ -1264,12 +1401,14 @@ Changes:
 .. _`#37174`: https://github.com/saltstack/salt/issues/37174
 .. _`#37262`: https://github.com/saltstack/salt/pull/37262
 .. _`#37338`: https://github.com/saltstack/salt/pull/37338
+.. _`#37366`: https://github.com/saltstack/salt/pull/37366
 .. _`#37375`: https://github.com/saltstack/salt/pull/37375
 .. _`#37413`: https://github.com/saltstack/salt/issues/37413
 .. _`#37632`: https://github.com/saltstack/salt/pull/37632
 .. _`#37864`: https://github.com/saltstack/salt/pull/37864
 .. _`#37938`: https://github.com/saltstack/salt/issues/37938
 .. _`#38003`: https://github.com/saltstack/salt/issues/38003
+.. _`#38032`: https://github.com/saltstack/salt/issues/38032
 .. _`#38081`: https://github.com/saltstack/salt/issues/38081
 .. _`#38100`: https://github.com/saltstack/salt/issues/38100
 .. _`#38165`: https://github.com/saltstack/salt/pull/38165
@@ -1435,6 +1574,7 @@ Changes:
 .. _`#39198`: https://github.com/saltstack/salt/pull/39198
 .. _`#39199`: https://github.com/saltstack/salt/pull/39199
 .. _`#39202`: https://github.com/saltstack/salt/pull/39202
+.. _`#39203`: https://github.com/saltstack/salt/issues/39203
 .. _`#39206`: https://github.com/saltstack/salt/pull/39206
 .. _`#39209`: https://github.com/saltstack/salt/pull/39209
 .. _`#39210`: https://github.com/saltstack/salt/pull/39210
@@ -1484,16 +1624,31 @@ Changes:
 .. _`#39362`: https://github.com/saltstack/salt/pull/39362
 .. _`#39364`: https://github.com/saltstack/salt/pull/39364
 .. _`#39369`: https://github.com/saltstack/salt/pull/39369
+.. _`#39370`: https://github.com/saltstack/salt/pull/39370
 .. _`#39378`: https://github.com/saltstack/salt/pull/39378
 .. _`#39379`: https://github.com/saltstack/salt/pull/39379
 .. _`#39380`: https://github.com/saltstack/salt/pull/39380
 .. _`#39392`: https://github.com/saltstack/salt/pull/39392
 .. _`#39400`: https://github.com/saltstack/salt/pull/39400
 .. _`#39409`: https://github.com/saltstack/salt/pull/39409
+.. _`#39418`: https://github.com/saltstack/salt/pull/39418
 .. _`#39419`: https://github.com/saltstack/salt/pull/39419
 .. _`#39424`: https://github.com/saltstack/salt/pull/39424
 .. _`#39428`: https://github.com/saltstack/salt/pull/39428
 .. _`#39429`: https://github.com/saltstack/salt/pull/39429
+.. _`#39432`: https://github.com/saltstack/salt/pull/39432
+.. _`#39437`: https://github.com/saltstack/salt/pull/39437
+.. _`#39438`: https://github.com/saltstack/salt/pull/39438
+.. _`#39448`: https://github.com/saltstack/salt/pull/39448
+.. _`#39451`: https://github.com/saltstack/salt/pull/39451
+.. _`#39456`: https://github.com/saltstack/salt/pull/39456
+.. _`#39458`: https://github.com/saltstack/salt/pull/39458
+.. _`#39462`: https://github.com/saltstack/salt/pull/39462
+.. _`#39484`: https://github.com/saltstack/salt/pull/39484
+.. _`#39486`: https://github.com/saltstack/salt/pull/39486
+.. _`#39521`: https://github.com/saltstack/salt/pull/39521
+.. _`#39534`: https://github.com/saltstack/salt/pull/39534
+.. _`#39536`: https://github.com/saltstack/salt/pull/39536
 .. _`bp-36336`: https://github.com/saltstack/salt/pull/36336
 .. _`bp-37338`: https://github.com/saltstack/salt/pull/37338
 .. _`bp-37375`: https://github.com/saltstack/salt/pull/37375

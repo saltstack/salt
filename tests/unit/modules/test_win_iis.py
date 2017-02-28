@@ -344,7 +344,8 @@ class WinIisTestCase(TestCase):
     @patch('salt.modules.win_iis._list_certs',
            MagicMock(return_value={'9988776655443322111000AAABBBCCCDDDEEEFFF': None}))
     @patch('salt.modules.win_iis._srvmgr',
-           MagicMock(return_value={'retcode': 0}))
+           MagicMock(return_value={'retcode': 0, 'stdout': 10}))
+    @patch('json.loads', MagicMock(return_value=[{'MajorVersion': 10, 'MinorVersion': 0}]))
     @patch('salt.modules.win_iis.list_bindings',
            MagicMock(return_value=BINDING_LIST))
     @patch('salt.modules.win_iis.list_cert_bindings',
