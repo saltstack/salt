@@ -70,8 +70,8 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.loader
-import salt.utils.event
-from salt.utils.event import tagify
+import salt.ext.six as six
+from salt.utils.event import get_event, tagify
 from salt.exceptions import SaltInvocationError
 
 
@@ -209,7 +209,7 @@ def process_queue(queue, quantity=1, backend='sqlite'):
         salt-run queue.process_queue myqueue all backend=sqlite
     '''
     # get ready to send an event
-    event = salt.utils.event.get_event(
+    event = get_event(
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
