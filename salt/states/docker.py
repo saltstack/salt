@@ -1673,6 +1673,34 @@ def running(name,
             `Configure logging drivers`_ documentation for more information.
 
         .. _`Configure logging drivers`: https://docs.docker.com/engine/admin/logging/overview/
+
+    sysctls
+        Either a list of variable/value mappings, or a list of strings in the
+        format ``VARNAME=value``. The below two examples are equivalent:
+
+        .. code-block:: yaml
+
+            foo:
+              docker.running:
+                - image: bar/baz:latest
+                - sysctls:
+                  - VAR1: value
+                  - VAR2: value
+
+        .. code-block:: yaml
+
+            foo:
+              docker.running:
+                - image: bar/baz:latest
+                - sysctls:
+                  - VAR1=value
+                  - VAR2=value
+
+        .. note::
+
+            Values must be strings. Otherwise it will be considered
+            as an error.
+
     '''
     ret = {'name': name,
            'changes': {},
