@@ -36,7 +36,8 @@ except ImportError:
                 'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR',
                 'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
                 'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
-                'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH', 'SPM_REACTOR_PATH'):
+                'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH', 'SPM_REACTOR_PATH',
+                'SHARE_DIR'):
         setattr(__generated_syspaths, key, None)
 
 
