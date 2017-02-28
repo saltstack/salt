@@ -14,7 +14,8 @@ dns.srv_name('ldap/tcp', 'example.com')
 - my stuff
     - gai
     - tmpltools.dns_secure
-
+    - dnsutil lookup parts
+    - dig
 
 # should replace/augment
 https://github.com/saltstack/salt/pull/39615/files
@@ -23,7 +24,6 @@ https://github.com/saltstack/salt/pull/36180
 - modules:
     - ddns
     - dnsutil
-    - dig
     - libcloud dns
 - states
     - libcoud dns
@@ -517,17 +517,33 @@ def records(
     :return: [] of records
     '''
     rdtype = rdtype.upper()
+    qargs = {
+        'method': method,
+        'servers': servers,
+        'timeout': timeout,
+        'secure': secure
+    }
+
     if rdtype == 'PTR' and not name.endswith('arpa'):
         name = ptr_name(name)
 
+    qres = query(name, rdtype, **qargs)
+    if rdtype == 'SPF' and not qres:
+        # 'SPF' has become a regular 'TXT' again
+        qres = [answer for answer in query(name, 'TXT', **qargs) if answer.startswith('v=spf')]
+
+    if not qres:
+        return {}
+
     res = {}
-    for answer in query(name, rdtype, method=method, servers=servers, timeout=timeout, secure=secure):
+    for answer in qres:
         ares = {
             'A': a_rec,
             'AAAA': aaaa_rec,
             'MX': mx_rec,
-            'SRV': srv_rec,
             'SOA': soa_rec,
+            'SPF': spf_rec,
+            'SRV': srv_rec,
         }
         if rdtype in ares:
             answer = ares[rdtype](answer)
@@ -550,26 +566,26 @@ def aaaa_rec(rdata):
     return _data2rec(rschema, rdata)
 
 
-def _weight_pick(domain):
-    pass
-
-
-def weighted_choice(choices):
-
-    qres = records(domain, 'MX')
-
-    total = sum(rec['weight'])
-    count = len(qres)
-
-    values, weights = zip(*choices)
-    total = 0
-    cum_weights = []
-    for w in weights:
-        total += w
-        cum_weights.append(total)
-    x = random() * total
-    i = bisect(cum_weights, x)
-    return values[i]
+# def _weight_pick(domain):
+#     pass
+#
+#
+# def weighted_choice(choices):
+#
+#     qres = records(domain, 'MX')
+#
+#     total = sum(rec['weight'])
+#     count = len(qres)
+#
+#     values, weights = zip(*choices)
+#     total = 0
+#     cum_weights = []
+#     for w in weights:
+#         total += w
+#         cum_weights.append(total)
+#     x = random() * total
+#     i = bisect(cum_weights, x)
+#     return values[i]
 
 
 def mx_data(target, preference=10):
@@ -618,6 +634,63 @@ def soa_rec(rdata):
         ('minimum', int),
     ))
     return _data2rec(rschema, rdata)
+
+
+def spf_rec(rdata):
+    '''
+    Structuralize an SPF record
+    http://www.openspf.org/SPF_Record_Syntax
+    http://www.openspf.org/RFC_4408
+    :param rdata:
+    :return:
+    '''
+    spf_fields = rdata.split(' ')
+    if not spf_fields.pop(0).startswith('v=spf'):
+        raise ValueError('Not an SPF record')
+
+    res = OrderedDict()
+    mods = set()
+    for mech_spec in spf_fields:
+        if mech_spec.startswith(('exp', 'redirect')):
+            # It's a modifier
+            mod, val = mech_spec.split('=', 1)
+            if mod in mods:
+                raise KeyError('Modifier {0} can only appear once'.format(mod))
+
+            mods.add(mod)
+            continue
+
+            # TODO: Should be in something intelligent like an SPF_get
+            # if mod == 'exp':
+            #     res[mod] = query(val, 'TXT', **qargs)
+            #     continue
+            # elif mod == 'redirect':
+            #     return records(val, 'SPF', **qargs)
+
+        mech = {}
+        if mech_spec[0] in ('+', '-', '~', '?'):
+            mech['qualifier'] = mech_spec[0]
+            mech_spec = mech_spec[1:]
+
+        if ':' in mech_spec:
+            mech_spec, val = mech_spec.split(':', 1)
+        elif '/' in mech_spec:
+            idx = mech_spec.find('/')
+            mech_spec = mech_spec[0:idx]
+            val = mech_spec[idx:]
+        else:
+            val = None
+
+        res[mech_spec] = mech
+        if not val:
+            continue
+        elif mech_spec in ('ip4', 'ip6'):
+            val = ipaddress.ip_interface(val)
+            assert val.version == int(mech_spec[-1])
+
+        mech['value'] = val
+
+    return res
 
 
 def srv_data(target, port, prio=10, weight=10):
