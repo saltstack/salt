@@ -163,10 +163,6 @@ class FileserverTest(integration.ShellCase):
         self.assertIsInstance(ret['return'], list)
         self.assertTrue('grail/scene33' in ret['return'])
 
-    # Git doesn't handle symlinks in Windows. See the thread below:
-    # http://stackoverflow.com/questions/5917249/git-symlinks-in-windows
-    @skipIf(salt.utils.is_windows(),
-            'Git doesn\'t handle symlinks properly on Windows')
     def test_symlink_list(self):
         '''
         fileserver.symlink_list
