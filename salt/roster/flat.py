@@ -44,7 +44,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
     conditioned_raw = {}
     for minion in raw:
         conditioned_raw[str(minion)] = raw[minion]
-    rmatcher = RosterMatcher(conditioned_raw, tgt, tgt_type, 'ipv4')
+    rmatcher = RosterMatcher(conditioned_raw, tgt, tgt_type, 'ipv4', opts=__opts__)
     return rmatcher.targets()
 
 
@@ -52,11 +52,12 @@ class RosterMatcher(object):
     '''
     Matcher for the roster data structure
     '''
-    def __init__(self, raw, tgt, tgt_type, ipv='ipv4'):
+    def __init__(self, raw, tgt, tgt_type, ipv='ipv4', **kwargs):
         self.tgt = tgt
         self.tgt_type = tgt_type
         self.raw = raw
         self.ipv = ipv
+        self.opts = kwargs.get('opts', {})
 
     def targets(self):
         '''
@@ -111,7 +112,7 @@ class RosterMatcher(object):
         ssh_list_nodegroups
         '''
         minions = {}
-        nodegroup = __opts__.get('ssh_list_nodegroups', {}).get(self.tgt, [])
+        nodegroup = self.opts.get('ssh_list_nodegroups', {}).get(self.tgt, [])
         if not isinstance(nodegroup, list):
             nodegroup = nodegroup.split(',')
         for minion in self.raw:
@@ -129,7 +130,7 @@ class RosterMatcher(object):
             raise RuntimeError("Python lib 'seco.range' is not available")
 
         minions = {}
-        range_hosts = _convert_range_to_list(self.tgt, __opts__['range_server'])
+        range_hosts = _convert_range_to_list(self.tgt, self.opts['range_server'])
 
         for minion in self.raw:
             if minion in range_hosts:
@@ -142,7 +143,7 @@ class RosterMatcher(object):
         '''
         Return the configured ip
         '''
-        ret = __opts__.get('roster_defaults', {})
+        ret = self.opts.get('roster_defaults', {})
         if isinstance(self.raw[minion], string_types):
             ret.update({'host': self.raw[minion]})
             return ret
