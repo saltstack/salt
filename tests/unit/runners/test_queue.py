@@ -20,10 +20,10 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.runners import queue as queue_mod
-from salt.queues import pgjsonb_queue
 
 queue_mod.__opts__ = {'sock_dir': '/var/run/salt/master', 'transport': 'zeromq'}
 queue_mod.__salt__ = {}
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class QueueTest(TestCase):
