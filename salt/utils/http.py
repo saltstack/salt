@@ -762,7 +762,11 @@ def _render(template, render, renderer, template_dict, opts):
         rend = salt.loader.render(opts, {})
         blacklist = opts.get('renderer_blacklist')
         whitelist = opts.get('renderer_whitelist')
-        return compile_template(template, rend, renderer, blacklist, whitelist, **template_dict)
+        ret = compile_template(template, rend, renderer, blacklist, whitelist, **template_dict)
+        ret = ret.read()
+        if str(ret).startswith('#!') and not str(ret).startswith('#!/'):
+            ret = str(ret).split('\n', 1)[1]
+        return ret
     with salt.utils.fopen(template, 'r') as fh_:
         return fh_.read()
 
