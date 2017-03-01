@@ -409,7 +409,7 @@ def _get_cron_date_time(**kwargs):
         if value == 'random':
             ret[param] = str(random.sample(range_max[param], 1)[0])
         elif len(value.split(':')) == 2:
-            cron_range = sorted(value.split(":"))
+            cron_range = sorted(value.split(':'))
             start, end = int(cron_range[0]), int(cron_range[1])
             ret[param] = str(random.randint(start, end))
         else:
