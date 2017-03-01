@@ -427,16 +427,30 @@ def _run(name, **kwargs):
         ret['result'] = False
         return ret
 
-    if aspec.varargs and aspec.varargs in kwargs:
-        varargs = kwargs.pop(aspec.varargs)
+    if aspec.varargs:
+        if aspec.varargs == 'name':
+            rarg = 'm_name'
+        elif aspec.varargs == 'fun':
+            rarg = 'm_fun'
+        elif aspec.varargs == 'names':
+            rarg = 'm_names'
+        elif aspec.varargs == 'state':
+            rarg = 'm_state'
+        elif aspec.varargs == 'saltenv':
+            rarg = 'm_saltenv'
+        else:
+            rarg = aspec.varargs
 
-        if not isinstance(varargs, list):
-            msg = "'{0}' must be a list."
-            ret['comment'] = msg.format(aspec.varargs)
-            ret['result'] = False
-            return ret
+        if rarg in kwargs:
+            varargs = kwargs.pop(rarg)
 
-        args.extend(varargs)
+            if not isinstance(varargs, list):
+                msg = "'{0}' must be a list."
+                ret['comment'] = msg.format(aspec.varargs)
+                ret['result'] = False
+                return ret
+
+            args.extend(varargs)
 
     nkwargs = {}
     if aspec.keywords and aspec.keywords in kwargs:
