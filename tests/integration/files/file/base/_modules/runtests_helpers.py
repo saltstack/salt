@@ -83,6 +83,7 @@ def get_invalid_docs():
     )
     allow_failure_glob = (
         'runtests_helpers.*',
+        'vsphere.*',
     )
     nodoc = set()
     noexample = set()
