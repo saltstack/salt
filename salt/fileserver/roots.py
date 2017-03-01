@@ -305,7 +305,7 @@ def _file_lists(load, form):
     if load['saltenv'] not in __opts__['file_roots']:
         return []
 
-    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/roots')
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists', 'roots')
     if not os.path.isdir(list_cachedir):
         try:
             os.makedirs(list_cachedir)
@@ -373,9 +373,11 @@ def _file_lists(load, form):
                         joined = os.path.join(
                             os.path.dirname(abs_path), link_dest
                         )
-                    rel_dest = os.path.relpath(
-                        os.path.realpath(os.path.normpath(joined)),
-                        fs_root
+                    rel_dest = _translate_sep(
+                        os.path.relpath(
+                            os.path.realpath(os.path.normpath(joined)),
+                            fs_root
+                        )
                     )
                     log.trace(
                         'roots: %s relative path is %s',
