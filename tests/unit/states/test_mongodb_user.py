@@ -21,7 +21,7 @@ ensure_in_syspath('../../')
 from salt.states import mongodb_user
 
 mongodb_user.__salt__ = {}
-mongodb_user.__opts__ = {}
+mongodb_user.__opts__ = {'test': True}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -69,7 +69,6 @@ class MongodbUserTestCase(TestCase):
                 comt = ('User {0} has been created'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Present'}})
-                print ret
                 self.assertDictEqual(mongodb_user.present(name, passwd), ret)
 
     # 'absent' function tests: 1
