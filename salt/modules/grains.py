@@ -210,7 +210,7 @@ def setvals(grains, destructive=False, refresh=True):
         Defaults to False.
 
     refresh
-        Refresh minion grains using saltutil.sync_grains.
+        Refresh modules and pillar after adding the new grains.
         Defaults to True.
 
     CLI Example:
@@ -308,7 +308,7 @@ def setval(key, val, destructive=False, refresh=True):
         Defaults to False.
 
     refresh
-        Refresh minion grains using saltutil.sync_grains.
+        Refresh modules and pillar after adding the new grain.
         Defaults to True.
 
     CLI Example:
