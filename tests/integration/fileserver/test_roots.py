@@ -177,10 +177,6 @@ class RootsTest(integration.ModuleCase):
             ret = roots.dir_list({'saltenv': 'base'})
             self.assertIn('empty_dir', ret)
 
-    # Git doesn't handle symlinks in Windows. See the thread below:
-    # http://stackoverflow.com/questions/5917249/git-symlinks-in-windows
-    @skipIf(salt.utils.is_windows(),
-            'Git doesn\'t handle symlinks properly on Windows')
     def test_symlink_list(self):
         with patch.dict(roots.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'file_roots': self.master_opts['file_roots'],

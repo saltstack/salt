@@ -25,6 +25,7 @@ import logging
 # Import salt libs
 import salt.fileserver
 import salt.utils
+import salt.utils.win_symlink
 from salt.utils.event import tagify
 import salt.ext.six as six
 
@@ -340,7 +341,10 @@ def _file_lists(load, form):
             for item in items:
                 abs_path = os.path.join(parent_dir, item)
                 log.trace('roots: Processing %s', abs_path)
-                is_link = os.path.islink(abs_path)
+                if salt.utils.is_windows():
+                    is_link = salt.utils.win_symlink.is_link(abs_path)
+                else:
+                    is_link = os.path.islink(abs_path)
                 log.trace(
                     'roots: %s is %sa link',
                     abs_path, 'not ' if not is_link else ''
@@ -361,7 +365,10 @@ def _file_lists(load, form):
                     # WindowsError on Windows.
                     pass
                 if is_link:
-                    link_dest = os.readlink(abs_path)
+                    if salt.utils.is_windows():
+                        link_dest = salt.utils.win_symlink.read_link(abs_path)
+                    else:
+                        link_dest = os.readlink(abs_path)
                     log.trace(
                         'roots: %s symlink destination is %s',
                         abs_path, link_dest
