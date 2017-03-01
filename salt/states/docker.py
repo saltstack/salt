@@ -32,7 +32,7 @@ from salt.modules.docker import (
     STOP_TIMEOUT,
     VALID_CREATE_OPTS,
     _validate_input,
-    _get_repo_tag
+    _get_repo_tag,
 )
 # pylint: enable=no-name-in-module,import-error
 import salt.utils
@@ -231,6 +231,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 ret.update({item: {'old': actual_ports,
                                    'new': desired_ports}})
             continue
+
         elif item == 'volumes':
             if actual_data is None:
                 actual_data = []
@@ -398,6 +399,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             # sometimes `[]`. We have to deal with it.
             if bool(actual_data) != bool(data):
                 ret.update({item: {'old': actual_data, 'new': data}})
+
         elif item == 'labels':
             if actual_data is None:
                 actual_data = {}
@@ -424,6 +426,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             if data != actual_data:
                 ret.update({item: {'old': actual_data, 'new': data}})
             continue
+
         elif item == 'devices':
             if data:
                 keys = ['PathOnHost', 'PathInContainer', 'CgroupPermissions']
@@ -441,6 +444,23 @@ def _compare(actual, create_kwargs, defaults_from_image):
             if data != actual_data:
                 ret.update({item: {'old': actual_data, 'new': data}})
                 continue
+
+        elif item == 'security_opt':
+            if actual_data is None:
+                actual_data = []
+            if data is None:
+                data = []
+            actual_data = sorted(set(actual_data))
+            desired_data = sorted(set(data))
+            log.trace('dockerng.running ({0}): munged actual value: {1}'
+                      .format(item, actual_data))
+            log.trace('dockerng.running ({0}): munged desired value: {1}'
+                      .format(item, desired_data))
+            if actual_data != desired_data:
+                ret.update({item: {'old': actual_data,
+                                   'new': desired_data}})
+            continue
+
         elif item in ('cmd', 'command', 'entrypoint'):
             if (actual_data is None and item not in create_kwargs and
                     _image_get(config['image_path'])):
@@ -504,6 +524,9 @@ def image_present(name,
                   insecure_registry=False,
                   client_timeout=CLIENT_TIMEOUT,
                   dockerfile=None,
+                  sls=None,
+                  base='opensuse/python',
+                  saltenv='base',
                   **kwargs):
     '''
     Ensure that an image is present. The image can either be pulled from a
@@ -539,7 +562,7 @@ def image_present(name,
                 - build: /home/myuser/docker/myimage
                 - dockerfile: Dockerfile.alternative
 
-            .. versionadded:: develop
+            .. versionadded:: 2016.11.0
 
         The image will be built using :py:func:`docker.build
         <salt.modules.docker.build>` and the specified image name and tag
@@ -568,7 +591,33 @@ def image_present(name,
         Allows for an alternative Dockerfile to be specified.  Path to alternative
         Dockefile is relative to the build path for the Docker container.
 
-        .. versionadded:: develop
+        .. versionadded:: 2016.11.0
+
+    sls
+        Allow for building images with ``dockerng.sls_build`` by specify the
+        sls files to build with. This can be a list or comma-seperated string.
+
+        .. code-block:: yaml
+
+            myuser/myimage:mytag:
+              dockerng.image_present:
+                - sls:
+                    - webapp1
+                    - webapp2
+                - base: centos
+                - saltenv: base
+
+        .. versionadded: Nitrogen
+
+    base
+        Base image with which to start ``dockerng.sls_build``
+
+        .. versionadded: Nitrogen
+
+    saltenv
+        environment from which to pull sls files for ``dockerng.sls_build``.
+
+        .. versionadded: Nitrogen
     '''
     ret = {'name': name,
            'changes': {},
@@ -598,7 +647,7 @@ def image_present(name,
     else:
         image_info = None
 
-    if build:
+    if build or sls:
         action = 'built'
     elif load:
         action = 'loaded'
@@ -620,6 +669,23 @@ def image_present(name,
             ret['comment'] = (
                 'Encountered error building {0} as {1}: {2}'
                 .format(build, image, exc)
+            )
+            return ret
+        if image_info is None or image_update['Id'] != image_info['Id'][:12]:
+            ret['changes'] = image_update
+
+    elif sls:
+        if isinstance(sls, list):
+            sls = ','.join(sls)
+        try:
+            image_update = __salt__['dockerng.sls_build'](name=image,
+                                                          base=base,
+                                                          mods=sls,
+                                                          saltenv=saltenv)
+        except Exception as exc:
+            ret['comment'] = (
+                'Encountered error using sls {0} for building {1}: {2}'
+                .format(sls, image, exc)
             )
             return ret
         if image_info is None or image_update['Id'] != image_info['Id'][:12]:
@@ -1513,6 +1579,29 @@ def running(name,
         .. note::
 
             This option requires Docker 1.5.0 or newer.
+
+    ulimits
+        List of ulimits. These limits should be passed in
+        the format ``<ulimit_name>:<soft_limit>:<hard_limit>``, with the hard
+        limit being optional.
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - ulimits: nofile=1024:1024,nproc=60
+
+        Ulimits can be passed as a YAML list instead of a comma-separated list:
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - ulimits:
+                  - nofile=1024:1024
+                  - nproc=60
 
     labels
         Add Metadata to the container. Can be a list of strings/dictionaries

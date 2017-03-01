@@ -54,6 +54,9 @@ from salt.ext.six import string_types
 from salt.ext.six.moves import range
 from salt.ext.six import StringIO
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'
 __func_alias__ = {'set_': 'set'}
@@ -2630,7 +2633,7 @@ class _policy_info(object):
         else:
             value_lookup = False
         if 'lookup' in kwargs:
-            for k, v in kwargs['lookup'].iteritems():
+            for k, v in six.iteritems(kwargs['lookup']):
                 if value_lookup:
                     if str(v).lower() == str(item).lower():
                         log.debug('returning key {0}'.format(k))
@@ -4678,14 +4681,6 @@ def _lookup_admin_template(policy_name,
                        ' specify the correct policy')
                 return (False, None, [], msg.format(policy_name, suggested_policies))
     return (False, None, [], 'Unable to find {0} policy {1}'.format(policy_class, policy_name))
-
-
-def list_configurable_policies(policy_class='Machine',
-                               include_administrative_templates=True,
-                               adml_language='en-US'):
-    '''
-    list the policies that the execution module can configure
-    '''
 
 
 def get_policy_info(policy_name,

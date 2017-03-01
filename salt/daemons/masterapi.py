@@ -29,6 +29,7 @@ import salt.minion
 import salt.search
 import salt.key
 import salt.fileserver
+import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
@@ -37,7 +38,7 @@ import salt.utils.gzip_util
 import salt.utils.jid
 from salt.pillar import git_pillar
 from salt.utils.event import tagify
-from salt.exceptions import SaltMasterError
+from salt.exceptions import FileserverConfigError, SaltMasterError
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -87,12 +88,19 @@ def init_git_pillar(opts):
                     )
             else:
                 # New git_pillar code
-                pillar = salt.utils.gitfs.GitPillar(opts)
-                pillar.init_remotes(
-                    opts_dict['git'],
-                    git_pillar.PER_REMOTE_OVERRIDES
-                )
-                ret.append(pillar)
+                try:
+                    pillar = salt.utils.gitfs.GitPillar(opts)
+                    pillar.init_remotes(
+                        opts_dict['git'],
+                        git_pillar.PER_REMOTE_OVERRIDES,
+                        git_pillar.PER_REMOTE_ONLY
+                    )
+                    ret.append(pillar)
+                except FileserverConfigError:
+                    if opts.get('git_pillar_verify_config', True):
+                        raise
+                    else:
+                        log.critical('Could not initialize git_pillar')
     return ret
 
 
@@ -844,7 +852,7 @@ class RemoteFuncs(object):
         opts = {}
         opts.update(self.opts)
         opts.update({'fun': load['fun'],
-                'arg': load['arg'],
+                'arg': salt.utils.args.parse_input(load['arg']),
                 'id': load['id'],
                 'doc': False,
                 'conf_file': self.opts['conf_file']})
@@ -894,7 +902,7 @@ class RemoteFuncs(object):
         # Set up the publication payload
         pub_load = {
             'fun': load['fun'],
-            'arg': load['arg'],
+            'arg': salt.utils.args.parse_input(load['arg']),
             'tgt_type': load.get('tgt_type', 'glob'),
             'tgt': load['tgt'],
             'ret': load['ret'],
@@ -947,7 +955,7 @@ class RemoteFuncs(object):
         # Set up the publication payload
         pub_load = {
             'fun': load['fun'],
-            'arg': load['arg'],
+            'arg': salt.utils.args.parse_input(load['arg']),
             'tgt_type': load.get('tgt_type', 'glob'),
             'tgt': load['tgt'],
             'ret': load['ret'],
@@ -1523,7 +1531,7 @@ class LocalFuncs(object):
                 'tgt': load['tgt'],
                 'user': load['user'],
                 'fun': load['fun'],
-                'arg': load['arg'],
+                'arg': salt.utils.args.parse_input(load['arg']),
                 'minions': minions,
             }
 
@@ -1575,7 +1583,7 @@ class LocalFuncs(object):
         # way that won't have a negative impact.
         pub_load = {
             'fun': load['fun'],
-            'arg': load['arg'],
+            'arg': salt.utils.args.parse_input(load['arg']),
             'tgt': load['tgt'],
             'jid': load['jid'],
             'ret': load['ret'],

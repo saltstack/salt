@@ -35,6 +35,7 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 import salt.utils
 import salt.utils.files
 import salt.utils.itertools
+import salt.utils.templates
 
 # TODO: Check that the passed arguments are correct
 

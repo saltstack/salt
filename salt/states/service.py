@@ -64,8 +64,8 @@ import time
 
 # Import Salt libs
 import salt.utils
+from salt.utils.args import get_function_argspec as _argspec
 from salt.exceptions import CommandExecutionError
-import salt.utils
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -294,7 +294,12 @@ def _available(name, ret):
     return avail
 
 
-def running(name, enable=None, sig=None, init_delay=None, **kwargs):
+def running(name,
+            enable=None,
+            sig=None,
+            init_delay=None,
+            no_block=False,
+            **kwargs):
     '''
     Ensure that the service is running
 
@@ -316,6 +321,11 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         number of seconds after a service has started before returning. Useful
         for requisite states wherein a dependent state might assume a service
         has started but is not yet fully initialized.
+
+    no_block : False
+        **For systemd minions only.** Starts the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
 
     .. note::
         ``watch`` can be used with service.running to restart a service when
@@ -372,7 +382,16 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         if enable is True:
             ret.update(_enable(name, False, result=False, **kwargs))
 
-    func_ret = __salt__['service.start'](name)
+    start_kwargs = {}
+    if no_block:
+        if 'no_block' in _argspec(__salt__['service.start']).args:
+            start_kwargs = {'no_block': no_block}
+        else:
+            ret.setdefault('warnings', []).append(
+                'The \'no_block\' argument is not supported on this platform.'
+            )
+
+    func_ret = __salt__['service.start'](name, **start_kwargs)
 
     if not func_ret:
         ret['result'] = False
@@ -417,7 +436,12 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     return ret
 
 
-def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
+def dead(name,
+         enable=None,
+         sig=None,
+         init_delay=None,
+         no_block=False,
+         **kwargs):
     '''
     Ensure that the named service is dead by stopping the service if it is running
 
@@ -435,6 +459,12 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
     init_delay
         Add a sleep command (in seconds) before the check to make sure service
         is killed.
+
+        .. versionadded:: Nitrogen
+
+    no_block : False
+        **For systemd minions only.** Stops the service using ``--no-block``.
+
         .. versionadded:: Nitrogen
     '''
     ret = {'name': name,
@@ -485,7 +515,16 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret['comment'] = 'Service {0} is set to be killed'.format(name)
         return ret
 
-    func_ret = __salt__['service.stop'](name)
+    stop_kwargs = {}
+    if no_block:
+        if 'no_block' in _argspec(__salt__['service.stop']).args:
+            stop_kwargs = {'no_block': no_block}
+        else:
+            ret.setdefault('warnings', []).append(
+                'The \'no_block\' argument is not supported on this platform.'
+            )
+
+    func_ret = __salt__['service.stop'](name, **stop_kwargs)
     if not func_ret:
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)

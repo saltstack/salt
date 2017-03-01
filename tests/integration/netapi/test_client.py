@@ -5,8 +5,8 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from integration import TMP_CONF_DIR
-from salttesting import TestCase
+from tests.support.unit import TestCase
+from tests.support.paths import TMP_CONF_DIR
 
 # Import Salt libs
 import salt.config
@@ -93,8 +93,3 @@ class NetapiClientTest(TestCase):
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NetapiClientTest, needs_daemon=True)
