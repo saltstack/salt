@@ -35,6 +35,15 @@ from salt.ext.six.moves import filter
 # Get logging started
 log = logging.getLogger(__name__)
 
+FILE_TYPES = ('c', 'd', 'g', 'l', 'r', 's', 'm')
+# c: config file
+# d: documentation file
+# g: ghost file (i.e. the file contents are not included in the package payload)
+# l: license file
+# r: readme file
+# s: SLS file
+# m: Salt module
+
 
 class SPMException(Exception):
     '''
@@ -342,8 +351,10 @@ class SPMClient(object):
             else:
                 response = http.query(dl_url, text=True)
                 with salt.utils.fopen(out_file, 'w') as outf:
-                    outf.write(response.get("text"))
+                    outf.write(response.get('text'))
 
+        # First we download everything, then we install
+        for package in dl_list:
             # Kick off the install
             self._install_indv_pkg(package, out_file)
         return
@@ -445,6 +456,7 @@ class SPMClient(object):
                 raise SPMPackageError('Invalid package: the {0} was not found'.format(field))
 
         pkg_files = formula_tar.getmembers()
+
         # First pass: check for files that already exist
         existing_files = self._pkgfiles_fun('check_existing', pkg_name, pkg_files, formula_def)
 
@@ -943,12 +955,31 @@ class SPMClient(object):
 
         formula_tar = tarfile.open(out_path, 'w:bz2')
 
-        try:
-            formula_tar.add(formula_path, formula_conf['name'], filter=self._exclude)
-            formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
-        except TypeError:
-            formula_tar.add(formula_path, formula_conf['name'], exclude=self._exclude)
-            formula_tar.add(self.abspath, formula_conf['name'], exclude=self._exclude)
+        if 'files' in formula_conf:
+            # This allows files to be added to the SPM file in a specific order.
+            # It also allows for files to be tagged as a certain type, as with
+            # RPM files. This tag is ignored here, but is used when installing
+            # the SPM file.
+            if isinstance(formula_conf['files'], list):
+                formula_dir = tarfile.TarInfo(formula_conf['name'])
+                formula_dir.type = tarfile.DIRTYPE
+                formula_tar.addfile(formula_dir)
+                for file_ in formula_conf['files']:
+                    for ftype in FILE_TYPES:
+                        if file_.startswith('{0}|'.format(ftype)):
+                            file_ = file_.lstrip('{0}|'.format(ftype))
+                    formula_tar.add(
+                        os.path.join(os.getcwd(), file_),
+                        os.path.join(formula_conf['name'], file_),
+                    )
+        else:
+            # If no files are specified, then the whole directory will be added.
+            try:
+                formula_tar.add(formula_path, formula_conf['name'], filter=self._exclude)
+                formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
+            except TypeError:
+                formula_tar.add(formula_path, formula_conf['name'], exclude=self._exclude)
+                formula_tar.add(self.abspath, formula_conf['name'], exclude=self._exclude)
         formula_tar.close()
 
         self.ui.status('Built package {0}'.format(out_path))
