@@ -93,6 +93,9 @@ class SPMTest(TestCase):
         os.mkdir(_TMP_SPM)
         self.ui = SPMTestUserInterface()
         self.client = salt.spm.SPMClient(self.ui, __opts__)
+        master_cache = salt.config.DEFAULT_MASTER_OPTS['cachedir']
+        if not os.path.exists(master_cache):
+            os.makedirs(master_cache)
 
     def tearDown(self):
         shutil.rmtree(_TMP_SPM, ignore_errors=True)
