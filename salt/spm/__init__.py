@@ -482,7 +482,7 @@ class SPMClient(object):
             log.debug('Executing pre_tgt_state script')
             high_data = self._render(formula_def['pre_tgt_state']['data'], formula_def)
             tgt = formula_def['pre_tgt_state']['tgt']
-            ret = client.run_job(
+            ret = self.client.run_job(
                 tgt=formula_def['pre_tgt_state']['tgt'],
                 fun='state.high',
                 tgt_type=formula_def['pre_tgt_state'].get('tgt_type', 'glob'),
@@ -536,7 +536,7 @@ class SPMClient(object):
             log.debug('Executing post_tgt_state script')
             high_data = self._render(formula_def['post_tgt_state']['data'], formula_def)
             tgt = formula_def['post_tgt_state']['tgt']
-            ret = client.run_job(
+            ret = self.client.run_job(
                 tgt=formula_def['post_tgt_state']['tgt'],
                 fun='state.high',
                 tgt_type=formula_def['post_tgt_state'].get('tgt_type', 'glob'),
