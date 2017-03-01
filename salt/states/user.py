@@ -497,6 +497,9 @@ def present(name,
             if key == 'passwd' and not empty_password:
                 __salt__['shadow.set_password'](name, password)
                 continue
+            if key == 'passwd' and empty_password:
+                log.warn("No password will be set when empty_password=True")
+                continue
             if key == 'date':
                 __salt__['shadow.set_date'](name, date)
                 continue
