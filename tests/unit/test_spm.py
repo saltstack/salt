@@ -37,6 +37,7 @@ __opts__ = {
     'force': False,
     'verbose': False,
     'cache': 'localfs',
+    'cachedir': os.path.join(_TMP_SPM, 'cache'),
     'spm_repo_dups': 'ignore',
     'spm_share_dir': os.path.join(_TMP_SPM, 'share'),
 }
