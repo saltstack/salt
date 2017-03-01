@@ -289,8 +289,8 @@ def setvals(grains, destructive=False, refresh=True):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
     if not __opts__.get('local', False):
-        # Sync the grains
-        __salt__['saltutil.sync_grains'](refresh=refresh)
+        # Refresh the grains
+        __salt__['saltutil.refresh_grains'](refresh=refresh)
     # Return the grains we just set to confirm everything was OK
     return new_grains
 
@@ -423,7 +423,7 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     return setval(key, grains)
 
 
-def delval(key, destructive=False):
+def delval(key, destructive=False, refresh=True):
     '''
     .. versionadded:: 0.17.0
 
@@ -435,6 +435,9 @@ def delval(key, destructive=False):
     destructive
         Delete the key, too. Defaults to False.
 
+    refresh
+        Refresh modules and pillar after removing the grain.
+
     CLI Example:
 
     .. code-block:: bash
@@ -442,7 +445,7 @@ def delval(key, destructive=False):
         salt '*' grains.delval key
     '''
 
-    setval(key, None, destructive=destructive)
+    setval(key, None, destructive=destructive, refresh=refresh)
 
 
 def ls():  # pylint: disable=C0103

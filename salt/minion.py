@@ -1765,6 +1765,15 @@ class Minion(MinionBase):
             tagify([self.opts['id'], 'start'], 'minion'),
         )
 
+    def grains_refresh_manual(self):
+        '''
+        Perform a manual grains refresh
+        '''
+        self.opts['grains'] = salt.loader.grains(
+            self.opts,
+            force_refresh=True,
+            proxy=getattr(self, 'proxy', None))
+
     def module_refresh(self, force_refresh=False, notify=False):
         '''
         Refresh the functions and returners.
@@ -1942,6 +1951,8 @@ class Minion(MinionBase):
         elif tag.startswith('manage_beacons'):
             self.manage_beacons(tag, data)
         elif tag.startswith('grains_refresh'):
+            if tag == 'grains_refresh_manual':
+                self.grains_refresh_manual()
             if (data.get('force_refresh', False) or
                     self.grains_cache != self.opts['grains']):
                 self.pillar_refresh(force_refresh=True)
