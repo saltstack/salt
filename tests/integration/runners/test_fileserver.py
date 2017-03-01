@@ -8,8 +8,7 @@ import contextlib
 
 # Import Salt Testing libs
 import tests.integration as integration
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import skipIf
 
 # Import salt libs
 import salt.utils
