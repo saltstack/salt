@@ -7,16 +7,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import win_dns_client
@@ -135,8 +132,3 @@ class WinDnsClientTestCase(TestCase):
                             'comment': 'Updated primary DNS suffix (a)'})
                 self.assertDictEqual(win_dns_client.primary_suffix('salt',
                                                                    'a'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinDnsClientTestCase, needs_daemon=False)

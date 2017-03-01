@@ -3,16 +3,12 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
     patch)
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import openvswitch_port
@@ -86,9 +82,3 @@ class OpenvswitchPortTestCase(TestCase):
                             }
                         })
             self.assertDictEqual(openvswitch_port.present(name, bridge, tunnel_type="gre", id=1, remote="10.0.0.1"), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-
-    run_tests(OpenvswitchPortTestCase, needs_daemon=False)

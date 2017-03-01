@@ -7,8 +7,8 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     mock_open,
     MagicMock,
     patch,
@@ -346,7 +346,3 @@ class MountTestCase(TestCase):
         mock = MagicMock(return_value={'name': 'name'})
         with patch.object(mount, 'active', mock):
             self.assertTrue(mount.is_mounted('name'))
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MountTestCase, needs_daemon=False)

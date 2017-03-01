@@ -6,8 +6,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     patch,
     NO_MOCK,
     NO_MOCK_REASON
@@ -119,8 +119,3 @@ class GnomedesktopTestCase(TestCase):
         '''
         with patch.object(gsettings_mock, '_get', return_value=True):
             self.assertTrue(gnomedesktop.set_())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GnomedesktopTestCase, needs_daemon=False)

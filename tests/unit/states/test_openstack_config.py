@@ -6,17 +6,14 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
 from salt.exceptions import CommandExecutionError
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import openstack_config
@@ -98,8 +95,3 @@ class OpenstackConfigTestCase(TestCase):
             ret.update({'comment': comt, 'changes': {'Value': 'Deleted'}})
             self.assertDictEqual(openstack_config.absent(name, filename,
                                                          section), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(OpenstackConfigTestCase, needs_daemon=False)

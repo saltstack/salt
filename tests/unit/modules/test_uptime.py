@@ -4,11 +4,8 @@
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
-ensure_in_syspath('../../')
-ensure_in_syspath('../../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
@@ -87,7 +84,3 @@ class UptimeTestCase(TestCase):
         self.assertTrue(uptime.delete('http://example.org') is True)
         self.assertEqual(('http://localhost:5000/api/checks/1234',),
                          REQUEST_MOCK.args)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(UptimeTestCase, needs_daemon=False)

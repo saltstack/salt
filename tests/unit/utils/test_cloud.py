@@ -15,13 +15,11 @@ import os
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.paths import TMP, CODE_DIR
 
 # Import salt libs
 from salt.utils import cloud
-from integration import TMP, CODE_DIR
 
 GPG_KEYDIR = os.path.join(TMP, 'gpg-keydir')
 
@@ -138,7 +136,3 @@ class CloudUtilsTestCase(TestCase):
 
         # tmp file removed
         self.assertFalse(cloud.check_key_path_and_mode('foo', key_file))
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CloudUtilsTestCase, needs_daemon=False)

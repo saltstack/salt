@@ -4,11 +4,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
-ensure_in_syspath('../../')
-
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
 # Import salt libs
 import salt.modules.rvm as rvm
@@ -148,8 +145,3 @@ gemsets for ruby-1.9.2-p180 (found in /usr/local/rvm/gems/ruby-1.9.2-p180)
                  'ruby-1.9.3-p125': ['9bar', '9foo', 'global'],
                  'ruby-head': ['global', 'headbar', 'headfoo']},
                 rvm.gemset_list_all())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestRvmModule, needs_daemon=False)

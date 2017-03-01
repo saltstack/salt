@@ -15,17 +15,12 @@ from random import randint
 import grp
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath,
-    requires_system_grains
-)
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, requires_system_grains
 
 # Import salt libs
 import salt.utils
-import integration
 
 if salt.utils.is_darwin():
     USER = 'macuser'
@@ -263,7 +258,3 @@ class UserTest(integration.ModuleCase,
             check_user = self.run_function('user.list_users')
             if USER in check_user:
                 del_user = self.run_function('user.delete', [USER], remove=True)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(UserTest)

@@ -8,9 +8,8 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,
@@ -18,8 +17,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import dnsutil
@@ -117,8 +114,3 @@ class DNSUtilTestCase(TestCase):
     def test_to_seconds_large(self):
         self.assertEqual(dnsutil._to_seconds('604801'), 604800,
                          msg='Did not set time greater than one week to one week')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DNSUtilTestCase, needs_daemon=False)

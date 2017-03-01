@@ -7,7 +7,7 @@ from __future__ import absolute_import
 from salt import acl
 
 # Import Salt Testing Libs
-from salttesting import TestCase
+from tests.support.unit import TestCase
 
 
 class ClientACLTestCase(TestCase):

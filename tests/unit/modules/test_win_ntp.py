@@ -7,15 +7,11 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch
 )
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import win_ntp
@@ -72,8 +68,3 @@ class WinNtpTestCase(TestCase):
             self.assertListEqual(win_ntp.get_servers(), ['SALT'])
 
             self.assertFalse(win_ntp.get_servers())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinNtpTestCase, needs_daemon=False)

@@ -32,7 +32,7 @@
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-from salttesting.case import TestCase
+from tests.support.case import TestCase
 
 # Import 3rd-party libs
 # pylint: disable=import-error

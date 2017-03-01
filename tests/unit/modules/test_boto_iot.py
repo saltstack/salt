@@ -7,16 +7,13 @@ import random
 import string
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
     patch
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
@@ -771,9 +768,3 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         self.conn.list_topic_rules.side_effect = ClientError(error_content, 'list_topic_rules')
         result = boto_iot.list_topic_rules(**conn_parameters)
         self.assertEqual(result.get('error', {}).get('message'), error_message.format('list_topic_rules'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoIoTPolicyTestCase, needs_daemon=False)
-    run_tests(BotoIoTTopicRuleTestCase, needs_daemon=False)

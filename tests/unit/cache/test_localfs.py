@@ -9,9 +9,9 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-import integration
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+import tests.integration as integration
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,

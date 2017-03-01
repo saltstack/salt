@@ -4,8 +4,8 @@
 from __future__ import absolute_import
 
 # Import Salt testing libs
-from salttesting import TestCase
-from salttesting.mock import Mock, patch, mock_open
+from tests.support.unit import TestCase
+from tests.support.mock import Mock, patch, mock_open
 
 # Import Salt libs
 from salt.states import kapacitor

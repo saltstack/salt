@@ -6,16 +6,12 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import modjk_worker
@@ -93,8 +89,3 @@ class ModjkWorkerTestCase(TestCase):
         with patch.dict(modjk_worker.__salt__, {'publish.publish': mock}):
             ret.update({'comment': comt})
             self.assertDictEqual(modjk_worker.disable(name, lbn, target), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ModjkWorkerTestCase, needs_daemon=False)

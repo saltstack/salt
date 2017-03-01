@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,
@@ -204,8 +204,3 @@ class ApacheTestCase(TestCase):
         with patch('salt.utils.fopen', mock_open()):
             self.assertEqual(apache.config('/ports.conf',
                                            [{'Listen': '22'}]), 'Listen 22')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ApacheTestCase, needs_daemon=False)

@@ -6,15 +6,11 @@ Tests for the service state
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    ensure_in_syspath,
-    destructiveTest
-)
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import integration
 import salt.utils
 
 INIT_DELAY = 5
@@ -34,7 +30,7 @@ class ServiceTest(integration.ModuleCase,
         '''
         check_status = self.run_function('service.status', name=SERVICE_NAME)
         if check_status is not exp_return:
-            self.assertFalse('status of service is not returning correctly')
+            self.fail('status of service is not returning correctly')
 
     def test_service_dead(self):
         '''
@@ -60,7 +56,3 @@ class ServiceTest(integration.ModuleCase,
                              init_delay=INIT_DELAY)
         self.assertSaltTrueReturn(ret)
         self.check_service_status(False)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ServiceTest)

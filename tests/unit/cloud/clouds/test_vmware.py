@@ -11,14 +11,11 @@ from __future__ import absolute_import
 from copy import deepcopy
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
-from salttesting.helpers import ensure_in_syspath
-from salt import config
-
-ensure_in_syspath('../../../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
 
 # Import Salt Libs
+from salt import config
 from salt.cloud.clouds import vmware
 from salt.exceptions import SaltCloudSystemExit
 
@@ -1274,8 +1271,3 @@ class CloneFromSnapshotTest(TestCase):
                 'disk_move_type': clone_type}})
 
         self.assertEqual(clone_spec2.location.diskMoveType, clone_type)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VMwareTestCase, needs_daemon=False)
-    run_tests(CloneFromSnapshotTest, needs_daemon=False)

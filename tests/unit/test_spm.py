@@ -7,14 +7,11 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath, destructiveTest
+from tests.support.unit import TestCase
+from tests.support.helpers import destructiveTest
 
 import salt.config
 import salt.spm
-
-ensure_in_syspath('../')
-
 
 _TMP_SPM = tempfile.mkdtemp()
 
@@ -173,8 +170,3 @@ class SPMTest(TestCase):
             self.ui._error = []
             self.client.run(args)
             assert len(self.ui._error) > 0
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SPMTest, needs_daemon=False)

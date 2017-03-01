@@ -20,19 +20,19 @@ except Exception:
     NO_PYOPENSSL = True
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     mock_open,
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import destructiveTest
+from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 from salt.modules import tls
-import integration
+import tests.integration as integration
 
 
 # Globals
@@ -812,7 +812,3 @@ class TLSAddTestCase(TestCase):
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TLSAddTestCase, needs_daemon=False)

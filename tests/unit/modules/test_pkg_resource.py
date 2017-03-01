@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import yaml
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -157,8 +157,3 @@ class PkgresTestCase(TestCase):
                              'A')
 
         self.assertTrue(pkg_resource.check_extra_requirements('a', False))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PkgresTestCase, needs_daemon=False)

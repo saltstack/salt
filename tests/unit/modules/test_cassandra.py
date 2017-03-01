@@ -6,8 +6,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -142,8 +142,3 @@ class CassandraTestCase(TestCase):
         with patch.object(cassandra, '_sys_mgr', mock_sys_mgr):
             self.assertEqual(cassandra.column_family_definition('A', 'a'), vars(object))
             self.assertEqual(cassandra.column_family_definition('B', 'a'), None)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CassandraTestCase, needs_daemon=False)

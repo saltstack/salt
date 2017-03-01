@@ -4,16 +4,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.ext.six as six
@@ -107,9 +104,3 @@ class PillarModuleTestCase(TestCase):
             pillarmod.get(key='foo', default=None, merge=True),
             'bar',
         )
-
-
-# gracinet: not sure this is really useful, but other test modules have this as well
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PillarModuleTestCase, needs_daemon=False)

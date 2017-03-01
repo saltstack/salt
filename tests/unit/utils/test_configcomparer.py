@@ -5,10 +5,7 @@ from __future__ import absolute_import
 import copy
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase
 
 # Import Salt libs
 from salt.utils import configcomparer
@@ -314,8 +311,3 @@ class UtilConfigcomparerTestCase(TestCase):
             },
             to_update,
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(UtilConfigcomparerTestCase, needs_daemon=False)

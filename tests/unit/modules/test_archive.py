@@ -11,16 +11,16 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from salt.ext.six.moves import zip
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 from salt.modules import archive
 from salt.exceptions import CommandNotFoundError
 from salt.utils import which_bin
+
+# Import 3rd-party libs
+from salt.ext.six.moves import zip
 
 
 class ZipFileMock(MagicMock):
@@ -443,8 +443,3 @@ class ArchiveTestCase(TestCase):
             with patch.dict(archive.__salt__, {'cmd.run': MagicMock(return_value=test_files)}):
                 ret = archive.unrar(source, tmp_dir, trim_output=test_trim_opts)
                 self.assertEqual(ret, test_expected)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ArchiveTestCase, needs_daemon=False)

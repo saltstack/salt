@@ -10,16 +10,14 @@ import random
 import string
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import (
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains
 )
-ensure_in_syspath('../../')
 
 # Import Salt Libs
-import integration
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -216,8 +214,3 @@ class MacGroupModuleTest(integration.ModuleCase):
         change_info = self.run_function('group.info', [CHANGE_GROUP])
         if change_info:
             self.run_function('group.delete', [CHANGE_GROUP])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacGroupModuleTest)

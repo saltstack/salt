@@ -4,11 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+import tests.integration as integration
 
 
 class DataModuleTest(integration.ModuleCase):
@@ -54,7 +50,3 @@ class DataModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('data.update', ['spam', 'eggs']))
         self.assertTrue(self.run_function('data.cas', ['spam', 'green', 'eggs']))
         self.assertEqual(self.run_function('data.get', ['spam']), 'green')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DataModuleTest)

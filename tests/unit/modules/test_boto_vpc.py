@@ -12,11 +12,8 @@ import random
 import string
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
 import salt.config
@@ -1816,7 +1813,3 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                 requester_vpc_name='my_peering',
                                                 peer_vpc_id=other_vpc.id,
                                                 **conn_parameters)
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoVpcTestCase, needs_daemon=False)

@@ -2,27 +2,27 @@
 
 # Import python libs
 from __future__ import absolute_import
+from textwrap import dedent
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-
-# Import Python libs
-from textwrap import dedent
+from tests.support.unit import skipIf, TestCase
 
 # Import 3rd party libs
 import jinja2
+import salt.ext.six as six
 
 # Import salt libs
 from salt.serializers import json, yamlex, yaml, msgpack, python, configparser
 from salt.serializers import SerializationError
 from salt.utils.odict import OrderedDict
 
+# Import test support libs
+from tests.support.helpers import flaky
+
 SKIP_MESSAGE = '%s is unavailable, do prerequisites have been met?'
 
 
+@flaky(condition=six.PY3)
 class TestSerializers(TestCase):
     @skipIf(not json.available, SKIP_MESSAGE % 'json')
     def test_serialize_json(self):
@@ -341,7 +341,3 @@ class TestSerializers(TestCase):
 
         deserialized = configparser.deserialize(serialized)
         assert deserialized == data, deserialized
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestSerializers, needs_daemon=False)

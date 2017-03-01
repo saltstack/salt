@@ -272,7 +272,7 @@ Now the workhorse method ``run_function`` can be used to test a module:
 .. code-block:: python
 
     import os
-    import integration
+    import tests.integration as integration
 
 
     class TestModuleTest(integration.ModuleCase):
@@ -312,7 +312,7 @@ Validating the shell commands can be done via shell tests:
     import shutil
     import tempfile
 
-    import integration
+    import tests.integration as integration
 
     class KeyTest(integration.ShellCase):
         '''
@@ -345,7 +345,7 @@ Testing salt-ssh functionality can be done using the SSHCase test class:
 
 .. code-block:: python
 
-    import integration
+    import tests.integration as integration
 
     class SSHGrainsTest(integration.SSHCase):
     '''
@@ -370,7 +370,7 @@ on a minion event bus.
 
 .. code-block:: python
 
-    import integration
+    import tests.integration as integration
 
     class TestEvent(integration.SaltEventAssertsMixin):
         '''
@@ -392,7 +392,7 @@ Testing Salt's Syndic can be done via the SyndicCase test class:
 
 .. code-block:: python
 
-    import integration
+    import tests.integration as integration
 
     class TestSyndic(integration.SyndicCase):
         '''
@@ -438,11 +438,9 @@ to test states:
     import shutil
 
     # Import Salt Testing libs
-    from salttesting.helpers import ensure_in_syspath
-    ensure_in_syspath('../../')
+    import tests.integration as integration
 
     # Import salt libs
-    import integration
     import salt.utils
 
     HFILE = os.path.join(integration.TMP, 'hosts')
@@ -506,8 +504,8 @@ the test method:
 
 .. code-block:: python
 
-    import integration
-    from salttesting.helpers import destructiveTest
+    import tests.integration as integration
+    from tests.support.helpers import destructiveTest
 
     class DestructiveExampleModuleTest(integration.ModuleCase):
         '''
@@ -628,7 +626,7 @@ the test function:
 
 .. code-block:: python
 
-    from salttesting.helpers import expensiveTest
+    from tests.support.helpers import expensiveTest
 
     @expensiveTest
     def test_instance(self):

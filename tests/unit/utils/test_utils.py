@@ -7,15 +7,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     patch, DEFAULT,
     create_autospec,
     NO_MOCK,
     NO_MOCK_REASON
 )
-ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.utils import args
@@ -811,8 +809,3 @@ class UtilsTestCase(TestCase):
             ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
             un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
             self.assertEqual(utils.to_unicode(ut, 'utf-8'), un)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(UtilsTestCase, needs_daemon=False)

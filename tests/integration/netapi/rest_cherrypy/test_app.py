@@ -4,26 +4,14 @@
 from __future__ import absolute_import
 import json
 
-# Import salttesting libs
-from salttesting.unit import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../../')
-
-from tests.utils import BaseRestCherryPyTest
+# Import test support libs
+import tests.support.cherrypy_testclasses as cptc
 
 # Import 3rd-party libs
-# pylint: disable=import-error,unused-import
-from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module
-try:
-    import cherrypy
-    HAS_CHERRYPY = True
-except ImportError:
-    HAS_CHERRYPY = False
-# pylint: enable=import-error,unused-import
+from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
 
 
-@skipIf(HAS_CHERRYPY is False, 'CherryPy not installed')
-class TestAuth(BaseRestCherryPyTest):
+class TestAuth(cptc.BaseRestCherryPyTest):
     def test_get_root_noauth(self):
         '''
         GET requests to the root URL should not require auth
@@ -53,7 +41,7 @@ class TestAuth(BaseRestCherryPyTest):
         self.assertEqual(response.status, '401 Unauthorized')
 
 
-class TestLogin(BaseRestCherryPyTest):
+class TestLogin(cptc.BaseRestCherryPyTest):
     auth_creds = (
             ('username', 'saltdev'),
             ('password', 'saltdev'),
@@ -95,7 +83,7 @@ class TestLogin(BaseRestCherryPyTest):
         self.assertEqual(response.status, '200 OK')
 
 
-class TestRun(BaseRestCherryPyTest):
+class TestRun(cptc.BaseRestCherryPyTest):
     auth_creds = (
         ('username', 'saltdev_auto'),
         ('password', 'saltdev'),
@@ -134,7 +122,7 @@ class TestRun(BaseRestCherryPyTest):
         self.assertEqual(response.status, '401 Unauthorized')
 
 
-class TestWebhookDisableAuth(BaseRestCherryPyTest):
+class TestWebhookDisableAuth(cptc.BaseRestCherryPyTest):
     __opts__ = {
         'rest_cherrypy': {
             'port': 8000,
@@ -155,7 +143,7 @@ class TestWebhookDisableAuth(BaseRestCherryPyTest):
         self.assertEqual(response.status, '200 OK')
 
 
-class TestArgKwarg(BaseRestCherryPyTest):
+class TestArgKwarg(cptc.BaseRestCherryPyTest):
     auth_creds = (
         ('username', 'saltdev'),
         ('password', 'saltdev'),

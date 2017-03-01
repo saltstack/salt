@@ -5,15 +5,9 @@ from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    ensure_in_syspath,
-    requires_network
-)
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import requires_network
 
 GIT_PYTHON = '0.3.2'
 HAS_GIT_PYTHON = False
@@ -123,7 +117,3 @@ class PillarModuleTest(integration.ModuleCase):
         self.assertDictContainsSubset(
             {'knights': ['Lancelot', 'Galahad', 'Bedevere', 'Robin']},
             get_items)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PillarModuleTest)

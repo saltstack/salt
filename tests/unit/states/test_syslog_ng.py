@@ -10,11 +10,8 @@ import re
 import tempfile
 import os
 
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 import salt.utils
 from salt.states import syslog_ng
@@ -383,9 +380,3 @@ class SyslogNGTestCase(TestCase):
                 command = got["changes"]["new"]
                 self.assertTrue(
                     command.endswith("syslog-ng --user=joe --group=users --enable-core --cfgfile=/etc/syslog-ng.conf"))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-
-    run_tests(SyslogNGTestCase, needs_daemon=False)

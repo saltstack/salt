@@ -15,16 +15,13 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules import aptpkg
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON,
 )
-
-ensure_in_syspath('../../')
 
 # Globals
 aptpkg.__salt__ = {}
@@ -344,8 +341,3 @@ class AptPkgTestCase(TestCase):
         }
         with patch.multiple(aptpkg, **patch_kwargs):
             self.assertEqual(aptpkg.upgrade(), dict())
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(AptPkgTestCase, needs_daemon=False)

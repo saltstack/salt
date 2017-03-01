@@ -9,19 +9,14 @@ import signal
 import subprocess
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath
-)
-from salt.ext.six.moves import range
-
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import integration
 import salt.utils
 import salt.states.file
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -338,7 +333,3 @@ class SystemModuleTest(integration.ModuleCase):
         if self.run_function('grains.get', ['os_family']) == 'NILinuxRT':
             self.assertTrue(self.run_function('system._has_settable_hwclock'))
             self.assertTrue(self._hwclock_has_compare())
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SystemModuleTest)

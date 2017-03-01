@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -54,8 +54,3 @@ class DevMapTestCase(TestCase):
             mock = MagicMock(return_value='A')
             with patch.dict(devmap.__salt__, {'cmd.run': mock}):
                 self.assertEqual(devmap.multipath_flush('device'), ['A'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DevMapTestCase, needs_daemon=False)

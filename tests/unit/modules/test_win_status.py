@@ -9,9 +9,8 @@ import types
 import salt.ext.six as six
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, Mock, patch, ANY
 
 # wmi and pythoncom modules are platform specific...
 wmi = types.ModuleType('wmi')
@@ -19,8 +18,6 @@ sys.modules['wmi'] = wmi
 
 pythoncom = types.ModuleType('pythoncom')
 sys.modules['pythoncom'] = pythoncom
-
-from salttesting.mock import NO_MOCK, Mock, patch, ANY
 
 if NO_MOCK is False:
     WMI = Mock()
@@ -183,17 +180,3 @@ class TestEmptyCommandLine(TestProcsBase):
 #    def test_initialize_and_uninitialize_called(self):
 #        pythoncom.CoInitialize.assert_has_calls(self.expected_calls)
 #        pythoncom.CoUninitialize.assert_has_calls(self.expected_calls)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(
-        [
-            TestProcsCount,
-            TestProcsAttributes,
-            TestProcsUnicodeAttributes,
-            TestProcsWMIGetOwnerErrorsAreLogged,
-            TestProcsWMIGetOwnerAccessDeniedWorkaround,
-        ],
-        needs_daemon=False
-    )

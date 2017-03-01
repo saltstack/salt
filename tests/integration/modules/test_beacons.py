@@ -9,11 +9,11 @@ import os
 
 # Salt Libs
 from salt.exceptions import CommandExecutionError
-import integration
+import tests.integration as integration
 import salt.utils
 
 # Salttesting libs
-from salttesting import skipIf
+from tests.support.unit import skipIf
 
 
 BEACON_CONF_DIR = os.path.join(integration.TMP, 'minion.d')

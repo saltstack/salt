@@ -38,7 +38,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-import integration
+import tests.integration as integration
 
 
 class SSHCustomModuleTest(integration.SSHCase):
@@ -78,8 +78,3 @@ class SSHCustomModuleTest(integration.SSHCase):
                 raise AssertionError(cmd[key]['comment'])
             cmd_ret = cmd[key]['changes'].get('ret', None)
             self.assertEqual(cmd_ret, expected[key])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SSHCustomModuleTest)

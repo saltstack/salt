@@ -19,15 +19,10 @@ from datetime import datetime
 import logging
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.helpers import (
-    destructiveTest
-)
-ensure_in_syspath('../../')
-
-import integration
-from integration.utils import testprogram
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
+from tests.integration.utils import testprogram
 
 # Import salt libs
 import salt.utils
@@ -45,7 +40,7 @@ _PKG_TARGETS = {
 _PKGS_INSTALLED = set()
 
 
-class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
+class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-call'
 
@@ -484,7 +479,3 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
             message='correct usage',
             stdout=stdout, stderr=stderr
         )
-
-
-if __name__ == '__main__':
-    integration.run_tests(CallTest)

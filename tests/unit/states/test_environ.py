@@ -5,14 +5,11 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase
+from tests.support.mock import (
     MagicMock,
     patch
 )
-ensure_in_syspath('../../')
-
 # Import salt libs
 import salt.states.environ as envstate
 import salt.modules.environ as envmodule
@@ -120,7 +117,3 @@ class TestEnvironState(TestCase):
         self.assertEqual(ret['changes'], {'test': 'value'})
         ret = envstate.setenv('INITIAL', 'initial')
         self.assertEqual(ret['changes'], {})
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestEnvironState, needs_daemon=False)

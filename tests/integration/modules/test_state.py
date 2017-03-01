@@ -9,12 +9,10 @@ import threading
 import time
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
 
 # Import salt libs
-import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
@@ -1237,8 +1235,3 @@ class StateModuleTest(integration.ModuleCase,
         self.assertIn('Attempt 4:', state_run[retry_state]['comment'])
         self.assertNotIn('Attempt 15:', state_run[retry_state]['comment'])
         self.assertEqual(state_run[retry_state]['result'], True)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StateModuleTest)

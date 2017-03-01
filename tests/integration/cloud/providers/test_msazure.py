@@ -11,13 +11,11 @@ import string
 from distutils.version import LooseVersion
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, expensiveTest
-
-ensure_in_syspath('../../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
-import integration
 from salt.config import cloud_providers_config
 
 # Import Third-Party Libs
@@ -177,8 +175,3 @@ class AzureTest(integration.ShellCase):
         if ret_str in query:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
                            timeout=TIMEOUT)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(AzureTest)

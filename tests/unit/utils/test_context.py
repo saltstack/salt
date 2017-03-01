@@ -9,8 +9,8 @@ import os
 import shutil
 
 # Import Salt testing libraries
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 from salt.utils.cache import context_cache
 
 # Import Salt libraries

@@ -22,17 +22,14 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase
-from salttesting.mock import MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
-from salttesting.helpers import ensure_in_syspath
 from salt.modules.inspectlib.fsdb import CsvDB
 from salt.modules.inspectlib.entities import CsvDBEntity
 from salt.utils.odict import OrderedDict
 
 from salt.ext.six.moves import StringIO
-
-ensure_in_syspath('../../')
 
 
 def mock_open(data=None):

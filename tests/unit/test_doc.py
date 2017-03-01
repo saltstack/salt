@@ -8,13 +8,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../')
+from tests.support.unit import TestCase
 
 # Import Salt libs
-import integration
+import tests.integration as integration
 import salt.modules.cmdmod
 
 
@@ -71,8 +68,3 @@ class DocTestCase(TestCase):
 
         # test_ret should be empty, otherwise there are :doc: references present
         self.assertEqual(test_ret, {})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DocTestCase, needs_daemon=False)

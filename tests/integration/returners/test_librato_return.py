@@ -7,11 +7,9 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
 
 # Import salt libs
-import integration
 from salt.returners import librato_return
 
 log = logging.getLogger(__name__)
@@ -62,7 +60,3 @@ class libratoTest(integration.ShellCase):
         self.assertEqual(results['num_failed_states'], 1)
         self.assertEqual(results['num_passed_states'], 1)
         self.assertEqual(results['runtime'], 7.29)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(libratoTest)

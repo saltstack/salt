@@ -12,8 +12,8 @@ import subprocess
 from distutils.version import LooseVersion
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -163,8 +163,3 @@ class GitTestCase(TestCase):
                     dict([(x, worktree_ret[x]) for x in WORKTREE_INFO
                           if WORKTREE_INFO[x].get('stale', False)])
                 )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GitTestCase, needs_daemon=False)

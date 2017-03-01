@@ -7,16 +7,13 @@ import random
 import string
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
     patch
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
@@ -27,7 +24,7 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 import logging
 
 # pylint: disable=import-error,no-name-in-module,unused-import
-from unit.modules.test_boto_cloudtrail import BotoCloudTrailTestCaseMixin
+from tests.unit.modules.test_boto_cloudtrail import BotoCloudTrailTestCaseMixin
 
 # Import 3rd-party libs
 try:

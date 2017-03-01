@@ -7,10 +7,7 @@ Test the RSA ANSI X9.31 signer and verifier
 from __future__ import absolute_import
 
 # salt testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase
 
 # salt libs
 from salt.utils.rsax931 import RSAX931Signer, RSAX931Verifier
@@ -108,8 +105,3 @@ class RSAX931Test(TestCase):
 
         msg = verifier.verify(RSAX931Test.hello_world_sig)
         self.assertEqual(RSAX931Test.hello_world, msg)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RSAX931Test, needs_daemon=False)

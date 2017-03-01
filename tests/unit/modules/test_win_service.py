@@ -7,16 +7,14 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.modules import win_service
 
@@ -248,8 +246,3 @@ class WinServiceTestCase(TestCase):
         with patch.object(win_service, 'enabled', mock):
             self.assertTrue(win_service.disabled('spongebob'))
             self.assertFalse(win_service.disabled('squarepants'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinServiceTestCase, needs_daemon=False)

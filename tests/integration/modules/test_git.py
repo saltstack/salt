@@ -18,19 +18,17 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+from distutils.version import LooseVersion
 
 # Import Salt Testing libs
-from distutils.version import LooseVersion
-from salttesting import skipIf
-from salttesting.helpers import (
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     skip_if_binaries_missing
 )
-ensure_in_syspath('../..')
 
 # Import salt libs
-import integration
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -976,8 +974,3 @@ class GitModuleTest(integration.ModuleCase):
             self.run_function('git.worktree_prune', [self.repo]),
             prune_message
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GitModuleTest)

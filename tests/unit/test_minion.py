@@ -9,9 +9,8 @@ import copy
 import os
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 
 # Import salt libs
 from salt import minion
@@ -19,8 +18,6 @@ from salt.utils import event
 from salt.exceptions import SaltSystemExit
 import salt.syspaths
 import tornado
-
-ensure_in_syspath('../')
 
 __opts__ = {}
 
@@ -138,8 +135,3 @@ class MinionTestCase(TestCase):
             self.assertEqual(minion.jid_queue, [456, 789])
         finally:
             minion.destroy()
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MinionTestCase, needs_daemon=False)
