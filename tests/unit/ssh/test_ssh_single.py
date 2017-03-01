@@ -9,14 +9,11 @@ import tempfile
 import os.path
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-
-ensure_in_syspath('../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
-import integration
+import tests.integration as integration
 from salt.client import ssh
 from salt.utils import thin
 
@@ -66,7 +63,3 @@ class SSHSingleTests(TestCase):
                          'PasswordAuthentication=yes -o ConnectTimeout=65 -o Port=22 '
                          '-o IdentityFile=/etc/salt/pki/master/ssh/salt-ssh.rsa '
                          '-o User=root  date +%s')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SSHSingleTests, needs_daemon=False)

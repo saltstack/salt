@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -199,7 +199,3 @@ class AtTestCase(TestCase):
         with patch.object(at, '_cmd',
                           return_value='101\tThu Dec 11 19:48:47 2014 A B'):
             self.assertEqual(at.atc(101), '101\tThu Dec 11 19:48:47 2014 A B')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AtTestCase, needs_daemon=False)

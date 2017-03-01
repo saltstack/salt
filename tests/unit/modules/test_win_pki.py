@@ -13,16 +13,13 @@ from __future__ import absolute_import
 from salt.modules import win_pki
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON,
 )
-
-ensure_in_syspath('../../')
 
 # Globals
 win_pki.__salt__ = {}
@@ -185,8 +182,3 @@ class WinPkiTestCase(TestCase):
         '''
         with patch.dict(win_pki.__salt__):
             self.assertTrue(win_pki.remove_cert(thumbprint=THUMBPRINT[::-1]))
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(WinPkiTestCase, needs_daemon=False)

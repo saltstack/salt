@@ -10,16 +10,13 @@ import os
 from salt.states import svn
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 svn.__opts__ = {}
 svn.__salt__ = {}
@@ -120,8 +117,3 @@ class SvnTestCase(TestCase):
         mock = MagicMock(return_value=True)
         with patch.object(svn, '_fail', mock):
             self.assertTrue(svn.dirty("salt", "c://salt"))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SvnTestCase, needs_daemon=False)

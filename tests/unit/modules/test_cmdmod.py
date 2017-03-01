@@ -13,17 +13,14 @@ from salt.log import LOG_LEVELS
 import salt.utils
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     mock_open,
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
     patch
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 cmdmod.__grains__ = {}
 
@@ -253,8 +250,3 @@ class CMDMODTestCase(TestCase):
         '''
         with patch('salt.utils.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
             self.assertFalse(cmdmod._is_valid_shell('foo'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CMDMODTestCase, needs_daemon=False)

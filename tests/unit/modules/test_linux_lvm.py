@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import os.path
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -282,7 +282,3 @@ class LinuxLVMTestCase(TestCase):
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(linux_lvm.lvresize(1, 'a'), {})
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LinuxLVMTestCase, needs_daemon=False)

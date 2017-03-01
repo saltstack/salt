@@ -7,12 +7,10 @@ import time
 import subprocess
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
 
 # Import salt libs
-import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
@@ -225,8 +223,3 @@ class SupervisordModuleTest(integration.ModuleCase):
             'supervisord.status', ['sleep_service'],
             conf_file=self.supervisor_conf, bin_env=self.venv_dir)
         self.assertTrue(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SupervisordModuleTest)

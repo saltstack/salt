@@ -10,14 +10,15 @@ import time
 import threading
 import platform
 
+# Import 3rd-party libs
 import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
 if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 from tornado.testing import AsyncTestCase
-
 import tornado.gen
 
+# Import Salt libs
 import salt.config
 import salt.ext.six as six
 import salt.utils
@@ -25,16 +26,15 @@ import salt.transport.server
 import salt.transport.client
 import salt.exceptions
 
+
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../')
+from tests.support.unit import TestCase, skipIf
 
-import integration
-
-# Import Salt libs
-from unit.transport.test_req import ReqChannelMixin
-from unit.transport.test_pub import PubChannelMixin
+# Import test support libs
+import tests.integration as integration
+from tests.support.helpers import flaky
+from tests.unit.transport.test_req import ReqChannelMixin
+from tests.unit.transport.test_pub import PubChannelMixin
 
 ON_SUSE = False
 if 'SuSE' in platform.dist():
@@ -117,7 +117,7 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
-@skipIf(True, 'Skipping flaky test until Jenkins is moved to C7.')
+@flaky
 @skipIf(ON_SUSE, 'Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed')
 class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     def setUp(self):
@@ -221,9 +221,3 @@ class AsyncPubChannelTest(BaseZMQPubCase, PubChannelMixin):
     '''
     def get_new_ioloop(self):
         return zmq.eventloop.ioloop.ZMQIOLoop()
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ClearReqTestCases, needs_daemon=False)
-    run_tests(AESReqTestCases, needs_daemon=False)

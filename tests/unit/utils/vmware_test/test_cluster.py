@@ -9,8 +9,8 @@ Tests for cluster related functions in salt.utils.vmware
 from __future__ import absolute_import
 import logging
 # Import Salt testing libraries
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call
 # Import Salt libraries
 from salt.exceptions import VMwareApiError, VMwareRuntimeError, \
         VMwareObjectRetrievalError
@@ -240,10 +240,3 @@ class UpdateClusterTestCase(TestCase):
                                       self.mock_cluster_spec)
         mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_cluster', 'ClusterUpdateTask')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GetClusterTestCase, needs_daemon=False)
-    run_tests(CreateClusterTestCase, needs_daemon=False)
-    run_tests(UpdateClusterTestCase, needs_daemon=False)

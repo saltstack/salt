@@ -11,11 +11,7 @@ import shutil
 import socket
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+import tests.integration as integration
 
 
 class SvnTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -142,8 +138,3 @@ class SvnTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertTrue(os.path.isdir(os.path.join(self.target, '.svn')))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SvnTest)

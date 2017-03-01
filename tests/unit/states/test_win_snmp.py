@@ -14,16 +14,13 @@ from salt.states import win_snmp
 import salt.ext.six as six
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON,
 )
-
-ensure_in_syspath('../../')
 
 # Globals
 win_snmp.__salt__ = {}
@@ -99,8 +96,3 @@ class WinSnmpTestCase(TestCase):
                                             'win_snmp.set_community_names': mock_value_set}):
             with patch.dict(win_snmp.__opts__, {'test': False}):
                 self.assertEqual(win_snmp.community_names(**kwargs), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(WinSnmpTestCase, needs_daemon=False)

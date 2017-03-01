@@ -4,11 +4,8 @@
 from __future__ import absolute_import
 
 # salt testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, call, mock_open, NO_MOCK, NO_MOCK_REASON, MagicMock
-
-ensure_in_syspath('../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import patch, call, mock_open, NO_MOCK, NO_MOCK_REASON, MagicMock
 
 # salt libs
 import salt.utils
@@ -107,8 +104,3 @@ class CryptTestCase(TestCase):
     def test_verify_signature(self):
         with patch('salt.utils.fopen', mock_open(read_data=PUBKEY_DATA)):
             self.assertTrue(crypt.verify_signature('/keydir/keyname.pub', MSG, SIG))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CryptTestCase, needs_daemon=False)

@@ -7,11 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch, call, Mock
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch, call, Mock
 
 # Import Salt libs
 from salt.modules import ps
@@ -184,8 +181,3 @@ class PsTestCase(TestCase):
         # @patch('salt.utils.psutil_compat.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
         # def test_get_users_utmp(self):
         #     pass
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(PsTestCase, needs_daemon=False)

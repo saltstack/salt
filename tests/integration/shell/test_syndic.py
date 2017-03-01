@@ -16,19 +16,17 @@ import shutil
 import logging
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.integration.utils import testprogram
 
 # Import salt libs
-import integration
-from integration.utils import testprogram
 import salt.utils
 
 
 log = logging.getLogger(__name__)
 
 
-class SyndicTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
+class SyndicTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixin):
     '''
     Test the salt-syndic command
     '''
@@ -159,7 +157,3 @@ class SyndicTest(integration.ShellCase, testprogram.TestProgramCase, integration
             stdout=stdout, stderr=stderr
         )
         syndic.shutdown()
-
-
-if __name__ == '__main__':
-    integration.run_tests(SyndicTest)

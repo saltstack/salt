@@ -13,11 +13,9 @@ import time
 import threading
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
 
 # Import salt libs
-import integration
 from salt.utils import event
 
 # Import 3rd-party libs
@@ -117,8 +115,3 @@ class EventModuleTest(integration.ModuleCase):
 
         with self.assertRaises(Empty):
             eventfired = events.get(block=True, timeout=10)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(EventModuleTest)

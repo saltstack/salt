@@ -9,16 +9,13 @@ import random
 import string
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.ext.six as six
@@ -312,8 +309,3 @@ class BotoElasticsearchDomainTestCase(BotoElasticsearchDomainTestCaseBase, BotoE
         self.conn.describe_elasticsearch_domain.return_value = {'DomainStatus': domain_ret}
         result = boto_elasticsearch_domain.list_tags(DomainName=domain_ret['DomainName'], **conn_parameters)
         self.assertTrue(result['error'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoElasticsearchDomainTestCase, needs_daemon=False)

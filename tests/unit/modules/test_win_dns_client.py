@@ -9,18 +9,14 @@ import sys
 import types
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     Mock,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # wmi and pythoncom modules are platform specific...
 wmi = types.ModuleType('wmi')
@@ -160,8 +156,3 @@ class WinDnsClientTestCase(TestCase):
                 with patch.object(WMI, 'Win32_NetworkAdapterConfiguration',
                                   return_value=[Mockwmi()]):
                     self.assertTrue(win_dns_client.get_dns_config())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinDnsClientTestCase, needs_daemon=False)

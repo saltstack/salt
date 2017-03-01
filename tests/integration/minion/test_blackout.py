@@ -10,12 +10,10 @@ from time import sleep
 import textwrap
 
 # Import Salt Testing libs
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-
-ensure_in_syspath('../')
+import tests.integration as integration
+from tests.support.helpers import destructiveTest
 
 # Import Salt libs
-import integration
 import salt.utils
 
 
@@ -101,8 +99,3 @@ class MinionBlackoutTestCase(integration.ModuleCase):
             self.assertIn('Minion in blackout mode.', cloud_ret)
         finally:
             self.end_blackout()
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MinionBlackoutTestCase, needs_daemon=True)

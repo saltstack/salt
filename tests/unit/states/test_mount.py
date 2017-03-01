@@ -6,16 +6,12 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import mount
@@ -301,8 +297,3 @@ class MountTestCase(TestCase):
         comt = ('Watch not supported in unmount at this time')
         ret.update({'comment': comt})
         self.assertDictEqual(mount.mod_watch(name, sfun='unmount'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MountTestCase, needs_daemon=False)

@@ -7,16 +7,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import win_system
@@ -135,8 +132,3 @@ class WinSystemTestCase(TestCase):
                         'result': True})
 
             self.assertDictEqual(win_system.hostname('SALT'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinSystemTestCase, needs_daemon=False)

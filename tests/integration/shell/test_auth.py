@@ -12,16 +12,13 @@ import grp
 import random
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    ensure_in_syspath,
-    destructiveTest)
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
 import salt.utils
 from salt.utils.pycrypto import gen_hash
-import integration
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -137,8 +134,3 @@ class AuthTest(integration.ShellCase):
                 self.run_call('user.delete {0}'.format(user))
         if grp.getgrnam(self.group):
             self.run_call('group.delete {0}'.format(self.group))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AuthTest)

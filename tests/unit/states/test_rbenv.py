@@ -6,17 +6,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import rbenv
@@ -128,8 +124,3 @@ class RbenvTestCase(TestCase):
                 comt = ('Rbenv installed')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(rbenv.install_rbenv(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RbenvTestCase, needs_daemon=False)

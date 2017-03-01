@@ -10,32 +10,37 @@ import logging
 import socket
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-
-from integration.cloud.helpers.virtualbox import VirtualboxTestCase, VirtualboxCloudTestCase, CONFIG_NAME, \
-    PROVIDER_NAME, \
-    PROFILE_NAME, BASE_BOX_NAME, INSTANCE_NAME, BOOTABLE_BASE_BOX_NAME, DEPLOY_PROFILE_NAME
-
-ensure_in_syspath('../../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.integration.cloud.helpers.virtualbox import (VirtualboxTestCase,
+                                                        VirtualboxCloudTestCase,
+                                                        CONFIG_NAME,
+                                                        PROVIDER_NAME,
+                                                        PROFILE_NAME,
+                                                        BASE_BOX_NAME,
+                                                        INSTANCE_NAME,
+                                                        BOOTABLE_BASE_BOX_NAME,
+                                                        DEPLOY_PROFILE_NAME)
 
 # Import Salt Libs
 import salt.ext.six as six
 from salt.ext.six.moves import range
-import integration
 from salt.config import cloud_providers_config, vm_profiles_config
-from salt.utils.virtualbox import vb_xpcom_to_attribute_dict, vb_clone_vm, vb_destroy_machine, vb_create_machine, \
-    vb_get_box, vb_machine_exists, XPCOM_ATTRIBUTES, vb_start_vm, vb_stop_vm, \
-    vb_get_network_addresses, vb_wait_for_network_address, machine_get_machinestate_str, HAS_LIBS
+from salt.utils.virtualbox import (vb_xpcom_to_attribute_dict,
+                                   vb_clone_vm,
+                                   vb_destroy_machine,
+                                   vb_create_machine,
+                                   vb_get_box,
+                                   vb_machine_exists,
+                                   XPCOM_ATTRIBUTES,
+                                   vb_start_vm,
+                                   vb_stop_vm,
+                                   vb_get_network_addresses,
+                                   vb_wait_for_network_address,
+                                   machine_get_machinestate_str,
+                                   HAS_LIBS)
 
-# Setup logging
-log = logging.getLogger()
 log = logging.getLogger(__name__)
-# log_handler = logging.StreamHandler()
-# log_handler.setLevel(logging.INFO)
-# log.addHandler(log_handler)
-# log.setLevel(logging.INFO)
-info = log.info
 
 # As described in the documentation of list_nodes (this may change with time)
 MINIMAL_MACHINE_ATTRIBUTES = [
@@ -300,7 +305,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
 
     def test_start_stop_action(self):
         res = self.run_cloud_action("start", BOOTABLE_BASE_BOX_NAME, timeout=10)
-        info(res)
+        log.info(res)
 
         machine = res.get(BOOTABLE_BASE_BOX_NAME)
         self.assertIsNotNone(machine)
@@ -309,7 +314,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
         self.assertEqual(state, expected_state)
 
         res = self.run_cloud_action("stop", BOOTABLE_BASE_BOX_NAME, timeout=10)
-        info(res)
+        log.info(res)
 
         machine = res.get(BOOTABLE_BASE_BOX_NAME)
         self.assertIsNotNone(machine)
@@ -425,7 +430,7 @@ class XpcomConversionTests(unittest.TestCase):
 
         self.assertIsNotNone(expected_attributes, "%s is unknown")
 
-        for key in ret.keys():
+        for key in ret:
             self.assertIn(key, expected_attributes)
 
     def test_override_attributes(self):
@@ -460,7 +465,7 @@ class XpcomConversionTests(unittest.TestCase):
         self.assertDictEqual(ret, expected_machine)
 
         ret_keys = ret.keys()
-        for key in expected_extras.keys():
+        for key in expected_extras:
             self.assertIn(key, ret_keys)
 
     def test_extra_nonexistant_attributes(self):
@@ -481,10 +486,3 @@ class XpcomConversionTests(unittest.TestCase):
 
         ret = vb_xpcom_to_attribute_dict(xpcom, extra_attributes=expected_extras)
         self.assertDictEqual(ret, expected_extra_dict)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-
-    run_tests(VirtualboxProviderTest)
-    # unittest.main()

@@ -8,17 +8,12 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import (
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains
 )
-
-ensure_in_syspath('../../')
-
-# Import Salt Libs
-import integration
 
 
 @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
@@ -93,8 +88,3 @@ class MacDesktopTestCase(integration.ModuleCase):
         self.assertTrue(
             self.run_function('desktop.say', ['hello', 'world'])
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacDesktopTestCase)

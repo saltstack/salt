@@ -7,14 +7,10 @@ import shutil
 import tempfile
 
 # Import Salt Testing Libs
+import tests.integration as integration
 from salt.runners import winrepo
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
-
-ensure_in_syspath('../../')
-# Import Salt Libs
-import integration
+from tests.support.unit import skipIf
+from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 _WINREPO_SLS = r'''
 winscp_x86:
@@ -107,8 +103,3 @@ class WinrepoTest(integration.ShellCase):
                  'winrepo_dir': self.winrepo_dir,
                  'extension_modules': self.extmods_dir}):
             self.assertEqual(winrepo.genrepo(), _WINREPO_GENREPO_DATA)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinrepoTest)

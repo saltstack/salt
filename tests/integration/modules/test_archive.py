@@ -9,15 +9,11 @@ import shutil
 import textwrap
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath
-)
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import integration
 import salt.utils
 
 # Import 3rd party libs
@@ -264,8 +260,3 @@ class ArchiveTest(integration.ModuleCase):
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ArchiveTest)

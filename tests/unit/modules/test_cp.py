@@ -7,9 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     Mock,
     MagicMock,
     mock_open,
@@ -17,8 +16,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import cp
@@ -159,8 +156,3 @@ class CpTestCase(TestCase):
                 id='abc'
             )
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CpTestCase, needs_daemon=False)

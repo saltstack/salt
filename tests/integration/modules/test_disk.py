@@ -6,12 +6,11 @@ import os
 import shutil
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (ensure_in_syspath, destructiveTest)
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import integration
 import salt.utils
 
 # Import 3rd-party libs
@@ -86,8 +85,3 @@ class DiskModuleTest(integration.ModuleCase):
             self.assertTrue('free' in val)
             self.assertTrue('use' in val)
             self.assertTrue('filesystem' in val)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests([DiskModuleVirtualizationTest, DiskModuleTest])

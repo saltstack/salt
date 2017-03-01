@@ -6,16 +6,12 @@ unit tests for the sqs_events engine
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.engines import sqs_events
@@ -77,8 +73,3 @@ class EngineSqsEventTestCase(TestCase):
         sqs_events._process_queue(q, q_name, mock_fire)
         self.assertTrue(mock_sqs.queue.Queue().get_messages.called, len(msgs))
         self.assertTrue(mock_fire.called, len(msgs))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(EngineSqsEventTestCase, needs_daemon=False)

@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -60,7 +60,3 @@ class HtpasswdTestCase(TestCase):
         '''
         self.assertEqual(htpasswd.userdel('/etc/httpd/htpasswd', 'larry'),
                          'Error: The specified htpasswd file does not exist')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HtpasswdTestCase, needs_daemon=False)

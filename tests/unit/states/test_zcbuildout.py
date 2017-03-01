@@ -5,18 +5,13 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    ensure_in_syspath,
-    requires_network,
-)
-
-ensure_in_syspath('../../')
-import integration
+from tests.support.unit import skipIf
+from tests.support.helpers import requires_network
+import tests.integration as integration
 
 # Import Salt libs
 import salt.utils
-from unit.modules.test_zcbuildout import Base, KNOWN_VIRTUALENV_BINARY_NAMES
+from tests.unit.modules.test_zcbuildout import Base, KNOWN_VIRTUALENV_BINARY_NAMES
 from salt.modules import zcbuildout as modbuildout
 from salt.states import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
@@ -89,8 +84,3 @@ class BuildoutTestCase(Base):
         self.assertEqual(ret['result'], True)
         self.assertTrue('OUTPUT:' in ret['comment'])
         self.assertTrue('Log summary:' in ret['comment'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BuildoutTestCase, needs_daemon=False)

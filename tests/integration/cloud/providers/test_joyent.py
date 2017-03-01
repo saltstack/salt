@@ -10,12 +10,10 @@ import random
 import string
 
 # Import Salt Testing Libs
-from salttesting.helpers import ensure_in_syspath, expensiveTest
-
-ensure_in_syspath('../../../')
+import tests.integration as integration
+from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
-import integration
 from salt.config import cloud_providers_config
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
@@ -111,8 +109,3 @@ class JoyentTest(integration.ShellCase):
         # if test instance is still present, delete it
         if ret_str in query:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(JoyentTest)

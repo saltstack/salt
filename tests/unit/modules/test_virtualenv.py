@@ -12,14 +12,9 @@ from __future__ import absolute_import
 import sys
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import (
-    ensure_in_syspath,
-    TestsLoggingHandler,
-    ForceImportErrorOn
-)
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.helpers import TestsLoggingHandler, ForceImportErrorOn
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 from salt.modules import virtualenv_mod
@@ -357,8 +352,3 @@ class VirtualenvTestCase(TestCase):
                 runas=None,
                 python_shell=False
             )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VirtualenvTestCase, needs_daemon=False)

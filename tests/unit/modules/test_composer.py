@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -165,8 +165,3 @@ class ComposerTestCase(TestCase):
             mock = MagicMock(return_value=rval)
             with patch.dict(composer.__salt__, {'cmd.run_all': mock}):
                 self.assertEqual(composer.selfupdate(), rval)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ComposerTestCase, needs_daemon=False)

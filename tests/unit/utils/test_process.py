@@ -9,9 +9,7 @@ import signal
 import multiprocessing
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase, skipIf
 
 # Import salt libs
 import salt.utils
@@ -164,11 +162,3 @@ class TestThreadPool(TestCase):
         self.assertEqual(counter.value, 0)
         # make sure the queue is still full
         self.assertEqual(pool._job_queue.qsize(), 1)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(
-        [TestProcessManager, TestThreadPool],
-        needs_daemon=False
-    )

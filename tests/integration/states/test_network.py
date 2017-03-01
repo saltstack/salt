@@ -8,13 +8,9 @@
 # Python libs
 from __future__ import absolute_import
 
-# Salt libs
-import integration
-
-# Salttesting libs
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-
-ensure_in_syspath('../../')
+# Import salt testing libs
+import tests.integration as integration
+from tests.support.helpers import destructiveTest
 
 
 @destructiveTest
@@ -55,8 +51,3 @@ class NetworkTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         ret = self.run_function('state.sls', mods='network.system', test=True)
         self.assertIn('Global network settings are set to be updated:', ret[state_key]['comment'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NetworkTest)

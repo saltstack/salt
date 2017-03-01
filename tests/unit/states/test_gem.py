@@ -4,10 +4,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Late import so mock can do its job
 import salt.states.gem as gem
@@ -106,7 +104,3 @@ class TestGemState(TestCase):
                 self.assertEqual(False, ret['result'])
                 gem_sources_remove_fails.assert_called_once_with(
                     source_uri='http://bar', ruby=None, runas=None)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestGemState, needs_daemon=False)

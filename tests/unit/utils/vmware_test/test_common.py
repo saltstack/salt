@@ -10,8 +10,8 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt testing libraries
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call, \
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call, \
         PropertyMock
 
 # Import Salt libraries
@@ -789,13 +789,3 @@ class GetRootFolderTestCase(TestCase):
     def test_return(self):
         ret = salt.utils.vmware.get_root_folder(self.mock_si)
         self.assertEqual(ret, self.mock_root_folder)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WaitForTaskTestCase, needs_daemon=False)
-    run_tests(GetMorsWithPropertiesTestCase, needs_daemon=False)
-    run_tests(GetPropertiesOfManagedObjectTestCase, needs_daemon=False)
-    run_tests(GetManagedObjectName, needs_daemon=False)
-    run_tests(GetContentTestCase, needs_daemon=False)
-    run_tests(GetRootFolderTestCase, needs_daemon=False)

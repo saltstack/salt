@@ -8,7 +8,7 @@ import json
 import yaml
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
 
-from tests.utils import BaseToolsTest
+from tests.support.cherrypy_testclasses import BaseToolsTest
 
 
 class TestOutFormats(BaseToolsTest):

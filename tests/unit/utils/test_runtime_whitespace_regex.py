@@ -12,9 +12,7 @@ from __future__ import absolute_import
 import re
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase
 
 # Import salt libs
 from salt.utils import build_whitespace_split_regex
@@ -101,8 +99,3 @@ class TestRuntimeWhitespaceRegex(TestCase):
     def test_issue_2227(self):
         regex = build_whitespace_split_regex(SINGLE_DOUBLE_SAME_LINE_TXT)
         self.assertTrue(re.search(regex, MATCH))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestRuntimeWhitespaceRegex, needs_daemon=False)

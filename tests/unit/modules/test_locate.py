@@ -7,16 +7,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import locate
@@ -81,8 +78,3 @@ class LocateTestCase(TestCase):
         mock = MagicMock(return_value='')
         with patch.dict(locate.__salt__, {'cmd.run': mock}):
             self.assertListEqual(locate.locate('wholename', database='myfile'), [])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LocateTestCase, needs_daemon=False)

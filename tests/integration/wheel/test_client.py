@@ -4,8 +4,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import integration
-from salttesting import skipIf
+import tests.integration as integration
+from tests.support.unit import skipIf
 
 # Import Salt libs
 import salt.auth
@@ -111,8 +111,3 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
         }
 
         self.wheel.cmd_sync(low)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WheelModuleTest, needs_daemon=True)

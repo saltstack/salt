@@ -14,12 +14,10 @@ import tornado.ioloop
 import tornado.web
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
 
 # Import salt libs
-import integration
 import salt.utils
 
 # Setup logging
@@ -202,8 +200,3 @@ class ArchiveTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
 
         self._check_extracted(UNTAR_FILE)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ArchiveTest)

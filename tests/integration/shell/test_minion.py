@@ -19,16 +19,15 @@ import shutil
 import logging
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
+import tests.integration.utils
+from tests.integration.utils import testprogram
+from tests.support.unit import skipIf
 
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Import salt libs
-import integration
-import integration.utils
-from integration.utils import testprogram
-import salt.ext.six as six
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -36,7 +35,7 @@ log = logging.getLogger(__name__)
 DEBUG = True
 
 
-class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
+class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixin):
     '''
     Various integration tests for the salt-minion executable.
     '''
@@ -293,7 +292,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             status, 'EX_NOUSER',
             message='unknown user not on system',
             stdout=stdout,
-            stderr=integration.utils.decode_byte_list(stderr)
+            stderr=tests.integration.utils.decode_byte_list(stderr)
         )
         # Although the start-up should fail, call shutdown() to set the internal
         # _shutdown flag and avoid the registered atexit calls to cause timeout
@@ -321,7 +320,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             status, 'EX_USAGE',
             message='unknown argument',
             stdout=stdout,
-            stderr=integration.utils.decode_byte_list(stderr)
+            stderr=tests.integration.utils.decode_byte_list(stderr)
         )
         # Although the start-up should fail, call shutdown() to set the internal
         # _shutdown flag and avoid the registered atexit calls to cause timeout
@@ -350,7 +349,3 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             stdout=stdout, stderr=stderr
         )
         minion.shutdown()
-
-
-if __name__ == '__main__':
-    integration.run_tests(MinionTest)

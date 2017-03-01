@@ -10,8 +10,8 @@ from __future__ import absolute_import
 from salt.cli.batch import Batch
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

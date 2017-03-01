@@ -6,8 +6,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -288,7 +288,3 @@ class FirewalldTestCase(TestCase):
         '''
         with patch.object(firewalld, '__firewall_cmd', return_value='success'):
             self.assertEqual(firewalld.remove_rich_rule('zone', 'rule family="ipv4" source address="1.2.3.4" accept'), 'success')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(FirewalldTestCase, needs_daemon=False)

@@ -7,16 +7,12 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import haproxyconn
@@ -169,8 +165,3 @@ class HaproxyConnTestCase(TestCase):
         Test if it get a value from etcd, by direct path
         '''
         self.assertTrue(haproxyconn.show_backends())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HaproxyConnTestCase, needs_daemon=False)

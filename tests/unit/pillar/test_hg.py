@@ -11,10 +11,10 @@ import subprocess
 import yaml
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
-import integration
+import tests.integration as integration
 
 COMMIT_USER_NAME = 'test_user'
 # file contents

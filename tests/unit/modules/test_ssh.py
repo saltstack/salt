@@ -4,15 +4,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
 
 # Import Salt Libs
-ensure_in_syspath('../../')
 from salt.modules import ssh
 from salt.exceptions import CommandExecutionError
 
@@ -60,8 +58,3 @@ class SSHAuthKeyTestCase(TestCase):
         # Inserting invalid public key should be rejected
         invalid_key = 'AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY'  # missing padding
         self.assertEqual(ssh.set_auth_key('user', invalid_key), 'Invalid public key')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SSHAuthKeyTestCase, needs_daemon=False)

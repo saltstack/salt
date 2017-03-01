@@ -13,11 +13,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../')
-
-# Import salt libs
-import integration
+import tests.integration as integration
 
 
 class LoaderOverridesTest(integration.ModuleCase):
@@ -40,8 +36,3 @@ class LoaderOverridesTest(integration.ModuleCase):
             self.run_function('test.echo', arg=[text])[::-1],
             self.run_function('test.recho', arg=[text]),
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LoaderOverridesTest)

@@ -7,13 +7,11 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
-ensure_in_syspath('../')
+import tests.integration as integration
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
-import integration
 from salt import client
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError, SaltClientError
 
@@ -89,8 +87,3 @@ class LocalClientTestCase(TestCase,
                 self.assertRaises(SaltInvocationError,
                                   self.client.pub,
                                   'non_existent_group', 'test.ping', tgt_type='nodegroup')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LocalClientTestCase, needs_daemon=False)

@@ -8,11 +8,10 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import integration
 import salt.utils
 
 TEST_PKG_URL = 'https://distfiles.macports.org/MacPorts/MacPorts-2.3.4-10.11-ElCapitan.pkg'
@@ -88,8 +87,3 @@ class MacPkgutilModuleTest(integration.ModuleCase):
 
         # Test forget
         self.assertTrue(self.run_function('pkgutil.forget', [TEST_PKG_NAME]))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacPkgutilModuleTest)

@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from tests.support.unit import TestCase
 
 from salt import fileserver
 

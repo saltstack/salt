@@ -118,8 +118,11 @@ def _get_policies(minion_id, config):
 
     policies = []
     for pattern in policy_patterns:
-        for expanded_pattern in _expand_pattern_lists(pattern, **mappings):
-            policies.append(expanded_pattern.format(**mappings))
+        try:
+            for expanded_pattern in _expand_pattern_lists(pattern, **mappings):
+                policies.append(expanded_pattern.format(**mappings))
+        except KeyError:
+            log.warning('Could not resolve policy pattern {0}'.format(pattern))
 
     log.debug('{0} policies: {1}'.format(minion_id, policies))
     return policies

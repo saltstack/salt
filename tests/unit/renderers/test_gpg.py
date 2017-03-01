@@ -4,16 +4,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.renderers import gpg
@@ -96,8 +93,3 @@ class GPGTestCase(TestCase):
             with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
                 with patch('salt.renderers.gpg._decrypt_object', MagicMock(return_value=secret)):
                     self.assertEqual(gpg.render(crypted), secret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GPGTestCase, needs_daemon=False)

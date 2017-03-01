@@ -11,13 +11,11 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-import integration
 from salt.states import pip_state
 
 # Import 3rd-party libs
@@ -302,8 +300,3 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 'successfully installed',
                 {'test': ret}
             )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PipStateTest, needs_daemon=False)

@@ -22,11 +22,8 @@ from salt.cloud.clouds import dimensiondata
 from salt.exceptions import SaltCloudSystemExit
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
 
 # Global Variables
 dimensiondata.__active_provider_name__ = ''
@@ -161,7 +158,3 @@ class DimensionDataTestCase(ExtendedTestCase):
         """
         p = dimensiondata.get_configured_provider()
         self.assertNotEqual(p, None)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DimensionDataTestCase, needs_daemon=False)

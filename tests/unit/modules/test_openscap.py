@@ -5,8 +5,8 @@ from subprocess import PIPE
 
 from salt.modules import openscap
 
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     Mock,
     MagicMock,
     patch,
@@ -72,7 +72,9 @@ class OpenscapTestCase(TestCase):
             response,
             {
                 'upload_dir': self.random_temp_dir,
-                'error': None, 'success': True
+                'error': '',
+                'success': True,
+                'returncode': 0
             }
         )
 
@@ -80,7 +82,7 @@ class OpenscapTestCase(TestCase):
        'salt.modules.openscap.Popen',
        MagicMock(
            return_value=Mock(
-               **{'returncode': 2, 'communicate.return_value': ('', '')}
+               **{'returncode': 2, 'communicate.return_value': ('', 'some error')}
            )
        )
     )
@@ -111,8 +113,9 @@ class OpenscapTestCase(TestCase):
             response,
             {
                 'upload_dir': self.random_temp_dir,
-                'error': None,
-                'success': True
+                'error': 'some error',
+                'success': True,
+                'returncode': 2
             }
         )
 
@@ -124,7 +127,8 @@ class OpenscapTestCase(TestCase):
             {
                 'error': 'argument --profile is required',
                 'upload_dir': None,
-                'success': False
+                'success': False,
+                'returncode': None
             }
         )
 
@@ -132,7 +136,7 @@ class OpenscapTestCase(TestCase):
        'salt.modules.openscap.Popen',
        MagicMock(
            return_value=Mock(
-               **{'returncode': 2, 'communicate.return_value': ('', '')}
+               **{'returncode': 2, 'communicate.return_value': ('', 'some error')}
            )
        )
     )
@@ -143,8 +147,9 @@ class OpenscapTestCase(TestCase):
             response,
             {
                 'upload_dir': self.random_temp_dir,
-                'error': None,
-                'success': True
+                'error': 'some error',
+                'success': True,
+                'returncode': 2
             }
         )
         expected_cmd = [
@@ -181,19 +186,11 @@ class OpenscapTestCase(TestCase):
             {
                 'upload_dir': None,
                 'error': 'evaluation error',
-                'success': False
+                'success': False,
+                'returncode': 1
             }
         )
 
-    @patch(
-       'salt.modules.openscap.Popen',
-       MagicMock(
-           return_value=Mock(**{
-               'returncode': 1,
-               'communicate.return_value': ('', 'evaluation error')
-           })
-       )
-    )
     def test_openscap_xccdf_eval_fail_not_implemented_action(self):
         response = openscap.xccdf('info {0}'.format(self.policy_file))
 
@@ -202,6 +199,7 @@ class OpenscapTestCase(TestCase):
             {
                 'upload_dir': None,
                 'error': "argument action: invalid choice: 'info' (choose from 'eval')",
-                'success': False
+                'success': False,
+                'returncode': None
             }
         )

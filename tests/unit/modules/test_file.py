@@ -7,11 +7,8 @@ import tempfile
 import textwrap
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 import salt.utils
@@ -713,11 +710,3 @@ class FileBasicsTestCase(TestCase):
         os.symlink(self.tfile.name, self.directory + '/a_link')
         result = filemod.symlink(self.tfile.name, self.directory + '/a_link')
         self.assertTrue(result)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(FileModuleTestCase,
-              FileReplaceTestCase,
-              FileBlockReplaceTestCase,
-              needs_daemon=False)

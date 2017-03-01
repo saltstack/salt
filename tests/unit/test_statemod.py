@@ -9,14 +9,11 @@ import tempfile
 import os.path
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-
-ensure_in_syspath('../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
-import integration
+import tests.integration as integration
 from salt.states import saltmod
 
 
@@ -67,8 +64,3 @@ class StatemodTests(TestCase):
             'result': True
         }
         self.assertEqual(ret, expected)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StatemodTests, needs_daemon=False)

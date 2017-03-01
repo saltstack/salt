@@ -6,13 +6,11 @@ Test the django module
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-import integration
 from salt.modules import djangomod as django
 
 django.__salt__ = {}
@@ -147,8 +145,3 @@ class DjangoModuleTest(integration.ModuleCase):
                 python_shell=False,
                 env=None
             )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DjangoModuleTest)

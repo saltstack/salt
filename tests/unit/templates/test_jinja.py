@@ -12,10 +12,9 @@ import pprint
 import re
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf, TestCase
-from salttesting.case import ModuleCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.case import ModuleCase
+from tests.support.paths import TMP_CONF_DIR
 
 # Import salt libs
 import salt.config
@@ -32,7 +31,6 @@ from salt.utils.jinja import (
 )
 from salt.utils.templates import JINJA, render_jinja_tmpl
 from salt.utils.odict import OrderedDict
-from integration import TMP_CONF_DIR
 
 # Import 3rd party libs
 import yaml
@@ -1084,9 +1082,3 @@ class TestDotNotationLookup(ModuleCase):
 
         ret = self.render(tmpl_str)
         self.assertEqual(ret, 'Hello, jerry.')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestSaltCacheLoader, TestGetTemplate, TestCustomExtensions,
-            TestDotNotationLookup,
-              needs_daemon=False)

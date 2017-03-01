@@ -4,11 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+import tests.integration as integration
 
 
 class DecoratorTest(integration.ModuleCase):
@@ -60,8 +56,3 @@ class DecoratorTest(integration.ModuleCase):
                     'runtests_decorators.missing_depends_will_fallback'
                     )
                 )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DecoratorTest)

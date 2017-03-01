@@ -6,18 +6,15 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
 from salt.exceptions import CommandExecutionError
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import sysctl
@@ -129,8 +126,3 @@ class SysctlTestCase(TestCase):
             with patch.dict(sysctl.__salt__, {'sysctl.persist': mock}):
                 ret.update({'comment': comt7, 'result': True})
                 self.assertDictEqual(sysctl.present(name, value), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SysctlTestCase, needs_daemon=False)

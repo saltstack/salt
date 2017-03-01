@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -247,8 +247,3 @@ comment support')
             with patch.dict(ipset.__salt__, {'cmd.run': mock}):
                 self.assertTrue(ipset.flush('set'))
                 self.assertFalse(ipset.flush('set'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(IpsetTestCase, needs_daemon=False)

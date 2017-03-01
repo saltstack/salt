@@ -15,14 +15,14 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
 import salt.minion
 import salt.utils
 import salt.utils.network
-import integration
+import tests.integration as integration
 from salt.syspaths import CONFIG_DIR
 from salt import config as sconfig
 from salt.exceptions import (
@@ -468,7 +468,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         syndic_opts = sconfig.syndic_config(
             syndic_conf_path, minion_conf_path
         )
-        syndic_opts.update(salt.minion.resolve_dns(syndic_opts))
+        syndic_opts.update(salt.minion.resolve_dns(syndic_opts, connect=False))
         root_dir = syndic_opts['root_dir']
         # id & pki dir are shared & so configured on the minion side
         self.assertEqual(syndic_opts['id'], 'minion')

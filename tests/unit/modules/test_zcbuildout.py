@@ -15,16 +15,11 @@ from salt.ext.six.moves.urllib.request import urlopen
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import (
-    ensure_in_syspath,
-    requires_network,
-    skip_if_binaries_missing
-)
-ensure_in_syspath('../..')
+from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import requires_network, skip_if_binaries_missing
+import tests.integration as integration
 
 # Import Salt libs
-import integration  # pylint: disable=import-error
 import salt.utils
 from salt.modules import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
@@ -506,12 +501,3 @@ class BuildoutAPITestCase(TestCase):
         uret = buildout._set_status({}, out=u'éà')
         self.assertTrue(ret['outlog'] == uret['outlog'])
         self.assertTrue('àé' in uret['outlog_by_level'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(
-        BuildoutAPITestCase,
-        BuildoutTestCase,
-        BuildoutOnlineTestCase,
-        needs_daemon=False)

@@ -7,12 +7,11 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, requires_salt_modules
-
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.helpers import requires_salt_modules
 
 # Import Salt libs
-import integration
+import salt.utils.args
 
 
 @requires_salt_modules('test.ping', 'test.arg')
@@ -25,7 +24,7 @@ class ArgumentTestCase(integration.ModuleCase):
         '''
         self.assertIn(
             ("ERROR executing 'test.ping': The following keyword arguments"),
-            self.run_function('test.ping', ['foo=bar'])
+            self.run_function('test.ping', foo='bar')
         )
 
     def test_kwarg_name_containing_dashes(self):
@@ -34,9 +33,12 @@ class ArgumentTestCase(integration.ModuleCase):
         are properly identified as kwargs. If this fails, then the KWARG_REGEX
         variable in salt/utils/__init__.py needs to be fixed.
         '''
+        # We need to use parse_input here because run_function now requires
+        # kwargs to be passed in as *actual* kwargs, and dashes are not valid
+        # characters in Python kwargs.
         self.assertEqual(
             self.run_function(
-                'test.arg', ['foo-bar=baz']
+                'test.arg', salt.utils.args.parse_input(['foo-bar=baz'])
             ).get('kwargs', {}).get('foo-bar'),
             'baz'
         )
@@ -52,8 +54,3 @@ class ArgumentTestCase(integration.ModuleCase):
             self.run_function('test.echo', [arg]),
             arg
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ArgumentTestCase)

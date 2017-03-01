@@ -9,10 +9,8 @@ import copy
 import hashlib
 
 # Import Salt Testing Libs
-from salttesting.unit import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../..')
-import integration  # pylint: disable=import-error
+from tests.support.unit import skipIf
+import tests.integration as integration
 
 # Import Salt libs
 try:
@@ -43,7 +41,7 @@ import salt.ext.six as six
 from salt.ext.six.moves.urllib.parse import urlencode, urlparse  # pylint: disable=no-name-in-module
 # pylint: enable=import-error
 
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')  # pylint: disable=W0223
@@ -698,8 +696,3 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
         ws = yield websocket_connect(request)
         ws.write_message('websocket client ready')
         ws.close()
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(TestBaseSaltAPIHandler, TestSaltAuthHandler, needs_daemon=False)

@@ -8,8 +8,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -677,8 +677,3 @@ class GlusterfsTestCase(TestCase):
                 mock_run.return_value = xml_command_fail
                 self.assertFalse(glusterfs.add_volume_bricks('Newvolume1',
                                                              ['new:/path']))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GlusterfsTestCase, needs_daemon=False)

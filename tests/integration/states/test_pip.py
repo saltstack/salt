@@ -16,14 +16,14 @@ import glob
 import shutil
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
     with_system_user
 )
 # Import salt libs
-import integration
+import tests.integration as integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.exceptions import CommandExecutionError

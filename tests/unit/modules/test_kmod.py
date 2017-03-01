@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, patch
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
 from salt.modules import kmod
@@ -132,8 +132,3 @@ class KmodTestCase(TestCase):
                 with patch.dict(kmod.__salt__, {'cmd.run_all': mock_run_all_1}):
                     self.assertEqual('Error removing module {0}: {1}'.format(mod, err_msg),
                                      kmod.remove(mod, True))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KmodTestCase, needs_daemon=False)

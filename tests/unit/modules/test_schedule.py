@@ -5,23 +5,17 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+import tests.integration as integration
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-from salttesting.helpers import ensure_in_syspath
-
-import os
-import integration
-SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import schedule
@@ -31,6 +25,8 @@ from salt.utils.event import SaltEvent
 schedule.__salt__ = {}
 schedule.__opts__ = {}
 schedule.__pillar__ = {}
+
+SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
 JOB1 = {'function': 'test.ping', 'maxrunning': 1, 'name': 'job1',
         'jid_include': True, 'enabled': True}
@@ -354,8 +350,3 @@ class ScheduleTestCase(TestCase):
                                                      {'comment': comm3,
                                                       'minions': ['minion1'],
                                                       'result': True})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ScheduleTestCase, needs_daemon=False)

@@ -283,7 +283,8 @@ import salt.utils.files
 import salt.utils.templates
 import salt.utils.url
 from salt.utils.locales import sdecode
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+
 if salt.utils.is_windows():
     import salt.utils.win_dacl
 
@@ -1446,7 +1447,7 @@ def managed(name,
         will not be changed or managed.
 
         If the file is hosted on a HTTP or FTP server then the source_hash
-        argument is also required
+        argument is also required.
 
         A list of sources can also be passed in to provide a default source and
         a set of fallbacks. The first source in the list that is found to exist
@@ -3542,8 +3543,7 @@ def line(name, content=None, match=None, mode=None, location=None,
     if not name:
         return _error(ret, 'Must provide name to file.line')
 
-    if create and not os.path.isfile(name):
-        managed(name, create=create, user=user, group=group, mode=file_mode)
+    managed(name, create=create, user=user, group=group, mode=file_mode)
 
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -3822,7 +3822,7 @@ def blockreplace(
         will not be changed or managed.
 
         If the file is hosted on a HTTP or FTP server then the source_hash
-        argument is also required
+        argument is also required.
 
         A list of sources can also be passed in to provide a default source and
         a set of fallbacks. The first source in the list that is found to exist
@@ -3831,7 +3831,8 @@ def blockreplace(
         .. code-block:: yaml
 
             file_override_example:
-              file.managed:
+              file.blockreplace:
+                - name: /etc/example.conf
                 - source:
                   - salt://file_that_does_not_exist
                   - salt://file_that_exists
@@ -3856,45 +3857,8 @@ def blockreplace(
             sha1        40
             md5         32
 
-        **Using a Source Hash File**
-            The file can contain several checksums for several files. Each line
-            must contain both the file name and the hash.  If no file name is
-            matched, the first hash encountered will be used, otherwise the most
-            secure hash with the correct source file name will be used.
-
-            When using a source hash file the source_hash argument needs to be a
-            url, the standard download urls are supported, ftp, http, salt etc:
-
-            Example:
-
-            .. code-block:: yaml
-
-                tomdroid-src-0.7.3.tar.gz:
-                  file.managed:
-                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
-                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
-                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.hash
-
-            The following is an example of the supported source_hash format:
-
-            .. code-block:: text
-
-                /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
-                sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
-                ead48423703509d37c4a90e6a0d53e143b6fc268
-
-            Debian file type ``*.dsc`` files are also supported.
-
-        **Inserting the Source Hash in the sls Data**
-            Examples:
-
-            .. code-block:: yaml
-
-                tomdroid-src-0.7.3.tar.gz:
-                  file.managed:
-                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
-                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
-                    - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
+        See the ``source_hash`` parameter description for :mod:`file.managed
+        <salt.states.file.managed>` function for more details and examples.
 
     template
         The named templating engine will be used to render the downloaded file.
@@ -4349,34 +4313,8 @@ def append(name,
             sha1        40
             md5         32
 
-        The file can contain several checksums for several files. Each line
-        must contain both the file name and the hash.  If no file name is
-        matched, the first hash encountered will be used, otherwise the most
-        secure hash with the correct source file name will be used.
-
-        Debian file type ``*.dsc`` is supported.
-
-        Examples:
-
-        .. code-block:: text
-
-            /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
-            sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
-            ead48423703509d37c4a90e6a0d53e143b6fc268
-
-        Known issues:
-            If the remote server URL has the hash file as an apparent
-            sub-directory of the source file, the module will discover that it
-            has already cached a directory where a file should be cached. For
-            example:
-
-            .. code-block:: yaml
-
-                tomdroid-src-0.7.3.tar.gz:
-                  file.managed:
-                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
-                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
-                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz/+md5
+        See the ``source_hash`` parameter description for :mod:`file.managed
+        <salt.states.file.managed>` function for more details and examples.
 
     template
         The named templating engine will be used to render the appended-to file.
@@ -4790,7 +4728,6 @@ def prepend(name,
 
 def patch(name,
           source=None,
-          hash=None,
           options='',
           dry_run_first=True,
           **kwargs):
@@ -4812,11 +4749,13 @@ def patch(name,
         salt://spam/eggs. A source is required.
 
     hash
-        Hash of the patched file. If the hash of the target file matches this
-        value then the patch is assumed to have been applied. The hash string
-        is as string in the form <hash_type>:<hash_value>. For example:
-        md5:e138491e9d5b97023cea823fe17bac22. For more informations, check the
-        :mod:`file.check_hash <salt.modules.file.check_hash>` module.
+        The hash of the patched file. If the hash of the target file matches
+        this value then the patch is assumed to have been applied. For versions
+        2016.11.4 and newer, the hash can be specified without an accompanying
+        hash type (e.g. ``e138491e9d5b97023cea823fe17bac22``), but for earlier
+        releases it is necessary to also specify the hash type in the format
+        ``<hash_type>:<hash_value>`` (e.g.
+        ``md5:e138491e9d5b97023cea823fe17bac22``).
 
     options
         Extra options to pass to patch.
@@ -4829,7 +4768,7 @@ def patch(name,
         by the ``source`` parameter. If not provided, this defaults to the
         environment from which the state is being executed.
 
-    Usage:
+    **Usage:**
 
     .. code-block:: yaml
 
@@ -4837,8 +4776,15 @@ def patch(name,
         /opt/file.txt:
           file.patch:
             - source: salt://file.patch
-            - hash: md5:e138491e9d5b97023cea823fe17bac22
+            - hash: e138491e9d5b97023cea823fe17bac22
+
+    .. note::
+        For minions running version 2016.11.3 or older, the hash in the example
+        above would need to be specified with the hash type (i.e.
+        ``md5:e138491e9d5b97023cea823fe17bac22``).
     '''
+    hash_ = kwargs.pop('hash', None)
+
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
@@ -4858,11 +4804,16 @@ def patch(name,
         return _error(ret, check_msg)
     if not source:
         return _error(ret, 'Source is required')
-    if hash is None:
+    if hash_ is None:
         return _error(ret, 'Hash is required')
 
-    if hash and __salt__['file.check_hash'](name, hash):
-        ret.update(result=True, comment='Patch is already applied')
+    try:
+        if hash_ and __salt__['file.check_hash'](name, hash_):
+            ret['result'] = True
+            ret['comment'] = 'Patch is already applied'
+            return ret
+    except (SaltInvocationError, ValueError) as exc:
+        ret['comment'] = exc.__str__()
         return ret
 
     # get cached file or copy it to cache
@@ -4873,9 +4824,8 @@ def patch(name,
         return ret
 
     log.debug(
-        'State patch.applied cached source {0} -> {1}'.format(
-            source, cached_source_path
-        )
+        'State patch.applied cached source %s -> %s',
+        source, cached_source_path
     )
 
     if dry_run_first or __opts__['test']:
@@ -4886,20 +4836,18 @@ def patch(name,
             ret['comment'] = 'File {0} will be patched'.format(name)
             ret['result'] = None
             return ret
-        if ret['changes']['retcode']:
+        if ret['changes']['retcode'] != 0:
             return ret
 
     ret['changes'] = __salt__['file.patch'](
         name, cached_source_path, options=options
     )
-    ret['result'] = not ret['changes']['retcode']
-    if ret['result'] and hash and not __salt__['file.check_hash'](name, hash):
-        ret.update(
-            result=False,
-            comment='File {0} hash mismatch after patch was applied'.format(
-                name
-            )
-        )
+    ret['result'] = ret['changes']['retcode'] == 0
+    # No need to check for SaltInvocationError or ValueError this time, since
+    # these exceptions would have been caught above.
+    if ret['result'] and hash_ and not __salt__['file.check_hash'](name, hash_):
+        ret['result'] = False
+        ret['comment'] = 'Hash mismatch after patch was applied'
     return ret
 
 

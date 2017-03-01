@@ -8,11 +8,9 @@ import shutil
 import time
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
 
 # Import salt libs
-import integration
 import salt.utils
 
 
@@ -20,7 +18,7 @@ def minion_in_returns(minion, lines):
     return bool([True for line in lines if line == '{0}:'.format(minion)])
 
 
-class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
+class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
     '''
     Test salt matchers
     '''
@@ -372,8 +370,3 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MatchTest)

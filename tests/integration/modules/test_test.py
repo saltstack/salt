@@ -4,13 +4,11 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
 
 # Import salt libs
-import integration
 import salt.version
-from salt import config
+import salt.config
 
 
 class TestModuleTest(integration.ModuleCase,
@@ -47,7 +45,7 @@ class TestModuleTest(integration.ModuleCase,
         '''
         test.get_opts
         '''
-        opts = config.minion_config(
+        opts = salt.config.minion_config(
             self.get_config_file_path('minion')
         )
         self.assertEqual(
@@ -95,8 +93,3 @@ class TestModuleTest(integration.ModuleCase,
         test.outputter
         '''
         self.assertEqual(self.run_function('test.outputter', ['text']), 'text')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestModuleTest)

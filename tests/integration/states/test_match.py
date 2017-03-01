@@ -12,12 +12,10 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
 
 # Import salt libs
-import integration
 import salt.utils
 
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
@@ -50,8 +48,3 @@ class StateMatchTest(integration.ModuleCase):
             )
         finally:
             os.remove(top_file)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StateMatchTest)

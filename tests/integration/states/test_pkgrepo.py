@@ -7,16 +7,14 @@ tests for pkgrepo states
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains
 )
-ensure_in_syspath('../../')
 
 # Import salt libs
-import integration
 import salt.utils
 
 # Import 3rd-party libs
@@ -80,8 +78,3 @@ class PkgrepoTest(integration.ModuleCase,
         self.assertReturnNonEmptySaltType(ret)
         for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PkgrepoTest)

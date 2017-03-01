@@ -6,22 +6,21 @@ Unit tests for the Vault runner
 # Import Python Libs
 from __future__ import absolute_import
 import logging
-from salt.ext import six
-from salt.runners import vault
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
+# Import salt libs
+import salt.ext.six as six
+from salt.runners import vault
 
 log = logging.getLogger(__name__)
-ensure_in_syspath('../../')
 
 vault.__opts__ = {}
 
@@ -111,7 +110,8 @@ class VaultTest(TestCase):
                     'deeply-nested-list:{grains[deep][foo][bar][baz]}': [
                         'deeply-nested-list:hello',
                         'deeply-nested-list:world'
-                    ]
+                    ],
+                    'should-not-cause-an-exception,but-result-empty:{foo}': []
                 }
 
         with patch('salt.utils.minions.get_minion_data',
@@ -125,8 +125,3 @@ class VaultTest(TestCase):
                     log.debug('Expected:\n\t{0}\nGot\n\t{1}'.format(output, correct_output))
                     log.debug('Difference:\n\t{0}'.format(diff))
                 self.assertEqual(output, correct_output)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(VaultTest, needs_daemon=False)

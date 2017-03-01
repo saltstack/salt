@@ -10,8 +10,8 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt testing libraries
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 
 # Import Salt libraries
 import salt.utils.vmware
@@ -150,8 +150,3 @@ class GetHostsTestCase(TestCase):
                    MagicMock(return_value=[self.mock_prop_host1])):
             res = salt.utils.vmware.get_hosts(self.mock_si, get_all_hosts=True)
         self.assertEqual(res, [self.mock_host1])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GetHostsTestCase, needs_daemon=False)

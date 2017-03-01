@@ -11,16 +11,13 @@ from salt.exceptions import SaltInvocationError
 from salt.modules import logrotate
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Globals
 logrotate.__salt__ = {}
@@ -93,8 +90,3 @@ class LogrotateTestCase(TestCase):
                   'value': '/var/log/wtmp',
                   'setting': '2'}
         self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(LogrotateTestCase, needs_daemon=False)

@@ -30,6 +30,8 @@ peer:
   '.*':
     - 'test.*'
 
+git_pillar_verify_config: False
+
 ext_pillar:
   - git:
     - master https://github.com/saltstack/pillar1.git

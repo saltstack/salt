@@ -10,10 +10,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf
+from tests.support.unit import skipIf
 
 # Import salt libs
-import integration
+import tests.integration as integration
 from salt.config import minion_config
 
 from salt.loader import grains

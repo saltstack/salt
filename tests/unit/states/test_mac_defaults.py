@@ -7,14 +7,11 @@ from __future__ import absolute_import
 from salt.states import mac_defaults as macdefaults
 
 # Import Salt Testing Libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase
+from tests.support.mock import (
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 macdefaults.__salt__ = {}
 
@@ -174,8 +171,3 @@ class MacDefaultsTestCase(TestCase):
             out = macdefaults.absent('Key', 'com.apple.something')
             mock.assert_called_once_with('com.apple.something', 'Key', None)
             self.assertEqual(out, expected)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacDefaultsTestCase, needs_daemon=False)

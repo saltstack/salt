@@ -57,7 +57,12 @@ The minimal `ssl` option in the minion configuration file looks like this:
 
 .. code-block:: yaml
 
+    ssl: True
+    # Versions below 2016.11.4:
     ssl: {}
+
+Specific options can be sent to the minion also, as defined in the Python
+`ssl.wrap_socket` function.
 
 .. note::
 

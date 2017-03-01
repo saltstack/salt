@@ -9,12 +9,10 @@ import tempfile
 import stat
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
 
 # Import salt libs
-import integration
+import tests.integration as integration
 import salt.ext.six as six
 import salt.utils
 import salt.utils.find
@@ -593,11 +591,3 @@ class TestFinder(TestCase):
 
         finder = salt.utils.find.Finder({'name': 'test_name'})
         self.assertEqual(list(finder.find('')), [])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(
-        [TestFind, TestGrepOption, TestPrintOption, TestFinder],
-        needs_daemon=False
-    )

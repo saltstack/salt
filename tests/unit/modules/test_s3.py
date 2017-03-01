@@ -6,17 +6,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
     patch
 )
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import s3
@@ -81,8 +77,3 @@ class S3TestCase(TestCase):
                                         'verify_ssl', 'kms_keyid', 'location',
                                         'role_arn', 'path_style', 'https_enable')):
             self.assertEqual(s3.put('bucket'), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(S3TestCase, needs_daemon=False)

@@ -122,14 +122,13 @@ Most commonly, the following imports are necessary to create a unit test:
 .. code-block:: python
 
     # Import Salt Testing libs
-    from salttesting import skipIf, TestCase
-    from salttesting.helpers import ensure_in_syspath
+    from tests.support.unit import skipIf, TestCase
 
 If you need mock support to your tests, please also import:
 
 .. code-block:: python
 
-    from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+    from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
 
 Evaluating Truth
@@ -183,13 +182,13 @@ additional imports for MagicMock:
 .. code-block:: python
 
     # Import Salt Testing libs
-    from salttesting import TestCase
+    from tests.support.unit import TestCase
 
     # Import Salt execution module to test
     from salt.modules import db
 
     # Import Mock libraries
-    from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+    from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
     # Create test case class and inherit from Salt's customized TestCase
     # Skip this test case if we don't have access to mock!
@@ -259,7 +258,7 @@ we might write the skeleton for testing ``fib.py``:
 .. code-block:: python
 
     # Import Salt Testing libs
-    from salttesting import TestCase
+    from tests.support.unit import TestCase
 
     # Import Salt execution module to test
     from salt.modules import fib
@@ -339,16 +338,13 @@ will also redefine the ``__salt__`` dictionary such that it only contains
     from salt.modules import linux_sysctl
 
     # Import Salt Testing Libs
-    from salttesting import skipIf, TestCase
-    from salttesting.helpers import ensure_in_syspath
-    from salttesting.mock import (
+    from tests.support.unit import skipIf, TestCase
+    from tests.support.mock import (
         MagicMock,
         patch,
         NO_MOCK,
         NO_MOCK_REASON
     )
-
-    ensure_in_syspath('../../')
 
     # Globals
     linux_sysctl.__salt__ = {}
@@ -367,11 +363,6 @@ will also redefine the ``__salt__`` dictionary such that it only contains
             mock_cmd = MagicMock(return_value=1)
             with patch.dict(linux_sysctl.__salt__, {'cmd.run': mock_cmd}):
                 self.assertEqual(linux_sysctl.get('net.ipv4.ip_forward'), 1)
-
-
-    if __name__ == '__main__':
-        from integration import run_tests
-        run_tests(LinuxSysctlTestCase, needs_daemon=False)
 
 Since ``get()`` has only one raise or return statement and that statement is a
 success condition, the test function is simply named ``test_get()``.  As
@@ -450,16 +441,13 @@ with.
     from salt.exceptions import CommandExecutionError
 
     # Import Salt Testing Libs
-    from salttesting import skipIf, TestCase
-    from salttesting.helpers import ensure_in_syspath
-    from salttesting.mock import (
+    from tests.support.unit import skipIf, TestCase
+    from tests.support.mock import (
         MagicMock,
         patch,
         NO_MOCK,
         NO_MOCK_REASON
     )
-
-    ensure_in_syspath('../../')
 
     # Globals
     linux_sysctl.__salt__ = {}
@@ -510,7 +498,3 @@ with.
             with patch.dict(linux_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
                 self.assertEqual(linux_sysctl.assign(
                     'net.ipv4.ip_forward', 1), ret)
-
-    if __name__ == '__main__':
-        from integration import run_tests
-        run_tests(LinuxSysctlTestCase, needs_daemon=False)

@@ -6,8 +6,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     mock_open,
     MagicMock,
     patch,
@@ -107,8 +107,3 @@ class DnsmasqTestCase(TestCase):
                                  {'A': 'B',
                                   'unparsed': ['line here',
                                                'second line']})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DnsmasqTestCase, needs_daemon=False)
