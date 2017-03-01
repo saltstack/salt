@@ -91,6 +91,23 @@ arguments. For example:
               delvol_on_destroy: 'True'
           }
 
+Another example that creates a recurring task that runs a batch on a Windows
+system:
+
+.. code-block:: yaml
+
+    eventsviewer:
+      module.run:
+        - name: task.create_task
+        - m_name: 'events-viewer'
+        - user_name: System
+        - kwargs: {
+              action_type: 'Execute',
+              cmd: 'c:\netops\scripts\events_viewer.bat',
+              trigger_type: 'Daily',
+              start_date: '2017-1-20',
+              start_time: '11:59PM'
+        }
 '''
 from __future__ import absolute_import
 
