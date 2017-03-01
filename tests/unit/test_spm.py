@@ -44,6 +44,7 @@ __opts__ = {
     'renderer_blacklist': [],
     'renderer_whitelist': [],
     'id': 'test',
+    'environment': None,
 }
 
 _F1 = {
