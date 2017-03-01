@@ -118,8 +118,8 @@ def present(name,
 
     # if the check does not return a boolean, return an error
     # this may be the case if there is a database connection error
-    if not isinstance(user_exists, bool):
-        ret['comment'] = user_exists
+    if not isinstance(users, list):
+        ret['comment'] = users
         ret['result'] = False
         return ret
 
