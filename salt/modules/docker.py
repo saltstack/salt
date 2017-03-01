@@ -1979,7 +1979,7 @@ def _validate_input(kwargs,
             raise SaltInvocationError(
                 'Invalid sysctls configuration.'
             )
-            
+
     def _valid_ulimits():  # pylint: disable=unused-variable
         '''
         Must be a string or list of strings with bind mount information
