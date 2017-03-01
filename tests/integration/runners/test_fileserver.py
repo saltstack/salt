@@ -165,7 +165,7 @@ class FileserverTest(integration.ShellCase):
     # Git doesn't handle symlinks in Windows. See the thread below:
     # http://stackoverflow.com/questions/5917249/git-symlinks-in-windows
     @skipIf(salt.utils.is_windows(),
-            'Git doesn\'t handle symlinks properly on Windows')
+            'Git for Windows does not preserve symbolic links when cloning')
     def test_symlink_list(self):
         '''
         fileserver.symlink_list
