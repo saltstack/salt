@@ -91,8 +91,8 @@ arguments. For example:
               delvol_on_destroy: 'True'
           }
 
-Another example that creates a recurring task that runs a batch on a Windows
-system:
+Another example that creates a recurring task that runs a batch file on a
+Windows system:
 
 .. code-block:: yaml
 
