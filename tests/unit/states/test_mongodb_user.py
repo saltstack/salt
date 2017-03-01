@@ -47,13 +47,16 @@ class MongodbUserTestCase(TestCase):
         ret.update({'comment': comt})
         self.assertDictEqual(mongodb_user.present(name, passwd, port={}), ret)
 
-        mock = MagicMock(side_effect=[True, False, False])
         mock_t = MagicMock(return_value=True)
+        mock_f = MagicMock(return_value=[])
         with patch.dict(mongodb_user.__salt__,
-                        {'mongodb.user_exists': mock,
-                         'mongodb.user_create': mock_t}):
-            comt = ('User {0} is already present'.format(name))
-            ret.update({'comment': comt, 'result': True})
+                        {
+                         'mongodb.user_create': mock_t,
+                         'mongodb.user_find': mock_f
+                        }):
+            comt = ('User {0} is not present and needs to be created'
+                ).format(name)
+            ret.update({'comment': comt, 'result': None})
             self.assertDictEqual(mongodb_user.present(name, passwd), ret)
 
             with patch.dict(mongodb_user.__opts__, {'test': True}):
@@ -66,6 +69,7 @@ class MongodbUserTestCase(TestCase):
                 comt = ('User {0} has been created'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Present'}})
+                print ret
                 self.assertDictEqual(mongodb_user.present(name, passwd), ret)
 
     # 'absent' function tests: 1
