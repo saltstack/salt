@@ -43,6 +43,7 @@ __opts__ = {
     'renderer': 'yaml_jinja',
     'renderer_blacklist': [],
     'renderer_whitelist': [],
+    'id': 'test',
 }
 
 _F1 = {
