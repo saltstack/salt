@@ -6,8 +6,8 @@ import errno
 import os
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import Mock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import Mock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
 from salt.exceptions import SaltInvocationError
@@ -280,8 +280,3 @@ class SystemdTestCase(TestCase):
         # Test with invalid context data
         with self.assertRaises(SaltInvocationError):
             _systemd.has_scope(99999)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SystemdTestCase, needs_daemon=False)

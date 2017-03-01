@@ -8,12 +8,10 @@ import hashlib
 import tempfile
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
 
 # Import salt libs
 import salt.ext.six as six
-import integration
 import salt.utils
 
 
@@ -513,20 +511,16 @@ class CPModuleTest(integration.ModuleCase):
         log_to_xfer = os.path.join(tempfile.gettempdir(), uuid.uuid4().hex)
         open(log_to_xfer, 'w').close()
         try:
-            self.run_function('cp.push', log_to_xfer)
+            self.run_function('cp.push', [log_to_xfer])
             tgt_cache_file = os.path.join(
-                 integration.TMP,
-                'master-minion-root',
-                'cache',
-                'minions',
-                'minion',
-                'files',
-                tempfile.gettempdir(),
-                log_to_xfer)
+                    integration.TMP,
+                    'master-minion-root',
+                    'cache',
+                    'minions',
+                    'minion',
+                    'files',
+                    tempfile.gettempdir(),
+                    log_to_xfer)
             self.assertTrue(os.path.isfile(tgt_cache_file), 'File was not cached on the master')
         finally:
             os.unlink(tgt_cache_file)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CPModuleTest)

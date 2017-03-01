@@ -11,12 +11,10 @@ import time
 import subprocess
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
 
 # Import salt libs
-import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
@@ -255,8 +253,3 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SupervisordTest)

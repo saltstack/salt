@@ -8,11 +8,9 @@ import os
 import shutil
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
 
 # Import salt libs
-import integration
 import salt.utils
 
 HFN = os.path.join(integration.TMP, 'hosts')
@@ -214,8 +212,3 @@ class HostsModuleTest(integration.ModuleCase):
             '192.168.1.1\t\thost1.fqdn.com host1 host1-reorder',
             '192.168.1.2\t\thost2.fqdn.com host2 oldhost2 host2-reorder',
         ])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HostsModuleTest)

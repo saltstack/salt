@@ -11,24 +11,60 @@ import os
 import sys
 import time
 
+TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
+if os.name == 'nt':
+    TESTS_DIR = TESTS_DIR.replace('\\', '\\\\')
+CODE_DIR = os.path.dirname(TESTS_DIR)
+
+# Let's inject CODE_DIR so salt is importable if not there already
+if '' in sys.path:
+    sys.path.remove('')
+if TESTS_DIR in sys.path:
+    sys.path.remove(TESTS_DIR)
+if CODE_DIR in sys.path and sys.path[0] != CODE_DIR:
+    sys.path.remove(CODE_DIR)
+if CODE_DIR not in sys.path:
+    sys.path.insert(0, CODE_DIR)
+if TESTS_DIR not in sys.path:
+    sys.path.insert(1, TESTS_DIR)
+
+try:
+    import tests
+    if not tests.__file__.startswith(CODE_DIR):
+        print('Found tests module not from salt in {}'.format(tests.__file__))
+        sys.modules.pop('tests')
+        module_dir = os.path.dirname(tests.__file__)
+        if module_dir in sys.path:
+            sys.path.remove(module_dir)
+        del tests
+except ImportError:
+    pass
+
 # Import salt libs
-from integration import TestDaemon, TMP  # pylint: disable=W0403
-from integration import SYS_TMP_DIR, INTEGRATION_TEST_DIR
-from integration import CODE_DIR as SALT_ROOT
+try:
+    from tests.support.paths import TMP, SYS_TMP_DIR, INTEGRATION_TEST_DIR
+    from tests.support.paths import CODE_DIR as SALT_ROOT
+except ImportError as exc:
+    try:
+        import tests
+        print('Found tests module not from salt in {}'.format(tests.__file__))
+    except ImportError:
+        print('Unable to import salt test module')
+        print('PYTHONPATH:', os.environ.get('PYTHONPATH'))
+    print('Current sys.path:')
+    import pprint
+    pprint.pprint(sys.path)
+    raise exc
+
+from tests.integration import TestDaemon  # pylint: disable=W0403
 import salt.utils
 
 if not salt.utils.is_windows():
     import resource
 
 # Import Salt Testing libs
-from salttesting.parser import PNUM, print_header
-from salttesting.parser.cover import SaltCoverageTestingParser
-try:
-    from salttesting.helpers import terminate_process_pid
-    RUNTESTS_WITH_HARD_KILL = True
-except ImportError:
-    from integration import terminate_process_pid
-    RUNTESTS_WITH_HARD_KILL = False
+from tests.support.parser import PNUM, print_header
+from tests.support.parser.cover import SaltCoverageTestingParser
 
 XML_OUTPUT_DIR = os.environ.get(
     'SALT_XML_TEST_REPORTS_DIR',
@@ -608,11 +644,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             )
             status.append(results)
         return status
-
-    def print_overall_testsuite_report(self):
-        if RUNTESTS_WITH_HARD_KILL is False:
-            terminate_process_pid(os.getpid(), only_children=True)
-        SaltCoverageTestingParser.print_overall_testsuite_report(self)
 
 
 def main():

@@ -8,11 +8,8 @@ from copy import deepcopy
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Testing Libs
-from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
 import salt.config
@@ -312,8 +309,3 @@ class BotoSecgroupTestCase(TestCase):
         conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         salt_conn = boto_secgroup._get_conn(**conn_parameters)
         self.assertEqual(conn.__class__, salt_conn.__class__)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoSecgroupTestCase, needs_daemon=False)

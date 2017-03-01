@@ -8,12 +8,8 @@ from __future__ import absolute_import
 import re
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import Salt libs
-import integration
+import tests.integration as integration
+from tests.support.unit import skipIf
 
 # Import 3rd-party libs
 NO_BOTO_MODULE = True

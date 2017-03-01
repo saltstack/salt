@@ -7,10 +7,7 @@ Tests for various minion timeouts
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import integration
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../')
+import tests.integration as integration
 
 
 class MinionTimeoutTestCase(integration.ShellCase):
@@ -29,8 +26,3 @@ class MinionTimeoutTestCase(integration.ShellCase):
                 ' may have returned error: {0}'.format(ret))
         self.assertTrue('True' in ret[1], 'Minion did not return True after '
                 '{0} seconds.'.format(sleep_length))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MinionTimeoutTestCase, needs_daemon=True)
