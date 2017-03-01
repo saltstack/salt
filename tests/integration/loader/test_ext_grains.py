@@ -33,8 +33,8 @@ class LoaderGrainsTest(integration.ModuleCase):
     def test_grains_overwrite(self):
         # To avoid a race condition on Windows, we need to make sure the
         # `test_custom_grain2.py` file is present in the _grains directory
-        # before trying to get the grains. For some reason, the files aren't
-        # available immediately.
+        # before trying to get the grains. This test may execute before the
+        # minion has finished syncing down the files it needs.
         module = os.path.join(integration.TMP, 'rootdir', 'cache', 'files',
                               'base', '_grains', 'test_custom_grain2.py')
         tries = 0
