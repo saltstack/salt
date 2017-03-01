@@ -19,7 +19,9 @@ config = salt.config.minion_config(None)
 config['file_roots'] = {'base': [os.path.join(_TMP_SPM, 'salt')]}
 config['pillar_roots'] = {'base': [os.path.join(_TMP_SPM, 'pillar')]}
 
-__opts__ = {
+__opts__ = salt.config.DEFAULT_MINION_OPTS
+
+__opts__.update({
     'spm_logfile': os.path.join(_TMP_SPM, 'log'),
     'spm_repos_config': os.path.join(_TMP_SPM, 'etc', 'spm.repos'),
     'spm_cache_dir': os.path.join(_TMP_SPM, 'cache'),
@@ -40,12 +42,7 @@ __opts__ = {
     'cachedir': os.path.join(_TMP_SPM, 'cache'),
     'spm_repo_dups': 'ignore',
     'spm_share_dir': os.path.join(_TMP_SPM, 'share'),
-    'renderer': 'yaml_jinja',
-    'renderer_blacklist': [],
-    'renderer_whitelist': [],
-    'id': 'test',
-    'environment': None,
-}
+})
 
 _F1 = {
     'definition': {
