@@ -40,6 +40,9 @@ __opts__ = {
     'cachedir': os.path.join(_TMP_SPM, 'cache'),
     'spm_repo_dups': 'ignore',
     'spm_share_dir': os.path.join(_TMP_SPM, 'share'),
+    'renderer': 'yaml_jinja',
+    'renderer_blacklist': [],
+    'renderer_whitelist': [],
 }
 
 _F1 = {
