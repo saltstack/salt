@@ -2992,6 +2992,11 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
 
         if self.options.ssh_askpass:
             self.options.ssh_passwd = getpass.getpass('Password: ')
+            for group in self.option_groups:
+                for option in group.option_list:
+                    if option.dest == 'ssh_passwd':
+                        option.explicit = True
+                        break
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
