@@ -6,6 +6,7 @@
 # Import Python libs
 from __future__ import absolute_import
 import os
+import tempfile
 
 # Import Salt Testing libs
 import tests.integration as integration
@@ -17,11 +18,47 @@ from salt.fileserver import roots
 from salt import fileclient
 import salt.utils
 
+try:
+    import win32file
+except ImportError:
+    pass
+
 roots.__opts__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class RootsTest(integration.ModuleCase):
+
+    @classmethod
+    def setUpClass(cls):
+        '''
+        Create special file_roots for symlink test on Windows
+        '''
+        if salt.utils.is_windows():
+            root_dir = tempfile.mkdtemp(dir=integration.TMP)
+            source_sym = os.path.join(root_dir, 'source_sym')
+            with salt.utils.fopen(source_sym, 'w') as fp_:
+                fp_.write('hello world!\n')
+            cwd = os.getcwd()
+            try:
+                os.chdir(root_dir)
+                win32file.CreateSymbolicLink('dest_sym', 'source_sym', 0)
+            finally:
+                os.chdir(cwd)
+            cls.test_symlink_list_file_roots = {'base': [root_dir]}
+        else:
+            cls.test_symlink_list_file_roots = None
+
+    @classmethod
+    def tearDownClass(cls):
+        '''
+        Remove special file_roots for symlink test
+        '''
+        if salt.utils.is_windows():
+            try:
+                salt.utils.rm_rf(cls.test_symlink_list_file_roots['base'][0])
+            except OSError:
+                pass
 
     def setUp(self):
         if integration.TMP_STATE_TREE not in self.master_opts['file_roots']['base']:
@@ -177,13 +214,11 @@ class RootsTest(integration.ModuleCase):
             ret = roots.dir_list({'saltenv': 'base'})
             self.assertIn('empty_dir', ret)
 
-    # Git doesn't handle symlinks in Windows. See the thread below:
-    # http://stackoverflow.com/questions/5917249/git-symlinks-in-windows
-    @skipIf(salt.utils.is_windows(),
-            'Git doesn\'t handle symlinks properly on Windows')
     def test_symlink_list(self):
+        file_roots = self.test_symlink_list_file_roots \
+            or self.master_opts['file_roots']
         with patch.dict(roots.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'file_roots': self.master_opts['file_roots'],
+                                         'file_roots': file_roots,
                                          'fileserver_ignoresymlinks': False,
                                          'fileserver_followsymlinks': False,
                                          'file_ignore_regex': False,
