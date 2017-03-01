@@ -1,3 +1,10 @@
+integration.client.runner
+integration.client.standard
+integration.fileserver.fileclient_test
+integration.fileserver.roots_test
+integration.loader.globals
+integration.loader.interfaces
+integration.loader.loader
 integration.modules.aliases
 integration.modules.beacons
 integration.modules.config
@@ -15,4 +22,12 @@ integration.modules.state
 integration.modules.sysmod
 integration.modules.test
 integration.modules.useradd
+integration.runners.jobs
+integration.runners.salt
+integration.runners.winrepo
+integration.sdb.test_env
 integration.states.host
+integration.states.renderers
+integration.utils.testprogram
+integration.wheel.client
+integration.wheel.key

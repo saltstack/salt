@@ -1,11 +1,11 @@
 #!/bin/bash
 ############################################################################
 #
-# Title: Sign Package Script for OSX
+# Title: Sign Package Script for macOS
 # Authors: Shane Lee
 # Date: December 2015
 #
-# Description: This signs an OSX Installer Package (.pkg)
+# Description: This signs an macOS Installer Package (.pkg)
 #              /opt/salt
 #
 # Requirements:

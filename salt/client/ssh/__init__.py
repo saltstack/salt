@@ -295,6 +295,9 @@ class SSH(object):
             'remote_port_forwards': self.opts.get(
                 'ssh_remote_port_forwards'
             ),
+            'ssh_options': self.opts.get(
+                'ssh_options'
+            )
         }
         if self.opts.get('rand_thin_dir'):
             self.defaults['thin_dir'] = os.path.join(
@@ -548,7 +551,10 @@ class SSH(object):
             }
 
         # save load to the master job cache
-        self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+        if self.opts['master_job_cache'] == 'local_cache':
+            self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load, minions=self.targets.keys())
+        else:
+            self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
 
         for ret in self.handle_ssh(mine=mine):
             host = next(six.iterkeys(ret))
@@ -690,6 +696,7 @@ class Single(object):
             identities_only=False,
             sudo_user=None,
             remote_port_forwards=None,
+            ssh_options=None,
             **kwargs):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
         self.mine = mine
@@ -701,13 +708,6 @@ class Single(object):
         if kwargs.get('wipe'):
             self.wipe = 'False'
         else:
-            if self.opts.get('wipe_ssh'):
-                salt.utils.warn_until(
-                    'Nitrogen',
-                    'Support for \'wipe_ssh\' has been deprecated in Saltfile and will be removed '
-                    'in Salt Nitrogen. Please use \'ssh_wipe\' instead.'
-                )
-                self.wipe = 'True'
             self.wipe = 'True' if self.opts.get('ssh_wipe') else 'False'
         if kwargs.get('thin_dir'):
             self.thin_dir = kwargs['thin_dir']
@@ -746,7 +746,8 @@ class Single(object):
                 'mods': self.mods,
                 'identities_only': identities_only,
                 'sudo_user': sudo_user,
-                'remote_port_forwards': remote_port_forwards}
+                'remote_port_forwards': remote_port_forwards,
+                'ssh_options': ssh_options}
         # Pre apply changeable defaults
         self.minion_opts = {
                     'grains_cache': True,
@@ -899,8 +900,19 @@ class Single(object):
 
             retcode = 0
 
+            # Restore master grains
+            for grain in conf_grains:
+                opts_pkg['grains'][grain] = conf_grains[grain]
+            # Enable roster grains support
+            if 'grains' in self.target:
+                for grain in self.target['grains']:
+                    opts_pkg['grains'][grain] = self.target['grains'][grain]
+
+            popts = {}
+            popts.update(opts_pkg['__master_opts__'])
+            popts.update(opts_pkg)
             pillar = salt.pillar.Pillar(
-                    opts_pkg,
+                    popts,
                     opts_pkg['grains'],
                     opts_pkg['id'],
                     opts_pkg.get('environment', 'base')

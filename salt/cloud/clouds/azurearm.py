@@ -13,20 +13,40 @@ The Azure cloud module is used to control access to Microsoft Azure
 :configuration:
     Required provider parameters:
 
+    if using username and password:
     * ``subscription_id``
     * ``username``
     * ``password``
+
+    if using a service principal:
+    * ``subscription_id``
+    * ``tenant``
+    * ``client_id``
+    * ``secret``
 
 Example ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/azure.conf`` configuration:
 
 .. code-block:: yaml
 
-    my-azure-config:
+    my-azure-config with username and password:
       driver: azure
       subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
       username: larry
       password: 123pass
+
+    Or my-azure-config with service principal:
+      driver: azure
+      subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
+      tenant: ABCDEFAB-1234-ABCD-1234-ABCDEFABCDEF
+      client_id: ABCDEFAB-1234-ABCD-1234-ABCDEFABCDEF
+      secret: XXXXXXXXXXXXXXXXXXXXXXXX
+
+      The Service Principal can be created with the new Azure CLI (https://github.com/Azure/azure-cli) with:
+      az ad sp create-for-rbac -n "http://<yourappname>" --role <role> --scopes <scope>
+      For example, this creates a service principal with 'owner' role for the whole subscription:
+      az ad sp create-for-rbac -n "http://mysaltapp" --role owner --scopes /subscriptions/3287abc8-f98a-c678-3bde-326766fd3617
+      *Note: review the details of Service Principals. Owner role is more than you normally need, and you can restrict scope to a resource group or individual resources.
 '''
 # pylint: disable=E0102
 
@@ -57,7 +77,10 @@ try:
     import salt.utils.msazure
     from salt.utils.msazure import object_to_dict
     import azure.storage
-    from azure.common.credentials import UserPassCredentials
+    from azure.common.credentials import (
+        UserPassCredentials,
+        ServicePrincipalCredentials,
+    )
     from azure.mgmt.compute import ComputeManagementClient
     from azure.mgmt.compute.models import (
         CachingTypes,
@@ -128,11 +151,19 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    return config.is_provider_configured(
+    provider = config.is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
-        ('subscription_id', 'username', 'password')
-    )
+        ('subscription_id', 'tenant', 'client_id', 'secret')
+        )
+    if provider is False:
+        return config.is_provider_configured(
+            __opts__,
+            __active_provider_name__ or __virtualname__,
+            ('subscription_id', 'username', 'password')
+        )
+    else:
+        return provider
 
 
 def get_dependencies():
@@ -157,17 +188,31 @@ def get_conn(Client=None):
         get_configured_provider(), __opts__, search_global=False
     )
 
-    username = config.get_cloud_config_value(
-        'username',
+    tenant = config.get_cloud_config_value(
+        'tenant',
         get_configured_provider(), __opts__, search_global=False
     )
+    if tenant is not None:
+        client_id = config.get_cloud_config_value(
+            'client_id',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        secret = config.get_cloud_config_value(
+            'secret',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        credentials = ServicePrincipalCredentials(client_id, secret, tenant=tenant)
+    else:
+        username = config.get_cloud_config_value(
+            'username',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        password = config.get_cloud_config_value(
+            'password',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        credentials = UserPassCredentials(username, password)
 
-    password = config.get_cloud_config_value(
-        'password',
-        get_configured_provider(), __opts__, search_global=False
-    )
-
-    credentials = UserPassCredentials(username, password)
     client = Client(
         credentials=credentials,
         subscription_id=subscription_id,
@@ -658,11 +703,17 @@ def show_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     data['ip_configurations'] = {}
     for ip_ in iface.ip_configurations:
         data['ip_configurations'][ip_.name] = make_safe(ip_)
-        pubip = netconn.public_ip_addresses.get(
-            kwargs['resource_group'],
-            ip_.name,
-        )
-        data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
+        try:
+            pubip = netconn.public_ip_addresses.get(
+                kwargs['resource_group'],
+                ip_.name,
+            )
+            data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
+        except Exception as exc:
+            log.warning('There was a cloud error: {0}'.format(exc))
+            log.warning('{0}'.format(type(exc)))
+            continue
+
     return data
 
 
@@ -774,6 +825,13 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     ip_kwargs = {}
     ip_configurations = None
+
+    if 'private_ip_address' in kwargs.keys():
+        ip_kwargs['private_ip_address'] = kwargs['private_ip_address']
+        ip_kwargs['private_ip_allocation_method'] = IPAllocationMethod.static
+    else:
+        ip_kwargs['private_ip_allocation_method'] = IPAllocationMethod.dynamic
+
     if bool(kwargs.get('public_ip')) is True:
         pub_ip_name = '{0}-ip'.format(kwargs['iface_name'])
         poller = netconn.public_ip_addresses.create_or_update(
@@ -799,7 +857,6 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                     ip_configurations = [
                         NetworkInterfaceIPConfiguration(
                             name='{0}-ip'.format(kwargs['iface_name']),
-                            private_ip_allocation_method='Dynamic',
                             subnet=subnet_obj,
                             **ip_kwargs
                         )
@@ -816,13 +873,21 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         ip_configurations = [
             NetworkInterfaceIPConfiguration(
                 name='{0}-ip'.format(kwargs['iface_name']),
-                private_ip_allocation_method='Dynamic',
                 subnet=subnet_obj,
+                **ip_kwargs
             )
         ]
 
+    network_security_group = None
+    if kwargs.get('security_group') is not None:
+        network_security_group = netconn.network_security_groups.get(
+            resource_group_name=kwargs['resource_group'],
+            network_security_group_name=kwargs['security_group'],
+        )
+
     iface_params = NetworkInterface(
         location=kwargs['location'],
+        network_security_group=network_security_group,
         ip_configurations=ip_configurations,
     )
 
@@ -919,6 +984,19 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     for volume in volumes:
         if isinstance(volume, six.string_types):
             volume = {'name': volume}
+
+        # Creating the name of the datadisk if missing in the configuration of the minion
+        # If the "name: name_of_my_disk" entry then we create it with the same logic than the os disk
+        volume.setdefault(
+            'name', volume.get(
+                'name', volume.get('name', '{0}-datadisk{1}'.format(
+                    vm_['name'],
+                    str(lun),
+                    ),
+                )
+            )
+        )
+
         # Use the size keyword to set a size, but you can use either the new
         # azure name (disk_size_gb) or the old (logical_disk_size_in_gb)
         # instead. If none are set, the disk has size 100GB.
@@ -1001,6 +1079,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 ),
                 os_type=os_type,
                 image=source_image,
+                disk_size_gb=vm_.get('os_disk_size_gb', 30)
             ),
             data_disks=data_disks,
             image_reference=img_ref,
@@ -1046,11 +1125,6 @@ def create(vm_):
             return False
     except AttributeError:
         pass
-
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
 
     __utils__['cloud.fire_event'](
         'event',
@@ -1104,7 +1178,9 @@ def create(vm_):
         finally:
             raise SaltCloudSystemExit(str(exc))
 
-    hostname = _query_ip_address()
+    # calling _query_ip_address() causes Salt to attempt to build the VM again.
+    #hostname = _query_ip_address()
+    hostname = data
 
     if not hostname or not isinstance(hostname, six.string_types):
         log.error('Failed to get a value for the hostname.')

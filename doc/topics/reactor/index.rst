@@ -375,14 +375,14 @@ command:
 
     salt '*' cmd.run 'rm -rf /tmp/*'
 
-Use the ``expr_form`` argument to specify a matcher:
+Use the ``tgt_type`` argument to specify a matcher:
 
 .. code-block:: yaml
 
     clean_tmp:
       local.cmd.run:
         - tgt: 'os:Ubuntu'
-        - expr_form: grain
+        - tgt_type: grain
         - arg:
           - rm -rf /tmp/*
 
@@ -390,9 +390,13 @@ Use the ``expr_form`` argument to specify a matcher:
     clean_tmp:
       local.cmd.run:
         - tgt: 'G@roles:hbase_master'
-        - expr_form: compound
+        - tgt_type: compound
         - arg:
           - rm -rf /tmp/*
+
+.. note::
+    The ``tgt_type`` argument was named ``expr_form`` in releases prior to
+    Nitrogen (2016.11.x and earlier).
 
 Any other parameters in the :py:meth:`LocalClient().cmd()
 <salt.client.LocalClient.cmd>` method can be specified as well.
@@ -406,7 +410,7 @@ sets up and listens to the minions event bus, instead of to the masters.
 The biggest difference is that you have to use the caller method on the
 Reactor, which is the equivalent of salt-call, to run your commands.
 
-:ref:`Reactor Engine setup<salt.engines.reactor>`
+:mod:`Reactor Engine setup <salt.engines.reactor>`
 
 .. code-block:: yaml
 
@@ -491,7 +495,7 @@ The above command is equivalent to the following command at the CLI:
 
 .. code-block:: bash
 
-    salt 'haproxy*' state.apply haproxy.refresh_pool 'pillar={new_minion: minionid}'
+    salt 'haproxy*' state.apply haproxy.refresh_pool pillar='{new_minion: minionid}'
 
 This works with Orchestrate files as well:
 

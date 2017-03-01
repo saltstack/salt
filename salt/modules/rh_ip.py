@@ -334,6 +334,9 @@ def _parse_settings_bond_1(opts, iface, bond_def):
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
 
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
+
     return bond
 
 
@@ -373,9 +376,6 @@ def _parse_settings_bond_2(opts, iface, bond_def):
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
         bond.update({'arp_interval': bond_def['arp_interval']})
-
-    if 'primary' in opts:
-        bond.update({'primary': opts['primary']})
 
     if 'hashing-algorithm' in opts:
         valid = ['layer2', 'layer2+3', 'layer3+4']
@@ -507,6 +507,9 @@ def _parse_settings_bond_5(opts, iface, bond_def):
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
 
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
+
     return bond
 
 
@@ -542,6 +545,9 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     else:
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
+
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
 
     return bond
 
@@ -747,6 +753,18 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     if 'clonenum_start' in opts:
         result['clonenum_start'] = opts['clonenum_start']
+
+    # If NetworkManager is available, we can control whether we use
+    # it or not
+    if 'nm_controlled' in opts:
+        if opts['nm_controlled'] in _CONFIG_TRUE:
+            result['nm_controlled'] = 'yes'
+        elif opts['nm_controlled'] in _CONFIG_FALSE:
+            result['nm_controlled'] = 'no'
+        else:
+            _raise_error_iface(iface, opts['nm_controlled'], valid)
+    else:
+        result['nm_controlled'] = 'no'
 
     return result
 
@@ -956,7 +974,6 @@ def build_interface(iface, iface_type, enabled, **settings):
     else:
         rh_major = __grains__['osrelease'][:1]
 
-    iface = iface.lower()
     iface_type = iface_type.lower()
 
     if iface_type not in _IFACE_TYPES:

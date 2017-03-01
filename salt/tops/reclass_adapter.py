@@ -4,7 +4,7 @@ Read tops data from a reclass database
 
 .. |reclass| replace:: **reclass**
 
-This :doc:`master_tops </topics/master_tops/index>` plugin provides access to
+This :ref:`master_tops <master-tops-system>` plugin provides access to
 the |reclass| database, such that state information (top data) are retrieved
 from |reclass|.
 

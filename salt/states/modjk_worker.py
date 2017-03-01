@@ -5,19 +5,21 @@ Manage modjk workers
 
 Send commands to a :strong:`modjk` load balancer via the peer system.
 
-This module can be used with the :doc:`prereq </ref/states/requisites>`
+This module can be used with the :ref:`prereq <requisites-prereq>`
 requisite to remove/add the worker from the load balancer before
 deploying/restarting service.
 
 Mandatory Settings:
 
 - The minion needs to have permission to publish the :strong:`modjk.*`
-  functions (see :doc:`here </ref/peer>` for information on configuring
+  functions (see :ref:`here <peer>` for information on configuring
   peer publishing permissions)
 
 - The modjk load balancer must be configured as stated in the :strong:`modjk`
   execution module :mod:`documentation <salt.modules.modjk>`
 '''
+from __future__ import absolute_import
+import salt.utils
 
 
 def __virtual__():
@@ -32,7 +34,7 @@ def _send_command(cmd,
                   lbn,
                   target,
                   profile='default',
-                  expr_form='glob'):
+                  tgt_type='glob'):
     '''
     Send a command to the modjk loadbalancer
     The minion need to be able to publish the commands to the load balancer
@@ -52,7 +54,7 @@ def _send_command(cmd,
     # Send the command to target
     func = 'modjk.{0}'.format(cmd)
     args = [worker, lbn, profile]
-    response = __salt__['publish.publish'](target, func, args, expr_form)
+    response = __salt__['publish.publish'](target, func, args, tgt_type)
 
     # Get errors and list of affeced minions
     errors = []
@@ -83,7 +85,7 @@ def _worker_status(target,
                    worker,
                    activation,
                    profile='default',
-                   expr_form='glob'):
+                   tgt_type='glob'):
     '''
     Check if the worker is in `activation` state in the targeted load balancers
 
@@ -102,7 +104,7 @@ def _worker_status(target,
 
     args = [worker, profile]
     status = __salt__['publish.publish'](
-        target, 'modjk.worker_status', args, expr_form
+        target, 'modjk.worker_status', args, tgt_type
     )
 
     # Did we got any respone from someone ?
@@ -120,7 +122,7 @@ def _worker_status(target,
     return ret
 
 
-def _talk2modjk(name, lbn, target, action, profile='default', expr_form='glob'):
+def _talk2modjk(name, lbn, target, action, profile='default', tgt_type='glob'):
     '''
     Wrapper function for the stop/disable/activate functions
     '''
@@ -138,7 +140,7 @@ def _talk2modjk(name, lbn, target, action, profile='default', expr_form='glob'):
 
     # Check what needs to be done
     status = _worker_status(
-        target, name, action_map[action], profile, expr_form
+        target, name, action_map[action], profile, tgt_type
     )
     if not status['result']:
         ret['result'] = False
@@ -164,14 +166,18 @@ def _talk2modjk(name, lbn, target, action, profile='default', expr_form='glob'):
         return ret
 
     # Send the action command to target
-    response = _send_command(action, name, lbn, target, profile, expr_form)
+    response = _send_command(action, name, lbn, target, profile, tgt_type)
     ret['comment'] = response['msg']
     ret['result'] = response['code']
     return ret
 
 
-def stop(name, lbn, target, profile='default', expr_form='glob'):
+def stop(name, lbn, target, profile='default', tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: Nitrogen
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Stop the named worker from the lbn load balancers at the targeted minions
     The worker won't get any traffic from the lbn
 
@@ -184,14 +190,28 @@ def stop(name, lbn, target, profile='default', expr_form='glob'):
             - name: {{ grains['id'] }}
             - lbn: application
             - target: 'roles:balancer'
-            - expr_form: grain
+            - tgt_type: grain
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
 
-    return _talk2modjk(name, lbn, target, 'worker_stop', profile, expr_form)
+    return _talk2modjk(name, lbn, target, 'worker_stop', profile, tgt_type)
 
 
-def activate(name, lbn, target, profile='default', expr_form='glob'):
+def activate(name, lbn, target, profile='default', tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: Nitrogen
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Activate the named worker from the lbn load balancers at the targeted
     minions
 
@@ -204,18 +224,31 @@ def activate(name, lbn, target, profile='default', expr_form='glob'):
             - name: {{ grains['id'] }}
             - lbn: application
             - target: 'roles:balancer'
-            - expr_form: grain
+            - tgt_type: grain
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
 
-    return _talk2modjk(name, lbn, target, 'worker_activate', profile, expr_form)
+    return _talk2modjk(name, lbn, target, 'worker_activate', profile, tgt_type)
 
 
-def disable(name, lbn, target, profile='default', expr_form='glob'):
+def disable(name, lbn, target, profile='default', tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: Nitrogen
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Disable the named worker from the lbn load balancers at the targeted
-    minions.
-    The worker will get traffic only for current sessions and won't get new
-    ones.
+    minions. The worker will get traffic only for current sessions and won't
+    get new ones.
 
     Example:
 
@@ -226,7 +259,17 @@ def disable(name, lbn, target, profile='default', expr_form='glob'):
             - name: {{ grains['id'] }}
             - lbn: application
             - target: 'roles:balancer'
-            - expr_form: grain
+            - tgt_type: grain
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
 
-    return _talk2modjk(name, lbn, target, 'worker_disable', profile, expr_form)
+    return _talk2modjk(name, lbn, target, 'worker_disable', profile, tgt_type)

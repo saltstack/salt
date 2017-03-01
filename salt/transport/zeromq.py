@@ -113,7 +113,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                 # Recreate the message client because it will fail to be deep
                 # copied. The reason is the same as the io_loop skip above.
                 setattr(result, key,
-                        AsyncReqMessageClient(result.opts,
+                        AsyncReqMessageClientPool(result.opts,
                                               self.master_uri,
                                               io_loop=result._io_loop))
                 continue
@@ -151,7 +151,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         if self.crypt != 'clear':
             # we don't need to worry about auth as a kwarg, since its a singleton
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self._io_loop)
-        self.message_client = AsyncReqMessageClient(self.opts,
+        self.message_client = AsyncReqMessageClientPool(self.opts,
                                                     self.master_uri,
                                                     io_loop=self._io_loop,
                                                     )
@@ -351,7 +351,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
             )
 
-        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+        if (self.opts['ipv6'] is True or ':' in self.opts['master_ip']) and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self._socket.setsockopt(zmq.IPV4ONLY, 0)
 
@@ -461,6 +461,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
+        self.clients.setsockopt(zmq.BACKLOG, self.opts.get('zmq_backlog', 1000))
         if HAS_ZMQ_MONITOR and self.opts['zmq_monitor']:
             # Socket monitor shall be used the only for debug  purposes so using threading doesn't look too bad here
             import threading
@@ -715,6 +716,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             pub_sock.setsockopt(zmq.IPV4ONLY, 0)
+        pub_sock.setsockopt(zmq.BACKLOG, self.opts.get('zmq_backlog', 1000))
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
@@ -830,8 +832,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         if self.opts['zmq_filtering'] and load['tgt_type'] in match_targets:
             # Fetch a list of minions that match
             match_ids = self.ckminions.check_minions(load['tgt'],
-                                                     expr_form=load['tgt_type']
-                                                     )
+                                                     tgt_type=load['tgt_type'])
 
             log.debug("Publish Side Match: {0}".format(match_ids))
             # Send list of miions thru so zmq can target them
@@ -840,6 +841,34 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         pub_sock.send(self.serial.dumps(int_payload))
         pub_sock.close()
         context.term()
+
+
+# TODO: unit tests!
+class AsyncReqMessageClientPool(object):
+    def __init__(self, opts, addr, linger=0, io_loop=None, socket_pool=1):
+        self.opts = opts
+        self.addr = addr
+        self.linger = linger
+        self.io_loop = io_loop
+        self.socket_pool = socket_pool
+        self.message_clients = []
+
+    def destroy(self):
+        for message_client in self.message_clients:
+            message_client.destroy()
+        self.message_clients = []
+
+    def __del__(self):
+        self.destroy()
+
+    def send(self, message, timeout=None, tries=3, future=None, callback=None, raw=False):
+        if len(self.message_clients) < self.socket_pool:
+            message_client = AsyncReqMessageClient(self.opts, self.addr, self.linger, self.io_loop)
+            self.message_clients.append(message_client)
+            return message_client.send(message, timeout, tries, future, callback, raw)
+        else:
+            available_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
+            return available_clients[0].send(message, timeout, tries, future, callback, raw)
 
 
 # TODO: unit tests!

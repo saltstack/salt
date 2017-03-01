@@ -50,12 +50,7 @@ config:
         - keyid: GKTADJGHEIQSXMKKRBJ08H
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
         - tags:
-          -
-            - key1
-            - value1
-          -
-            - key2
-            - value2
+            key: value
 
 .. code-block:: yaml
 
@@ -261,7 +256,7 @@ def present(name,
         the state. Available states: available, modifying, backing-up
 
     tags
-        A list of tags.
+        A dict of tags.
 
     copy_tags_to_snapshot
         Specifies whether tags are copied from the DB instance to snapshots of
@@ -309,7 +304,7 @@ def present(name,
            'changes': {}
            }
 
-    r = __salt__['boto_rds.exists'](name, region, key, keyid, profile)
+    r = __salt__['boto_rds.exists'](name, tags, region, key, keyid, profile)
 
     if not r.get('exists'):
         if __opts__['test']:
@@ -350,7 +345,7 @@ def present(name,
             ret['comment'] = 'Failed to create RDS instance {0}.'.format(r['error']['message'])
             return ret
 
-        _describe = __salt__['boto_rds.describe'](name, region, key, keyid, profile)
+        _describe = __salt__['boto_rds.describe'](name, tags, region, key, keyid, profile)
         ret['changes']['old'] = {'instance': None}
         ret['changes']['new'] = _describe
         ret['comment'] = 'RDS instance {0} created.'.format(name)
@@ -382,7 +377,7 @@ def replica_present(name, source, db_instance_class=None,
            }
     replica_exists = __salt__['boto_rds.exists'](name, tags, region, key,
                                                  keyid, profile)
-    if not replica_exists:
+    if not replica_exists.get('exists'):
         if __opts__['test']:
             ret['comment'] = 'RDS read replica {0} is set to be created '.format(name)
             ret['result'] = None
@@ -442,7 +437,7 @@ def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
         Subnet group description.
 
     tags
-        A list of tags.
+        A dict of tags.
 
     region
         Region to connect to.
@@ -488,36 +483,30 @@ def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
                 return ret
             subnet_ids.append(r['id'])
 
-    for i in subnet_ids:
-        r = __salt__['boto_rds.create_subnet_group'](name=name,
-                                                     description=description,
-                                                     subnet_ids=subnet_ids,
-                                                     tags=tags, region=region,
-                                                     key=key, keyid=keyid,
-                                                     profile=profile)
+    exists = __salt__['boto_rds.subnet_group_exists'](name=name, tags=tags, region=region, key=key,
+                                                      keyid=keyid, profile=profile)
+    if not exists.get('exists'):
+        if __opts__['test']:
+            ret['comment'] = 'Subnet group {0} is set to be created.'.format(name)
+            ret['result'] = None
+            return ret
+        created = __salt__['boto_rds.create_subnet_group'](name=name,
+                                                           description=description,
+                                                           subnet_ids=subnet_ids,
+                                                           tags=tags, region=region,
+                                                           key=key, keyid=keyid,
+                                                           profile=profile)
 
-        if not r.get('exists'):
-            if __opts__['test']:
-                ret['comment'] = 'Subnet group {0} is set to be created.'.format(name)
-                ret['result'] = None
-                return ret
-            if not r.get('created'):
-                ret['result'] = False
-                ret['comment'] = 'Failed to create {0} subnet group.'.format(r['error']['message'])
-                return ret
-
-            _describe = __salt__['boto_rds.describe']('subnet',
-                                                      name=i,
-                                                      region=region,
-                                                      key=key,
-                                                      keyid=keyid,
-                                                      profile=profile)
-
-            ret['changes']['old'] = None
-            ret['changes']['new'] = _describe
-            ret['comment'] = 'Subnet {0} created.'.format(name)
-        else:
-            ret['comment'] = 'Subnet {0} present.'.format(name)
+        if not created:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create {0} subnet group.'.format(name)
+            return ret
+        ret['changes']['old'] = None
+        ret['changes']['new'] = name
+        ret['comment'] = 'Subnet {0} created.'.format(name)
+        return ret
+    else:
+        ret['comment'] = 'Subnet {0} present.'.format(name)
 
         return ret
 
@@ -541,7 +530,7 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
         snapshot.
 
     tags
-        A list of tags.
+        A dict of tags.
 
     region
         Region to connect to.
@@ -573,7 +562,7 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
 
     exists = __salt__['boto_rds.exists'](name, tags, region, key, keyid,
                                          profile)
-    if not exists:
+    if not exists.get('exists'):
         ret['result'] = True
         ret['comment'] = '{0} RDS does not exist.'.format(name)
         return ret
@@ -584,7 +573,7 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
         return ret
     deleted = __salt__['boto_rds.delete'](name, skip_final_snapshot,
                                           final_db_snapshot_identifier,
-                                          region, key, keyid, profile,
+                                          region, key, keyid, profile, tags,
                                           wait_for_deletion, timeout)
     if not deleted:
         ret['result'] = False
@@ -655,7 +644,7 @@ def parameter_present(name, db_parameter_group_family, description, parameters=N
         parameters.
 
     tags
-        A list of tags.
+        A dict of tags.
 
     region
         Region to connect to.
@@ -676,7 +665,7 @@ def parameter_present(name, db_parameter_group_family, description, parameters=N
            'changes': {}
            }
     res = __salt__['boto_rds.parameter_group_exists'](name=name, tags=tags, region=region, key=key,
-                                                         keyid=keyid, profile=profile)
+                                                      keyid=keyid, profile=profile)
     if not res.get('exists'):
         if __opts__['test']:
             ret['comment'] = 'Parameter group {0} is set to be created.'.format(name)

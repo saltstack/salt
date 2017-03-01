@@ -4,8 +4,7 @@ Salt 2015.5.1 Release Notes
 
 :release: 2015-05-20
 
-Version 2015.5.1 is a bugfix release for :doc:`2015.5.0
-</topics/releases/2015.5.0>`.
+Version 2015.5.1 is a bugfix release for :ref:`2015.5.0<release-2015-5-0>`.
 
 Changes:
 
@@ -233,7 +232,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
   - **ISSUE** `#23900`_: (*hashi825*) salt ubuntu network building issue 2015.5.0
     | refs: `#23922`_
   * b818f72 Merge pull request `#23922`_ from garethgreenaway/23900_2015_5_bonding_interface_fixes
-  * 0bba536 Fixing issue reported when using bonded interfaces on Ubuntu.  Attributes should be bond-, but the code was attempting to split just on bond_.  Fix accounts for both, but the debian_ip.py module will write out bond attributes with bond-
+  * 0bba536 Fixing issue reported when using bonded interfaces on Ubuntu.  Attributes should be bond-, but the code was attempting to split just on ``bond_``.  Fix accounts for both, but the debian_ip.py module will write out bond attributes with bond-
 
 - **PR** `#23925`_: (*jpic*) Fixed wrong path in LXC cloud documentation
   @ *2015-05-19T18:23:56Z*

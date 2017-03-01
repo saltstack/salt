@@ -18,6 +18,9 @@ import salt.utils
 import salt.client.ssh.client
 import salt.exceptions
 
+# Import third party libs
+import salt.ext.six as six
+
 
 class NetapiClient(object):
     '''
@@ -60,7 +63,8 @@ class NetapiClient(object):
                     'Salt Master is not available.')
 
         if low.get('client') not in CLIENTS:
-            raise salt.exceptions.SaltInvocationError('Invalid client specified')
+            raise salt.exceptions.SaltInvocationError(
+                    'Invalid client specified: \'{0}\''.format(low.get('client')))
 
         if not ('token' in low or 'eauth' in low) and low['client'] != 'ssh':
             raise salt.exceptions.EauthAuthenticationError(
@@ -98,18 +102,6 @@ class NetapiClient(object):
         local = salt.client.get_local_client(mopts=self.opts)
         return local.cmd(*args, **kwargs)
 
-    def local_batch(self, *args, **kwargs):
-        '''
-        Run :ref:`execution modules <all-salt.modules>` against batches of minions
-
-        Wraps :py:meth:`salt.client.LocalClient.cmd_batch`
-
-        :return: Returns the result from the exeuction module for each batch of
-            returns
-        '''
-        local = salt.client.get_local_client(mopts=self.opts)
-        return local.cmd_batch(*args, **kwargs)
-
     def local_subset(self, *args, **kwargs):
         '''
         Run :ref:`execution modules <all-salt.modules>` against subsets of minions
@@ -129,19 +121,9 @@ class NetapiClient(object):
 
         :return: Returns the result from the salt-ssh command
         '''
-        ssh_client = salt.client.ssh.client.SSHClient(mopts=self.opts)
+        ssh_client = salt.client.ssh.client.SSHClient(mopts=self.opts,
+                                                      disable_custom_roster=True)
         return ssh_client.cmd_sync(kwargs)
-
-    def ssh_async(self, fun, timeout=None, **kwargs):
-        '''
-        Run salt-ssh commands asynchronously
-
-        Wraps :py:meth:`salt.client.ssh.client.SSHClient.cmd_async`.
-
-        :return: Returns the JID to check for results on
-        '''
-        kwargs['fun'] = fun
-        return salt.client.ssh.client.cmd_async(kwargs)
 
     def runner(self, fun, timeout=None, **kwargs):
         '''
@@ -205,6 +187,6 @@ class NetapiClient(object):
 
 CLIENTS = [
     name for name, _
-    in inspect.getmembers(NetapiClient, predicate=inspect.ismethod)
+    in inspect.getmembers(NetapiClient, predicate=inspect.ismethod if six.PY2 else None)
     if not (name == 'run' or name.startswith('_'))
 ]

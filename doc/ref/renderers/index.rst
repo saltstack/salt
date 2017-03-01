@@ -114,7 +114,7 @@ module implement the ``render`` function.
 
 The ``render`` function will be passed the path of the SLS file as an argument.
 
-The purpose of of ``render`` function is to  parse the passed file and to return
+The purpose of the ``render`` function is to parse the passed file and to return
 the Python data structure derived from the file.
 
 Custom renderers must be placed in a ``_renderers`` directory within the

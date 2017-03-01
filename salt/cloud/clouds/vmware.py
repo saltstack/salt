@@ -7,7 +7,7 @@ VMware Cloud Module
 
 The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 
-See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
+See :ref:`Getting started with VMware <cloud-getting-started-vmware>` to get started.
 
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 
@@ -116,7 +116,7 @@ configuration, run :py:func:`test_vcenter_connection`
 # Import python libs
 from __future__ import absolute_import
 from random import randint
-from re import findall
+from re import findall, split
 import pprint
 import logging
 import time
@@ -126,6 +126,7 @@ import subprocess
 # Import salt libs
 import salt.utils
 import salt.utils.cloud
+import salt.utils.network
 import salt.utils.xmlutil
 import salt.utils.vmware
 from salt.exceptions import SaltCloudSystemExit
@@ -655,10 +656,9 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                     if device.deviceInfo.label in list(devices['disk'].keys()):
                         disk_spec = None
                         if 'size' in devices['disk'][device.deviceInfo.label]:
-                            disk_spec = _get_size_spec(device, devices)
-                            size_kb = float(
-                                devices['disk'][device.deviceInfo.label]['size']
-                            ) * 1024 * 1024
+                            size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
+                            disk_spec = _get_size_spec(device, size_gb)
+                            size_kb = size_gb * 1024 * 1024
                         else:
                             # User didn't specify disk size
                             # in the cloud profile
@@ -671,6 +671,12 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         if device.capacityInKB < size_kb:
                             # expand the disk
                             disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
+                        elif device.capacityInKB > size_kb:
+                            raise SaltCloudSystemExit(
+                                'The specified disk size is smaller than the '
+                                'size of the disk image. It must be equal to '
+                                'or greater than the disk image'
+                            )
 
                         if 'mode' in devices['disk'][device.deviceInfo.label]:
                             if devices['disk'][device.deviceInfo.label]['mode'] \
@@ -685,7 +691,8 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                                 raise SaltCloudSystemExit('Invalid disk'
                                                           ' backing mode'
                                                           ' specified!')
-                        device_specs.append(disk_spec)
+                        if disk_spec is not None:
+                            device_specs.append(disk_spec)
 
             elif isinstance(device.backing, vim.vm.device.VirtualEthernetCard.NetworkBackingInfo) or isinstance(device.backing, vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
                 # this is a network adapter
@@ -907,7 +914,16 @@ def _wait_for_ip(vm_ref, max_wait):
     max_wait_ip = max_wait
     vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_vmware_tools)
     if not vmware_tools_status:
-        return False
+        # VMware will only report the IP if VMware tools are installed. Try to
+        # determine the IP using DNS
+        vm_name = vm_ref.summary.config.name
+        resolved_ips = salt.utils.network.host_to_ips(vm_name)
+        log.debug("Timeout waiting for VMware tools. The name {0} resolved "
+                  "to {1}".format(vm_name, str(resolved_ips)))
+        if isinstance(resolved_ips, list) and len(resolved_ips):
+            return resolved_ips[0]
+        else:
+            return False
     time_counter = 0
     starttime = time.time()
     while time_counter < max_wait_ip:
@@ -2104,7 +2120,7 @@ def reset(name, call=None):
                 return ret
             try:
                 log.info('Resetting VM {0}'.format(name))
-                task = vm["object"].Reset()
+                task = vm["object"].ResetVM_Task()
                 salt.utils.vmware.wait_for_task(task, name, 'reset')
             except Exception as exc:
                 log.error(
@@ -2271,11 +2287,6 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
@@ -2351,6 +2362,9 @@ def create(vm_):
     )
     customization = config.get_cloud_config_value(
         'customization', vm_, __opts__, search_global=False, default=True
+    )
+    customization_spec = config.get_cloud_config_value(
+        'customization_spec', vm_, __opts__, search_global=False, default=None
     )
     win_password = config.get_cloud_config_value(
         'win_password', vm_, __opts__, search_global=False, default=None
@@ -2549,11 +2563,14 @@ def create(vm_):
                                          reloc_spec,
                                          template)
 
-        if customization and (devices and 'network' in list(devices.keys())):
+        if customization and customization_spec:
+            customization_spec = salt.utils.vmware.get_customizationspec_ref(si=si, customization_spec_name=customization_spec)
+            clone_spec.customization = customization_spec.spec
+        elif customization and (devices and 'network' in list(devices.keys())):
             global_ip = vim.vm.customization.GlobalIPSettings()
             if 'dns_servers' in list(vm_.keys()):
                 global_ip.dnsServerList = vm_['dns_servers']
-            hostName = vm_name.split('.')[0]
+            hostName = split(r'[^\w-]', vm_name, maxsplit=1)[0]
             domainName = vm_name.split('.', 1)[-1]
             if 'Windows' not in object_ref.config.guestFullName:
                 identity = vim.vm.customization.LinuxPrep()
@@ -2602,7 +2619,11 @@ def create(vm_):
             'event',
             'requesting instance',
             'salt/cloud/{0}/requesting'.format(vm_['name']),
-            args={'kwargs': vm_},
+            args={
+                'name': vm_['name'],
+                'profile': vm_['profile'],
+                'provider': vm_['driver'],
+            },
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )

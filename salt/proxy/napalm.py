@@ -66,7 +66,6 @@ Example:
 from __future__ import absolute_import
 
 # Import python lib
-import traceback
 import logging
 log = logging.getLogger(__file__)
 
@@ -80,6 +79,9 @@ try:
     HAS_NAPALM = True
 except ImportError:
     HAS_NAPALM = False
+
+from salt.ext import six
+import salt.utils.napalm
 
 # ----------------------------------------------------------------------------------------------------------------------
 # proxy properties
@@ -101,7 +103,7 @@ DETAILS = {}
 
 
 def __virtual__():
-    return HAS_NAPALM or (False, 'Please install NAPALM library: `pip install napalm`')
+    return HAS_NAPALM or (False, 'Please install the NAPALM library: `pip install napalm`!')
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -116,72 +118,62 @@ def init(opts):
     '''
     Opens the connection with the network device.
     '''
-    proxy_dict = opts.get('proxy', {})
-    NETWORK_DEVICE['HOSTNAME'] = proxy_dict.get('host') or proxy_dict.get('hostname')
-    NETWORK_DEVICE['USERNAME'] = proxy_dict.get('username') or proxy_dict.get('user')
-    NETWORK_DEVICE['DRIVER_NAME'] = proxy_dict.get('driver') or proxy_dict.get('os')
-    NETWORK_DEVICE['PASSWORD'] = proxy_dict.get('passwd') or proxy_dict.get('password') or proxy_dict.get('pass')
-    NETWORK_DEVICE['TIMEOUT'] = proxy_dict.get('timeout', 60)
-    NETWORK_DEVICE['OPTIONAL_ARGS'] = proxy_dict.get('optional_args', {})
-
-    NETWORK_DEVICE['UP'] = False
-
-    _driver_ = napalm_base.get_network_driver(NETWORK_DEVICE.get('DRIVER_NAME'))
-    # get driver object form NAPALM
-
-    if 'config_lock' not in NETWORK_DEVICE['OPTIONAL_ARGS'].keys():
-        NETWORK_DEVICE['OPTIONAL_ARGS']['config_lock'] = False
-
-    try:
-        NETWORK_DEVICE['DRIVER'] = _driver_(
-            NETWORK_DEVICE.get('HOSTNAME', ''),
-            NETWORK_DEVICE.get('USERNAME', ''),
-            NETWORK_DEVICE.get('PASSWORD', ''),
-            timeout=NETWORK_DEVICE['TIMEOUT'],
-            optional_args=NETWORK_DEVICE['OPTIONAL_ARGS']
-        )
-        NETWORK_DEVICE.get('DRIVER').open()
-        # no exception raised here, means connection established
-        NETWORK_DEVICE['UP'] = True
-        DETAILS['initialized'] = True
-    except napalm_base.exceptions.ConnectionException as error:
-        log.error(
-            "Cannot connect to {hostname}{port} as {username}. Please check error: {error}".format(
-                hostname=NETWORK_DEVICE.get('HOSTNAME', ''),
-                port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS'])
-                      if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''),
-                username=NETWORK_DEVICE.get('USERNAME', ''),
-                error=error
-            )
-        )
-
+    NETWORK_DEVICE.update(salt.utils.napalm.get_device(opts))
+    DETAILS['initialized'] = True
     return True
 
 
-def ping():
+def alive(opts):
+    '''
+    Return the connection status with the remote device.
 
+    .. versionadded:: Nitrogen
+    '''
+    is_alive_ret = call('is_alive', **{})
+    if not is_alive_ret.get('result', False):
+        log.debug('[{proxyid}] Unable to execute `is_alive`: {comment}'.format(
+            proxyid=opts.get('id'),
+            comment=is_alive_ret.get('comment')
+        ))
+        # if `is_alive` is not implemented by the underneath driver,
+        # will consider the connection to be still alive
+        # we don't want overly request connection reestablishment
+        # NOTE: revisit this if IOS is still not stable
+        #       and return False to force reconnection
+        return True
+    flag = is_alive_ret.get('out', {}).get('is_alive', False)
+    log.debug('Is {proxyid} still alive? {answ}'.format(
+        proxyid=opts.get('id'),
+        answ='Yes.' if flag else 'No.'
+    ))
+    return flag
+
+
+def ping():
     '''
     Connection open successfully?
     '''
-
     return NETWORK_DEVICE.get('UP', False)
 
 
 def initialized():
-
     '''
     Connection finished initializing?
     '''
-
     return DETAILS.get('initialized', False)
 
 
-def grains():
+def get_device():
+    '''
+    Returns the network device object.
+    '''
+    return NETWORK_DEVICE
 
+
+def get_grains():
     '''
     Retrieve facts from the network device.
     '''
-
     refresh_needed = False
     refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}))
     refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}).get('result', False))
@@ -195,21 +187,17 @@ def grains():
 
 
 def grains_refresh():
-
     '''
     Refresh the grains.
     '''
-
     DETAILS['grains_cache'] = {}
-    return grains()
+    return get_grains()
 
 
 def fns():
-
     '''
     Method called by NAPALM grains module.
     '''
-
     return {
         'details': 'Network device grains.'
     }
@@ -227,8 +215,8 @@ def shutdown(opts):
         log.error(
             'Cannot close connection with {hostname}{port}! Please check error: {error}'.format(
                 hostname=NETWORK_DEVICE.get('HOSTNAME', '[unknown hostname]'),
-                port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS'])
-                      if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''),
+                port=(':{port}'.format(port=NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port'))
+                      if NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port') else ''),
                 error=error
             )
         )
@@ -240,8 +228,7 @@ def shutdown(opts):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def call(method, **params):
-
+def call(method, *args, **kwargs):
     '''
     Calls a specific method from the network driver instance.
     Please check the readthedocs_ page for the updated list of getters.
@@ -273,39 +260,11 @@ def call(method, **params):
                                     ]
                                  })
     '''
-
-    result = False
-    out = None
-
-    try:
-        if not NETWORK_DEVICE.get('UP', False):
-            raise Exception('not connected')
-        # if connected will try to execute desired command
-        out = getattr(NETWORK_DEVICE.get('DRIVER'), method)(**params)  # calls the method with the specified parameters
-        result = True
-    except Exception as error:
-        # either not connected
-        # either unable to execute the command
-        err_tb = traceback.format_exc()  # let's get the full traceback and display for debugging reasons.
-        comment = 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
-            device=NETWORK_DEVICE.get('HOSTNAME', '[unspecified hostname]'),
-            port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS'])
-                  if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''),
-            user=NETWORK_DEVICE.get('USERNAME', ''),
-            method=method,
-            error=error
-        )
-        log.error(comment)
-        log.error(err_tb)
-        return {
-            'out': {},
-            'result': False,
-            'comment': comment,
-            'traceback': err_tb
-        }
-
-    return {
-        'out': out,
-        'result': result,
-        'comment': ''
-    }
+    kwargs_copy = {}
+    kwargs_copy.update(kwargs)
+    for karg, warg in six.iteritems(kwargs_copy):
+        # will remove None values
+        # thus the NAPALM methods will be called with their defaults
+        if warg is None:
+            kwargs.pop(karg)
+    return salt.utils.napalm.call(NETWORK_DEVICE, method, *args, **kwargs)

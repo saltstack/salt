@@ -401,6 +401,29 @@ def chhomephone(name, homephone):
     return _update_gecos(name, 'homephone', homephone)
 
 
+def chloginclass(name, loginclass, root=None):
+    '''
+    Change the default login class of the user
+
+    .. versionadded:: 2016.3.5
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.chloginclass foo staff
+    '''
+    if loginclass == get_loginclass(name):
+        return True
+
+    cmd = ['pw', 'usermod', '-L', '{0}'.format(loginclass),
+           '-n', '{0}'.format(name)]
+
+    __salt__['cmd.run'](cmd, python_shell=False)
+
+    return get_loginclass(name) == loginclass
+
+
 def info(name):
     '''
     Return user information

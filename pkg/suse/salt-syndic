@@ -123,7 +123,7 @@ case "$1" in
             RETVAL=$?
         fi
         ;;
-    condrestart)
+    condrestart|try-restart)
         [ -f $LOCKFILE ] && restart || :
         ;;
     reload)
@@ -131,7 +131,7 @@ case "$1" in
         RETVAL=$?
         ;;
     *)
-        echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}"
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload}"
         exit 1
         ;;
 esac

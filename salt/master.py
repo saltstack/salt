@@ -306,7 +306,7 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             for secret_key, secret_map in six.iteritems(SMaster.secrets):
                 # should be unnecessary-- since no one else should be modifying
                 with secret_map['secret'].get_lock():
-                    secret_map['secret'].value = secret_map['reload']()
+                    secret_map['secret'].value = six.b(secret_map['reload']())
                 self.event.fire_event({'rotate_{0}_key'.format(secret_key): True}, tag='key')
             self.rotate = now
             if self.opts.get('ping_on_rotate'):
@@ -323,11 +323,8 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             for pillar in self.git_pillar:
                 pillar.update()
         except Exception as exc:
-            log.error(
-                'Exception \'{0}\' caught while updating git_pillar'
-                .format(exc),
-                exc_info_on_loglevel=logging.DEBUG
-            )
+            log.error('Exception caught while updating git_pillar',
+                      exc_info=True)
 
     def handle_schedule(self):
         '''
@@ -400,7 +397,7 @@ class Master(SMaster):
         # Let's check to see how our max open files(ulimit -n) setting is
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
         if mof_h == resource.RLIM_INFINITY:
-            # Unclear what to do with infinity... OSX reports RLIM_INFINITY as
+            # Unclear what to do with infinity... macOS reports RLIM_INFINITY as
             # hard limit,but raising to anything above soft limit fails...
             mof_h = mof_s
         log.info(
@@ -433,7 +430,7 @@ class Master(SMaster):
                 )
             except ValueError:
                 # https://github.com/saltstack/salt/issues/1991#issuecomment-13025595
-                # A user under OSX reported that our 100000 default value is
+                # A user under macOS reported that our 100000 default value is
                 # still too high.
                 log.critical(
                     'Failed to raise max open files setting to {0}. If this '
@@ -458,19 +455,21 @@ class Master(SMaster):
                 'Cannot change to root directory ({1})'.format(err)
             )
 
-        fileserver = salt.fileserver.Fileserver(self.opts)
-        if not fileserver.servers:
-            errors.append(
-                'Failed to load fileserver backends, the configured backends '
-                'are: {0}'.format(', '.join(self.opts['fileserver_backend']))
-            )
-        else:
-            # Run init() for all backends which support the function, to
-            # double-check configuration
-            try:
-                fileserver.init()
-            except FileserverConfigError as exc:
-                critical_errors.append('{0}'.format(exc))
+        if self.opts.get('fileserver_verify_config', True):
+            fileserver = salt.fileserver.Fileserver(self.opts)
+            if not fileserver.servers:
+                errors.append(
+                    'Failed to load fileserver backends, the configured backends '
+                    'are: {0}'.format(', '.join(self.opts['fileserver_backend']))
+                )
+            else:
+                # Run init() for all backends which support the function, to
+                # double-check configuration
+                try:
+                    fileserver.init()
+                except FileserverConfigError as exc:
+                    critical_errors.append('{0}'.format(exc))
+
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
 
@@ -483,25 +482,29 @@ class Master(SMaster):
             except OSError:
                 pass
 
-        non_legacy_git_pillars = [
-            x for x in self.opts.get('ext_pillar', [])
-            if 'git' in x
-            and not isinstance(x['git'], six.string_types)
-        ]
-        if non_legacy_git_pillars:
-            try:
-                new_opts = copy.deepcopy(self.opts)
-                from salt.pillar.git_pillar \
-                    import PER_REMOTE_OVERRIDES as overrides
-                for repo in non_legacy_git_pillars:
-                    new_opts['ext_pillar'] = [repo]
-                    try:
-                        git_pillar = salt.utils.gitfs.GitPillar(new_opts)
-                        git_pillar.init_remotes(repo['git'], overrides)
-                    except FileserverConfigError as exc:
-                        critical_errors.append(exc.strerror)
-            finally:
-                del new_opts
+        if self.opts.get('git_pillar_verify_config', True):
+            non_legacy_git_pillars = [
+                x for x in self.opts.get('ext_pillar', [])
+                if 'git' in x
+                and not isinstance(x['git'], six.string_types)
+            ]
+            if non_legacy_git_pillars:
+                try:
+                    new_opts = copy.deepcopy(self.opts)
+                    from salt.pillar.git_pillar \
+                        import PER_REMOTE_OVERRIDES as per_remote_overrides, \
+                        PER_REMOTE_ONLY as per_remote_only
+                    for repo in non_legacy_git_pillars:
+                        new_opts['ext_pillar'] = [repo]
+                        try:
+                            git_pillar = salt.utils.gitfs.GitPillar(new_opts)
+                            git_pillar.init_remotes(repo['git'],
+                                                    per_remote_overrides,
+                                                    per_remote_only)
+                        except FileserverConfigError as exc:
+                            critical_errors.append(exc.strerror)
+                finally:
+                    del new_opts
 
         if errors or critical_errors:
             for error in errors:
@@ -535,7 +538,7 @@ class Master(SMaster):
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets['aes'] = {'secret': multiprocessing.Array(ctypes.c_char,
-                                                salt.crypt.Crypticle.generate_key_string().encode('ascii')),
+                                                six.b(salt.crypt.Crypticle.generate_key_string())),
                                       'reload': salt.crypt.Crypticle.generate_key_string
                                      }
             log.info('Creating master process manager')
@@ -957,7 +960,7 @@ class AESFuncs(object):
         self.mminion = salt.minion.MasterMinion(
             self.opts,
             states=False,
-            rend=True,
+            rend=False,
             ignore_config_errors=True
         )
         self.__setup_fileserver()
@@ -971,6 +974,7 @@ class AESFuncs(object):
         self._serve_file = self.fs_.serve_file
         self._file_find = self.fs_._find_file
         self._file_hash = self.fs_.file_hash
+        self._file_hash_and_stat = self.fs_.file_hash_and_stat
         self._file_list = self.fs_.file_list
         self._file_list_emptydirs = self.fs_.file_list_emptydirs
         self._dir_list = self.fs_.dir_list
@@ -1269,9 +1273,12 @@ class AESFuncs(object):
             return {}
         load.pop('tok')
 
+        # Join path
+        sep_path = os.sep.join(load['path'])
+
         # Path normalization should have been done by the sending
         # minion but we can't guarantee it. Re-do it here.
-        normpath = os.path.normpath(os.path.join(*load['path']))
+        normpath = os.path.normpath(sep_path)
 
         # Ensure that this safety check is done after the path
         # have been normalized.
@@ -1329,8 +1336,7 @@ class AESFuncs(object):
             load.get('saltenv', load.get('env')),
             ext=load.get('ext'),
             pillar=load.get('pillar_override', {}),
-            pillarenv=load.get('pillarenv'),
-            rend=self.mminion.rend)
+            pillarenv=load.get('pillarenv'))
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         self.fs_.update_opts()
         if self.opts.get('minion_data_cache', False):
@@ -1716,13 +1722,6 @@ class ClearFuncs(object):
                                    message=msg))
 
         name = self.loadauth.load_name(clear_load)
-        if not ((name in self.opts['external_auth'][clear_load['eauth']]) |
-                ('*' in self.opts['external_auth'][clear_load['eauth']])):
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
-                                   message=msg))
         if self.loadauth.time_auth(clear_load) is False:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
@@ -1886,9 +1885,9 @@ class ClearFuncs(object):
                     'user': username}
 
             self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-            ret = self.wheel_.call_func(fun, **clear_load)
-            data['return'] = ret
-            data['success'] = True
+            ret = self.wheel_.call_func(fun, full_return=True, **clear_load)
+            data['return'] = ret['return']
+            data['success'] = ret['success']
             self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
             return {'tag': tag,
                     'data': data}
@@ -1922,7 +1921,7 @@ class ClearFuncs(object):
             name = self.loadauth.load_name(clear_load)
             groups = self.loadauth.get_groups(clear_load)
             eauth_config = self.opts['external_auth'][clear_load['eauth']]
-            if '*' not in eauth_config and name not in eauth_config:
+            if '^model' not in eauth_config and '*' not in eauth_config and name not in eauth_config:
                 found = False
                 for group in groups:
                     if "{0}%".format(group) in eauth_config:
@@ -1962,15 +1961,7 @@ class ClearFuncs(object):
         '''
         extra = clear_load.get('kwargs', {})
 
-        if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
-            salt.utils.warn_until(
-                    'Nitrogen',
-                    'ACL rules should be configured with \'publisher_acl\' and '
-                    '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
-                    'This functionality will be removed in Salt Nitrogen.'
-                    )
-        publisher_acl = salt.acl.PublisherACL(
-                self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist'])
+        publisher_acl = salt.acl.PublisherACL(self.opts['publisher_acl_blacklist'])
 
         if publisher_acl.user_is_blacklisted(clear_load['user']) or \
                 publisher_acl.cmd_is_blacklisted(clear_load['fun']):
@@ -2030,7 +2021,7 @@ class ClearFuncs(object):
                             break
             except KeyError:
                 pass
-            if '*' not in eauth_users and token['name'] not in eauth_users \
+            if '^model' not in eauth_users and '*' not in eauth_users and token['name'] not in eauth_users \
                 and not group_auth_match:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
@@ -2174,7 +2165,7 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-                publisher_acl = self.opts['publisher_acl'] or self.opts['client_acl']
+                publisher_acl = self.opts['publisher_acl']
                 if self.opts['sudo_acl'] and publisher_acl:
                     publisher_acl = salt.utils.get_values_of_matching_keys(
                             publisher_acl,
@@ -2218,7 +2209,7 @@ class ClearFuncs(object):
                         return ''
                     # Build ACL matching the user name
                     acl = salt.utils.get_values_of_matching_keys(
-                            self.opts['publisher_acl'] or self.opts['client_acl'],
+                            self.opts['publisher_acl'],
                             clear_load['user'])
                     if not acl:
                         log.warning(

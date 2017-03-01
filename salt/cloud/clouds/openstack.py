@@ -225,9 +225,9 @@ def __virtual__():
         return False
 
     salt.utils.warn_until(
-        'Nitrogen',
+        'Oxygen',
         'This driver has been deprecated and will be removed in the '
-        'Nitrogen release of Salt. Please use the nova driver instead.'
+        '{version} release of Salt. Please use the nova driver instead.'
     )
 
     return __virtualname__
@@ -594,11 +594,6 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
     key_filename = config.get_cloud_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
@@ -727,6 +722,8 @@ def create(vm_):
             )
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
+                if private_ip is False:
+                    continue
                 if salt.utils.cloud.is_public_ip(private_ip):
                     log.warning('{0} is a public IP'.format(private_ip))
                     data.public_ips.append(private_ip)
@@ -851,19 +848,18 @@ def _assign_floating_ips(vm_, conn, kwargs):
                     pool = OpenStack_1_1_FloatingIpPool(
                         net['floating'], conn.connection
                     )
-                    for idx in [pool.create_floating_ip()]:
+                    for idx in pool.list_floating_ips():
                         if idx.node_id is None:
                             floating.append(idx)
                     if not floating:
-                        # Note(pabelanger): We have no available floating IPs.
-                        # For now, we raise an exception and exit.
-                        # A future enhancement might be to allow salt-cloud
-                        # to dynamically allocate new address but that might
-                        raise SaltCloudSystemExit(
-                            'Floating pool \'{0}\' does not have any more '
-                            'please create some more or use a different '
-                            'pool.'.format(net['floating'])
-                        )
+                        try:
+                            floating.append(pool.create_floating_ip())
+                        except Exception as e:
+                            raise SaltCloudSystemExit(
+                                'Floating pool \'{0}\' does not have any more '
+                                'please create some more or use a different '
+                                'pool.'.format(net['floating'])
+                            )
         # otherwise, attempt to obtain list without specifying pool
         # this is the same as 'nova floating-ip-list'
         elif ssh_interface(vm_) != 'private_ips':
@@ -879,15 +875,13 @@ def _assign_floating_ips(vm_, conn, kwargs):
                     if idx.node_id is None:
                         floating.append(idx)
                 if not floating:
-                    # Note(pabelanger): We have no available floating IPs.
-                    # For now, we raise an exception and exit.
-                    # A future enhancement might be to allow salt-cloud to
-                    # dynamically allocate new address but that might be
-                    # tricky to manage.
-                    raise SaltCloudSystemExit(
-                        'There are no more floating IP addresses '
-                        'available, please create some more'
-                    )
+                    try:
+                        floating.append(pool.create_floating_ip())
+                    except Exception as e:
+                        raise SaltCloudSystemExit(
+                            'There are no more floating IP addresses '
+                            'available, please create some more'
+                        )
             except Exception as e:
                 if str(e).startswith('404'):
                     pass

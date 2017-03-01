@@ -1,3 +1,6 @@
+.. _docker-sls:
+
+=====================================================
 Running Salt States and Commands in Docker Containers
 =====================================================
 

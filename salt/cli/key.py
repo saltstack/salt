@@ -2,6 +2,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+
 from salt.utils import parsers
 from salt.utils.verify import check_user, verify_log
 

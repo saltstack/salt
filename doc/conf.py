@@ -49,6 +49,13 @@ class Mock(object):
         else:
             data = Mock(mapping=self.__mapping)
         return data
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        raise StopIteration
+
 # pylint: enable=R0903
 
 MOCK_MODULES = [
@@ -158,6 +165,11 @@ MOCK_MODULES = [
     'pyroute2.ipdb',
     'avahi',
     'dbus',
+    'twisted',
+    'twisted.internet',
+    'twisted.internet.protocol',
+    'twisted.internet.protocol.DatagramProtocol',
+    'msgpack',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -232,11 +244,11 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2016.3.4'  # latest release
-previous_release = '2015.8.12'  # latest release from previous branch
-previous_release_dir = '2015.8'  # path on web server for previous branch
-next_release = '2016.11'  # next release
-next_release_dir = '2016.11'  # path on web server for next release branch
+latest_release = '2016.11.3'  # latest release
+previous_release = '2016.3.5'  # latest release from previous branch
+previous_release_dir = '2016.3'  # path on web server for previous branch
+next_release = ''  # next release
+next_release_dir = ''  # path on web server for next release branch
 
 today = ''
 copyright = ''

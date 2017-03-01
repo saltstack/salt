@@ -64,7 +64,7 @@ to them:
 Environments
 ============
 
-Environments are directory hierarchies which contain a top files and a set
+Environments are directory hierarchies which contain a top file and a set
 of state files.
 
 Environments can be used in many ways, however there is no requirement that
@@ -220,8 +220,8 @@ Advanced Minion Targeting
 =========================
 
 In addition to globs, minions can be specified in top files a few other
-ways. Some common ones are :doc:`compound matches </topics/targeting/compound>`
-and :doc:`node groups </topics/targeting/nodegroups>`.
+ways. Some common ones are :ref:`compound matches <targeting-compound>`
+and :ref:`node groups <targeting-nodegroups>`.
 
 Below is a slightly more complex top file example, showing the different types
 of matches you can perform:

@@ -6,7 +6,7 @@ High Availability Features in Salt
 
 Salt supports several features for high availability and fault tolerance.
 Brief documentation for these features is listed alongside their configuration
-parameters in :ref:`Configuration file examples <configuration/examples>`.
+parameters in :ref:`Configuration file examples <configuration-file-examples>`.
 
 Multimaster
 ===========
@@ -23,7 +23,7 @@ to Salt as well
 
 A tutorial on setting up multimaster with "hot" masters is here:
 
-:doc:`Multimaster Tutorial </topics/tutorials/multimaster>`
+:ref:`Multimaster Tutorial <tutorial-multi-master>`
 
 Multimaster with Failover
 =========================
@@ -42,7 +42,7 @@ Failover can be combined with PKI-style encrypted keys, but PKI is NOT
 REQUIRED to use failover.
 
 Multimaster with PKI and Failover is discussed in
-:doc:`this tutorial </topics/tutorials/multimaster_pki>`
+:ref:`this tutorial <tutorial-multi-master-pki>`
 
 ``master_type: failover`` can be combined with ``master_shuffle: True``
 to spread minion connections across all masters (one master per
@@ -61,7 +61,7 @@ With the syndic, a Salt infrastructure can be partitioned in such a way that
 certain masters control certain segments of the infrastructure, and "Master
 of Masters" nodes can control multiple segments underneath them.
 
-Syndics are covered in depth in :doc:`Salt Syndic </topics/topology/syndic>`.
+Syndics are covered in depth in :ref:`Salt Syndic <syndic>`.
 
 Syndic with Multimaster
 =======================
@@ -71,4 +71,4 @@ Syndic with Multimaster
 Syndic with Multimaster lets you connect a syndic to multiple masters to provide
 an additional layer of redundancy in a syndic configuration.
 
-Syndics are covered in depth in :doc:`Salt Syndic </topics/topology/syndic>`.
+Syndics are covered in depth in :ref:`Salt Syndic <syndic>`.

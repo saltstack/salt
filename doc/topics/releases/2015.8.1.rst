@@ -2,8 +2,7 @@
 Salt 2015.8.1 Release Notes
 ===========================
 
-Version 2015.8.1 is a bugfix release for :doc:`2015.8.0
-</topics/releases/2015.8.0>`.
+Version 2015.8.1 is a bugfix release for :ref:`2015.8.0<release-2015-8-0>`.
 
 Security Fixes
 --------------
@@ -410,6 +409,7 @@ Changes:
 .. _`#27210`: https://github.com/saltstack/salt/pull/27210
 .. _`#27213`: https://github.com/saltstack/salt/pull/27213
 .. _`#27214`: https://github.com/saltstack/salt/pull/27214
+.. _`#27217`: https://github.com/saltstack/salt/issues/27217
 .. _`#27218`: https://github.com/saltstack/salt/pull/27218
 .. _`#27223`: https://github.com/saltstack/salt/pull/27223
 .. _`#27230`: https://github.com/saltstack/salt/pull/27230

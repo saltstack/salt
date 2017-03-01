@@ -160,11 +160,12 @@ def verify_files(files, user):
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         try:
-            try:
-                os.makedirs(dirname)
-            except OSError as err:
-                if err.errno != errno.EEXIST:
-                    raise
+            if dirname:
+                try:
+                    os.makedirs(dirname)
+                except OSError as err:
+                    if err.errno != errno.EEXIST:
+                        raise
             if not os.path.isfile(fn_):
                 with salt.utils.fopen(fn_, 'w+') as fp_:
                     fp_.write('')
@@ -555,7 +556,7 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
         if not permissive:
             try:
                 # Get a clean dacl by not passing an obj_name
-                dacl = salt.utils.win_dacl.Dacl()
+                dacl = salt.utils.win_dacl.dacl()
 
                 # Add aces to the dacl, use the GUID (locale non-specific)
                 # Administrators Group
@@ -566,9 +567,6 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
                              'this_folder_subfolders_files')
                 # Owner
                 dacl.add_ace('S-1-3-4', 'grant', 'full_control',
-                             'this_folder_subfolders_files')
-                # Users Group
-                dacl.add_ace('S-1-5-32-545', 'grant', 'read_execute',
                              'this_folder_subfolders_files')
 
                 # Save the dacl to the object
@@ -602,7 +600,7 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
 
                 # Give Admins, System and Owner permissions
                 # Get a clean dacl by not passing an obj_name
-                dacl = salt.utils.win_dacl.Dacl()
+                dacl = salt.utils.win_dacl.dacl()
 
                 # Add aces to the dacl, use the GUID (locale non-specific)
                 # Administrators Group

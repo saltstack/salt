@@ -28,16 +28,9 @@ from __future__ import absolute_import
 import logging
 log = logging.getLogger(__file__)
 
-
-try:
-    # will try to import NAPALM
-    # https://github.com/napalm-automation/napalm
-    # pylint: disable=W0611
-    from napalm import get_network_driver
-    # pylint: enable=W0611
-    HAS_NAPALM = True
-except ImportError:
-    HAS_NAPALM = False
+# import NAPALM utils
+import salt.utils.napalm
+from salt.utils.napalm import proxy_napalm_wrap
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -53,17 +46,10 @@ __proxyenabled__ = ['napalm']
 
 
 def __virtual__():
-
     '''
-    NAPALM library must be installed for this module to work.
-    Also, the key proxymodule must be set in the __opts___ dictionary.
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
     '''
-
-    if HAS_NAPALM and 'proxy' in __opts__:
-        return __virtualname__
-    else:
-        return (False, 'The module napalm_probes (probes) cannot be loaded: \
-                NAPALM or proxy could not be loaded.')
+    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -74,7 +60,8 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def config():
+@proxy_napalm_wrap
+def config(**kwargs):  # pylint: disable=unused-argument
 
     '''
     Returns the configuration of the RPM probes.
@@ -111,14 +98,16 @@ def config():
         }
     '''
 
-    return __proxy__['napalm.call'](
+    return salt.utils.napalm.call(
+        napalm_device,  # pylint: disable=undefined-variable
         'get_probes_config',
         **{
         }
     )
 
 
-def results():
+@proxy_napalm_wrap
+def results(**kwargs):  # pylint: disable=unused-argument
 
     '''
     Provides the results of the measurements of the RPM/SLA probes.
@@ -179,14 +168,16 @@ def results():
         }
     '''
 
-    return __proxy__['napalm.call'](
+    return salt.utils.napalm.call(
+        napalm_device,  # pylint: disable=undefined-variable
         'get_probes_results',
         **{
         }
     )
 
 
-def set_probes(probes, test=False, commit=True):
+@proxy_napalm_wrap
+def set_probes(probes, test=False, commit=True, **kwargs):  # pylint: disable=unused-argument
 
     '''
     Configures RPM/SLA probes on the device.
@@ -271,10 +262,12 @@ def set_probes(probes, test=False, commit=True):
     return __salt__['net.load_template']('set_probes',
                                          probes=probes,
                                          test=test,
-                                         commit=commit)
+                                         commit=commit,
+                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
 
 
-def delete_probes(probes, test=False, commit=True):
+@proxy_napalm_wrap
+def delete_probes(probes, test=False, commit=True, **kwargs):  # pylint: disable=unused-argument
 
     '''
     Removes RPM/SLA probes from the network device.
@@ -317,10 +310,12 @@ def delete_probes(probes, test=False, commit=True):
     return __salt__['net.load_template']('delete_probes',
                                          probes=probes,
                                          test=test,
-                                         commit=commit)
+                                         commit=commit,
+                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
 
 
-def schedule_probes(probes, test=False, commit=True):
+@proxy_napalm_wrap
+def schedule_probes(probes, test=False, commit=True, **kwargs):  # pylint: disable=unused-argument
 
     '''
     Will schedule the probes. On Cisco devices, it is not enough to define the probes, it is also necessary
@@ -357,10 +352,10 @@ def schedule_probes(probes, test=False, commit=True):
                 'new_test2': {}
             }
         }
-
     '''
 
     return __salt__['net.load_template']('schedule_probes',
                                          probes=probes,
                                          test=test,
-                                         commit=commit)
+                                         commit=commit,
+                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable

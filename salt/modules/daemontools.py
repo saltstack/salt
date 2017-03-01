@@ -31,7 +31,7 @@ __func_alias__ = {
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'service'
+__virtualname__ = 'daemontools'
 
 VALID_SERVICE_DIRS = [
     '/service',
@@ -48,7 +48,9 @@ for service_dir in VALID_SERVICE_DIRS:
 def __virtual__():
     # Ensure that daemontools is installed properly.
     BINS = frozenset(('svc', 'supervise', 'svok'))
-    return __virtualname__ if all(salt.utils.which(b) for b in BINS) else False
+    if all(salt.utils.which(b) for b in BINS) and SERVICE_DIR:
+        return __virtualname__
+    return False
 
 
 def _service_path(name):

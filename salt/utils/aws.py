@@ -87,7 +87,9 @@ def creds(provider):
                 proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
             )
             result.raise_for_status()
-            role = result.text
+            role = result.text.encode(
+                result.encoding if result.encoding else 'utf-8'
+            )
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
             return provider['id'], provider['key'], ''
 
@@ -460,7 +462,9 @@ def query(params=None, setname=None, requesturl=None, location=None,
             )
             LOG.trace(
                 'AWS Response Text: {0}'.format(
-                    result.text
+                    result.text.encode(
+                        result.encoding if result.encoding else 'utf-8'
+                    )
                 )
             )
             result.raise_for_status()
@@ -501,7 +505,9 @@ def query(params=None, setname=None, requesturl=None, location=None,
             return {'error': data}, requesturl
         return {'error': data}
 
-    response = result.text
+    response = result.text.encode(
+        result.encoding if result.encoding else 'utf-8'
+    )
 
     root = ET.fromstring(response)
     items = root[1]
@@ -577,8 +583,10 @@ def get_location(opts=None, provider=None):
         DEFAULT_LOCATION
     '''
     if opts is None:
-        opts = __opts__
-    ret = opts.get('location', provider.get('location'))
+        opts = {}
+    ret = opts.get('location')
+    if ret is None and provider is not None:
+        ret = provider.get('location')
     if ret is None:
         ret = get_region_from_metadata()
     if ret is None:

@@ -31,7 +31,8 @@ Minion Primary Configuration
 
 Default: ``salt``
 
-The hostname or ipv4 of the master.
+The hostname or IP address of the master. See :conf_minion:`ipv6` for IPv6
+connections to the master.
 
 Default: ``salt``
 
@@ -39,8 +40,8 @@ Default: ``salt``
 
     master: salt
 
-The option can can also be set to a list of masters, enabling
-:doc:`multi-master </topics/tutorials/multimaster>` mode.
+The option can also be set to a list of masters, enabling
+:ref:`multi-master <tutorial-multi-master>` mode.
 
 .. code-block:: yaml
 
@@ -75,6 +76,20 @@ The option can can also be set to a list of masters, enabling
           - address2
         master_type: failover
 
+.. conf_minion:: ipv6
+
+``ipv6``
+--------
+
+Default: ``None``
+
+Whether the master should be connected over IPv6. By default salt minion
+will try to automatically detect IPv6 connectivity to master.
+
+.. code-block:: yaml
+
+    ipv6: True
+
 .. conf_minion:: master_type
 
 ``master_type``
@@ -107,12 +122,13 @@ to manage the minion's master setting from an execution module. By simply
 changing the algorithm in the module to return a new master ip/fqdn, restart
 the minion and it will connect to the new master.
 
+As of version 2016.11.0 this option can be set to ``disable`` and the minion
+will never attempt to talk to the master. This is useful for running a
+masterless minion daemon.
+
 .. code-block:: yaml
 
     master_type: disable
-
-If you just want to run a masterless minion, this can be set and the minion
-will never attempt to talk to the master.
 
 .. conf_minion:: max_event_size
 
@@ -455,26 +471,6 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 
     cache_jobs: False
 
-.. conf_minion:: minion_pillar_cache
-
-``minion_pillar_cache``
------------------------
-
-Default: ``False``
-
-The minion can locally cache rendered pillar data under
-:conf_minion:`cachedir`/pillar. This allows a temporarily disconnected minion
-to access previously cached pillar data by invoking salt-call with the --local
-and --pillar_root=:conf_minion:`cachedir`/pillar options. Before enabling this
-setting consider that the rendered pillar may contain security sensitive data.
-Appropriate access restrictions should be in place. By default the saved pillar
-data will be readable only by the user account running salt. By default this
-feature is disabled, to enable set minion_pillar_cache to ``True``.
-
-.. code-block:: yaml
-
-    minion_pillar_cache: False
-
 .. conf_minion:: grains
 
 ``grains``
@@ -627,7 +623,9 @@ The directory where Unix sockets will be kept.
 
 Default: ``''``
 
-Backup files replaced by file.managed and file.recurse under cachedir.
+Make backups of files replaced by ``file.managed`` and ``file.recurse`` state modules under
+:conf_minion:`cachedir` in ``file_backup`` subdirectory preserving original paths.
+Refer to :ref:`File State Backups documentation <file-state-backups>` for more details.
 
 .. code-block:: yaml
 
@@ -1191,8 +1189,8 @@ and/or having to install specific modules' dependencies in system libraries.
 Default: (empty)
 
 A module provider can be statically overwritten or extended for the minion via
-the ``providers`` option. This can be done :doc:`on an individual basis in an
-SLS file <../states/providers>`, or globally here in the minion config, like
+the ``providers`` option. This can be done :ref:`on an individual basis in an
+SLS file <state-providers>`, or globally here in the minion config, like
 below.
 
 .. code-block:: yaml
@@ -1200,6 +1198,173 @@ below.
     providers:
       service: systemd
 
+``extmod_whitelist/extmod_blacklist``
+--------------------
+
+.. versionadded:: Nitrogen
+
+By using this dictionary, the modules that are synced to the minion's extmod cache using `saltutil.sync_*` can be
+limited.  If nothing is set to a specific type, then all modules are accepted.  To block all modules of a specific type,
+whitelist an empty list.
+
+.. code-block:: yaml
+
+    extmod_whitelist:
+      modules:
+        - custom_module
+      engines:
+        - custom_engine
+      pillars: []
+
+    extmod_blacklist:
+      modules:
+        - specific_module
+
+
+Valid options:
+  - beacons
+  - sdb
+  - modules
+  - states
+  - grains
+  - renderers
+  - returners
+  - proxy
+  - engines
+  - output
+  - utils
+  - pillar
+
+
+Top File Settings
+=================
+
+These parameters only have an effect if running a masterless minion.
+
+.. conf_minion:: state_top
+
+``state_top``
+-------------
+
+Default: ``top.sls``
+
+The state system uses a "top" file to tell the minions what environment to
+use and what modules to use. The state_top file is defined relative to the
+root of the base environment.
+
+.. code-block:: yaml
+
+    state_top: top.sls
+
+.. conf_minion:: state_top_saltenv
+
+``state_top_saltenv``
+---------------------
+
+This option has no default value. Set it to an environment name to ensure that
+*only* the top file from that environment is considered during a
+:ref:`highstate <running-highstate>`.
+
+.. note::
+    Using this value does not change the merging strategy. For instance, if
+    :conf_minion:`top_file_merging_strategy` is set to ``merge``, and
+    :conf_minion:`state_top_saltenv` is set to ``foo``, then any sections for
+    environments other than ``foo`` in the top file for the ``foo`` environment
+    will be ignored. With :conf_minion:`state_top_saltenv` set to ``base``, all
+    states from all environments in the ``base`` top file will be applied,
+    while all other top files are ignored. The only way to set
+    :conf_minion:`state_top_saltenv` to something other than ``base`` and not
+    have the other environments in the targeted top file ignored, would be to
+    set :conf_minion:`top_file_merging_strategy` to ``merge_all``.
+
+.. code-block:: yaml
+
+    state_top_saltenv: dev
+
+.. conf_minion:: top_file_merging_strategy
+
+``top_file_merging_strategy``
+-----------------------------
+
+.. versionchanged:: 2016.11.0
+    A ``merge_all`` strategy has been added.
+
+Default: ``merge``
+
+When no specific fileserver environment (a.k.a. ``saltenv``) has been specified
+for a :ref:`highstate <running-highstate>`, all environments' top files are
+inspected. This config option determines how the SLS targets in those top files
+are handled.
+
+When set to ``merge``, the ``base`` environment's top file is evaluated first,
+followed by the other environments' top files. The first target expression
+(e.g. ``'*'``) for a given environment is kept, and when the same target
+expression is used in a different top file evaluated later, it is ignored.
+Because ``base`` is evaluated first, it is authoritative. For example, if there
+is a target for ``'*'`` for the ``foo`` environment in both the ``base`` and
+``foo`` environment's top files, the one in the ``foo`` environment would be
+ignored. The environments will be evaluated in no specific order (aside from
+``base`` coming first). For greater control over the order in which the
+environments are evaluated, use :conf_minion:`env_order`. Note that, aside from
+the ``base`` environment's top file, any sections in top files that do not
+match that top file's environment will be ignored. So, for example, a section
+for the ``qa`` environment would be ignored if it appears in the ``dev``
+environment's top file. To keep use cases like this from being ignored, use the
+``merge_all`` strategy.
+
+When set to ``same``, then for each environment, only that environment's top
+file is processed, with the others being ignored. For example, only the ``dev``
+environment's top file will be processed for the ``dev`` environment, and any
+SLS targets defined for ``dev`` in the ``base`` environment's (or any other
+environment's) top file will be ignored. If an environment does not have a top
+file, then the top file from the :conf_minion:`default_top` config parameter
+will be used as a fallback.
+
+When set to ``merge_all``, then all states in all environments in all top files
+will be applied. The order in which individual SLS files will be executed will
+depend on the order in which the top files were evaluated, and the environments
+will be evaluated in no specific order. For greater control over the order in
+which the environments are evaluated, use :conf_minion:`env_order`.
+
+.. code-block:: yaml
+
+    top_file_merging_strategy: same
+
+.. conf_minion:: env_order
+
+``env_order``
+-------------
+
+Default: ``[]``
+
+When :conf_minion:`top_file_merging_strategy` is set to ``merge``, and no
+environment is specified for a :ref:`highstate <running-highstate>`, this
+config option allows for the order in which top files are evaluated to be
+explicitly defined.
+
+.. code-block:: yaml
+
+    env_order:
+      - base
+      - dev
+      - qa
+
+.. conf_minion:: default_top
+
+``default_top``
+---------------
+
+Default: ``base``
+
+When :conf_minion:`top_file_merging_strategy` is set to ``same``, and no
+environment is specified for a :ref:`highstate <running-highstate>` (i.e.
+:conf_minion:`environment` is not set for the minion), this config option
+specifies a fallback environment in which to look for a top file if an
+environment lacks one.
+
+.. code-block:: yaml
+
+    default_top: dev
 
 State Management Settings
 =========================
@@ -1216,6 +1381,20 @@ The default renderer used for local state executions
 .. code-block:: yaml
 
     renderer: yaml_jinja
+
+.. conf_master:: test
+
+``test``
+--------
+
+Default: ``False``
+
+Set all state calls to only test if they are going to actually make changes
+or just post what changes are going to be made.
+
+.. code-block:: yaml
+
+    test: False
 
 .. conf_minion:: state_verbose
 
@@ -1275,6 +1454,10 @@ enabled and can be disabled by changing this value to ``False``.
 
     clean_dynamic_modules: True
 
+.. note::
+
+    If ``extmod_whitelist`` is specified, modules which are not whitelisted will also be cleaned here.
+
 .. conf_minion:: environment
 
 ``environment``
@@ -1288,111 +1471,6 @@ environments is to isolate via the top file.
 .. code-block:: yaml
 
     environment: dev
-
-.. conf_minion:: state_top_saltenv
-
-``state_top_saltenv``
----------------------
-
-This option has no default value. Set it to an environment name to ensure that
-*only* the top file from that environment is considered during a
-:ref:`highstate <running-highstate>`.
-
-.. note::
-    Using this value does not change the merging strategy. For instance, if
-    :conf_minion:`top_file_merging_strategy` is set to ``merge``, and
-    :conf_minion:`state_top_saltenv` is set to ``foo``, then any sections for
-    environments other than ``foo`` in the top file for the ``foo`` environment
-    will be ignored. With :conf_minion:`state_top_saltenv` set to ``base``, all
-    states from all environments in the ``base`` top file will be applied,
-    while all other top files are ignored. The only way to set
-    :conf_minion:`state_top_saltenv` to something other than ``base`` and not
-    have the other environments in the targeted top file ignored, would be to
-    set :conf_minion:`top_file_merging_strategy` to ``merge_all``.
-
-.. code-block:: yaml
-
-    state_top_saltenv: dev
-
-.. conf_minion:: top_file_merging_strategy
-
-``top_file_merging_strategy``
------------------------------
-
-.. versionchanged:: 2016.11.0
-    A ``merge_all`` strategy has been added.
-
-Default: ``merge``
-
-When no specific fileserver environment (a.k.a. ``saltenv``) has been specified
-for a :ref:`highstate <running-highstate>`, all environments' top files are
-inspected. This config option determines how the SLS targets in those top files
-are handled.
-
-When set to ``merge``, the ``base`` environment's top file is evaluated first,
-followed by the other environments' top files. The first target expression
-(e.g. ``'*'``) for a given environment is kept, and when the same target
-expression is used in a different top file evaluated later, it is ignored.
-Because ``base`` is evaluated first, it is authoritative. For example, if there
-is a target for ``'*'`` for the ``foo`` environment in both the ``base`` and
-``foo`` environment's top files, the one in the ``foo`` environment would be
-ignored. The environments will be evaluated in no specific order (aside from
-``base`` coming first). For greater control over the order in which the
-environments are evaluated, use :conf_minion:`env_order`.
-
-When set to ``same``, then for each environment, only that environment's top
-file is processed, with the others being ignored. For example, only the ``dev``
-environment's top file will be processed for the ``dev`` environment, and any
-SLS targets defined for ``dev`` in the ``base`` environment's (or any other
-environment's) top file will be ignored. If an environment does not have a top
-file, then the top file from the :conf_minion:`default_top` config parameter
-will be used as a fallback.
-
-When set to ``merge_all``, then all states in all environments in all top files
-will be applied. The order in which individual SLS files will be executed will
-depend on the order in which the top files were evaluated, and the environments
-will be evaluated in no specific order. For greater control over the order in
-which the environments are evaluated, use :conf_minion:`env_order`.
-
-.. code-block:: yaml
-
-    top_file_merging_strategy: same
-
-.. conf_minion:: env_order
-
-``env_order``
--------------
-
-Default: ``[]``
-
-When :conf_minion:`top_file_merging_strategy` is set to ``merge``, and no
-environment is specified for a :ref:`highstate <running-highstate>`, this
-config option allows for the order in which top files are evaluated to be
-explicitly defined.
-
-.. code-block:: yaml
-
-    env_order:
-      - base
-      - dev
-      - qa
-
-.. conf_minion:: default_top
-
-``default_top``
----------------
-
-Default: ``base``
-
-When :conf_minion:`top_file_merging_strategy` is set to ``same``, and no
-environment is specified for a :ref:`highstate <running-highstate>` (i.e.
-:conf_minion:`environment` is not set for the minion), this config option
-specifies a fallback environment in which to look for a top file if an
-environment lacks one.
-
-.. code-block:: yaml
-
-    default_top: dev
 
 .. conf_minion:: snapper_states
 
@@ -1545,19 +1623,21 @@ is impacted.
 ``hash_type``
 -------------
 
-Default: ``md5``
+Default: ``sha256``
 
 The hash_type is the hash to use when discovering the hash of a file on the
-local fileserver. The default is md5, but sha1, sha224, sha256, sha384, and
+local fileserver. The default is sha256, but md5, sha1, sha224, sha384, and
 sha512 are also supported.
 
 .. code-block:: yaml
 
-    hash_type: md5
+    hash_type: sha256
 
 
-Pillar Settings
-===============
+.. _pillar-configuration-minion:
+
+Pillar Configuration
+====================
 
 .. conf_minion:: pillar_roots
 
@@ -1584,6 +1664,109 @@ the pillar environments.
       prod:
         - /srv/pillar/prod
 
+.. conf_minion:: on_demand_ext_pillar
+
+``on_demand_ext_pillar``
+------------------------
+
+.. versionadded:: 2016.3.6,2016.11.3,Nitrogen
+
+Default: ``['libvirt', 'virtkey']``
+
+When using a local :conf_minion:`file_client`, this option controls which
+external pillars are permitted to be used on-demand using :py:func:`pillar.ext
+<salt.modules.pillar.ext>`.
+
+.. code-block:: yaml
+
+    on_demand_ext_pillar:
+      - libvirt
+      - virtkey
+      - git
+
+.. warning::
+    This will allow a masterless minion to request specific pillar data via
+    :py:func:`pillar.ext <salt.modules.pillar.ext>`, and may be considered a
+    security risk. However, pillar data generated in this way will not affect
+    the :ref:`in-memory pillar data <pillar-in-memory>`, so this risk is
+    limited to instances in which states/modules/etc. (built-in or custom) rely
+    upon pillar data generated by :py:func:`pillar.ext
+    <salt.modules.pillar.ext>`.
+
+.. conf_minion:: decrypt_pillar
+
+``decrypt_pillar``
+------------------
+
+.. versionadded:: Nitrogen
+
+Default: ``[]``
+
+A list of paths to be recursively decrypted during pillar compilation.
+
+.. code-block:: yaml
+
+    decrypt_pillar:
+      - 'foo:bar': gpg
+      - 'lorem:ipsum:dolor'
+
+Entries in this list can be formatted either as a simple string, or as a
+key/value pair, with the key being the pillar location, and the value being the
+renderer to use for pillar decryption. If the former is used, the renderer
+specified by :conf_minion:`decrypt_pillar_default` will be used.
+
+.. conf_minion:: decrypt_pillar_delimiter
+
+``decrypt_pillar_delimiter``
+----------------------------
+
+.. versionadded:: Nitrogen
+
+Default: ``:``
+
+The delimiter used to distinguish nested data structures in the
+:conf_minion:`decrypt_pillar` option.
+
+.. code-block:: yaml
+
+    decrypt_pillar_delimiter: '|'
+    decrypt_pillar:
+      - 'foo|bar': gpg
+      - 'lorem|ipsum|dolor'
+
+.. conf_minion:: decrypt_pillar_default
+
+``decrypt_pillar_default``
+--------------------------
+
+.. versionadded:: Nitrogen
+
+Default: ``gpg``
+
+The default renderer used for decryption, if one is not specified for a given
+pillar key in :conf_minion:`decrypt_pillar`.
+
+.. code-block:: yaml
+
+    decrypt_pillar_default: my_custom_renderer
+
+.. conf_minion:: decrypt_pillar_renderers
+
+``decrypt_pillar_renderers``
+----------------------------
+
+.. versionadded:: Nitrogen
+
+Default: ``['gpg']``
+
+List of renderers which are permitted to be used for pillar decryption.
+
+.. code-block:: yaml
+
+    decrypt_pillar_renderers:
+      - gpg
+      - my_custom_renderer
+
 .. conf_minion:: pillarenv
 
 ``pillarenv``
@@ -1596,7 +1779,26 @@ the environment setting, but for pillar instead of states.
 
 .. code-block:: yaml
 
-    pillarenv: None
+    pillarenv: dev
+
+.. conf_minion:: pillarenv_from_saltenv
+
+``pillarenv_from_saltenv``
+--------------------------
+
+.. versionadded:: Nitrogen
+
+Default: ``False``
+
+When set to ``True``, the :conf_minion:`pillarenv` value will assume the value
+of the effective saltenv when running states. This essentially makes ``salt '*'
+state.sls mysls saltenv=dev`` equivalent to ``salt '*' state.sls mysls
+saltenv=dev pillarenv=dev``. If :conf_minion:`pillarenv` is set, either in the
+minion config file or via the CLI, it will override this option.
+
+.. code-block:: yaml
+
+    pillarenv_from_saltenv: True
 
 .. conf_minion:: pillar_raise_on_missing
 
@@ -1610,6 +1812,28 @@ Default: ``False``
 Set this option to ``True`` to force a ``KeyError`` to be raised whenever an
 attempt to retrieve a named value from pillar fails. When this option is set
 to ``False``, the failed attempt returns an empty string.
+
+.. conf_minion:: minion_pillar_cache
+
+``minion_pillar_cache``
+-----------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``False``
+
+The minion can locally cache rendered pillar data under
+:conf_minion:`cachedir`/pillar. This allows a temporarily disconnected minion
+to access previously cached pillar data by invoking salt-call with the --local
+and --pillar_root=:conf_minion:`cachedir`/pillar options. Before enabling this
+setting consider that the rendered pillar may contain security sensitive data.
+Appropriate access restrictions should be in place. By default the saved pillar
+data will be readable only by the user account running salt. By default this
+feature is disabled, to enable set minion_pillar_cache to ``True``.
+
+.. code-block:: yaml
+
+    minion_pillar_cache: False
 
 .. conf_minion:: file_recv_max_size
 
@@ -1765,6 +1989,32 @@ blocked. If `cmd_whitelist_glob` is NOT SET, then all shell commands are permitt
     cmd_whitelist_glob:
       - 'ls * '
       - 'cat /etc/fstab'
+
+
+.. conf_master:: ssl
+
+``ssl``
+-------
+
+.. versionadded:: 2016.11.0
+
+Default: ``None``
+
+TLS/SSL connection options. This could be set to a dictionary containing
+arguments corresponding to python ``ssl.wrap_socket`` method. For details see
+`Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
+and `Python <http://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+documentation.
+
+Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
+constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23``.
+
+.. code-block:: yaml
+
+    ssl:
+        keyfile: <path_to_keyfile>
+        certfile: <path_to_certfile>
+        ssl_version: PROTOCOL_TLSv1_2
 
 
 Thread Settings
@@ -2166,7 +2416,7 @@ List of git repositories to checkout and include in the winrepo
       - https://github.com/saltstack/salt-winrepo.git
 
 To specify a specific revision of the repository, prepend a commit ID to the
-URL of the the repository:
+URL of the repository:
 
 .. code-block:: yaml
 

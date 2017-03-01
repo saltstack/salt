@@ -98,17 +98,17 @@ the key from the master when the minion has been gone for 60 seconds:
 
 .. code-block:: yaml
 
-    startreg:
+    statreg:
       status.reg
 
     keydel:
       key.timeout:
         - delete: 60
         - require:
-          - status: statreg
+          - status: startreg
 
-There are two stanzas in this formula, whose IDs are ``startreg`` and
-``keydel``. The first stanza, ``startreg``, tells Thorium to keep track of
+There are two stanzas in this formula, whose IDs are ``statreg`` and
+``keydel``. The first stanza, ``statreg``, tells Thorium to keep track of
 minion status beacons in its *register*. We'll talk more about the register in
 a moment.
 
@@ -122,7 +122,7 @@ of deleted if it does not check in within the specified time period.
 
 There is also a ``require`` requisite in this stanza. It states that the
 ``key.timeout`` function will not be called unless the ``status.reg`` function
-in the ``startreg`` codeblock has been successfully called first.
+in the ``statreg`` codeblock has been successfully called first.
 
 
 Thorium Links to Beacons
@@ -136,7 +136,7 @@ to function properly you will also need to enable the ``status`` beacon in the
 
     beacons:
       status:
-        interval: 10
+        - interval: 10
 
 This will cause the minion to use the status beacon to check in with the master
 every 10 seconds.

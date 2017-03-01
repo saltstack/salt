@@ -378,7 +378,7 @@ def _netstat_route_linux():
 
 def _netstat_route_freebsd():
     '''
-    Return netstat routing information for FreeBSD and OS X
+    Return netstat routing information for FreeBSD and macOS
     '''
     ret = []
     cmd = 'netstat -f inet -rn | tail -n+5'
@@ -490,7 +490,7 @@ def _netstat_route_sunos():
             'gateway': comps[1],
             'netmask': '',
             'flags': comps[2],
-            'interface': comps[5]})
+            'interface': comps[5] if len(comps) >= 6 else ''})
     cmd = 'netstat -f inet6 -rn | tail -n+5'
     out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
@@ -501,7 +501,7 @@ def _netstat_route_sunos():
             'gateway': comps[1],
             'netmask': '',
             'flags': comps[2],
-            'interface': comps[5]})
+            'interface': comps[5] if len(comps) >= 6 else ''})
     return ret
 
 
@@ -1486,6 +1486,8 @@ def ifacestartswith(cidr):
     '''
     Retrieve the interface name from a specific CIDR
 
+    .. versionadded:: 2016.11.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -1500,13 +1502,18 @@ def ifacestartswith(cidr):
         if 'inet' in ifval:
             for inet in ifval['inet']:
                 if inet['address'][0:size] == pattern:
-                    intfnames.append(inet['label'])
+                    if 'label' in inet:
+                        intfnames.append(inet['label'])
+                    else:
+                        intfnames.append(ifname)
     return intfnames
 
 
 def iphexval(ip):
     '''
     Retrieve the interface name from a specific CIDR
+
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -1517,5 +1524,5 @@ def iphexval(ip):
     a = ip.split('.')
     hexval = ""
     for val in a:
-        hexval = hexval.join(hex(int(val))[2:])
+        hexval = ''.join([hexval, hex(int(val))[2:].zfill(2)])
     return hexval.upper()

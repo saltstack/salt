@@ -53,7 +53,7 @@ def __virtual__():
     if __grains__['kernel'] != 'Linux':
         return (False, 'Non Linux OSes are not supported')
     # SUSE >=12.0 uses systemd
-    if __grains__.get('os_family', '') == 'SUSE':
+    if __grains__.get('os_family', '') == 'Suse':
         try:
             # osrelease might be in decimal format (e.g. "12.1"), or for
             # SLES might include service pack (e.g. "11 SP3"), so split on

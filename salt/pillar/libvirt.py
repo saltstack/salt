@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Load up the libvirt keys into Pillar for a given minion if said keys have been generated using the libvirt key runner
+Load up the libvirt keys into Pillar for a given minion if said keys have been
+generated using the libvirt key runner
+
+:depends: certtool
 '''
 from __future__ import absolute_import
 

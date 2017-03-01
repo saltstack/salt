@@ -61,6 +61,7 @@ import logging
 import datetime
 from collections import MutableMapping
 from multiprocessing.util import Finalize
+from salt.ext.six.moves import range
 
 # Import third party libs
 import salt.ext.six as six
@@ -568,8 +569,6 @@ class SaltEvent(object):
                   wait=5,
                   tag='',
                   full=False,
-                  use_pending=None,
-                  pending_tags=None,
                   match_type=None,
                   no_block=False,
                   auto_reconnect=False):
@@ -619,18 +618,6 @@ class SaltEvent(object):
         '''
         assert self._run_io_loop_sync
 
-        if use_pending is not None:
-            salt.utils.warn_until(
-                'Nitrogen',
-                'The \'use_pending\' keyword argument is deprecated and is simply ignored. '
-                'Please stop using it since it\'s support will be removed in {version}.'
-            )
-        if pending_tags is not None:
-            salt.utils.warn_until(
-                'Nitrogen',
-                'The \'pending_tags\' keyword argument is deprecated and is simply ignored. '
-                'Please stop using it since it\'s support will be removed in {version}.'
-            )
         match_func = self._get_match_func(match_type)
 
         ret = self._check_pending(tag, match_func)
@@ -780,19 +767,30 @@ class SaltEvent(object):
         if self._run_io_loop_sync and not self.keep_loop:
             self.io_loop.close()
 
-    def _fire_ret_load_specific_fun(self, load, fun):
+    def _fire_ret_load_specific_fun(self, load, fun_index=0):
         '''
         Helper function for fire_ret_load
         '''
         if isinstance(load['fun'], list):
             # Multi-function job
-            ret = load.get('return', {})
-            ret = ret.get(fun, {})
-            # This was already validated to exist and be non-zero in the
-            # caller.
-            retcode = load['retcode'][fun]
+            fun = load['fun'][fun_index]
+            # 'retcode' was already validated to exist and be non-zero
+            # for the given function in the caller.
+            if isinstance(load['retcode'], list):
+                # Multi-function ordered
+                ret = load.get('return')
+                if isinstance(ret, list) and len(ret) > fun_index:
+                    ret = ret[fun_index]
+                else:
+                    ret = {}
+                retcode = load['retcode'][fun_index]
+            else:
+                ret = load.get('return', {})
+                ret = ret.get(fun, {})
+                retcode = load['retcode'][fun]
         else:
             # Single-function job
+            fun = load['fun']
             ret = load.get('return', {})
             retcode = load['retcode']
 
@@ -830,15 +828,28 @@ class SaltEvent(object):
         if load.get('retcode') and load.get('fun'):
             if isinstance(load['fun'], list):
                 # Multi-function job
-                for fun in load['fun']:
-                    if load['retcode'].get(fun, 0) and fun in SUB_EVENT:
-                        # Minion fired a bad retcode, fire an event
-                        self._fire_ret_load_specific_fun(load, fun)
+                if isinstance(load['retcode'], list):
+                    multifunc_ordered = True
+                else:
+                    multifunc_ordered = False
+
+                for fun_index in range(0, len(load['fun'])):
+                    fun = load['fun'][fun_index]
+                    if multifunc_ordered:
+                        if (len(load['retcode']) > fun_index and
+                                load['retcode'][fun_index] and
+                                fun in SUB_EVENT):
+                            # Minion fired a bad retcode, fire an event
+                            self._fire_ret_load_specific_fun(load, fun_index)
+                    else:
+                        if load['retcode'].get(fun, 0) and fun in SUB_EVENT:
+                            # Minion fired a bad retcode, fire an event
+                            self._fire_ret_load_specific_fun(load, fun_index)
             else:
                 # Single-function job
                 if load['fun'] in SUB_EVENT:
                     # Minion fired a bad retcode, fire an event
-                    self._fire_ret_load_specific_fun(load, load['fun'])
+                    self._fire_ret_load_specific_fun(load)
 
     def set_event_handler(self, event_handler):
         '''
@@ -1097,17 +1108,8 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
             try:
                 self.publisher.start()
                 self.puller.start()
-                if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
-                    salt.utils.warn_until(
-                            'Nitrogen',
-                            'ACL rules should be configured with \'publisher_acl\' and '
-                            '\'publisher_acl_blacklist\' not \'client_acl\' and '
-                            '\'client_acl_blacklist\'. This functionality will be removed in Salt '
-                            'Nitrogen.'
-                            )
                 if (self.opts['ipc_mode'] != 'tcp' and (
                         self.opts['publisher_acl'] or
-                        self.opts['client_acl'] or
                         self.opts['external_auth'])):
                     os.chmod(os.path.join(
                         self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)

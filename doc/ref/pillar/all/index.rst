@@ -16,6 +16,7 @@ pillar modules
     cobbler
     confidant
     consul_pillar
+    csvpillar
     django_orm
     ec2_pillar
     etcd_pillar
@@ -24,14 +25,17 @@ pillar modules
     git_pillar
     hg_pillar
     hiera
+    http_json
     http_yaml
     libvirt
+    makostack
     mongo
     mysql
     neutron
     nodegroups
     pepa
     pillar_ldap
+    postgres
     puppet
     reclass_adapter
     redismod
@@ -44,3 +48,5 @@ pillar modules
     varstack_pillar
     vault
     virtkey
+    vmware_pillar
+

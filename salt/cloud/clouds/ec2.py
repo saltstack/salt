@@ -684,6 +684,26 @@ def avail_sizes(call=None):
                 'ram': '60 GiB'
             },
         },
+        'GPU Compute': {
+            'p2.xlarge': {
+                'id': 'p2.xlarge',
+                'cores': '4',
+                'disk': 'EBS',
+                'ram': '61 GiB'
+            },
+            'p2.8xlarge': {
+                'id': 'p2.8xlarge',
+                'cores': '32',
+                'disk': 'EBS',
+                'ram': '488 GiB'
+            },
+            'p2.16xlarge': {
+                'id': 'p2.16xlarge',
+                'cores': '64',
+                'disk': 'EBS',
+                'ram': '732 GiB'
+            },
+        },
         'High I/O': {
             'i2.xlarge': {
                 'id': 'i2.xlarge',
@@ -711,23 +731,53 @@ def avail_sizes(call=None):
             }
         },
         'High Memory': {
-            'm2.2xlarge': {
-                'id': 'm2.2xlarge',
-                'cores': '4 (with 3.25 ECUs each)',
-                'disk': '840 GiB (1 x 840 GiB)',
-                'ram': '34.2 GiB'
+            'x1.16xlarge': {
+                'id': 'x1.16xlarge',
+                'cores': '64 (with 5.45 ECUs each)',
+                'disk': '1920 GiB (1 x 1920 GiB)',
+                'ram': '976 GiB'
             },
-            'm2.xlarge': {
-                'id': 'm2.xlarge',
-                'cores': '2 (with 3.25 ECUs each)',
-                'disk': '410 GiB (1 x 410 GiB)',
-                'ram': '17.1 GiB'
+            'x1.32xlarge': {
+                'id': 'x1.32xlarge',
+                'cores': '128 (with 2.73 ECUs each)',
+                'disk': '3840 GiB (2 x 1920 GiB)',
+                'ram': '1952 GiB'
             },
-            'm2.4xlarge': {
-                'id': 'm2.4xlarge',
-                'cores': '8 (with 3.25 ECUs each)',
-                'disk': '1680 GiB (2 x 840 GiB)',
-                'ram': '68.4 GiB'
+            'r4.large': {
+                'id': 'r4.large',
+                'cores': '2 (with 3.45 ECUs each)',
+                'disk': 'EBS',
+                'ram': '15.25 GiB'
+            },
+            'r4.xlarge': {
+                'id': 'r4.xlarge',
+                'cores': '4 (with 3.35 ECUs each)',
+                'disk': 'EBS',
+                'ram': '30.5 GiB'
+            },
+            'r4.2xlarge': {
+                'id': 'r4.2xlarge',
+                'cores': '8 (with 3.35 ECUs each)',
+                'disk': 'EBS',
+                'ram': '61 GiB'
+            },
+            'r4.4xlarge': {
+                'id': 'r4.4xlarge',
+                'cores': '16 (with 3.3 ECUs each)',
+                'disk': 'EBS',
+                'ram': '122 GiB'
+            },
+            'r4.8xlarge': {
+                'id': 'r4.8xlarge',
+                'cores': '32 (with 3.1 ECUs each)',
+                'disk': 'EBS',
+                'ram': '244 GiB'
+            },
+            'r4.16xlarge': {
+                'id': 'r4.16xlarge',
+                'cores': '64 (with 3.05 ECUs each)',
+                'disk': 'EBS',
+                'ram': '488 GiB'
             },
             'r3.large': {
                 'id': 'r3.large',
@@ -807,6 +857,18 @@ def avail_sizes(call=None):
                 'disk': 'EBS',
                 'ram': '8 GiB'
             },
+            't2.xlarge': {
+                'id': 't2.xlarge',
+                'cores': '4',
+                'disk': 'EBS',
+                'ram': '16 GiB'
+            },
+            't2.2xlarge': {
+                'id': 't2.2xlarge',
+                'cores': '8',
+                'disk': 'EBS',
+                'ram': '32 GiB'
+            },
             'm4.large': {
                 'id': 'm4.large',
                 'cores': '2',
@@ -836,6 +898,12 @@ def avail_sizes(call=None):
                 'cores': '40',
                 'disk': 'EBS - 4000 Mbps',
                 'ram': '160 GiB'
+            },
+            'm4.16xlarge': {
+                'id': 'm4.16xlarge',
+                'cores': '64',
+                'disk': 'EBS - 10000 Mbps',
+                'ram': '256 GiB'
             },
             'm3.medium': {
                 'id': 'm3.medium',
@@ -1190,19 +1258,27 @@ def securitygroupid(vm_):
         __opts__,
         search_global=False
     )
+    # If the list is None, then the set will remain empty
+    # If the list is already a set then calling 'set' on it is a no-op
+    # If the list is a string, then calling 'set' generates a one-element set
+    # If the list is anything else, stacktrace
     if securitygroupid_list:
-        if isinstance(securitygroupid_list, list):
-            securitygroupid_set = securitygroupid_set.union(securitygroupid_list)
-        else:
-            securitygroupid_set.add(securitygroupid_list)
+        securitygroupid_set = securitygroupid_set.union(set(securitygroupid_list))
 
     securitygroupname_list = config.get_cloud_config_value(
         'securitygroupname', vm_, __opts__, search_global=False
     )
     if securitygroupname_list:
-        securitygroupid_set = securitygroupid_set.union(
-            _get_securitygroupname_id(securitygroupname_list)
-        )
+        if not isinstance(securitygroupname_list, list):
+            securitygroupname_list = [securitygroupname_list]
+        params = {'Action': 'DescribeSecurityGroups'}
+        for sg in aws.query(params, location=get_location(),
+                            provider=get_provider(), opts=__opts__, sigver='4'):
+            if sg['groupName'] in securitygroupname_list:
+                log.debug('AWS SecurityGroup ID of {0} is {1}'.format(
+                    sg['groupName'], sg['groupId'])
+                )
+                securitygroupid_set.add(sg['groupId'])
     return list(securitygroupid_set)
 
 
@@ -1231,12 +1307,7 @@ def get_provider(vm_=None):
     if vm_ is None:
         provider = __active_provider_name__ or 'ec2'
     else:
-        # Since using "provider: <provider-engine>" is deprecated, alias provider
-        # to use driver: "driver: <provider-engine>"
-        if 'provider' in vm_:
-            vm_['driver'] = vm_.pop('provider')
-
-        provider = vm_.get('driver', 'ec2')
+        provider = vm_.get('provider', 'ec2')
 
     if ':' in provider:
         prov_comps = provider.split(':')
@@ -1916,7 +1987,7 @@ def request_instance(vm_=None, call=None):
             params[termination_key] = str(set_del_root_vol_on_destroy).lower()
 
             # Use default volume type if not specified
-            if 'Ebs.VolumeType' not in ex_blockdevicemappings[dev_index]:
+            if ex_blockdevicemappings and 'Ebs.VolumeType' not in ex_blockdevicemappings[dev_index]:
                 type_key = '{0}BlockDeviceMapping.{1}.Ebs.VolumeType'.format(spot_prefix, dev_index)
                 params[type_key] = rd_type
 
@@ -2150,14 +2221,21 @@ def query_instance(vm_=None, call=None):
 
         log.debug('Returned query data: {0}'.format(data))
 
-        if ssh_interface(vm_) == 'public_ips' and 'ipAddress' in data[0]['instancesSet']['item']:
-            log.error(
-                'Public IP not detected.'
-            )
-            return data
-        if ssh_interface(vm_) == 'private_ips' and \
-           'privateIpAddress' in data[0]['instancesSet']['item']:
-            return data
+        if ssh_interface(vm_) == 'public_ips':
+            if 'ipAddress' in data[0]['instancesSet']['item']:
+                return data
+            else:
+                log.error(
+                    'Public IP not detected.'
+                )
+
+        if ssh_interface(vm_) == 'private_ips':
+            if 'privateIpAddress' in data[0]['instancesSet']['item']:
+                return data
+            else:
+                log.error(
+                    'Private IP not detected.'
+                )
 
     try:
         data = salt.utils.cloud.wait_for_ip(
@@ -2411,6 +2489,31 @@ def wait_for_instance(
     return vm_
 
 
+def _validate_key_path_and_mode(key_filename):
+    if key_filename is None:
+        raise SaltCloudSystemExit(
+            'The required \'private_key\' configuration setting is missing from the '
+            '\'ec2\' driver.'
+        )
+
+    if not os.path.exists(key_filename):
+        raise SaltCloudSystemExit(
+            'The EC2 key file \'{0}\' does not exist.\n'.format(
+                key_filename
+            )
+        )
+
+    key_mode = stat.S_IMODE(os.stat(key_filename).st_mode)
+    if key_mode not in (0o400, 0o600):
+        raise SaltCloudSystemExit(
+            'The EC2 key file \'{0}\' needs to be set to mode 0400 or 0600.\n'.format(
+                key_filename
+            )
+        )
+
+    return True
+
+
 def create(vm_=None, call=None):
     '''
     Create a single VM from a data dict
@@ -2430,11 +2533,6 @@ def create(vm_=None, call=None):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     # Check for private_key and keyfile name for bootstrapping new instances
     deploy = config.get_cloud_config_value(
         'deploy', vm_, __opts__, default=True
@@ -2445,32 +2543,10 @@ def create(vm_=None, call=None):
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
-    if deploy or (deploy and win_password == 'auto'):
+    if deploy:
         # The private_key and keyname settings are only needed for bootstrapping
-        # new instances when deploy is True, or when win_password is set to 'auto'
-        # and deploy is also True.
-        if key_filename is None:
-            raise SaltCloudSystemExit(
-                'The required \'private_key\' configuration setting is missing from the '
-                '\'ec2\' driver.'
-            )
-
-        if not os.path.exists(key_filename):
-            raise SaltCloudSystemExit(
-                'The EC2 key file \'{0}\' does not exist.\n'.format(
-                    key_filename
-                )
-            )
-
-        key_mode = str(
-            oct(stat.S_IMODE(os.stat(key_filename).st_mode))
-        )
-        if key_mode not in ('0400', '0600'):
-            raise SaltCloudSystemExit(
-                'The EC2 key file \'{0}\' needs to be set to mode 0400 or 0600.\n'.format(
-                    key_filename
-                )
-            )
+        # new instances when deploy is True
+        _validate_key_path_and_mode(key_filename)
 
     __utils__['cloud.fire_event'](
         'event',
@@ -3373,11 +3449,6 @@ def list_nodes_full(location=None, call=None):
 
 
 def _vm_provider_driver(vm_):
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     alias, driver = vm_['driver'].split(':')
     if alias not in __opts__['providers']:
         return None

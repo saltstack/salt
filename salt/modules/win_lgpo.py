@@ -52,6 +52,10 @@ from salt.exceptions import SaltInvocationError
 import salt.utils.dictupdate as dictupdate
 from salt.ext.six import string_types
 from salt.ext.six.moves import range
+from salt.ext.six import StringIO
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'
@@ -109,7 +113,7 @@ try:
     VALUE_LIST_XPATH = etree.XPath('.//*[local-name() = "valueList"]')
     ENUM_ITEM_DISPLAY_NAME_XPATH = etree.XPath('.//*[local-name() = "item" and @*[local-name() = "displayName" = $display_name]]')
     ADMX_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "name"] = $policy_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class)]')
-    ADML_SEARCH_XPATH = etree.XPath('//*[text() = $policy_name and @*[local-name() = "id"]]')
+    ADML_SEARCH_XPATH = etree.XPath('//*[starts-with(text(), $policy_name) and @*[local-name() = "id"]]')
     ADMX_DISPLAYNAME_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "displayName"] = $display_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class) ]')
     PRESENTATION_ANCESTOR_XPATH = etree.XPath('ancestor::*[local-name() = "presentation"]')
     TEXT_ELEMENT_XPATH = etree.XPath('.//*[local-name() = "text"]')
@@ -2477,11 +2481,15 @@ class _policy_info(object):
         '''
         minimum = 0
         maximum = 1
+
         if isinstance(val, string_types):
             if val.lower() == 'not defined':
                 return True
             else:
-                return False
+                try:
+                    val = int(val)
+                except ValueError:
+                    return False
         if 'min' in kwargs:
             minimum = kwargs['min']
         if 'max' in kwargs:
@@ -2625,7 +2633,7 @@ class _policy_info(object):
         else:
             value_lookup = False
         if 'lookup' in kwargs:
-            for k, v in kwargs['lookup'].iteritems():
+            for k, v in six.iteritems(kwargs['lookup']):
                 if value_lookup:
                     if str(v).lower() == str(item).lower():
                         log.debug('returning key {0}'.format(k))
@@ -2682,6 +2690,19 @@ def _updatePolicyElements(policy_item, regkey):
     return policy_item
 
 
+def _remove_unicode_encoding(xml_file):
+    '''
+    attempts to remove the "encoding='unicode'" from an xml file
+    as lxml does not support that on a windows node currently
+    see issue #38100
+    '''
+    with open(xml_file, 'rb') as f:
+        xml_content = f.read()
+    modified_xml = re.sub(r' encoding=[\'"]+unicode[\'"]+', '', xml_content.decode('utf-16'), count=1)
+    xmltree = lxml.etree.parse(StringIO(modified_xml))
+    return xmltree
+
+
 def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                               display_language='en-US'):
     '''
@@ -2707,7 +2728,17 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
             for t_admfile in files:
                 admfile = os.path.join(root, t_admfile)
                 parser = lxml.etree.XMLParser(remove_comments=True)
-                xmltree = lxml.etree.parse(admfile, parser=parser)
+                # see issue #38100
+                try:
+                    xmltree = lxml.etree.parse(admfile, parser=parser)
+                except lxml.etree.XMLSyntaxError:
+                    try:
+                        xmltree = _remove_unicode_encoding(admfile)
+                    except Exception:
+                        msg = ('A error was found while processing admx file {0},'
+                               ' all policies from this file will be unavailable via this module')
+                        log.error(msg.format(admfile))
+                        continue
                 namespaces = xmltree.getroot().nsmap
                 namespace_string = ''
                 if None in namespaces:
@@ -2758,7 +2789,17 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                         raise SaltInvocationError(msg.format(display_language,
                                                              display_language_fallback,
                                                              t_admfile))
-                xmltree = lxml.etree.parse(adml_file)
+                try:
+                    xmltree = lxml.etree.parse(adml_file)
+                except lxml.etree.XMLSyntaxError:
+                    # see issue #38100
+                    try:
+                        xmltree = _remove_unicode_encoding(adml_file)
+                    except Exception:
+                        msg = ('An error was found while processing adml file {0}, all policy'
+                               ' languange data from this file will be unavailable via this module')
+                        log.error(msg.format(adml_file))
+                        continue
                 if None in namespaces:
                     namespaces['None'] = namespaces[None]
                     namespaces.pop(None)
@@ -3463,7 +3504,8 @@ def _checkAllAdmxPolicies(policy_class,
             log.debug('returning non configured policies')
             not_configured_policies = ALL_CLASS_POLICY_XPATH(admx_policy_definitions, registry_class=policy_class)
             for policy_item in admx_policies:
-                not_configured_policies.remove(policy_item)
+                if policy_item in not_configured_policies:
+                    not_configured_policies.remove(policy_item)
 
             for not_configured_policy in not_configured_policies:
                 policy_vals[not_configured_policy.attrib['name']] = 'Not Configured'
@@ -3473,6 +3515,11 @@ def _checkAllAdmxPolicies(policy_class,
                             not_configured_policy.attrib['name'],
                             return_full_policy_names,
                             adml_policy_resources)
+                log.debug('building hierarchy for non-configured item {0}'.format(not_configured_policy.attrib['name']))
+                hierarchy[not_configured_policy.attrib['name']] = _build_parent_list(not_configured_policy,
+                                                                                     admx_policy_definitions,
+                                                                                     return_full_policy_names,
+                                                                                     adml_policy_resources)
         for admx_policy in admx_policies:
             this_key = None
             this_valuename = None
@@ -3785,7 +3832,7 @@ def _checkAllAdmxPolicies(policy_class,
                 policy_vals[full_names[policy_item]] = policy_vals.pop(policy_item)
                 unpathed_dict[full_names[policy_item]] = policy_item
         # go back and remove any "unpathed" policies that need a full path
-        for path_needed in pathed_dict.keys():
+        for path_needed in unpathed_dict.keys():
             # remove the item with the same full name and re-add it w/a path'd version
             full_path_list = hierarchy[unpathed_dict[path_needed]]
             full_path_list.reverse()
@@ -4552,6 +4599,9 @@ def _lookup_admin_template(policy_name,
             suggested_policies = ''
             if len(adml_search_results) > 1:
                 multiple_adml_entries = True
+                for adml_search_result in adml_search_results:
+                    if not adml_search_result.attrib['text'].strip() == policy_name:
+                        adml_search_results.remove(adml_search_result)
             for adml_search_result in adml_search_results:
                 dmsg = 'found an ADML entry matching the string! {0} -- {1}'
                 log.debug(dmsg.format(adml_search_result.tag,
@@ -4631,14 +4681,6 @@ def _lookup_admin_template(policy_name,
                        ' specify the correct policy')
                 return (False, None, [], msg.format(policy_name, suggested_policies))
     return (False, None, [], 'Unable to find {0} policy {1}'.format(policy_class, policy_name))
-
-
-def list_configurable_policies(policy_class='Machine',
-                               include_administrative_templates=True,
-                               adml_language='en-US'):
-    '''
-    list the policies that the execution module can configure
-    '''
 
 
 def get_policy_info(policy_name,
@@ -4899,9 +4941,9 @@ def set_computer_policy(name,
     pol = {}
     pol[name] = setting
     ret = set_(computer_policy=pol,
-              user_policy=None,
-              cumulative_rights_assignments=cumulative_rights_assignments,
-              adml_language=adml_language)
+               user_policy=None,
+               cumulative_rights_assignments=cumulative_rights_assignments,
+               adml_language=adml_language)
     return ret
 
 
@@ -4936,9 +4978,9 @@ def set_user_policy(name,
     pol = {}
     pol[name] = setting
     ret = set_(user_policy=pol,
-              computer_policy=None,
-              cumulative_rights_assignments=True,
-              adml_language=adml_language)
+               computer_policy=None,
+               cumulative_rights_assignments=True,
+               adml_language=adml_language)
     return ret
 
 

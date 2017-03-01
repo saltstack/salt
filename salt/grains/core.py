@@ -370,7 +370,7 @@ def _sunos_cpudata():
     grains['cpuarch'] = __salt__['cmd.run']('isainfo -k')
     psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
     grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo, python_shell=True).splitlines())
-    kstat_info = 'kstat -p cpu_info:0:*:brand'
+    kstat_info = 'kstat -p cpu_info:*:*:brand'
     for line in __salt__['cmd.run'](kstat_info).splitlines():
         match = re.match(r'(\w+:\d+:\w+\d+:\w+)\s+(.+)', line)
         if match:
@@ -439,36 +439,45 @@ def _windows_virtual(osdata):
     if osdata['kernel'] != 'Windows':
         return grains
 
-    if 'QEMU' in osdata.get('manufacturer', ''):
+    # It is possible that the 'manufacturer' and/or 'productname' grains
+    # exist but have a value of None.
+    manufacturer = osdata.get('manufacturer', '')
+    if manufacturer is None:
+        manufacturer = ''
+    productname = osdata.get('productname', '')
+    if productname is None:
+        productname = ''
+
+    if 'QEMU' in manufacturer:
         # FIXME: Make this detect between kvm or qemu
         grains['virtual'] = 'kvm'
-    if 'Bochs' in osdata.get('manufacturer', ''):
+    if 'Bochs' in manufacturer:
         grains['virtual'] = 'kvm'
     # Product Name: (oVirt) www.ovirt.org
     # Red Hat Community virtualization Project based on kvm
-    elif 'oVirt' in osdata.get('productname', ''):
+    elif 'oVirt' in productname:
         grains['virtual'] = 'kvm'
         grains['virtual_subtype'] = 'oVirt'
     # Red Hat Enterprise Virtualization
-    elif 'RHEV Hypervisor' in osdata.get('productname', ''):
+    elif 'RHEV Hypervisor' in productname:
         grains['virtual'] = 'kvm'
         grains['virtual_subtype'] = 'rhev'
     # Product Name: VirtualBox
-    elif 'VirtualBox' in osdata.get('productname', ''):
+    elif 'VirtualBox' in productname:
         grains['virtual'] = 'VirtualBox'
     # Product Name: VMware Virtual Platform
-    elif 'VMware Virtual Platform' in osdata.get('productname', ''):
+    elif 'VMware Virtual Platform' in productname:
         grains['virtual'] = 'VMware'
     # Manufacturer: Microsoft Corporation
     # Product Name: Virtual Machine
-    elif 'Microsoft' in osdata.get('manufacturer', '') and \
-         'Virtual Machine' in osdata.get('productname', ''):
+    elif 'Microsoft' in manufacturer and \
+         'Virtual Machine' in productname:
         grains['virtual'] = 'VirtualPC'
     # Manufacturer: Parallels Software International Inc.
-    elif 'Parallels Software' in osdata.get('manufacturer'):
+    elif 'Parallels Software' in manufacturer:
         grains['virtual'] = 'Parallels'
     # Apache CloudStack
-    elif 'CloudStack KVM Hypervisor' in osdata.get('productname', ''):
+    elif 'CloudStack KVM Hypervisor' in productname:
         grains['virtual'] = 'kvm'
         grains['virtual_subtype'] = 'cloudstack'
     return grains
@@ -676,14 +685,14 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
             elif 'joyent smartdc hvm' in model:
                 grains['virtual'] = 'kvm'
+            break
     else:
-        if osdata['kernel'] in skip_cmds:
-            log.warning(
-                "The tools 'dmidecode' and 'lspci' failed to "
-                'execute because they do not exist on the system of the user '
-                'running this instance or the user does not have the '
-                'necessary permissions to execute them. Grains output might '
-                'not be accurate.'
+        if osdata['kernel'] not in skip_cmds:
+            log.debug(
+                'All tools for virtual hardware identification failed to '
+                'execute because they do not exist on the system running this '
+                'instance or the user does not have the necessary permissions '
+                'to execute them. Grains output might not be accurate.'
             )
 
     choices = ('Linux', 'OpenBSD', 'HP-UX')
@@ -842,7 +851,7 @@ def _virtual(osdata):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
     for command in failed_commands:
-        log.warning(
+        log.info(
             "Although '{0}' was found in path, the current user "
             'cannot execute it. Grains output might not be '
             'accurate.'.format(command)
@@ -868,10 +877,8 @@ def _ps(osdata):
             '/proc/[0-9]*/status | sed -e \"s=/proc/\\([0-9]*\\)/.*=\\1=\")  '
             '| awk \'{ $7=\"\"; print }\''
         )
-    elif osdata['os_family'] == 'Debian':
-        grains['ps'] = 'ps -efHww'
     else:
-        grains['ps'] = 'ps -efH'
+        grains['ps'] = 'ps -efHww'
     return grains
 
 
@@ -1038,7 +1045,7 @@ def _windows_platform_data():
 
 def _osx_platform_data():
     '''
-    Additional data for Mac OS X systems
+    Additional data for macOS systems
     Returns: A dictionary containing values for the following:
         - model_name
         - boot_rom_version
@@ -1099,6 +1106,7 @@ _OS_NAME_MAP = {
     'scientific': 'ScientificLinux',
     'synology': 'Synology',
     'nilrt': 'NILinuxRT',
+    'nilrt-xfce': 'NILinuxRT-XFCE',
     'manjaro': 'Manjaro',
     'antergos': 'Antergos',
     'sles': 'SUSE',
@@ -1164,6 +1172,7 @@ _OS_FAMILY_MAP = {
     'Devuan': 'Debian',
     'antiX': 'Debian',
     'NILinuxRT': 'NILinuxRT',
+    'NILinuxRT-XFCE': 'NILinuxRT',
     'Void': 'Void',
 }
 
@@ -1312,7 +1321,7 @@ def os_data():
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     init_bin = salt.utils.which(init_cmdline[0])
                     if init_bin is not None and init_bin.endswith('bin/init'):
-                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'), six.b('runit'))
+                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
                         edge_len = max(len(x) for x in supported_inits) - 1
                         try:
                             buf_size = __opts__['file_buffer_size']
@@ -1342,6 +1351,8 @@ def os_data():
                             )
                     elif salt.utils.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
+                    elif init_cmdline == ['runit']:
+                        grains['init'] = 'runit'
                     else:
                         log.info(
                             'Could not determine init system from command line: ({0})'
@@ -1359,7 +1370,9 @@ def os_data():
                     key
                 )
                 grains[lsb_param] = value
-        except ImportError:
+        # Catch a NameError to workaround possible breakage in lsb_release
+        # See https://github.com/saltstack/salt/issues/37867
+        except (ImportError, NameError):
             # if the python library isn't available, default to regex
             if os.path.isfile('/etc/lsb-release'):
                 # Matches any possible format:
@@ -1702,6 +1715,16 @@ def hostname():
     grains['localhost'] = socket.gethostname()
     if __FQDN__ is None:
         __FQDN__ = salt.utils.network.get_fqhostname()
+
+    # On some distros (notably FreeBSD) if there is no hostname set
+    # salt.utils.network.get_fqhostname() will return None.
+    # In this case we punt and log a message at error level, but force the
+    # hostname and domain to be localhost.localdomain
+    # Otherwise we would stacktrace below
+    if __FQDN__ is None:   # still!
+        log.error('Having trouble getting a hostname.  Does this machine have its hostname and domain set properly?')
+        __FQDN__ = 'localhost.localdomain'
+
     grains['fqdn'] = __FQDN__
     (grains['host'], grains['domain']) = grains['fqdn'].partition('.')[::2]
     return grains
@@ -1978,7 +2001,12 @@ def _hw_data(osdata):
     grains = {}
     # On SmartOS (possibly SunOS also) smbios only works in the global zone
     # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
-    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not salt.utils.is_smartos():
+    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not (
+            salt.utils.is_smartos() or
+            (  # SunOS on SPARC - 'smbios: failed to load SMBIOS: System does not export an SMBIOS table'
+                osdata['kernel'] == 'SunOS' and
+                osdata['cpuarch'].startswith('sparc')
+            )):
         grains = {
             'biosversion': __salt__['smbios.get']('bios-version'),
             'productname': __salt__['smbios.get']('system-product-name'),
@@ -1995,6 +2023,17 @@ def _hw_data(osdata):
             if serial is not None:
                 grains['serialnumber'] = serial
                 break
+    elif salt.utils.which_bin(['fw_printenv']) is not None:
+        # ARM Linux devices expose UBOOT env variables via fw_printenv
+        hwdata = {
+            'manufacturer': 'manufacturer',
+            'serialnumber': 'serial#',
+        }
+        for grain_name, cmd_key in six.iteritems(hwdata):
+            result = __salt__['cmd.run_all']('fw_printenv {0}'.format(cmd_key))
+            if result['retcode'] == 0:
+                uboot_keyval = result['stdout'].split('=')
+                grains[grain_name] = _clean_value(grain_name, uboot_keyval[1])
     elif osdata['kernel'] == 'FreeBSD':
         # On FreeBSD /bin/kenv (already in base system)
         # can be used instead of dmidecode
@@ -2045,6 +2084,122 @@ def _hw_data(osdata):
             value = __salt__['cmd.run']('{0} -b {1}'.format(sysctl, oid))
             if not value.endswith(' is invalid'):
                 grains[key] = _clean_value(key, value)
+    elif osdata['kernel'] == 'SunOS' and osdata['cpuarch'].startswith('sparc'):
+        # Depending on the hardware model, commands can report different bits
+        # of information.  With that said, consolidate the output from various
+        # commands and attempt various lookups.
+        data = ""
+        for (cmd, args) in (('/usr/sbin/prtdiag', '-v'), ('/usr/sbin/prtconf', '-vp'), ('/usr/sbin/virtinfo', '-a')):
+            if salt.utils.which(cmd):  # Also verifies that cmd is executable
+                data += __salt__['cmd.run']('{0} {1}'.format(cmd, args))
+                data += '\n'
+
+        sn_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*Chassis\s+Serial\s+Number\n-+\n(\S+)',  # prtdiag
+                r'(?im)^\s*chassis-sn:\s*(\S+)',  # prtconf
+                r'(?im)^\s*Chassis\s+Serial#:\s*(\S+)',  # virtinfo
+            ]
+        ]
+
+        obp_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*System\s+PROM\s+revisions.*\nVersion\n-+\nOBP\s+(\S+)\s+(\S+)',  # prtdiag
+                r'(?im)^\s*version:\s*\'OBP\s+(\S+)\s+(\S+)',  # prtconf
+            ]
+        ]
+
+        fw_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*Sun\s+System\s+Firmware\s+(\S+)\s+(\S+)',  # prtdiag
+            ]
+        ]
+
+        uuid_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*Domain\s+UUID:\s*(\S+)',  # virtinfo
+            ]
+        ]
+
+        manufacture_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*System\s+Configuration:\s*(.*)(?=sun)',  # prtdiag
+            ]
+        ]
+
+        product_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*System\s+Configuration:\s*.*?sun\d\S+\s(.*)',  # prtdiag
+                r'(?im)^\s*banner-name:\s*(.*)',  # prtconf
+                r'(?im)^\s*product-name:\s*(.*)',  # prtconf
+            ]
+        ]
+
+        sn_regexes = [
+            re.compile(r) for r in [
+                r'(?im)Chassis\s+Serial\s+Number\n-+\n(\S+)',  # prtdiag
+                r'(?i)Chassis\s+Serial#:\s*(\S+)',  # virtinfo
+                r'(?i)chassis-sn:\s*(\S+)',  # prtconf
+            ]
+        ]
+
+        obp_regexes = [
+            re.compile(r) for r in [
+                r'(?im)System\s+PROM\s+revisions.*\nVersion\n-+\nOBP\s+(\S+)\s+(\S+)',  # prtdiag
+                r'(?im)version:\s*\'OBP\s+(\S+)\s+(\S+)',  # prtconf
+            ]
+        ]
+
+        fw_regexes = [
+            re.compile(r) for r in [
+                r'(?i)Sun\s+System\s+Firmware\s+(\S+)\s+(\S+)',  # prtdiag
+            ]
+        ]
+
+        uuid_regexes = [
+            re.compile(r) for r in [
+                r'(?i)Domain\s+UUID:\s+(\S+)',  # virtinfo
+            ]
+        ]
+
+        for regex in sn_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['serialnumber'] = res.group(1).strip().replace("'", "")
+                break
+
+        for regex in obp_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                obp_rev, obp_date = res.groups()[0:2]  # Limit the number in case we found the data in multiple places
+                grains['biosversion'] = obp_rev.strip().replace("'", "")
+                grains['biosreleasedate'] = obp_date.strip().replace("'", "")
+
+        for regex in fw_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                fw_rev, fw_date = res.groups()[0:2]
+                grains['systemfirmware'] = fw_rev.strip().replace("'", "")
+                grains['systemfirmwaredate'] = fw_date.strip().replace("'", "")
+                break
+
+        for regex in uuid_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['uuid'] = res.group(1).strip().replace("'", "")
+                break
+
+        for regex in manufacture_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['manufacture'] = res.group(1).strip().replace("'", "")
+                break
+
+        for regex in product_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['product'] = res.group(1).strip().replace("'", "")
+                break
 
     return grains
 

@@ -13,6 +13,9 @@ import threading
 import salt.utils
 import salt.payload
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 
 
@@ -84,7 +87,7 @@ def _read_proc_file(path, opts):
         except IOError:
             pass
         return None
-    if opts['multiprocessing']:
+    if opts.get('multiprocessing'):
         if data.get('pid') == pid:
             return None
     else:
@@ -138,7 +141,7 @@ def _check_cmdline(data):
         return False
     try:
         with salt.utils.fopen(path, 'rb') as fp_:
-            if 'salt' in fp_.read():
+            if six.b('salt') in fp_.read():
                 return True
     except (OSError, IOError):
         return False

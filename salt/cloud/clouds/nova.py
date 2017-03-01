@@ -48,6 +48,25 @@ examples could be set up in the cloud configuration at
       driver: nova
       userdata_file: /tmp/userdata.txt
 
+To use keystoneauth1 instead of keystoneclient, include the `use_keystoneauth`
+option in the provider config.
+
+.. note:: this is required to use keystone v3 as for authentication.
+
+.. code-block:: yaml
+
+    my-openstack-config:
+      use_keystoneauth: True
+      identity_url: 'https://controller:5000/v3'
+      auth_version: 3
+      compute_name: nova
+      compute_region: RegionOne
+      service_type: compute
+      tenant: admin
+      user: admin
+      password: passwordgoeshere
+      driver: nova
+
 For local installations that only use private IP address ranges, the
 following option may be useful. Using the old syntax:
 
@@ -279,6 +298,7 @@ def get_conn():
     kwargs['project_id'] = vm_['tenant']
     kwargs['auth_url'] = vm_['identity_url']
     kwargs['region_name'] = vm_['compute_region']
+    kwargs['use_keystoneauth'] = vm_.get('use_keystoneauth', False)
 
     if 'password' in vm_:
         kwargs['password'] = vm_['password']
@@ -682,8 +702,47 @@ def request_instance(vm_=None, call=None):
                 break
         if floating_ip is None:
             floating_ip = conn.floating_ip_create(pool)['ip']
+
+        def __query_node_data(vm_):
+            try:
+                node = show_instance(vm_['name'], 'action')
+                log.debug(
+                    'Loaded node data for {0}:\n{1}'.format(
+                        vm_['name'],
+                        pprint.pformat(node)
+                    )
+                )
+            except Exception as err:
+                log.error(
+                    'Failed to get nodes list: {0}'.format(
+                        err
+                    ),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG
+                )
+                # Trigger a failure in the wait for IP function
+                return False
+            return node['state'] == 'ACTIVE' or None
+
+        # if we associate the floating ip here,then we will fail.
+        # As if we attempt to associate a floating IP before the Nova instance has completed building,
+        # it will fail.So we should associate it after the Nova instance has completed building.
         try:
-            conn.floating_ip_associate(kwargs['name'], floating_ip)
+            salt.utils.cloud.wait_for_ip(
+                __query_node_data,
+                update_args=(vm_,)
+            )
+        except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+            try:
+                # It might be already up, let's destroy it!
+                destroy(vm_['name'])
+            except SaltCloudSystemExit:
+                pass
+            finally:
+                raise SaltCloudSystemExit(str(exc))
+
+        try:
+            conn.floating_ip_associate(vm_['name'], floating_ip)
             vm_['floating_ip'] = floating_ip
         except Exception as exc:
             raise SaltCloudSystemExit(
@@ -693,6 +752,7 @@ def request_instance(vm_=None, call=None):
                     vm_['name'], exc
                 )
             )
+
     if not vm_.get('password', None):
         vm_['password'] = data.extra.get('password', '')
 
@@ -725,11 +785,6 @@ def create(vm_):
         )
 
     vm_['key_filename'] = key_filename
-
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
 
     __utils__['cloud.fire_event'](
         'event',
@@ -866,6 +921,8 @@ def create(vm_):
             )
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
+                if private_ip is False:
+                    continue
                 if salt.utils.cloud.is_public_ip(private_ip):
                     log.warning('{0} is a public IP'.format(private_ip))
                     data.public_ips.append(private_ip)
@@ -1103,6 +1160,26 @@ def list_nodes_full(call=None, **kwargs):
 
     __utils__['cloud.cache_node_list'](ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
+
+
+def list_nodes_min(call=None, **kwargs):
+    '''
+    Return a list of the VMs that in this location
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            (
+                'The list_nodes_min function must be called with'
+                ' -f or --function.'
+            )
+        )
+
+    conn = get_conn()
+    server_list = conn.server_list_min()
+
+    if not server_list:
+        return {}
+    return server_list
 
 
 def list_nodes_select(call=None):

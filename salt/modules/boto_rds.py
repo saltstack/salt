@@ -220,7 +220,10 @@ def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None,
         rds = conn.describe_db_subnet_groups(DBSubnetGroupName=name)
         return {'exists': bool(rds)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        if "DBSubnetGroupNotFoundFault" in e.message:
+            return {'exists': False}
+        else:
+            return {'error': salt.utils.boto3.get_error(e)}
 
 
 def create(name, allocated_storage, db_instance_class, engine,
@@ -256,7 +259,7 @@ def create(name, allocated_storage, db_instance_class, engine,
         raise SaltInvocationError('master_username is required')
     if not master_user_password:
         raise SaltInvocationError('master_user_password is required')
-    if availability_zone and MultiAZ:
+    if availability_zone and multi_az:
         raise SaltInvocationError('availability_zone and multi_az are mutually'
                                   ' exclusive arguments.')
     if wait_status:
@@ -529,6 +532,10 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
             return {'results': bool(conn)}
 
         rds = conn.describe_db_instances(DBInstanceIdentifier=name)
+        rds = [
+            i for i in rds.get('DBInstances', [])
+            if i.get('DBInstanceIdentifier') == name
+        ].pop(0)
 
         if rds:
             keys = ('DBInstanceIdentifier', 'DBInstanceClass', 'Engine',
@@ -549,6 +556,8 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
             return {'rds': None}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+    except IndexError:
+        return {'rds': None}
 
 
 def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
@@ -561,31 +570,27 @@ def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
         salt myminion boto_rds.get_endpoint myrds
 
     '''
-    endpoint = 'None'
+    endpoint = False
     res = __salt__['boto_rds.exists'](name, tags, region, key, keyid,
                                       profile)
-    if not res:
-        return {'exists': bool(res), 'message':
-                'RDS instance {0} does not exist.'.format(name)}
+    if res.get('exists'):
+        try:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            if conn:
+                rds = conn.describe_db_instances(DBInstanceIdentifier=name)
 
-    try:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if not conn:
-            return {'results': bool(conn)}
+                if rds and 'Endpoint' in rds['DBInstances'][0]:
+                    endpoint = rds['DBInstances'][0]['Endpoint']['Address']
+                    return endpoint
 
-        rds = conn.describe_db_instances(DBInstanceIdentifier=name)
+        except ClientError as e:
+            return {'error': salt.utils.boto3.get_error(e)}
 
-        if rds:
-            inst = rds['DBInstances'][0]['Endpoint']
-            endpoint = '{0}:{1}'.format(inst.get('Address'), inst.get('Port'))
-            return endpoint
-
-    except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+    return endpoint
 
 
 def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
-           region=None, key=None, keyid=None, profile=None,
+           region=None, key=None, keyid=None, profile=None, tags=None,
            wait_for_deletion=True, timeout=180):
     '''
     Delete an RDS instance.
@@ -623,10 +628,10 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
 
         start_time = time()
         while True:
-            if not __salt__['boto_rds.exists'](name=name, region=region,
+            res = __salt__['boto_rds.exists'](name=name, tags=tags, region=region,
                                                key=key, keyid=keyid,
-                                               profile=profile):
-
+                                               profile=profile)
+            if not res.get('exists'):
                 return {'deleted': bool(res), 'message':
                         'Deleted RDS instance {0} completely.'.format(name)}
 

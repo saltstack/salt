@@ -8,6 +8,7 @@ Discover all instances of unittest.TestCase in this directory.
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
+import sys
 import time
 
 # Import salt libs
@@ -352,9 +353,20 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             # Turn on expensive tests execution
             os.environ['EXPENSIVE_TESTS'] = 'True'
 
+        import salt.utils
+        if salt.utils.is_windows():
+            import salt.utils.win_functions
+            current_user = salt.utils.win_functions.get_current_user()
+            if current_user == 'SYSTEM':
+                is_admin = True
+            else:
+                is_admin = salt.utils.win_functions.is_admin(current_user)
+        else:
+            is_admin = os.geteuid() == 0
+
         if self.options.coverage and any((
                     self.options.name,
-                    os.geteuid() != 0,
+                    is_admin,
                     not self.options.run_destructive)) \
                 and self._check_enabled_suites(include_unit=True):
             self.error(
@@ -375,6 +387,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             source=[os.path.join(SALT_ROOT, 'salt')],
         )
 
+        # Print out which version of python this test suite is running on
+        print(' * Python Version: {0}'.format(' '.join(sys.version.split())))
+
         # Transplant configuration
         TestDaemon.transplant_configs(transport=self.options.transport)
 
@@ -388,7 +403,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         Run an integration test suite
         '''
         full_path = os.path.join(TEST_DIR, path)
-        return self.run_suite(full_path, display_name)
+        return self.run_suite(full_path, display_name, suffix='test_*.py')
 
     def start_daemons_only(self):
         if not salt.utils.is_windows():
@@ -457,7 +472,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         for integration tests or unit tests
         '''
         # Get current limits
-        prev_soft, prev_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        if salt.utils.is_windows():
+            import win32file
+            prev_hard = win32file._getmaxstdio()
+            prev_soft = 512
+        else:
+            prev_soft, prev_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
 
         # Get required limits
         min_soft = MAX_OPEN_FILES[limits]['soft_limit']
@@ -488,7 +508,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 '{0}, hard: {1}'.format(soft, hard)
             )
             try:
-                resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
+                if salt.utils.is_windows():
+                    hard = 2048 if hard > 2048 else hard
+                    win32file._setmaxstdio(hard)
+                else:
+                    resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
             except Exception as err:
                 print(
                     'ERROR: Failed to raise the max open files settings -> '
@@ -542,7 +566,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 for name in self.options.name:
                     if name.startswith('unit.'):
                         continue
-                    results = self.run_suite('', name, load_from_name=True)
+                    results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
                     status.append(results)
             for suite in TEST_SUITES:
                 if suite != 'unit' and getattr(self.options, suite):
@@ -571,7 +595,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.set_filehandle_limits('unit')
 
             results = self.run_suite(
-                os.path.join(TEST_DIR, 'unit'), 'Unit', '*_test.py'
+                os.path.join(TEST_DIR, 'unit'), 'Unit', suffix='test_*.py'
             )
             status.append(results)
             # We executed ALL unittests, we can skip running unittests by name
@@ -580,7 +604,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         for name in named_unit_test:
             results = self.run_suite(
-                os.path.join(TEST_DIR, 'unit'), name, load_from_name=True
+                os.path.join(TEST_DIR, 'unit'), name, suffix='test_*.py', load_from_name=True
             )
             status.append(results)
         return status

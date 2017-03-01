@@ -54,7 +54,7 @@ service, then set the reload value to True:
 .. note::
 
     More details regarding ``watch`` can be found in the
-    :doc:`Requisites </ref/states/requisites>` documentation.
+    :ref:`Requisites <requisites>` documentation.
 
 '''
 
@@ -64,8 +64,8 @@ import time
 
 # Import Salt libs
 import salt.utils
+from salt.utils.args import get_function_argspec as _argspec
 from salt.exceptions import CommandExecutionError
-import salt.utils
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -294,7 +294,12 @@ def _available(name, ret):
     return avail
 
 
-def running(name, enable=None, sig=None, init_delay=None, **kwargs):
+def running(name,
+            enable=None,
+            sig=None,
+            init_delay=None,
+            no_block=False,
+            **kwargs):
     '''
     Ensure that the service is running
 
@@ -317,11 +322,16 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         for requisite states wherein a dependent state might assume a service
         has started but is not yet fully initialized.
 
+    no_block : False
+        **For systemd minions only.** Starts the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
     .. note::
         ``watch`` can be used with service.running to restart a service when
          another state changes ( example: a file.managed state that creates the
          service's config file ). More details regarding ``watch`` can be found
-         in the :doc:`Requisites </ref/states/requisites>` documentation.
+         in the :ref:`Requisites <requisites>` documentation.
     '''
     ret = {'name': name,
            'changes': {},
@@ -372,7 +382,16 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         if enable is True:
             ret.update(_enable(name, False, result=False, **kwargs))
 
-    func_ret = __salt__['service.start'](name)
+    start_kwargs = {}
+    if no_block:
+        if 'no_block' in _argspec(__salt__['service.start']).args:
+            start_kwargs = {'no_block': no_block}
+        else:
+            ret.setdefault('warnings', []).append(
+                'The \'no_block\' argument is not supported on this platform.'
+            )
+
+    func_ret = __salt__['service.start'](name, **start_kwargs)
 
     if not func_ret:
         ret['result'] = False
@@ -387,7 +406,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         time.sleep(init_delay)
 
     # only force a change state if we have explicitly detected them
-    after_toggle_status = __salt__['service.status'](name)
+    after_toggle_status = __salt__['service.status'](name, sig)
     if 'service.enabled' in __salt__:
         after_toggle_enable_status = __salt__['service.enabled'](name)
     else:
@@ -417,7 +436,12 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     return ret
 
 
-def dead(name, enable=None, sig=None, **kwargs):
+def dead(name,
+         enable=None,
+         sig=None,
+         init_delay=None,
+         no_block=False,
+         **kwargs):
     '''
     Ensure that the named service is dead by stopping the service if it is running
 
@@ -431,6 +455,17 @@ def dead(name, enable=None, sig=None, **kwargs):
 
     sig
         The string to search for when looking for the service process with ps
+
+    init_delay
+        Add a sleep command (in seconds) before the check to make sure service
+        is killed.
+
+        .. versionadded:: Nitrogen
+
+    no_block : False
+        **For systemd minions only.** Stops the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
     '''
     ret = {'name': name,
            'changes': {},
@@ -480,7 +515,16 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['comment'] = 'Service {0} is set to be killed'.format(name)
         return ret
 
-    func_ret = __salt__['service.stop'](name)
+    stop_kwargs = {}
+    if no_block:
+        if 'no_block' in _argspec(__salt__['service.stop']).args:
+            stop_kwargs = {'no_block': no_block}
+        else:
+            ret.setdefault('warnings', []).append(
+                'The \'no_block\' argument is not supported on this platform.'
+            )
+
+    func_ret = __salt__['service.stop'](name, **stop_kwargs)
     if not func_ret:
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)
@@ -489,6 +533,9 @@ def dead(name, enable=None, sig=None, **kwargs):
         elif enable is False:
             ret.update(_disable(name, True, result=False, **kwargs))
         return ret
+
+    if init_delay:
+        time.sleep(init_delay)
 
     # only force a change state if we have explicitly detected them
     after_toggle_status = __salt__['service.status'](name)
@@ -553,6 +600,158 @@ def disabled(name, **kwargs):
 
     ret.update(_disable(name, None, **kwargs))
     return ret
+
+
+def masked(name, runtime=False):
+    '''
+    .. versionadded:: Nitrogen
+
+    .. note::
+        This state is only available on minions which use systemd_.
+
+    Ensures that the named service is masked (i.e. prevented from being
+    started).
+
+    name
+        Name of the service to mask
+
+    runtime : False
+        By default, this state will manage an indefinite mask for the named
+        service. Set this argument to ``True`` to runtime mask the service.
+
+    .. note::
+        It is possible for a service to have both indefinite and runtime masks
+        set for it. Therefore, this state will manage a runtime or indefinite
+        mask independently of each other. This means that if the service is
+        already indefinitely masked, running this state with ``runtime`` set to
+        ``True`` will _not_ remove the indefinite mask before setting a runtime
+        mask. In these cases, if it is desirable to ensure that the service is
+        runtime masked and not indefinitely masked, pair this state with a
+        :py:func:`service.unmasked <salt.states.service.unmasked>` state, like
+        so:
+
+        .. code-block:: yaml
+
+            mask_runtime_foo:
+              service.masked:
+                - name: foo
+                - runtime: True
+
+            unmask_indefinite_foo:
+              service.unmasked:
+                - name: foo
+                - runtime: False
+
+    .. _systemd: https://freedesktop.org/wiki/Software/systemd/
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    if 'service.masked' not in __salt__:
+        ret['comment'] = 'Service masking not available on this minion'
+        ret['result'] = False
+        return ret
+
+    mask_type = 'runtime masked' if runtime else 'masked'
+    expected_changes = {mask_type: {'old': False, 'new': True}}
+
+    try:
+        if __salt__['service.masked'](name, runtime):
+            ret['comment'] = 'Service {0} is already {1}'.format(
+                name,
+                mask_type,
+            )
+            return ret
+
+        if __opts__['test']:
+            ret['result'] = None
+            ret['changes'] = expected_changes
+            ret['comment'] = 'Service {0} would be {1}'.format(name, mask_type)
+            return ret
+
+        __salt__['service.mask'](name, runtime)
+
+        if __salt__['service.masked'](name, runtime):
+            ret['changes'] = expected_changes
+            ret['comment'] = 'Service {0} was {1}'.format(name, mask_type)
+        else:
+            ret['comment'] = 'Failed to mask service {0}'.format(name)
+        return ret
+
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
+        return ret
+
+
+def unmasked(name, runtime=False):
+    '''
+    .. versionadded:: Nitrogen
+
+    .. note::
+        This state is only available on minions which use systemd_.
+
+    Ensures that the named service is unmasked
+
+    name
+        Name of the service to unmask
+
+    runtime : False
+        By default, this state will manage an indefinite mask for the named
+        service. Set this argument to ``True`` to ensure that the service is
+        runtime masked.
+
+    .. note::
+        It is possible for a service to have both indefinite and runtime masks
+        set for it. Therefore, this state will manage a runtime or indefinite
+        mask independently of each other. This means that if the service is
+        indefinitely masked, running this state with ``runtime`` set to
+        ``True`` will _not_ remove the indefinite mask.
+
+    .. _systemd: https://freedesktop.org/wiki/Software/systemd/
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    if 'service.masked' not in __salt__:
+        ret['comment'] = 'Service masking not available on this minion'
+        ret['result'] = False
+        return ret
+
+    mask_type = 'runtime masked' if runtime else 'masked'
+    action = 'runtime unmasked' if runtime else 'unmasked'
+    expected_changes = {mask_type: {'old': True, 'new': False}}
+
+    try:
+        if not __salt__['service.masked'](name, runtime):
+            ret['comment'] = 'Service {0} was already {1}'.format(name, action)
+            return ret
+
+        if __opts__['test']:
+            ret['result'] = None
+            ret['changes'] = expected_changes
+            ret['comment'] = 'Service {0} would be {1}'.format(name, action)
+            return ret
+
+        __salt__['service.unmask'](name, runtime)
+
+        if not __salt__['service.masked'](name, runtime):
+            ret['changes'] = expected_changes
+            ret['comment'] = 'Service {0} was {1}'.format(name, action)
+        else:
+            ret['comment'] = 'Failed to unmask service {0}'.format(name)
+        return ret
+
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
+        return ret
 
 
 def mod_watch(name,

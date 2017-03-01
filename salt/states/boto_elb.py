@@ -493,10 +493,13 @@ def present(
     if not instance_ids:
         instance_ids = []
     if instance_names:
+        # AWS borks on adding instances in "non-running" states, so filter 'em out.
+        running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
         for n in instance_names:
             instance_ids += __salt__['boto_ec2.find_instances'](name=n, region=region,
                                                                 key=key, keyid=keyid,
-                                                                profile=profile)
+                                                                profile=profile,
+                                                                in_states=running_states)
     # Backwards compat:  Only touch attached instances if requested (e.g. if some are defined).
     if instance_ids:
         if __opts__['test']:
@@ -747,12 +750,12 @@ def _listeners_present(
 
     expected_listeners_by_tuple = {}
     for l in listeners:
-        key = __salt__['boto_elb.listener_dict_to_tuple'](l)
-        expected_listeners_by_tuple[key] = l
+        l_key = __salt__['boto_elb.listener_dict_to_tuple'](l)
+        expected_listeners_by_tuple[l_key] = l
     actual_listeners_by_tuple = {}
     for l in lb['listeners']:
-        key = __salt__['boto_elb.listener_dict_to_tuple'](l)
-        actual_listeners_by_tuple[key] = l
+        l_key = __salt__['boto_elb.listener_dict_to_tuple'](l)
+        actual_listeners_by_tuple[l_key] = l
 
     to_delete = []
     to_create = []

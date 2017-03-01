@@ -25,7 +25,7 @@ Module to provide Postgres compatibility to salt.
     automatically placed on the path. Add a configuration to the location
     of the postgres bin's path to the relevant minion for this module::
 
-        postgres.pg_bin: '/usr/pgsql-9.5/bin/'
+        postgres.bins_dir: '/usr/pgsql-9.5/bin/'
 '''
 
 # This pylint error is popping up where there are no colons?
@@ -51,7 +51,7 @@ except ImportError:
 import salt.utils
 import salt.utils.files
 import salt.utils.itertools
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -113,9 +113,10 @@ _PRIVILEGE_TYPE_MAP = {
 
 def __virtual__():
     '''
-    Only load this module if the psql and initdb bin exist
+    Only load this module if the psql bin exist.
+    initdb bin might also be used, but its presence will be detected on runtime.
     '''
-    utils = ['psql', 'initdb']
+    utils = ['psql']
     if not HAS_CSV:
         return False
     for util in utils:
@@ -135,7 +136,7 @@ def _find_pg_binary(util):
     util_bin = salt.utils.which(util)
     if not util_bin:
         if pg_bin_dir:
-            return os.path.join(pg_bin_dir, util)
+            return salt.utils.which(os.path.join(pg_bin_dir, util))
     else:
         return util_bin
 
@@ -155,7 +156,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
         if not host or host.startswith('/'):
             if 'FreeBSD' in __grains__['os_family']:
                 runas = 'pgsql'
-            if 'OpenBSD' in __grains__['os_family']:
+            elif 'OpenBSD' in __grains__['os_family']:
                 runas = '_postgresql'
             else:
                 runas = 'postgres'
@@ -203,7 +204,7 @@ def _run_initdb(name,
     if runas is None:
         if 'FreeBSD' in __grains__['os_family']:
             runas = 'pgsql'
-        if 'OpenBSD' in __grains__['os_family']:
+        elif 'OpenBSD' in __grains__['os_family']:
             runas = '_postgresql'
         else:
             runas = 'postgres'
@@ -211,6 +212,8 @@ def _run_initdb(name,
     if user is None:
         user = runas
     _INITDB_BIN = _find_pg_binary('initdb')
+    if not _INITDB_BIN:
+        raise CommandExecutionError('initdb executable not found.')
     cmd = [
         _INITDB_BIN,
         '--pgdata={0}'.format(name),

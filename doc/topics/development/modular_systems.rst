@@ -24,11 +24,11 @@ detecting information about the system. The only restraint in execution
 modules is that the defined functions always return a JSON serializable
 object.
 
-For a list of all built in execution modules, click :doc:`here
-</ref/modules/all/index>`
+For a list of all built in execution modules, click :ref:`here
+<all-salt.modules>`
 
-For information on writing execution modules, see :doc:`this page
-</ref/modules/index>`.
+For information on writing execution modules, see :ref:`this page
+<writing-execution-modules>`.
 
 
 Interactive Debugging

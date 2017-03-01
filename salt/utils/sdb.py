@@ -10,7 +10,7 @@ import salt.loader
 from salt.ext.six import string_types
 
 
-def sdb_get(uri, opts):
+def sdb_get(uri, opts, utils=None):
     '''
     Get a value from a db, using a uri in the form of ``sdb://<profile>/<key>``. If
     the uri provided does not start with ``sdb://``, then it will be returned as-is.
@@ -20,6 +20,9 @@ def sdb_get(uri, opts):
 
     if not uri.startswith('sdb://'):
         return uri
+
+    if utils is None:
+        utils = {}
 
     sdlen = len('sdb://')
     indx = uri.find('/', sdlen)
@@ -36,11 +39,11 @@ def sdb_get(uri, opts):
     fun = '{0}.get'.format(profile['driver'])
     query = uri[indx+1:]
 
-    loaded_db = salt.loader.sdb(opts, fun)
+    loaded_db = salt.loader.sdb(opts, fun, utils=utils)
     return loaded_db[fun](query, profile=profile)
 
 
-def sdb_set(uri, value, opts):
+def sdb_set(uri, value, opts, utils=None):
     '''
     Set a value in a db, using a uri in the form of ``sdb://<profile>/<key>``.
     If the uri provided does not start with ``sdb://`` or the value is not
@@ -51,6 +54,9 @@ def sdb_set(uri, value, opts):
 
     if not uri.startswith('sdb://'):
         return False
+
+    if utils is None:
+        utils = {}
 
     sdlen = len('sdb://')
     indx = uri.find('/', sdlen)
@@ -67,11 +73,11 @@ def sdb_set(uri, value, opts):
     fun = '{0}.set'.format(profile['driver'])
     query = uri[indx+1:]
 
-    loaded_db = salt.loader.sdb(opts, fun)
+    loaded_db = salt.loader.sdb(opts, fun, utils=utils)
     return loaded_db[fun](query, value, profile=profile)
 
 
-def sdb_delete(uri, opts):
+def sdb_delete(uri, opts, utils=None):
     '''
     Delete a value from a db, using a uri in the form of ``sdb://<profile>/<key>``. If
     the uri provided does not start with ``sdb://`` or the value is not successfully
@@ -82,6 +88,9 @@ def sdb_delete(uri, opts):
 
     if not uri.startswith('sdb://'):
         return False
+
+    if utils is None:
+        utils = {}
 
     sdlen = len('sdb://')
     indx = uri.find('/', sdlen)
@@ -98,5 +107,5 @@ def sdb_delete(uri, opts):
     fun = '{0}.delete'.format(profile['driver'])
     query = uri[indx+1:]
 
-    loaded_db = salt.loader.sdb(opts, fun)
+    loaded_db = salt.loader.sdb(opts, fun, utils=utils)
     return loaded_db[fun](query, profile=profile)

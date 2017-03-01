@@ -187,6 +187,14 @@ class CkMinions(object):
         else:
             self.acc = 'accepted'
 
+    def _check_nodegroup_minions(self, expr, greedy):  # pylint: disable=unused-argument
+        '''
+        Return minions found by looking at nodegroups
+        '''
+        return self._check_compound_minions(nodegroup_comp(expr, self.opts['nodegroups']),
+            DEFAULT_TARGET_DELIM,
+            greedy)
+
     def _check_glob_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via globs
@@ -616,7 +624,7 @@ class CkMinions(object):
 
     def check_minions(self,
                       expr,
-                      expr_form='glob',
+                      tgt_type='glob',
                       delimiter=DEFAULT_TARGET_DELIM,
                       greedy=True):
         '''
@@ -626,8 +634,10 @@ class CkMinions(object):
         make sure everyone has checked back in.
         '''
         try:
-            check_func = getattr(self, '_check_{0}_minions'.format(expr_form), None)
-            if expr_form in ('grain',
+            if expr is None:
+                expr = ''
+            check_func = getattr(self, '_check_{0}_minions'.format(tgt_type), None)
+            if tgt_type in ('grain',
                              'grain_pcre',
                              'pillar',
                              'pillar_pcre',
@@ -640,7 +650,7 @@ class CkMinions(object):
         except Exception:
             log.exception(
                     'Failed matching available minions with {0} pattern: {1}'
-                    .format(expr_form, expr))
+                    .format(tgt_type, expr))
             minions = []
         return minions
 
@@ -664,14 +674,25 @@ class CkMinions(object):
 
         return set(self.check_minions(v_expr, v_matcher))
 
-    def validate_tgt(self, valid, expr, expr_form, minions=None):
+    def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
         '''
         Return a Bool. This function returns if the expression sent in is
         within the scope of the valid expression
         '''
+        # remember to remove the expr_form argument from this function when
+        # performing the cleanup on this deprecation.
+        if expr_form is not None:
+            salt.utils.warn_until(
+                'Fluorine',
+                'the target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = expr_form
+
         v_minions = self._expand_matching(valid)
         if minions is None:
-            minions = set(self.check_minions(expr, expr_form))
+            minions = set(self.check_minions(expr, tgt_type))
         else:
             minions = set(minions)
         d_bool = not bool(minions.difference(v_minions))
@@ -789,6 +810,7 @@ class CkMinions(object):
                     # so this fn is permitted by all minions
                     if self.match_check(auth_list_entry, fun):
                         return True
+                continue
             if isinstance(auth_list_entry, dict):
                 if len(auth_list_entry) != 1:
                     log.info('Malformed ACL: {0}'.format(auth_list_entry))

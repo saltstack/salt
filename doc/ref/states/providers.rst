@@ -1,3 +1,5 @@
+.. _state-providers:
+
 ===============
 State Providers
 ===============

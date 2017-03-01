@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: Carbon
+Pillar data from vCenter or an ESXi host
+
+.. versionadded:: Nitrogen
 
 :depends: - pyVmomi
-
-Pillar data from vCenter or an ESXi host
 
 This external pillar can pull attributes from objects in vCenter or an ESXi host and provide those attributes
 as pillar data to minions.  This can allow for pillar based targeting of minions on ESXi host, Datastore, VM
@@ -150,7 +150,8 @@ import logging
 from salt.utils import dictupdate
 import salt.utils.vmware
 
-# Import third party libs
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     from pyVmomi import vim
     from pyVim.connect import Disconnect
@@ -479,7 +480,7 @@ def _recurse_config_to_dict(t_data):
             return t_list
         elif isinstance(t_data, dict):
             t_dict = {}
-            for k, v in t_data.iteritems():
+            for k, v in six.iteritems(t_data):
                 t_dict[k] = _recurse_config_to_dict(v)
             return t_dict
         else:

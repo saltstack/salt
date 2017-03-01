@@ -68,7 +68,7 @@ class AESReqServerMixin(object):
             # cases, 'aes' is already set in the secrets.
             salt.master.SMaster.secrets['aes'] = {
                 'secret': multiprocessing.Array(ctypes.c_char,
-                              salt.crypt.Crypticle.generate_key_string()),
+                              six.b(salt.crypt.Crypticle.generate_key_string())),
                 'reload': salt.crypt.Crypticle.generate_key_string
             }
 

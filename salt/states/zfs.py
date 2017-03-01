@@ -330,15 +330,13 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
     properties : dict
         additional zfs properties (-o)
 
-    ..note::
-
+    .. note::
         ``cloned_from`` is only use if the filesystem does not exist yet,
         when ``cloned_from`` is set after the filesystem exists it will be ignored.
 
-    ..note::
-
-        properties do not get cloned, if you specify the properties in the state file
-        they will be applied on a subsequent run.
+    .. note::
+        Properties do not get cloned, if you specify the properties in the
+        state file they will be applied on a subsequent run.
 
     '''
     ret = {'name': name,
@@ -442,20 +440,19 @@ def volume_present(name, volume_size, sparse=False, create_parent=False, propert
     properties : dict
         additional zfs properties (-o)
 
-    ..note::
-
+    .. note::
         ``cloned_from`` is only use if the volume does not exist yet,
         when ``cloned_from`` is set after the volume exists it will be ignored.
 
-    ..note::
-
-        properties do not get cloned, if you specify the properties in the state file
+    .. note::
+        Properties do not get cloned, if you specify the properties in the state file
         they will be applied on a subsequent run.
 
-        volume_size is considered a property so it the volume's size will be corrected
-        when the properties get update if it differs from the original volume.
+        ``volume_size`` is considered a property, so the volume's size will be
+        corrected when the properties get updated if it differs from the
+        original volume.
 
-        the sparse parameter is ignored when using cloned_from.
+        The sparse parameter is ignored when using ``cloned_from``.
 
     '''
     ret = {'name': name,
@@ -603,9 +600,8 @@ def snapshot_present(name, recursive=False, properties=None):
     properties : dict
         additional zfs properties (-o)
 
-    ..note:
-
-        properties are only set at creation time.
+    .. note:
+        Properties are only set at creation time
 
     '''
     ret = {'name': name,

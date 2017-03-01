@@ -4,8 +4,8 @@ Salt 0.17.5 Release Notes
 
 :release: 2014-01-27
 
-Version 0.17.5 is another bugfix release for :doc:`0.17.0
-</topics/releases/0.17.0>`.  The changes include:
+Version 0.17.5 is another bugfix release for :ref:`0.17.0
+<release-0-17-0>`.  The changes include:
 
 - Fix ``user.present`` states with non-string fullname (:issue:`9085`)
 - Fix ``virt.init`` return value on failure (:issue:`6870`)

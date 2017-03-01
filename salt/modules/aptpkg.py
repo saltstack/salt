@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import fnmatch
 import os
 import re
 import logging
@@ -38,6 +39,7 @@ import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
+import salt.utils.itertools
 import salt.utils.systemd
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -67,6 +69,8 @@ except ImportError:
     HAS_SOFTWAREPROPERTIES = False
 # pylint: enable=import-error
 
+APT_LISTS_PATH = "/var/lib/apt/lists"
+
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
 LP_PVT_SRC_FORMAT = 'deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu' \
@@ -89,7 +93,7 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    if __grains__.get('os_family') in ('Kali', 'Debian'):
+    if __grains__.get('os_family') in ('Kali', 'Debian', 'neon'):
         return __virtualname__
     elif __grains__.get('os_family', False) == 'Cumulus':
         return __virtualname__
@@ -179,8 +183,8 @@ def _get_virtual():
         if HAS_APT:
             try:
                 apt_cache = apt.cache.Cache()
-            except SystemError as se:
-                msg = 'Failed to get virtual package information ({0})'.format(se)
+            except SystemError as syserr:
+                msg = 'Failed to get virtual package information ({0})'.format(syserr)
                 log.error(msg)
                 raise CommandExecutionError(msg)
             pkgs = getattr(apt_cache._cache, 'packages', [])
@@ -343,7 +347,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db(cache_valid_time=0):
+def refresh_db(cache_valid_time=0, failhard=False):
     '''
     Updates the APT database to latest packages based upon repositories
 
@@ -361,14 +365,23 @@ def refresh_db(cache_valid_time=0):
         Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
+    failhard
+
+        If False, return results of Err lines as ``False`` for the package database that
+        encountered the error.
+        If True, raise an error with a list of the package databases that encountered
+        errors.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
-    APT_LISTS_PATH = "/var/lib/apt/lists"
+    failhard = salt.utils.is_true(failhard)
     ret = {}
+    error_repos = list()
+
     if cache_valid_time:
         try:
             latest_update = os.stat(APT_LISTS_PATH).st_mtime
@@ -409,6 +422,13 @@ def refresh_db(cache_valid_time=0):
             ret[ident] = False
         elif 'Hit' in cols[0]:
             ret[ident] = None
+        elif 'Err' in cols[0]:
+            ret[ident] = False
+            error_repos.append(ident)
+
+    if failhard and error_repos:
+        raise CommandExecutionError('Error getting repos: {0}'.format(', '.join(error_repos)))
+
     return ret
 
 
@@ -698,11 +718,13 @@ def install(name=None,
             if reinstall and cver \
                     and salt.utils.compare_versions(ver1=version_num,
                                                     oper='==',
-                                                    ver2=cver):
+                                                    ver2=cver,
+                                                    cmp_func=version_cmp):
                 to_reinstall[pkgname] = pkgstr
             elif not cver or salt.utils.compare_versions(ver1=version_num,
                                                          oper='>=',
-                                                         ver2=cver):
+                                                         ver2=cver,
+                                                         cmp_func=version_cmp):
                 targets.append(pkgstr)
             else:
                 downgrade.append(pkgstr)
@@ -1556,9 +1578,78 @@ def _consolidate_repo_sources(sources):
     for file_ in delete_files:
         try:
             os.remove(file_)
-        except Exception:
+        except OSError:
             pass
     return sources
+
+
+def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
+    '''
+    .. versionadded:: Nitrogen
+
+    Returns all available packages. Optionally, package names (and name globs)
+    can be passed and the results will be filtered to packages matching those
+    names.
+
+    This function can be helpful in discovering the version or repo to specify
+    in a :mod:`pkg.installed <salt.states.pkg.installed>` state.
+
+    The return data will be a dictionary mapping package names to a list of
+    version numbers, ordered from newest to oldest. For example:
+
+    .. code-block:: python
+
+        {
+            'bash': ['4.3-14ubuntu1.1',
+                     '4.3-14ubuntu1'],
+            'nginx': ['1.10.0-0ubuntu0.16.04.4',
+                      '1.9.15-0ubuntu1']
+        }
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_repo_pkgs
+        salt '*' pkg.list_repo_pkgs foo bar baz
+    '''
+    out = __salt__['cmd.run_all'](
+        ['apt-cache', 'dump'],
+        output_loglevel='trace',
+        ignore_retcode=True,
+        python_shell=False
+    )
+
+    ret = {}
+    pkg_name = None
+    skip_pkg = False
+    new_pkg = re.compile('^Package: (.+)')
+    for line in salt.utils.itertools.split(out['stdout'], '\n'):
+        try:
+            cur_pkg = new_pkg.match(line).group(1)
+        except AttributeError:
+            pass
+        else:
+            if cur_pkg != pkg_name:
+                pkg_name = cur_pkg
+                if args:
+                    for arg in args:
+                        if fnmatch.fnmatch(pkg_name, arg):
+                            skip_pkg = False
+                            break
+                    else:
+                        # Package doesn't match any of the passed args, skip it
+                        skip_pkg = True
+                else:
+                    # No args passed, we're getting all packages
+                    skip_pkg = False
+                continue
+        if not skip_pkg:
+            comps = line.strip().split(None, 1)
+            if comps[0] == 'Version:':
+                ret.setdefault(pkg_name, []).append(comps[1])
+
+    return ret
 
 
 def list_repos():
@@ -1607,7 +1698,7 @@ def get_repo(repo, **kwargs):
     ppa_auth = kwargs.get('ppa_auth', None)
     # we have to be clever about this since the repo definition formats
     # are a bit more "loose" than in some other distributions
-    if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint'):
+    if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint', 'neon'):
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
         dist = __grains__['lsb_distrib_codename']
@@ -1685,7 +1776,7 @@ def del_repo(repo, **kwargs):
     '''
     _check_apt()
     is_ppa = False
-    if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint'):
+    if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint', 'neon'):
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
         is_ppa = True
@@ -2041,7 +2132,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
     if repo.startswith('ppa:'):
-        if __grains__['os'] in ('Ubuntu', 'Mint'):
+        if __grains__['os'] in ('Ubuntu', 'Mint', 'neon'):
             # secure PPAs cannot be supported as of the time of this code
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
@@ -2224,11 +2315,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
         kwargs['architectures'] = kwargs['architectures'].split(',')
 
     if 'disabled' in kwargs:
-        kw_disabled = kwargs['disabled']
-        if kw_disabled is True or str(kw_disabled).lower() == 'true':
-            kwargs['disabled'] = True
-        else:
-            kwargs['disabled'] = False
+        kwargs['disabled'] = salt.utils.is_true(kwargs['disabled'])
 
     kw_type = kwargs.get('type')
     kw_dist = kwargs.get('dist')
@@ -2236,13 +2323,12 @@ def mod_repo(repo, saltenv='base', **kwargs):
     for source in repos:
         # This series of checks will identify the starting source line
         # and the resulting source line.  The idea here is to ensure
-        # we are not retuning bogus data because the source line
+        # we are not returning bogus data because the source line
         # has already been modified on a previous run.
-        if ((source.type == repo_type and source.uri == repo_uri
-             and source.dist == repo_dist) or
-            (source.dist == kw_dist and source.type == kw_type
-             and source.type == kw_type)):
+        repo_matches = source.type == repo_type and source.uri == repo_uri and source.dist == repo_dist
+        kw_matches = source.dist == kw_dist and source.type == kw_type
 
+        if repo_matches or kw_matches:
             for comp in full_comp_list:
                 if comp in getattr(source, 'comps', []):
                     mod_source = source
@@ -2341,7 +2427,7 @@ def expand_repo_def(**kwargs):
 
     sanitized = {}
     repo = _strip_uri(kwargs['repo'])
-    if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint'):
+    if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint', 'neon'):
         dist = __grains__['lsb_distrib_codename']
         owner_name, ppa_name = repo[4:].split('/', 1)
         if 'ppa_auth' in kwargs:
@@ -2625,7 +2711,7 @@ def owner(*paths):
     return ret
 
 
-def info_installed(*names):
+def info_installed(*names, **kwargs):
     '''
     Return the information of the named package(s) installed on the system.
 
@@ -2634,15 +2720,27 @@ def info_installed(*names):
     names
         The names of the packages for which to return information.
 
+    failhard
+        Whether to throw an exception if none of the packages are installed.
+        Defaults to True.
+
+        .. versionadded:: 2016.11.3
+
     CLI example:
 
     .. code-block:: bash
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
+        salt '*' pkg.info_installed <package1> failhard=false
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    failhard = kwargs.pop('failhard', True)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names).items():
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard).items():
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():

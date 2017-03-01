@@ -209,7 +209,7 @@ ssh_public_key
 
 ssh_interface
     This option will use the private LAN IP for node connections (such as
-    as bootstrapping the node) instead of the public LAN IP. The value accepts
+    bootstrapping the node) instead of the public LAN IP. The value accepts
     'private_lan'.
 
 cpu_family
@@ -228,5 +228,5 @@ wait_for_timeout
     The timeout to wait in seconds for provisioning resources such as servers.
     The default wait_for_timeout is 15 minutes.
 
-For more information concerning cloud profiles, see :doc:`here
-</topics/cloud/profiles>`.
+For more information concerning cloud profiles, see :ref:`here
+<salt-cloud-profiles>`.

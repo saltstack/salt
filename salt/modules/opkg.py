@@ -12,8 +12,8 @@ Support for Opkg
 
 .. note::
 
-    For version comparison support, the ``opkg-utils`` package must be
-    installed.
+    For version comparison support on opkg < 0.3.4, the ``opkg-utils`` package
+    must be installed.
 
 '''
 from __future__ import absolute_import
@@ -23,6 +23,7 @@ import copy
 import os
 import re
 import logging
+import distutils.version
 from salt.ext import six
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
@@ -32,13 +33,12 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
-from salt.utils.decorators import which as _which
 
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
 
-REPO_REGEXP = r'^#?\s*(src|src/gz)\s+[^\s<>]+\s+[^\s<>]+'
+REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
 OPKG_CONFDIR = '/etc/opkg'
 ATTR_MAP = {
     'Architecture': 'arch',
@@ -922,7 +922,6 @@ def upgrade_available(name):
     return latest_version(name) != ''
 
 
-@_which('opkg-compare-versions')
 def version_cmp(pkg1, pkg2, ignore_epoch=False):
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
@@ -944,7 +943,19 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 
-    cmd_compare = ['opkg-compare-versions']
+    output = __salt__['cmd.run_stdout'](['opkg', '--version'],
+                                        output_loglevel='trace',
+                                        python_shell=False)
+    opkg_version = output.split(' ')[2].strip()
+    if distutils.version.LooseVersion(opkg_version) >= distutils.version.LooseVersion('0.3.4'):
+        cmd_compare = ['opkg', 'compare-versions']
+    elif salt.utils.which('opkg-compare-versions'):
+        cmd_compare = ['opkg-compare-versions']
+    else:
+        log.warning('Unable to find a compare-versions utility installed. Either upgrade opkg to '
+                    'version > 0.3.4 (preferred) or install the older opkg-compare-versions script.')
+        return None
+
     for oper, ret in (("<<", -1), ("=", 0), (">>", 1)):
         cmd = cmd_compare[:]
         cmd.append(_cmd_quote(pkg1))
@@ -982,7 +993,7 @@ def list_repos():
                             line = line[1:]
                         else:
                             repo['enabled'] = True
-                        cols = line.strip().split()
+                        cols = salt.utils.shlex_split(line.strip())
                         if cols[0] in 'src':
                             repo['compressed'] = False
                         else:
@@ -1027,7 +1038,7 @@ def _del_repo_from_file(alias, filepath):
             if regex.search(line):
                 if line.startswith('#'):
                     line = line[1:]
-                cols = line.strip().split()
+                cols = salt.utils.shlex_split(line.strip())
                 if alias != cols[1]:
                     output.append(line)
     with open(filepath, 'w') as fhandle:
@@ -1040,7 +1051,11 @@ def _add_new_repo(alias, uri, compressed, enabled=True):
     '''
     repostr = '# ' if not enabled else ''
     repostr += 'src/gz ' if compressed else 'src '
-    repostr += alias + ' ' + uri + '\n'
+    if ' ' in alias:
+        repostr += '"' + alias + '" '
+    else:
+        repostr += alias + ' '
+    repostr += uri + '\n'
     conffile = os.path.join(OPKG_CONFDIR, alias + '.conf')
 
     with open(conffile, 'a') as fhandle:
@@ -1054,7 +1069,8 @@ def _mod_repo_in_file(alias, repostr, filepath):
     with open(filepath) as fhandle:
         output = []
         for line in fhandle:
-            if alias not in line:
+            cols = salt.utils.shlex_split(line.strip())
+            if alias not in cols:
                 output.append(line)
             else:
                 output.append(repostr + '\n')
@@ -1150,7 +1166,11 @@ def mod_repo(alias, **kwargs):
                 repostr += 'src/gz ' if kwargs['compressed'] else 'src'
             else:
                 repostr += 'src/gz' if source['compressed'] else 'src'
-            repostr += ' {0}'.format(kwargs['alias'] if 'alias' in kwargs else alias)
+            repo_alias = kwargs['alias'] if 'alias' in kwargs else alias
+            if ' ' in repo_alias:
+                repostr += ' "{0}"'.format(repo_alias)
+            else:
+                repostr += ' {0}'.format(repo_alias)
             repostr += ' {0}'.format(kwargs['uri'] if 'uri' in kwargs else source['uri'])
             _mod_repo_in_file(alias, repostr, source['file'])
         elif uri and source['uri'] == uri:

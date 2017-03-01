@@ -3,7 +3,7 @@ Getting Started With Proxmox
 ============================
 
 Proxmox Virtual Environment is a complete server virtualization management solution,
-based on LXC and full virtualization with KVM.
+based on OpenVZ(in Proxmox up to 3.4)/LXC(from Proxmox 4.0 and up) and full virtualization with KVM.
 Further information can be found at:
 
 http://www.proxmox.org/
@@ -14,8 +14,8 @@ Dependencies
 * requests >= 2.2.1
 
 Please note:
-This module allows you to create both OpenVZ and KVM but installing Salt on it will only be
-done when the VM is an OpenVZ container rather than a KVM virtual machine.
+This module allows you to create OpenVZ/LXC containers and KVM VMs, but installing Salt on it will only be
+done on containers rather than a KVM virtual machine.
 
 * Set up the cloud configuration at
   ``/etc/salt/cloud.providers`` or
@@ -66,7 +66,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     proxmox-ubuntu:
         provider: my-proxmox-config
         image: local:vztmpl/ubuntu-12.04-standard_12.04-1_amd64.tar.gz
-        technology: openvz
+        technology: lxc
 
         # host needs to be set to the configured name of the proxmox host
         # and not the ip address or FQDN of the server
@@ -149,6 +149,12 @@ with their default settings listed.
 
     # The name of the image, from ``salt-cloud --list-images proxmox``
     image: local:vztmpl/ubuntu-12.04-standard_12.04-1_amd64.tar.gz
+    
+    # Whether or not to verify the SSL cert on the Proxmox host
+    verify_ssl: False
+    
+    # Network interfaces, netX
+    net0: name=eth0,bridge=vmbr0,ip=dhcp
 
 QEMU
 ====
@@ -164,7 +170,7 @@ QEMU profile file (for a new VM):
     # Image of the new VM
     image: image.iso # You can get all your available images using 'salt-cloud --list-images provider_name' (Ex: 'salt-cloud --list-images my-proxmox-config')
 
-    # Technology used to create the VM ('qemu' or 'openvz')
+    # Technology used to create the VM ('qemu', 'openvz'(on Proxmox <4.x) or 'lxc'(on Proxmox 4.x+))
     technology: qemu
  
     # Proxmox node name
@@ -223,7 +229,7 @@ QEMU profile file (for a clone):
     # VMID of Template to clone
     clone_from: ID
 
-    # Technology used to create the VM ('qemu' or 'openvz')
+    # Technology used to create the VM ('qemu' or 'lxc')
     technology: qemu
  
     # Proxmox node name

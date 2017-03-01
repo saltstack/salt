@@ -257,7 +257,7 @@ def create_user(username, password, permissions, users=None):
 
     .. code-block:: bash
 
-        salt dell drac.create_user [USERNAME] [PASSWORD] [PRIVELEGES]
+        salt dell drac.create_user [USERNAME] [PASSWORD] [PRIVILEGES]
         salt dell drac.create_user diana secret login,test_alerts,clear_logs
 
     DRAC Privileges
@@ -320,7 +320,7 @@ def set_permissions(username, permissions, uid=None):
 
     .. code-block:: bash
 
-        salt dell drac.set_permissions [USERNAME] [PRIVELEGES] [USER INDEX - optional]
+        salt dell drac.set_permissions [USERNAME] [PRIVILEGES] [USER INDEX - optional]
         salt dell drac.set_permissions diana login,test_alerts,clear_logs 4
 
     DRAC Privileges

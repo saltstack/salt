@@ -1,3 +1,5 @@
+.. _cloud-getting-started-vmware:
+
 ===========================
 Getting Started With VMware
 ===========================
@@ -36,6 +38,14 @@ This package can be installed using `pip` or `easy_install`:
 
 .. _Issue #29537: https://github.com/saltstack/salt/issues/29537
 
+.. note::
+
+    pyVmomi doesn't expose the ability to specify the locale when connecting to
+    VMware. This causes parsing issues when connecting to an instance of VMware
+    running under a non-English locale. Until this feature is added upstream
+    `Issue #38402`_ contains a workaround.
+
+.. _Issue #38402: https://github.com/saltstack/salt/issues/38402
 
 Configuration
 =============
@@ -446,6 +456,14 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     so salt will be installed using the bootstrap script. If ``template: True`` or
     ``power_on: False`` is set, this field is ignored and salt will not be installed.
 
+``wait_for_ip_timeout``
+    When ``deploy: True``, this timeout determines the maximum time to wait for
+    VMware tools to be installed on the virtual machine. If this timeout is
+    reached, an attempt to determine the client's IP will be made by resolving
+    the VM's name.  By lowering this value a salt bootstrap can be fully
+    automated for systems that are not built with VMware tools.  Default is
+    ``wait_for_ip_timeout: 1200``.
+
 ``customization``
     Specify whether the new virtual machine should be customized or not. If
     ``customization: False`` is set, the new virtual machine will not be customized.
@@ -668,8 +686,8 @@ Example of a complete profile:
           SCSI controller 0:
             type: lsilogic_sas
         ide:
-          IDE 0
-          IDE 1
+          IDE 0: {}
+          IDE 1: {}
         disk:
           Hard disk 0:
             controller: 'SCSI controller 0'

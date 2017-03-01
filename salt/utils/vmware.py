@@ -76,6 +76,7 @@ You should see output related to the ESXi host's syslog configuration.
 # Import Python Libs
 from __future__ import absolute_import
 import atexit
+import errno
 import logging
 import time
 from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
@@ -268,6 +269,21 @@ def _get_service_instance(host, username, password, protocol,
     return service_instance
 
 
+def get_customizationspec_ref(si, customization_spec_name):
+    '''
+    Get a reference to a VMware customization spec for the purposes of customizing a clone
+
+    si
+        ServiceInstance for the vSphere or ESXi server (see get_service_instance)
+
+    customization_spec_name
+        Name of the customization spec
+
+    '''
+    customization_spec_name = si.content.customizationSpecManager.GetCustomizationSpec(name=customization_spec_name)
+    return customization_spec_name
+
+
 def get_datastore_ref(si, datastore_name):
     '''
     Get a reference to a VMware datastore for the purposes of adding/removing disks
@@ -366,6 +382,10 @@ def get_service_instance(host, username=None, password=None, protocol=None,
                                                  mechanism,
                                                  principal,
                                                  domain)
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
     return service_instance
 
@@ -389,6 +409,22 @@ def get_service_instance_from_managed_object(mo_ref, name='<unnamed>'):
     return si
 
 
+def disconnect(service_instance):
+    '''
+    Function that disconnects from the vCenter server or ESXi host
+
+    service_instance
+        The Service Instance from which to obtain managed object references.
+    '''
+    log.trace('Disconnecting')
+    try:
+        Disconnect(service_instance)
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+
+
 def is_connection_to_a_vcenter(service_instance):
     '''
     Function that returns True if the connection is made to a vCenter Server and
@@ -397,7 +433,12 @@ def is_connection_to_a_vcenter(service_instance):
     service_instance
         The Service Instance from which to obtain managed object references.
     '''
-    api_type = service_instance.content.about.apiType
+    try:
+        api_type = service_instance.content.about.apiType
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
     log.trace('api_type = {0}'.format(api_type))
     if api_type == 'VirtualCenter':
         return True
@@ -639,7 +680,7 @@ def get_content(service_instance, obj_type, property_list=None,
     '''
     # Start at the rootFolder if container starting point not specified
     if not container_ref:
-        container_ref = service_instance.content.rootFolder
+        container_ref = get_root_folder(service_instance)
 
     # By default, the object reference used as the starting poing for the filter
     # is the container_ref passed in the function
@@ -649,8 +690,14 @@ def get_content(service_instance, obj_type, property_list=None,
         local_traversal_spec = True
         # We don't have a specific traversal spec override so we are going to
         # get everything using a container view
-        obj_ref = service_instance.content.viewManager.CreateContainerView(
-            container_ref, [obj_type], True)
+        try:
+            obj_ref = service_instance.content.viewManager.CreateContainerView(
+                container_ref, [obj_type], True)
+        except vim.fault.VimFault as exc:
+            raise salt.exceptions.VMwareApiError(exc.msg)
+        except vmodl.RuntimeFault as exc:
+            raise salt.exceptions.VMwareRuntimeError(exc.msg)
+
         # Create 'Traverse All' traversal spec to determine the path for
         # collection
         traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
@@ -682,11 +729,21 @@ def get_content(service_instance, obj_type, property_list=None,
     )
 
     # Retrieve the contents
-    content = service_instance.content.propertyCollector.RetrieveContents([filter_spec])
+    try:
+        content = service_instance.content.propertyCollector.RetrieveContents([filter_spec])
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
     # Destroy the object view
     if local_traversal_spec:
-        obj_ref.Destroy()
+        try:
+            obj_ref.Destroy()
+        except vim.fault.VimFault as exc:
+            raise salt.exceptions.VMwareApiError(exc.msg)
+        except vmodl.RuntimeFault as exc:
+            raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
     return content
 
@@ -760,6 +817,10 @@ def get_mors_with_properties(service_instance, object_type, property_list=None,
     try:
         content = get_content(*content_args, **content_kwargs)
     except BadStatusLine:
+        content = get_content(*content_args, **content_kwargs)
+    except IOError as e:
+        if e.errno != errno.EPIPE:
+            raise e
         content = get_content(*content_args, **content_kwargs)
 
     object_list = []
@@ -874,6 +935,30 @@ def list_datacenters(service_instance):
     return list_objects(service_instance, vim.Datacenter)
 
 
+def get_datacenters(service_instance, datacenter_names=None,
+                    get_all_datacenters=False):
+    '''
+    Returns all datacenters in a vCenter.
+
+    service_instance
+        The Service Instance Object from which to obtain cluster.
+
+    datacenter_names
+        List of datacenter names to filter by. Default value is None.
+
+    get_all_datacenters
+        Flag specifying whether to retrieve all datacenters.
+        Default value is None.
+    '''
+    items = [i['object'] for i in
+             get_mors_with_properties(service_instance,
+                                      vim.Datacenter,
+                                      property_list=['name'])
+             if get_all_datacenters or
+             (datacenter_names and i['name'] in datacenter_names)]
+    return items
+
+
 def get_datacenter(service_instance, datacenter_name):
     '''
     Returns a vim.Datacenter managed object.
@@ -884,11 +969,8 @@ def get_datacenter(service_instance, datacenter_name):
     datacenter_name
         The datacenter name
     '''
-    items = [i['object'] for i in
-             get_mors_with_properties(service_instance,
-                                      vim.Datacenter,
-                                      property_list=['name'])
-            if i['name'] == datacenter_name]
+    items = get_datacenters(service_instance,
+                            datacenter_names=[datacenter_name])
     if not items:
         raise salt.exceptions.VMwareObjectRetrievalError(
             'Datacenter \'{0}\' was not found'.format(datacenter_name))
@@ -1030,6 +1112,68 @@ def list_datastores(service_instance):
         The Service Instance Object from which to obtain datastores.
     '''
     return list_objects(service_instance, vim.Datastore)
+
+
+def get_hosts(service_instance, datacenter_name=None, host_names=None,
+              cluster_name=None, get_all_hosts=False):
+    '''
+    Returns a list of vim.HostSystem objects representing ESXi hosts
+    in a vcenter filtered by their names and/or datacenter, cluster membership.
+
+    service_instance
+        The Service Instance Object from which to obtain the hosts.
+
+    datacenter_name
+        The datacenter name. Default is None.
+
+    host_names
+        The host_names to be retrieved. Default is None.
+
+    cluster_name
+        The cluster name - used to restrict the hosts retrieved. Only used if
+        the datacenter is set.  This argument is optional.
+
+    get_all_hosts
+        Specifies whether to retrieve all hosts in the container.
+        Default value is False.
+    '''
+    properties = ['name']
+    if not host_names:
+        host_names = []
+    if cluster_name:
+        properties.append('parent')
+    if datacenter_name:
+        start_point = get_datacenter(service_instance, datacenter_name)
+        if cluster_name:
+            # Retrieval to test if cluster exists. Cluster existence only makes
+            # sense if the cluster has been specified
+            cluster = get_cluster(start_point, cluster_name)
+    else:
+        # Assume the root folder is the starting point
+        start_point = get_root_folder(service_instance)
+
+    # Search for the objects
+    hosts = get_mors_with_properties(service_instance,
+                                     vim.HostSystem,
+                                     container_ref=start_point,
+                                     property_list=properties)
+    filtered_hosts = []
+    for h in hosts:
+        # Complex conditions checking if a host should be added to the
+        # filtered list (either due to its name and/or cluster membership)
+        name_condition = get_all_hosts or (h['name'] in host_names)
+        # the datacenter_name needs to be set in order for the cluster
+        # condition membership to be checked, otherwise the condition is
+        # ignored
+        cluster_condition = \
+                (not datacenter_name or not cluster_name or
+                 (isinstance(h['parent'], vim.ClusterComputeResource) and
+                  h['parent'].name == cluster_name))
+
+        if name_condition and cluster_condition:
+            filtered_hosts.append(h['object'])
+
+    return filtered_hosts
 
 
 def list_hosts(service_instance):
@@ -1177,3 +1321,9 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='de
             raise salt.exceptions.VMwareApiError(exc.msg)
         except vmodl.fault.SystemError as exc:
             raise salt.exceptions.VMwareSystemError(exc.msg)
+        except vmodl.fault.InvalidArgument as exc:
+            exc_message = exc.msg
+            if exc.faultMessage:
+                exc_message = '{0} ({1})'.format(exc_message,
+                                                 exc.faultMessage[0].message)
+            raise salt.exceptions.VMwareApiError(exc_message)

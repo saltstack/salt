@@ -2,8 +2,9 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import os
 import sys
+sys.modules['pkg_resources'] = None
+import os
 
 # Import Salt libs
 from salt.ext.six import string_types
@@ -51,7 +52,15 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             return
 
         if self.options.batch or self.options.static:
+            # _run_batch() will handle all output and
+            # exit with the appropriate error condition
+            # Execution will not continue past this point
+            # in batch mode.
             self._run_batch()
+            return
+
+        if self.options.preview_target:
+            self._preview_target()
             return
 
         if self.options.timeout <= 0:
@@ -75,9 +84,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         kwargs['delimiter'] = self.options.delimiter
 
         if self.selected_target_option:
-            kwargs['expr_form'] = self.selected_target_option
+            kwargs['tgt_type'] = self.selected_target_option
         else:
-            kwargs['expr_form'] = 'glob'
+            kwargs['tgt_type'] = 'glob'
 
         if getattr(self.options, 'return'):
             kwargs['ret'] = getattr(self.options, 'return')
@@ -131,7 +140,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         try:
             if self.options.subset:
                 cmd_func = self.local_client.cmd_subset
-                kwargs['sub'] = True
+                kwargs['sub'] = self.options.subset
                 kwargs['cli'] = True
             else:
                 cmd_func = self.local_client.cmd_cli
@@ -189,6 +198,13 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             ret = str(exc)
             self._output_ret(ret, '')
 
+    def _preview_target(self):
+        '''
+        Return a list of minions from a given target
+        '''
+        minion_list = self.local_client.gather_minions(self.config['tgt'], self.selected_target_option or 'glob')
+        self._output_ret(minion_list, self.config.get('output', 'nested'))
+
     def _run_batch(self):
         import salt.cli.batch
         eauth = {}
@@ -239,10 +255,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 # We will print errors to the console further down the stack
                 sys.exit(1)
             # Printing the output is already taken care of in run() itself
+            retcode = 0
             for res in batch.run():
-                if self.options.failhard:
-                    for ret in six.itervalues(res):
-                        retcode = self._get_retcode(ret)
+                for ret in six.itervalues(res):
+                    job_retcode = salt.utils.job.get_retcode(ret)
+                    if job_retcode > retcode:
+                        # Exit with the highest retcode we find
+                        retcode = job_retcode
+                    if self.options.failhard:
                         if retcode != 0:
                             sys.stderr.write(
                                 '{0}\nERROR: Minions returned with non-zero exit code.\n'.format(
@@ -250,6 +270,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                                 )
                             )
                             sys.exit(retcode)
+            sys.exit(retcode)
 
     def _print_errors_summary(self, errors):
         if errors:
@@ -381,7 +402,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         if isinstance(ret, str):
             self.exit(2, '{0}\n'.format(ret))
         for host in ret:
-            if isinstance(ret[host], string_types) and ret[host].startswith("Minion did not return"):
+            if isinstance(ret[host], string_types) \
+                    and (ret[host].startswith("Minion did not return")
+                         or ret[host] == 'VALUE TRIMMED'):
                 continue
             for fun in ret[host]:
                 if fun not in docs and ret[host][fun]:

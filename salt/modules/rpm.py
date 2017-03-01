@@ -575,7 +575,7 @@ def info(*packages, **attr):
             # Convert Unix ticks into ISO time format
             if key in ['build_date', 'install_date']:
                 try:
-                    pkg_data[key] = datetime.datetime.fromtimestamp(int(value)).isoformat() + "Z"
+                    pkg_data[key] = datetime.datetime.utcfromtimestamp(int(value)).isoformat() + "Z"
                 except ValueError:
                     log.warning('Could not convert "{0}" into Unix time'.format(value))
                 continue
@@ -601,6 +601,9 @@ def info(*packages, **attr):
     ret = dict()
     for pkg_data in reversed(sorted(_ret, cmp=lambda a_vrs, b_vrs: version_cmp(a_vrs['edition'], b_vrs['edition']))):
         pkg_name = pkg_data.pop('name')
+        # Filter out GPG public keys packages
+        if pkg_name.startswith('gpg-pubkey'):
+            continue
         if pkg_name not in ret:
             ret[pkg_name] = pkg_data.copy()
             del ret[pkg_name]['edition']

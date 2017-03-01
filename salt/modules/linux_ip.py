@@ -19,6 +19,8 @@ def __virtual__():
         return (False, 'Module linux_ip: RedHat systems are not supported.')
     if __grains__['os_family'] == 'Debian':
         return (False, 'Module linux_ip: Debian systems are not supported.')
+    if __grains__['os_family'] == 'NILinuxRT':
+        return (False, 'Module linux_ip: NILinuxRT systems are not supported.')
     if not salt.utils.which('ip'):
         return (False, 'The linux_ip execution module cannot be loaded: '
                 'the ip binary is not in the path.')

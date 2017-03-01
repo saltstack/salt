@@ -13,7 +13,7 @@ Manage the SNMP configuration on network devices.
 Dependencies
 ------------
 
-- :doc:`napalm snmp management module (salt.modules.napalm_snmp) </ref/modules/all/salt.modules.napalm_snmp>`
+- :mod:`napalm snmp management module (salt.modules.napalm_snmp) <salt.modules.napalm_snmp>`
 
 .. versionadded: 2016.11.0
 '''
@@ -27,10 +27,14 @@ from json import loads, dumps
 
 # salt lib
 from salt.ext import six
+# import NAPALM utils
+import salt.utils.napalm
 
 # ----------------------------------------------------------------------------------------------------------------------
 # state properties
 # ----------------------------------------------------------------------------------------------------------------------
+
+__virtualname__ = 'netsnmp'
 
 _COMMUNITY_MODE_MAP = {
     'read-only': 'ro',
@@ -49,7 +53,10 @@ _COMMUNITY_MODE_MAP = {
 
 
 def __virtual__():
-    return 'netsnmp'
+    '''
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
+    '''
+    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
