@@ -38,12 +38,11 @@ try:
 except ImportError:
     HAS_GRP = False
 
-IS_WINDOWS = salt.utils.is_windows()
-
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
+IS_WINDOWS = salt.utils.is_windows()
 GIT_PYTHON = '0.3.2'
 HAS_GIT_PYTHON = False
 
@@ -144,11 +143,11 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         tgt = os.path.join(integration.TMP, 'target')
 
         # Windows must have a source directory to link to
-        if salt.utils.is_windows() and not os.path.isdir(tgt):
+        if IS_WINDOWS and not os.path.isdir(tgt):
             os.mkdir(tgt)
 
         # Windows cannot create a symlink if it already exists
-        if salt.utils.is_windows() and self.run_function('file.is_link', [name]):
+        if IS_WINDOWS and self.run_function('file.is_link', [name]):
             self.run_function('file.remove', [name])
 
         ret = self.run_state('file.symlink', name=name, target=tgt)
@@ -194,7 +193,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         tgt = '{0}.tgt'.format(name)
 
         # Windows must have a source directory to link to
-        if salt.utils.is_windows() and not os.path.isdir(tgt):
+        if IS_WINDOWS and not os.path.isdir(tgt):
             os.mkdir(tgt)
 
         if not self.run_function('file.is_link', [name]):
@@ -556,7 +555,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             for typ in managed_files:
                 os.remove(managed_files[typ])
 
-    @skipIf(salt.utils.is_windows(), 'Windows does not support "mode" kwarg. Skipping.')
+    @skip_if_not_root
+    @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
     def test_managed_check_cmd(self):
         '''
         Test file.managed passing a basic check_cmd kwarg. See Issue #38111.
@@ -715,7 +715,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             pass
 
         exclude_pat = 'E@^straydir(|/keepfile)$'
-        if salt.utils.is_windows():
+        if IS_WINDOWS:
             exclude_pat = 'E@^straydir(|\\\\keepfile)$'
 
         ret = self.run_state('file.directory',
@@ -756,7 +756,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             pass
 
         exclude_pat = 'E@^straydir(|/keepfile)$'
-        if salt.utils.is_windows():
+        if IS_WINDOWS:
             exclude_pat = 'E@^straydir(|\\\\keepfile)$'
 
         ret = self.run_state('file.directory',
