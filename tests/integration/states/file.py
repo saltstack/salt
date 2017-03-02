@@ -9,14 +9,21 @@ from __future__ import absolute_import
 from distutils.version import LooseVersion
 import errno
 import glob
+import logging
 import os
 import re
 import sys
 import shutil
+import socket
 import stat
 import tempfile
 import textwrap
+import threading
+import tornado.ioloop
+import tornado.web
 import filecmp
+
+log = logging.getLogger(__name__)
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -2391,6 +2398,104 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             check_file = self.run_function('file.file_exists', [file])
             if check_file:
                 self.run_function('file.remove', [file])
+
+
+PORT = 9999
+FILE_SOURCE = 'http://localhost:{0}/grail/scene33'.format(PORT)
+FILE_HASH = 'd2feb3beb323c79fc7a0f44f1408b4a3'
+STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
+
+
+class RemoteFileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+    '''
+    Uses a local tornado webserver to test http(s) file.managed states with and
+    without skip_verify
+    '''
+    @classmethod
+    def webserver(cls):
+        '''
+        method to start tornado static web app
+        '''
+        application = tornado.web.Application([
+            (r'/(.*)', tornado.web.StaticFileHandler, {'path': STATE_DIR})
+        ])
+        application.listen(PORT)
+        tornado.ioloop.IOLoop.instance().start()
+
+    @classmethod
+    def setUpClass(cls):
+        '''
+        start tornado app on thread and wait until it is running
+        '''
+        cls.server_thread = threading.Thread(target=cls.webserver)
+        cls.server_thread.daemon = True
+        cls.server_thread.start()
+        # check if tornado app is up
+        port_closed = True
+        while port_closed:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            result = sock.connect_ex(('127.0.0.1', PORT))
+            if result == 0:
+                port_closed = False
+
+    @classmethod
+    def tearDownClass(cls):
+        tornado.ioloop.IOLoop.instance().stop()
+        cls.server_thread.join()
+
+    def setUp(self):
+        fd_, self.name = tempfile.mkstemp(dir=integration.TMP)
+        try:
+            os.close(fd_)
+        except OSError as exc:
+            if exc.errno != errno.EBADF:
+                raise exc
+        # Remove the file that mkstemp just created so that the states can test
+        # creating a new file instead of a diff from a zero-length file.
+        self.tearDown()
+
+    def tearDown(self):
+        try:
+            os.remove(self.name)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                raise exc
+
+    def test_file_managed_http_source_no_hash(self):
+        '''
+        Test a remote file with no hash
+        '''
+        ret = self.run_state('file.managed',
+                             name=self.name,
+                             source=FILE_SOURCE,
+                             skip_verify=False)
+        log.debug('ret = %s', ret)
+        # This should fail because no hash was provided
+        self.assertSaltFalseReturn(ret)
+
+    def test_file_managed_http_source(self):
+        '''
+        Test a remote file with no hash
+        '''
+        ret = self.run_state('file.managed',
+                             name=self.name,
+                             source=FILE_SOURCE,
+                             source_hash=FILE_HASH,
+                             skip_verify=False)
+        log.debug('ret = %s', ret)
+        self.assertSaltTrueReturn(ret)
+
+    def test_file_managed_http_source_skip_verify(self):
+        '''
+        Test a remote file using skip_verify
+        '''
+        ret = self.run_state('file.managed',
+                             name=self.name,
+                             source=FILE_SOURCE,
+                             skip_verify=True)
+        log.debug('ret = %s', ret)
+        self.assertSaltTrueReturn(ret)
+
 
 if __name__ == '__main__':
     from integration import run_tests

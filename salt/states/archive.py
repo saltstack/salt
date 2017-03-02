@@ -897,17 +897,6 @@ def extracted(name,
                 ret['comment'] = '\n'.join([str(x) for x in file_result])
             return ret
 
-        # Get actual state result. The state.single return is a single-element
-        # dictionary with the state's unique ID at the top level, and its value
-        # being the state's return dictionary. next(iter(dict_name)) will give
-        # us the value of the first key, so
-        # file_result[next(iter(file_result))] will give us the results of the
-        # state.single we just ran.
-        try:
-            file_result = file_result[next(iter(file_result))]
-        except AttributeError:
-            pass
-
         try:
             if not file_result['result']:
                 log.debug('failed to download {0}'.format(source_match))
