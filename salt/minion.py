@@ -11,6 +11,7 @@ import copy
 import time
 import types
 import signal
+import random
 import fnmatch
 import logging
 import threading
@@ -967,6 +968,14 @@ class Minion(MinionBase):
             self.opts['grains'] = salt.loader.grains(opts)
 
         log.info('Creating minion process manager')
+
+        if self.opts['random_startup_delay']:
+            sleep_time = random.randint(0, self.opts['random_startup_delay'])
+            log.info('Minion sleeping for {0} seconds due to configured '
+                    'startup_delay between 0 and {1} seconds'.format(sleep_time,
+                        self.opts['random_startup_delay']))
+            time.sleep(sleep_time)
+
         self.process_manager = ProcessManager(name='MinionProcessManager')
         self.io_loop.spawn_callback(self.process_manager.run, async=True)
         # We don't have the proxy setup yet, so we can't start engines
