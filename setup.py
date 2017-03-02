@@ -832,6 +832,8 @@ class SaltDistribution(distutils.dist.Distribution):
         # Salt's Paths Configuration Settings
         ('salt-root-dir=', None,
          'Salt\'s pre-configured root directory'),
+        ('salt-share-dir=', None,
+         'Salt\'s pre-configured share directory'),
         ('salt-config-dir=', None,
          'Salt\'s pre-configured configuration directory'),
         ('salt-cache-dir=', None,
