@@ -21,10 +21,7 @@ import filecmp
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import (
-    destructiveTest,
-    with_system_user_and_group
-)
+from tests.support.helpers import with_system_user_and_group
 
 # Import salt libs
 import salt.utils
@@ -348,7 +345,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
     def test_managed_file_with_grains_data(self):
         '''
         Test to ensure we can render grains data into a managed
@@ -366,7 +362,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         self.assertTrue(re.match('^minion$', file_contents[0]))
 
-    @destructiveTest
     def test_managed_file_with_pillar_sls(self):
         '''
         Test to ensure pillar data in sls file
@@ -381,7 +376,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         check_file = self.run_function('file.file_exists', [FILEPILLAR])
         self.assertTrue(check_file)
 
-    @destructiveTest
     def test_managed_file_with_pillardefault_sls(self):
         '''
         Test to ensure when pillar data is not available
@@ -398,7 +392,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertTrue(check_file)
 
     @skipIf(not HAS_GIT_PYTHON, "GitFS could not be loaded. Skipping test")
-    @destructiveTest
     def test_managed_file_with_gitpillar_sls(self):
         '''
         Test to ensure git pillar data in sls
@@ -574,27 +567,28 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             for typ in managed_files:
                 os.remove(managed_files[typ])
 
-    @destructiveTest
     @skipIf(salt.utils.is_windows(), 'Windows does not support "mode" kwarg. Skipping.')
     def test_managed_check_cmd(self):
         '''
         Test file.managed passing a basic check_cmd kwarg. See Issue #38111.
         '''
-        ret = self.run_state(
-            'file.managed',
-            name='/tmp/sudoers',
-            user='root',
-            group='root',
-            mode=440,
-            check_cmd='visudo -c -s -f'
-        )
-        self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('Empty file', ret)
-        self.assertEqual(ret['file_|-/tmp/sudoers_|-/tmp/sudoers_|-managed']['changes'],
-                         {'new': 'file /tmp/sudoers created', 'mode': '0440'})
-
-        # Clean Up File
-        os.remove('/tmp/sudoers')
+        try:
+            ret = self.run_state(
+                'file.managed',
+                name='/tmp/sudoers',
+                user='root',
+                group='root',
+                mode=440,
+                check_cmd='visudo -c -s -f'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment('Empty file', ret)
+            self.assertEqual(ret['file_|-/tmp/sudoers_|-/tmp/sudoers_|-managed']['changes'],
+                             {'new': 'file /tmp/sudoers created', 'mode': '0440'})
+        finally:
+            # Clean Up File
+            if os.path.exists('/tmp/sudoers'):
+                os.remove('/tmp/sudoers')
 
     def test_directory(self):
         '''
@@ -2237,7 +2231,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 os.unlink(test_file)
                 os.unlink(template_path)
 
-    @destructiveTest
     @skipIf(not IS_ADMIN, 'you must be root to run this test')
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
@@ -2285,7 +2278,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(tmp_dir):
                 shutil.rmtree(tmp_dir)
 
-    @destructiveTest
     @skipIf(not IS_ADMIN, 'you must be root to run this test')
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
@@ -2414,7 +2406,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         os.remove(source)
         os.remove(dest)
 
-    @destructiveTest
     def test_contents_pillar_with_pillar_list(self):
         '''
         This tests for any regressions for this issue:
