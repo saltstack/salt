@@ -20,10 +20,7 @@ def sdb_get(uri, opts, utils=None):
     Get a value from a db, using a uri in the form of ``sdb://<profile>/<key>``. If
     the uri provided does not start with ``sdb://``, then it will be returned as-is.
     '''
-    if not isinstance(uri, string_types):
-        return uri
-
-    if not uri.startswith('sdb://'):
+    if not isinstance(uri, string_types) or not uri.startswith('sdb://'):
         return uri
 
     if utils is None:
@@ -54,10 +51,7 @@ def sdb_set(uri, value, opts, utils=None):
     If the uri provided does not start with ``sdb://`` or the value is not
     successfully set, return ``False``.
     '''
-    if not isinstance(uri, string_types):
-        return False
-
-    if not uri.startswith('sdb://'):
+    if not isinstance(uri, string_types) or not uri.startswith('sdb://'):
         return False
 
     if utils is None:
@@ -88,10 +82,7 @@ def sdb_delete(uri, opts, utils=None):
     the uri provided does not start with ``sdb://`` or the value is not successfully
     deleted, return ``False``.
     '''
-    if not isinstance(uri, string_types):
-        return False
-
-    if not uri.startswith('sdb://'):
+    if not isinstance(uri, string_types) or not uri.startswith('sdb://'):
         return False
 
     if utils is None:
@@ -126,10 +117,7 @@ def sdb_get_or_set_hash(uri,
     random string and store it.  This can be used for storing secrets in a
     centralized place.
     '''
-    if not isinstance(uri, string_types):
-        return False
-
-    if not uri.startswith('sdb://'):
+    if not isinstance(uri, string_types) or not uri.startswith('sdb://'):
         return False
 
     if utils is None:
