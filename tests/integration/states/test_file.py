@@ -21,7 +21,7 @@ import filecmp
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import with_system_user_and_group
+from tests.support.helpers import skip_if_not_root, with_system_user_and_group
 
 # Import salt libs
 import salt.utils
@@ -38,18 +38,7 @@ try:
 except ImportError:
     HAS_GRP = False
 
-IS_ADMIN = False
-IS_WINDOWS = False
-if salt.utils.is_windows():
-    IS_WINDOWS = True
-    import salt.utils.win_functions
-    current_user = salt.utils.win_functions.get_current_user()
-    if current_user == 'SYSTEM':
-        IS_ADMIN = True
-    else:
-        IS_ADMIN = salt.utils.win_functions.is_admin(current_user)
-else:
-    IS_ADMIN = os.geteuid() == 0
+IS_WINDOWS = salt.utils.is_windows()
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -406,7 +395,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         check_file = self.run_function('file.file_exists', [FILEPILLARGIT])
         self.assertTrue(check_file)
 
-    @skipIf(not IS_ADMIN, 'you must be root to run this test')
+    @skip_if_not_root
     def test_managed_dir_mode(self):
         '''
         Tests to ensure that file.managed creates directories with the
@@ -2231,7 +2220,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 os.unlink(test_file)
                 os.unlink(template_path)
 
-    @skipIf(not IS_ADMIN, 'you must be root to run this test')
+    @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
@@ -2278,7 +2267,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(tmp_dir):
                 shutil.rmtree(tmp_dir)
 
-    @skipIf(not IS_ADMIN, 'you must be root to run this test')
+    @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
