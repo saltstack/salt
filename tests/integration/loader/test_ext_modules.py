@@ -11,18 +11,29 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import os
+import time
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../')
-
-# Import salt libs
-import integration
+import tests.integration as integration
 
 
 class LoaderOverridesTest(integration.ModuleCase):
 
     def test_overridden_internal(self):
+        # To avoid a race condition on Windows, we need to make sure the
+        # `override_test.py` file is present in the _modules directory before
+        # trying to list all functions. This test may execute before the
+        # minion has finished syncing down the files it needs.
+        module = os.path.join(integration.TMP, 'rootdir', 'cache', 'files',
+                              'base', '_modules', 'override_test.py')
+        tries = 0
+        while not os.path.exists(module):
+            tries += 1
+            if tries > 60:
+                break
+            time.sleep(1)
+
         funcs = self.run_function('sys.list_functions')
 
         # We placed a test module under _modules.
@@ -40,8 +51,3 @@ class LoaderOverridesTest(integration.ModuleCase):
             self.run_function('test.echo', arg=[text])[::-1],
             self.run_function('test.recho', arg=[text]),
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LoaderOverridesTest)

@@ -14,11 +14,10 @@ import subprocess
 import tempfile
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
-import integration
 import salt.utils
 
 
@@ -603,8 +602,3 @@ class LocalRepoGitTest(integration.ModuleCase, integration.SaltReturnAssertsMixI
             all([x in string.hexdigits for x in
                  ret[next(iter(ret))]['changes']['revision']['new']])
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GitTest)

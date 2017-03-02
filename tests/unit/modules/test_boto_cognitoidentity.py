@@ -8,11 +8,8 @@ import random
 import string
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 # Import Salt libs
 import salt.config
@@ -20,7 +17,7 @@ import salt.loader
 from salt.modules import boto_cognitoidentity
 
 # Import Mock libraries
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import 3rd-party libs
 
@@ -516,7 +513,3 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityTestCaseBase, BotoCognitoId
         result = boto_cognitoidentity.update_identity_pool(IdentityPoolId=second_pool_id, DeveloperProviderName='added_developer_provider', **conn_parameters)
         self.assertIs(result.get('updated'), False)
         self.assertEqual(result.get('error', {}).get('message'), error_message.format('update_identity_pool'))
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoCognitoIdentityTestCase, needs_daemon=False)

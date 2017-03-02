@@ -4,10 +4,8 @@
 from __future__ import absolute_import
 
 # Import salt testing libs
-from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
 
 # Import salt libs
 from salt.utils.odict import OrderedDict

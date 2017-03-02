@@ -1279,7 +1279,7 @@ def route_table_absent(name, region=None,
 
 
 def nat_gateway_present(name, subnet_name=None, subnet_id=None,
-                        region=None, key=None, keyid=None, profile=None):
+                        region=None, key=None, keyid=None, profile=None, allocation_id=None):
     '''
     Ensure a nat gateway exists within the specified subnet
 
@@ -1303,6 +1303,10 @@ def nat_gateway_present(name, subnet_name=None, subnet_id=None,
     subnet_id
         Id of the subnet within which the nat gateway should exist.
         Either subnet_name or subnet_id must be provided.
+
+    allocation_id
+        If specified, the elastic IP address referenced by the ID is
+        associated with the gateway. Otherwise, a new allocation_id is created and used.
 
     region
         Region to connect to.
@@ -1337,7 +1341,8 @@ def nat_gateway_present(name, subnet_name=None, subnet_id=None,
         r = __salt__['boto_vpc.create_nat_gateway'](subnet_name=subnet_name,
                                                     subnet_id=subnet_id,
                                                     region=region, key=key,
-                                                    keyid=keyid, profile=profile)
+                                                    keyid=keyid, profile=profile,
+                                                    allocation_id=allocation_id)
         if not r.get('created'):
             ret['result'] = False
             ret['comment'] = 'Failed to create nat gateway: {0}.'.format(r['error']['message'])

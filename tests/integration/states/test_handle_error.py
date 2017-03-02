@@ -7,11 +7,7 @@ tests for host state
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+import tests.integration as integration
 
 
 class HandleErrorTest(integration.ModuleCase):
@@ -29,8 +25,3 @@ class HandleErrorTest(integration.ModuleCase):
         self.assertTrue(
             'An exception occurred in this state: Traceback'
             in ret[[a for a in ret][0]]['comment'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HandleErrorTest)

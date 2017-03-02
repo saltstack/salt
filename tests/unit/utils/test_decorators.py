@@ -8,13 +8,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
+from tests.support.unit import TestCase
 from salt.utils import decorators
 from salt.version import SaltStackVersion
 from salt.exceptions import CommandExecutionError
-
-ensure_in_syspath('../../')
 
 
 class DummyLogger(object):
@@ -225,8 +222,3 @@ class DecoratorsTest(TestCase):
                           'an alias "old_function" is configured as its deprecated version. '
                           'The lifetime of the function "old_function" expired. '
                           'Please use its successor "new_function" instead.'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DecoratorsTest, needs_daemon=False)

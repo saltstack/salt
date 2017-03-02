@@ -9,13 +9,11 @@ import os
 import shutil
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
-ensure_in_syspath('../../')
-
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
-import integration
 import salt.utils
 import salt.utils.http
 
@@ -239,8 +237,3 @@ class SSHModuleTest(integration.ModuleCase):
                     exc, ret
                 )
             )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SSHModuleTest)

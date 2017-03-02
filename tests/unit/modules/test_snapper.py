@@ -11,17 +11,14 @@ from __future__ import absolute_import
 import sys
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch,
     mock_open,
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.ext.six as six
@@ -396,8 +393,3 @@ class SnapperTestCase(TestCase):
                 "/tmp/foo3": MODULE_RET['DIFF']["/tmp/foo3"],
             }
             self.assertEqual(snapper.diff(), module_ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SnapperTestCase, needs_daemon=False)
