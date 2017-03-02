@@ -786,6 +786,12 @@ VALID_OPTS = {
     # The logfile location for salt-key
     'key_logfile': str,
 
+    # The upper bound for the random number of seconds that a minion should
+    # delay when starting in up before it connects to a master. This can be
+    # used to mitigate a thundering-herd scenario when many minions start up
+    # at once and attempt to all connect immediately to the master
+    'random_startup_delay': int,
+
     # The source location for the winrepo sls files
     # (used by win_pkg.py, minion only)
     'winrepo_source_dir': str,
@@ -1064,6 +1070,7 @@ DEFAULT_MINION_OPTS = {
     'renderer': 'yaml_jinja',
     'renderer_whitelist': [],
     'renderer_blacklist': [],
+    'random_startup_delay': 0,
     'failhard': False,
     'autoload_dynamic_modules': True,
     'environment': None,
