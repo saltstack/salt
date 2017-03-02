@@ -2625,12 +2625,18 @@ def is_bin_file(path):
     a bin, False if the file is not and None if the file is not available.
     '''
     if not os.path.isfile(path):
-        return None
+        return False
     try:
-        with fopen(path, 'r') as fp_:
-            return is_bin_str(fp_.read(2048))
+        with fopen(path, 'rb') as fp_:
+            try:
+                data = fp_.read(2048)
+                if six.PY3:
+                    data = data.decode(__salt_system_encoding__)
+                return is_bin_str(data)
+            except UnicodeDecodeError:
+                return True
     except os.error:
-        return None
+        return False
 
 
 def is_bin_str(data):
@@ -3032,10 +3038,10 @@ def to_unicode(s, encoding=None):
     '''
     Given str or unicode, return unicode (str for python 3)
     '''
-    if not isinstance(s, (bytes, six.string_types)):
+    if not isinstance(s, (bytes, bytearray, six.string_types)):
         return s
     if six.PY3:
-        if isinstance(s, bytes):
+        if isinstance(s, (bytes, bytearray)):
             return to_str(s, encoding)
     else:
         if isinstance(s, str):

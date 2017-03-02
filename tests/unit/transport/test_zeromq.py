@@ -26,13 +26,10 @@ import salt.transport.server
 import salt.transport.client
 import salt.exceptions
 
-
-# Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-
 # Import test support libs
 import tests.integration as integration
 from tests.support.helpers import flaky
+from tests.support.unit import TestCase, skipIf
 from tests.unit.transport.test_req import ReqChannelMixin
 from tests.unit.transport.test_pub import PubChannelMixin
 

@@ -21,10 +21,7 @@ import filecmp
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import (
-    destructiveTest,
-    with_system_user_and_group
-)
+from tests.support.helpers import skip_if_not_root, with_system_user_and_group
 
 # Import salt libs
 import salt.utils
@@ -41,23 +38,11 @@ try:
 except ImportError:
     HAS_GRP = False
 
-IS_ADMIN = False
-IS_WINDOWS = False
-if salt.utils.is_windows():
-    IS_WINDOWS = True
-    import salt.utils.win_functions
-    current_user = salt.utils.win_functions.get_current_user()
-    if current_user == 'SYSTEM':
-        IS_ADMIN = True
-    else:
-        IS_ADMIN = salt.utils.win_functions.is_admin(current_user)
-else:
-    IS_ADMIN = os.geteuid() == 0
-
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
+IS_WINDOWS = salt.utils.is_windows()
 GIT_PYTHON = '0.3.2'
 HAS_GIT_PYTHON = False
 
@@ -158,11 +143,11 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         tgt = os.path.join(integration.TMP, 'target')
 
         # Windows must have a source directory to link to
-        if salt.utils.is_windows() and not os.path.isdir(tgt):
+        if IS_WINDOWS and not os.path.isdir(tgt):
             os.mkdir(tgt)
 
         # Windows cannot create a symlink if it already exists
-        if salt.utils.is_windows() and self.run_function('file.is_link', [name]):
+        if IS_WINDOWS and self.run_function('file.is_link', [name]):
             self.run_function('file.remove', [name])
 
         ret = self.run_state('file.symlink', name=name, target=tgt)
@@ -208,7 +193,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         tgt = '{0}.tgt'.format(name)
 
         # Windows must have a source directory to link to
-        if salt.utils.is_windows() and not os.path.isdir(tgt):
+        if IS_WINDOWS and not os.path.isdir(tgt):
             os.mkdir(tgt)
 
         if not self.run_function('file.is_link', [name]):
@@ -348,7 +333,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
     def test_managed_file_with_grains_data(self):
         '''
         Test to ensure we can render grains data into a managed
@@ -366,7 +350,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         self.assertTrue(re.match('^minion$', file_contents[0]))
 
-    @destructiveTest
     def test_managed_file_with_pillar_sls(self):
         '''
         Test to ensure pillar data in sls file
@@ -381,7 +364,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         check_file = self.run_function('file.file_exists', [FILEPILLAR])
         self.assertTrue(check_file)
 
-    @destructiveTest
     def test_managed_file_with_pillardefault_sls(self):
         '''
         Test to ensure when pillar data is not available
@@ -398,7 +380,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertTrue(check_file)
 
     @skipIf(not HAS_GIT_PYTHON, "GitFS could not be loaded. Skipping test")
-    @destructiveTest
     def test_managed_file_with_gitpillar_sls(self):
         '''
         Test to ensure git pillar data in sls
@@ -413,7 +394,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         check_file = self.run_function('file.file_exists', [FILEPILLARGIT])
         self.assertTrue(check_file)
 
-    @skipIf(not IS_ADMIN, 'you must be root to run this test')
+    @skip_if_not_root
     def test_managed_dir_mode(self):
         '''
         Tests to ensure that file.managed creates directories with the
@@ -574,27 +555,29 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             for typ in managed_files:
                 os.remove(managed_files[typ])
 
-    @destructiveTest
-    @skipIf(salt.utils.is_windows(), 'Windows does not support "mode" kwarg. Skipping.')
+    @skip_if_not_root
+    @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
     def test_managed_check_cmd(self):
         '''
         Test file.managed passing a basic check_cmd kwarg. See Issue #38111.
         '''
-        ret = self.run_state(
-            'file.managed',
-            name='/tmp/sudoers',
-            user='root',
-            group='root',
-            mode=440,
-            check_cmd='visudo -c -s -f'
-        )
-        self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('Empty file', ret)
-        self.assertEqual(ret['file_|-/tmp/sudoers_|-/tmp/sudoers_|-managed']['changes'],
-                         {'new': 'file /tmp/sudoers created', 'mode': '0440'})
-
-        # Clean Up File
-        os.remove('/tmp/sudoers')
+        try:
+            ret = self.run_state(
+                'file.managed',
+                name='/tmp/sudoers',
+                user='root',
+                group='root',
+                mode=440,
+                check_cmd='visudo -c -s -f'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment('Empty file', ret)
+            self.assertEqual(ret['file_|-/tmp/sudoers_|-/tmp/sudoers_|-managed']['changes'],
+                             {'new': 'file /tmp/sudoers created', 'mode': '0440'})
+        finally:
+            # Clean Up File
+            if os.path.exists('/tmp/sudoers'):
+                os.remove('/tmp/sudoers')
 
     def test_directory(self):
         '''
@@ -732,7 +715,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             pass
 
         exclude_pat = 'E@^straydir(|/keepfile)$'
-        if salt.utils.is_windows():
+        if IS_WINDOWS:
             exclude_pat = 'E@^straydir(|\\\\keepfile)$'
 
         ret = self.run_state('file.directory',
@@ -773,7 +756,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             pass
 
         exclude_pat = 'E@^straydir(|/keepfile)$'
-        if salt.utils.is_windows():
+        if IS_WINDOWS:
             exclude_pat = 'E@^straydir(|\\\\keepfile)$'
 
         ret = self.run_state('file.directory',
@@ -2237,8 +2220,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 os.unlink(test_file)
                 os.unlink(template_path)
 
-    @destructiveTest
-    @skipIf(not IS_ADMIN, 'you must be root to run this test')
+    @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
@@ -2285,8 +2267,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(tmp_dir):
                 shutil.rmtree(tmp_dir)
 
-    @destructiveTest
-    @skipIf(not IS_ADMIN, 'you must be root to run this test')
+    @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
@@ -2414,7 +2395,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         os.remove(source)
         os.remove(dest)
 
-    @destructiveTest
     def test_contents_pillar_with_pillar_list(self):
         '''
         This tests for any regressions for this issue:

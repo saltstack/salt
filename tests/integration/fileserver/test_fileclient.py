@@ -9,22 +9,22 @@ import logging
 import os
 import shutil
 
-log = logging.getLogger(__name__)
-
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils
 from salt import fileclient
 import salt.ext.six as six
 
+log = logging.getLogger(__name__)
+
 SALTENVS = ('base', 'dev')
-FS_ROOT = os.path.join(integration.TMP, 'fileclient_fs_root')
-CACHE_ROOT = os.path.join(integration.TMP, 'fileclient_cache_root')
+FS_ROOT = os.path.join(TMP, 'fileclient_fs_root')
+CACHE_ROOT = os.path.join(TMP, 'fileclient_cache_root')
 SUBDIR = 'subdir'
 SUBDIR_FILES = ('foo.txt', 'bar.txt', 'baz.txt')
 
@@ -72,7 +72,6 @@ class FileClientTest(integration.ModuleCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@destructiveTest
 class FileclientCacheTest(integration.ModuleCase):
     '''
     Tests for the fileclient caching. The LocalClient is the only thing we can
