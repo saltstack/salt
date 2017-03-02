@@ -56,7 +56,7 @@ def _worktrees_supported():
     Check if the git version is 2.5.0 or later
     '''
     try:
-        return _git_version() >= LooseVersion('2.5.0').encode()
+        return _git_version() >= LooseVersion('2.5.0')
     except AttributeError:
         return False
 
@@ -931,10 +931,16 @@ class GitModuleTest(integration.ModuleCase):
             worktree_add_prefix = 'Preparing '
         else:
             worktree_add_prefix = 'Enter '
+
         worktree_path = tempfile.mkdtemp(dir=integration.TMP)
         worktree_basename = os.path.basename(worktree_path)
         worktree_path2 = tempfile.mkdtemp(dir=integration.TMP)
-        worktree_basename2 = os.path.basename(worktree_path2)
+
+        # Even though this is Windows, git commands return a unix style path
+        if salt.utils.is_windows():
+            worktree_path = worktree_path.replace('\\', '/')
+            worktree_path = worktree_path.replace('\\', '/')
+
         # Add the worktrees
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path],
