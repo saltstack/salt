@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 Execution of Salt modules from within states
 ============================================
 
