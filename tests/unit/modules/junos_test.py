@@ -7,6 +7,7 @@ import unittest2 as unittest
 from nose.plugins.attrib import attr
 from mock import patch, MagicMock
 
+import lxml.etree as etree
 from jnpr.junos.utils.config import Config
 from jnpr.junos.utils.sw import SW
 from jnpr.junos.device import Device
@@ -40,27 +41,26 @@ class Test_Junos_Module(unittest.TestCase):
     def raise_exception_for_load(self, string=None, path=None, format=None):
         raise Exception('dummy exception')
 
-    def raise_exception_for_zeroize(self, str):
+    def raise_exception_one_arg(self, str=None):
         raise Exception('dummy exception')
 
     def raise_exception_for_install(self, path, progress):
         raise Exception('dummy exception')
 
-    '''
-    @patch('jnpr.junos.device._Connection.facts_refresh')
-    def test_facts_refresh_raise_exception(self, mock_jnpr_facts_refresh):
-        mock_jnpr_facts_refresh.side_effect = self.raise_exception
-        ret = dict()
-        ret['message'] = 'Execution failed due to "dummy exception"'
-        ret['out'] = False
-        self.assertEqual(junos.facts_refresh(), ret)
-    '''
+    def raise_exception_cli(self, command=None, format='text', warning=False):
+        raise Exception('dummy exception')
 
     def test_rpc_without_args(self):
         ret = dict()
         ret['message'] = 'Please provide the rpc to execute.'
         ret['out'] = False
         self.assertEqual(junos.rpc(), ret)
+
+    @patch('jnpr.junos.device.Device.execute')
+    def test_rpc(self, mock_exec):
+        self.dev = self.make_connect()
+        mock_exec.return_value = etree.fromstring('<root><a>test</a></root>')
+        junos.rpc('get-interface-information')
 
     def test_set_hostname_without_args(self):
         ret = dict()
@@ -198,10 +198,14 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('jnpr.junos.utils.config.Config.commit')
     def test_commit_with_single_argument(self, mock_commit, mock_commit_check):
         mock_commit_check.return_value = True
-        args = {'__pub_user': 'root', '__pub_arg': [{'sync': True}],
-                'sync': True, '__pub_fun': 'junos.commit', '__pub_jid':
-                    '20170221182531323467', '__pub_tgt': 'mac_min',
-                '__pub_tgt_type': 'glob', '__pub_ret': ''}
+        args = {'__pub_user': 'root',
+                '__pub_arg': [{'sync': True}],
+                'sync': True,
+                '__pub_fun': 'junos.commit',
+                '__pub_jid': '20170221182531323467',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
         junos.commit(**args)
         mock_commit.assert_called_with(detail=False, sync=True)
 
@@ -421,9 +425,6 @@ class Test_Junos_Module(unittest.TestCase):
         ret['out'] = False
         self.assertEqual(junos.ping(), ret)
 
-    def test_ping_with_host_ip_only(self):
-        print
-
     def test_cli_without_args(self):
         ret = dict()
         ret['message'] = 'Please provide the CLI command to be executed.'
@@ -438,6 +439,54 @@ class Test_Junos_Module(unittest.TestCase):
         ret['out'] = True
         junos.cli('show version')
         mock_cli.assert_called_with('show version', 'text', warning=False)
+
+    @patch('salt.modules.junos.jxmlease.parse')
+    @patch('salt.modules.junos.etree.tostring')
+    @patch('jnpr.junos.device.Device.cli')
+    def test_cli_format_xml(self, mock_cli, mock_to_string, mock_jxml):
+        mock_cli.return_value = '<root><a>test</a></root>'
+        mock_jxml.return_value = '<root><a>test</a></root>'
+        args = {'__pub_user': 'root',
+                '__pub_arg': [{'format': 'xml'}],
+                'format': 'xml',
+                '__pub_fun': 'junos.cli',
+                '__pub_jid': '20170221182531323467',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
+        ret = dict()
+        ret['message'] = '<root><a>test</a></root>'
+        ret['out'] = True
+        self.assertEqual(junos.cli('show version', **args), ret)
+        mock_cli.assert_called_with('show version', 'xml', warning=False)
+        mock_to_string.assert_called_once_with('<root><a>test</a></root>')
+        assert mock_jxml.called
+
+    @patch('jnpr.junos.device.Device.cli')
+    def test_cli_exception_in_cli(self, mock_cli):
+        mock_cli.side_effect = self.raise_exception_cli
+        ret = dict()
+        ret['message'] = 'Execution failed due to "dummy exception"'
+        ret['out'] = False
+        self.assertEqual(junos.cli('show version'), ret)
+
+    @patch('salt.modules.junos.fopen')
+    @patch('jnpr.junos.device.Device.cli')
+    def test_cli_write_output(self, mock_cli, mock_fopen):
+        mock_cli.return_vale = 'cli text output'
+        args = {'__pub_user': 'root',
+                '__pub_arg': [{'dest': 'copy/output/here'}],
+                'dest': 'copy/output/here',
+                '__pub_fun': 'junos.cli',
+                '__pub_jid': '20170221182531323467',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
+        ret = dict()
+        ret['message'] = 'cli text output'
+        ret['out'] = True
+        junos.cli('show version', **args)
+        mock_fopen.assert_called_with('copy/output/here', 'w')
 
     def test_shutdown_without_args(self):
         ret = dict()
@@ -992,7 +1041,7 @@ class Test_Junos_Module(unittest.TestCase):
 
     @patch('jnpr.junos.device.Device.cli')
     def test_zeroize_throw_exception(self, mock_cli):
-        mock_cli.side_effect = self.raise_exception_for_zeroize
+        mock_cli.side_effect = self.raise_exception_one_arg
         ret = dict()
         ret['message'] = 'Could not zeroize due to : "dummy exception"'
         ret['out'] = False
