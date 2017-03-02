@@ -600,6 +600,17 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         with TestDaemon(self):
             if self.options.name:
                 for name in self.options.name:
+                    if os.path.isfile(name):
+                        if not name.endswith('.py'):
+                            continue
+                        if name.startswith(os.path.join('tests', 'unit')):
+                            continue
+                        results = self.run_suite(os.path.dirname(name),
+                                                 name,
+                                                 suffix=os.path.basename(name),
+                                                 load_from_name=False)
+                        status.append(results)
+                        continue
                     if name.startswith('unit.'):
                         continue
                     results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
