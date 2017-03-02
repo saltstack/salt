@@ -311,6 +311,17 @@ class SaltTestingParser(optparse.OptionParser):
                 self.options.name.extend(lines)
             else:
                 self.options.name = lines
+        if self.args:
+            if not self.options.name:
+                self.options.name = []
+            for fpath in self.args:
+                if not os.path.isfile(fpath):
+                    continue
+                if not fpath.endswith('.py'):
+                    continue
+                if not os.path.basename(fpath).startswith('test_'):
+                    continue
+                self.options.name.append(fpath)
 
         print_header(u'', inline=True, width=self.options.output_columns)
         self.pre_execution_cleanup()
