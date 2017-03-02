@@ -392,7 +392,12 @@ def cloud(tgt, provider=None):
     opts = salt.config.cloud_config(
         os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
     )
+    if not opts.get('update_cachedir'):
+        return {}
+
     cloud_cache = __utils__['cloud.list_cache_nodes_full'](opts=opts, provider=provider)
+    if cloud_cache is None:
+        return {}
     for driver, providers in cloud_cache.items():
         for provider, servers in providers.items():
             for name, data in servers.items():
