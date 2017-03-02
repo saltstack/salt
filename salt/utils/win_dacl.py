@@ -1142,12 +1142,68 @@ def get_owner(obj_name):
 
         salt.utils.win_dacl.get_owner('c:\\file')
     '''
-    # Return owner
-    security_descriptor = win32security.GetFileSecurity(
-        obj_name, win32security.OWNER_SECURITY_INFORMATION)
-    owner_sid = security_descriptor.GetSecurityDescriptorOwner()
+    # Not all filesystems mountable within windows have SecurityDescriptors.
+    # For instance, some mounted SAMBA shares, or VirtualBox shared folders. If
+    # we can't load a file descriptor for the file, we default to "None"
+    # http://support.microsoft.com/kb/243330
+    try:
+        security_descriptor = win32security.GetFileSecurity(
+            obj_name, win32security.OWNER_SECURITY_INFORMATION)
+        owner_sid = security_descriptor.GetSecurityDescriptorOwner()
+
+    except MemoryError:
+        # Generic Memory Error (Windows Server 2003+)
+        owner_sid = 'S-1-1-0'
+
+    except pywintypes.error as exc:
+        # Incorrect function error (Windows Server 2008+)
+        if exc.winerror == 1 or exc.winerror == 50:
+            owner_sid = 'S-1-1-0'
+        else:
+            raise CommandExecutionError(
+                'Failed to set permissions: {0}'.format(exc[2]))
 
     return get_name(win32security.ConvertSidToStringSid(owner_sid))
+
+
+def get_primary_group(obj_name):
+    '''
+    Gets the primary group of the passed object
+
+    Args:
+        obj_name (str): The path for which to obtain primary group information
+
+    Returns:
+        str: The primary group for the object
+
+    Usage:
+
+    .. code-block:: python
+
+        salt.utils.win_dacl.get_primary_group('c:\\file')
+    '''
+    # Not all filesystems mountable within windows have SecurityDescriptors.
+    # For instance, some mounted SAMBA shares, or VirtualBox shared folders. If
+    # we can't load a file descriptor for the file, we default to "Everyone"
+    # http://support.microsoft.com/kb/243330
+    try:
+        security_descriptor = win32security.GetFileSecurity(
+            obj_name, win32security.GROUP_SECURITY_INFORMATION)
+        primary_group_gid = security_descriptor.GetSecurityDescriptorGroup()
+
+    except MemoryError:
+        # Generic Memory Error (Windows Server 2003+)
+        primary_group_gid = 'S-1-1-0'
+
+    except pywintypes.error as exc:
+        # Incorrect function error (Windows Server 2008+)
+        if exc.winerror == 1 or exc.winerror == 50:
+            primary_group_gid = 'S-1-1-0'
+        else:
+            raise CommandExecutionError(
+                'Failed to set permissions: {0}'.format(exc[2]))
+
+    return get_name(win32security.ConvertSidToStringSid(primary_group_gid))
 
 
 def set_owner(obj_name, principal, obj_type='file'):
@@ -1212,6 +1268,81 @@ def set_owner(obj_name, principal, obj_type='file'):
         log.debug('Failed to make {0} the owner: {1}'.format(principal, exc[2]))
         raise CommandExecutionError(
             'Failed to set owner: {0}'.format(exc[2]))
+
+    return True
+
+
+def set_primary_group(obj_name, principal, obj_type='file'):
+    '''
+    Set the primary group of an object. This can be a file, folder, registry
+    key, printer, service, etc...
+
+    Args:
+
+        obj_name (str):
+            The object for which to set primary group. This can be the path to a
+            file or folder, a registry key, printer, etc. For more information
+            about how to format the name see:
+
+        https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
+
+        principal (str):
+            The name of the group to make primary for the object. Can also pass
+            a SID.
+
+        obj_type (Optional[str]):
+            The type of object for which to set the primary group.
+
+    Returns:
+        bool: True if successful, raises an error otherwise
+
+    Usage:
+
+    .. code-block:: python
+
+        salt.utils.win_dacl.set_primary_group('C:\\MyDirectory', 'Administrators', 'file')
+    '''
+    # Windows has the concept of a group called 'None'. It is the default group
+    # for all Objects. If the user passes None, assume 'None'
+    if principal is None:
+        principal = 'None'
+
+    gid = get_sid(principal)
+
+    obj_flags = flags()
+
+    # To set the owner to something other than the logged in user requires
+    # SE_TAKE_OWNERSHIP_NAME and SE_RESTORE_NAME privileges
+    # Enable them for the logged in user
+    # Setup the privilege set
+    new_privs = set()
+    luid = win32security.LookupPrivilegeValue('', 'SeTakeOwnershipPrivilege')
+    new_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+    luid = win32security.LookupPrivilegeValue('', 'SeRestorePrivilege')
+    new_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+
+    # Get the current token
+    p_handle = win32api.GetCurrentProcess()
+    t_handle = win32security.OpenProcessToken(
+        p_handle,
+        win32security.TOKEN_ALL_ACCESS | win32con.TOKEN_ADJUST_PRIVILEGES)
+
+    # Enable the privileges
+    win32security.AdjustTokenPrivileges(t_handle, 0, new_privs)
+
+    # Set the user
+    try:
+        win32security.SetNamedSecurityInfo(
+            obj_name,
+            obj_flags.obj_type[obj_type],
+            obj_flags.element['group'],
+            None, gid, None, None)
+    except pywintypes.error as exc:
+        log.debug(
+            'Failed to make {0} the primary group: {1}'
+            ''.format(principal, exc[2]))
+        raise CommandExecutionError(
+            'Failed to set primary group: {0}'.format(exc[2]))
 
     return True
 
