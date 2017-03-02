@@ -13,6 +13,7 @@ import random
 # Import salt libs
 import salt.loader
 from salt.ext.six import string_types
+from salt.ext.six.moves import range
 
 
 def sdb_get(uri, opts, utils=None):
