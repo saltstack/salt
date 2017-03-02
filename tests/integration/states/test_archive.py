@@ -23,9 +23,8 @@ import salt.utils
 # Setup logging
 log = logging.getLogger(__name__)
 
-STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 if salt.utils.is_windows():
-    ARCHIVE_DIR = os.path.join("c:/", "tmp")
+    ARCHIVE_DIR = os.path.join('c:/', 'tmp')
 else:
     ARCHIVE_DIR = '/tmp/archive'
 
@@ -151,7 +150,6 @@ class ArchiveTest(integration.ModuleCase,
 
         self._check_extracted(UNTAR_FILE)
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_archive_extracted_with_strip_in_options(self):
         '''
         test archive.extracted with --strip in options
@@ -169,7 +167,6 @@ class ArchiveTest(integration.ModuleCase,
 
         self._check_extracted(os.path.join(ARCHIVE_DIR, 'README'))
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_archive_extracted_with_strip_components_in_options(self):
         '''
         test archive.extracted with --strip-components in options
