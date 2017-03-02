@@ -443,6 +443,9 @@ class Schedule(object):
             config_dir,
             os.path.dirname(self.opts.get('default_include',
                                           salt.config.DEFAULT_MINION_OPTS['default_include'])))
+        if salt.utils.is_proxy():
+            # each proxy will have a separate _schedule.conf file
+            minion_d_dir = os.path.join(minion_d_dir, self.opts['proxyid'])
 
         if not os.path.isdir(minion_d_dir):
             os.makedirs(minion_d_dir)
