@@ -33,6 +33,6 @@ integration.runners.test_winrepo
 integration.sdb.test_env
 integration.states.test_host
 integration.states.test_renderers
-integration.utils.test_testprogram
+integration.utils.testprogram
 integration.wheel.test_client
 integration.wheel.test_key
