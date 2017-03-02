@@ -271,7 +271,8 @@ class KeyCLI(object):
                         ret = list_ret
                     for minions in ret.values():
                         for minion in minions:
-                            print('Key for minion {0} {1}ed.'.format(minion, cmd))
+                            print('Key for minion {0} {1}ed.'.format(minion,
+                                                                     cmd.rstrip('e')))
                 elif isinstance(ret, dict):
                     salt.output.display_output(ret, 'key', opts=self.opts)
                 else:
