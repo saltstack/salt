@@ -7,11 +7,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+import tests.integration as integration
 
 
 class RabbitUserTestCase(integration.ModuleCase,
@@ -46,8 +42,3 @@ class RabbitUserTestCase(integration.ModuleCase,
             'rabbitmq_user.absent', name='null_name', test=True
         )
         self.assertSaltFalseReturn(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RabbitUserTestCase)

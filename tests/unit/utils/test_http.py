@@ -7,11 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 from salt.utils import http
@@ -93,8 +90,3 @@ class HTTPTestCase(TestCase):
         mock_ret = 'foo=XXXXXXXXXX&foo=XXXXXXXXXX&api_key=testing&'
         ret = http._sanitize_url_components(mock_component_list, 'foo')
         self.assertEqual(ret, mock_ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HTTPTestCase, needs_daemon=False)

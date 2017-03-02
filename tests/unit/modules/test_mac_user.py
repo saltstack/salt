@@ -9,11 +9,8 @@ import grp
 import pwd
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 from salt.modules import mac_user
@@ -314,8 +311,3 @@ class MacUserTestCase(TestCase):
         '''
         ret = ['_amavisd', '_appleevents', '_appowner']
         self.assertEqual(mac_user.list_users(), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacUserTestCase, needs_daemon=False)

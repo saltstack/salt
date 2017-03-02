@@ -10,17 +10,15 @@ import os
 import time
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains,
     requires_salt_modules
 )
-ensure_in_syspath('../../')
 
 # Import salt libs
-import integration
 import salt.utils
 
 # Import 3rd-party libs
@@ -697,7 +695,3 @@ class PkgTest(integration.ModuleCase,
         self.assertEqual(ret_comment, 'An error was encountered while installing/updating group '
                                       '\'handle_missing_pkg_group\': Group \'handle_missing_pkg_group\' '
                                       'not found.')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PkgTest)

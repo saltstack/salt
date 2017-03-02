@@ -370,21 +370,14 @@ class SyncClientMixin(object):
                 args = low['arg']
 
             if 'kwarg' not in low:
-                if f_call is None:
-                    f_call = salt.utils.format_call(
-                        self.functions[fun],
-                        low,
-                        expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
-                    )
-                kwargs = f_call.get('kwargs', {})
-
-                # throw a warning for the badly formed low data if we found
-                # kwargs using the old mechanism
-                if kwargs:
-                    salt.utils.warn_until(
-                        'Nitrogen',
-                        'kwargs must be passed inside the low under "kwargs"'
-                    )
+                log.critical(
+                    'kwargs must be passed inside the low data within the '
+                    '\'kwarg\' key. See usage of '
+                    'salt.utils.args.parse_input() and '
+                    'salt.minion.load_args_and_kwargs() elsewhere in the '
+                    'codebase.'
+                )
+                kwargs = {}
             else:
                 kwargs = low['kwarg']
 

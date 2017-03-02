@@ -6,8 +6,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -92,8 +92,3 @@ class DjangomodTestCase(TestCase):
         mock = MagicMock(return_value=True)
         with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
             self.assertTrue(djangomod.collectstatic('DJANGO_SETTINGS_MODULE'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DjangomodTestCase, needs_daemon=False)

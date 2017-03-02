@@ -19,17 +19,14 @@ import textwrap
 import filecmp
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     with_system_user_and_group
 )
 
-ensure_in_syspath('../../')
-
 # Import salt libs
-import integration
 import salt.utils
 
 HAS_PWD = True
@@ -1819,7 +1816,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         src_file, ret = self.do_patch('hello_dolly')
         self.assertSaltFalseReturn(ret)
         self.assertInSaltComment(
-            'File {0} hash mismatch after patch was applied'.format(src_file),
+            'Hash mismatch after patch was applied',
             ret
         )
 
@@ -2437,7 +2434,3 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             check_file = self.run_function('file.file_exists', [file])
             if check_file:
                 self.run_function('file.remove', [file])
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(FileTest)

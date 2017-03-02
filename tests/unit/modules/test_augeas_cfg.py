@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
 )
@@ -148,8 +148,3 @@ class AugeasCfgTestCase(TestCase):
         Test if it returns recursively the complete tree of a node
         '''
         self.assertEqual(augeas_cfg.tree('/etc/'), {'/etc': None})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AugeasCfgTestCase, needs_daemon=False)

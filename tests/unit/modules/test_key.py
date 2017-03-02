@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -50,8 +50,3 @@ class KeyTestCase(TestCase):
                 with patch.dict(key.__opts__,
                         {'pki_dir': 'A', 'hash_type': 'sha256'}):
                     self.assertEqual(key.finger_master(), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KeyTestCase, needs_daemon=False)

@@ -81,9 +81,10 @@ The option can also be set to a list of masters, enabling
 ``ipv6``
 --------
 
-Default: ``False``
+Default: ``None``
 
-Whether the master should be connected over IPv6.
+Whether the master should be connected over IPv6. By default salt minion
+will try to automatically detect IPv6 connectivity to master.
 
 .. code-block:: yaml
 
@@ -1778,12 +1779,14 @@ the environment setting, but for pillar instead of states.
 
 .. code-block:: yaml
 
-    pillarenv: None
+    pillarenv: dev
 
 .. conf_minion:: pillarenv_from_saltenv
 
 ``pillarenv_from_saltenv``
 --------------------------
+
+.. versionadded:: Nitrogen
 
 Default: ``False``
 

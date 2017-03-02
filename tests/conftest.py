@@ -542,7 +542,8 @@ def session_pillar_tree_root_dir(session_integration_files_dir):
 @pytest.fixture(scope='session')
 def test_daemon(request):
     from collections import namedtuple
-    from integration import TestDaemon, PNUM
+    from tests.integration import TestDaemon
+    from tests.support.parser import PNUM
     values = (('transport', request.config.getoption('--transport')),
               ('sysinfo', request.config.getoption('--sysinfo')),
               ('no_colors', request.config.getoption('--no-colors')),

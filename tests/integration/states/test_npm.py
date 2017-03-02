@@ -8,12 +8,11 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath, requires_network
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, requires_network
 
 # Import salt libs
-import integration
 import salt.utils
 
 
@@ -60,8 +59,3 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         ret = self.run_state('npm.cache_cleaned', name=None)
         self.assertSaltTrueReturn(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NpmStateTest)

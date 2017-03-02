@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import grp
 
 # Import Salt Testing Libs
-from salttesting import TestCase
-from salttesting.mock import MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
 from salt.modules import mac_group
@@ -181,8 +181,3 @@ class MacGroupTestCase(TestCase):
                         {'file.group_to_gid': mock_pre_gid}):
             with patch.dict(mac_group.__salt__, {'cmd.retcode': mock_ret}):
                 self.assertTrue(mac_group.chgid('test', 500))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacGroupTestCase, needs_daemon=False)

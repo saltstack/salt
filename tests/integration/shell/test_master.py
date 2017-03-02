@@ -14,18 +14,16 @@ import yaml
 import signal
 import shutil
 
-# Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
 # Import salt libs
-import integration
-import integration.utils
-from integration.utils import testprogram
 import salt.utils
 
+# Import salt test libs
+import tests.integration as integration
+import tests.integration.utils
+from tests.integration.utils import testprogram
 
-class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
+
+class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-master'
 
@@ -97,7 +95,7 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
             status, 'EX_NOUSER',
             message='unknown user not on system',
             stdout=stdout,
-            stderr=integration.utils.decode_byte_list(stderr)
+            stderr=tests.integration.utils.decode_byte_list(stderr)
         )
         # Although the start-up should fail, call shutdown() to set the internal
         # _shutdown flag and avoid the registered atexit calls to cause timeout
@@ -125,7 +123,7 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
             status, 'EX_USAGE',
             message='unknown argument',
             stdout=stdout,
-            stderr=integration.utils.decode_byte_list(stderr)
+            stderr=tests.integration.utils.decode_byte_list(stderr)
         )
         # Although the start-up should fail, call shutdown() to set the internal
         # _shutdown flag and avoid the registered atexit calls to cause timeout
@@ -152,10 +150,6 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
             status, 'EX_OK',
             message='correct usage',
             stdout=stdout,
-            stderr=integration.utils.decode_byte_list(stderr)
+            stderr=tests.integration.utils.decode_byte_list(stderr)
         )
         master.shutdown()
-
-
-if __name__ == '__main__':
-    integration.run_tests(MasterTest)

@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -131,8 +131,3 @@ class LaunchctlTestCase(TestCase):
         with patch.object(launchctl, 'stop', return_value=None):
             with patch.object(launchctl, 'start', return_value=True):
                 self.assertTrue(launchctl.restart('job_label'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LaunchctlTestCase, needs_daemon=False)

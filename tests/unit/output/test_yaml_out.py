@@ -7,10 +7,7 @@ unittests for yaml outputter
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase
 
 # Import Salt Libs
 from salt.output import yaml_out as yaml
@@ -35,8 +32,3 @@ class YamlTestCase(TestCase):
         ret = yaml.output(self.data)
         expect = '{example: one, test: two}\n'
         self.assertEqual(expect, ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(YamlTestCase, needs_daemon=False)

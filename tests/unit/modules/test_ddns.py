@@ -15,8 +15,8 @@ except ImportError:
 
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     mock_open,
     MagicMock,
     patch,
@@ -126,8 +126,3 @@ class DDNSTestCase(TestCase):
                     with patch.object(ddns, '_get_keyring', return_value=None):
                         with patch.object(ddns, '_config', return_value=None):
                             self.assertTrue(ddns.delete(zone='A', name='B'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DDNSTestCase, needs_daemon=False)

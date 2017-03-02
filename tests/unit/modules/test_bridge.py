@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -118,8 +118,3 @@ class BridgeTestCase(TestCase):
 
         with patch.dict(bridge.__grains__, {'kernel': None}):
             self.assertFalse(bridge.stp())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BridgeTestCase, needs_daemon=False)

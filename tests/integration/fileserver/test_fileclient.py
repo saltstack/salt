@@ -12,16 +12,15 @@ import shutil
 log = logging.getLogger(__name__)
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-ensure_in_syspath('../..')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import salt libs
-import integration
 import salt.utils
 from salt import fileclient
-from salt.ext import six
+import salt.ext.six as six
 
 SALTENVS = ('base', 'dev')
 FS_ROOT = os.path.join(integration.TMP, 'fileclient_fs_root')
@@ -351,8 +350,3 @@ class FileclientCacheTest(integration.ModuleCase):
                 log.debug('cache_loc = %s', cache_loc)
                 log.debug('content = %s', content)
                 self.assertTrue(saltenv in content)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(FileClientTest)

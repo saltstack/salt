@@ -7,16 +7,12 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import modjk
@@ -230,8 +226,3 @@ class ModjkTestCase(TestCase):
                           {'worker.result.type': 'OK'}):
             self.assertTrue(modjk.worker_edit('node1', 'loadbalancer1',
                                               {'vwf': 500, 'vwd': 60}))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ModjkTestCase, needs_daemon=False)

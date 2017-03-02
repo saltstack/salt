@@ -8,15 +8,12 @@ from salt.modules import status
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase
+from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,
 )
-
-ensure_in_syspath('../../')
 
 # Globals
 status.__salt__ = {}
@@ -149,8 +146,3 @@ class StatusTestCase(TestCase):
         with self.assertRaises(CommandExecutionError):
             with patch.dict(status.__salt__, {'cmd.run': exc_mock}):
                 status.uptime()
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StatusTestCase, needs_daemon=False)

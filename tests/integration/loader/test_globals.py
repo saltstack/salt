@@ -10,12 +10,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+import tests.integration as integration
 
 # Import salt libs
-import integration
 import salt.loader
 import inspect
 import yaml
@@ -142,8 +139,3 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __context__ # Context dict shared amongst all modules of the same type
         '''
         self._verify_globals(salt.loader.render(self.master_opts, {}))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LoaderGlobalsTest, needs_daemon=False)

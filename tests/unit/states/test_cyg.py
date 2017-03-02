@@ -1,10 +1,8 @@
 # # -*- coding: utf-8 -*-
 
 # # Import Salt Testing libs
-# from salttesting import skipIf, TestCase
-# from salttesting.helpers import ensure_in_syspath
-# from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-# ensure_in_syspath('../../')
+# from tests.support.unit import skipIf, TestCase
+# from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # # Late import so mock can do its job
 # import salt.states.cyg as cyg
@@ -63,8 +61,3 @@
 #                 self.assertEqual(False, ret['result'])
 #                 gem_uninstall_fails.assert_called_once_with(
 #                     'bar', None, runas=None)
-
-
-# if __name__ == '__main__':
-#     from integration import run_tests
-#     run_tests(TestGemState, needs_daemon=False)

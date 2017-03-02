@@ -7,14 +7,12 @@ integration tests for mac_power
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import integration
 import salt.utils
-
-ensure_in_syspath('../../')
 
 
 @skipIf(not salt.utils.is_darwin()
@@ -330,12 +328,3 @@ class MacPowerModuleTestWakeOnModem(integration.ModuleCase):
             self.assertTrue(
                 self.run_function('power.set_wake_on_modem', ['off']))
             self.assertFalse(self.run_function('power.get_wake_on_modem'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacPowerModuleTest,
-              MacPowerModuleTestSleepOnPowerButton,
-              MacPowerModuleTestRestartPowerFailure,
-              MacPowerModuleTestWakeOnNet,
-              MacPowerModuleTestWakeOnModem)

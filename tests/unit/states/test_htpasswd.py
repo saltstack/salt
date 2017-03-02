@@ -7,17 +7,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import htpasswd
@@ -88,8 +84,3 @@ class HtpasswdTestCase(TestCase):
                         'comment': 'Error',
                         'changes': {}}
             self.assertEqual(ret, expected)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HtpasswdTestCase, needs_daemon=False)

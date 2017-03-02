@@ -7,12 +7,10 @@ import os
 import textwrap
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
 
-import integration
+# Import salt libs
 import salt.utils
-
 
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
@@ -48,8 +46,3 @@ class EnvTestCase(integration.ModuleCase,
         state_key = 'test_|-always-changes-and-succeeds_|-foo_|-succeed_with_changes'
         ret = self.run_function('state.sls', [self.state_name])
         self.assertTrue(ret[state_key]['result'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(EnvTestCase)

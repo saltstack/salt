@@ -8,17 +8,15 @@ import textwrap
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     skip_if_binaries_missing
 )
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
-ensure_in_syspath('../../')
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 
 # Import salt libs
-import integration
 import salt.utils
 
 
@@ -262,19 +260,21 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.run trigger timeout
         '''
-        out = self.run_function('cmd.run', ['sleep 2 && echo hello', 'timeout=1'])
-
-        self.assertTrue(
-            'Timed out' in self.run_function(
-                'cmd.run', ['sleep 2 && echo hello', 'timeout=1'], python_shell=True))
+        out = self.run_function('cmd.run',
+                                ['sleep 2 && echo hello'],
+                                f_timeout=1,
+                                python_shell=True)
+        self.assertTrue('Timed out' in out)
 
     def test_timeout_success(self):
         '''
         cmd.run sufficient timeout to succeed
         '''
-        self.assertTrue(
-            'hello' == self.run_function(
-                'cmd.run', ['sleep 1 && echo hello', 'timeout=2'], python_shell=True))
+        out = self.run_function('cmd.run',
+                                ['sleep 1 && echo hello'],
+                                f_timeout=2,
+                                python_shell=True)
+        self.assertEqual(out, 'hello')
 
     def test_run_cwd_doesnt_exist_issue_7154(self):
         '''
@@ -292,7 +292,3 @@ class CMDModuleTest(integration.ModuleCase):
             pass
         else:
             raise RuntimeError
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CMDModuleTest)

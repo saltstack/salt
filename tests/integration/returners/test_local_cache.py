@@ -8,19 +8,16 @@ import logging
 import os
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
 
 # Import salt libs
-import integration
-from integration import TMP
 import salt.utils.job
 from salt.returners import local_cache
 
 log = logging.getLogger(__name__)
 
 # JOBS DIR and FILES
-TMP_CACHE_DIR = os.path.join(TMP, 'rootdir', 'cache')
+TMP_CACHE_DIR = os.path.join(integration.TMP, 'rootdir', 'cache')
 JOBS_DIR = os.path.join(TMP_CACHE_DIR, 'jobs')
 JID_DIR = os.path.join(JOBS_DIR, '31', 'c56eed380a4e899ae12bc42563cfdfc53066fb4a6b53e2378a08ac49064539')
 JID_FILE = os.path.join(JID_DIR, 'jid')
@@ -110,6 +107,28 @@ class Local_CacheTest(integration.ShellCase):
         EMPTY_JID_DIR.append(new_jid_dir)
         os.makedirs(new_jid_dir)
 
+        # This needed due to a race condition in Windows
+        # `os.makedirs` hasn't released the handle before
+        # `local_cache.clean_old_jobs` tries to delete the new_jid_dir
+        if salt.utils.is_windows():
+            import time
+            lock_dir = new_jid_dir + '.lckchk'
+            tries = 0
+            while True:
+                tries += 1
+                if tries > 10:
+                    break
+                # Rename the directory and name it back
+                # If it fails, the directory handle is not released, try again
+                # If it succeeds, break and continue test
+                try:
+                    os.rename(new_jid_dir, lock_dir)
+                    time.sleep(1)
+                    os.rename(lock_dir, new_jid_dir)
+                    break
+                except WindowsError:  # pylint: disable=E0602
+                    continue
+
         # check dir exists
         self._check_dir_files('new_jid_dir was not created',
                               EMPTY_JID_DIR,
@@ -122,8 +141,3 @@ class Local_CacheTest(integration.ShellCase):
         self._check_dir_files('new_jid_dir was not removed',
                               EMPTY_JID_DIR,
                               status='removed')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(Local_CacheTest)

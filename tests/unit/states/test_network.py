@@ -8,16 +8,13 @@ from __future__ import absolute_import
 import sys
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import network
@@ -231,8 +228,3 @@ class NetworkTestCase(TestCase):
                                     ' are up to date.',
                                     'result': True})
                         self.assertDictEqual(network.system('salt'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NetworkTestCase, needs_daemon=False)

@@ -8,15 +8,11 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath
-)
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import integration
 import salt.utils
 import salt.ext.six as six
 from salt.modules import mysql as mysqlmod
@@ -502,8 +498,3 @@ class MysqlGrantsStateTest(integration.ModuleCase,
             connection_charset='utf8'
         )
         self.assertSaltTrueReturn(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MysqlDatabaseStateTest, MysqlGrantsStateTest)

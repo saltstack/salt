@@ -11,11 +11,8 @@ from salt.modules import mac_brew
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Global Variables
 mac_brew.__context__ = {}
@@ -182,8 +179,3 @@ class BrewTestCase(TestCase):
         with patch.dict(mac_brew.__salt__,
                         {'pkg_resource.parse_targets': mock_params}):
             self.assertEqual(mac_brew.install('name=foo'), {})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BrewTestCase, needs_daemon=False)

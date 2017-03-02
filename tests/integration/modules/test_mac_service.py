@@ -7,12 +7,11 @@ integration tests for mac_service
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import integration
 import salt.utils
 
 
@@ -220,8 +219,3 @@ class MacServiceModuleTest(integration.ModuleCase):
         services = self.run_function('service.get_enabled')
         self.assertIsInstance(services, list)
         self.assertIn('com.apple.coreservicesd', services)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacServiceModuleTest)

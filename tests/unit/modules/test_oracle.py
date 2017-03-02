@@ -7,16 +7,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import oracle
@@ -87,8 +84,3 @@ class OracleTestCase(TestCase):
                                         'TNS_ADMIN': 'TNS_ADMIN',
                                         'NLS_LANG': 'NLS_LANG'}):
             self.assertDictEqual(oracle.show_env(), {})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(OracleTestCase, needs_daemon=False)

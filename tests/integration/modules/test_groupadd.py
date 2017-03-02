@@ -6,12 +6,11 @@ import string
 import random
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
 from salt.ext.six.moves import range
-import integration
 import salt.utils
 
 
@@ -169,8 +168,3 @@ class GroupModuleTest(integration.ModuleCase):
         self.assertIn(self._user, str(ginfo))
         self.assertNotIn(self._no_group, str(ginfo))
         self.assertNotIn(self._no_user, str(ginfo))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GroupModuleTest)

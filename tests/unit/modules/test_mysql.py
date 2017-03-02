@@ -11,11 +11,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
-
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
 # Import salt libs
 from salt.modules import mysql
@@ -297,8 +294,3 @@ class MySQLTestCase(TestCase):
             else:
                 calls = call().cursor().execute('{0}'.format(expected_sql))
             connect_mock.assert_has_calls((calls,), True)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MySQLTestCase, needs_daemon=False)

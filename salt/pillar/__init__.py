@@ -10,6 +10,8 @@ import os
 import collections
 import logging
 import tornado.gen
+import sys
+import traceback
 
 # Import salt libs
 import salt.loader
@@ -403,20 +405,21 @@ class Pillar(object):
         # Gather initial top files
         try:
             if self.opts['pillarenv']:
-                tops[self.opts['pillarenv']] = [
-                        compile_template(
-                            self.client.cache_file(
-                                self.opts['state_top'],
-                                self.opts['pillarenv']
-                                ),
-                            self.rend,
-                            self.opts['renderer'],
-                            self.opts['renderer_blacklist'],
-                            self.opts['renderer_whitelist'],
-                            self.opts['pillarenv'],
-                            _pillar_rend=True,
-                            )
-                        ]
+                top = self.client.cache_file(
+                    self.opts['state_top'], self.opts['pillarenv'])
+
+                if top:
+                    tops[self.opts['pillarenv']] = [
+                            compile_template(
+                                top,
+                                self.rend,
+                                self.opts['renderer'],
+                                self.opts['renderer_blacklist'],
+                                self.opts['renderer_whitelist'],
+                                self.opts['pillarenv'],
+                                _pillar_rend=True,
+                                )
+                            ]
             else:
                 for saltenv in self._get_envs():
                     if self.opts.get('pillar_source_merging_strategy', None) == "none":
@@ -817,8 +820,16 @@ class Pillar(object):
                                                         pillar_dirs,
                                                         key)
                 except Exception as exc:
-                    errors.append('Failed to load ext_pillar {0}: {1}'.format(
-                        key, exc))
+                    errors.append(
+                        'Failed to load ext_pillar {0}: {1}'.format(
+                            key,
+                            exc.__str__(),
+                        )
+                    )
+                    log.error(
+                        'Execption caught loading ext_pillar \'%s\':\n%s',
+                        key, ''.join(traceback.format_tb(sys.exc_info()[2]))
+                    )
             if ext:
                 pillar = merge(
                     pillar,

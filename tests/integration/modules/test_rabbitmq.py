@@ -5,13 +5,9 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, requires_salt_modules
-
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import requires_salt_modules
 
 
 @skipIf(os.geteuid() != 0, 'You must be root to run this test')
@@ -28,8 +24,3 @@ class RabbitModuleTest(integration.ModuleCase):
         '''
         ret = self.run_function('rabbitmq.user_exists', ['null_user'])
         self.assertEqual(ret, False)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RabbitModuleTest)

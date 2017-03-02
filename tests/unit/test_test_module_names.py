@@ -9,15 +9,16 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from tests.support.unit import TestCase
 
 
 # Import Salt libs
-import integration
+import tests.integration as integration
 
 EXCLUDED_DIRS = [
     'tests/pkg',
     'tests/perf',
+    'tests/support',
     'tests/unit/utils/cache_mods',
     'tests/unit/modules/inspectlib',
     'tests/unit/modules/zypp/',
@@ -40,8 +41,6 @@ EXCLUDED_FILES = [
     'tests/modparser.py',
     'tests/committer_parser.py',
     'tests/integration/utils/testprogram.py',
-    'tests/utils/cptestcase.py',
-    'tests/utils/mixins.py'
 ]
 
 

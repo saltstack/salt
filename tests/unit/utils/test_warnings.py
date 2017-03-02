@@ -15,9 +15,7 @@ import sys
 import warnings
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase
 
 # Import salt libs
 from salt.utils import warn_until, kwargs_warn_until
@@ -165,8 +163,3 @@ class WarnUntilTestCase(TestCase):
                 r'0.17.0 is released. Current version is now 0.17.0. '
                 r'Please remove the warning.'):
             raise_warning(bar='baz', qux='quux', _version_info_=(0, 17))  # some kwargs
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WarnUntilTestCase, needs_daemon=False)

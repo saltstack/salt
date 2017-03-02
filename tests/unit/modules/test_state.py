@@ -8,18 +8,15 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf
 from salt.exceptions import SaltInvocationError
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 import salt.utils
@@ -976,7 +973,3 @@ class StateTestCase(TestCase):
                 with patch('salt.utils.fopen', mock_open()):
                     self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
                                               0, "md5"))
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StateTestCase, needs_daemon=False)

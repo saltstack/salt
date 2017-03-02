@@ -15,17 +15,15 @@ except ImportError:
 NO_DATEUTIL_REASON = 'python-dateutil is not installed'
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.helpers import destructiveTest
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     call,
     mock_open,
     patch)
-
-ensure_in_syspath('../../')
 
 # Import third party libs
 import yaml
@@ -1808,9 +1806,3 @@ class FileTestCase(TestCase):
         run_checks(test=True)
         run_checks(strptime_format=fake_strptime_format)
         run_checks(strptime_format=fake_strptime_format, test=True)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(FileTestCase, needs_daemon=False)
-    run_tests(TestFileState, needs_daemon=False)

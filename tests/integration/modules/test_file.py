@@ -10,14 +10,11 @@ import shutil
 import sys
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, MagicMock
-
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.mock import patch, MagicMock
 
 # Import salt libs
-import integration
 import salt.utils
 from salt.modules import file as filemod
 
@@ -252,7 +249,3 @@ class FileModuleTest(integration.ModuleCase):
         ret = filemod.source_list(
             [{'file://' + self.myfile: ''}], 'filehash', 'base')
         self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(FileModuleTest)

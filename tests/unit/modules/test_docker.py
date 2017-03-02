@@ -7,17 +7,14 @@ Unit tests for the docker module
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     MagicMock,
     Mock,
     NO_MOCK,
     NO_MOCK_REASON,
     patch
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.ext.six.moves import range
@@ -641,6 +638,7 @@ class DockerTestCase(TestCase):
         docker_stop_mock = MagicMock(
             return_value={'state': {'old': 'running', 'new': 'stopped'},
                           'result': True})
+        docker_rm_mock = MagicMock(return_value={})
         docker_commit_mock = MagicMock(
             return_value={'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42})
 
@@ -672,16 +670,18 @@ class DockerTestCase(TestCase):
                 with patch.object(docker_mod, 'stop', docker_stop_mock):
                     with patch.object(docker_mod, 'commit', docker_commit_mock):
                         with patch.object(docker_mod, 'sls', docker_sls_mock):
-                            ret = docker_mod.sls_build(
-                                'foo',
-                                mods='foo',
-                            )
+                            with patch.object(docker_mod, 'rm_', docker_rm_mock):
+                                ret = docker_mod.sls_build(
+                                    'foo',
+                                    mods='foo',
+                                )
         docker_create_mock.assert_called_once_with(
             cmd='sleep infinity',
-            image='opensuse/python', interactive=True, name='foo', tty=True)
+            image='opensuse/python', interactive=True, tty=True)
         docker_start_mock.assert_called_once_with('ID')
         docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
         docker_stop_mock.assert_called_once_with('ID')
+        docker_rm_mock.assert_called_once_with('ID')
         docker_commit_mock.assert_called_once_with('ID', 'foo')
         self.assertEqual(
             {'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42}, ret)
@@ -735,7 +735,7 @@ class DockerTestCase(TestCase):
                             )
         docker_create_mock.assert_called_once_with(
             cmd='sleep infinity',
-            image='opensuse/python', interactive=True, name='foo', tty=True)
+            image='opensuse/python', interactive=True, tty=True)
         docker_start_mock.assert_called_once_with('ID')
         docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
         docker_stop_mock.assert_called_once_with('ID')
@@ -839,8 +839,3 @@ class DockerTestCase(TestCase):
             result = docker_mod.images()
         self.assertEqual(result,
                          {'sha256:abcdefg': {'RepoTags': ['image:latest']}})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DockerTestCase, needs_daemon=False)

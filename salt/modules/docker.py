@@ -183,6 +183,10 @@ Functions
     - :py:func:`docker.disconnect_container_from_network
       <salt.modules.docker.disconnect_container_from_network>`
 
+- Salt Functions and States Execution
+    - :py:func:`docker.call <salt.modules.docker.call>`
+    - :py:func:`docker.sls <salt.modules.docker.sls>`
+    - :py:func:`docker.sls_build <salt.modules.docker.sls_build>`
 
 
 .. _docker-execution-driver:
@@ -571,6 +575,17 @@ VALID_CREATE_OPTS = {
     'devices': {
         'path': 'HostConfig:Devices',
     },
+    'sysctls': {
+        'path': 'HostConfig:Sysctls',
+        'min_docker': (1, 12, 0),
+        'default': {},
+    },
+    'ulimits': {
+        'path': 'HostConfig:Ulimits',
+        'min_docker': (1, 6, 0),
+        'min_docker_py': (1, 2, 0),
+        'default': [],
+    },
 }
 
 
@@ -831,10 +846,10 @@ def _get_client(timeout=None):
                     'Docker machine {0} failed: {1}'.format(docker_machine, exc))
 
         try:
-            __context__['docker.client'] = docker.Client(**client_kwargs)
-        except AttributeError:
             # docker-py 2.0 renamed this client attribute
             __context__['docker.client'] = docker.APIClient(**client_kwargs)
+        except AttributeError:
+            __context__['docker.client'] = docker.Client(**client_kwargs)
 
 
 def _get_md5(name, path):
@@ -1927,6 +1942,81 @@ def _validate_input(kwargs,
                     kwargs['labels'] = new_labels
             else:
                 kwargs['labels'] = salt.utils.repack_dictlist(kwargs['labels'])
+
+    def _valid_sysctls():  # pylint: disable=unused-variable
+        '''
+        Can be a a dictionary
+        '''
+        if kwargs.get('sysctls') is None:
+            return
+        if isinstance(kwargs['sysctls'], list):
+            repacked_sysctl = {}
+            for sysctl_var in kwargs['sysctls']:
+                try:
+                    key, val = sysctl_var.split('=')
+                except AttributeError:
+                    raise SaltInvocationError(
+                        'Invalid sysctl variable definition \'{0}\''
+                        .format(sysctl_var)
+                    )
+                else:
+                    if key in repacked_sysctl:
+                        raise SaltInvocationError(
+                            'Duplicate sysctl variable \'{0}\''
+                            .format(key)
+                        )
+                    if not isinstance(val, six.string_types):
+                        raise SaltInvocationError(
+                            'sysctl values must be strings {key}=\'{val}\''
+                            .format(key=key, val=val))
+                    repacked_sysctl[key] = val
+            kwargs['sysctls'] = repacked_sysctl
+        elif isinstance(kwargs['sysctls'], dict):
+            for key, val in six.iteritems(kwargs['sysctls']):
+                if not isinstance(val, six.string_types):
+                    raise SaltInvocationError('sysctl values must be dicts')
+        elif not isinstance(kwargs['sysctls'], dict):
+            raise SaltInvocationError(
+                'Invalid sysctls configuration.'
+            )
+
+    def _valid_ulimits():  # pylint: disable=unused-variable
+        '''
+        Must be a string or list of strings with bind mount information
+        '''
+        if kwargs.get('ulimits') is None:
+            # No need to validate
+            return
+        err = (
+            'Invalid ulimits configuration. See the documentation for proper '
+            'usage.'
+        )
+        try:
+            _valid_dictlist('ulimits')
+            # If this was successful then assume the correct API value was
+            # passed on on the CLI and do not proceed with validation.
+            return
+        except SaltInvocationError:
+            pass
+        try:
+            _valid_stringlist('ulimits')
+        except SaltInvocationError:
+            raise SaltInvocationError(err)
+
+        new_ulimits = []
+        for ulimit in kwargs['ulimits']:
+            ulimit_name, comps = ulimit.strip().split('=', 1)
+            try:
+                comps = [int(x) for x in comps.split(':', 1)]
+            except ValueError:
+                raise SaltInvocationError(err)
+            if len(comps) == 1:
+                comps *= 2
+            soft_limit, hard_limit = comps
+            new_ulimits.append({'Name': ulimit_name,
+                                'Soft': soft_limit,
+                                'Hard': hard_limit})
+        kwargs['ulimits'] = new_ulimits
 
     # And now, the actual logic to perform the validation
     if 'docker.docker_version' not in __context__:
@@ -5793,7 +5883,17 @@ def _gather_pillar(pillarenv, pillar_override, **grains):
 
 def call(name, function, *args, **kwargs):
     '''
-    Executes a salt function inside a container
+    Executes a Salt function inside a running container
+
+    .. versionadded:: 2016.11.0
+
+    The container does not need to have Salt installed, but Python is required.
+
+    name
+        Container name or ID
+
+    function
+        Salt execution module function
 
     CLI Example:
 
@@ -5801,11 +5901,7 @@ def call(name, function, *args, **kwargs):
 
         salt myminion docker.call test.ping
         salt myminion test.arg arg1 arg2 key1=val1
-
-    The container does not need to have Salt installed, but Python
-    is required.
-
-    .. versionadded:: 2016.11.0
+        salt myminion dockerng.call compassionate_mirzakhani test.arg arg1 arg2 key1=val1
 
     '''
     # where to put the salt-thin
@@ -5862,11 +5958,23 @@ def call(name, function, *args, **kwargs):
 
 def sls(name, mods=None, saltenv='base', **kwargs):
     '''
-    Apply the highstate defined by the specified modules.
+    Apply the states defined by the specified SLS modules to the running
+    container
 
-    For example, if your master defines the states ``web`` and ``rails``, you
-    can apply them to a container:
-    states by doing:
+    .. versionadded:: 2016.11.0
+
+    The container does not need to have Salt installed, but Python is required.
+
+    name
+        Container name or ID
+
+    mods : None
+        A string containing comma-separated list of SLS with defined states to
+        apply to the container.
+
+    saltenv : base
+        Specify the environment from which to retrieve the SLS indicated by the
+        `mods` parameter.
 
     CLI Example:
 
@@ -5874,10 +5982,6 @@ def sls(name, mods=None, saltenv='base', **kwargs):
 
         salt myminion docker.sls compassionate_mirzakhani mods=rails,web
 
-    The container does not need to have Salt installed, but Python
-    is required.
-
-    .. versionadded:: 2016.11.0
     '''
     mods = [item.strip() for item in mods.split(',')] if mods else []
 
@@ -5936,11 +6040,25 @@ def sls(name, mods=None, saltenv='base', **kwargs):
 def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
               dryrun=False, **kwargs):
     '''
-    Build a docker image using the specified sls modules and base image.
+    Build a Docker image using the specified SLS modules on top of base image
 
-    For example, if your master defines the states ``web`` and ``rails``, you
-    can build a docker image inside myminion that results of applying those
-    states by doing:
+    .. versionadded:: 2016.11.0
+
+    The base image does not need to have Salt installed, but Python is required.
+
+    name
+        Image name to be built and committed
+
+    base : opensuse/python
+        Name or ID of the base image
+
+    mods : None
+        A string containing comma-separated list of SLS with defined states to
+        apply to the base image.
+
+    saltenv : base
+        Specify the environment from which to retrieve the SLS indicated by the
+        `mods` parameter.
 
     base
         the base image
@@ -5966,12 +6084,7 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
 
         salt myminion docker.sls_build imgname base=mybase mods=rails,web
 
-    The base image does not need to have Salt installed, but Python
-    is required.
-
-    .. versionadded:: 2016.11.0
     '''
-
     create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
     for key in ('image', 'name', 'cmd', 'interactive', 'tty'):
         try:
@@ -5981,7 +6094,6 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
 
     # start a new container
     ret = create(image=base,
-                 name=name,
                  cmd='sleep infinity',
                  interactive=True, tty=True,
                  **create_kwargs)
@@ -5994,13 +6106,12 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
         # fail if the state was not successful
         if not dryrun and not salt.utils.check_state_result(ret):
             raise CommandExecutionError(ret)
+        if dryrun is False:
+            ret = commit(id_, name)
     finally:
         stop(id_)
-
-    if dryrun:
         rm_(id_)
-        return ret
-    return commit(id_, name)
+    return ret
 
 
 def get_client_args():
@@ -6040,11 +6151,15 @@ def get_client_args():
     except AttributeError:
         try:
             endpoint_config_args = \
-                _argspec(docker.utils.create_endpoint_config).args
+                _argspec(docker.utils.utils.create_endpoint_config).args
         except AttributeError:
-            raise CommandExecutionError(
-                'Failed to get create_host_config argspec'
-            )
+            try:
+                endpoint_config_args = \
+                    _argspec(docker.utils.create_endpoint_config).args
+            except AttributeError:
+                raise CommandExecutionError(
+                    'Failed to get create_endpoint_config argspec'
+                )
 
     for arglist in (config_args, host_config_args, endpoint_config_args):
         try:

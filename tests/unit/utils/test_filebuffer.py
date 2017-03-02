@@ -11,9 +11,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase
 
 # Import salt libs
 from salt.utils.filebuffer import BufferedReader, InvalidFileMode
@@ -32,8 +30,3 @@ class TestFileBuffer(TestCase):
 
         with self.assertRaises(InvalidFileMode):
             BufferedReader('/tmp/foo', mode='wb')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestFileBuffer, needs_daemon=False)

@@ -11,9 +11,7 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase
 
 # Import Salt libs
 import salt.utils

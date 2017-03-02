@@ -7,16 +7,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     mock_open,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import nfs3
@@ -55,8 +52,3 @@ class NfsTestCase(TestCase):
                                           ['B1'], 'options': ['23']}]}):
             with patch.object(nfs3, '_write_exports', return_value=None):
                 self.assertDictEqual(nfs3.del_export(path='A'), {})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NfsTestCase, needs_daemon=False)

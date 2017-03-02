@@ -3,16 +3,12 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import (
+import tests.integration as integration
+from tests.support.helpers import (
     destructiveTest,
     requires_network,
     requires_salt_modules,
-    ensure_in_syspath
 )
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
 
 
 class PkgModuleTest(integration.ModuleCase,
@@ -302,8 +298,3 @@ class PkgModuleTest(integration.ModuleCase,
                 self.assertNotEqual(ret, {})
                 if 'changes' in ret:
                     self.assertNotEqual(ret['changes'], {})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PkgModuleTest)

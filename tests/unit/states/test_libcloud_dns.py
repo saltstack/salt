@@ -7,18 +7,15 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf
+from tests.support.unit import skipIf
 from tests.unit import ModuleTestCase, hasDependency
-from salttesting.mock import (
+from tests.support.mock import (
     patch,
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
 from salt.states import libcloud_dns
-
-ensure_in_syspath('../../')
 
 SERVICE_NAME = 'libcloud_dns'
 libcloud_dns.__salt__ = {}
@@ -192,7 +189,3 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
             result = libcloud_dns.zone_absent('testing.com', 'test1')
             self.assertTrue(result)
         self.assertFalse(create_patch.called)
-
-if __name__ == '__main__':
-    from unit import run_tests
-    run_tests(LibcloudDnsModuleTestCase)

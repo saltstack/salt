@@ -10,11 +10,8 @@ import random
 import string
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
 import salt.config
@@ -24,7 +21,7 @@ import salt.loader
 import yaml
 
 # pylint: disable=import-error,no-name-in-module
-from unit.modules.test_boto_apigateway import BotoApiGatewayTestCaseMixin
+from tests.unit.modules.test_boto_apigateway import BotoApiGatewayTestCaseMixin
 
 # Import 3rd-party libs
 try:

@@ -7,14 +7,11 @@ from __future__ import absolute_import
 from salt.modules import win_dism as dism
 
 # Import Salt Testing Libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase
+from tests.support.mock import (
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 dism.__salt__ = {}
 dism.__grains__ = {}
@@ -234,7 +231,3 @@ class WinDismTestCase(TestCase):
             out = dism.installed_packages()
             mock.assert_called_once_with(['DISM', '/English', '/Online', '/Get-Packages'])
             self.assertEqual(out, ['Capa1', 'Capa2'])
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinDismTestCase, needs_daemon=False)

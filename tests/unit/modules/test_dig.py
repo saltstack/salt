@@ -7,10 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import salt libs
 from salt.modules import dig
@@ -193,8 +191,3 @@ class DigTestCase(TestCase):
                  ['50', 'alt4.aspmx.l.google.com.'],
                  ['30', 'alt2.aspmx.l.google.com.']]
             )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DigTestCase, needs_daemon=False)

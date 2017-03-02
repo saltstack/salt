@@ -11,13 +11,11 @@ import yaml
 import shutil
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.integration.utils import testprogram
+from tests.support.unit import skipIf
 
 # Import salt libs
-import integration
-from integration.utils import testprogram
 import salt.utils
 
 USERA = 'saltdev'
@@ -25,7 +23,7 @@ USERA_PWD = 'saltdev'
 HASHED_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
 
 
-class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
+class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixin):
     '''
     Test the salt-run command
     '''
@@ -211,7 +209,3 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
                                test.arg arg kwarg=kwarg1'.format(USERA, USERA_PWD))
         expect = ['The specified external authentication system "wrongeauth" is not available']
         self.assertEqual(expect, run_cmd)
-
-
-if __name__ == '__main__':
-    integration.run_tests(RunTest)

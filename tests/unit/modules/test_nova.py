@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -320,8 +320,3 @@ class NovaTestCase(TestCase):
         with patch.object(mock_auth,
                           'server_by_name', MagicMock(return_value='A')):
             self.assertTrue(nova.server_by_name('name'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NovaTestCase, needs_daemon=False)

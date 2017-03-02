@@ -4,11 +4,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt Libs
 from salt.pillar import consul_pillar
@@ -81,8 +78,3 @@ class ConsulPillarTestCase(TestCase):
         with patch.dict(test_dict, {'key1': {'key3': {'key4': 'value'}}}):
             self.assertDictEqual(pillar.dict_merge(test_dict, SIMPLE_DICT),
                                  {'key1': {'key2': 'val1', 'key3': {'key4': 'value'}}})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ConsulPillarTestCase, needs_daemon=False)

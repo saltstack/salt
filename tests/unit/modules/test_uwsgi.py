@@ -4,13 +4,11 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, Mock, patch
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, Mock, patch
 
+# Import salt libs
 from salt.modules import uwsgi
-
-ensure_in_syspath('../../')
 
 uwsgi.__salt__ = {}
 
@@ -28,8 +26,3 @@ class UwsgiTestCase(TestCase):
                 ['uwsgi', '--connect-and-read', '{0}'.format(socket)],
                 python_shell=False)
             self.assertEqual(result, {'a': 1, 'b': 2})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(UwsgiTestCase, needs_daemon=False)

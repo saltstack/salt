@@ -8,12 +8,7 @@ from __future__ import absolute_import
 import time
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
-# Import Salt libs
-import integration
+import tests.integration as integration
 
 
 class SaltUtilModuleTest(integration.ModuleCase):
@@ -154,9 +149,3 @@ class SaltUtilSyncModuleTest(integration.ModuleCase):
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['runtests_decorators']},
                                 extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SaltUtilModuleTest)
-    run_tests(SaltUtilSyncModuleTest)

@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     patch,
     NO_MOCK,
     NO_MOCK_REASON
@@ -32,7 +32,3 @@ class HttpTestCase(TestCase):
         '''
         with patch.object(salt.utils.http, 'query', return_value='A'):
             self.assertEqual(http.query('url'), 'A')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HttpTestCase, needs_daemon=False)

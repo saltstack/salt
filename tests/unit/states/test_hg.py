@@ -10,16 +10,13 @@ import os
 from salt.states import hg
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 hg.__opts__ = {}
 hg.__salt__ = {}
@@ -120,8 +117,3 @@ class HgTestCase(TestCase):
                     with patch.object(hg, '_clone_repo', mock):
                         self.assertDictEqual(hg.latest("salt", target="c:\\salt", update_head=False), ret)
                         assert not update_mock.called
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HgTestCase, needs_daemon=False)

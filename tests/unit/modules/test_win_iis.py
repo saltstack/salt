@@ -15,16 +15,13 @@ from salt.exceptions import SaltInvocationError
 from salt.modules import win_iis
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON,
 )
-
-ensure_in_syspath('../../')
 
 # Globals
 win_iis.__salt__ = {}
@@ -344,7 +341,8 @@ class WinIisTestCase(TestCase):
     @patch('salt.modules.win_iis._list_certs',
            MagicMock(return_value={'9988776655443322111000AAABBBCCCDDDEEEFFF': None}))
     @patch('salt.modules.win_iis._srvmgr',
-           MagicMock(return_value={'retcode': 0}))
+           MagicMock(return_value={'retcode': 0, 'stdout': 10}))
+    @patch('json.loads', MagicMock(return_value=[{'MajorVersion': 10, 'MinorVersion': 0}]))
     @patch('salt.modules.win_iis.list_bindings',
            MagicMock(return_value=BINDING_LIST))
     @patch('salt.modules.win_iis.list_cert_bindings',
@@ -408,7 +406,3 @@ class WinIisTestCase(TestCase):
                   'settings': {'managedPipelineMode': 'Integrated'}}
         with patch.dict(win_iis.__salt__):
             self.assertTrue(win_iis.set_container_setting(**kwargs))
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(WinIisTestCase, needs_daemon=False)

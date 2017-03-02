@@ -6,12 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
-# Import Salt Libs
-import integration
+import tests.integration as integration
 
 
 class BatchTest(integration.ShellCase):
@@ -60,7 +55,3 @@ class BatchTest(integration.ShellCase):
         '''
         cmd = self.run_salt(' "*" state.single test.fail_without_changes name=test_me -b 25%', with_retcode=True)
         self.assertEqual(cmd[-1], 2)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BatchTest)

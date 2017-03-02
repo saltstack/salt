@@ -7,17 +7,14 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     create_autospec,
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import etcd_mod
@@ -193,8 +190,3 @@ class EtcdModTestCase(TestCase):
             self.assertEqual(etcd_mod.watch('/some-dir', True, None, 5, 10),
                              self.instance.watch.return_value)
             self.instance.watch.assert_called_with('/some-dir', recurse=True, timeout=5, index=10)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(EtcdModTestCase, needs_daemon=False)

@@ -10,14 +10,13 @@ import string
 import os
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-from salt.ext.six.moves import range
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import integration
 import salt.utils
+from salt.ext.six.moves import range
 
 
 @skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
@@ -232,8 +231,3 @@ class ShadowModuleTest(integration.ModuleCase):
         #restore shadow file
         with salt.utils.fopen('/etc/shadow', 'w') as sFile:
             sFile.write(shadow)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ShadowModuleTest)

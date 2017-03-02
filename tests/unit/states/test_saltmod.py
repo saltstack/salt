@@ -4,23 +4,19 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import time
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-import salt.utils.event
-import time
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
+import salt.utils.event
 from salt.states import saltmod
 
 saltmod.__opts__ = {'__role': 'master', 'file_client': 'remote'}
@@ -193,8 +189,3 @@ class SaltmodTestCase(TestCase):
 
         with patch.dict(saltmod.__salt__, {'saltutil.wheel': wheel_mock}):
             self.assertDictEqual(saltmod.wheel(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SaltmodTestCase, needs_daemon=False)

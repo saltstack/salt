@@ -6,12 +6,10 @@ import os
 import shutil
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
-import salt.utils
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
-import integration
 import salt.utils
 # from salt.modules import linux_acl as acl
 
@@ -68,8 +66,3 @@ class LinuxAclModuleTest(integration.ModuleCase,
                            'group': [{'root': {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}}],
                            'comment': {'owner': 'root', 'group': 'root', 'file': self.myfile}}}
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LinuxAclModuleTest)

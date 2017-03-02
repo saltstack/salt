@@ -8,11 +8,8 @@ import random
 import string
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 # Import Salt libs
 import salt.config
@@ -21,7 +18,7 @@ import salt.utils.boto
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error,unused-import
-from unit.modules.test_boto_vpc import BotoVpcTestCaseMixin
+from tests.unit.modules.test_boto_vpc import BotoVpcTestCaseMixin
 
 # Import 3rd-party libs
 try:

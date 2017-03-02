@@ -7,11 +7,10 @@ integration tests for mac_ports
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import integration
 import salt.utils
 
 
@@ -116,8 +115,3 @@ class MacPortsModuleTest(integration.ModuleCase):
         results = self.run_function('pkg.upgrade', refresh=False)
         self.assertIsInstance(results, dict)
         self.assertTrue(results['result'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacPortsModuleTest)

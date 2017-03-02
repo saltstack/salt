@@ -15,12 +15,11 @@ from __future__ import absolute_import
 import datetime
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import integration
 import salt.utils
 
 
@@ -214,8 +213,3 @@ class MacTimezoneModuleTest(integration.ModuleCase):
             self.run_function('timezone.set_time_server', ['spongebob.com']))
         self.assertEqual(
             self.run_function('timezone.get_time_server'), 'spongebob.com')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacTimezoneModuleTest)

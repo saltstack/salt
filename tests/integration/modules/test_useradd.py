@@ -7,17 +7,15 @@ import string
 import random
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains
 )
-ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.utils
-import integration
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -199,9 +197,3 @@ class UseraddModuleTestWindows(integration.ModuleCase):
         finally:
             self.run_function('user.delete', [user_name, True, True])
             self.run_function('group.delete', [group_name])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(UseraddModuleTestLinux,
-              UseraddModuleTestWindows)

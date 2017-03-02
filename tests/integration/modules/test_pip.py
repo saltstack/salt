@@ -15,12 +15,10 @@ import re
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
 
 # Import salt libs
-import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
@@ -438,8 +436,3 @@ class PipModuleTest(integration.ModuleCase):
             shutil.rmtree(self.venv_test_dir)
         if os.path.isdir(self.pip_temp):
             shutil.rmtree(self.pip_temp)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PipModuleTest)

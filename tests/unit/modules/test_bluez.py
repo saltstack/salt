@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -208,7 +208,3 @@ class BluezTestCase(TestCase):
         mock = MagicMock(return_value="Ok")
         with patch.dict(bluez.__salt__, {'service.stop': mock}):
             self.assertEqual(bluez.stop(), "Ok")
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BluezTestCase, needs_daemon=False)

@@ -8,13 +8,11 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
-ensure_in_syspath('../..')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 # Import salt libs
-import integration
 from salt.fileserver import roots
 from salt import fileclient
 import salt.utils
@@ -211,8 +209,3 @@ class RootsLimitTraversalTest(integration.ModuleCase):
         self.assertIn('test_deep.test', ret)
         self.assertIn('test_deep.a.test', ret)
         self.assertNotIn('test_deep.b.2.test', ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RootsTest, RootsLimitTraversalTest)

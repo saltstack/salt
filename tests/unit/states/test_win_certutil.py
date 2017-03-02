@@ -7,14 +7,11 @@ from __future__ import absolute_import
 from salt.states import win_certutil as certutil
 
 # Import Salt Testing Libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase
+from tests.support.mock import (
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 certutil.__salt__ = {}
 
@@ -228,8 +225,3 @@ class CertUtilTestCase(TestCase):
             get_store_serials_mock.assert_called_once_with('TrustedPublisher')
             del_mock.assert_called_once_with('/tmp/cert.cer', 'TrustedPublisher')
             self.assertEqual(expected, out)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CertUtilTestCase, needs_daemon=False)

@@ -6,10 +6,7 @@ import os
 import tempfile
 
 # Import Salt Testing libs
-from salttesting.unit import TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase
 
 # Import Salt libs
 import salt.utils
@@ -164,8 +161,3 @@ empty_option =
             'SectionB': {'test3': 'this value will be edited two times'},
         })
         self.test_empty_lines_preserved_after_edit()
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(IniManageTestCase, needs_daemon=False)

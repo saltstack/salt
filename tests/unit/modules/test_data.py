@@ -6,8 +6,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,
@@ -134,8 +134,3 @@ class DataTestCase(TestCase):
         Test if it check and set a value in the minion datastore
         '''
         self.assertTrue(data.cas('salt', 'SALTSTACK', 'SALT'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DataTestCase, needs_daemon=False)

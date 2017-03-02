@@ -10,18 +10,14 @@ import sys
 import types
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     Mock,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # wmi modules are platform specific...
 wmi = types.ModuleType('wmi')
@@ -212,8 +208,3 @@ class WinNetworkTestCase(TestCase):
         with patch.object(salt.utils.network, 'in_subnet',
                           MagicMock(return_value=True)):
             self.assertTrue(win_network.in_subnet('10.1.1.0/16'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinNetworkTestCase, needs_daemon=False)

@@ -8,12 +8,11 @@ from __future__ import absolute_import
 import time
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import integration
 import salt.utils
 
 
@@ -111,8 +110,3 @@ class Nilrt_ipModuleTest(integration.ModuleCase):
             self.assertEqual(interface['ipv4']['address'], '192.168.10.4')
             self.assertEqual(interface['ipv4']['netmask'], '255.255.255.0')
             self.assertEqual(interface['ipv4']['gateway'], '192.168.10.1')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(Nilrt_ipModuleTest)

@@ -7,16 +7,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import memcached
@@ -468,8 +465,3 @@ class MemcachedTestCase(TestCase):
                           MagicMock(return_value=MockMemcache())):
             self.assertRaises(CommandExecutionError, memcached.decrement,
                               'salt')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MemcachedTestCase, needs_daemon=False)

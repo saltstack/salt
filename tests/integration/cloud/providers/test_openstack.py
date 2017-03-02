@@ -8,15 +8,10 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath
-)
-ensure_in_syspath('../../')
+import tests.integration as integration
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
-# Import salt libs
-import integration
 log = logging.getLogger(__name__)
 
 NO_KEYSTONE = False
@@ -161,8 +156,3 @@ class OpenstackTest(integration.ModuleCase,
                                                   tenant_name='admin')
         driver.authenticate()
         self.assertTrue(driver.auth_token)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(OpenstackTest)

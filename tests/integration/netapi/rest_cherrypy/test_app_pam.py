@@ -8,27 +8,20 @@ from __future__ import absolute_import
 import os
 
 # Import salttesting libs
-from salttesting.unit import skipIf
-from salttesting.helpers import (
-    ensure_in_syspath,
-    destructiveTest)
-ensure_in_syspath('../../../')
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
-from tests.utils import BaseRestCherryPyTest
+# Import test support libs
+import tests.support.cherrypy_testclasses as cptc
+import tests.integration as integration
 
 # Import Salt Libs
 import salt.utils
-from tests import integration
 
 # Import 3rd-party libs
-# pylint: disable=import-error,unused-import
-from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module
-try:
+from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
+if cptc.HAS_CHERRYPY:
     import cherrypy
-    HAS_CHERRYPY = True
-except ImportError:
-    HAS_CHERRYPY = False
-# pylint: enable=import-error,unused-import
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
@@ -40,8 +33,8 @@ AUTH_CREDS = {
     'eauth': 'pam'}
 
 
-@skipIf(HAS_CHERRYPY is False, 'CherryPy not installed')
-class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
+@skipIf(cptc.HAS_CHERRYPY is False, 'CherryPy not installed')
+class TestAuthPAM(cptc.BaseRestCherryPyTest, integration.ModuleCase):
     '''
     Test auth with pam using salt-api
     '''
@@ -137,5 +130,5 @@ class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
         # Remove saltdev user
         if USERA in user_list:
             self.run_function('user.delete', [USERA], remove=True)
-        #need to exit cherypy engine
+        # need to exit cherypy engine
         cherrypy.engine.exit()

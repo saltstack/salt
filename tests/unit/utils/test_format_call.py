@@ -13,9 +13,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase
 
 # Import salt libs
 from salt.utils import format_call
@@ -56,8 +54,3 @@ class TestFormatCall(TestCase):
                 TypeError,
                 r'foo2 takes at least 2 arguments \(1 given\)'):
             format_call(foo2, dict(one=1))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestFormatCall, needs_daemon=False)

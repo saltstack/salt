@@ -8,11 +8,9 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import tests.integration as integration
 
 # Import salt libs
-import integration
 import salt.utils
 
 TEST_FILE = os.path.join(integration.TMP, 'xattr_test_file.txt')
@@ -175,8 +173,3 @@ class MacXattrModuleTest(integration.ModuleCase):
         # Test file not found
         self.assertEqual(self.run_function('xattr.clear', [NO_FILE]),
                          'ERROR: File not found: {0}'.format(NO_FILE))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacXattrModuleTest)

@@ -10,14 +10,9 @@
 from __future__ import absolute_import
 import logging
 
-# Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
-import integration.utils
-from integration.utils import testprogram
+# Import salt tests libs
+import tests.integration.utils
+from tests.integration.utils import testprogram
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +49,7 @@ class ProxyTest(testprogram.TestProgramCase):
             status, 'EX_USAGE',
             message='no --proxyid specified',
             stdout=stdout,
-            stderr=integration.utils.decode_byte_list(stderr)
+            stderr=tests.integration.utils.decode_byte_list(stderr)
         )
         # proxy.shutdown() should be unnecessary since the start-up should fail
 
@@ -79,7 +74,7 @@ class ProxyTest(testprogram.TestProgramCase):
             status, 'EX_NOUSER',
             message='unknown user not on system',
             stdout=stdout,
-            stderr=integration.utils.decode_byte_list(stderr)
+            stderr=tests.integration.utils.decode_byte_list(stderr)
         )
         # proxy.shutdown() should be unnecessary since the start-up should fail
 
@@ -127,10 +122,6 @@ class ProxyTest(testprogram.TestProgramCase):
             status, 'EX_OK',
             message='correct usage',
             stdout=stdout,
-            stderr=integration.utils.decode_byte_list(stderr)
+            stderr=tests.integration.utils.decode_byte_list(stderr)
         )
         proxy.shutdown()
-
-
-if __name__ == '__main__':
-    integration.run_tests(ProxyTest)

@@ -13,16 +13,14 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import destructiveTest
+from tests.support.mock import (
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
     patch
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.utils
@@ -161,8 +159,3 @@ class LocalCacheCleanOldJobsTestCase(TestCase):
                 jid_file.write('this is a jid file')
 
         return temp_dir, jid_file_path
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LocalCacheCleanOldJobsTestCase, needs_daemon=False)

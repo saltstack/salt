@@ -10,8 +10,8 @@ from salt.cloud.clouds import ec2
 from salt.exceptions import SaltCloudSystemExit
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

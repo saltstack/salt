@@ -6,20 +6,17 @@
 # Import Python Libs
 from __future__ import absolute_import
 
+import os
+
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-from salttesting.helpers import ensure_in_syspath
-import os
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import poudriere
@@ -248,8 +245,3 @@ class PoudriereTestCase(TestCase):
             with patch.dict(poudriere.__salt__, {'cmd.run': mock}):
                 self.assertEqual(poudriere.bulk_build('90amd64',
                                                       '/root/pkg_list'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PoudriereTestCase, needs_daemon=False)

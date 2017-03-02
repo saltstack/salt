@@ -10,16 +10,13 @@ import os
 import yaml
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 from salt.modules import grains as grainsmod
 from salt.states import grains as grains
 
-import integration
+import tests.integration as integration
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -1077,8 +1074,3 @@ class GrainsTestCase(TestCase):
                                   + "foo:\n"
                                   + "- bar\n"
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GrainsTestCase, needs_daemon=False)
