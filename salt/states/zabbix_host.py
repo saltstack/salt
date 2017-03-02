@@ -256,7 +256,7 @@ def present(host, groups, interfaces, **kwargs):
     return ret
 
 
-def absent(name):
+def absent(name, **kwargs):
     """
     Ensures that the host does not exists, eventually deletes host.
 
