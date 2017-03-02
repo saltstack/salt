@@ -20,6 +20,7 @@ import grp
 import sys
 
 # Import Salt libs
+import salt.client
 import salt.config
 import salt.loader
 import salt.cache
@@ -31,6 +32,7 @@ from salt.ext.six import string_types
 from salt.ext.six.moves import input
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import filter
+from salt.template import compile_template
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -229,6 +231,10 @@ class SPMClient(object):
         if len(args) < 2:
             raise SPMInvocationError('A package must be specified')
 
+        caller_opts = self.opts.copy()
+        caller_opts['file_client'] = 'local'
+        self.caller = salt.client.Caller(mopts=caller_opts)
+        self.client = salt.client.get_local_client(self.opts['conf_file'])
         cache = salt.cache.Cache(self.opts)
 
         packages = args[1:]
@@ -468,6 +474,22 @@ class SPMClient(object):
         # We've decided to install
         self._pkgdb_fun('register_pkg', pkg_name, formula_def, self.db_conn)
 
+        # Run the pre_local_state script, if present
+        if 'pre_local_state' in formula_def:
+            high_data = self._render(formula_def['pre_local_state'], formula_def)
+            ret = self.caller.cmd('state.high', data=high_data)
+        if 'pre_tgt_state' in formula_def:
+            log.debug('Executing pre_tgt_state script')
+            high_data = self._render(formula_def['pre_tgt_state']['data'], formula_def)
+            tgt = formula_def['pre_tgt_state']['tgt']
+            ret = self.client.run_job(
+                tgt=formula_def['pre_tgt_state']['tgt'],
+                fun='state.high',
+                tgt_type=formula_def['pre_tgt_state'].get('tgt_type', 'glob'),
+                timout=self.opts['timeout'],
+                data=high_data,
+            )
+
         # No defaults for this in config.py; default to the current running
         # user and group
         uid = self.opts.get('spm_uid', os.getuid())
@@ -504,6 +526,23 @@ class SPMClient(object):
                                 out_path,
                                 digest,
                                 self.db_conn)
+
+        # Run the post_local_state script, if present
+        if 'post_local_state' in formula_def:
+            log.debug('Executing post_local_state script')
+            high_data = self._render(formula_def['post_local_state'], formula_def)
+            self.caller.cmd('state.high', data=high_data)
+        if 'post_tgt_state' in formula_def:
+            log.debug('Executing post_tgt_state script')
+            high_data = self._render(formula_def['post_tgt_state']['data'], formula_def)
+            tgt = formula_def['post_tgt_state']['tgt']
+            ret = self.client.run_job(
+                tgt=formula_def['post_tgt_state']['tgt'],
+                fun='state.high',
+                tgt_type=formula_def['post_tgt_state'].get('tgt_type', 'glob'),
+                timout=self.opts['timeout'],
+                data=high_data,
+            )
 
         formula_tar.close()
 
@@ -997,6 +1036,27 @@ class SPMClient(object):
             elif member.name.startswith('{0}/{1}'.format(self.abspath, item)):
                 return None
         return member
+
+    def _render(self, data, formula_def):
+        '''
+        Render a [pre|post]_local_state or [pre|post]_tgt_state script
+        '''
+        # FORMULA can contain a renderer option
+        renderer = formula_def.get('renderer', self.opts.get('renderer', 'yaml_jinja'))
+        rend = salt.loader.render(self.opts, {})
+        blacklist = self.opts.get('renderer_blacklist')
+        whitelist = self.opts.get('renderer_whitelist')
+        template_vars = formula_def.copy()
+        template_vars['opts'] = self.opts.copy()
+        return compile_template(
+            ':string:',
+            rend,
+            renderer,
+            blacklist,
+            whitelist,
+            input_data=data,
+            **template_vars
+        )
 
 
 class SPMUserInterface(object):

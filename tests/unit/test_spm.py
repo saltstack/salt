@@ -19,7 +19,9 @@ config = salt.config.minion_config(None)
 config['file_roots'] = {'base': [os.path.join(_TMP_SPM, 'salt')]}
 config['pillar_roots'] = {'base': [os.path.join(_TMP_SPM, 'pillar')]}
 
-__opts__ = {
+__opts__ = salt.config.DEFAULT_MINION_OPTS
+
+__opts__.update({
     'spm_logfile': os.path.join(_TMP_SPM, 'log'),
     'spm_repos_config': os.path.join(_TMP_SPM, 'etc', 'spm.repos'),
     'spm_cache_dir': os.path.join(_TMP_SPM, 'cache'),
@@ -37,9 +39,10 @@ __opts__ = {
     'force': False,
     'verbose': False,
     'cache': 'localfs',
+    'cachedir': os.path.join(_TMP_SPM, 'cache'),
     'spm_repo_dups': 'ignore',
     'spm_share_dir': os.path.join(_TMP_SPM, 'share'),
-}
+})
 
 _F1 = {
     'definition': {
@@ -90,6 +93,9 @@ class SPMTest(TestCase):
         os.mkdir(_TMP_SPM)
         self.ui = SPMTestUserInterface()
         self.client = salt.spm.SPMClient(self.ui, __opts__)
+        master_cache = salt.config.DEFAULT_MASTER_OPTS['cachedir']
+        if not os.path.exists(master_cache):
+            os.makedirs(master_cache)
 
     def tearDown(self):
         shutil.rmtree(_TMP_SPM, ignore_errors=True)
