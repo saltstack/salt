@@ -215,6 +215,7 @@ class GenerateSaltSyspaths(Command):
             INSTALL_SYSPATHS_TEMPLATE.format(
                 date=DATE,
                 root_dir=self.distribution.salt_root_dir,
+                share_dir=self.distribution.salt_share_dir,
                 config_dir=self.distribution.salt_config_dir,
                 cache_dir=self.distribution.salt_cache_dir,
                 sock_dir=self.distribution.salt_sock_dir,
@@ -703,6 +704,7 @@ INSTALL_SYSPATHS_TEMPLATE = '''\
 {date:%A, %d %B %Y @ %H:%m:%S UTC}.
 
 ROOT_DIR = {root_dir!r}
+SHARE_DIR = {share_dir!r}
 CONFIG_DIR = {config_dir!r}
 CACHE_DIR = {cache_dir!r}
 SOCK_DIR = {sock_dir!r}
@@ -864,6 +866,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
         # Salt Paths Configuration Settings
         self.salt_root_dir = None
+        self.salt_share_dir = None
         self.salt_config_dir = None
         self.salt_cache_dir = None
         self.salt_sock_dir = None

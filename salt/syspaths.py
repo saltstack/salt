@@ -139,6 +139,7 @@ if SPM_REACTOR_PATH is None:
 
 __all__ = [
     'ROOT_DIR',
+    'SHARE_DIR',
     'CONFIG_DIR',
     'CACHE_DIR',
     'SOCK_DIR',
