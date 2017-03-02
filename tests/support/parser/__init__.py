@@ -26,6 +26,7 @@ import subprocess
 import warnings
 from functools import partial
 from contextlib import closing
+from collections import namedtuple
 
 from tests.support import helpers
 from tests.support.unit import TestLoader, TextTestRunner
@@ -73,6 +74,9 @@ def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
 
 # Set our own exception handler as the one to use
 sys.excepthook = __global_logging_exception_handler
+
+TestsuiteResult = namedtuple('TestsuiteResult', ['header', 'errors', 'skipped', 'failures', 'passed'])
+TestResult = namedtuple('TestResult', ['id', 'reason'])
 
 
 def print_header(header, sep='~', top=True, bottom=True, inline=False,
@@ -490,13 +494,31 @@ class SaltTestingParser(optparse.OptionParser):
                 output=self.xml_output_dir,
                 verbosity=self.options.verbosity
             ).run(tests)
-            self.testsuite_results.append((header, runner))
         else:
             runner = TextTestRunner(
                 stream=sys.stdout,
                 verbosity=self.options.verbosity).run(tests)
-            self.testsuite_results.append((header, runner))
-        return runner.wasSuccessful()
+
+        errors = []
+        skipped = []
+        failures = []
+        for testcase, reason in runner.errors:
+            errors.append(TestResult(testcase.id(), reason))
+        for testcase, reason in runner.skipped:
+            skipped.append(TestResult(testcase.id(), reason))
+        for testcase, reason in runner.failures:
+            failures.append(TestResult(testcase.id(), reason))
+        self.testsuite_results.append(
+            TestsuiteResult(header,
+                            errors,
+                            skipped,
+                            failures,
+                            runner.testsRun - len(errors + skipped + failures))
+        )
+        success = runner.wasSuccessful()
+        del loader
+        del runner
+        return success
 
     def print_overall_testsuite_report(self):
         '''
@@ -510,22 +532,19 @@ class SaltTestingParser(optparse.OptionParser):
 
         failures = errors = skipped = passed = 0
         no_problems_found = True
-        for (name, results) in self.testsuite_results:
+        for results in self.testsuite_results:
             failures += len(results.failures)
             errors += len(results.errors)
             skipped += len(results.skipped)
-            passed += results.testsRun - len(
-                results.failures + results.errors + results.skipped
-            )
+            passed += results.passed
 
-            if not results.failures and not results.errors and \
-                    not results.skipped:
+            if not results.failures and not results.errors and not results.skipped:
                 continue
 
             no_problems_found = False
 
             print_header(
-                u'*** {0}  '.format(name), sep=u'*', inline=True,
+                u'*** {0}  '.format(results.header), sep=u'*', inline=True,
                 width=self.options.output_columns
             )
             if results.skipped:
@@ -534,12 +553,11 @@ class SaltTestingParser(optparse.OptionParser):
                     width=self.options.output_columns
                 )
                 maxlen = len(
-                    max([testcase.id() for (testcase, reason) in
-                         results.skipped], key=len)
+                    max([testcase.id for testcase in results.skipped], key=len)
                 )
                 fmt = u'   -> {0: <{maxlen}}  ->  {1}'
-                for testcase, reason in results.skipped:
-                    print(fmt.format(testcase.id(), reason, maxlen=maxlen))
+                for testcase in results.skipped:
+                    print(fmt.format(testcase.id, testcase.reason, maxlen=maxlen))
                 print_header(u' ', sep='-', inline=True,
                              width=self.options.output_columns)
 
@@ -548,13 +566,13 @@ class SaltTestingParser(optparse.OptionParser):
                     u' --------  Tests with Errors  ', sep='-', inline=True,
                     width=self.options.output_columns
                 )
-                for testcase, reason in results.errors:
+                for testcase in results.errors:
                     print_header(
-                        u'   -> {0}  '.format(testcase.id()),
+                        u'   -> {0}  '.format(testcase.id),
                         sep=u'.', inline=True,
                         width=self.options.output_columns
                     )
-                    for line in reason.rstrip().splitlines():
+                    for line in testcase.reason.rstrip().splitlines():
                         print('       {0}'.format(line.rstrip()))
                     print_header(u'   ', sep=u'.', inline=True,
                                  width=self.options.output_columns)
@@ -566,13 +584,13 @@ class SaltTestingParser(optparse.OptionParser):
                     u' --------  Failed Tests  ', sep='-', inline=True,
                     width=self.options.output_columns
                 )
-                for testcase, reason in results.failures:
+                for testcase in results.failures:
                     print_header(
-                        u'   -> {0}  '.format(testcase.id()),
+                        u'   -> {0}  '.format(testcase.id),
                         sep=u'.', inline=True,
                         width=self.options.output_columns
                     )
-                    for line in reason.rstrip().splitlines():
+                    for line in testcase.reason.rstrip().splitlines():
                         print('       {0}'.format(line.rstrip()))
                     print_header(u'   ', sep=u'.', inline=True,
                                  width=self.options.output_columns)
