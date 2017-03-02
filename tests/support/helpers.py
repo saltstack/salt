@@ -1042,9 +1042,17 @@ def skip_if_binaries_missing(*binaries, **kwargs):
 
 
 def skip_if_not_root(func):
-    if os.getuid() != 0:
-        func.__unittest_skip__ = True
-        func.__unittest_skip_why__ = 'You must be logged in as root to run this test'
+    if not sys.platform.startswith('win'):
+        if os.getuid() != 0:
+            func.__unittest_skip__ = True
+            func.__unittest_skip_why__ = 'You must be logged in as root to run this test'
+    else:
+        import salt.utils.win_functions
+        current_user = salt.utils.win_functions.get_current_user()
+        if current_user != 'SYSTEM':
+            if not salt.utils.win_functions.is_admin(current_user):
+                func.__unittest_skip__ = True
+                func.__unittest_skip_why__ = 'You must be logged in as an Administrator to run this test'
     return func
 
 
