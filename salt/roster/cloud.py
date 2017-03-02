@@ -70,7 +70,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         'profile': profile,
     }
 
-    full_info = info.get(provider, {}).get(driver, {}).get(tgt, {}).get(tgt, {})
+    full_info = info.get(provider, {}).get(driver, {}).get(tgt, {})
     public_ips = full_info.get('public_ips', [])
     private_ips = full_info.get('private_ips', [])
     ip_list = []
