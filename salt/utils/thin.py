@@ -154,7 +154,7 @@ def get_tops(extra_mods='', so_mods=''):
 
 
 def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
-             python2_bin='python2', python3_bin='python3'):
+             python2_bin='python2', python3_bin='python3', absonly=True):
     '''
     Generate the salt-thin tarball and print the location of the tarball
     Optional additional mods to include (e.g. mako) can be supplied as a comma
@@ -269,7 +269,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     tempdir = None
     for py_ver, tops in _six.iteritems(tops_py_version_mapping):
         for top in tops:
-            if not os.path.isabs(top):
+            if absonly and not os.path.isabs(top):
                 continue
             base = os.path.basename(top)
             top_dirname = os.path.dirname(top)
