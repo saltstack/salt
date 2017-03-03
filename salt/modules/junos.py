@@ -24,7 +24,6 @@ try:
     import jnpr.junos.utils
     import jnpr.junos.cfg
     import jxmlease
-
     # pylint: enable=W0611
     HAS_JUNOS = True
 except ImportError:
@@ -158,7 +157,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
           The format in which the rpc reply is received from the device.
           (default = xml)
         * kwargs: keyworded arguments taken by rpc call like-
-            * timeout:
+            * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default= 30 seconds)
             * filter:
@@ -402,7 +401,7 @@ def commit(**kwargs):
             ret['out'] = False
             ret['message'] = \
                 'Commit check succeeded but actual commit failed with "{0}"' \
-                    .format(exception)
+                .format(exception)
     else:
         ret['out'] = False
         ret['message'] = 'Pre-commit check failed.'
@@ -425,7 +424,7 @@ def rollback(id=0, **kwargs):
         * id:
           The rollback id value [0-49]. (default = 0)
         * kwargs: Keyworded arguments which can be provided like-
-            * timeout:
+            * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
             * comment:
@@ -818,7 +817,10 @@ def install_config(path=None, **kwargs):
         template_vars = kwargs["template_vars"]
 
     template_cached_path = files.mkstemp()
-    __salt__['cp.get_template'](path, template_cached_path, template_vars=template_vars)
+    __salt__['cp.get_template'](
+        path,
+        template_cached_path,
+        template_vars=template_vars)
 
     if not os.path.isfile(template_cached_path):
         ret['message'] = 'Invalid file path.'
@@ -903,7 +905,7 @@ def install_config(path=None, **kwargs):
     except Exception as exception:
         ret['message'] = \
             'Commit check threw the following exception: "{0}"' \
-                .format(exception)
+            .format(exception)
         ret['out'] = False
         return ret
 
@@ -914,7 +916,7 @@ def install_config(path=None, **kwargs):
         except Exception as exception:
             ret['message'] = \
                 'Commit check successful but commit failed with "{0}"' \
-                    .format(exception)
+                .format(exception)
             ret['out'] = False
             return ret
     else:
@@ -1027,7 +1029,7 @@ def install_os(path=None, **kwargs):
         except Exception as exception:
             ret['message'] = \
                 'Installation successful but reboot failed due to : "{0}"' \
-                    .format(exception)
+                .format(exception)
             ret['out'] = False
             return ret
         ret['message'] = 'Successfully installed and rebooted!'

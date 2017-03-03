@@ -16,7 +16,7 @@ before_install:
   - pip install git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
 
 install:
-  - pip install -r requirements/zeromq.txt 
+  - pip install -r requirements/zeromq.txt -r requirements/cloud.txt
   - pip install --allow-all-external -r requirements/opt.txt
 
 before_script:
