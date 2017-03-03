@@ -39,7 +39,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import copy
 
 # Import 3rd-party libs
 try:
@@ -125,10 +124,19 @@ def proxytype():
 
 
 def grains():
-    thisproxy['grains'] = copy.deepcopy(thisproxy['conn'].facts)
+
+    thisproxy['grains'] = dict(thisproxy['conn'].facts)
+
     if thisproxy['grains']:
         thisproxy['grains']['version_info'] = dict(
             thisproxy['grains']['version_info'])
+        # For backward compatibility. 'junos_info' is present
+        # only of in newer versions of facts.
+        if 'junos_info' in thisproxy['grains']:
+            thisproxy['grains']['junos_info']['re0']['object'] = \
+                dict(thisproxy['grains']['junos_info']['re0']['object'])
+            thisproxy['grains']['junos_info']['re1']['object'] = \
+                dict(thisproxy['grains']['junos_info']['re1']['object'])
     else:
         log.debug(
             'Grains will not be populated by junos facts \
