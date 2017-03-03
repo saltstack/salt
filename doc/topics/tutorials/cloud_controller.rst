@@ -312,9 +312,11 @@ migrate routine:
 VNC Consoles
 ============
 
-Salt Virt also sets up VNC consoles by default, allowing for remote visual
-consoles to be oped up. The information from a ``virt.query`` routine will
-display the vnc console port for the specific vms:
+Although not enabled by default, Salt Virt can also set up VNC consoles allowing for remote visual
+consoles to be opened up. When creating a new VM using ``virt.init`` pass the ``enable_vnc=True``
+parameter to have a console configured for the new VM.
+
+The information from a ``virt.query`` routine will display the vnc console port for the specific vms:
 
 .. code-block:: yaml
 
