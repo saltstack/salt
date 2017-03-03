@@ -183,8 +183,7 @@ class UseraddModuleTestWindows(integration.ModuleCase):
 
             # And create the user as a member of that group
             if self.run_function(
-                    'user.add',
-                    [user_name, 'groups={0}'.format(group_name)]) is False:
+                    'user.add', [user_name], groups=group_name) is False:
                 self.run_function('user.delete', [user_name, True, True])
                 self.skipTest('Failed to create user')
 
