@@ -107,6 +107,28 @@ class Local_CacheTest(integration.ShellCase):
         EMPTY_JID_DIR.append(new_jid_dir)
         os.makedirs(new_jid_dir)
 
+        # This needed due to a race condition in Windows
+        # `os.makedirs` hasn't released the handle before
+        # `local_cache.clean_old_jobs` tries to delete the new_jid_dir
+        if salt.utils.is_windows():
+            import time
+            lock_dir = new_jid_dir + '.lckchk'
+            tries = 0
+            while True:
+                tries += 1
+                if tries > 10:
+                    break
+                # Rename the directory and name it back
+                # If it fails, the directory handle is not released, try again
+                # If it succeeds, break and continue test
+                try:
+                    os.rename(new_jid_dir, lock_dir)
+                    time.sleep(1)
+                    os.rename(lock_dir, new_jid_dir)
+                    break
+                except WindowsError:  # pylint: disable=E0602
+                    continue
+
         # check dir exists
         self._check_dir_files('new_jid_dir was not created',
                               EMPTY_JID_DIR,

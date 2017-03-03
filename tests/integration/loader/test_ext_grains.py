@@ -8,6 +8,8 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import os
+import time
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf
@@ -15,7 +17,6 @@ from tests.support.unit import skipIf
 # Import salt libs
 import tests.integration as integration
 from salt.config import minion_config
-
 from salt.loader import grains
 
 
@@ -30,6 +31,18 @@ class LoaderGrainsTest(integration.ModuleCase):
     #    self.opts['grains'] = grains(self.opts)
 
     def test_grains_overwrite(self):
+        # To avoid a race condition on Windows, we need to make sure the
+        # `test_custom_grain2.py` file is present in the _grains directory
+        # before trying to get the grains. This test may execute before the
+        # minion has finished syncing down the files it needs.
+        module = os.path.join(integration.TMP, 'rootdir', 'cache', 'files',
+                              'base', '_grains', 'test_custom_grain2.py')
+        tries = 0
+        while not os.path.exists(module):
+            tries += 1
+            if tries > 60:
+                break
+            time.sleep(1)
         grains = self.run_function('grains.items')
 
         # Check that custom grains are overwritten

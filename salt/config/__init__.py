@@ -1625,6 +1625,7 @@ DEFAULT_SPM_OPTS = {
     # If set, spm_node_type will be either master or minion, but they should
     # NOT be a default
     'spm_node_type': '',
+    'spm_share_dir': os.path.join(salt.syspaths.SHARE_DIR, 'spm'),
     # <---- Salt master settings overridden by SPM ----------------------
 }
 
@@ -3388,7 +3389,7 @@ def apply_master_config(overrides=None, defaults=None):
     ]
 
     # These can be set to syslog, so, not actual paths on the system
-    for config_key in ('log_file', 'key_logfile'):
+    for config_key in ('log_file', 'key_logfile', 'ssh_log_file'):
         log_setting = opts.get(config_key, '')
         if log_setting is None:
             continue

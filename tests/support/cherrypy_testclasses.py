@@ -11,7 +11,7 @@ except ImportError:
 import os
 
 import salt.config
-from tests.integration import TMP_CONF_DIR
+from tests.support.paths import TMP_CONF_DIR
 
 if HAS_CHERRYPY:
     from tests.support.cptestcase import BaseCherryPyTestCase

@@ -1122,7 +1122,10 @@ def symlink(
 
     mode
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
-        on Windows
+        on Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
     '''
     name = os.path.expanduser(name)
 
@@ -1586,7 +1589,10 @@ def managed(name,
         is running as on the minion On Windows, this is ignored
 
     mode
-        The mode to set on this file, e.g. ``644``, ``0775``, or ``4664``.
+        The permissions to set on this file, e.g. ``644``, ``0775``, or ``4664``.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
         .. note::
             This option is **not** supported on Windows.
@@ -1620,6 +1626,9 @@ def managed(name,
         permissions for those directories. If this is not set, directories
         will be assigned permissions by adding the execute bit to the mode of
         the files.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     replace : True
         If set to ``False`` and the file already exists, the file will not be
@@ -2434,11 +2443,17 @@ def directory(name,
 
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
-        Windows
+        Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     file_mode
         The permissions mode to set any files created if 'mode' is run in
-        'recurse'. This defaults to dir_mode. Not supported on Windows
+        'recurse'. This defaults to dir_mode. Not supported on Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     makedirs
         If the directory is located in a path without a parent directory, then
@@ -2876,14 +2891,19 @@ def recurse(name,
         salt is running as on the minion. On Windows, this is ignored
 
     dir_mode
-        The mode to set on any directories created.
+        The permissions mode to set on any directories created.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
         .. note::
             This option is **not** supported on Windows.
 
     file_mode
-        The mode to set on any files created.
-        Windows
+        The permissions mode to set on any files created.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
         .. note::
             This option is **not** supported on Windows.
@@ -2897,7 +2917,10 @@ def recurse(name,
             incompatible with the ``contents`` options.
 
     sym_mode
-        The mode to set on any symlink created.
+        The permissions mode to set on any symlink created.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
         .. note::
             This option is **not** supported on Windows.
@@ -4978,7 +5001,10 @@ def copy(
 
         The permissions to set on the copied file, aka 644, '0775', '4664'.
         If ``preserve`` is set to ``True``, then this will be ignored.
-        Not supported on Windows
+        Not supported on Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     subdir
         .. versionadded:: 2015.5.0
@@ -5357,6 +5383,9 @@ def serialize(name,
     mode
         The permissions to set on this file, e.g. ``644``, ``0775``, or
         ``4664``.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
         .. note::
             This option is **not** supported on Windows.

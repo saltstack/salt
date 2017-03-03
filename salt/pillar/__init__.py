@@ -821,11 +821,14 @@ class Pillar(object):
                                                         key)
                 except Exception as exc:
                     errors.append(
-                        'Failed to load ext_pillar {0}: {1}\n{2}'.format(
+                        'Failed to load ext_pillar {0}: {1}'.format(
                             key,
                             exc.__str__(),
-                            ''.join(traceback.format_tb(sys.exc_info()[2])),
                         )
+                    )
+                    log.error(
+                        'Execption caught loading ext_pillar \'%s\':\n%s',
+                        key, ''.join(traceback.format_tb(sys.exc_info()[2]))
                     )
             if ext:
                 pillar = merge(

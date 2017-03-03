@@ -575,6 +575,11 @@ VALID_CREATE_OPTS = {
     'devices': {
         'path': 'HostConfig:Devices',
     },
+    'sysctls': {
+        'path': 'HostConfig:Sysctls',
+        'min_docker': (1, 12, 0),
+        'default': {},
+    },
     'ulimits': {
         'path': 'HostConfig:Ulimits',
         'min_docker': (1, 6, 0),
@@ -1937,6 +1942,43 @@ def _validate_input(kwargs,
                     kwargs['labels'] = new_labels
             else:
                 kwargs['labels'] = salt.utils.repack_dictlist(kwargs['labels'])
+
+    def _valid_sysctls():  # pylint: disable=unused-variable
+        '''
+        Can be a a dictionary
+        '''
+        if kwargs.get('sysctls') is None:
+            return
+        if isinstance(kwargs['sysctls'], list):
+            repacked_sysctl = {}
+            for sysctl_var in kwargs['sysctls']:
+                try:
+                    key, val = sysctl_var.split('=')
+                except AttributeError:
+                    raise SaltInvocationError(
+                        'Invalid sysctl variable definition \'{0}\''
+                        .format(sysctl_var)
+                    )
+                else:
+                    if key in repacked_sysctl:
+                        raise SaltInvocationError(
+                            'Duplicate sysctl variable \'{0}\''
+                            .format(key)
+                        )
+                    if not isinstance(val, six.string_types):
+                        raise SaltInvocationError(
+                            'sysctl values must be strings {key}=\'{val}\''
+                            .format(key=key, val=val))
+                    repacked_sysctl[key] = val
+            kwargs['sysctls'] = repacked_sysctl
+        elif isinstance(kwargs['sysctls'], dict):
+            for key, val in six.iteritems(kwargs['sysctls']):
+                if not isinstance(val, six.string_types):
+                    raise SaltInvocationError('sysctl values must be dicts')
+        elif not isinstance(kwargs['sysctls'], dict):
+            raise SaltInvocationError(
+                'Invalid sysctls configuration.'
+            )
 
     def _valid_ulimits():  # pylint: disable=unused-variable
         '''
