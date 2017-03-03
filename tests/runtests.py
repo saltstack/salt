@@ -569,7 +569,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         if self.options.name:
             for test in self.options.name:
-                if test.startswith('unit.'):
+                if test.startswith(('tests.unit.', 'unit.')):
                     named_unit_test.append(test)
                     continue
                 named_tests.append(test)
@@ -611,7 +611,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                                                  load_from_name=False)
                         status.append(results)
                         continue
-                    if name.startswith('unit.'):
+                    if name.startswith(('tests.unit.', 'unit.')):
                         continue
                     results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
                     status.append(results)
@@ -627,7 +627,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         named_unit_test = []
         if self.options.name:
             for test in self.options.name:
-                if not test.startswith('unit.'):
+                if not test.startswith(('tests.unit.', 'unit.')):
                     continue
                 named_unit_test.append(test)
 
