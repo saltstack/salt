@@ -1611,7 +1611,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 except Exception as exc:
                     error_reason = (
                         'Exception raised when processing __virtual__ function'
-                        ' for {0}. Module will not be loaded {1}'.format(
+                        ' for {0}. Module will not be loaded: {1}'.format(
                             module_name, exc))
                     log.error(error_reason, exc_info_on_loglevel=logging.DEBUG)
                     virtual = None
