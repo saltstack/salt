@@ -1185,6 +1185,7 @@ class Test_Junos_RPC(unittest.TestCase):
             gather_facts=False)
         self.dev.rpc = MagicMock
         self.dev.open()
+        self.dev.timeout = 30
         self.dev.bind(cu=Config)
         self.dev.bind(sw=SW)
         return self.dev
@@ -1197,7 +1198,7 @@ class Test_Junos_RPC(unittest.TestCase):
 
     @patch('salt.modules.junos.jxmlease.parse')
     @patch('salt.modules.junos.etree.tostring')
-    @patch('junos_test.Test_Junos_RPC.dummy')
+    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.dummy')
     @patch('salt.modules.junos.getattr')
     def test_rpc_get_config_with_filter_format_xml(self, mock_attr, mock_dummy, mock_etree, mock_jxml):
         mock_attr.return_value = self.dummy
@@ -1206,9 +1207,9 @@ class Test_Junos_RPC(unittest.TestCase):
         ret['rpc_reply'] = 'get-config-reply'
         ret['out'] = True
         self.assertEqual(junos.rpc('get-config', filter='<configuration><system/></configuration>'), ret)
-        mock_dummy.assert_called_with(ANY, options={'dev_timeout': ANY, 'format': 'xml'})
+        mock_dummy.assert_called_with(ANY, options={'dev_timeout': 30, 'format': 'xml'})
 
-    @patch('junos_test.Test_Junos_RPC.dummy')
+    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.dummy')
     @patch('salt.modules.junos.getattr')
     def test_rpc_get_config_exception(self, mock_attr, mock_dummy):
         mock_attr.return_value = self.raise_exception
@@ -1217,12 +1218,12 @@ class Test_Junos_RPC(unittest.TestCase):
         ret['out'] = False
         self.assertEqual(junos.rpc('get_config'), ret)
 
-    @patch('junos_test.Test_Junos_RPC.dummy')
+    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.dummy')
     @patch('salt.modules.junos.getattr')
     def test_rpc_get_interface_information(self, mock_attr, mock_dummy):
         mock_attr.return_value = self.dummy
         junos.rpc('get-interface-information', format='json')
-        mock_dummy.assert_called_with({'format': 'json'}, dev_timeout=ANY)
+        mock_dummy.assert_called_with({'format': 'json'}, dev_timeout=30)
 
     # @patch('junos_test.Test_Junos_RPC.dummy')
     # @patch('salt.modules.junos.getattr')
@@ -1231,7 +1232,7 @@ class Test_Junos_RPC(unittest.TestCase):
     #     junos.rpc('get-interface-information', format='json', filter='<configuration><system/></configuration>')
     #     mock_dummy.assert_called_with({'format': 'json'}, dev_timeout=ANY)
 
-    @patch('junos_test.Test_Junos_RPC.dummy')
+    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.dummy')
     @patch('salt.modules.junos.getattr')
     def test_rpc_get_interface_information_exception(self, mock_attr, mock_dummy):
         mock_attr.return_value = self.raise_exception
@@ -1240,15 +1241,9 @@ class Test_Junos_RPC(unittest.TestCase):
         ret['out'] = False
         self.assertEqual(junos.rpc('get_interface_information'), ret)
 
-    # @patch('junos_test.Test_Junos_RPC.dummy')
+    # @patch('tests.unit.modules.salt.junos_test.Test_Junos_RPC.dummy')
     # @patch('salt.modules.junos.getattr')
     # def test_rpc_get_interface_information_format_text(self, mock_attr, mock_dummy):
     #     mock_attr.return_value = self.dummy
-    #     ret = dict()
-    #     ret['rpc_reply'] = 'rpc-reply-in-given-format'
-    #     ret['out'] = True
-    #     self.assertEqual(junos.rpc('get-interface-information', format='json'), ret)
-    #     mock_dummy.assert_called_with({'format': 'json'}, dev_timeout=ANY)
-
-    def test_ping(self):
-        junos.ping('1.1.1.1')
+    #     junos.rpc('get-interface-information', format='text')
+    #     mock_dummy.assert_called_with({'format': 'text'}, dev_timeout=30)
