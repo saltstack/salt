@@ -24,6 +24,7 @@ try:
     import jnpr.junos.utils
     import jnpr.junos.cfg
     import jxmlease
+
     # pylint: enable=W0611
     HAS_JUNOS = True
 except ImportError:
@@ -77,10 +78,17 @@ def facts_refresh():
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
-    new_facts = conn.facts
-    new_facts['version_info'] = dict(new_facts['version_info'])
-    # Earlier it was ret['message']
-    ret['facts'] = facts
+    ret['facts'] = dict(conn.facts)
+    ret['facts']['version_info'] = \
+        dict(ret['facts']['version_info'])
+    # For backward compatibility. 'junos_info' is present
+    # only of in newer versions of facts.
+    if 'junos_info' in ret['facts']:
+        ret['facts']['junos_info']['re0']['object'] = \
+            dict(ret['facts']['junos_info']['re0']['object'])
+        ret['facts']['junos_info']['re1']['object'] = \
+            dict(ret['facts']['junos_info']['re1']['object'])
+
     try:
         __salt__['saltutil.sync_grains']()
     except Exception as exception:
@@ -103,9 +111,16 @@ def facts():
     conn = __proxy__['junos.conn']()
     ret = dict()
     try:
-        facts = conn.facts
-        facts['version_info'] = dict(facts['version_info'])
-        ret['facts'] = facts
+        ret['facts'] = dict(conn.facts)
+        ret['facts']['version_info'] = \
+            dict(ret['facts']['version_info'])
+        # For backward compatibility. 'junos_info' is present
+        # only of in newer versions of facts.
+        if 'junos_info' in ret['facts']:
+            ret['facts']['junos_info']['re0']['object'] = \
+                dict(ret['facts']['junos_info']['re0']['object'])
+            ret['facts']['junos_info']['re1']['object'] = \
+                dict(ret['facts']['junos_info']['re1']['object'])
         ret['out'] = True
     except Exception as exception:
         ret['message'] = 'Could not display facts due to "{0}"'.format(
@@ -171,7 +186,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
-    op['dev_timeout'] = op.pop('timeout', conn.timeout)
+    op['dev_timeout'] = str(op.pop('timeout', conn.timeout))
 
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
@@ -191,21 +206,11 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
                 exception)
             ret['out'] = False
             return ret
-
-        if format == 'text':
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = reply.text
-        elif format == 'json':
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = reply
-        else:
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
     else:
+        op['dev_timeout'] = int(op['dev_timeout'])
         if 'filter' in op:
             log.warning(
                 'Filter ignored as it is only used with "get-config" rpc')
-
         try:
             reply = getattr(
                 conn.rpc,
@@ -218,15 +223,15 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
             ret['out'] = False
             return ret
 
-        if format == 'text':
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = reply.text
-        elif format == 'json':
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = reply
-        else:
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
+    if format == 'text':
+        # Earlier it was ret['message']
+        ret['rpc_reply'] = reply.text
+    elif format == 'json':
+        # Earlier it was ret['message']
+        ret['rpc_reply'] = reply
+    else:
+        # Earlier it was ret['message']
+        ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
 
     if dest:
         if format == 'text':
@@ -396,7 +401,7 @@ def commit(**kwargs):
         except Exception as exception:
             ret['out'] = False
             ret['message'] = \
-                'Commit check succeeded but actual commit failed with "{0}"'\
+                'Commit check succeeded but actual commit failed with "{0}"' \
                     .format(exception)
     else:
         ret['out'] = False
@@ -436,7 +441,7 @@ def rollback(id=0, **kwargs):
 
     ret = dict()
     conn = __proxy__['junos.conn']()
-    
+
     op = dict()
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
@@ -803,7 +808,7 @@ def install_config(path=None, **kwargs):
     ret['out'] = True
 
     if path is None:
-        ret['message'] =\
+        ret['message'] = \
             'Please provide the salt path where the configuration is present'
         ret['out'] = False
         return ret
@@ -872,17 +877,15 @@ def install_config(path=None, **kwargs):
     finally:
         safe_rm(template_cached_path)
 
+    config_diff = conn.cu.diff()
+    if config_diff is None:
+        ret['message'] = 'Configuration already applied!'
+        ret['out'] = True
+        return ret
     try:
-        config_diff = conn.cu.diff()
-        if config_diff is None:
-            ret['message'] = 'Configuration already applied!'
-            ret['out'] = True
-            return ret
-
         if write_diff and config_diff is not None:
             with fopen(write_diff, 'w') as fp:
                 fp.write(config_diff)
-
     except Exception as exception:
         ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
             exception)
@@ -898,7 +901,9 @@ def install_config(path=None, **kwargs):
     try:
         check = conn.cu.commit_check()
     except Exception as exception:
-        ret['message'] = 'Commit check failed with "{0}"'.format(exception)
+        ret['message'] = \
+            'Commit check threw the following exception: "{0}"' \
+                .format(exception)
         ret['out'] = False
         return ret
 
@@ -907,8 +912,9 @@ def install_config(path=None, **kwargs):
             conn.cu.commit(**commit_params)
             ret['message'] = 'Successfully loaded and committed!'
         except Exception as exception:
-            ret['message'] = 'Commit check successful but \
-            commit failed with "{0}"'.format(exception)
+            ret['message'] = \
+                'Commit check successful but commit failed with "{0}"' \
+                    .format(exception)
             ret['out'] = False
             return ret
     else:
@@ -1019,8 +1025,8 @@ def install_os(path=None, **kwargs):
         try:
             conn.sw.reboot()
         except Exception as exception:
-            ret['message'] =\
-                'Installation successful but reboot failed due to : "{0}"'\
+            ret['message'] = \
+                'Installation successful but reboot failed due to : "{0}"' \
                     .format(exception)
             ret['out'] = False
             return ret
@@ -1063,7 +1069,7 @@ def file_copy(src=None, dest=None, **kwargs):
 
     if dest is None:
         ret['message'] = \
-        'Please provide the absolute path of the destination where the file is to be copied.'
+            'Please provide the absolute path of the destination where the file is to be copied.'
         ret['out'] = False
         return ret
 
