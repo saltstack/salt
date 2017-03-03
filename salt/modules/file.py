@@ -5051,6 +5051,9 @@ def makedirs_(path,
     '''
     path = os.path.expanduser(path)
 
+    if mode:
+        mode = salt.utils.normalize_mode(mode)
+
     # walk up the directory structure until we find the first existing
     # directory
     dirname = os.path.normpath(os.path.dirname(path))

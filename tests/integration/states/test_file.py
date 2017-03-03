@@ -360,7 +360,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_function('state.sls', [state_name])
         self.assertSaltTrueReturn(ret)
 
-        #Check to make sure the file was created
+        # Check to make sure the file was created
         check_file = self.run_function('file.file_exists', [FILEPILLAR])
         self.assertTrue(check_file)
 
@@ -375,7 +375,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_function('state.sls', [state_name])
         self.assertSaltTrueReturn(ret)
 
-        #Check to make sure the file was created
+        # Check to make sure the file was created
         check_file = self.run_function('file.file_exists', [FILEPILLARDEF])
         self.assertTrue(check_file)
 
@@ -390,7 +390,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_function('state.sls', [state_name])
         self.assertSaltTrueReturn(ret)
 
-        #Check to make sure the file was created
+        # Check to make sure the file was created
         check_file = self.run_function('file.file_exists', [FILEPILLARGIT])
         self.assertTrue(check_file)
 
@@ -610,7 +610,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.islink(sym_dir):
                 os.unlink(sym_dir)
 
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @skip_if_not_root
     @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     def test_directory_max_depth(self):
         '''
