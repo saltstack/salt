@@ -939,7 +939,7 @@ class GitModuleTest(integration.ModuleCase):
         # Even though this is Windows, git commands return a unix style path
         if salt.utils.is_windows():
             worktree_path = worktree_path.replace('\\', '/')
-            worktree_path = worktree_path.replace('\\', '/')
+            worktree_path2 = worktree_path2.replace('\\', '/')
 
         # Add the worktrees
         ret = self.run_function(
