@@ -20,8 +20,7 @@ class HandleOrderTest(integration.ModuleCase):
         '''
         ret = self.run_function('state.show_low_sls', mods='issue-7649-handle-iorder')
 
-        sorted_chunks = sorted(ret, key=lambda c: c.get('order'))
+        sorted_chunks = [chunk['name'] for chunk in sorted(ret, key=lambda c: c.get('order'))]
 
-        self.assertEqual(sorted_chunks[0]['name'], './configure')
-        self.assertEqual(sorted_chunks[1]['name'], 'make')
-        self.assertEqual(sorted_chunks[2]['name'], 'make install')
+        expected = ['./configure', 'make', 'make install']
+        self.assertEqual(expected, sorted_chunks)
