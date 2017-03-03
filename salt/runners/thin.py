@@ -16,7 +16,8 @@ import salt.utils.thin
 
 
 def generate(extra_mods='', overwrite=False, so_mods='',
-             python2_bin='python2', python3_bin='python3', absonly=True):
+             python2_bin='python2', python3_bin='python3', absonly=True,
+             compress='gzip'):
     '''
     Generate the salt-thin tarball and print the location of the tarball
     Optional additional mods to include (e.g. mako) can be supplied as a comma
@@ -41,7 +42,8 @@ def generate(extra_mods='', overwrite=False, so_mods='',
                                     so_mods,
                                     python2_bin,
                                     python3_bin,
-                                    absonly)
+                                    absonly,
+                                    compress)
 
 
 def generate_min(extra_mods='', overwrite=False, so_mods='',
