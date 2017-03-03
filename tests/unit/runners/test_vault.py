@@ -45,6 +45,7 @@ class VaultTest(TestCase):
                                 }
                             }
                         },
+                        'mixedcase': 'UP-low-UP',
                         'dictlist': [
                             {'foo': 'bar'},
                             {'baz': 'qux'}
@@ -111,7 +112,10 @@ class VaultTest(TestCase):
                         'deeply-nested-list:hello',
                         'deeply-nested-list:world'
                     ],
-                    'should-not-cause-an-exception,but-result-empty:{foo}': []
+                    'should-not-cause-an-exception,but-result-empty:{foo}': [],
+                    'Case-Should-Be-Lowered:{grains[mixedcase]}': [
+                        'case-should-be-lowered:up-low-up'
+                    ]
                 }
 
         with patch('salt.utils.minions.get_minion_data',
