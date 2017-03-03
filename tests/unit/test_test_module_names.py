@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    tests.unit.doc_test
-    ~~~~~~~~~~~~~~~~~~~~
+    tests.unit.test_test_module_name
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 # Import Python libs
@@ -10,10 +10,7 @@ import os
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-
-
-# Import Salt libs
-import tests.integration as integration
+from tests.support.paths import CODE_DIR
 
 EXCLUDED_DIRS = [
     'tests/pkg',
@@ -56,11 +53,10 @@ class BadTestModuleNamesTestCase(TestCase):
         Make sure all test modules conform to the test_*.py naming scheme
         '''
         excluded_dirs = tuple(EXCLUDED_DIRS)
-        code_dir = integration.CODE_DIR
-        tests_dir = os.path.join(code_dir, 'tests')
+        tests_dir = os.path.join(CODE_DIR, 'tests')
         bad_names = []
         for root, dirs, files in os.walk(tests_dir):
-            reldir = os.path.relpath(root, code_dir)
+            reldir = os.path.relpath(root, CODE_DIR)
             if reldir.startswith(excluded_dirs) or reldir.endswith('__pycache__'):
                 continue
             for fname in files:
