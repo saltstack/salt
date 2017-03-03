@@ -85,7 +85,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     ))
     preferred_ip = extract_ipv4(roster_order, ip_list)
 
-    ret['tgt'] = {
+    ret[tgt] = {
         'host': preferred_ip,
     }
 
@@ -94,27 +94,27 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     )
     ssh_username = salt.utils.cloud.ssh_usernames({}, cloud_opts)
     if isinstance(ssh_username, string_types):
-        ret['tgt']['user'] = ssh_username
+        ret[tgt]['user'] = ssh_username
     elif isinstance(ssh_username, list):
-        ret['tgt']['user'] = ssh_username[0]
+        ret[tgt]['user'] = ssh_username[0]
 
     password = salt.config.get_cloud_config_value(
         'password', vm_, cloud_opts, search_global=False, default=None
     )
     if password:
-        ret['tgt']['password'] = password
+        ret[tgt]['password'] = password
 
     key_filename = salt.config.get_cloud_config_value(
         'private_key', vm_, cloud_opts, search_global=False, default=None
     )
     if key_filename:
-        ret['tgt']['priv'] = key_filename
+        ret[tgt]['priv'] = key_filename
 
     sudo = salt.config.get_cloud_config_value(
         'sudo', vm_, cloud_opts, search_global=False, default=None
     )
     if sudo:
-        ret['tgt']['sudo'] = sudo
+        ret[tgt]['sudo'] = sudo
 
     return ret
 
