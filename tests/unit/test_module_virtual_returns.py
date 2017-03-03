@@ -9,8 +9,6 @@ from __future__ import absolute_import
 import os
 import imp
 import sys
-import copy
-import types
 from contextlib import contextmanager
 
 # Import 3rd-party libs
