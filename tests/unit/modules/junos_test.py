@@ -5,7 +5,7 @@ __author__ = "Rajvi Dhimar"
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
-from mock import patch, MagicMock
+from mock import patch, MagicMock, ANY
 
 import lxml.etree as etree
 from jnpr.junos.utils.config import Config
@@ -35,19 +35,7 @@ class Test_Junos_Module(unittest.TestCase):
     def fake_cp(self, path='dummy', dest=None, template_vars=None):
         return MagicMock()
 
-    def raise_exception(self, **kwargs):
-        raise Exception('dummy exception')
-
-    def raise_exception_for_load(self, string=None, path=None, format=None):
-        raise Exception('dummy exception')
-
-    def raise_exception_one_arg(self, str=None):
-        raise Exception('dummy exception')
-
-    def raise_exception_for_install(self, path, progress):
-        raise Exception('dummy exception')
-
-    def raise_exception_cli(self, command=None, format='text', warning=False):
+    def raise_exception(self, *args ,**kwargs):
         raise Exception('dummy exception')
 
     def test_rpc_without_args(self):
@@ -76,7 +64,7 @@ class Test_Junos_Module(unittest.TestCase):
 
     @patch('jnpr.junos.utils.config.Config.load')
     def test_set_hostname_raise_exception_for_load(self, mock_load):
-        mock_load.side_effect = self.raise_exception_for_load
+        mock_load.side_effect = self.raise_exception
         ret = dict()
         ret['message'] = 'Could not load configuration due to error "dummy exception"'
         ret['out'] = False
@@ -464,7 +452,7 @@ class Test_Junos_Module(unittest.TestCase):
 
     @patch('jnpr.junos.device.Device.cli')
     def test_cli_exception_in_cli(self, mock_cli):
-        mock_cli.side_effect = self.raise_exception_cli
+        mock_cli.side_effect = self.raise_exception
         ret = dict()
         ret['message'] = 'Execution failed due to "dummy exception"'
         ret['out'] = False
@@ -826,7 +814,7 @@ class Test_Junos_Module(unittest.TestCase):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
         mock_mkstemp.return_value = 'dummy/path/config'
-        mock_load.side_effect = self.raise_exception_for_load
+        mock_load.side_effect = self.raise_exception
         ret = dict()
         ret['message'] = 'Could not load configuration due to : "dummy exception"'
         ret['format'] = 'set'
@@ -1041,7 +1029,7 @@ class Test_Junos_Module(unittest.TestCase):
 
     @patch('jnpr.junos.device.Device.cli')
     def test_zeroize_throw_exception(self, mock_cli):
-        mock_cli.side_effect = self.raise_exception_one_arg
+        mock_cli.side_effect = self.raise_exception
         ret = dict()
         ret['message'] = 'Could not zeroize due to : "dummy exception"'
         ret['out'] = False
@@ -1133,7 +1121,7 @@ class Test_Junos_Module(unittest.TestCase):
             mock_install):
         mock_getsize.return_value = 10
         mock_isfile.return_value = True
-        mock_install.side_effect = self.raise_exception_for_install
+        mock_install.side_effect = self.raise_exception
         ret = dict()
         ret['message'] = 'Installation failed due to: "dummy exception"'
         ret['out'] = False
@@ -1181,3 +1169,86 @@ class Test_Junos_Module(unittest.TestCase):
         with patch('salt.modules.junos.os.path.isfile') as mck:
             mck.return_value = True
             self.assertEqual(junos.file_copy('/home/user/config.set'), ret)
+
+@attr('unit')
+class Test_Junos_RPC(unittest.TestCase):
+
+    def setUp(self):
+        junos.__proxy__ = {'junos.conn': self.make_connect}
+
+    @patch('ncclient.manager.connect')
+    def make_connect(self, mock_connect):
+        self.dev = self.dev = Device(
+            host='1.1.1.1',
+            user='test',
+            password='test123',
+            gather_facts=False)
+        self.dev.rpc = MagicMock
+        self.dev.open()
+        self.dev.bind(cu=Config)
+        self.dev.bind(sw=SW)
+        return self.dev
+
+    def dummy(self, *args, **kwargs):
+        pass
+
+    def raise_exception(self, *args, **kwargs):
+        raise Exception('dummy exception')
+
+    @patch('salt.modules.junos.jxmlease.parse')
+    @patch('salt.modules.junos.etree.tostring')
+    @patch('junos_test.Test_Junos_RPC.dummy')
+    @patch('salt.modules.junos.getattr')
+    def test_rpc_get_config_with_filter_format_xml(self, mock_attr, mock_dummy, mock_etree, mock_jxml):
+        mock_attr.return_value = self.dummy
+        mock_jxml.return_value = 'get-config-reply'
+        ret = dict()
+        ret['rpc_reply'] = 'get-config-reply'
+        ret['out'] = True
+        self.assertEqual(junos.rpc('get-config', filter='<configuration><system/></configuration>'), ret)
+        mock_dummy.assert_called_with(ANY, options={'dev_timeout': ANY, 'format': 'xml'})
+
+    @patch('junos_test.Test_Junos_RPC.dummy')
+    @patch('salt.modules.junos.getattr')
+    def test_rpc_get_config_exception(self, mock_attr, mock_dummy):
+        mock_attr.return_value = self.raise_exception
+        ret = dict()
+        ret['message'] = 'RPC execution failed due to "dummy exception"'
+        ret['out'] = False
+        self.assertEqual(junos.rpc('get_config'), ret)
+
+    @patch('junos_test.Test_Junos_RPC.dummy')
+    @patch('salt.modules.junos.getattr')
+    def test_rpc_get_interface_information(self, mock_attr, mock_dummy):
+        mock_attr.return_value = self.dummy
+        junos.rpc('get-interface-information', format='json')
+        mock_dummy.assert_called_with({'format': 'json'}, dev_timeout=ANY)
+
+    # @patch('junos_test.Test_Junos_RPC.dummy')
+    # @patch('salt.modules.junos.getattr')
+    # def test_rpc_get_interface_information_with_filter(self, mock_attr, mock_dummy):
+    #     mock_attr.return_value = self.dummy
+    #     junos.rpc('get-interface-information', format='json', filter='<configuration><system/></configuration>')
+    #     mock_dummy.assert_called_with({'format': 'json'}, dev_timeout=ANY)
+
+    @patch('junos_test.Test_Junos_RPC.dummy')
+    @patch('salt.modules.junos.getattr')
+    def test_rpc_get_interface_information_exception(self, mock_attr, mock_dummy):
+        mock_attr.return_value = self.raise_exception
+        ret = dict()
+        ret['message'] = 'RPC execution failed due to "dummy exception"'
+        ret['out'] = False
+        self.assertEqual(junos.rpc('get_interface_information'), ret)
+
+    # @patch('junos_test.Test_Junos_RPC.dummy')
+    # @patch('salt.modules.junos.getattr')
+    # def test_rpc_get_interface_information_format_text(self, mock_attr, mock_dummy):
+    #     mock_attr.return_value = self.dummy
+    #     ret = dict()
+    #     ret['rpc_reply'] = 'rpc-reply-in-given-format'
+    #     ret['out'] = True
+    #     self.assertEqual(junos.rpc('get-interface-information', format='json'), ret)
+    #     mock_dummy.assert_called_with({'format': 'json'}, dev_timeout=ANY)
+
+    def test_ping(self):
+        junos.ping('1.1.1.1')

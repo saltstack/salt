@@ -77,10 +77,17 @@ def facts_refresh():
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
-    new_facts = conn.facts
-    new_facts['version_info'] = dict(new_facts['version_info'])
-    # Earlier it was ret['message']
-    ret['facts'] = facts
+    ret['facts'] = dict(conn.facts)
+    ret['facts']['version_info'] = \
+        dict(ret['facts']['version_info'])
+    # For backward compatibility. 'junos_info' is present
+    # only of in newer versions of facts.
+    if 'junos_info' in ret['facts']:
+        ret['facts']['junos_info']['re0']['object'] = \
+            dict(ret['facts']['junos_info']['re0']['object'])
+        ret['facts']['junos_info']['re1']['object'] = \
+            dict(ret['facts']['junos_info']['re1']['object'])
+
     try:
         __salt__['saltutil.sync_grains']()
     except Exception as exception:
@@ -103,9 +110,16 @@ def facts():
     conn = __proxy__['junos.conn']()
     ret = dict()
     try:
-        facts = conn.facts
-        facts['version_info'] = dict(facts['version_info'])
-        ret['facts'] = facts
+        ret['facts'] = dict(conn.facts)
+        ret['facts']['version_info'] = \
+            dict(ret['facts']['version_info'])
+        # For backward compatibility. 'junos_info' is present
+        # only of in newer versions of facts.
+        if 'junos_info' in ret['facts']:
+            ret['facts']['junos_info']['re0']['object'] = \
+                dict(ret['facts']['junos_info']['re0']['object'])
+            ret['facts']['junos_info']['re1']['object'] = \
+                dict(ret['facts']['junos_info']['re1']['object'])
         ret['out'] = True
     except Exception as exception:
         ret['message'] = 'Could not display facts due to "{0}"'.format(
@@ -171,7 +185,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
-    op['dev_timeout'] = op.pop('timeout', conn.timeout)
+    op['dev_timeout'] = str(op.pop('timeout', conn.timeout))
 
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
@@ -191,21 +205,11 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
                 exception)
             ret['out'] = False
             return ret
-
-        if format == 'text':
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = reply.text
-        elif format == 'json':
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = reply
-        else:
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
     else:
+        op['dev_timeout'] = int(op['dev_timeout'])
         if 'filter' in op:
             log.warning(
                 'Filter ignored as it is only used with "get-config" rpc')
-
         try:
             reply = getattr(
                 conn.rpc,
@@ -218,15 +222,15 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
             ret['out'] = False
             return ret
 
-        if format == 'text':
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = reply.text
-        elif format == 'json':
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = reply
-        else:
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
+    if format == 'text':
+        # Earlier it was ret['message']
+        ret['rpc_reply'] = reply.text
+    elif format == 'json':
+        # Earlier it was ret['message']
+        ret['rpc_reply'] = reply
+    else:
+        # Earlier it was ret['message']
+        ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
 
     if dest:
         if format == 'text':
