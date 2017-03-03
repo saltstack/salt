@@ -315,13 +315,12 @@ class SaltTestingParser(optparse.OptionParser):
             if not self.options.name:
                 self.options.name = []
             for fpath in self.args:
-                if not os.path.isfile(fpath):
+                if os.path.isfile(fpath) and \
+                        fpath.endswith('.py') and \
+                        os.path.basename(fpath).startswith('test_'):
+                    self.options.name.append(fpath)
                     continue
-                if not fpath.endswith('.py'):
-                    continue
-                if not os.path.basename(fpath).startswith('test_'):
-                    continue
-                self.options.name.append(fpath)
+                self.exit(status=1, msg='\'{}\' is not a valid test module'.format(fpath))
 
         print_header(u'', inline=True, width=self.options.output_columns)
         self.pre_execution_cleanup()
