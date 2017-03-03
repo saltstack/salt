@@ -38,6 +38,14 @@ def present(name, **kwargs):
                 - users_status: 0
 
     '''
+    connection_args = {}
+    if '_connection_user' in kwargs:
+        connection_args['_connection_user'] = kwargs['_connection_user']
+    if '_connection_password' in kwargs:
+        connection_args['_connection_password'] = kwargs['_connection_password']
+    if '_connection_url' in kwargs:
+        connection_args['_connection_url'] = kwargs['_connection_url']
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     # Comment and change messages
@@ -50,10 +58,10 @@ def present(name, **kwargs):
                                         }
                                  }
 
-    usergroup_exists = __salt__['zabbix.usergroup_exists'](name)
+    usergroup_exists = __salt__['zabbix.usergroup_exists'](name, **connection_args)
 
     if usergroup_exists:
-        usergroup = __salt__['zabbix.usergroup_get'](name)[0]
+        usergroup = __salt__['zabbix.usergroup_get'](name, **connection_args)[0]
         usrgrpid = int(usergroup['usrgrpid'])
         update_debug_mode = False
         update_gui_access = False
@@ -93,21 +101,27 @@ def present(name, **kwargs):
             ret['comment'] = comment_usergroup_updated
 
             if update_debug_mode:
-                updated_debug = __salt__['zabbix.usergroup_update'](usrgrpid, debug_mode=kwargs['debug_mode'])
+                updated_debug = __salt__['zabbix.usergroup_update'](usrgrpid,
+                                                                    debug_mode=kwargs['debug_mode'],
+                                                                    **connection_args)
                 if 'error' in updated_debug:
                     error.append(updated_debug['error'])
                 else:
                     ret['changes']['debug_mode'] = kwargs['debug_mode']
 
             if update_gui_access:
-                updated_gui = __salt__['zabbix.usergroup_update'](usrgrpid, gui_access=kwargs['gui_access'])
+                updated_gui = __salt__['zabbix.usergroup_update'](usrgrpid,
+                                                                  gui_access=kwargs['gui_access'],
+                                                                  **connection_args)
                 if 'error' in updated_gui:
                     error.append(updated_gui['error'])
                 else:
                     ret['changes']['gui_access'] = kwargs['gui_access']
 
             if update_users_status:
-                updated_status = __salt__['zabbix.usergroup_update'](usrgrpid, users_status=kwargs['users_status'])
+                updated_status = __salt__['zabbix.usergroup_update'](usrgrpid,
+                                                                     users_status=kwargs['users_status'],
+                                                                     **connection_args)
                 if 'error' in updated_status:
                     error.append(updated_status['error'])
                 else:
@@ -136,7 +150,7 @@ def present(name, **kwargs):
     return ret
 
 
-def absent(name):
+def absent(name, **kwargs):
     '''
     Ensures that the user group does not exist, eventually delete user group.
 
@@ -152,8 +166,15 @@ def absent(name):
         delete_thai_monks_usrgrp:
             zabbix_usergroup.absent:
                 - name: 'Thai monks'
-
     '''
+    connection_args = {}
+    if '_connection_user' in kwargs:
+        connection_args['_connection_user'] = kwargs['_connection_user']
+    if '_connection_password' in kwargs:
+        connection_args['_connection_password'] = kwargs['_connection_password']
+    if '_connection_url' in kwargs:
+        connection_args['_connection_url'] = kwargs['_connection_url']
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     # Comment and change messages
@@ -165,7 +186,7 @@ def absent(name):
                                         }
                                  }
 
-    usergroup_exists = __salt__['zabbix.usergroup_exists'](name)
+    usergroup_exists = __salt__['zabbix.usergroup_exists'](name, **connection_args)
 
     # Dry run, test=true mode
     if __opts__['test']:
@@ -177,7 +198,7 @@ def absent(name):
             ret['comment'] = comment_usergroup_deleted
         return ret
 
-    usergroup_get = __salt__['zabbix.usergroup_get'](name)
+    usergroup_get = __salt__['zabbix.usergroup_get'](name, **connection_args)
 
     if not usergroup_get:
         ret['result'] = True
@@ -185,7 +206,7 @@ def absent(name):
     else:
         try:
             usrgrpid = usergroup_get[0]['usrgrpid']
-            usergroup_delete = __salt__['zabbix.usergroup_delete'](usrgrpid)
+            usergroup_delete = __salt__['zabbix.usergroup_delete'](usrgrpid, **connection_args)
         except KeyError:
             usergroup_delete = False
 
