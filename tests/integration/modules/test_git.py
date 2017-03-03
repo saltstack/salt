@@ -48,7 +48,7 @@ def _git_version():
         log.debug('Git not installed')
         return False
     log.debug('Detected git version %s', git_version)
-    return LooseVersion(str(git_version.split()[-1]))
+    return LooseVersion(str(git_version.split()[-1]).encode())
 
 
 def _worktrees_supported():
@@ -56,7 +56,7 @@ def _worktrees_supported():
     Check if the git version is 2.5.0 or later
     '''
     try:
-        return _git_version() >= LooseVersion('2.5.0')
+        return _git_version() >= LooseVersion('2.5.0'.encode())
     except AttributeError:
         return False
 
