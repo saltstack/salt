@@ -31,6 +31,8 @@ try:
 except ImportError:
     HAS_PSUTIL = False
 
+log = logging.getLogger(__name__)
+
 # Set SHOW_PROC to True to show
 # process details when running in verbose mode
 # i.e. [CPU:15.1%|MEM:48.3%|Z:0]
@@ -121,6 +123,21 @@ class TestCase(_TestCase):
 #                    'on tearDown() to {0}\n'.format(cls._cwd))
 #            cls._chdir_counter += 1
     # pylint: enable=expected-an-indented-block-comment
+
+    def run(self, result=None):
+        self._prerun_instance_attributes = dir(self)
+        outcome = super(TestCase, self).run(result=result)
+        for attr in dir(self):
+            if attr == '_prerun_instance_attributes':
+                continue
+            if attr not in self._prerun_instance_attributes:
+                log.warning('Deleting extra class attribute after test run: %s.%s(%s). '
+                            'Please consider using \'del self.%s\' on the test case '
+                            '\'tearDown()\' method', self.__class__.__name__, attr,
+                            getattr(self, attr), attr)
+                delattr(self, attr)
+        del self._prerun_instance_attributes
+        return outcome
 
     def shortDescription(self):
         desc = _TestCase.shortDescription(self)
@@ -213,15 +230,11 @@ class TextTestResult(_TextTestResult):
     '''
 
     def startTest(self, test):
-        logging.getLogger(__name__).debug(
-            '>>>>> START >>>>> {0}'.format(test.id())
-        )
+        log.debug('>>>>> START >>>>> {0}'.format(test.id()))
         return super(TextTestResult, self).startTest(test)
 
     def stopTest(self, test):
-        logging.getLogger(__name__).debug(
-            '<<<<< END <<<<<<< {0}'.format(test.id())
-        )
+        log.debug('<<<<< END <<<<<<< {0}'.format(test.id()))
         return super(TextTestResult, self).stopTest(test)
 
 
