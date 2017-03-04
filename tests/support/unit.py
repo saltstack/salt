@@ -43,11 +43,11 @@ if sys.version_info < (2, 7):
     try:
         # pylint: disable=import-error
         from unittest2 import (
-            TestLoader as _TestLoader,
+            TestLoader as __TestLoader,
             TextTestRunner as __TextTestRunner,
             TestCase as __TestCase,
             expectedFailure,
-            TestSuite as _TestSuite,
+            TestSuite as __TestSuite,
             skip,
             skipIf,
             TestResult as _TestResult,
@@ -65,7 +65,7 @@ if sys.version_info < (2, 7):
                 'Cannot create a consistent method resolution order (MRO) for bases'
             '''
 
-        class TestLoader(_TestLoader, NewStyleClassMixin):
+        class _TestLoader(__TestLoader, NewStyleClassMixin):
             pass
 
         class _TextTestRunner(__TextTestRunner, NewStyleClassMixin):
@@ -74,7 +74,7 @@ if sys.version_info < (2, 7):
         class _TestCase(__TestCase, NewStyleClassMixin):
             pass
 
-        class TestSuite(_TestSuite, NewStyleClassMixin):
+        class _TestSuite(__TestSuite, NewStyleClassMixin):
             pass
 
         class TestResult(_TestResult, NewStyleClassMixin):
@@ -87,17 +87,59 @@ if sys.version_info < (2, 7):
         raise SystemExit('You need to install unittest2 to run the salt tests')
 else:
     from unittest import (
-        TestLoader,
+        TestLoader as _TestLoader,
         TextTestRunner as _TextTestRunner,
         TestCase as _TestCase,
         expectedFailure,
-        TestSuite,
+        TestSuite as _TestSuite,
         skip,
         skipIf,
         TestResult,
         TextTestResult as _TextTestResult
     )
     from unittest.case import _id
+
+
+class TestSuite(_TestSuite):
+
+    def _handleClassSetUp(self, test, result):
+        previousClass = getattr(result, '_previousTestClass', None)
+        currentClass = test.__class__
+        if currentClass == previousClass or getattr(currentClass, 'setUpClass', None) is None:
+            return super(TestSuite, self)._handleClassSetUp(test, result)
+
+        # Store a reference to all class attributes before running the setUpClass method
+        initial_class_attributes = dir(test.__class__)
+        ret = super(TestSuite, self)._handleClassSetUp(test, result)
+        # Store the difference in in a variable in order to check later if they were deleted
+        test.__class__._prerun_class_attributes = [
+                attr for attr in dir(test.__class__) if attr not in initial_class_attributes]
+        return ret
+
+    def _tearDownPreviousClass(self, test, result):
+        # Run any tearDownClass code defined
+        super(TestSuite, self)._tearDownPreviousClass(test, result)
+        previousClass = getattr(result, '_previousTestClass', None)
+        currentClass = test.__class__
+        if currentClass == previousClass:
+            return
+        # See if the previous class attributes have been cleaned
+        if previousClass and getattr(previousClass, 'tearDownClass', None):
+            prerun_class_attributes = getattr(previousClass, '_prerun_class_attributes', None)
+            if prerun_class_attributes is not None:
+                del previousClass._prerun_class_attributes
+                for attr in prerun_class_attributes:
+                    if hasattr(previousClass, attr):
+                        log.warning('Deleting extra class attribute after test run: %s.%s(%s). '
+                                    'Please consider using \'del self.%s\' on the test class '
+                                    '\'tearDownClass()\' method', previousClass.__name__, attr,
+                                    str(getattr(previousClass, attr))[:100], attr)
+                        delattr(previousClass, attr)
+
+
+class TestLoader(_TestLoader):
+    # We're just subclassing to make sure tha tour TestSuite class is the one used
+    suiteClass = TestSuite
 
 
 class TestCase(_TestCase):
@@ -129,6 +171,8 @@ class TestCase(_TestCase):
         outcome = super(TestCase, self).run(result=result)
         for attr in dir(self):
             if attr == '_prerun_instance_attributes':
+                continue
+            if attr in getattr(self.__class__, '_prerun_class_attributes', ()):
                 continue
             if attr not in self._prerun_instance_attributes:
                 log.warning('Deleting extra class attribute after test run: %s.%s(%s). '
