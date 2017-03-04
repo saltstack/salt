@@ -75,7 +75,7 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
                 salt.utils.error.raise_error(**ret['error'])
         return ret
 
-    def cmd_sync(self, low, timeout=None):
+    def cmd_sync(self, low, timeout=None, full_return=False):
         '''
         Execute a wheel function synchronously; eauth is respected
 

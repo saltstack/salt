@@ -100,3 +100,9 @@ class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTes
             'bar': 'Bar!',
         }
         self.runner.cmd_sync(low)
+
+    def test_full_return_kwarg(self):
+        low = {'fun': 'test.arg'}
+        low.update(self.eauth_creds)
+        ret = self.runner.cmd_sync(low, full_return=True)
+        self.assertIn('success', ret['data'])
