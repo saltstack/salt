@@ -23,6 +23,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import os
 import sys
 import logging
 try:
@@ -36,7 +37,7 @@ log = logging.getLogger(__name__)
 # Set SHOW_PROC to True to show
 # process details when running in verbose mode
 # i.e. [CPU:15.1%|MEM:48.3%|Z:0]
-SHOW_PROC = True
+SHOW_PROC = 'NO_SHOW_PROC' not in os.environ
 
 # support python < 2.7 via unittest2
 if sys.version_info < (2, 7):
@@ -144,7 +145,7 @@ class TestLoader(_TestLoader):
 
 class TestCase(_TestCase):
 
-    # pylint: disable=expected-an-indented-block-comment
+    # pylint: disable=expected-an-indented-block-comment,too-many-leading-hastag-for-block-comment
 ##   Commented out because it may be causing tests to hang
 ##   at the end of the run
 #
@@ -164,7 +165,7 @@ class TestCase(_TestCase):
 #            print('\nWARNING: A misbehaving test has modified the working directory!\nThe test suite has reset the working directory '
 #                    'on tearDown() to {0}\n'.format(cls._cwd))
 #            cls._chdir_counter += 1
-    # pylint: enable=expected-an-indented-block-comment
+    # pylint: enable=expected-an-indented-block-comment,too-many-leading-hastag-for-block-comment
 
     def run(self, result=None):
         self._prerun_instance_attributes = dir(self)
@@ -186,18 +187,19 @@ class TestCase(_TestCase):
     def shortDescription(self):
         desc = _TestCase.shortDescription(self)
         if HAS_PSUTIL and SHOW_PROC:
-            proc_info = ''
-            found_zombies = 0
-            try:
-                for proc in psutil.process_iter():
-                    if proc.status == psutil.STATUS_ZOMBIE:
-                        found_zombies += 1
-                proc_info = '[CPU:{0}%|MEM:{1}%|Z:{2}] {short_desc}'.format(psutil.cpu_percent(),
-                                                                            psutil.virtual_memory().percent,
-                                                                            found_zombies,
-                                                                            short_desc=desc if desc else '')
-            except Exception:
-                pass
+            show_zombie_processes = 'SHOW_PROC_ZOMBIES' in os.environ
+            proc_info = '[CPU:{0}%|MEM:{1}%'.format(psutil.cpu_percent(),
+                                                    psutil.virtual_memory().percent)
+            if show_zombie_processes:
+                found_zombies = 0
+                try:
+                    for proc in psutil.process_iter():
+                        if proc.status == psutil.STATUS_ZOMBIE:
+                            found_zombies += 1
+                except Exception:
+                    pass
+                proc_info += '|Z:{0}'.format(found_zombies)
+            proc_info += '] {short_desc}'.format(short_desc=desc if desc else '')
             return proc_info
         else:
             return _TestCase.shortDescription(self)
