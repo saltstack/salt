@@ -3278,7 +3278,7 @@ def apply_minion_config(overrides=None,
     if 'beacons' not in opts:
         opts['beacons'] = {}
 
-    if overrides.get('ipc_write_buffer', '') == 'dynamic':
+    if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
@@ -3363,7 +3363,7 @@ def apply_master_config(overrides=None, defaults=None):
     )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
     opts['syndic_dir'] = os.path.join(opts['cachedir'], 'syndics')
-    if overrides.get('ipc_write_buffer', '') == 'dynamic':
+    if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
