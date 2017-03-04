@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+tests for docker module
+'''
 
 # Import Python libs
 from __future__ import absolute_import
@@ -7,26 +10,45 @@ import os
 import json
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+
 
 # Import salt libs
-import integration
 import salt.version
-from salt import config
+import tests.integration as integration
+from tests.support.unit import skipIf
+
+NO_DOCKERPY = False
+try:
+    import DOCKER  # pylint: disable=import-error,unused-import
+except ImportError:
+    NO_DOCKER = True
+
+if not salt.utils.which('mysqladmin'):
+    NO_DOCKER = True
+
+
+
+ensure_in_syspath('../../')
 
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
-class TestModuleDockereng(integration.ModuleCase,
-                     integration.AdaptedConfigurationTestCaseMixIn):
-
+@skipIf(
+    NO_DOCKER,
+    'Please install docker-py before running'
+    'Docker integration tests.'
+)
+class TestModuleDockereng(integration.ModuleCase, 
+                          integration.AdaptedConfigurationTestCaseMixIn): 
     '''
     Validate the test module
     '''
-
     def setUp(self):
+        '''
+        Setup
+        '''
         self.state_name = 'docker_top'
-    	state_filename = self.state_name + '.sls'
-    	self.state_file = os.path.join(STATE_DIR, state_filename)
+        state_filename = self.state_name + '.sls'
+        self.state_file = os.path.join(STATE_DIR, state_filename)
         with salt.utils.fopen(self.state_file, 'w') as fb_:
             fb_.write(textwrap.dedent('''
                 foo:
@@ -51,10 +73,10 @@ class TestModuleDockereng(integration.ModuleCase,
             os.remove(self.state_file)
         except OSError:
             pass
-        self.run_function('cmd.run',['docker kill foo'])
+        self.run_function('cmd.run', ['docker kill foo'])
 
     def test_docker_env(self):
-    	'''
+        '''
     	dockerng.running environnment part.
         '''
         with salt.utils.fopen(self.state_file, 'w') as fb_:
@@ -71,19 +93,19 @@ class TestModuleDockereng(integration.ModuleCase,
                       - VAR3: value3
                         '''))
         ret = self.run_function('state.sls', [self.state_name])
-        self.assertEqual(ret['dockerng_|-foo_|-foo_|-running']['comment'],'Container \'foo\' was replaced')
-        self.assertEqual(ret['dockerng_|-foo_|-foo_|-running']['changes']['diff']['environment']['old']['VAR2'],'value2')
-        ret = self.run_function('cmd.run',['docker inspect foo'])
+        self.assertEqual(ret['dockerng_|-foo_|-foo_|-running']['comment'], 
+                         'Container \'foo\' was replaced')
+        self.assertEqual(ret['dockerng_|-foo_|-foo_|-running']['changes']['diff']
+                         ['environment']['old']['VAR2'], 'value2')
+        ret = self.run_function('cmd.run', ['docker inspect foo'])
         container_json_data = json.loads(ret)
         container_data = container_json_data[0]
-        self.assertIn('VAR1=value1',container_data['Config']['Env'])
-        self.assertIn('VAR3=value3',container_data['Config']['Env'])
-        self.assertNotIn('VAR2=value2',container_data['Config']['Env'])
+        self.assertIn('VAR1=value1', container_data['Config']['Env'])
+        self.assertIn('VAR3=value3', container_data['Config']['Env'])
+        self.assertNotIn('VAR2=value2', container_data['Config']['Env'])
 
         # Running same state to make sure that container should not get restarted every time
         ret = self.run_function('state.sls', [self.state_name])
-        self.assertEqual(ret['dockerng_|-foo_|-foo_|-running']['comment'],'Container \'foo\' is already configured as specified')
+        self.assertEqual(ret['dockerng_|-foo_|-foo_|-running']['comment'], 
+                         'Container \'foo\' is already configured as specified')
 
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestModuleDockereng)
