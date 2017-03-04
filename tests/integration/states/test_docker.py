@@ -34,8 +34,8 @@ STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
     'Please install docker-py before running'
     'Docker integration tests.'
 )
-class TestModuleDockereng(integration.ModuleCase, 
-                          integration.AdaptedConfigurationTestCaseMixIn): 
+class TestModuleDockereng(integration.ModuleCase,
+                          integration.AdaptedConfigurationTestCaseMixIn):
     '''
     Validate the test module
     '''
