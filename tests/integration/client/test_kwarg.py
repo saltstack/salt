@@ -89,3 +89,8 @@ class StdTest(integration.ModuleCase):
         self.assertIn('int', data['args'][1])
         self.assertIn('dict', data['kwargs']['outer'])
         self.assertIn('str', data['kwargs']['inner'])
+
+    def test_full_return_kwarg(self):
+        ret = self.client.cmd('minion', 'test.ping', full_return=True)
+        for mid, data in ret.items():
+            self.assertIn('retcode', data)
