@@ -131,6 +131,12 @@ def parse():
         default='zeromq',
         help='Declare which transport to use, default is zeromq')
     parser.add_option(
+        '--start-delay',
+        dest='start_delay',
+        default=0.0,
+        type='float',
+        help='Seconds to wait between minion starts')
+    parser.add_option(
         '-c', '--config-dir', default='',
         help=('Pass in a configuration directory containing base configuration.')
         )
@@ -276,6 +282,7 @@ class MinionSwarm(Swarm):
             else:
                 cmd += ' -d &'
             subprocess.call(cmd, shell=True)
+            time.sleep(self.opts['start_delay'])
 
     def mkconf(self, idx):
         '''
