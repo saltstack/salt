@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 # Set SHOW_PROC to True to show
 # process details when running in verbose mode
 # i.e. [CPU:15.1%|MEM:48.3%|Z:0]
-SHOW_PROC = False
+SHOW_PROC = True
 
 # support python < 2.7 via unittest2
 if sys.version_info < (2, 7):
