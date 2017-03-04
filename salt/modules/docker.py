@@ -807,9 +807,8 @@ def _get_client(timeout=None):
         - docker.version: API version to use (default: "auto")
     '''
     if 'docker.client' not in __context__:
-        if timeout is None:
-            client_kwargs = {}
-        else:
+        client_kwargs = {}
+        if timeout is not None:
             client_kwargs['timeout'] = timeout
         for key, val in (('base_url', 'docker.url'),
                          ('version', 'docker.version')):
