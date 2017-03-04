@@ -74,7 +74,7 @@ class TestModuleDockereng(integration.ModuleCase,
 
     def test_docker_env(self):
         '''
-    	dockerng.running environnment part.
+        dockerng.running environnment part.
         '''
         with salt.utils.fopen(self.state_file, 'w') as fb_:
             fb_.write(textwrap.dedent('''
