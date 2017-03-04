@@ -10,12 +10,10 @@ import os
 import json
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
-
-
-# Import salt libs
-import salt.version
 import tests.integration as integration
 from tests.support.unit import skipIf
+# Import salt libs
+import salt.version
 
 NO_DOCKERPY = False
 try:
@@ -26,11 +24,10 @@ except ImportError:
 if not salt.utils.which('mysqladmin'):
     NO_DOCKER = True
 
-
-
 ensure_in_syspath('../../')
 
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
+
 
 @skipIf(
     NO_DOCKER,
@@ -93,7 +90,7 @@ class TestModuleDockereng(integration.ModuleCase,
                       - VAR3: value3
                         '''))
         ret = self.run_function('state.sls', [self.state_name])
-        self.assertEqual(ret['dockerng_|-foo_|-foo_|-running']['comment'], 
+        self.assertEqual(ret['dockerng_|-foo_|-foo_|-running']['comment'],
                          'Container \'foo\' was replaced')
         self.assertEqual(ret['dockerng_|-foo_|-foo_|-running']['changes']['diff']
                          ['environment']['old']['VAR2'], 'value2')
@@ -106,6 +103,5 @@ class TestModuleDockereng(integration.ModuleCase,
 
         # Running same state to make sure that container should not get restarted every time
         ret = self.run_function('state.sls', [self.state_name])
-        self.assertEqual(ret['dockerng_|-foo_|-foo_|-running']['comment'], 
+        self.assertEqual(ret['dockerng_|-foo_|-foo_|-running']['comment'],
                          'Container \'foo\' is already configured as specified')
-
