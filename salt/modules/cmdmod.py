@@ -36,6 +36,7 @@ from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
 from salt.log import LOG_LEVELS
 from salt.ext.six.moves import range, zip
 from salt.ext.six.moves import shlex_quote as _cmd_quote
+from salt.utils.locales import sdecode
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -437,6 +438,8 @@ def _run(cmd,
                 if isinstance(env_encoded, str):
                     env_encoded = env_encoded.encode(__salt_system_encoding__)
                 env_runas = dict(list(zip(*[iter(env_encoded.split(b'\0'))]*2)))
+
+            env_runas = {sdecode(k): sdecode(v) for k, v in six.iteritems(env_runas)}
             env_runas.update(env)
             env = env_runas
             # Encode unicode kwargs to filesystem encoding to avoid a
