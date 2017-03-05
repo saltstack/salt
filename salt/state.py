@@ -1655,8 +1655,10 @@ class State(object):
         '''
         tag = _gen_tag(low)
         try:
-            ret = self.states[cdata['full']](*cdata['args'],
+            ret = {'start_timestamp': datetime.datetime.now().timestamp()}
+            ret_state = self.states[cdata['full']](*cdata['args'],
                                              **cdata['kwargs'])
+            ret.update(ret_state)
         except Exception:
             trb = traceback.format_exc()
             ret = {
@@ -2003,12 +2005,17 @@ class State(object):
                                'changes': {}}
                     try:
                         with salt.utils.fopen(ret_cache, 'rb') as fp_:
-                            ret = msgpack.loads(fp_.read())
+                            ret = msgpack.loads(fp_.read(), encoding='utf-8')
                     except (OSError, IOError):
                         ret = {'result': False,
                                'comment': 'Parallel cache failure',
                                'name': running[tag]['name'],
                                'changes': {}}
+                    start = datetime.datetime.fromtimestamp(ret['start_timestamp'])
+                    delta = datetime.datetime.now() - start
+                    duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+
+                    ret['duration'] = duration
                     running[tag].update(ret)
                     running[tag].pop('proc')
                 else:
