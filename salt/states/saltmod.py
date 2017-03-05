@@ -758,12 +758,12 @@ def parallel_runners(name, runners):
     .. code-block:: yaml
 
         parallel-state:
-           saltext.parallel-runner:
+           salt.parallel-runner:
              - runners:
                - name: state.orchestrate
                  kwarg:
                    mods: orchestrate_state_1
-               - name: state.orcestrate
+               - name: state.orchestrate
                  kwarg:
                    mods: orchestrate_state_2
     '''
