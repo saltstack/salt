@@ -9,7 +9,6 @@ import textwrap
 import os
 import json
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
 import tests.integration as integration
 from tests.support.unit import skipIf
 # Import salt libs
@@ -24,7 +23,6 @@ except ImportError:
 if not salt.utils.which('mysqladmin'):
     NO_DOCKER = True
 
-ensure_in_syspath('../../')
 
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
