@@ -470,7 +470,7 @@ from multiprocessing import Process, Pipe
 
 # Import third-party libs
 # pylint: disable=import-error
-import cherrypy
+import cherrypy  # pylint: disable=3rd-party-module-not-gated
 import yaml
 import salt.ext.six as six
 # pylint: enable=import-error

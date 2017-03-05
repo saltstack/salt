@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import salt.ext.six as six
 
 # No exception handling, as we want ImportError if psutil doesn't exist
-import psutil
+import psutil  # pylint: disable=3rd-party-module-not-gated
 
 if psutil.version_info >= (2, 0):
     from psutil import *  # pylint: disable=wildcard-import,unused-wildcard-import

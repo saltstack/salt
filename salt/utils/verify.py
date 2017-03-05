@@ -16,9 +16,9 @@ import socket
 import logging
 
 # Import third party libs
-if sys.platform.startswith('win'):
+try:
     import win32file
-else:
+except ImportError:
     import resource
 
 # Import salt libs
