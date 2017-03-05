@@ -237,7 +237,7 @@ def _gen_xml(name,
     Generate the XML string to define a libvirt VM
     '''
     hypervisor = 'vmware' if hypervisor == 'esxi' else hypervisor
-    mem = mem * 1024  # MB
+    mem = int(mem) * 1024  # MB
     context = {
         'hypervisor': hypervisor,
         'name': name,
