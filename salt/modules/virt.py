@@ -664,9 +664,13 @@ def init(name,
     xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
     try:
         define_xml_str(xml)
-    except libvirtError:
-        # This domain already exists
-        pass
+    except libvirtError as err:
+        # check if failure is due to this domain already existing
+        if "domain '{}' already exists".format(name) in str(err):
+            # continue on to seeding
+            log.warn(err)
+        else:
+            raise err  # a real error we should report upwards
 
     if seed and seedable:
         log.debug('Seed command is {0}'.format(seed_cmd))
