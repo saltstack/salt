@@ -175,7 +175,7 @@ import salt.utils.vmware
 import salt.utils.http
 from salt.utils import dictupdate
 from salt.exceptions import CommandExecutionError, VMwareSaltError
-from salt.utils.decorators import depends
+from salt.utils.decorators import depends, ignores_kwargs
 from salt.utils import clean_kwargs
 
 # Import Third Party Libs
@@ -377,7 +377,7 @@ def disconnect(service_instance):
 
 
 @depends(HAS_ESX_CLI)
-def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, port=None, esxi_hosts=None):
+def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, port=None, esxi_hosts=None, credstore=None):
     '''
     Run an ESXCLI command directly on the host or list of hosts.
 
@@ -408,6 +408,9 @@ def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, 
         If ``host`` is a vCenter host, then use esxi_hosts to execute this function
         on a list of one or more ESXi machines.
 
+    credstore
+        Optionally set to path to the credential store file.
+
     CLI Example:
 
     .. code-block:: bash
@@ -428,7 +431,7 @@ def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, 
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd_str,
                                                 protocol=protocol, port=port,
-                                                esxi_host=esxi_host)
+                                                esxi_host=esxi_host, credstore=credstore)
             if response['retcode'] != 0:
                 ret.update({esxi_host: {'Error': response.get('stdout')}})
             else:
@@ -436,7 +439,8 @@ def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, 
     else:
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = salt.utils.vmware.esxcli(host, username, password, cmd_str,
-                                            protocol=protocol, port=port)
+                                            protocol=protocol, port=port,
+                                            credstore=credstore)
         if response['retcode'] != 0:
             ret.update({host: {'Error': response.get('stdout')}})
         else:
@@ -446,7 +450,7 @@ def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, 
 
 
 @depends(HAS_ESX_CLI)
-def get_coredump_network_config(host, username, password, protocol=None, port=None, esxi_hosts=None):
+def get_coredump_network_config(host, username, password, protocol=None, port=None, esxi_hosts=None, credstore=None):
     '''
     Retrieve information on ESXi or vCenter network dump collection and
     format it into a dictionary.
@@ -471,6 +475,9 @@ def get_coredump_network_config(host, username, password, protocol=None, port=No
     esxi_hosts
         If ``host`` is a vCenter host, then use esxi_hosts to execute this function
         on a list of one or more ESXi machines.
+
+    credstore
+        Optionally set to path to the credential store file.
 
     :return: A dictionary with the network configuration, or, if getting
              the network config failed, a an error message retrieved from the
@@ -497,7 +504,7 @@ def get_coredump_network_config(host, username, password, protocol=None, port=No
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                                 protocol=protocol, port=port,
-                                                esxi_host=esxi_host)
+                                                esxi_host=esxi_host, credstore=credstore)
             if response['retcode'] != 0:
                 ret.update({esxi_host: {'Error': response.get('stdout')}})
             else:
@@ -506,7 +513,8 @@ def get_coredump_network_config(host, username, password, protocol=None, port=No
     else:
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                            protocol=protocol, port=port)
+                                            protocol=protocol, port=port,
+                                            credstore=credstore)
         if response['retcode'] != 0:
             ret.update({host: {'Error': response.get('stdout')}})
         else:
@@ -518,7 +526,7 @@ def get_coredump_network_config(host, username, password, protocol=None, port=No
 
 
 @depends(HAS_ESX_CLI)
-def coredump_network_enable(host, username, password, enabled, protocol=None, port=None, esxi_hosts=None):
+def coredump_network_enable(host, username, password, enabled, protocol=None, port=None, esxi_hosts=None, credstore=None):
     '''
     Enable or disable ESXi core dump collection. Returns ``True`` if coredump is enabled
     and returns ``False`` if core dump is not enabled. If there was an error, the error
@@ -548,6 +556,9 @@ def coredump_network_enable(host, username, password, enabled, protocol=None, po
         If ``host`` is a vCenter host, then use esxi_hosts to execute this function
         on a list of one or more ESXi machines.
 
+    credstore
+        Optionally set to path to the credential store file.
+
     CLI Example:
 
     .. code-block:: bash
@@ -573,7 +584,7 @@ def coredump_network_enable(host, username, password, enabled, protocol=None, po
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                                 protocol=protocol, port=port,
-                                                esxi_host=esxi_host)
+                                                esxi_host=esxi_host, credstore=credstore)
             if response['retcode'] != 0:
                 ret.update({esxi_host: {'Error': response.get('stdout')}})
             else:
@@ -582,7 +593,8 @@ def coredump_network_enable(host, username, password, enabled, protocol=None, po
     else:
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                            protocol=protocol, port=port)
+                                            protocol=protocol, port=port,
+                                            credstore=credstore)
         if response['retcode'] != 0:
             ret.update({host: {'Error': response.get('stdout')}})
         else:
@@ -600,7 +612,8 @@ def set_coredump_network_config(host,
                                 port=None,
                                 host_vnic='vmk0',
                                 dump_port=6500,
-                                esxi_hosts=None):
+                                esxi_hosts=None,
+                                credstore=None):
     '''
 
     Set the network parameters for a network coredump collection.
@@ -637,6 +650,9 @@ def set_coredump_network_config(host,
     dump_port
         TCP port to use for the dump, defaults to ``6500``.
 
+    credstore
+        Optionally set to path to the credential store file.
+
     :return: A standard cmd.run_all dictionary with a `success` key added, per host.
              `success` will be True if the set succeeded, False otherwise.
 
@@ -662,7 +678,7 @@ def set_coredump_network_config(host,
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                                 protocol=protocol, port=port,
-                                                esxi_host=esxi_host)
+                                                esxi_host=esxi_host, credstore=credstore)
             if response['retcode'] != 0:
                 response['success'] = False
             else:
@@ -673,7 +689,8 @@ def set_coredump_network_config(host,
     else:
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                            protocol=protocol, port=port)
+                                            protocol=protocol, port=port,
+                                            credstore=credstore)
         if response['retcode'] != 0:
             response['success'] = False
         else:
@@ -684,7 +701,7 @@ def set_coredump_network_config(host,
 
 
 @depends(HAS_ESX_CLI)
-def get_firewall_status(host, username, password, protocol=None, port=None, esxi_hosts=None):
+def get_firewall_status(host, username, password, protocol=None, port=None, esxi_hosts=None, credstore=None):
     '''
     Show status of all firewall rule sets.
 
@@ -708,6 +725,9 @@ def get_firewall_status(host, username, password, protocol=None, port=None, esxi
     esxi_hosts
         If ``host`` is a vCenter host, then use esxi_hosts to execute this function
         on a list of one or more ESXi machines.
+
+    credstore
+        Optionally set to path to the credential store file.
 
     :return: Nested dictionary with two toplevel keys ``rulesets`` and ``success``
              ``success`` will be True or False depending on query success
@@ -735,7 +755,7 @@ def get_firewall_status(host, username, password, protocol=None, port=None, esxi
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                                 protocol=protocol, port=port,
-                                                esxi_host=esxi_host)
+                                                esxi_host=esxi_host, credstore=credstore)
             if response['retcode'] != 0:
                 ret.update({esxi_host: {'Error': response['stdout'],
                                         'success': False,
@@ -746,7 +766,8 @@ def get_firewall_status(host, username, password, protocol=None, port=None, esxi
     else:
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                            protocol=protocol, port=port)
+                                            protocol=protocol, port=port,
+                                            credstore=credstore)
         if response['retcode'] != 0:
             ret.update({host: {'Error': response['stdout'],
                                'success': False,
@@ -766,7 +787,8 @@ def enable_firewall_ruleset(host,
                             ruleset_name,
                             protocol=None,
                             port=None,
-                            esxi_hosts=None):
+                            esxi_hosts=None,
+                            credstore=None):
     '''
     Enable or disable an ESXi firewall rule set.
 
@@ -797,6 +819,9 @@ def enable_firewall_ruleset(host,
         If ``host`` is a vCenter host, then use esxi_hosts to execute this function
         on a list of one or more ESXi machines.
 
+    credstore
+        Optionally set to path to the credential store file.
+
     :return: A standard cmd.run_all dictionary, per host.
 
     CLI Example:
@@ -822,19 +847,20 @@ def enable_firewall_ruleset(host,
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                                 protocol=protocol, port=port,
-                                                esxi_host=esxi_host)
+                                                esxi_host=esxi_host, credstore=credstore)
             ret.update({esxi_host: response})
     else:
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                            protocol=protocol, port=port)
+                                            protocol=protocol, port=port,
+                                            credstore=credstore)
         ret.update({host: response})
 
     return ret
 
 
 @depends(HAS_ESX_CLI)
-def syslog_service_reload(host, username, password, protocol=None, port=None, esxi_hosts=None):
+def syslog_service_reload(host, username, password, protocol=None, port=None, esxi_hosts=None, credstore=None):
     '''
     Reload the syslog service so it will pick up any changes.
 
@@ -858,6 +884,9 @@ def syslog_service_reload(host, username, password, protocol=None, port=None, es
     esxi_hosts
         If ``host`` is a vCenter host, then use esxi_hosts to execute this function
         on a list of one or more ESXi machines.
+
+    credstore
+        Optionally set to path to the credential store file.
 
     :return: A standard cmd.run_all dictionary.  This dictionary will at least
              have a `retcode` key.  If `retcode` is 0 the command was successful.
@@ -883,12 +912,13 @@ def syslog_service_reload(host, username, password, protocol=None, port=None, es
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                                 protocol=protocol, port=port,
-                                                esxi_host=esxi_host)
+                                                esxi_host=esxi_host, credstore=credstore)
             ret.update({esxi_host: response})
     else:
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                            protocol=protocol, port=port)
+                                            protocol=protocol, port=port,
+                                            credstore=credstore)
         ret.update({host: response})
 
     return ret
@@ -904,7 +934,8 @@ def set_syslog_config(host,
                       port=None,
                       firewall=True,
                       reset_service=True,
-                      esxi_hosts=None):
+                      esxi_hosts=None,
+                      credstore=None):
     '''
     Set the specified syslog configuration parameter. By default, this function will
     reset the syslog service after the configuration is set.
@@ -950,6 +981,9 @@ def set_syslog_config(host,
         If ``host`` is a vCenter host, then use esxi_hosts to execute this function
         on a list of one or more ESXi machines.
 
+    credstore
+        Optionally set to path to the credential store file.
+
     :return: Dictionary with a top-level key of 'success' which indicates
              if all the parameters were reset, and individual keys
              for each parameter indicating which succeeded or failed, per host.
@@ -980,7 +1014,7 @@ def set_syslog_config(host,
                 response = enable_firewall_ruleset(host, username, password,
                                                    ruleset_enable=True, ruleset_name='syslog',
                                                    protocol=protocol, port=port,
-                                                   esxi_hosts=[esxi_host]).get(esxi_host)
+                                                   esxi_hosts=[esxi_host], credstore=credstore).get(esxi_host)
                 if response['retcode'] != 0:
                     ret.update({esxi_host: {'enable_firewall': {'message': response['stdout'],
                                                                 'success': False}}})
@@ -990,7 +1024,8 @@ def set_syslog_config(host,
             # Handles a single host or a vCenter connection when no esxi_hosts are provided.
             response = enable_firewall_ruleset(host, username, password,
                                                ruleset_enable=True, ruleset_name='syslog',
-                                               protocol=protocol, port=port).get(host)
+                                               protocol=protocol, port=port,
+                                               credstore=credstore).get(host)
             if response['retcode'] != 0:
                 ret.update({host: {'enable_firewall': {'message': response['stdout'],
                                                        'success': False}}})
@@ -1005,7 +1040,8 @@ def set_syslog_config(host,
         for esxi_host in esxi_hosts:
             response = _set_syslog_config_helper(host, username, password, syslog_config,
                                                  config_value, protocol=protocol, port=port,
-                                                 reset_service=reset_service, esxi_host=esxi_host)
+                                                 reset_service=reset_service, esxi_host=esxi_host,
+                                                 credstore=credstore)
             # Ensure we don't overwrite any dictionary data already set
             # By updating the esxi_host directly.
             if ret.get(esxi_host) is None:
@@ -1016,7 +1052,7 @@ def set_syslog_config(host,
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = _set_syslog_config_helper(host, username, password, syslog_config,
                                              config_value, protocol=protocol, port=port,
-                                             reset_service=reset_service)
+                                             reset_service=reset_service, credstore=credstore)
         # Ensure we don't overwrite any dictionary data already set
         # By updating the host directly.
         if ret.get(host) is None:
@@ -1027,7 +1063,7 @@ def set_syslog_config(host,
 
 
 @depends(HAS_ESX_CLI)
-def get_syslog_config(host, username, password, protocol=None, port=None, esxi_hosts=None):
+def get_syslog_config(host, username, password, protocol=None, port=None, esxi_hosts=None, credstore=None):
     '''
     Retrieve the syslog configuration.
 
@@ -1051,6 +1087,9 @@ def get_syslog_config(host, username, password, protocol=None, port=None, esxi_h
     esxi_hosts
         If ``host`` is a vCenter host, then use esxi_hosts to execute this function
         on a list of one or more ESXi machines.
+
+    credstore
+        Optionally set to path to the credential store file.
 
     :return: Dictionary with keys and values corresponding to the
              syslog configuration, per host.
@@ -1076,13 +1115,14 @@ def get_syslog_config(host, username, password, protocol=None, port=None, esxi_h
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                                 protocol=protocol, port=port,
-                                                esxi_host=esxi_host)
+                                                esxi_host=esxi_host, credstore=credstore)
             # format the response stdout into something useful
             ret.update({esxi_host: _format_syslog_config(response)})
     else:
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                            protocol=protocol, port=port)
+                                            protocol=protocol, port=port,
+                                            credstore=credstore)
         # format the response stdout into something useful
         ret.update({host: _format_syslog_config(response)})
 
@@ -1096,7 +1136,8 @@ def reset_syslog_config(host,
                         protocol=None,
                         port=None,
                         syslog_config=None,
-                        esxi_hosts=None):
+                        esxi_hosts=None,
+                        credstore=None):
     '''
     Reset the syslog service to its default settings.
 
@@ -1128,6 +1169,9 @@ def reset_syslog_config(host,
     esxi_hosts
         If ``host`` is a vCenter host, then use esxi_hosts to execute this function
         on a list of one or more ESXi machines.
+
+    credstore
+        Optionally set to path to the credential store file.
 
     :return: Dictionary with a top-level key of 'success' which indicates
              if all the parameters were reset, and individual keys
@@ -1170,18 +1214,20 @@ def reset_syslog_config(host,
             response_dict = _reset_syslog_config_params(host, username, password,
                                                         cmd, resets, valid_resets,
                                                         protocol=protocol, port=port,
-                                                        esxi_host=esxi_host)
+                                                        esxi_host=esxi_host, credstore=credstore)
             ret.update({esxi_host: response_dict})
     else:
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response_dict = _reset_syslog_config_params(host, username, password,
                                                     cmd, resets, valid_resets,
-                                                    protocol=protocol, port=port)
+                                                    protocol=protocol, port=port,
+                                                    credstore=credstore)
         ret.update({host: response_dict})
 
     return ret
 
 
+@ignores_kwargs('credstore')
 def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
                    protocol=None, port=None, certificate_verify=False):
     '''
@@ -1253,6 +1299,7 @@ def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
     return ret
 
 
+@ignores_kwargs('credstore')
 def get_ssh_key(host,
                 username,
                 password,
@@ -1310,6 +1357,7 @@ def get_ssh_key(host,
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def get_host_datetime(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Get the date/time information for a given host or list of host_names.
@@ -1368,6 +1416,7 @@ def get_host_datetime(host, username, password, protocol=None, port=None, host_n
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def get_ntp_config(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Get the NTP configuration information for a given host or list of host_names.
@@ -1425,6 +1474,7 @@ def get_ntp_config(host, username, password, protocol=None, port=None, host_name
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def get_service_policy(host, username, password, service_name, protocol=None, port=None, host_names=None):
     '''
     Get the service name's policy for a given host or list of hosts.
@@ -1531,6 +1581,7 @@ def get_service_policy(host, username, password, service_name, protocol=None, po
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def get_service_running(host, username, password, service_name, protocol=None, port=None, host_names=None):
     '''
     Get the service name's running state for a given host or list of hosts.
@@ -1637,6 +1688,7 @@ def get_service_running(host, username, password, service_name, protocol=None, p
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def get_vmotion_enabled(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Get the VMotion enabled status for a given host or a list of host_names. Returns ``True``
@@ -1698,6 +1750,7 @@ def get_vmotion_enabled(host, username, password, protocol=None, port=None, host
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def get_vsan_enabled(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Get the VSAN enabled status for a given host or a list of host_names. Returns ``True``
@@ -1764,6 +1817,7 @@ def get_vsan_enabled(host, username, password, protocol=None, port=None, host_na
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Returns a list of VSAN-eligible disks for a given host or list of host_names.
@@ -1859,6 +1913,7 @@ def test_vcenter_connection(service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def system_info(host, username, password, protocol=None, port=None):
     '''
     Return system information about a VMware environment.
@@ -1899,6 +1954,7 @@ def system_info(host, username, password, protocol=None, port=None):
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def list_datacenters(host, username, password, protocol=None, port=None):
     '''
     Returns a list of datacenters for the the specified host.
@@ -1936,6 +1992,7 @@ def list_datacenters(host, username, password, protocol=None, port=None):
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def list_clusters(host, username, password, protocol=None, port=None):
     '''
     Returns a list of clusters for the the specified host.
@@ -1973,6 +2030,7 @@ def list_clusters(host, username, password, protocol=None, port=None):
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def list_datastore_clusters(host, username, password, protocol=None, port=None):
     '''
     Returns a list of datastore clusters for the the specified host.
@@ -2009,6 +2067,7 @@ def list_datastore_clusters(host, username, password, protocol=None, port=None):
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def list_datastores(host, username, password, protocol=None, port=None):
     '''
     Returns a list of datastores for the the specified host.
@@ -2045,6 +2104,7 @@ def list_datastores(host, username, password, protocol=None, port=None):
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def list_hosts(host, username, password, protocol=None, port=None):
     '''
     Returns a list of hosts for the the specified VMware environment.
@@ -2081,6 +2141,7 @@ def list_hosts(host, username, password, protocol=None, port=None):
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def list_resourcepools(host, username, password, protocol=None, port=None):
     '''
     Returns a list of resource pools for the the specified host.
@@ -2117,6 +2178,7 @@ def list_resourcepools(host, username, password, protocol=None, port=None):
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def list_networks(host, username, password, protocol=None, port=None):
     '''
     Returns a list of networks for the the specified host.
@@ -2153,6 +2215,7 @@ def list_networks(host, username, password, protocol=None, port=None):
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def list_vms(host, username, password, protocol=None, port=None):
     '''
     Returns a list of VMs for the the specified host.
@@ -2189,6 +2252,7 @@ def list_vms(host, username, password, protocol=None, port=None):
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def list_folders(host, username, password, protocol=None, port=None):
     '''
     Returns a list of folders for the the specified host.
@@ -2225,6 +2289,7 @@ def list_folders(host, username, password, protocol=None, port=None):
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def list_dvs(host, username, password, protocol=None, port=None):
     '''
     Returns a list of distributed virtual switches for the the specified host.
@@ -2261,6 +2326,7 @@ def list_dvs(host, username, password, protocol=None, port=None):
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def list_vapps(host, username, password, protocol=None, port=None):
     '''
     Returns a list of vApps for the the specified host.
@@ -2298,6 +2364,7 @@ def list_vapps(host, username, password, protocol=None, port=None):
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def list_ssds(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Returns a list of SSDs for the given host or list of host_names.
@@ -2358,6 +2425,7 @@ def list_ssds(host, username, password, protocol=None, port=None, host_names=Non
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def list_non_ssds(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Returns a list of Non-SSD disks for the given host or list of host_names.
@@ -2425,6 +2493,7 @@ def list_non_ssds(host, username, password, protocol=None, port=None, host_names
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def set_ntp_config(host, username, password, ntp_servers, protocol=None, port=None, host_names=None):
     '''
     Set NTP configuration for a given host of list of host_names.
@@ -2504,6 +2573,7 @@ def set_ntp_config(host, username, password, ntp_servers, protocol=None, port=No
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def service_start(host,
                   username,
                   password,
@@ -2614,6 +2684,7 @@ def service_start(host,
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def service_stop(host,
                  username,
                  password,
@@ -2724,6 +2795,7 @@ def service_stop(host,
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def service_restart(host,
                     username,
                     password,
@@ -2834,6 +2906,7 @@ def service_restart(host,
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def set_service_policy(host,
                        username,
                        password,
@@ -2962,6 +3035,7 @@ def set_service_policy(host,
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def update_host_datetime(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Update the date/time on the given host or list of host_names. This function should be
@@ -3028,6 +3102,7 @@ def update_host_datetime(host, username, password, protocol=None, port=None, hos
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def update_host_password(host, username, password, new_password, protocol=None, port=None):
     '''
     Update the password for a given host.
@@ -3090,6 +3165,7 @@ def update_host_password(host, username, password, new_password, protocol=None, 
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def vmotion_disable(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Disable vMotion for a given host or list of host_names.
@@ -3158,6 +3234,7 @@ def vmotion_disable(host, username, password, protocol=None, port=None, host_nam
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def vmotion_enable(host, username, password, protocol=None, port=None, host_names=None, device='vmk0'):
     '''
     Enable vMotion for a given host or list of host_names.
@@ -3230,6 +3307,7 @@ def vmotion_enable(host, username, password, protocol=None, port=None, host_name
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def vsan_add_disks(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Add any VSAN-eligible disks to the VSAN System for the given host or list of host_names.
@@ -3333,6 +3411,7 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def vsan_disable(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Disable VSAN for a given host or list of host_names.
@@ -3417,6 +3496,7 @@ def vsan_disable(host, username, password, protocol=None, port=None, host_names=
 
 
 @depends(HAS_PYVMOMI)
+@ignores_kwargs('credstore')
 def vsan_enable(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Enable VSAN for a given host or list of host_names.
@@ -3724,7 +3804,7 @@ def _get_vsan_eligible_disks(service_instance, host, host_names):
 
 
 def _reset_syslog_config_params(host, username, password, cmd, resets, valid_resets,
-                                protocol=None, port=None, esxi_host=None):
+                                protocol=None, port=None, esxi_host=None, credstore=None):
     '''
     Helper function for reset_syslog_config that resets the config and populates the return dictionary.
     '''
@@ -3738,7 +3818,7 @@ def _reset_syslog_config_params(host, username, password, cmd, resets, valid_res
         if reset_param in valid_resets:
             ret = salt.utils.vmware.esxcli(host, username, password, cmd + reset_param,
                                            protocol=protocol, port=port,
-                                           esxi_host=esxi_host)
+                                           esxi_host=esxi_host, credstore=credstore)
             ret_dict[reset_param] = {}
             ret_dict[reset_param]['success'] = ret['retcode'] == 0
             if ret['retcode'] != 0:
@@ -3757,7 +3837,7 @@ def _reset_syslog_config_params(host, username, password, cmd, resets, valid_res
 
 
 def _set_syslog_config_helper(host, username, password, syslog_config, config_value,
-                              protocol=None, port=None, reset_service=None, esxi_host=None):
+                              protocol=None, port=None, reset_service=None, esxi_host=None, credstore=None):
     '''
     Helper function for set_syslog_config that sets the config and populates the return dictionary.
     '''
@@ -3773,7 +3853,7 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
 
     response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                         protocol=protocol, port=port,
-                                        esxi_host=esxi_host)
+                                        esxi_host=esxi_host, credstore=credstore)
 
     # Update the return dictionary for success or error messages.
     if response['retcode'] != 0:
@@ -3791,12 +3871,13 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
             host_name = host
         response = syslog_service_reload(host, username, password,
                                          protocol=protocol, port=port,
-                                         esxi_hosts=esxi_host).get(host_name)
+                                         esxi_hosts=esxi_host, credstore=credstore).get(host_name)
         ret_dict.update({'syslog_restart': {'success': response['retcode'] == 0}})
 
     return ret_dict
 
 
+@ignores_kwargs('credstore')
 def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
                     dvs_name, target_portgroup_name, uplink_portgroup_name,
                     protocol=None, port=None, host_names=None):
