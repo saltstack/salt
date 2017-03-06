@@ -1332,7 +1332,7 @@ class Jobs(LowDataAdapter):
             ret['info'] = [job_ret_info[0]]
             minion_ret = {}
             returns = job_ret_info[0].get('Result')
-            for minion in returns.keys():
+            for minion in returns:
                 if u'return' in returns[minion]:
                     minion_ret[minion] = returns[minion].get(u'return')
                 else:

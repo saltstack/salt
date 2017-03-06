@@ -162,7 +162,7 @@ def create(name, **kwargs):
     # create "-o property=value" pairs
     if properties:
         optlist = []
-        for prop in properties.keys():
+        for prop in properties:
             if isinstance(properties[prop], bool):  # salt breaks the on/off/yes/no properties :(
                 properties[prop] = 'on' if properties[prop] else 'off'
 
@@ -685,7 +685,7 @@ def clone(name_a, name_b, **kwargs):
     # create "-o property=value" pairs
     if properties:
         optlist = []
-        for prop in properties.keys():
+        for prop in properties:
             if isinstance(properties[prop], bool):  # salt breaks the on/off/yes/no properties :(
                 properties[prop] = 'on' if properties[prop] else 'off'
             optlist.append('-o {0}={1}'.format(prop, properties[prop]))
@@ -1063,7 +1063,7 @@ def snapshot(*snapshot, **kwargs):
     # create "-o property=value" pairs
     if properties:
         optlist = []
-        for prop in properties.keys():
+        for prop in properties:
             if isinstance(properties[prop], bool):  # salt breaks the on/off/yes/no properties :(
                 properties[prop] = 'on' if properties[prop] else 'off'
             optlist.append('-o {0}={1}'.format(prop, properties[prop]))
@@ -1153,7 +1153,7 @@ def set(*dataset, **kwargs):
 
     # for better error handling we don't do one big set command
     for ds in dataset:
-        for prop in properties.keys():
+        for prop in properties:
 
             if isinstance(properties[prop], bool):  # salt breaks the on/off/yes/no properties :(
                 properties[prop] = 'on' if properties[prop] else 'off'

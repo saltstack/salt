@@ -1493,7 +1493,7 @@ def subdict_match(data,
                            exact_match=exact_match):
             return True
         if wildcard:
-            for key in target.keys():
+            for key in target:
                 if _match(key,
                           pattern,
                           regex_match=regex_match,

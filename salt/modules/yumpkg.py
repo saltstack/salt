@@ -2365,7 +2365,7 @@ def list_repos(basedir=None):
             if not repofile.endswith('.repo'):
                 continue
             filerepos = _parse_repo_file(repopath)[1]
-            for reponame in filerepos.keys():
+            for reponame in filerepos:
                 repo = filerepos[reponame]
                 repo['file'] = repopath
                 repos[reponame] = repo

@@ -721,7 +721,7 @@ class LocalClient(object):
                         ret[mid] = (data if full_return
                                 else data.get('ret', {}))
 
-            for failed in list(set(pub_data['minions']) ^ set(ret.keys())):
+            for failed in list(set(pub_data['minions']) ^ set(ret)):
                 ret[failed] = False
             return ret
         finally:
@@ -943,7 +943,7 @@ class LocalClient(object):
                                                     block=False,
                                                     **kwargs):
                     if fn_ret and any([show_jid, verbose]):
-                        for minion in fn_ret.keys():
+                        for minion in fn_ret:
                             fn_ret[minion]['jid'] = pub_data['jid']
                     yield fn_ret
 

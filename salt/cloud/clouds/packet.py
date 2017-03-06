@@ -508,7 +508,7 @@ def get_devices_by_token():
 
     devices = []
 
-    for profile_name in vm_['profiles'].keys():
+    for profile_name in vm_['profiles']:
         profile = vm_['profiles'][profile_name]
 
         devices.extend(manager.list_devices(profile['project_id']))

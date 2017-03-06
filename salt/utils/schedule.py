@@ -538,7 +538,7 @@ class Schedule(object):
 
         # if enabled is not included in the job,
         # assume job is enabled.
-        for job in data.keys():
+        for job in data:
             if 'enabled' not in data[job]:
                 data[job]['enabled'] = True
 

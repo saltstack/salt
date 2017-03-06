@@ -514,7 +514,7 @@ def fcontext_apply_policy(name, recursive=False):
             for key, value in six.iteritems(old):
                 if new.get(key) == value:
                     intersect.update({key: value})
-            for key in intersect.keys():
+            for key in intersect:
                 del old[key]
                 del new[key]
             ret['changes'].update({filespec: {'old': old, 'new': new}})
