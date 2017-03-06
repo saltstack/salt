@@ -9,7 +9,7 @@
     some fake objects in order to properly set the function/class decorators
     and yet skip the test cases execution.
 '''
-# pylint: disable=unused-import,function-redefined
+# pylint: disable=unused-import,function-redefined,blacklisted-external-module
 
 from __future__ import absolute_import
 import sys
