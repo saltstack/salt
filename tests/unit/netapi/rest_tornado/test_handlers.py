@@ -105,6 +105,24 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
             os.environ.pop('ASYNC_TEST_TIMEOUT', None)
         else:
             os.environ['ASYNC_TEST_TIMEOUT'] = self.async_timeout_prev
+        if hasattr(self, 'http_server'):
+            del self.http_server
+        if hasattr(self, 'io_loop'):
+            del self.io_loop
+        if hasattr(self, '_app'):
+            del self._app
+        if hasattr(self, 'http_client'):
+            del self.http_client
+        if hasattr(self, '__port'):
+            del self.__port
+        if hasattr(self, '_AsyncHTTPTestCase__port'):
+            del self._AsyncHTTPTestCase__port
+        if hasattr(self, '__auth'):
+            del self.__auth
+        if hasattr(self, '_SaltnadoTestCase__auth'):
+            del self._SaltnadoTestCase__auth
+        if hasattr(self, '_test_generator'):
+            del self._test_generator
 
     def build_tornado_app(self, urls):
         application = tornado.web.Application(urls, debug=True)

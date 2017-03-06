@@ -103,6 +103,8 @@ class GitFSTest(integration.ModuleCase):
         '''
         shutil.rmtree(self.tmp_repo_dir)
         shutil.rmtree(os.path.join(self.master_opts['cachedir'], 'gitfs'))
+        del self.tmp_repo_dir
+        del self.integration_base_files
 
     #@skipIf(True, 'Skipping tests temporarily')
     def test_file_list(self):

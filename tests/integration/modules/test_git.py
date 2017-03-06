@@ -133,6 +133,11 @@ class GitModuleTest(integration.ModuleCase):
         # Go back to original cwd
         os.chdir(self.orig_cwd)
 
+    def tearDown(self):
+        for key in ('orig_cwd', 'repo', 'files', 'dirs', 'branches', 'tags'):
+            delattr(self, key)
+        super(GitModuleTest, self).tearDown()
+
     def test_add_dir(self):
         '''
         Test git.add with a directory

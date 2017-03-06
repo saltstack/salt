@@ -982,6 +982,17 @@ def requires_salt_modules(*names):
                     if name not in self.__salt_sys_docs__:
                         self.skipTest('Salt module {0!r} is not available'.format(name))
             caller.setUp = setUp
+
+            old_teardown = getattr(caller, 'tearDown', None)
+
+            def teardown(self, *args, **kwargs):
+                if hasattr(self, '__salt_sys_docs__'):
+                    del self.__salt_sys_docs__
+
+                if old_teardown is not None:
+                    old_teardown(self, *args, **kwargs)
+
+            caller.tearDown = teardown
             return caller
 
         # We're simply decorating functions

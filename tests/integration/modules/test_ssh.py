@@ -55,6 +55,7 @@ class SSHModuleTest(integration.ModuleCase):
         if os.path.isdir(SUBSALT_DIR):
             shutil.rmtree(SUBSALT_DIR)
         super(SSHModuleTest, self).tearDown()
+        del self.key
 
     def test_auth_keys(self):
         '''

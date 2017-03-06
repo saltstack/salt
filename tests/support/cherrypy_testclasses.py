@@ -79,6 +79,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
 
     def tearDown(self):
         cherrypy.engine.exit()
+        del self.app
 
 
 class Root(object):
@@ -119,3 +120,5 @@ if HAS_CHERRYPY:
 
         def tearDown(self):
             cherrypy.engine.exit()
+            if hasattr(self, '_cp_config'):
+                del self._cp_config
