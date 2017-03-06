@@ -56,7 +56,9 @@ allowed-3rd-party-modules = msgpack,
   Crypto,
   requests,
   libcloud,
-  zmq
+  zmq,
+  pytest,
+  pytestsalt
 
 [MESSAGES CONTROL]
 # Only show warnings with the listed confidence levels. Leave empty to show
