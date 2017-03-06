@@ -77,16 +77,7 @@ def facts_refresh():
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
-    ret['facts'] = dict(conn.facts)
-    ret['facts']['version_info'] = \
-        dict(ret['facts']['version_info'])
-    # For backward compatibility. 'junos_info' is present
-    # only of in newer versions of facts.
-    if 'junos_info' in ret['facts']:
-        ret['facts']['junos_info']['re0']['object'] = \
-            dict(ret['facts']['junos_info']['re0']['object'])
-        ret['facts']['junos_info']['re1']['object'] = \
-            dict(ret['facts']['junos_info']['re1']['object'])
+    ret['facts'] = __proxy__['junos.get_serialized_facts']()
 
     try:
         __salt__['saltutil.sync_grains']()
@@ -107,19 +98,9 @@ def facts():
         salt 'device_name' junos.facts
 
     '''
-    conn = __proxy__['junos.conn']()
     ret = dict()
     try:
-        ret['facts'] = dict(conn.facts)
-        ret['facts']['version_info'] = \
-            dict(ret['facts']['version_info'])
-        # For backward compatibility. 'junos_info' is present
-        # only of in newer versions of facts.
-        if 'junos_info' in ret['facts']:
-            ret['facts']['junos_info']['re0']['object'] = \
-                dict(ret['facts']['junos_info']['re0']['object'])
-            ret['facts']['junos_info']['re1']['object'] = \
-                dict(ret['facts']['junos_info']['re1']['object'])
+        ret['facts'] = __proxy__['junos.get_serialized_facts']()
         ret['out'] = True
     except Exception as exception:
         ret['message'] = 'Could not display facts due to "{0}"'.format(
@@ -157,7 +138,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
           The format in which the rpc reply is received from the device.
           (default = xml)
         * kwargs: keyworded arguments taken by rpc call like-
-            * timeout:
+            * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default= 30 seconds)
             * filter:
@@ -400,8 +381,8 @@ def commit(**kwargs):
         except Exception as exception:
             ret['out'] = False
             ret['message'] = \
-                'Commit check succeeded but actual commit failed with "{0}"'\
-                    .format(exception)
+                'Commit check succeeded but actual commit failed with "{0}"' \
+                .format(exception)
     else:
         ret['out'] = False
         ret['message'] = 'Pre-commit check failed.'
@@ -424,7 +405,7 @@ def rollback(id=0, **kwargs):
         * id:
           The rollback id value [0-49]. (default = 0)
         * kwargs: Keyworded arguments which can be provided like-
-            * timeout:
+            * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
             * comment:
@@ -440,7 +421,7 @@ def rollback(id=0, **kwargs):
 
     ret = dict()
     conn = __proxy__['junos.conn']()
-    
+
     op = dict()
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
@@ -807,7 +788,7 @@ def install_config(path=None, **kwargs):
     ret['out'] = True
 
     if path is None:
-        ret['message'] =\
+        ret['message'] = \
             'Please provide the salt path where the configuration is present'
         ret['out'] = False
         return ret
@@ -817,7 +798,10 @@ def install_config(path=None, **kwargs):
         template_vars = kwargs["template_vars"]
 
     template_cached_path = files.mkstemp()
-    __salt__['cp.get_template'](path, template_cached_path, template_vars=template_vars)
+    __salt__['cp.get_template'](
+        path,
+        template_cached_path,
+        template_vars=template_vars)
 
     if not os.path.isfile(template_cached_path):
         ret['message'] = 'Invalid file path.'
@@ -901,8 +885,13 @@ def install_config(path=None, **kwargs):
         check = conn.cu.commit_check()
     except Exception as exception:
         ret['message'] = \
+<<<<<<< HEAD
             'Commit check threw the following exception: "{0}"'\
                 .format(exception)
+=======
+            'Commit check threw the following exception: "{0}"' \
+            .format(exception)
+>>>>>>> bdc8d2d196417a4ce9247d5ea9a9770ab5d1adae
         ret['out'] = False
         return ret
 
@@ -912,8 +901,13 @@ def install_config(path=None, **kwargs):
             ret['message'] = 'Successfully loaded and committed!'
         except Exception as exception:
             ret['message'] = \
+<<<<<<< HEAD
                 'Commit check successful but commit failed with "{0}"'\
                     .format(exception)
+=======
+                'Commit check successful but commit failed with "{0}"' \
+                .format(exception)
+>>>>>>> bdc8d2d196417a4ce9247d5ea9a9770ab5d1adae
             ret['out'] = False
             return ret
     else:
@@ -1024,9 +1018,9 @@ def install_os(path=None, **kwargs):
         try:
             conn.sw.reboot()
         except Exception as exception:
-            ret['message'] =\
-                'Installation successful but reboot failed due to : "{0}"'\
-                    .format(exception)
+            ret['message'] = \
+                'Installation successful but reboot failed due to : "{0}"' \
+                .format(exception)
             ret['out'] = False
             return ret
         ret['message'] = 'Successfully installed and rebooted!'
@@ -1068,7 +1062,7 @@ def file_copy(src=None, dest=None, **kwargs):
 
     if dest is None:
         ret['message'] = \
-        'Please provide the absolute path of the destination where the file is to be copied.'
+            'Please provide the absolute path of the destination where the file is to be copied.'
         ret['out'] = False
         return ret
 
