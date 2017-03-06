@@ -20,7 +20,7 @@ import salt.ext.six as six
 import psutil  # pylint: disable=3rd-party-module-not-gated
 
 if psutil.version_info >= (2, 0):
-    from psutil import *  # pylint: disable=wildcard-import,unused-wildcard-import
+    from psutil import *  # pylint: disable=wildcard-import,unused-wildcard-import,3rd-party-module-not-gated
 else:
     # Import hack to work around bugs in old psutil's
     # Psuedo "from psutil import *"
@@ -33,8 +33,10 @@ else:
             pass
 
     # Import functions not in __all__
-    from psutil import disk_partitions  # pylint: disable=unused-import
-    from psutil import disk_usage  # pylint: disable=unused-import
+    # pylint: disable=unused-import,3rd-party-module-not-gated
+    from psutil import disk_partitions
+    from psutil import disk_usage
+    # pylint: enable=unused-import,3rd-party-module-not-gated
 
     # Alias new module functions
     def boot_time():
