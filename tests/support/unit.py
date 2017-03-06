@@ -26,6 +26,7 @@ from __future__ import absolute_import
 import os
 import sys
 import logging
+import salt.ext.six as six
 try:
     import psutil
     HAS_PSUTIL = True
@@ -130,7 +131,12 @@ class TestSuite(_TestSuite):
             if prerun_class_attributes is not None:
                 del previousClass._prerun_class_attributes
                 for attr in prerun_class_attributes:
-                    if hasattr(previousClass, attr) and getattr(previousClass, attr, None) is not None:
+                    if hasattr(previousClass, attr):
+                        attr_value = getattr(previousClass, attr, None)
+                        if attr_value is None:
+                            continue
+                        if isinstance(attr_value, (bool,) + six.string_types + six.integer_types):
+                            continue
                         log.warning('Deleting extra class attribute after test run: %s.%s(%s). '
                                     'Please consider using \'del self.%s\' on the test class '
                                     '\'tearDownClass()\' method', previousClass.__name__, attr,
@@ -175,7 +181,12 @@ class TestCase(_TestCase):
                 continue
             if attr in getattr(self.__class__, '_prerun_class_attributes', ()):
                 continue
-            if attr not in self._prerun_instance_attributes and getattr(self, attr, None) is not None:
+            if attr not in self._prerun_instance_attributes:
+                attr_value = getattr(self, attr, None)
+                if attr_value is None:
+                    continue
+                if isinstance(attr_value, (bool,) + six.string_types + six.integer_types):
+                    continue
                 log.warning('Deleting extra class attribute after test run: %s.%s(%s). '
                             'Please consider using \'del self.%s\' on the test case '
                             '\'tearDown()\' method', self.__class__.__name__, attr,
