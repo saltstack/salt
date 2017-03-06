@@ -1,25 +1,21 @@
 language: python
 
 python:
-  - "2.6"
-  - "2.7"
+  - '2.6'
+  - '2.7'
 
-addons:
-  apt:
-    packages:
-    - python-dev
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install --fix-broken --ignore-missing -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" swig rabbitmq-server ruby python-apt mysql-server libmysqlclient-dev
+  - (git describe && git fetch --tags) || (git remote add upstream git://github.com/saltstack/salt.git && git fetch --tags upstream)
+  - pip install mock
+  - pip install --allow-external http://dl.dropbox.com/u/174789/m2crypto-0.20.1.tar.gz
+  - pip install --upgrade pep8 'pylint<=1.2.0'
+  - pip install --upgrade coveralls
+  - "if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then pip install unittest2 ordereddict; fi"
+  - pip install git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
 
 install:
-<<<<<<< HEAD
-  - if [ "$TRAVIS_PYTHON_VERSION" == "2.6" ]; then pip install importlib; fi
-  - "pip install junos-eznc"
-  - "pip install jxmlease"
-  - "pip install -r requirements/dev_python26.txt"
-  - "pip install -r requirements/zeromq.txt"
-  - "pip install nose"
-
-script: nosetests -v tests/unit/modules/junos_test.py
-=======
   - pip install -r requirements/zeromq.txt -r requirements/cloud.txt
   - pip install --allow-all-external -r requirements/opt.txt
 
@@ -37,4 +33,3 @@ notifications:
     channels: "irc.freenode.org#salt-devel"
     on_success: change
     on_failure: change
->>>>>>> bdc8d2d196417a4ce9247d5ea9a9770ab5d1adae
