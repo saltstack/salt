@@ -7,10 +7,10 @@ import unittest2 as unittest
 from nose.plugins.attrib import attr
 from mock import patch, MagicMock, ANY
 
-import lxml.etree as etree
 from jnpr.junos.utils.config import Config
 from jnpr.junos.utils.sw import SW
 from jnpr.junos.device import Device
+from jnpr.junos.facts.swver import version_info
 import salt.modules.junos as junos
 
 @attr('unit')
@@ -18,7 +18,7 @@ class Test_Junos_Module(unittest.TestCase):
 
     def setUp(self):
         junos.__proxy__ = {'junos.conn': self.make_connect}
-        junos.__salt__ = {'cp.get_template': self.fake_cp}
+        junos.__salt__ = {'cp.get_template': MagicMock}
 
     @patch('ncclient.manager.connect')
     def make_connect(self, mock_connect):
@@ -32,23 +32,213 @@ class Test_Junos_Module(unittest.TestCase):
         self.dev.bind(sw=SW)
         return self.dev
 
-    def fake_cp(self, path='dummy', dest=None, template_vars=None):
-        return MagicMock()
-
     def raise_exception(self, *args ,**kwargs):
         raise Exception('dummy exception')
 
-    def test_rpc_without_args(self):
-        ret = dict()
-        ret['message'] = 'Please provide the rpc to execute.'
-        ret['out'] = False
-        self.assertEqual(junos.rpc(), ret)
+    def get_facts(self, key):
+        facts = {'2RE': True,
+             'HOME': '/var/home/regress',
+             'RE0': {'last_reboot_reason': '0x200:normal shutdown',
+                     'mastership_state': 'master',
+                     'model': 'RE-VMX',
+                     'status': 'OK',
+                     'up_time': '11 days, 23 hours, 16 minutes, 54 seconds'},
+             'RE1': {'last_reboot_reason': '0x200:normal shutdown',
+                     'mastership_state': 'backup',
+                     'model': 'RE-VMX',
+                     'status': 'OK',
+                     'up_time': '11 days, 23 hours, 16 minutes, 41 seconds'},
+             'RE_hw_mi': False,
+             'current_re': ['re0', 'master', 'node', 'fwdd', 'member', 'pfem'],
+             'domain': 'englab.juniper.net',
+             'fqdn': 'R1_re0.englab.juniper.net',
+             'hostname': 'R1_re0',
+             'hostname_info': {'re0': 'R1_re0', 're1': 'R1_re01'},
+             'ifd_style': 'CLASSIC',
+             'junos_info': {'re0': {'object': {'build': None,
+                                               'major': (16, 1),
+                                               'minor': '20160413_0837_aamish',
+                                               'type': 'I'},
+                                    'text': '16.1I20160413_0837_aamish'},
+                            're1': {'object': {'build': None,
+                                               'major': (16, 1),
+                                               'minor': '20160413_0837_aamish',
+                                               'type': 'I'},
+                                    'text': '16.1I20160413_0837_aamish'}},
+             'master': 'RE0',
+             'model': 'MX240',
+             'model_info': {'re0': 'MX240', 're1': 'MX240'},
+             'personality': 'MX',
+             're_info': {'default': {'0': {'last_reboot_reason': '0x200:normal shutdown',
+                                           'mastership_state': 'master',
+                                           'model': 'RE-VMX',
+                                           'status': 'OK'},
+                                     '1': {'last_reboot_reason': '0x200:normal shutdown',
+                                           'mastership_state': 'backup',
+                                           'model': 'RE-VMX',
+                                           'status': 'OK'},
+                                     'default': {'last_reboot_reason': '0x200:normal shutdown',
+                                                 'mastership_state': 'master',
+                                                 'model': 'RE-VMX',
+                                                 'status': 'OK'}}},
+             're_master': {'default': '0'},
+             'serialnumber': 'VMX4eaf',
+             'srx_cluster': None,
+             'switch_style': 'BRIDGE_DOMAIN',
+             'vc_capable': False,
+             'vc_fabric': None,
+             'vc_master': None,
+             'vc_mode': None,
+             'version': '16.1I20160413_0837_aamish',
+             'version_RE0': '16.1I20160413_0837_aamish',
+             'version_RE1': '16.1I20160413_0837_aamish',
+             'version_info': version_info("16.1I20160413_0837_aamish"),
+             'virtual': True}
+        return facts[key]
 
-    @patch('jnpr.junos.device.Device.execute')
-    def test_rpc(self, mock_exec):
-        self.dev = self.make_connect()
-        mock_exec.return_value = etree.fromstring('<root><a>test</a></root>')
-        junos.rpc('get-interface-information')
+    @patch('salt.modules.saltutil.sync_grains')
+    @patch('jnpr.junos.factcache._FactCache.__getitem__')
+    def test_facts_refresh(self, mock_facts, mock_sync_grains):
+        mock_facts.side_effect = self.get_facts
+        ret = dict()
+        ret['facts'] = {'2RE': True,
+                        'HOME': '/var/home/regress',
+                        'RE0': {'last_reboot_reason': '0x200:normal shutdown',
+                                'mastership_state': 'master',
+                                'model': 'RE-VMX',
+                                'status': 'OK',
+                                'up_time': '11 days, 23 hours, 16 minutes, 54 seconds'},
+                        'RE1': {'last_reboot_reason': '0x200:normal shutdown',
+                                'mastership_state': 'backup',
+                                'model': 'RE-VMX',
+                                'status': 'OK',
+                                'up_time': '11 days, 23 hours, 16 minutes, 41 seconds'},
+                        'RE_hw_mi': False,
+                        'current_re': ['re0', 'master', 'node', 'fwdd', 'member', 'pfem'],
+                        'domain': 'englab.juniper.net',
+                        'fqdn': 'R1_re0.englab.juniper.net',
+                        'hostname': 'R1_re0',
+                        'hostname_info': {'re0': 'R1_re0', 're1': 'R1_re01'},
+                        'ifd_style': 'CLASSIC',
+                        'junos_info': {'re0': {'object': {'build': None,
+                                                          'major': (16, 1),
+                                                          'minor': '20160413_0837_aamish',
+                                                          'type': 'I'},
+                                               'text': '16.1I20160413_0837_aamish'},
+                                       're1': {'object': {'build': None,
+                                                          'major': (16, 1),
+                                                          'minor': '20160413_0837_aamish',
+                                                          'type': 'I'},
+                                               'text': '16.1I20160413_0837_aamish'}},
+                        'master': 'RE0',
+                        'model': 'MX240',
+                        'model_info': {'re0': 'MX240', 're1': 'MX240'},
+                        'personality': 'MX',
+                        're_info': {'default': {'0': {'last_reboot_reason': '0x200:normal shutdown',
+                                                      'mastership_state': 'master',
+                                                      'model': 'RE-VMX',
+                                                      'status': 'OK'},
+                                                '1': {'last_reboot_reason': '0x200:normal shutdown',
+                                                      'mastership_state': 'backup',
+                                                      'model': 'RE-VMX',
+                                                      'status': 'OK'},
+                                                'default': {'last_reboot_reason': '0x200:normal shutdown',
+                                                            'mastership_state': 'master',
+                                                            'model': 'RE-VMX',
+                                                            'status': 'OK'}}},
+                        're_master': {'default': '0'},
+                        'serialnumber': 'VMX4eaf',
+                        'srx_cluster': None,
+                        'switch_style': 'BRIDGE_DOMAIN',
+                        'vc_capable': False,
+                        'vc_fabric': None,
+                        'vc_master': None,
+                        'vc_mode': None,
+                        'version': '16.1I20160413_0837_aamish',
+                        'version_RE0': '16.1I20160413_0837_aamish',
+                        'version_RE1': '16.1I20160413_0837_aamish',
+                        'version_info': {'build': None,
+                                         'major': (16, 1),
+                                         'minor': '20160413_0837_aamish',
+                                         'type': 'I'},
+                        'virtual': True}
+        ret['out'] = True
+
+    @patch('jnpr.junos.factcache._FactCache.__getitem__')
+    def test_facts(self, mock_facts):
+        mock_facts.side_effect = self.get_facts
+        ret = dict()
+        ret['facts'] = {'2RE': True,
+                         'HOME': '/var/home/regress',
+                         'RE0': {'last_reboot_reason': '0x200:normal shutdown',
+                                 'mastership_state': 'master',
+                                 'model': 'RE-VMX',
+                                 'status': 'OK',
+                                 'up_time': '11 days, 23 hours, 16 minutes, 54 seconds'},
+                         'RE1': {'last_reboot_reason': '0x200:normal shutdown',
+                                 'mastership_state': 'backup',
+                                 'model': 'RE-VMX',
+                                 'status': 'OK',
+                                 'up_time': '11 days, 23 hours, 16 minutes, 41 seconds'},
+                         'RE_hw_mi': False,
+                         'current_re': ['re0', 'master', 'node', 'fwdd', 'member', 'pfem'],
+                         'domain': 'englab.juniper.net',
+                         'fqdn': 'R1_re0.englab.juniper.net',
+                         'hostname': 'R1_re0',
+                         'hostname_info': {'re0': 'R1_re0', 're1': 'R1_re01'},
+                         'ifd_style': 'CLASSIC',
+                         'junos_info': {'re0': {'object': {'build': None,
+                                                           'major': (16, 1),
+                                                           'minor': '20160413_0837_aamish',
+                                                           'type': 'I'},
+                                                'text': '16.1I20160413_0837_aamish'},
+                                        're1': {'object': {'build': None,
+                                                           'major': (16, 1),
+                                                           'minor': '20160413_0837_aamish',
+                                                           'type': 'I'},
+                                                'text': '16.1I20160413_0837_aamish'}},
+                         'master': 'RE0',
+                         'model': 'MX240',
+                         'model_info': {'re0': 'MX240', 're1': 'MX240'},
+                         'personality': 'MX',
+                         're_info': {'default': {'0': {'last_reboot_reason': '0x200:normal shutdown',
+                                                       'mastership_state': 'master',
+                                                       'model': 'RE-VMX',
+                                                       'status': 'OK'},
+                                                 '1': {'last_reboot_reason': '0x200:normal shutdown',
+                                                       'mastership_state': 'backup',
+                                                       'model': 'RE-VMX',
+                                                       'status': 'OK'},
+                                                 'default': {'last_reboot_reason': '0x200:normal shutdown',
+                                                             'mastership_state': 'master',
+                                                             'model': 'RE-VMX',
+                                                             'status': 'OK'}}},
+                         're_master': {'default': '0'},
+                         'serialnumber': 'VMX4eaf',
+                         'srx_cluster': None,
+                         'switch_style': 'BRIDGE_DOMAIN',
+                         'vc_capable': False,
+                         'vc_fabric': None,
+                         'vc_master': None,
+                         'vc_mode': None,
+                         'version': '16.1I20160413_0837_aamish',
+                         'version_RE0': '16.1I20160413_0837_aamish',
+                         'version_RE1': '16.1I20160413_0837_aamish',
+                         'version_info': {'build': None,
+                                         'major': (16, 1),
+                                         'minor': '20160413_0837_aamish',
+                                         'type': 'I'},
+                        'virtual': True}
+        ret['out'] = True
+        self.assertEqual(junos.facts(), ret)
+
+    # @patch('jnpr.junos.device.Device.facts')
+    # def test_facts_exception(self, mock_facts):
+    #     mock_facts.side_effect = self.raise_exception
+    #     ret = dict()
+    #     ret['message'] = 'Could not display facts due to "{0}"'
+    #     ret['out'] = False
+    #     self.assertEqual(junos.facts(), ret)
 
     def test_set_hostname_without_args(self):
         ret = dict()
@@ -1196,18 +1386,27 @@ class Test_Junos_RPC(unittest.TestCase):
     def raise_exception(self, *args, **kwargs):
         raise Exception('dummy exception')
 
-    @patch('salt.modules.junos.jxmlease.parse')
-    @patch('salt.modules.junos.etree.tostring')
-    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.dummy')
-    @patch('salt.modules.junos.getattr')
-    def test_rpc_get_config_with_filter_format_xml(self, mock_attr, mock_dummy, mock_etree, mock_jxml):
-        mock_attr.return_value = self.dummy
-        mock_jxml.return_value = 'get-config-reply'
+    def test_rpc_without_args(self):
         ret = dict()
-        ret['rpc_reply'] = 'get-config-reply'
-        ret['out'] = True
-        self.assertEqual(junos.rpc('get-config', filter='<configuration><system/></configuration>'), ret)
-        mock_dummy.assert_called_with(ANY, options={'dev_timeout': 30, 'format': 'xml'})
+        ret['message'] = 'Please provide the rpc to execute.'
+        ret['out'] = False
+        self.assertEqual(junos.rpc(), ret)
+
+    # @patch('salt.modules.junos.jxmlease.parse')
+    # @patch('salt.modules.junos.etree.tostring')
+    # @patch('junos_test.Test_Junos_RPC.dummy')
+    # @patch('salt.modules.junos.getattr')
+    # def test_rpc_get_config_with_filter_format_xml(self, mock_attr, mock_dummy, mock_etree, mock_jxml):
+    #     mock_attr.return_value = self.dummy
+    #     mock_jxml.return_value = 'get-config-reply'
+    #     ret = dict()
+    #     ret['rpc_reply'] = 'get-config-reply'
+    #     ret['out'] = True
+    #     self.assertEqual(junos.rpc('get-config', filter='<configuration><system/></configuration>'), ret)
+    #     #mock_dummy.assert_called_with(ANY, options={'dev_timeout': 30, 'format': 'xml'})
+    #     args = mock_dummy.call_args_list
+    #     print (mock_dummy.call_args_list[0])
+    #     #assert args[-1] =
 
     @patch('tests.unit.modules.junos_test.Test_Junos_RPC.dummy')
     @patch('salt.modules.junos.getattr')
@@ -1225,12 +1424,12 @@ class Test_Junos_RPC(unittest.TestCase):
         junos.rpc('get-interface-information', format='json')
         mock_dummy.assert_called_with({'format': 'json'}, dev_timeout=30)
 
-    # @patch('junos_test.Test_Junos_RPC.dummy')
-    # @patch('salt.modules.junos.getattr')
-    # def test_rpc_get_interface_information_with_filter(self, mock_attr, mock_dummy):
-    #     mock_attr.return_value = self.dummy
-    #     junos.rpc('get-interface-information', format='json', filter='<configuration><system/></configuration>')
-    #     mock_dummy.assert_called_with({'format': 'json'}, dev_timeout=ANY)
+    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.dummy')
+    @patch('salt.modules.junos.getattr')
+    def test_rpc_get_interface_information_with_filter(self, mock_attr, mock_dummy):
+        mock_attr.return_value = self.dummy
+        junos.rpc('get-interface-information', format='json', filter='<configuration><system/></configuration>')
+        mock_dummy.assert_called_with({'format': 'json'}, dev_timeout=ANY, filter='<configuration><system/></configuration>')
 
     @patch('tests.unit.modules.junos_test.Test_Junos_RPC.dummy')
     @patch('salt.modules.junos.getattr')
@@ -1240,10 +1439,5 @@ class Test_Junos_RPC(unittest.TestCase):
         ret['message'] = 'RPC execution failed due to "dummy exception"'
         ret['out'] = False
         self.assertEqual(junos.rpc('get_interface_information'), ret)
+        
 
-    # @patch('tests.unit.modules.salt.junos_test.Test_Junos_RPC.dummy')
-    # @patch('salt.modules.junos.getattr')
-    # def test_rpc_get_interface_information_format_text(self, mock_attr, mock_dummy):
-    #     mock_attr.return_value = self.dummy
-    #     junos.rpc('get-interface-information', format='text')
-    #     mock_dummy.assert_called_with({'format': 'text'}, dev_timeout=30)
