@@ -130,7 +130,7 @@ class TestSuite(_TestSuite):
             if prerun_class_attributes is not None:
                 del previousClass._prerun_class_attributes
                 for attr in prerun_class_attributes:
-                    if hasattr(previousClass, attr):
+                    if hasattr(previousClass, attr) and getattr(previousClass, attr, None) is not None:
                         log.warning('Deleting extra class attribute after test run: %s.%s(%s). '
                                     'Please consider using \'del self.%s\' on the test class '
                                     '\'tearDownClass()\' method', previousClass.__name__, attr,
@@ -175,7 +175,7 @@ class TestCase(_TestCase):
                 continue
             if attr in getattr(self.__class__, '_prerun_class_attributes', ()):
                 continue
-            if attr not in self._prerun_instance_attributes:
+            if attr not in self._prerun_instance_attributes and getattr(self, attr, None) is not None:
                 log.warning('Deleting extra class attribute after test run: %s.%s(%s). '
                             'Please consider using \'del self.%s\' on the test case '
                             '\'tearDown()\' method', self.__class__.__name__, attr,
