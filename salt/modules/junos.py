@@ -77,6 +77,8 @@ def facts_refresh():
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
+        return ret
+
     ret['facts'] = __proxy__['junos.get_serialized_facts']()
 
     try:
@@ -885,13 +887,9 @@ def install_config(path=None, **kwargs):
         check = conn.cu.commit_check()
     except Exception as exception:
         ret['message'] = \
-<<<<<<< HEAD
             'Commit check threw the following exception: "{0}"'\
                 .format(exception)
-=======
-            'Commit check threw the following exception: "{0}"' \
-            .format(exception)
->>>>>>> bdc8d2d196417a4ce9247d5ea9a9770ab5d1adae
+
         ret['out'] = False
         return ret
 
@@ -901,13 +899,8 @@ def install_config(path=None, **kwargs):
             ret['message'] = 'Successfully loaded and committed!'
         except Exception as exception:
             ret['message'] = \
-<<<<<<< HEAD
                 'Commit check successful but commit failed with "{0}"'\
                     .format(exception)
-=======
-                'Commit check successful but commit failed with "{0}"' \
-                .format(exception)
->>>>>>> bdc8d2d196417a4ce9247d5ea9a9770ab5d1adae
             ret['out'] = False
             return ret
     else:
