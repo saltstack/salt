@@ -132,7 +132,8 @@ disable=R,
   E8265,
   E8266,
   E8402,
-  E8731
+  E8731,
+  3rd-party-local-module-not-gated
 
 # Disabled:
 # R* [refactoring suggestions & reports]
