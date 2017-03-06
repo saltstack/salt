@@ -259,15 +259,29 @@ def install_config(name, **kwargs):
 
     .. code-block:: yaml
 
-            salt://configs/interface.set:
+            Install the mentioned config:
               junos:
                 - install_config
+                - path: salt//configs/interface.set
                 - timeout: 100
                 - diffs_file: 'var/log/diff'
 
+
+    .. code-block:: yaml
+
+            Install the mentioned config:
+              junos:
+                - install_config
+                - template_path: salt//configs/interface.set
+                - timeout: 100
+                - template_vars:
+                    interface_name: lo0
+                    description: Creating interface via SaltStack.
+
+
     Parameters:
       Required
-        * path:
+        * path or template_path (Either one of the keyword must be there):
           Path where the configuration file is present. If the file has a \
           '*.conf' extension,
           the content is treated as text format. If the file has a '*.xml' \
@@ -277,6 +291,11 @@ def install_config(name, **kwargs):
           the content is treated as Junos OS 'set' commands.(default = None)
       Optional
         * kwargs: Keyworded arguments which can be provided like-
+            * template_path:
+              Path where the jinja template is present on the master.
+            * template_vars:
+              The dictionary of data for the jinja variables present in the \
+              jinja template
             * timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
