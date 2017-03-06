@@ -2221,14 +2221,21 @@ def query_instance(vm_=None, call=None):
 
         log.debug('Returned query data: {0}'.format(data))
 
-        if ssh_interface(vm_) == 'public_ips' and 'ipAddress' in data[0]['instancesSet']['item']:
-            log.error(
-                'Public IP not detected.'
-            )
-            return data
-        if ssh_interface(vm_) == 'private_ips' and \
-           'privateIpAddress' in data[0]['instancesSet']['item']:
-            return data
+        if ssh_interface(vm_) == 'public_ips':
+            if 'ipAddress' in data[0]['instancesSet']['item']:
+                return data
+            else:
+                log.error(
+                    'Public IP not detected.'
+                )
+
+        if ssh_interface(vm_) == 'private_ips':
+            if 'privateIpAddress' in data[0]['instancesSet']['item']:
+                return data
+            else:
+                log.error(
+                    'Private IP not detected.'
+                )
 
     try:
         data = salt.utils.cloud.wait_for_ip(
@@ -2482,6 +2489,31 @@ def wait_for_instance(
     return vm_
 
 
+def _validate_key_path_and_mode(key_filename):
+    if key_filename is None:
+        raise SaltCloudSystemExit(
+            'The required \'private_key\' configuration setting is missing from the '
+            '\'ec2\' driver.'
+        )
+
+    if not os.path.exists(key_filename):
+        raise SaltCloudSystemExit(
+            'The EC2 key file \'{0}\' does not exist.\n'.format(
+                key_filename
+            )
+        )
+
+    key_mode = stat.S_IMODE(os.stat(key_filename).st_mode)
+    if key_mode not in (0o400, 0o600):
+        raise SaltCloudSystemExit(
+            'The EC2 key file \'{0}\' needs to be set to mode 0400 or 0600.\n'.format(
+                key_filename
+            )
+        )
+
+    return True
+
+
 def create(vm_=None, call=None):
     '''
     Create a single VM from a data dict
@@ -2511,32 +2543,10 @@ def create(vm_=None, call=None):
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
-    if deploy or (deploy and win_password == 'auto'):
+    if deploy:
         # The private_key and keyname settings are only needed for bootstrapping
-        # new instances when deploy is True, or when win_password is set to 'auto'
-        # and deploy is also True.
-        if key_filename is None:
-            raise SaltCloudSystemExit(
-                'The required \'private_key\' configuration setting is missing from the '
-                '\'ec2\' driver.'
-            )
-
-        if not os.path.exists(key_filename):
-            raise SaltCloudSystemExit(
-                'The EC2 key file \'{0}\' does not exist.\n'.format(
-                    key_filename
-                )
-            )
-
-        key_mode = str(
-            oct(stat.S_IMODE(os.stat(key_filename).st_mode))
-        )
-        if key_mode not in ('0400', '0600'):
-            raise SaltCloudSystemExit(
-                'The EC2 key file \'{0}\' needs to be set to mode 0400 or 0600.\n'.format(
-                    key_filename
-                )
-            )
+        # new instances when deploy is True
+        _validate_key_path_and_mode(key_filename)
 
     __utils__['cloud.fire_event'](
         'event',

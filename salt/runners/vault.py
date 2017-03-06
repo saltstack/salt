@@ -11,6 +11,7 @@ documented in the execution module docs.
 from __future__ import absolute_import
 import base64
 import logging
+import string
 import requests
 
 import salt.crypt
@@ -117,7 +118,64 @@ def _get_policies(minion_id, config):
 
     policies = []
     for pattern in policy_patterns:
-        policies.append(pattern.format(**mappings))
+        try:
+            for expanded_pattern in _expand_pattern_lists(pattern, **mappings):
+                policies.append(
+                                expanded_pattern.format(**mappings)
+                                                .lower()  # Vault requirement
+                               )
+        except KeyError:
+            log.warning('Could not resolve policy pattern {0}'.format(pattern))
 
     log.debug('{0} policies: {1}'.format(minion_id, policies))
     return policies
+
+
+def _expand_pattern_lists(pattern, **mappings):
+    '''
+    Expands the pattern for any list-valued mappings, such that for any list of
+    length N in the mappings present in the pattern, N copies of the pattern are
+    returned, each with an element of the list substituted.
+
+    pattern:
+        A pattern to expand, for example ``by-role/{grains[roles]}``
+
+    mappings:
+        A dictionary of variables that can be expanded into the pattern.
+
+    Example: Given the pattern `` by-role/{grains[roles]}`` and the below grains
+
+    .. code-block:: yaml
+
+        grains:
+            roles:
+                - web
+                - database
+
+    This function will expand into two patterns,
+    ``[by-role/web, by-role/database]``.
+
+    Note that this method does not expand any non-list patterns.
+    '''
+    expanded_patterns = []
+    f = string.Formatter()
+    '''
+    This function uses a string.Formatter to get all the formatting tokens from
+    the pattern, then recursively replaces tokens whose expanded value is a
+    list. For a list with N items, it will create N new pattern strings and
+    then continue with the next token. In practice this is expected to not be
+    very expensive, since patterns will typically involve a handful of lists at
+    most.
+    '''  # pylint: disable=W0105
+    for (_, field_name, _, _) in f.parse(pattern):
+        if field_name is None:
+            continue
+        (value, _) = f.get_field(field_name, None, mappings)
+        if isinstance(value, list):
+            token = '{{{0}}}'.format(field_name)
+            expanded = [pattern.replace(token, str(elem)) for elem in value]
+            for expanded_item in expanded:
+                result = _expand_pattern_lists(expanded_item, **mappings)
+                expanded_patterns += result
+            return expanded_patterns
+    return [pattern]
