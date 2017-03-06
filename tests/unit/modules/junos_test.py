@@ -10,14 +10,13 @@ from mock import patch, MagicMock, ANY
 from jnpr.junos.utils.config import Config
 from jnpr.junos.utils.sw import SW
 from jnpr.junos.device import Device
-from jnpr.junos.facts.swver import version_info
 import salt.modules.junos as junos
 
 @attr('unit')
 class Test_Junos_Module(unittest.TestCase):
 
     def setUp(self):
-        junos.__proxy__ = {'junos.conn': self.make_connect}
+        junos.__proxy__ = {'junos.conn': self.make_connect, 'junos.get_serialized_facts': self.get_facts}
         junos.__salt__ = {'cp.get_template': MagicMock}
 
     @patch('ncclient.manager.connect')
@@ -35,7 +34,7 @@ class Test_Junos_Module(unittest.TestCase):
     def raise_exception(self, *args ,**kwargs):
         raise Exception('dummy exception')
 
-    def get_facts(self, key):
+    def get_facts(self):
         facts = {'2RE': True,
              'HOME': '/var/home/regress',
              'RE0': {'last_reboot_reason': '0x200:normal shutdown',
@@ -92,14 +91,15 @@ class Test_Junos_Module(unittest.TestCase):
              'version': '16.1I20160413_0837_aamish',
              'version_RE0': '16.1I20160413_0837_aamish',
              'version_RE1': '16.1I20160413_0837_aamish',
-             'version_info': version_info("16.1I20160413_0837_aamish"),
+             'version_info': {'build': None,
+                              'major': (16, 1),
+                              'minor': '20160413_0837_aamish',
+                              'type': 'I'},
              'virtual': True}
-        return facts[key]
+        return facts
 
     @patch('salt.modules.saltutil.sync_grains')
-    @patch('jnpr.junos.factcache._FactCache.__getitem__')
-    def test_facts_refresh(self, mock_facts, mock_sync_grains):
-        mock_facts.side_effect = self.get_facts
+    def test_facts_refresh(self, mock_sync_grains):
         ret = dict()
         ret['facts'] = {'2RE': True,
                         'HOME': '/var/home/regress',
@@ -163,10 +163,17 @@ class Test_Junos_Module(unittest.TestCase):
                                          'type': 'I'},
                         'virtual': True}
         ret['out'] = True
+        self.assertEqual(junos.facts_refresh(), ret)
 
-    @patch('jnpr.junos.factcache._FactCache.__getitem__')
-    def test_facts(self, mock_facts):
-        mock_facts.side_effect = self.get_facts
+    @patch('jnpr.junos.device.Device.facts_refresh')
+    def test_facts_refresh_exception(self, mock_facts_refresh):
+        mock_facts_refresh.side_effect = self.raise_exception
+        ret = dict()
+        ret['message'] = 'Execution failed due to "dummy exception"'
+        ret['out'] = False
+        self.assertEqual(junos.facts_refresh(), ret)
+
+    def test_facts(self):
         ret = dict()
         ret['facts'] = {'2RE': True,
                          'HOME': '/var/home/regress',
@@ -232,13 +239,12 @@ class Test_Junos_Module(unittest.TestCase):
         ret['out'] = True
         self.assertEqual(junos.facts(), ret)
 
-    # @patch('jnpr.junos.device.Device.facts')
-    # def test_facts_exception(self, mock_facts):
-    #     mock_facts.side_effect = self.raise_exception
-    #     ret = dict()
-    #     ret['message'] = 'Could not display facts due to "{0}"'
-    #     ret['out'] = False
-    #     self.assertEqual(junos.facts(), ret)
+    def test_facts_exception(self):
+        junos.__proxy__ = {'junos.get_serialized_facts': self.raise_exception}
+        ret = dict()
+        ret['message'] = 'Could not display facts due to "dummy exception"'
+        ret['out'] = False
+        self.assertEqual(junos.facts(), ret)
 
     def test_set_hostname_without_args(self):
         ret = dict()
