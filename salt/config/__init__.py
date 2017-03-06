@@ -583,6 +583,8 @@ VALID_OPTS = {
     'git_pillar_pubkey': str,
     'git_pillar_passphrase': str,
     'git_pillar_refspecs': list,
+    'git_pillar_includes': bool,
+    'git_pillar_verify_config': bool,
     'gitfs_remotes': list,
     'gitfs_mountpoint': str,
     'gitfs_root': str,
@@ -684,6 +686,7 @@ VALID_OPTS = {
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
     'fileserver_limit_traversal': bool,
+    'fileserver_verify_config': bool,
 
     # The number of open files a daemon is allowed to have open. Frequently needs to be increased
     # higher than the system default in order to account for the way zeromq consumes file handles.
@@ -976,7 +979,7 @@ VALID_OPTS = {
     # http://docs.python.org/2/library/ssl.html#ssl.wrap_socket
     # Note: to set enum arguments values like `cert_reqs` and `ssl_version` use constant names
     # without ssl module prefix: `CERT_REQUIRED` or `PROTOCOL_SSLv23`.
-    'ssl': (dict, None),
+    'ssl': (dict, bool, type(None)),
 
     # Controls how a multi-function job returns its data. If this is False,
     # it will return its data using a dictionary with the function name as
@@ -1095,6 +1098,7 @@ DEFAULT_MINION_OPTS = {
     'git_pillar_pubkey': '',
     'git_pillar_passphrase': '',
     'git_pillar_refspecs': _DFLT_REFSPECS,
+    'git_pillar_includes': True,
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -1135,7 +1139,7 @@ DEFAULT_MINION_OPTS = {
     'mine_interval': 60,
     'ipc_mode': _DFLT_IPC_MODE,
     'ipc_write_buffer': _DFLT_IPC_WBUFFER,
-    'ipv6': False,
+    'ipv6': None,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
@@ -1316,6 +1320,8 @@ DEFAULT_MASTER_OPTS = {
     'git_pillar_pubkey': '',
     'git_pillar_passphrase': '',
     'git_pillar_refspecs': _DFLT_REFSPECS,
+    'git_pillar_includes': True,
+    'git_pillar_verify_config': True,
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -1390,6 +1396,7 @@ DEFAULT_MASTER_OPTS = {
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
     'fileserver_limit_traversal': False,
+    'fileserver_verify_config': True,
     'max_open_files': 100000,
     'hash_type': 'sha256',
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'master'),
@@ -1615,6 +1622,10 @@ DEFAULT_SPM_OPTS = {
     'spm_db': os.path.join(salt.syspaths.CACHE_DIR, 'spm', 'packages.db'),
     'cache': 'localfs',
     'spm_repo_dups': 'ignore',
+    # If set, spm_node_type will be either master or minion, but they should
+    # NOT be a default
+    'spm_node_type': '',
+    'spm_share_dir': os.path.join(salt.syspaths.SHARE_DIR, 'spm'),
     # <---- Salt master settings overridden by SPM ----------------------
 }
 
@@ -3166,7 +3177,11 @@ def _update_ssl_config(opts):
     '''
     Resolves string names to integer constant in ssl configuration.
     '''
-    if opts['ssl'] is None:
+    if opts['ssl'] in (None, False):
+        opts['ssl'] = None
+        return
+    if opts['ssl'] is True:
+        opts['ssl'] = {}
         return
     import ssl
     for key, prefix in (('cert_reqs', 'CERT_'),
@@ -3263,7 +3278,7 @@ def apply_minion_config(overrides=None,
     if 'beacons' not in opts:
         opts['beacons'] = {}
 
-    if overrides.get('ipc_write_buffer', '') == 'dynamic':
+    if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
@@ -3348,7 +3363,7 @@ def apply_master_config(overrides=None, defaults=None):
     )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
     opts['syndic_dir'] = os.path.join(opts['cachedir'], 'syndics')
-    if overrides.get('ipc_write_buffer', '') == 'dynamic':
+    if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
@@ -3374,7 +3389,7 @@ def apply_master_config(overrides=None, defaults=None):
     ]
 
     # These can be set to syslog, so, not actual paths on the system
-    for config_key in ('log_file', 'key_logfile'):
+    for config_key in ('log_file', 'key_logfile', 'ssh_log_file'):
         log_setting = opts.get(config_key, '')
         if log_setting is None:
             continue

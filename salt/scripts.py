@@ -430,21 +430,21 @@ def salt_cloud():
     '''
     The main function for salt-cloud
     '''
+    # Define 'salt' global so we may use it after ImportError. Otherwise,
+    # UnboundLocalError will be raised.
+    global salt  # pylint: disable=W0602
+
     try:
         # Late-imports for CLI performance
         import salt.cloud
         import salt.cloud.cli
-        has_saltcloud = True
     except ImportError as e:
-        log.error("Error importing salt cloud {0}".format(e))
         # No salt cloud on Windows
-        has_saltcloud = False
-    if '' in sys.path:
-        sys.path.remove('')
-
-    if not has_saltcloud:
+        log.error("Error importing salt cloud {0}".format(e))
         print('salt-cloud is not available in this system')
         sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
+    if '' in sys.path:
+        sys.path.remove('')
 
     client = salt.cloud.cli.SaltCloud()
     _install_signal_handlers(client)

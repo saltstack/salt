@@ -161,7 +161,7 @@
 # strip_colors: False
 
 # Backup files that are replaced by file.managed and file.recurse under
-# 'cachedir'/file_backups relative to their original location and appended
+# 'cachedir'/file_backup relative to their original location and appended
 # with a timestamp. The only valid setting is "minion". Disabled by default.
 #
 # Alternatively this can be specified for each file in state files:
@@ -574,14 +574,11 @@
 #fileserver_limit_traversal: False
 
 # The hash_type is the hash to use when discovering the hash of a file on
-# the local fileserver. The default is md5, but sha1, sha224, sha256, sha384
+# the local fileserver. The default is sha256, but md5, sha1, sha224, sha384
 # and sha512 are also supported.
 #
-# WARNING: While md5 and sha1 are also supported, do not use it due to the high chance
-# of possible collisions and thus security breach.
-#
-# WARNING: While md5 is also supported, do not use it due to the high chance
-# of possible collisions and thus security breach.
+# WARNING: While md5 and sha1 are also supported, do not use them due to the
+# high chance of possible collisions and thus security breach.
 #
 # Warning: Prior to changing this value, the minion should be stopped and all
 # Salt caches should be cleared.
@@ -652,6 +649,10 @@
 ###########################################
 # Disable multiprocessing support, by default when a minion receives a
 # publication a new process is spawned and the command is executed therein.
+#
+# WARNING: Disabling multiprocessing may result in substantial slowdowns
+# when processing large pillars. See https://github.com/saltstack/salt/issues/38758
+# for a full explanation.
 #multiprocessing: True
 
 

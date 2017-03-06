@@ -17,6 +17,7 @@ log_file: master.log
 log_fmt: '[%(asctime)s.%(msecs)s] %(colorlevel)s%(colorname)s%(colorprocess)s %(funcName)s() L%(lineno)s %(processName)s %(message)s'
 log_level_logfile: debug
 key_logfile: key.log
+ssh_log_file: ssh.log
 token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
 
 # These settings needed for tests on Windows which defaults
@@ -29,6 +30,8 @@ tcp_master_workers: 64515
 peer:
   '.*':
     - 'test.*'
+
+git_pillar_verify_config: False
 
 ext_pillar:
   - git:

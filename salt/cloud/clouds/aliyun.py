@@ -1026,6 +1026,13 @@ def destroy(name, call=None):
 
     instanceId = _get_node(name)['InstanceId']
 
+    # have to stop instance before del it
+    stop_params = {
+        'Action': 'StopInstance',
+        'InstanceId': instanceId
+    }
+    query(stop_params)
+
     params = {
         'Action': 'DeleteInstance',
         'InstanceId': instanceId

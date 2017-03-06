@@ -20,6 +20,7 @@ import grp
 import sys
 
 # Import Salt libs
+import salt.client
 import salt.config
 import salt.loader
 import salt.cache
@@ -31,9 +32,19 @@ from salt.ext.six import string_types
 from salt.ext.six.moves import input
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import filter
+from salt.template import compile_template
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+FILE_TYPES = ('c', 'd', 'g', 'l', 'r', 's', 'm')
+# c: config file
+# d: documentation file
+# g: ghost file (i.e. the file contents are not included in the package payload)
+# l: license file
+# r: readme file
+# s: SLS file
+# m: Salt module
 
 
 class SPMException(Exception):
@@ -220,6 +231,10 @@ class SPMClient(object):
         if len(args) < 2:
             raise SPMInvocationError('A package must be specified')
 
+        caller_opts = self.opts.copy()
+        caller_opts['file_client'] = 'local'
+        self.caller = salt.client.Caller(mopts=caller_opts)
+        self.client = salt.client.get_local_client(self.opts['conf_file'])
         cache = salt.cache.Cache(self.opts)
 
         packages = args[1:]
@@ -342,8 +357,10 @@ class SPMClient(object):
             else:
                 response = http.query(dl_url, text=True)
                 with salt.utils.fopen(out_file, 'w') as outf:
-                    outf.write(response.get("text"))
+                    outf.write(response.get('text'))
 
+        # First we download everything, then we install
+        for package in dl_list:
             # Kick off the install
             self._install_indv_pkg(package, out_file)
         return
@@ -445,6 +462,7 @@ class SPMClient(object):
                 raise SPMPackageError('Invalid package: the {0} was not found'.format(field))
 
         pkg_files = formula_tar.getmembers()
+
         # First pass: check for files that already exist
         existing_files = self._pkgfiles_fun('check_existing', pkg_name, pkg_files, formula_def)
 
@@ -455,6 +473,22 @@ class SPMClient(object):
 
         # We've decided to install
         self._pkgdb_fun('register_pkg', pkg_name, formula_def, self.db_conn)
+
+        # Run the pre_local_state script, if present
+        if 'pre_local_state' in formula_def:
+            high_data = self._render(formula_def['pre_local_state'], formula_def)
+            ret = self.caller.cmd('state.high', data=high_data)
+        if 'pre_tgt_state' in formula_def:
+            log.debug('Executing pre_tgt_state script')
+            high_data = self._render(formula_def['pre_tgt_state']['data'], formula_def)
+            tgt = formula_def['pre_tgt_state']['tgt']
+            ret = self.client.run_job(
+                tgt=formula_def['pre_tgt_state']['tgt'],
+                fun='state.high',
+                tgt_type=formula_def['pre_tgt_state'].get('tgt_type', 'glob'),
+                timout=self.opts['timeout'],
+                data=high_data,
+            )
 
         # No defaults for this in config.py; default to the current running
         # user and group
@@ -492,6 +526,23 @@ class SPMClient(object):
                                 out_path,
                                 digest,
                                 self.db_conn)
+
+        # Run the post_local_state script, if present
+        if 'post_local_state' in formula_def:
+            log.debug('Executing post_local_state script')
+            high_data = self._render(formula_def['post_local_state'], formula_def)
+            self.caller.cmd('state.high', data=high_data)
+        if 'post_tgt_state' in formula_def:
+            log.debug('Executing post_tgt_state script')
+            high_data = self._render(formula_def['post_tgt_state']['data'], formula_def)
+            tgt = formula_def['post_tgt_state']['tgt']
+            ret = self.client.run_job(
+                tgt=formula_def['post_tgt_state']['tgt'],
+                fun='state.high',
+                tgt_type=formula_def['post_tgt_state'].get('tgt_type', 'glob'),
+                timout=self.opts['timeout'],
+                data=high_data,
+            )
 
         formula_tar.close()
 
@@ -943,12 +994,31 @@ class SPMClient(object):
 
         formula_tar = tarfile.open(out_path, 'w:bz2')
 
-        try:
-            formula_tar.add(formula_path, formula_conf['name'], filter=self._exclude)
-            formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
-        except TypeError:
-            formula_tar.add(formula_path, formula_conf['name'], exclude=self._exclude)
-            formula_tar.add(self.abspath, formula_conf['name'], exclude=self._exclude)
+        if 'files' in formula_conf:
+            # This allows files to be added to the SPM file in a specific order.
+            # It also allows for files to be tagged as a certain type, as with
+            # RPM files. This tag is ignored here, but is used when installing
+            # the SPM file.
+            if isinstance(formula_conf['files'], list):
+                formula_dir = tarfile.TarInfo(formula_conf['name'])
+                formula_dir.type = tarfile.DIRTYPE
+                formula_tar.addfile(formula_dir)
+                for file_ in formula_conf['files']:
+                    for ftype in FILE_TYPES:
+                        if file_.startswith('{0}|'.format(ftype)):
+                            file_ = file_.lstrip('{0}|'.format(ftype))
+                    formula_tar.add(
+                        os.path.join(os.getcwd(), file_),
+                        os.path.join(formula_conf['name'], file_),
+                    )
+        else:
+            # If no files are specified, then the whole directory will be added.
+            try:
+                formula_tar.add(formula_path, formula_conf['name'], filter=self._exclude)
+                formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
+            except TypeError:
+                formula_tar.add(formula_path, formula_conf['name'], exclude=self._exclude)
+                formula_tar.add(self.abspath, formula_conf['name'], exclude=self._exclude)
         formula_tar.close()
 
         self.ui.status('Built package {0}'.format(out_path))
@@ -966,6 +1036,27 @@ class SPMClient(object):
             elif member.name.startswith('{0}/{1}'.format(self.abspath, item)):
                 return None
         return member
+
+    def _render(self, data, formula_def):
+        '''
+        Render a [pre|post]_local_state or [pre|post]_tgt_state script
+        '''
+        # FORMULA can contain a renderer option
+        renderer = formula_def.get('renderer', self.opts.get('renderer', 'yaml_jinja'))
+        rend = salt.loader.render(self.opts, {})
+        blacklist = self.opts.get('renderer_blacklist')
+        whitelist = self.opts.get('renderer_whitelist')
+        template_vars = formula_def.copy()
+        template_vars['opts'] = self.opts.copy()
+        return compile_template(
+            ':string:',
+            rend,
+            renderer,
+            blacklist,
+            whitelist,
+            input_data=data,
+            **template_vars
+        )
 
 
 class SPMUserInterface(object):

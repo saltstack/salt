@@ -68,7 +68,7 @@ def compile_template(template,
             return ret
         # Template is an empty file
         if salt.utils.is_empty(template):
-            log.warning('Template is an empty file: {0}'.format(template))
+            log.debug('Template is an empty file: {0}'.format(template))
             return ret
 
         with codecs.open(template, encoding=SLS_ENCODING) as ifile:

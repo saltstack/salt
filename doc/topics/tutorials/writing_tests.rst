@@ -379,7 +379,7 @@ the test method:
 .. code-block:: python
 
     import integration
-    from salttesting.helpers import destructiveTest
+    from tests.support.helpers import destructiveTest
 
     class PkgTest(integration.ModuleCase):
         @destructiveTest
@@ -462,7 +462,7 @@ can be used
 .. code-block:: python
 
     # Import logging handler
-    from salttesting.helpers import TestsLoggingHandler
+    from tests.support.helpers import TestsLoggingHandler
 
     # .. inside test
     with TestsLoggingHandler() as handler:

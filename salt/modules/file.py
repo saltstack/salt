@@ -687,31 +687,54 @@ def check_hash(path, file_hash):
     '''
     Check if a file matches the given hash string
 
-    Returns true if the hash matched, otherwise false. Raises ValueError if
-    the hash was not formatted correctly.
+    Returns ``True`` if the hash matches, otherwise ``False``.
 
     path
-        A file path
+        Path to a file local to the minion.
+
     hash
-        A string in the form <hash_type>:<hash_value>. For example:
-        ``md5:e138491e9d5b97023cea823fe17bac22``
+        The hash to check against the file specified in the ``path`` argument.
+        For versions 2016.11.4 and newer, the hash can be specified without an
+        accompanying hash type (e.g. ``e138491e9d5b97023cea823fe17bac22``),
+        but for earlier releases it is necessary to also specify the hash type
+        in the format ``<hash_type>:<hash_value>`` (e.g.
+        ``md5:e138491e9d5b97023cea823fe17bac22``).
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.check_hash /etc/fstab md5:<md5sum>
+        salt '*' file.check_hash /etc/fstab e138491e9d5b97023cea823fe17bac22
+        salt '*' file.check_hash /etc/fstab md5:e138491e9d5b97023cea823fe17bac22
     '''
     path = os.path.expanduser(path)
 
-    hash_parts = file_hash.split(':', 1)
-    if len(hash_parts) != 2:
-        # Support "=" for backward compatibility.
-        hash_parts = file_hash.split('=', 1)
-        if len(hash_parts) != 2:
-            raise ValueError('Bad hash format: \'{0}\''.format(file_hash))
-    hash_form, hash_value = hash_parts
-    return get_hash(path, hash_form) == hash_value
+    if not isinstance(file_hash, six.string_types):
+        raise SaltInvocationError('hash must be a string')
+
+    for sep in (':', '='):
+        if sep in file_hash:
+            hash_type, hash_value = file_hash.split(sep, 1)
+            break
+    else:
+        hash_value = file_hash
+        hash_len = len(file_hash)
+        hash_type = HASHES_REVMAP.get(hash_len)
+        if hash_type is None:
+            raise SaltInvocationError(
+                'Hash {0} (length: {1}) could not be matched to a supported '
+                'hash type. The supported hash types and lengths are: '
+                '{2}'.format(
+                    file_hash,
+                    hash_len,
+                    ', '.join(
+                        ['{0} ({1})'.format(HASHES_REVMAP[x], x)
+                         for x in sorted(HASHES_REVMAP)]
+                    ),
+                )
+            )
+
+    return get_hash(path, hash_type) == hash_value
 
 
 def find(path, *args, **kwargs):
@@ -3657,7 +3680,7 @@ def apply_template_on_contents(
             opts=__opts__)['data']
         if six.PY2:
             contents = contents.encode('utf-8')
-        elif six.PY3:
+        elif six.PY3 and isinstance(contents, bytes):
             # bytes -> str
             contents = contents.decode('utf-8')
     else:
@@ -5027,6 +5050,9 @@ def makedirs_(path,
         salt '*' file.makedirs /opt/code/
     '''
     path = os.path.expanduser(path)
+
+    if mode:
+        mode = salt.utils.normalize_mode(mode)
 
     # walk up the directory structure until we find the first existing
     # directory

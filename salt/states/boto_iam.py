@@ -141,10 +141,10 @@ import os
 import salt.utils
 import salt.utils.odict as odict
 import salt.utils.dictupdate as dictupdate
-
-# Import 3rd party libs
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
+# Import 3rd party libs
 try:
     from salt._compat import ElementTree as ET
     HAS_ELEMENT_TREE = True
@@ -164,7 +164,7 @@ if six.PY2:
             return dict([(_byteify(k), _byteify(v)) for k, v in six.iteritems(thing)])
         elif isinstance(thing, list):
             return [_byteify(m) for m in thing]
-        elif isinstance(thing, unicode):  # pylint: disable=W1699
+        elif isinstance(thing, six.text_type):  # pylint: disable=W1699
             return thing.encode('utf-8')
         else:
             return thing

@@ -4,7 +4,6 @@ Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
 
-
 # Import python libs
 from __future__ import absolute_import
 import datetime
@@ -41,6 +40,16 @@ __func_alias__ = {
 }
 
 
+def __virtual__():
+    '''
+    Not all functions supported by Windows
+    '''
+    if salt.utils.is_windows():
+        return False, 'Windows platform is not supported by this module'
+
+    return __virtualname__
+
+
 def _number(text):
     '''
     Convert a string to a number.
@@ -67,8 +76,6 @@ def procs():
         salt '*' status.procs
     '''
     # Get the user, pid and cmd
-    if salt.utils.is_windows():
-        raise CommandExecutionError('This platform is not supported')
     ret = {}
     uind = 0
     pind = 0
@@ -117,8 +124,6 @@ def custom():
 
         salt '*' status.custom
     '''
-    if salt.utils.is_windows():
-        raise CommandExecutionError('This platform is not supported')
     ret = {}
     conf = __salt__['config.dot_vals']('status')
     for key, val in six.iteritems(conf):
@@ -587,10 +592,6 @@ def diskusage(*args):
         salt '*' status.diskusage ext?    # usage for ext[234] filesystems
         salt '*' status.diskusage / ext?  # usage for / and all ext filesystems
     '''
-
-    if salt.utils.is_windows():
-        raise CommandExecutionError('This platform is not supported')
-
     selected = set()
     fstypes = set()
     if not args:
@@ -929,8 +930,6 @@ def w():  # pylint: disable=C0103
 
         salt '*' status.w
     '''
-    if salt.utils.is_windows():
-        raise CommandExecutionError('This platform is not supported')
     user_list = []
     users = __salt__['cmd.run']('w -h').splitlines()
     for row in users:
