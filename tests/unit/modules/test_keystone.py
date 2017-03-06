@@ -80,7 +80,7 @@ class MockEndpoints(object):
     """
     def __init__(self):
         self.id = '007'
-        self.region = 'region'
+        self.region = 'RegionOne'
         self.adminurl = 'adminurl'
         self.internalurl = 'internalurl'
         self.publicurl = 'publicurl'
@@ -503,20 +503,26 @@ class KeystoneTestCase(TestCase):
         '''
         Test if it return a specific endpoint (keystone endpoint-get)
         '''
-        self.assertDictEqual(keystone.endpoint_get('nova', profile='openstack'),
+        self.assertDictEqual(keystone.endpoint_get('nova',
+                                                   'RegionOne',
+                                                   profile='openstack'),
                              {'Error': 'Could not find the specified service'})
 
         ret = {'Error': 'Could not find endpoint for the specified service'}
         MockServices.flag = 1
         self.assertDictEqual(keystone.endpoint_get('iptables',
+                                                   'RegionOne',
                                                    profile='openstack'), ret)
 
         MockServices.flag = 0
         self.assertDictEqual(keystone.endpoint_get('iptables',
+                                                   'RegionOne',
                                                    profile='openstack'),
-                             {'adminurl': 'adminurl', 'id': '007',
+                             {'adminurl': 'adminurl',
+                              'id': '007',
                               'internalurl': 'internalurl',
-                              'publicurl': 'publicurl', 'region': 'region',
+                              'publicurl': 'publicurl',
+                              'region': 'RegionOne',
                               'service_id': '117'})
 
     # 'endpoint_list' function tests: 1
@@ -527,10 +533,12 @@ class KeystoneTestCase(TestCase):
         (keystone endpoints-list)
         '''
         self.assertDictEqual(keystone.endpoint_list(profile='openstack1'),
-                             {'007': {'adminurl': 'adminurl', 'id': '007',
+                             {'007': {'adminurl': 'adminurl',
+                                      'id': '007',
                                       'internalurl': 'internalurl',
                                       'publicurl': 'publicurl',
-                                      'region': 'region', 'service_id': '117'}})
+                                      'region': 'RegionOne',
+                                      'service_id': '117'}})
 
     # 'endpoint_create' function tests: 1
 
@@ -545,10 +553,13 @@ class KeystoneTestCase(TestCase):
         self.assertDictEqual(keystone.endpoint_create('iptables',
                                                       'http://public/url',
                                                       'http://internal/url',
-                                                      'http://adminurl/url'),
-                             {'adminurl': 'adminurl', 'id': '007',
+                                                      'http://adminurl/url',
+                                                      'RegionOne'),
+                             {'adminurl': 'adminurl',
+                              'id': '007',
                               'internalurl': 'internalurl',
-                              'publicurl': 'publicurl', 'region': 'region',
+                              'publicurl': 'publicurl',
+                              'region': 'RegionOne',
                               'service_id': '117'})
 
     # 'endpoint_delete' function tests: 1
@@ -558,11 +569,11 @@ class KeystoneTestCase(TestCase):
         Test if it delete an endpoint for an Openstack service
         '''
         ret = {'Error': 'Could not find any endpoints for the service'}
-        self.assertDictEqual(keystone.endpoint_delete('nova'), ret)
+        self.assertDictEqual(keystone.endpoint_delete('nova', 'RegionOne'), ret)
 
         with patch.object(keystone, 'endpoint_get',
                           MagicMock(side_effect=[{'id': '117'}, None])):
-            self.assertTrue(keystone.endpoint_delete('iptables'))
+            self.assertTrue(keystone.endpoint_delete('iptables', 'RegionOne'))
 
     # 'role_create' function tests: 1
 

@@ -296,7 +296,7 @@ def ec2_credentials_list(user_id=None, name=None, profile=None,
     return ret
 
 
-def endpoint_get(service, profile=None, **connection_args):
+def endpoint_get(service, region=None, profile=None, **connection_args):
     '''
     Return a specific endpoint (keystone endpoint-get)
 
@@ -304,7 +304,7 @@ def endpoint_get(service, profile=None, **connection_args):
 
     .. code-block:: bash
 
-        salt '*' keystone.endpoint_get nova
+        salt '*' keystone.endpoint_get nova [region=RegionOne]
     '''
     auth(profile, **connection_args)
     services = service_list(profile, **connection_args)
@@ -312,9 +312,15 @@ def endpoint_get(service, profile=None, **connection_args):
         return {'Error': 'Could not find the specified service'}
     service_id = services[service]['id']
     endpoints = endpoint_list(profile, **connection_args)
-    for endpoint in endpoints:
-        if endpoints[endpoint]['service_id'] == service_id:
-            return endpoints[endpoint]
+
+    e = [_f for _f in [e
+          if e['service_id'] == service_id and
+            (e['region'] == region if region else True) else None for e in endpoints.values()] if _f]
+    if len(e) > 1:
+        return {'Error': 'Multiple endpoints found ({0}) for the {1} service. Please specify region.'.format(e, service)}
+    if len(e) == 1:
+        return e[0]
+    #log.debug('Could not find endpoint for the specified service {0}, service_id: {3} and region {1} in endpoints {2}'.format(service, region, endpoints.values(), service_id))
     return {'Error': 'Could not find endpoint for the specified service'}
 
 
@@ -349,7 +355,7 @@ def endpoint_create(service, publicurl=None, internalurl=None, adminurl=None,
 
         salt 'v2' keystone.endpoint_create nova 'http://public/url' 'http://internal/url' 'http://adminurl/url' region
 
-        salt 'v3' keystone.endpoint_create nova url='http://public/url' interface='public'
+        salt 'v3' keystone.endpoint_create nova url='http://public/url' interface='public' region='RegionOne'
     '''
     kstone = auth(profile, **connection_args)
     keystone_service = service_get(name=service, profile=profile,
@@ -368,10 +374,10 @@ def endpoint_create(service, publicurl=None, internalurl=None, adminurl=None,
                                 publicurl=publicurl,
                                 adminurl=adminurl,
                                 internalurl=internalurl)
-    return endpoint_get(service, profile, **connection_args)
+    return endpoint_get(service, region, profile, **connection_args)
 
 
-def endpoint_delete(service, profile=None, **connection_args):
+def endpoint_delete(service, region=None, profile=None, **connection_args):
     '''
     Delete endpoints of an Openstack service
 
@@ -379,14 +385,14 @@ def endpoint_delete(service, profile=None, **connection_args):
 
     .. code-block:: bash
 
-        salt '*' keystone.endpoint_delete nova
+        salt '*' keystone.endpoint_delete nova [region=RegionOne]
     '''
     kstone = auth(profile, **connection_args)
-    endpoint = endpoint_get(service, profile, **connection_args)
+    endpoint = endpoint_get(service, region, profile, **connection_args)
     if not endpoint or 'Error' in endpoint:
         return {'Error': 'Could not find any endpoints for the service'}
     kstone.endpoints.delete(endpoint['id'])
-    endpoint = endpoint_get(service, profile, **connection_args)
+    endpoint = endpoint_get(service, region, profile, **connection_args)
     if not endpoint or 'Error' in endpoint:
         return True
 
@@ -413,6 +419,7 @@ def role_delete(role_id=None, name=None, profile=None,
                 **connection_args):
     '''
     Delete a role (keystone role-delete)
+
 
     CLI Examples:
 
