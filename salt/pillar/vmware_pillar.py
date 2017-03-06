@@ -502,7 +502,7 @@ def _crawl_attribute(this_data, this_attr):
     else:
         if isinstance(this_attr, dict):
             t_dict = {}
-            for k in this_attr.keys():
+            for k in this_attr:
                 if hasattr(this_data, k):
                     t_dict[k] = _crawl_attribute(getattr(this_data, k, None), this_attr[k])
             return t_dict

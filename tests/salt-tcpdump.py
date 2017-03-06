@@ -38,7 +38,7 @@ tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4506 and "tcp[tcpflags] & tcp-ac
 from __future__ import absolute_import, print_function
 import socket
 from struct import unpack
-import pcapy
+import pcapy  # pylint: disable=import-error,3rd-party-module-not-gated
 import sys
 import argparse  # pylint: disable=minimum-python-version
 import time

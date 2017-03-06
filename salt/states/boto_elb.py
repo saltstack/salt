@@ -1435,7 +1435,7 @@ def _tags_present(name,
         tags_to_update = {}
         tags_to_remove = []
         if lb['tags']:
-            for _tag in lb['tags'].keys():
+            for _tag in lb['tags']:
                 if _tag not in tags.keys():
                     if _tag not in tags_to_remove:
                         tags_to_remove.append(_tag)
