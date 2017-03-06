@@ -52,15 +52,15 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # Since we don't have the virtualenv created, pip.installed will
             # thrown and error.
             # Example error strings:
-            #  * "Error installing 'supervisor': /tmp/pip-installed-errors: not found"
-            #  * "Error installing 'supervisor': /bin/sh: 1: /tmp/pip-installed-errors: not found"
-            #  * "Error installing 'supervisor': /bin/bash: /tmp/pip-installed-errors: No such file or directory"
+            #  * "Error installing 'pep8': /tmp/pip-installed-errors: not found"
+            #  * "Error installing 'pep8': /bin/sh: 1: /tmp/pip-installed-errors: not found"
+            #  * "Error installing 'pep8': /bin/bash: /tmp/pip-installed-errors: No such file or directory"
             os.environ['SHELL'] = '/bin/sh'
             ret = self.run_function('state.sls', mods='pip-installed-errors')
             self.assertSaltFalseReturn(ret)
             self.assertSaltCommentRegexpMatches(
                 ret,
-                'Error installing \'supervisor\':'
+                'Error installing \'pep8\':'
             )
 
             # We now create the missing virtualenv
@@ -142,7 +142,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             self.assertSaltTrueReturn(ret)
             self.assertTrue(
-                os.path.isfile(os.path.join(venv_dir, 'bin', 'supervisord'))
+                os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
             )
         finally:
             if os.path.isdir(venv_dir):
@@ -253,7 +253,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             integration.TMP_STATE_TREE, 'issue-6912-requirements.txt'
         )
         with salt.utils.fopen(req_filename, 'wb') as reqf:
-            reqf.write('pep8')
+            reqf.write(six.b('pep8'))
 
         try:
             ret = self.run_state(
@@ -320,7 +320,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             integration.TMP_STATE_TREE, 'issue-6912-requirements.txt'
         )
         with salt.utils.fopen(req_filename, 'wb') as reqf:
-            reqf.write('pep8')
+            reqf.write(six.b('pep8'))
 
         try:
             ret = self.run_state(
@@ -415,7 +415,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             integration.TMP_PRODENV_STATE_TREE, 'prod-env-requirements.txt'
         )
         with salt.utils.fopen(requirements_file, 'wb') as reqf:
-            reqf.write('pep8\n')
+            reqf.write(six.b('pep8\n'))
 
         try:
             self.run_function('virtualenv.create', [venv_dir])
