@@ -10,6 +10,7 @@ addons:
     - python-dev
 
 install:
+<<<<<<< HEAD
   - if [ "$TRAVIS_PYTHON_VERSION" == "2.6" ]; then pip install importlib; fi
   - "pip install junos-eznc"
   - "pip install jxmlease"
@@ -18,3 +19,22 @@ install:
   - "pip install nose"
 
 script: nosetests -v tests/unit/modules/junos_test.py
+=======
+  - pip install -r requirements/zeromq.txt -r requirements/cloud.txt
+  - pip install --allow-all-external -r requirements/opt.txt
+
+before_script:
+  - "/home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/pylint --rcfile=.testing.pylintrc salt/ && echo 'Finished Pylint Check Cleanly' || echo 'Finished Pylint Check With Errors'"
+  - "/home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/pep8 --ignore=E501,E12 salt/ && echo 'Finished PEP-8 Check Cleanly' || echo 'Finished PEP-8 Check With Errors'"
+
+script: "sudo -E /home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/python setup.py test --runtests-opts='--run-destructive --sysinfo -v --coverage'"
+
+after_success:
+  - coveralls
+
+notifications:
+  irc:
+    channels: "irc.freenode.org#salt-devel"
+    on_success: change
+    on_failure: change
+>>>>>>> bdc8d2d196417a4ce9247d5ea9a9770ab5d1adae
