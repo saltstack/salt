@@ -77,16 +77,7 @@ def facts_refresh():
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
-    ret['facts'] = dict(conn.facts)
-    ret['facts']['version_info'] = \
-        dict(ret['facts']['version_info'])
-    # For backward compatibility. 'junos_info' is present
-    # only of in newer versions of facts.
-    if 'junos_info' in ret['facts']:
-        ret['facts']['junos_info']['re0']['object'] = \
-            dict(ret['facts']['junos_info']['re0']['object'])
-        ret['facts']['junos_info']['re1']['object'] = \
-            dict(ret['facts']['junos_info']['re1']['object'])
+    ret['facts'] = __proxy__['junos.get_serialized_facts']()
 
     try:
         __salt__['saltutil.sync_grains']()
@@ -107,19 +98,9 @@ def facts():
         salt 'device_name' junos.facts
 
     '''
-    conn = __proxy__['junos.conn']()
     ret = dict()
     try:
-        ret['facts'] = dict(conn.facts)
-        ret['facts']['version_info'] = \
-            dict(ret['facts']['version_info'])
-        # For backward compatibility. 'junos_info' is present
-        # only of in newer versions of facts.
-        if 'junos_info' in ret['facts']:
-            ret['facts']['junos_info']['re0']['object'] = \
-                dict(ret['facts']['junos_info']['re0']['object'])
-            ret['facts']['junos_info']['re1']['object'] = \
-                dict(ret['facts']['junos_info']['re1']['object'])
+        ret['facts'] = __proxy__['junos.get_serialized_facts']()
         ret['out'] = True
     except Exception as exception:
         ret['message'] = 'Could not display facts due to "{0}"'.format(
