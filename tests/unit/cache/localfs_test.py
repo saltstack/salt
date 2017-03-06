@@ -100,10 +100,10 @@ class LocalFSTest(TestCase):
     @patch('os.path.isfile', MagicMock(return_value=False))
     def test_fetch_return_when_cache_file_does_not_exist(self):
         '''
-        Tests that the fetch function returns None when the cache key file doesn't
-        exist.
+        Tests that the fetch function returns an empty dic when the cache key file
+        doesn't exist.
         '''
-        self.assertIsNone(localfs.fetch(bank='', key='', cachedir=''))
+        self.assertEqual(localfs.fetch(bank='', key='', cachedir=''), {})
 
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('salt.utils.fopen', MagicMock(side_effect=IOError))
