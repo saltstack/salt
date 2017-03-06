@@ -1229,3 +1229,49 @@ def terminate_process_pid(pid, only_children=False):
     if only_children:
         return terminate_process(children=children, kill_children=True, slow_stop=True)
     return terminate_process(pid=pid, process=process, children=children, kill_children=True, slow_stop=True)
+
+
+def repeat(caller=None, condition=True, times=5):
+    '''
+    Repeat a test X amount of times until the first failure.
+
+    .. code-block:: python
+
+        class MyTestCase(TestCase):
+
+        @repeat
+        def test_sometimes_works(self):
+            pass
+    '''
+    if caller is None:
+        return functools.partial(repeat, condition=condition, times=times)
+
+    if isinstance(condition, bool) and condition is False:
+        # Don't even decorate
+        return caller
+    elif callable(condition):
+        if condition() is False:
+            # Don't even decorate
+            return caller
+
+    if inspect.isclass(caller):
+        attrs = [n for n in dir(caller) if n.startswith('test_')]
+        for attrname in attrs:
+            try:
+                function = getattr(caller, attrname)
+                if not inspect.isfunction(function) and not inspect.ismethod(function):
+                    continue
+                setattr(caller, attrname, repeat(caller=function, condition=condition, times=times))
+            except Exception as exc:
+                log.exception(exc)
+                continue
+        return caller
+
+    @functools.wraps(caller)
+    def wrap(cls):
+        result = None
+        for attempt in range(1, times+1):
+            log.info('%s test run %d of %s times', cls, attempt, times)
+            caller(cls)
+        return cls
+    return wrap
