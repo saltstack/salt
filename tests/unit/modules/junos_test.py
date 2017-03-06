@@ -6,6 +6,7 @@ __author__ = "Rajvi Dhimar"
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 from mock import patch, MagicMock, ANY
+from lxml import etree
 
 from jnpr.junos.utils.config import Config
 from jnpr.junos.utils.sw import SW
@@ -608,6 +609,31 @@ class Test_Junos_Module(unittest.TestCase):
         ret['message'] = 'Please specify the destination ip to ping.'
         ret['out'] = False
         self.assertEqual(junos.ping(), ret)
+
+    @patch('jnpr.junos.device.Device.execute')
+    def test_ping(self, mock_execute):
+        junos.ping('1.1.1.1')
+        args = mock_execute.call_args
+        rpc = '<ping><count>5</count><host>1.1.1.1</host></ping>'
+        self.assertEqual(etree.tostring(args[0][0]), rpc)
+
+    @patch('jnpr.junos.device.Device.execute')
+    def test_ping_ttl(self, mock_execute):
+        args = {'__pub_user': 'sudo_drajvi', '__pub_arg': ['1.1.1.1', {'ttl': 3}],
+                '__pub_fun': 'junos.ping', '__pub_jid': '20170306165237683279',
+                '__pub_tgt': 'mac_min', 'ttl': 3, '__pub_tgt_type': 'glob', '__pub_ret': ''}
+        junos.ping('1.1.1.1', **args)
+        exec_args = mock_execute.call_args
+        rpc = '<ping><count>5</count><host>1.1.1.1</host><ttl>3</ttl></ping>'
+        self.assertEqual(etree.tostring(exec_args[0][0]), rpc)
+
+    @patch('jnpr.junos.device.Device.execute')
+    def test_ping_exception(self, mock_execute):
+        mock_execute.side_effect = self.raise_exception
+        ret = dict()
+        ret['message'] = 'Execution failed due to "dummy exception"'
+        ret['out'] = False
+        self.assertEqual(junos.ping('1.1.1.1'), ret)
 
     def test_cli_without_args(self):
         ret = dict()
@@ -1445,5 +1471,3 @@ class Test_Junos_RPC(unittest.TestCase):
         ret['message'] = 'RPC execution failed due to "dummy exception"'
         ret['out'] = False
         self.assertEqual(junos.rpc('get_interface_information'), ret)
-        
-
