@@ -33,7 +33,7 @@ Set up the provider config at ``/etc/salt/cloud.providers.d/azurearm.conf``:
 
     my-azurearm-config:
       driver: azurearm
-      master: limejack.com
+      master: salt.example.com
       subscription_id: 01234567-890a-bcde-f012-34567890abdc
 
       # https://apps.dev.microsoft.com/#/appList
