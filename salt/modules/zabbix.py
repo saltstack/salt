@@ -191,7 +191,7 @@ def _params_extend(params, _ignore_name=False, **kwargs):
 
     '''
     # extend params value by optional zabbix API parameters
-    for key in kwargs.keys():
+    for key in kwargs:
         if not key.startswith('_'):
             params.setdefault(key, kwargs[key])
 

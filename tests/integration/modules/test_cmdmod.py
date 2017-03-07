@@ -19,6 +19,9 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 # Import salt libs
 import salt.utils
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 AVAILABLE_PYTHON_EXECUTABLE = salt.utils.which_bin([
     'python',
@@ -129,8 +132,6 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.run_all
         '''
-        from six import string_types
-
         if sys.platform.startswith(('freebsd', 'openbsd')):
             shell = '/bin/sh'
         else:
@@ -144,8 +145,8 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertTrue('stderr' in ret)
         self.assertTrue(isinstance(ret.get('pid'), int))
         self.assertTrue(isinstance(ret.get('retcode'), int))
-        self.assertTrue(isinstance(ret.get('stdout'), string_types))
-        self.assertTrue(isinstance(ret.get('stderr'), string_types))
+        self.assertTrue(isinstance(ret.get('stdout'), six.string_types))
+        self.assertTrue(isinstance(ret.get('stderr'), six.string_types))
         self.assertEqual(ret.get('stderr').rstrip(), 'cheese')
 
     def test_retcode(self):
