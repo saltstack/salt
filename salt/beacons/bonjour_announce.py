@@ -156,6 +156,16 @@ def beacon(config):
         servicename = config['servicename']
     else:
         servicename = __grains__['host']
+        # Check for hostname change
+        if LAST_GRAINS and LAST_GRAINS['host'] != servicename:
+            changes['servicename'] = servicename
+
+    if LAST_GRAINS and config.get('reset_on_change', False):
+        # Check for IP address change in the case when we reset on change
+        if LAST_GRAINS.get('ipv4', []) != __grains__.get('ipv4', []):
+            changes['ipv4'] = __grains__.get('ipv4', [])
+        if LAST_GRAINS.get('ipv6', []) != __grains__.get('ipv6', []):
+            changes['ipv6'] = __grains__.get('ipv6', [])
 
     for item in config['txt']:
         if config['txt'][item].startswith('grains.'):
@@ -187,6 +197,8 @@ def beacon(config):
             changes['servicename'] = servicename
             changes['servicetype'] = config['servicetype']
             changes['port'] = config['port']
+            changes['ipv4'] = __grains__.get('ipv4', [])
+            changes['ipv6'] = __grains__.get('ipv6', [])
             SD_REF = pybonjour.DNSServiceRegister(
                 name=servicename,
                 regtype=config['servicetype'],
@@ -197,7 +209,9 @@ def beacon(config):
             ready = select.select([SD_REF], [], [])
             if SD_REF in ready[0]:
                 pybonjour.DNSServiceProcessResult(SD_REF)
-        elif config.get('reset_on_change', False):
+        elif config.get('reset_on_change', False) or 'servicename' in changes:
+            # A change in 'servicename' requires a reset because we can only
+            # directly update TXT records
             SD_REF.close()
             SD_REF = None
             reset_wait = config.get('reset_wait', 0)
