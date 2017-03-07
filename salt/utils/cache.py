@@ -145,7 +145,7 @@ class CacheDisk(CacheDict):
         else:  # old format
             self._dict = cache
             timestamp = os.path.getmtime(self._path)
-            for key in self._dict.keys():
+            for key in self._dict:
                 self._key_cache_time[key] = timestamp
         if log.isEnabledFor(logging.DEBUG):
             log.debug('Disk cache retrieved: {0}'.format(cache))

@@ -190,7 +190,7 @@ def _route_flags(rflags):
         0x01000000: 'C',  # RTF_CACHE, cache entry
         0x0200: '!',  # RTF_REJECT, reject route
     }
-    for item in fmap.keys():
+    for item in fmap:
         if rflags & item:
             flags += fmap[item]
     return flags

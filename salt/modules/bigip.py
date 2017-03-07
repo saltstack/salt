@@ -984,7 +984,7 @@ def replace_pool_members(hostname, username, password, name, members):
                     member['state'] = member.pop('member_state')
 
                 #replace underscore with dash
-                for key in member.keys():
+                for key in member:
                     new_key = key.replace('_', '-')
                     member[new_key] = member.pop(key)
 
@@ -1039,7 +1039,7 @@ def add_pool_member(hostname, username, password, name, member):
             member['state'] = member.pop('member_state')
 
         #replace underscore with dash
-        for key in member.keys():
+        for key in member:
             new_key = key.replace('_', '-')
             member[new_key] = member.pop(key)
 

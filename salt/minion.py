@@ -24,7 +24,7 @@ from stat import S_IMODE
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 if six.PY3:
-    import ipaddress
+    import ipaddress  # pylint: disable=3rd-party-module-not-gated
 else:
     import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range

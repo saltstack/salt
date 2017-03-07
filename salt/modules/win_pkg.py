@@ -338,7 +338,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
                 pkg_info = _get_package_info(key, saltenv=saltenv)
                 if not pkg_info:
                     continue
-                for pkg_ver in pkg_info.keys():
+                for pkg_ver in pkg_info:
                     if pkg_info[pkg_ver]['full_name'] == pkg_name:
                         val = pkg_ver
         else:
@@ -1570,7 +1570,7 @@ def _get_name_map(saltenv='base'):
     '''
     u_name_map = {}
     name_map = get_repo_data(saltenv).get('name_map', {})
-    for k in name_map.keys():
+    for k in name_map:
         u_name_map[k.decode('utf-8')] = name_map[k]
     return u_name_map
 

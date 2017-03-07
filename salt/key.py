@@ -1016,7 +1016,7 @@ class RaetKey(Key):
         '''
         Use libnacl to generate and safely save a private key
         '''
-        import libnacl.public
+        import libnacl.dual  # pylint: disable=3rd-party-module-not-gated
         d_key = libnacl.dual.DualSecret()
         keydir, keyname, _, _ = self._get_key_attrs(keydir, keyname,
                                                     keysize, user)

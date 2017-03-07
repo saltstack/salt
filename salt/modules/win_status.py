@@ -34,11 +34,14 @@ import copy
 from salt.utils import namespaced_function as _namespaced_function
 
 # Import 3rd Party Libs
-if salt.utils.is_windows():
-    import wmi
-    import salt.utils.winapi
-    HAS_WMI = True
-else:
+try:
+    if salt.utils.is_windows():
+        import wmi
+        import salt.utils.winapi
+        HAS_WMI = True
+    else:
+        HAS_WMI = False
+except ImportError:
     HAS_WMI = False
 
 __opts__ = {}

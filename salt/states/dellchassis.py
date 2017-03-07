@@ -499,7 +499,7 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
         pw_single = True
         if __salt__[chassis_cmd]('change_password', username='root', uid=1,
                                    password=password):
-            for blade in inventory['server'].keys():
+            for blade in inventory['server']:
                 pw_single = __salt__[chassis_cmd]('deploy_password',
                                                   username='root',
                                                   password=password,
