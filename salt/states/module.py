@@ -179,6 +179,41 @@ def xrun(**kwargs):
     :return:
     '''
 
+    _id = kwargs.pop('name')
+    ret = {
+        'name': kwargs.keys(),
+        'changes': {},
+        'comment': '',
+        'result': {}
+    }
+
+    for func in kwargs.keys():
+        if func not in __salt__:
+            ret['comment'] = "Module function '{0}' is not available".format(func)
+            ret['result'] = False
+        elif __opts__['test']:
+            ret['comment'] = "Module function '{0}' is set to execute".format(func)
+            ret['result'] = True
+
+    for func in kwargs.keys():
+        ret['result'][func] = _call_function(func)
+
+    return ret
+
+def _call_function(name, **kwargs):
+    '''
+    Calls a function from the specified module.
+
+    :param name:
+    :param kwargs:
+    :return:
+    '''
+
+    aspec = salt.utils.args.get_function_argspec(__salt__[name])
+
+    return None
+
+
 def run(name, **kwargs):
     '''
     Run a single module function
