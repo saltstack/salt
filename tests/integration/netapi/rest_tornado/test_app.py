@@ -5,6 +5,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 import json
 import time
+import threading
 from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Libs
@@ -16,7 +17,6 @@ from tests.support.unit import skipIf
 
 # Import 3rd-party libs
 import salt.ext.six as six
-
 try:
     import zmq
     from zmq.eventloop.ioloop import ZMQIOLoop
@@ -526,25 +526,33 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
         return application
 
     def test_post(self):
-        def verify_event(future):
-            '''
-            Verify that the event fired on the master matches what we sent
-            '''
+        self._future_resolved = threading.Event()
+        try:
+            def verify_event(future):
+                '''
+                Notify the threading event that the future is resolved
+                '''
+                self._future_resolved.set()
+
+            self._finished = False  # TODO: remove after some cleanup of the event listener
+
+            # get an event future
+            future = self.application.event_listener.get_event(self,
+                                                               tag='salt/netapi/hook',
+                                                               callback=verify_event)
+            # fire the event
+            response = self.fetch('/hook',
+                                  method='POST',
+                                  body='foo=bar',
+                                  headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                                  )
+            response_obj = json_loads(response.body)
+            self.assertTrue(response_obj['success'])
+            self._future_resolved.wait(30)
             event = future.result()
             self.assertEqual(event['tag'], 'salt/netapi/hook')
             self.assertIn('headers', event['data'])
             self.assertEqual(event['data']['post'], {'foo': 'bar'})
-        # get an event future
-        self._finished = False  # TODO: remove after some cleanup of the event listener
-        event = self.application.event_listener.get_event(self,
-                                                          tag='salt/netapi/hook',
-                                                          callback=verify_event,
-                                                          )
-        # fire the event
-        response = self.fetch('/hook',
-                              method='POST',
-                              body='foo=bar',
-                              headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              )
-        response_obj = json_loads(response.body)
-        self.assertTrue(response_obj['success'])
+        finally:
+            self._future_resolved.clear()
+            del self._future_resolved
