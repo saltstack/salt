@@ -39,8 +39,8 @@ depending on your relevant version of Python:
 
 .. code-block:: bash
 
-    pip install -r requirements/dev_python26.txt
     pip install -r requirements/dev_python27.txt
+    pip install -r requirements/dev_python34.txt
 
 To be able to run integration tests which utilizes ZeroMQ transport, you also
 need to install additional requirements for it. Make sure you have installed
