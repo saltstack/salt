@@ -210,7 +210,7 @@ def xrun(**kwargs):
                 success.append('{0}: {1}'.format(func, func_ret.get('comment', 'Success')))
                 ret['result'] = _get_result(func_ret, ret['changes'].get('ret', {}))
             except SaltInvocationError as ex:
-                failures.append("Function '{0}' failed: {1}".format(func, ex))
+                failures.append("'{0}' failed: {1}".format(func, ex))
         if failures:
             ret['comment'] = ' '.join(failures)
             ret['result'] = False
