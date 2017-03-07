@@ -149,6 +149,36 @@ def wait(name, **kwargs):
 watch = salt.utils.alias_function(wait, 'watch')
 
 
+def xrun(**kwargs):
+    '''
+    Run a single module function or a range of module functions in a batch.
+    Supersedes `module.run` function, which requires `m_` prefix to function-specific parameters.
+
+    ``kwargs``
+        Pass any arguments needed to execute the function(s)
+
+    .. code-block:: yaml
+      some_id_of_state:
+        module.xrun:
+          - network.ip_addrs:
+            - interface: eth0
+          - cloud.create:
+            - names:
+              - test-isbm-1
+              - test-isbm-2
+            - ssh_username: sles
+            - image: sles12sp2
+            - securitygroup: default
+            - size: 'c3.large'
+            - location: ap-northeast-1
+            - delvol_on_destroy: True
+
+
+    :param call:
+    :param kwargs:
+    :return:
+    '''
+
 def run(name, **kwargs):
     '''
     Run a single module function
