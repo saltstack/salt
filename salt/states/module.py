@@ -188,7 +188,8 @@ def xrun(**kwargs):
         'result': None,
     }
 
-    for func in kwargs.keys():
+    functions = [func for func in kwargs.keys() if '.' in func]
+    for func in functions:
         if func not in __salt__:
             ret['comment'] = "Module function '{0}' is not available".format(func)
             ret['result'] = False
