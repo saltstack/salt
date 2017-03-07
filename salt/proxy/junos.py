@@ -122,6 +122,7 @@ def proxytype():
     '''
     return 'junos'
 
+
 def get_serialized_facts():
     facts = dict(thisproxy['conn'].facts)
     if 'version_info' in facts:
@@ -135,6 +136,7 @@ def get_serialized_facts():
         facts['junos_info']['re1']['object'] = \
             dict(facts['junos_info']['re1']['object'])
     return facts
+
 
 def ping():
     '''

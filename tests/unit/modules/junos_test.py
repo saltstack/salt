@@ -13,11 +13,14 @@ from jnpr.junos.utils.sw import SW
 from jnpr.junos.device import Device
 import salt.modules.junos as junos
 
+
 @attr('unit')
 class Test_Junos_Module(unittest.TestCase):
 
     def setUp(self):
-        junos.__proxy__ = {'junos.conn': self.make_connect, 'junos.get_serialized_facts': self.get_facts}
+        junos.__proxy__ = {
+            'junos.conn': self.make_connect,
+            'junos.get_serialized_facts': self.get_facts}
         junos.__salt__ = {'cp.get_template': MagicMock}
 
     @patch('ncclient.manager.connect')
@@ -32,71 +35,71 @@ class Test_Junos_Module(unittest.TestCase):
         self.dev.bind(sw=SW)
         return self.dev
 
-    def raise_exception(self, *args ,**kwargs):
-        raise Exception('dummy exception')
+    def raise_exception(self, *args, **kwargs):
+        raise Exception('Test exception')
 
     def get_facts(self):
         facts = {'2RE': True,
-             'HOME': '/var/home/regress',
-             'RE0': {'last_reboot_reason': '0x200:normal shutdown',
-                     'mastership_state': 'master',
-                     'model': 'RE-VMX',
-                     'status': 'OK',
-                     'up_time': '11 days, 23 hours, 16 minutes, 54 seconds'},
-             'RE1': {'last_reboot_reason': '0x200:normal shutdown',
-                     'mastership_state': 'backup',
-                     'model': 'RE-VMX',
-                     'status': 'OK',
-                     'up_time': '11 days, 23 hours, 16 minutes, 41 seconds'},
-             'RE_hw_mi': False,
-             'current_re': ['re0', 'master', 'node', 'fwdd', 'member', 'pfem'],
-             'domain': 'englab.juniper.net',
-             'fqdn': 'R1_re0.englab.juniper.net',
-             'hostname': 'R1_re0',
-             'hostname_info': {'re0': 'R1_re0', 're1': 'R1_re01'},
-             'ifd_style': 'CLASSIC',
-             'junos_info': {'re0': {'object': {'build': None,
-                                               'major': (16, 1),
-                                               'minor': '20160413_0837_aamish',
-                                               'type': 'I'},
-                                    'text': '16.1I20160413_0837_aamish'},
-                            're1': {'object': {'build': None,
-                                               'major': (16, 1),
-                                               'minor': '20160413_0837_aamish',
-                                               'type': 'I'},
-                                    'text': '16.1I20160413_0837_aamish'}},
-             'master': 'RE0',
-             'model': 'MX240',
-             'model_info': {'re0': 'MX240', 're1': 'MX240'},
-             'personality': 'MX',
-             're_info': {'default': {'0': {'last_reboot_reason': '0x200:normal shutdown',
-                                           'mastership_state': 'master',
-                                           'model': 'RE-VMX',
-                                           'status': 'OK'},
-                                     '1': {'last_reboot_reason': '0x200:normal shutdown',
-                                           'mastership_state': 'backup',
-                                           'model': 'RE-VMX',
-                                           'status': 'OK'},
-                                     'default': {'last_reboot_reason': '0x200:normal shutdown',
-                                                 'mastership_state': 'master',
-                                                 'model': 'RE-VMX',
-                                                 'status': 'OK'}}},
-             're_master': {'default': '0'},
-             'serialnumber': 'VMX4eaf',
-             'srx_cluster': None,
-             'switch_style': 'BRIDGE_DOMAIN',
-             'vc_capable': False,
-             'vc_fabric': None,
-             'vc_master': None,
-             'vc_mode': None,
-             'version': '16.1I20160413_0837_aamish',
-             'version_RE0': '16.1I20160413_0837_aamish',
-             'version_RE1': '16.1I20160413_0837_aamish',
-             'version_info': {'build': None,
-                              'major': (16, 1),
-                              'minor': '20160413_0837_aamish',
-                              'type': 'I'},
-             'virtual': True}
+                 'HOME': '/var/home/regress',
+                 'RE0': {'last_reboot_reason': '0x200:normal shutdown',
+                         'mastership_state': 'master',
+                         'model': 'RE-VMX',
+                         'status': 'OK',
+                         'up_time': '11 days, 23 hours, 16 minutes, 54 seconds'},
+                 'RE1': {'last_reboot_reason': '0x200:normal shutdown',
+                         'mastership_state': 'backup',
+                         'model': 'RE-VMX',
+                         'status': 'OK',
+                         'up_time': '11 days, 23 hours, 16 minutes, 41 seconds'},
+                 'RE_hw_mi': False,
+                 'current_re': ['re0', 'master', 'node', 'fwdd', 'member', 'pfem'],
+                 'domain': 'englab.juniper.net',
+                 'fqdn': 'R1_re0.englab.juniper.net',
+                 'hostname': 'R1_re0',
+                 'hostname_info': {'re0': 'R1_re0', 're1': 'R1_re01'},
+                 'ifd_style': 'CLASSIC',
+                 'junos_info': {'re0': {'object': {'build': None,
+                                                   'major': (16, 1),
+                                                   'minor': '20160413_0837_aamish',
+                                                   'type': 'I'},
+                                        'text': '16.1I20160413_0837_aamish'},
+                                're1': {'object': {'build': None,
+                                                   'major': (16, 1),
+                                                   'minor': '20160413_0837_aamish',
+                                                   'type': 'I'},
+                                        'text': '16.1I20160413_0837_aamish'}},
+                 'master': 'RE0',
+                 'model': 'MX240',
+                 'model_info': {'re0': 'MX240', 're1': 'MX240'},
+                 'personality': 'MX',
+                 're_info': {'default': {'0': {'last_reboot_reason': '0x200:normal shutdown',
+                                               'mastership_state': 'master',
+                                               'model': 'RE-VMX',
+                                               'status': 'OK'},
+                                         '1': {'last_reboot_reason': '0x200:normal shutdown',
+                                               'mastership_state': 'backup',
+                                               'model': 'RE-VMX',
+                                               'status': 'OK'},
+                                         'default': {'last_reboot_reason': '0x200:normal shutdown',
+                                                     'mastership_state': 'master',
+                                                     'model': 'RE-VMX',
+                                                     'status': 'OK'}}},
+                 're_master': {'default': '0'},
+                 'serialnumber': 'VMX4eaf',
+                 'srx_cluster': None,
+                 'switch_style': 'BRIDGE_DOMAIN',
+                 'vc_capable': False,
+                 'vc_fabric': None,
+                 'vc_master': None,
+                 'vc_mode': None,
+                 'version': '16.1I20160413_0837_aamish',
+                 'version_RE0': '16.1I20160413_0837_aamish',
+                 'version_RE1': '16.1I20160413_0837_aamish',
+                 'version_info': {'build': None,
+                                  'major': (16, 1),
+                                  'minor': '20160413_0837_aamish',
+                                  'type': 'I'},
+                 'virtual': True}
         return facts
 
     @patch('salt.modules.saltutil.sync_grains')
@@ -170,69 +173,69 @@ class Test_Junos_Module(unittest.TestCase):
     def test_facts_refresh_exception(self, mock_facts_refresh):
         mock_facts_refresh.side_effect = self.raise_exception
         ret = dict()
-        ret['message'] = 'Execution failed due to "dummy exception"'
+        ret['message'] = 'Execution failed due to "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.facts_refresh(), ret)
 
     def test_facts(self):
         ret = dict()
         ret['facts'] = {'2RE': True,
-                         'HOME': '/var/home/regress',
-                         'RE0': {'last_reboot_reason': '0x200:normal shutdown',
-                                 'mastership_state': 'master',
-                                 'model': 'RE-VMX',
-                                 'status': 'OK',
-                                 'up_time': '11 days, 23 hours, 16 minutes, 54 seconds'},
-                         'RE1': {'last_reboot_reason': '0x200:normal shutdown',
-                                 'mastership_state': 'backup',
-                                 'model': 'RE-VMX',
-                                 'status': 'OK',
-                                 'up_time': '11 days, 23 hours, 16 minutes, 41 seconds'},
-                         'RE_hw_mi': False,
-                         'current_re': ['re0', 'master', 'node', 'fwdd', 'member', 'pfem'],
-                         'domain': 'englab.juniper.net',
-                         'fqdn': 'R1_re0.englab.juniper.net',
-                         'hostname': 'R1_re0',
-                         'hostname_info': {'re0': 'R1_re0', 're1': 'R1_re01'},
-                         'ifd_style': 'CLASSIC',
-                         'junos_info': {'re0': {'object': {'build': None,
-                                                           'major': (16, 1),
-                                                           'minor': '20160413_0837_aamish',
-                                                           'type': 'I'},
-                                                'text': '16.1I20160413_0837_aamish'},
-                                        're1': {'object': {'build': None,
-                                                           'major': (16, 1),
-                                                           'minor': '20160413_0837_aamish',
-                                                           'type': 'I'},
-                                                'text': '16.1I20160413_0837_aamish'}},
-                         'master': 'RE0',
-                         'model': 'MX240',
-                         'model_info': {'re0': 'MX240', 're1': 'MX240'},
-                         'personality': 'MX',
-                         're_info': {'default': {'0': {'last_reboot_reason': '0x200:normal shutdown',
-                                                       'mastership_state': 'master',
-                                                       'model': 'RE-VMX',
-                                                       'status': 'OK'},
-                                                 '1': {'last_reboot_reason': '0x200:normal shutdown',
-                                                       'mastership_state': 'backup',
-                                                       'model': 'RE-VMX',
-                                                       'status': 'OK'},
-                                                 'default': {'last_reboot_reason': '0x200:normal shutdown',
-                                                             'mastership_state': 'master',
-                                                             'model': 'RE-VMX',
-                                                             'status': 'OK'}}},
-                         're_master': {'default': '0'},
-                         'serialnumber': 'VMX4eaf',
-                         'srx_cluster': None,
-                         'switch_style': 'BRIDGE_DOMAIN',
-                         'vc_capable': False,
-                         'vc_fabric': None,
-                         'vc_master': None,
-                         'vc_mode': None,
-                         'version': '16.1I20160413_0837_aamish',
-                         'version_RE0': '16.1I20160413_0837_aamish',
-                         'version_RE1': '16.1I20160413_0837_aamish',
-                         'version_info': {'build': None,
+                        'HOME': '/var/home/regress',
+                        'RE0': {'last_reboot_reason': '0x200:normal shutdown',
+                                'mastership_state': 'master',
+                                'model': 'RE-VMX',
+                                'status': 'OK',
+                                'up_time': '11 days, 23 hours, 16 minutes, 54 seconds'},
+                        'RE1': {'last_reboot_reason': '0x200:normal shutdown',
+                                'mastership_state': 'backup',
+                                'model': 'RE-VMX',
+                                'status': 'OK',
+                                'up_time': '11 days, 23 hours, 16 minutes, 41 seconds'},
+                        'RE_hw_mi': False,
+                        'current_re': ['re0', 'master', 'node', 'fwdd', 'member', 'pfem'],
+                        'domain': 'englab.juniper.net',
+                        'fqdn': 'R1_re0.englab.juniper.net',
+                        'hostname': 'R1_re0',
+                        'hostname_info': {'re0': 'R1_re0', 're1': 'R1_re01'},
+                        'ifd_style': 'CLASSIC',
+                        'junos_info': {'re0': {'object': {'build': None,
+                                                          'major': (16, 1),
+                                                          'minor': '20160413_0837_aamish',
+                                                          'type': 'I'},
+                                               'text': '16.1I20160413_0837_aamish'},
+                                       're1': {'object': {'build': None,
+                                                          'major': (16, 1),
+                                                          'minor': '20160413_0837_aamish',
+                                                          'type': 'I'},
+                                               'text': '16.1I20160413_0837_aamish'}},
+                        'master': 'RE0',
+                        'model': 'MX240',
+                        'model_info': {'re0': 'MX240', 're1': 'MX240'},
+                        'personality': 'MX',
+                        're_info': {'default': {'0': {'last_reboot_reason': '0x200:normal shutdown',
+                                                      'mastership_state': 'master',
+                                                      'model': 'RE-VMX',
+                                                      'status': 'OK'},
+                                                '1': {'last_reboot_reason': '0x200:normal shutdown',
+                                                      'mastership_state': 'backup',
+                                                      'model': 'RE-VMX',
+                                                      'status': 'OK'},
+                                                'default': {'last_reboot_reason': '0x200:normal shutdown',
+                                                            'mastership_state': 'master',
+                                                            'model': 'RE-VMX',
+                                                            'status': 'OK'}}},
+                        're_master': {'default': '0'},
+                        'serialnumber': 'VMX4eaf',
+                        'srx_cluster': None,
+                        'switch_style': 'BRIDGE_DOMAIN',
+                        'vc_capable': False,
+                        'vc_fabric': None,
+                        'vc_master': None,
+                        'vc_mode': None,
+                        'version': '16.1I20160413_0837_aamish',
+                        'version_RE0': '16.1I20160413_0837_aamish',
+                        'version_RE1': '16.1I20160413_0837_aamish',
+                        'version_info': {'build': None,
                                          'major': (16, 1),
                                          'minor': '20160413_0837_aamish',
                                          'type': 'I'},
@@ -243,7 +246,7 @@ class Test_Junos_Module(unittest.TestCase):
     def test_facts_exception(self):
         junos.__proxy__ = {'junos.get_serialized_facts': self.raise_exception}
         ret = dict()
-        ret['message'] = 'Could not display facts due to "dummy exception"'
+        ret['message'] = 'Could not display facts due to "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.facts(), ret)
 
@@ -255,26 +258,26 @@ class Test_Junos_Module(unittest.TestCase):
 
     def test_set_hostname_load_called_with_valid_name(self):
         with patch('jnpr.junos.utils.config.Config.load') as mock_load:
-            junos.set_hostname('dummy-name')
+            junos.set_hostname('test-name')
             mock_load.assert_called_with(
-                'set system host-name dummy-name', format='set')
+                'set system host-name test-name', format='set')
 
     @patch('jnpr.junos.utils.config.Config.load')
     def test_set_hostname_raise_exception_for_load(self, mock_load):
         mock_load.side_effect = self.raise_exception
         ret = dict()
-        ret['message'] = 'Could not load configuration due to error "dummy exception"'
+        ret['message'] = 'Could not load configuration due to error "Test exception"'
         ret['out'] = False
-        self.assertEqual(junos.set_hostname('dummy-name'), ret)
+        self.assertEqual(junos.set_hostname('Test-name'), ret)
 
     @patch('jnpr.junos.utils.config.Config.commit_check')
     def test_set_hostname_raise_exception_for_commit_check(
             self, mock_commit_check):
         mock_commit_check.side_effect = self.raise_exception
         ret = dict()
-        ret['message'] = 'Could not commit check due to error "dummy exception"'
+        ret['message'] = 'Could not commit check due to error "Test exception"'
         ret['out'] = False
-        self.assertEqual(junos.set_hostname('dummy-name'), ret)
+        self.assertEqual(junos.set_hostname('test-name'), ret)
 
     @patch('jnpr.junos.utils.config.Config.load')
     @patch('jnpr.junos.utils.config.Config.commit_check')
@@ -283,12 +286,12 @@ class Test_Junos_Module(unittest.TestCase):
             self, mock_commit, mock_commit_check, mock_load):
         mock_commit_check.return_value = True
         args = {'comment': 'Committed via salt', '__pub_user': 'root',
-                '__pub_arg': ['dummy-name', {'comment': 'Committed via salt'}],
+                '__pub_arg': ['test-name', {'comment': 'Committed via salt'}],
                 '__pub_fun': 'junos.set_hostname', '__pub_jid':
                     '20170220210915624885', '__pub_tgt': 'mac_min',
                 '__pub_tgt_type': 'glob', '__pub_ret': ''}
 
-        junos.set_hostname('dummy-name', **args)
+        junos.set_hostname('test-name', **args)
         mock_commit.assert_called_with(comment='Committed via salt')
 
     @patch('jnpr.junos.utils.config.Config.load')
@@ -299,7 +302,7 @@ class Test_Junos_Module(unittest.TestCase):
         mock_commit_check.return_value = True
         args = {'comment': 'Committed via salt',
                 '__pub_user': 'root',
-                '__pub_arg': ['dummy-name',
+                '__pub_arg': ['test-name',
                               {'comment': 'Committed via salt',
                                'confirm': 5}],
                 '__pub_fun': 'junos.set_hostname',
@@ -308,7 +311,7 @@ class Test_Junos_Module(unittest.TestCase):
                 '__pub_tgt_type': 'glob',
                 '__pub_ret': ''}
 
-        junos.set_hostname('dummy-name', **args)
+        junos.set_hostname('test-name', **args)
         mock_commit.assert_called_with(comment='Committed via salt', confirm=5)
 
     @patch('jnpr.junos.utils.config.Config.load')
@@ -319,7 +322,7 @@ class Test_Junos_Module(unittest.TestCase):
         mock_commit_check.return_value = True
         args = {'comment': 'Committed via salt',
                 '__pub_user': 'root',
-                '__pub_arg': ['dummy-name',
+                '__pub_arg': ['test-name',
                               {'comment': 'Committed via salt'}],
                 '__pub_fun': 'junos.set_hostname',
                 '__pub_jid': '20170220210915624885',
@@ -329,15 +332,15 @@ class Test_Junos_Module(unittest.TestCase):
         ret = dict()
         ret['message'] = 'Successfully changed hostname.'
         ret['out'] = True
-        self.assertEqual(junos.set_hostname('dummy-name', **args), ret)
+        self.assertEqual(junos.set_hostname('test-name', **args), ret)
 
     @patch('jnpr.junos.utils.config.Config.commit')
     def test_set_hostname_raise_exception_for_commit(self, mock_commit):
         mock_commit.side_effect = self.raise_exception
         ret = dict()
-        ret['message'] = 'Successfully loaded host-name but commit failed with "dummy exception"'
+        ret['message'] = 'Successfully loaded host-name but commit failed with "Test exception"'
         ret['out'] = False
-        self.assertEqual(junos.set_hostname('dummy-name'), ret)
+        self.assertEqual(junos.set_hostname('test-name'), ret)
 
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('salt.modules.junos.rollback')
@@ -347,7 +350,7 @@ class Test_Junos_Module(unittest.TestCase):
         ret = dict()
         ret['out'] = False
         ret['message'] = 'Successfully loaded host-name but pre-commit check failed.'
-        self.assertEqual(junos.set_hostname('dummy'), ret)
+        self.assertEqual(junos.set_hostname('test'), ret)
 
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
@@ -363,7 +366,7 @@ class Test_Junos_Module(unittest.TestCase):
     def test_commit_raise_commit_check_exeception(self, mock_commit_check):
         mock_commit_check.side_effect = self.raise_exception
         ret = dict()
-        ret['message'] = 'Could not perform commit check due to "dummy exception"'
+        ret['message'] = 'Could not perform commit check due to "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.commit(), ret)
 
@@ -376,7 +379,7 @@ class Test_Junos_Module(unittest.TestCase):
         ret = dict()
         ret['out'] = False
         ret['message'] = \
-            'Commit check succeeded but actual commit failed with "dummy exception"'
+            'Commit check succeeded but actual commit failed with "Test exception"'
         self.assertEqual(junos.commit(), ret)
 
     @patch('jnpr.junos.utils.config.Config.commit_check')
@@ -619,9 +622,15 @@ class Test_Junos_Module(unittest.TestCase):
 
     @patch('jnpr.junos.device.Device.execute')
     def test_ping_ttl(self, mock_execute):
-        args = {'__pub_user': 'sudo_drajvi', '__pub_arg': ['1.1.1.1', {'ttl': 3}],
-                '__pub_fun': 'junos.ping', '__pub_jid': '20170306165237683279',
-                '__pub_tgt': 'mac_min', 'ttl': 3, '__pub_tgt_type': 'glob', '__pub_ret': ''}
+        args = {'__pub_user': 'sudo_drajvi',
+                '__pub_arg': ['1.1.1.1',
+                              {'ttl': 3}],
+                '__pub_fun': 'junos.ping',
+                '__pub_jid': '20170306165237683279',
+                '__pub_tgt': 'mac_min',
+                'ttl': 3,
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
         junos.ping('1.1.1.1', **args)
         exec_args = mock_execute.call_args
         rpc = '<ping><count>5</count><host>1.1.1.1</host><ttl>3</ttl></ping>'
@@ -631,7 +640,7 @@ class Test_Junos_Module(unittest.TestCase):
     def test_ping_exception(self, mock_execute):
         mock_execute.side_effect = self.raise_exception
         ret = dict()
-        ret['message'] = 'Execution failed due to "dummy exception"'
+        ret['message'] = 'Execution failed due to "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.ping('1.1.1.1'), ret)
 
@@ -676,7 +685,7 @@ class Test_Junos_Module(unittest.TestCase):
     def test_cli_exception_in_cli(self, mock_cli):
         mock_cli.side_effect = self.raise_exception
         ret = dict()
-        ret['message'] = 'Execution failed due to "dummy exception"'
+        ret['message'] = 'Execution failed due to "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.cli('show version'), ret)
 
@@ -778,7 +787,7 @@ class Test_Junos_Module(unittest.TestCase):
                 '__pub_jid': '20170222213858582619', '__pub_tgt': 'mac_min',
                 '__pub_tgt_type': 'glob', '__pub_ret': ''}
         ret = dict()
-        ret['message'] = 'Could not poweroff/reboot beacause "dummy exception"'
+        ret['message'] = 'Could not poweroff/reboot beacause "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.shutdown(**args), ret)
 
@@ -827,7 +836,7 @@ class Test_Junos_Module(unittest.TestCase):
             mock_commit):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
-        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_mkstemp.return_value = 'test/path/config'
         mock_diff.return_value = 'diff'
         mock_commit_check.return_value = True
 
@@ -835,7 +844,7 @@ class Test_Junos_Module(unittest.TestCase):
         ret['message'] = 'Successfully loaded and committed!'
         ret['out'] = True
         self.assertEqual(junos.install_config('actual/path/config.set'), ret)
-        mock_load.assert_called_with(path='dummy/path/config', format='set')
+        mock_load.assert_called_with(path='test/path/config', format='set')
 
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.commit_check')
@@ -857,7 +866,7 @@ class Test_Junos_Module(unittest.TestCase):
             mock_commit):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
-        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_mkstemp.return_value = 'test/path/config'
         mock_diff.return_value = 'diff'
         mock_commit_check.return_value = True
 
@@ -865,7 +874,7 @@ class Test_Junos_Module(unittest.TestCase):
         ret['message'] = 'Successfully loaded and committed!'
         ret['out'] = True
         self.assertEqual(junos.install_config('actual/path/config.xml'), ret)
-        mock_load.assert_called_with(path='dummy/path/config', format='xml')
+        mock_load.assert_called_with(path='test/path/config', format='xml')
 
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.commit_check')
@@ -887,7 +896,7 @@ class Test_Junos_Module(unittest.TestCase):
             mock_commit):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
-        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_mkstemp.return_value = 'test/path/config'
         mock_diff.return_value = 'diff'
         mock_commit_check.return_value = True
 
@@ -895,7 +904,7 @@ class Test_Junos_Module(unittest.TestCase):
         ret['message'] = 'Successfully loaded and committed!'
         ret['out'] = True
         self.assertEqual(junos.install_config('actual/path/config'), ret)
-        mock_load.assert_called_with(path='dummy/path/config', format='text')
+        mock_load.assert_called_with(path='test/path/config', format='text')
 
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.commit_check')
@@ -917,7 +926,7 @@ class Test_Junos_Module(unittest.TestCase):
             mock_commit):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
-        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_mkstemp.return_value = 'test/path/config'
         mock_diff.return_value = 'diff'
         mock_commit_check.return_value = True
 
@@ -935,7 +944,7 @@ class Test_Junos_Module(unittest.TestCase):
                 **args),
             ret)
         mock_load.assert_called_with(
-            path='dummy/path/config',
+            path='test/path/config',
             format='set',
             merge=False)
 
@@ -959,7 +968,7 @@ class Test_Junos_Module(unittest.TestCase):
             mock_commit):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
-        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_mkstemp.return_value = 'test/path/config'
         mock_diff.return_value = 'diff'
         mock_commit_check.return_value = True
 
@@ -977,7 +986,7 @@ class Test_Junos_Module(unittest.TestCase):
                 **args),
             ret)
         mock_load.assert_called_with(
-            path='dummy/path/config',
+            path='test/path/config',
             format='xml',
             overwrite=True)
 
@@ -1001,7 +1010,7 @@ class Test_Junos_Module(unittest.TestCase):
             mock_commit):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
-        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_mkstemp.return_value = 'test/path/config'
         mock_diff.return_value = 'diff'
         mock_commit_check.return_value = True
 
@@ -1019,7 +1028,7 @@ class Test_Junos_Module(unittest.TestCase):
                 **args),
             ret)
         mock_load.assert_called_with(
-            path='dummy/path/config', format='text', merge=True)
+            path='test/path/config', format='text', merge=True)
 
     @patch('jnpr.junos.utils.config.Config.load')
     @patch('salt.modules.junos.safe_rm')
@@ -1035,10 +1044,10 @@ class Test_Junos_Module(unittest.TestCase):
             mock_load):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
-        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_mkstemp.return_value = 'test/path/config'
         mock_load.side_effect = self.raise_exception
         ret = dict()
-        ret['message'] = 'Could not load configuration due to : "dummy exception"'
+        ret['message'] = 'Could not load configuration due to : "Test exception"'
         ret['format'] = 'set'
         ret['out'] = False
         self.assertEqual(
@@ -1061,7 +1070,7 @@ class Test_Junos_Module(unittest.TestCase):
             mock_diff):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
-        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_mkstemp.return_value = 'test/path/config'
         mock_diff.return_value = None
         ret = dict()
         ret['message'] = 'Configuration already applied!'
@@ -1090,7 +1099,7 @@ class Test_Junos_Module(unittest.TestCase):
             mock_fopen):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
-        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_mkstemp.return_value = 'test/path/config'
         mock_diff.return_value = 'diff'
         mock_commit_check.return_value = True
 
@@ -1133,7 +1142,7 @@ class Test_Junos_Module(unittest.TestCase):
             mock_commit):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
-        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_mkstemp.return_value = 'test/path/config'
         mock_diff.return_value = 'diff'
         mock_commit_check.return_value = True
         args = {'comment': 'comitted via salt',
@@ -1174,12 +1183,12 @@ class Test_Junos_Module(unittest.TestCase):
             mock_commit_check):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
-        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_mkstemp.return_value = 'test/path/config'
         mock_diff.return_value = 'diff'
         mock_commit_check.side_effect = self.raise_exception
 
         ret = dict()
-        ret['message'] = 'Commit check threw the following exception: "dummy exception"'
+        ret['message'] = 'Commit check threw the following exception: "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.install_config('actual/path/config.xml'), ret)
 
@@ -1201,7 +1210,7 @@ class Test_Junos_Module(unittest.TestCase):
             mock_commit_check):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
-        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_mkstemp.return_value = 'test/path/config'
         mock_diff.return_value = 'diff'
         mock_commit_check.return_value = False
 
@@ -1230,13 +1239,13 @@ class Test_Junos_Module(unittest.TestCase):
             mock_commit):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
-        mock_mkstemp.return_value = 'dummy/path/config'
+        mock_mkstemp.return_value = 'test/path/config'
         mock_diff.return_value = 'diff'
         mock_commit_check.return_value = True
         mock_commit.side_effect = self.raise_exception
         ret = dict()
         ret['message'] = \
-            'Commit check successful but commit failed with "dummy exception"'
+            'Commit check successful but commit failed with "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.install_config('actual/path/config'), ret)
 
@@ -1253,7 +1262,7 @@ class Test_Junos_Module(unittest.TestCase):
     def test_zeroize_throw_exception(self, mock_cli):
         mock_cli.side_effect = self.raise_exception
         ret = dict()
-        ret['message'] = 'Could not zeroize due to : "dummy exception"'
+        ret['message'] = 'Could not zeroize due to : "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.zeroize(), ret)
 
@@ -1277,7 +1286,7 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('os.path.isfile')
     @patch('os.path.getsize')
     def test_install_os_image_cp_fails(
-            self, mock_getsize, mock_isfile):  # , mock_mkstemp):
+            self, mock_getsize, mock_isfile):
         mock_getsize.return_value = 0
         mock_isfile.return_value = True
         ret = dict()
@@ -1345,7 +1354,7 @@ class Test_Junos_Module(unittest.TestCase):
         mock_isfile.return_value = True
         mock_install.side_effect = self.raise_exception
         ret = dict()
-        ret['message'] = 'Installation failed due to: "dummy exception"'
+        ret['message'] = 'Installation failed due to: "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.install_os('path'), ret)
 
@@ -1372,7 +1381,7 @@ class Test_Junos_Module(unittest.TestCase):
                 '__pub_tgt_type': 'glob', '__pub_ret': ''}
         ret = dict()
         ret['message'] = \
-            'Installation successful but reboot failed due to : "dummy exception"'
+            'Installation successful but reboot failed due to : "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.install_os('path', **args), ret)
 
@@ -1391,6 +1400,7 @@ class Test_Junos_Module(unittest.TestCase):
         with patch('salt.modules.junos.os.path.isfile') as mck:
             mck.return_value = True
             self.assertEqual(junos.file_copy('/home/user/config.set'), ret)
+
 
 @attr('unit')
 class Test_Junos_RPC(unittest.TestCase):
@@ -1412,11 +1422,11 @@ class Test_Junos_RPC(unittest.TestCase):
         self.dev.bind(sw=SW)
         return self.dev
 
-    def dummy(self, *args, **kwargs):
+    def test(self, *args, **kwargs):
         pass
 
     def raise_exception(self, *args, **kwargs):
-        raise Exception('dummy exception')
+        raise Exception('Test exception')
 
     def test_rpc_without_args(self):
         ret = dict()
@@ -1424,50 +1434,39 @@ class Test_Junos_RPC(unittest.TestCase):
         ret['out'] = False
         self.assertEqual(junos.rpc(), ret)
 
-    # @patch('salt.modules.junos.jxmlease.parse')
-    # @patch('salt.modules.junos.etree.tostring')
-    # @patch('junos_test.Test_Junos_RPC.dummy')
-    # @patch('salt.modules.junos.getattr')
-    # def test_rpc_get_config_with_filter_format_xml(self, mock_attr, mock_dummy, mock_etree, mock_jxml):
-    #     mock_attr.return_value = self.dummy
-    #     mock_jxml.return_value = 'get-config-reply'
-    #     ret = dict()
-    #     ret['rpc_reply'] = 'get-config-reply'
-    #     ret['out'] = True
-    #     self.assertEqual(junos.rpc('get-config', filter='<configuration><system/></configuration>'), ret)
-    #     #mock_dummy.assert_called_with(ANY, options={'dev_timeout': 30, 'format': 'xml'})
-    #     args = mock_dummy.call_args_list
-    #     print (mock_dummy.call_args_list[0])
-    #     #assert args[-1] =
-
-    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.dummy')
+    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.test')
     @patch('salt.modules.junos.getattr')
-    def test_rpc_get_config_exception(self, mock_attr, mock_dummy):
+    def test_rpc_get_config_exception(self, mock_attr, mock_test):
         mock_attr.return_value = self.raise_exception
         ret = dict()
-        ret['message'] = 'RPC execution failed due to "dummy exception"'
+        ret['message'] = 'RPC execution failed due to "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.rpc('get_config'), ret)
 
-    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.dummy')
+    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.test')
     @patch('salt.modules.junos.getattr')
-    def test_rpc_get_interface_information(self, mock_attr, mock_dummy):
-        mock_attr.return_value = self.dummy
+    def test_rpc_get_interface_information(self, mock_attr, mock_test):
+        mock_attr.return_value = self.test
         junos.rpc('get-interface-information', format='json')
-        mock_dummy.assert_called_with({'format': 'json'}, dev_timeout=30)
+        mock_test.assert_called_with({'format': 'json'}, dev_timeout=30)
 
-    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.dummy')
+    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.test')
     @patch('salt.modules.junos.getattr')
-    def test_rpc_get_interface_information_with_filter(self, mock_attr, mock_dummy):
-        mock_attr.return_value = self.dummy
-        junos.rpc('get-interface-information', format='json', filter='<configuration><system/></configuration>')
-        mock_dummy.assert_called_with({'format': 'json'}, dev_timeout=ANY, filter='<configuration><system/></configuration>')
+    def test_rpc_get_interface_information_with_filter(
+            self, mock_attr, mock_test):
+        mock_attr.return_value = self.test
+        junos.rpc('get-interface-information', format='json',
+                  filter='<configuration><system/></configuration>')
+        mock_test.assert_called_with({'format': 'json'},
+                                     dev_timeout=ANY,
+                                     filter='<configuration><system/></configuration>')
 
-    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.dummy')
+    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.test')
     @patch('salt.modules.junos.getattr')
-    def test_rpc_get_interface_information_exception(self, mock_attr, mock_dummy):
+    def test_rpc_get_interface_information_exception(
+            self, mock_attr, mock_test):
         mock_attr.return_value = self.raise_exception
         ret = dict()
-        ret['message'] = 'RPC execution failed due to "dummy exception"'
+        ret['message'] = 'RPC execution failed due to "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.rpc('get_interface_information'), ret)
