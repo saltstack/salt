@@ -2005,7 +2005,7 @@ class State(object):
                                'changes': {}}
                     try:
                         with salt.utils.fopen(ret_cache, 'rb') as fp_:
-                            ret = msgpack.loads(fp_.read(), encoding='utf-8')
+                            ret = msgpack.loads(fp_.read(), encoding=__salt_system_encoding__)
                     except (OSError, IOError):
                         ret = {'result': False,
                                'comment': 'Parallel cache failure',
