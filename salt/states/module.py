@@ -197,8 +197,24 @@ def xrun(**kwargs):
             ret['comment'] = "Module function '{0}' is set to execute".format(func)
             ret['result'] = True
 
-    for func in kwargs.keys():
-        ret['result'][func] = _call_function(func)
+    if ret['result'] is None:
+        ret['result'] = True
+
+        failures = []
+        success = []
+        for func in functions:
+            try:
+                func_ret = _call_function(func, returner=kwargs.get('returner'),
+                                          func_args=kwargs.get(func))
+                success.append('{0}: {1}'.format(func, func_ret.get('comment', 'Success')))
+                ret['result'] = _get_result(func_ret, ret['changes'].get('ret', {}))
+            except SaltInvocationError as ex:
+                failures.append("Function '{0}' failed: {1}".format(func, ex))
+        if failures:
+            ret['comment'] = ' '.join(failures)
+            ret['result'] = False
+        else:
+            ret['comment'] = ', '.join(success)
 
     return ret
 
