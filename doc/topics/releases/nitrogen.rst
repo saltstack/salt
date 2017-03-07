@@ -175,6 +175,15 @@ in event that the ``dockerng`` alias is dropped in a future release.
 
 .. _salt-contrib: https://github.com/saltstack/salt-contrib
 
+New SSH cache Roster
+====================
+
+The :mod:`SSH cache Roster <salt.roster.cache>` has been rewritten from scratch to increase it's usefulness.
+The new roster supports all minion matchers, so it's now possible to target minions identically through `salt` and `salt-ssh`.
+The new configuration syntax allows for flexible combinations of arbitrary grains, pillar and mine data.
+This applies not just for the `host` of a minion, but also for it's other configuration data.
+The new release is also fully IPv4 and IPV6 enabled, and even allows for picking certain CIDR ranges for connecting.
+
 Deprecations
 ============
 
