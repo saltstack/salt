@@ -15,6 +15,7 @@ dns.srv_name('ldap/tcp', 'example.com')
     - gai
     - tmpltools.dns_secure
     - dnsutil lookup parts
+- modules
     - dig
 
 # should replace/augment
@@ -169,7 +170,7 @@ def _query_simple(name, rdtype, timeout=None):
     :return: [] of addresses or False if error
     '''
     sock_t = {
-        'A': socket.AF_INET,
+        'A':    socket.AF_INET,
         'AAAA': socket.AF_INET6
     }[rdtype]
 
@@ -207,9 +208,8 @@ def _query_dig(name, rdtype, timeout=None, servers=[], secure=None):
 
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
-        log.warning(
-            'dig returned ({0}): {1}'.format(
-                cmd['retcode'], cmd['stderr']
+        log.warning('dig returned ({0}): {1}'.format(
+            cmd['retcode'], cmd['stderr']
         ))
         return False
 
@@ -250,10 +250,9 @@ def _query_drill(name, rdtype, timeout=None, servers=[], secure=None):
 
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
-        log.warning(
-            'drill returned ({0}): {1}'.format(
+        log.warning('drill returned ({0}): {1}'.format(
                 cmd['retcode'], cmd['stderr']
-            ))
+        ))
         return False
 
     lookup_res = iter(cmd['stdout'].splitlines())
@@ -306,9 +305,8 @@ def _query_host(name, rdtype, timeout=None, server=None):
 
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
-        log.warning(
-            'host returned ({0}): {1}'.format(
-                cmd['retcode'], cmd['stdout']
+        log.warning('host returned ({0}): {1}'.format(
+            cmd['retcode'], cmd['stdout']
         ))
         return False
     elif 'has no' in cmd['stdout']:
@@ -339,8 +337,6 @@ def _query_pydns(name, rdtype, timeout=None, servers=[], secure=None):
     '''
     resolver = dns.resolver.Resolver(configure=False)
 
-    resolver.ednsflags += dns.flags.DO
-
     if timeout is not None:
         resolver.lifetime = float(timeout)
     if servers:
@@ -353,7 +349,8 @@ def _query_pydns(name, rdtype, timeout=None, servers=[], secure=None):
         res = [str(rr.to_text().strip(string.whitespace + '"'))
                for rr in resolver.query(name, rdtype, raise_on_no_answer=False)]
         return res
-    except:
+    except:  # pylint: disable=bare-except
+        # raise TODO>strange errors
         return False
 
 
@@ -376,13 +373,10 @@ def _query_nslookup(name, rdtype, timeout=None, server=None):
     cmd = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='quiet')
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
-        log.warning(
-            'nslookup returned ({0}): {1}'.format(
-                cmd['retcode'], cmd['stdout'].splitlines()[-1]
-            ))
+        log.warning('nslookup returned ({0}): {1}'.format(
+            cmd['retcode'], cmd['stdout'].splitlines()[-1]
+        ))
         return False
-
-    # ppr(cmd['stdout'].splitlines())
 
     lookup_res = iter(cmd['stdout'].splitlines())
 
@@ -395,7 +389,6 @@ def _query_nslookup(name, rdtype, timeout=None, server=None):
             line = next(lookup_res)
 
         while True:
-            # ppr('{}: now at {}'.format(name, line))
             line = line.strip()
             if not line or line.startswith('*'):
                 break
@@ -427,12 +420,12 @@ def _query_nslookup(name, rdtype, timeout=None, server=None):
 
 
 def query(
-        name,
-        rdtype,
-        method=None,
-        servers=None,
-        timeout=None,
-        secure=None
+    name,
+    rdtype,
+    method=None,
+    servers=None,
+    timeout=None,
+    secure=None
 ):
     '''
     Lookup DNS records
@@ -471,7 +464,7 @@ def query(
         return False
 
     res_kwargs = {
-        'name': name,
+        'name':   name,
         'rdtype': rdtype
     }
     if timeout:
@@ -499,12 +492,12 @@ def query(
 
 
 def records(
-        name,
-        rdtype,
-        method=None,
-        servers=None,
-        timeout=None,
-        secure=None
+    name,
+    rdtype,
+    method=None,
+    servers=None,
+    timeout=None,
+    secure=None
 ):
     '''
     Parse DNS records
@@ -518,10 +511,10 @@ def records(
     '''
     rdtype = rdtype.upper()
     qargs = {
-        'method': method,
+        'method':  method,
         'servers': servers,
         'timeout': timeout,
-        'secure': secure
+        'secure':  secure
     }
 
     if rdtype == 'PTR' and not name.endswith('arpa'):
@@ -533,17 +526,17 @@ def records(
         qres = [answer for answer in query(name, 'TXT', **qargs) if answer.startswith('v=spf')]
 
     if not qres:
-        return {}
+        return qres
 
-    res = {}
+    res = []
     for answer in qres:
         ares = {
-            'A': a_rec,
+            'A':    a_rec,
             'AAAA': aaaa_rec,
-            'MX': mx_rec,
-            'SOA': soa_rec,
-            'SPF': spf_rec,
-            'SRV': srv_rec,
+            'MX':   mx_rec,
+            'SOA':  soa_rec,
+            'SPF':  spf_rec,
+            'SRV':  srv_rec,
         }
         if rdtype in ares:
             answer = ares[rdtype](answer)
@@ -835,9 +828,7 @@ def parse_resolv(src='/etc/resolv.conf'):
                                     if ip_net.version == 4:
                                         ip_addr = str(ip_net.network_address)
                                         # pylint: disable=protected-access
-                                        mask = salt.utils.network.\
-                                            natural_ipv4_netmask(ip_addr)
-
+                                        mask = salt.utils.network.natural_ipv4_netmask(ip_addr)
                                         ip_net = ipaddress.ip_network(
                                             '{0}{1}'.format(ip_addr, mask),
                                             strict=False
@@ -861,16 +852,16 @@ def parse_resolv(src='/etc/resolv.conf'):
             # than one instance of these keywords is present, the last instance
             # will override.
             log.debug('{0}: The domain and search keywords are mutually '
-                        'exclusive.'.format(src))
+                      'exclusive.'.format(src))
 
         return {
-            'nameservers': nameservers,
+            'nameservers':     nameservers,
             'ip4_nameservers': [ip for ip in nameservers if ip.version == 4],
             'ip6_nameservers': [ip for ip in nameservers if ip.version == 6],
-            'sortlist': [ip.with_netmask for ip in sortlist],
-            'domain': domain,
-            'search': search,
-            'options': options
+            'sortlist':        [ip.with_netmask for ip in sortlist],
+            'domain':          domain,
+            'search':          search,
+            'options':         options
         }
     except IOError:
         return {}
