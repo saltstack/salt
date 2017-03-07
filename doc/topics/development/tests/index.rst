@@ -429,7 +429,7 @@ Test Helpers
 ------------
 
 Several Salt-specific helpers are available. A full list is available by inspecting
-functions exported in `salttesting.helpers`.
+functions exported in `tests.support.helpers`.
 
 `@expensiveTest` -- Designates a test which typically requires a relatively costly
 external resource, like a cloud virtual machine. This decorator is not normally
@@ -453,10 +453,10 @@ the test will be skipped if the binaries are not all present on the system.
 `@skip_if_not_root` -- If the test is not executed as root, it will be skipped.
 
 `@with_system_user` -- Creates and optionally destroys a system user within a test case.
-See implementation details in `salttesting.helpers` for details.
+See implementation details in `tests.support.helpers` for details.
 
 `@with_system_group` -- Creates and optionally destroys a system group within a test case.
-See implementation details in `salttesting.helpers` for details.
+See implementation details in `tests.support.helpers` for details.
 
 `@with_system_user_and_group` -- Creates and optionally destroys a system user and group
-within a test case.  See implementation details in `salttesting.helpers` for details.
+within a test case.  See implementation details in `tests.support.helpers` for details.

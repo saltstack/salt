@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import json
 import logging
 import distutils.version  # pylint: disable=import-error,no-name-in-module
+import shlex
 
 # Import salt libs
 import salt.utils
@@ -56,6 +57,21 @@ def _check_valid_version():
         )
 
 
+def _construct_bower_command(bower_command):
+    '''
+    Create bower command line string
+    '''
+    if not bower_command:
+        raise CommandExecutionError(
+            'bower_command, e.g. install, must be specified')
+
+    cmd = ['bower'] + shlex.split(bower_command)
+    cmd.extend(['--config.analytics', 'false',
+                '--config.interactive', 'false',
+                '--allow-root', '--json'])
+    return cmd
+
+
 def install(pkg,
             dir,
             pkgs=None,
@@ -96,16 +112,12 @@ def install(pkg,
     '''
     _check_valid_version()
 
-    cmd = 'bower install'
-    cmd += ' --config.analytics false'
-    cmd += ' --config.interactive false'
-    cmd += ' --allow-root'
-    cmd += ' --json'
+    cmd = _construct_bower_command('install')
 
     if pkg:
-        cmd += ' "{0}"'.format(pkg)
+        cmd.append(pkg)
     elif pkgs:
-        cmd += ' "{0}"'.format('" "'.join(pkgs))
+        cmd.extend(pkgs)
 
     result = __salt__['cmd.run_all'](cmd,
                                      cwd=dir,
@@ -149,12 +161,8 @@ def uninstall(pkg, dir, runas=None, env=None):
     '''
     _check_valid_version()
 
-    cmd = 'bower uninstall'
-    cmd += ' --config.analytics false'
-    cmd += ' --config.interactive false'
-    cmd += ' --allow-root'
-    cmd += ' --json'
-    cmd += ' "{0}"'.format(pkg)
+    cmd = _construct_bower_command('uninstall')
+    cmd.append(pkg)
 
     result = __salt__['cmd.run_all'](cmd,
                                      cwd=dir,
@@ -194,11 +202,8 @@ def list_(dir, runas=None, env=None):
     '''
     _check_valid_version()
 
-    cmd = 'bower list --json'
-    cmd += ' --config.analytics false'
-    cmd += ' --config.interactive false'
-    cmd += ' --offline'
-    cmd += ' --allow-root'
+    cmd = _construct_bower_command('list')
+    cmd.append('--offline')
 
     result = __salt__['cmd.run_all'](cmd,
                                      cwd=dir,
@@ -210,3 +215,44 @@ def list_(dir, runas=None, env=None):
         raise CommandExecutionError(result['stderr'])
 
     return json.loads(result['stdout'])['dependencies']
+
+
+def prune(dir, runas=None, env=None):
+    '''
+    .. versionadded:: Nitrogen
+
+    Remove extraneous local Bower packages, i.e. those not referenced in bower.json
+
+    dir
+        The directory whose packages will be pruned
+
+    runas
+        The user to run Bower with
+
+    env
+        Environment variables to set when invoking Bower. Uses the same ``env``
+        format as the :py:func:`cmd.run <salt.modules.cmdmod.run>` execution
+        function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' bower.prune /path/to/project
+
+    '''
+    _check_valid_version()
+
+    cmd = _construct_bower_command('prune')
+
+    result = __salt__['cmd.run_all'](cmd,
+                                     cwd=dir,
+                                     runas=runas,
+                                     env=env,
+                                     python_shell=False)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(result['stderr'])
+
+    # Bower returns an empty dictionary if nothing was pruned
+    return json.loads(result['stdout'])

@@ -342,7 +342,7 @@ def create(vm_):
     )
 
     if ssh_interface == 'private':
-        log.info("ssh_interafce: Setting interface for ssh to 'private'.")
+        log.info("ssh_interface: Setting interface for ssh to 'private'.")
         kwargs['ssh_interface'] = ssh_interface
     else:
         if ssh_interface != 'public':
@@ -350,7 +350,7 @@ def create(vm_):
                 "The DigitalOcean driver requires ssh_interface to be defined as 'public' or 'private'."
             )
         else:
-            log.info("ssh_interafce: Setting interface for ssh to 'public'.")
+            log.info("ssh_interface: Setting interface for ssh to 'public'.")
             kwargs['ssh_interface'] = ssh_interface
 
     private_networking = config.get_cloud_config_value(

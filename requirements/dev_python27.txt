@@ -5,5 +5,7 @@ apache-libcloud>=0.14.0
 boto>=2.32.1
 boto3>=1.2.1
 moto>=0.3.6
-SaltTesting
-SaltPyLint>=v2017.2.22
+SaltPyLint>=v2017.2.29
+GitPython>=0.3
+pytest
+git+https://github.com/saltstack/pytest-salt.git@master#egg=pytest-salt

@@ -125,7 +125,7 @@ class NetapiClient(object):
                                                       disable_custom_roster=True)
         return ssh_client.cmd_sync(kwargs)
 
-    def runner(self, fun, timeout=None, **kwargs):
+    def runner(self, fun, timeout=None, full_return=False, **kwargs):
         '''
         Run `runner modules <all-salt.runners>` synchronously
 
@@ -138,7 +138,7 @@ class NetapiClient(object):
         '''
         kwargs['fun'] = fun
         runner = salt.runner.RunnerClient(self.opts)
-        return runner.cmd_sync(kwargs, timeout=timeout)
+        return runner.cmd_sync(kwargs, timeout=timeout, full_return=full_return)
 
     def runner_async(self, fun, **kwargs):
         '''

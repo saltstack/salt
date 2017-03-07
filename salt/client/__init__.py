@@ -576,6 +576,7 @@ class LocalClient(object):
             tgt_type='glob',
             ret='',
             jid='',
+            full_return=False,
             kwarg=None,
             **kwargs):
         '''
@@ -664,6 +665,9 @@ class LocalClient(object):
 
         :param kwarg: A dictionary with keyword arguments for the function.
 
+        :param full_return: Output the job return only (default) or the full
+            return including exit code and other job metadata.
+
         :param kwargs: Optional keyword arguments.
             Authentication credentials may be passed when using
             :conf_master:`external_auth`.
@@ -714,7 +718,8 @@ class LocalClient(object):
 
                 if fn_ret:
                     for mid, data in six.iteritems(fn_ret):
-                        ret[mid] = data.get('ret', {})
+                        ret[mid] = (data if full_return
+                                else data.get('ret', {}))
 
             for failed in list(set(pub_data['minions']) ^ set(ret.keys())):
                 ret[failed] = False

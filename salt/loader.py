@@ -653,17 +653,16 @@ def grains(opts, force_refresh=False, proxy=None):
                     except (IOError, OSError):
                         pass
                 else:
-                    if force_refresh:
-                        log.debug('Grains refresh requested. Refreshing grains.')
-                    else:
-                        log.debug('Grains cache last modified {0} seconds ago and '
-                                  'cache expiration is set to {1}. '
-                                  'Grains cache expired. Refreshing.'.format(
-                                      grains_cache_age,
-                                      opts.get('grains_cache_expiration', 300)
-                                  ))
+                    log.debug('Grains cache last modified {0} seconds ago and '
+                              'cache expiration is set to {1}. '
+                              'Grains cache expired. Refreshing.'.format(
+                                  grains_cache_age,
+                                  opts.get('grains_cache_expiration', 300)
+                              ))
             else:
                 log.debug('Grains cache file does not exist.')
+    else:
+        log.debug('Grains refresh requested. Refreshing grains.')
 
     if opts.get('skip_grains', False):
         return {}
@@ -696,11 +695,11 @@ def grains(opts, force_refresh=False, proxy=None):
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
     # Run core grains
-    for key, fun in six.iteritems(funcs):
+    for key in funcs:
         if not key.startswith('core.'):
             continue
         log.trace('Loading {0} grain'.format(key))
-        ret = fun()
+        ret = funcs[key]()
         if not isinstance(ret, dict):
             continue
         if grains_deep_merge:
@@ -709,7 +708,7 @@ def grains(opts, force_refresh=False, proxy=None):
             grains_data.update(ret)
 
     # Run the rest of the grains
-    for key, fun in six.iteritems(funcs):
+    for key in funcs:
         if key.startswith('core.') or key == '_errors':
             continue
         try:
@@ -719,17 +718,17 @@ def grains(opts, force_refresh=False, proxy=None):
             # one parameter.  Then the grains can have access to the
             # proxymodule for retrieving information from the connected
             # device.
-            if fun.__code__.co_argcount == 1:
-                ret = fun(proxy)
+            if funcs[key].__code__.co_argcount == 1:
+                ret = funcs[key](proxy)
             else:
-                ret = fun()
+                ret = funcs[key]()
         except Exception:
             if is_proxy():
                 log.info('The following CRITICAL message may not be an error; the proxy may not be completely established yet.')
             log.critical(
                 'Failed to load grains defined in grain file {0} in '
                 'function {1}, error:\n'.format(
-                    key, fun
+                    key, funcs[key]
                 ),
                 exc_info=True
             )
@@ -1046,7 +1045,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.pack = {} if pack is None else pack
         if opts is None:
             opts = {}
-        self.context_dict = salt.utils.context.ContextDict()
+        threadsafety = not opts.get('multiprocessing')
+        self.context_dict = salt.utils.context.ContextDict(threadsafe=threadsafety)
         self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
@@ -1177,10 +1177,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # The files are added in order of priority, so order *must* be retained.
         self.file_mapping = salt.utils.odict.OrderedDict()
 
-        for mod_dir in self.module_dirs:
+        for mod_dir in sorted(self.module_dirs):
             files = []
             try:
-                files = os.listdir(mod_dir)
+                files = sorted(os.listdir(mod_dir))
             except OSError:
                 continue  # Next mod_dir
             for filename in files:
@@ -1611,7 +1611,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 except Exception as exc:
                     error_reason = (
                         'Exception raised when processing __virtual__ function'
-                        ' for {0}. Module will not be loaded {1}'.format(
+                        ' for {0}. Module will not be loaded: {1}'.format(
                             module_name, exc))
                     log.error(error_reason, exc_info_on_loglevel=logging.DEBUG)
                     virtual = None

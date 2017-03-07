@@ -685,14 +685,14 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
             elif 'joyent smartdc hvm' in model:
                 grains['virtual'] = 'kvm'
+            break
     else:
-        if osdata['kernel'] in skip_cmds:
-            log.warning(
-                "The tools 'dmidecode' and 'lspci' failed to "
-                'execute because they do not exist on the system of the user '
-                'running this instance or the user does not have the '
-                'necessary permissions to execute them. Grains output might '
-                'not be accurate.'
+        if osdata['kernel'] not in skip_cmds:
+            log.debug(
+                'All tools for virtual hardware identification failed to '
+                'execute because they do not exist on the system running this '
+                'instance or the user does not have the necessary permissions '
+                'to execute them. Grains output might not be accurate.'
             )
 
     choices = ('Linux', 'OpenBSD', 'HP-UX')
@@ -851,7 +851,7 @@ def _virtual(osdata):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
     for command in failed_commands:
-        log.warning(
+        log.info(
             "Although '{0}' was found in path, the current user "
             'cannot execute it. Grains output might not be '
             'accurate.'.format(command)

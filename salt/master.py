@@ -323,11 +323,8 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             for pillar in self.git_pillar:
                 pillar.update()
         except Exception as exc:
-            log.error(
-                'Exception \'{0}\' caught while updating git_pillar'
-                .format(exc),
-                exc_info_on_loglevel=logging.DEBUG
-            )
+            log.error('Exception caught while updating git_pillar',
+                      exc_info=True)
 
     def handle_schedule(self):
         '''
@@ -458,19 +455,21 @@ class Master(SMaster):
                 'Cannot change to root directory ({1})'.format(err)
             )
 
-        fileserver = salt.fileserver.Fileserver(self.opts)
-        if not fileserver.servers:
-            errors.append(
-                'Failed to load fileserver backends, the configured backends '
-                'are: {0}'.format(', '.join(self.opts['fileserver_backend']))
-            )
-        else:
-            # Run init() for all backends which support the function, to
-            # double-check configuration
-            try:
-                fileserver.init()
-            except FileserverConfigError as exc:
-                critical_errors.append('{0}'.format(exc))
+        if self.opts.get('fileserver_verify_config', True):
+            fileserver = salt.fileserver.Fileserver(self.opts)
+            if not fileserver.servers:
+                errors.append(
+                    'Failed to load fileserver backends, the configured backends '
+                    'are: {0}'.format(', '.join(self.opts['fileserver_backend']))
+                )
+            else:
+                # Run init() for all backends which support the function, to
+                # double-check configuration
+                try:
+                    fileserver.init()
+                except FileserverConfigError as exc:
+                    critical_errors.append('{0}'.format(exc))
+
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
 
@@ -483,25 +482,29 @@ class Master(SMaster):
             except OSError:
                 pass
 
-        non_legacy_git_pillars = [
-            x for x in self.opts.get('ext_pillar', [])
-            if 'git' in x
-            and not isinstance(x['git'], six.string_types)
-        ]
-        if non_legacy_git_pillars:
-            try:
-                new_opts = copy.deepcopy(self.opts)
-                from salt.pillar.git_pillar \
-                    import PER_REMOTE_OVERRIDES as overrides
-                for repo in non_legacy_git_pillars:
-                    new_opts['ext_pillar'] = [repo]
-                    try:
-                        git_pillar = salt.utils.gitfs.GitPillar(new_opts)
-                        git_pillar.init_remotes(repo['git'], overrides)
-                    except FileserverConfigError as exc:
-                        critical_errors.append(exc.strerror)
-            finally:
-                del new_opts
+        if self.opts.get('git_pillar_verify_config', True):
+            non_legacy_git_pillars = [
+                x for x in self.opts.get('ext_pillar', [])
+                if 'git' in x
+                and not isinstance(x['git'], six.string_types)
+            ]
+            if non_legacy_git_pillars:
+                try:
+                    new_opts = copy.deepcopy(self.opts)
+                    from salt.pillar.git_pillar \
+                        import PER_REMOTE_OVERRIDES as per_remote_overrides, \
+                        PER_REMOTE_ONLY as per_remote_only
+                    for repo in non_legacy_git_pillars:
+                        new_opts['ext_pillar'] = [repo]
+                        try:
+                            git_pillar = salt.utils.gitfs.GitPillar(new_opts)
+                            git_pillar.init_remotes(repo['git'],
+                                                    per_remote_overrides,
+                                                    per_remote_only)
+                        except FileserverConfigError as exc:
+                            critical_errors.append(exc.strerror)
+                finally:
+                    del new_opts
 
         if errors or critical_errors:
             for error in errors:

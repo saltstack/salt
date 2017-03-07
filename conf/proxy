@@ -119,7 +119,7 @@
 # strip_colors: False
 
 # Backup files that are replaced by file.managed and file.recurse under
-# 'cachedir'/file_backups relative to their original location and appended
+# 'cachedir'/file_backup relative to their original location and appended
 # with a timestamp. The only valid setting is "minion". Disabled by default.
 #
 # Alternatively this can be specified for each file in state files:

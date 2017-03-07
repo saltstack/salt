@@ -751,10 +751,11 @@ def ip_bracket(addr):
     return addr
 
 
-def dns_check(addr, safe=False, ipv6=False):
+def dns_check(addr, port, safe=False, ipv6=None, connect=True):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception. Obeys system preference for IPv4/6 address resolution.
+    Tries to connect to the address before considering it useful.
     '''
     error = False
     lookup = addr
@@ -769,18 +770,30 @@ def dns_check(addr, safe=False, ipv6=False):
         if not hostnames:
             error = True
         else:
-            addr = False
+            resolved = False
             for h in hostnames:
-                if h[0] == socket.AF_INET:
-                    addr = ip_bracket(h[4][0])
+                if h[0] == socket.AF_INET and ipv6 is True:
+                    continue
+                if h[0] == socket.AF_INET6 and ipv6 is False:
+                    continue
+                if h[0] == socket.AF_INET6 and connect is False and ipv6 is None:
+                    continue
+
+                candidate_addr = ip_bracket(h[4][0])
+
+                if not connect:
+                    resolved = candidate_addr
+
+                s = socket.socket(h[0], socket.SOCK_STREAM)
+                try:
+                    s.connect((candidate_addr.strip('[]'), port))
+                    s.close()
+
+                    resolved = candidate_addr
                     break
-                elif h[0] == socket.AF_INET6:
-                    if not ipv6:
-                        seen_ipv6 = True
-                        continue
-                    addr = ip_bracket(h[4][0])
-                    break
-            if not addr:
+                except socket.error:
+                    pass
+            if not resolved:
                 error = True
     except TypeError:
         err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
@@ -789,10 +802,7 @@ def dns_check(addr, safe=False, ipv6=False):
         error = True
 
     if error:
-        if seen_ipv6 and not addr:
-            err = ('DNS lookup of \'{0}\' failed, but ipv6 address ignored. Enable ipv6 in config to use it.').format(lookup)
-        else:
-            err = ('DNS lookup of \'{0}\' failed.').format(lookup)
+        err = ('DNS lookup or connection check of \'{0}\' failed.').format(addr)
         if safe:
             if salt.log.is_console_configured():
                 # If logging is not configured it also means that either
@@ -801,7 +811,7 @@ def dns_check(addr, safe=False, ipv6=False):
                 log.error(err)
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
-    return addr
+    return resolved
 
 
 def required_module_list(docstring=None):
@@ -1478,9 +1488,9 @@ def subdict_match(data,
             # We might want to search for a key
             return True
         elif subdict_match(target,
-                         pattern,
-                         regex_match=regex_match,
-                         exact_match=exact_match):
+                           pattern,
+                           regex_match=regex_match,
+                           exact_match=exact_match):
             return True
         if wildcard:
             for key in target.keys():
@@ -1629,7 +1639,7 @@ def sanitize_win_path_string(winpath):
     '''
     intab = '<>:|?*'
     outtab = '_' * len(intab)
-    trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)
+    trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)  # pylint: disable=no-member
     if isinstance(winpath, str):
         winpath = winpath.translate(trantab)
     elif isinstance(winpath, six.text_type):
@@ -2218,8 +2228,8 @@ def date_cast(date):
         if HAS_TIMELIB:
             raise ValueError('Unable to parse {0}'.format(date))
 
-        raise RuntimeError('Unable to parse {0}.'
-            ' Consider installing timelib'.format(date))
+        raise RuntimeError(
+                'Unable to parse {0}. Consider installing timelib'.format(date))
 
 
 def date_format(date=None, format="%Y-%m-%d"):
@@ -2398,7 +2408,7 @@ def kwargs_warn_until(kwargs,
             version,
             message='The following parameter(s) have been deprecated and '
                     'will be removed in \'{0}\': {1}.'.format(version.string,
-                                                            arg_names),
+                                                              arg_names),
             category=category,
             stacklevel=stacklevel,
             _version_info_=_version_.info,
@@ -2615,12 +2625,18 @@ def is_bin_file(path):
     a bin, False if the file is not and None if the file is not available.
     '''
     if not os.path.isfile(path):
-        return None
+        return False
     try:
-        with fopen(path, 'r') as fp_:
-            return is_bin_str(fp_.read(2048))
+        with fopen(path, 'rb') as fp_:
+            try:
+                data = fp_.read(2048)
+                if six.PY3:
+                    data = data.decode(__salt_system_encoding__)
+                return is_bin_str(data)
+            except UnicodeDecodeError:
+                return True
     except os.error:
-        return None
+        return False
 
 
 def is_bin_str(data):
@@ -2639,7 +2655,7 @@ def is_bin_str(data):
         trans = ''.maketrans('', '', text_characters)
         nontext = data.translate(trans)
     else:
-        trans = string.maketrans('', '')
+        trans = string.maketrans('', '')  # pylint: disable=no-member
         nontext = data.translate(trans, text_characters)
 
     # If more than 30% non-text characters, then
@@ -2996,7 +3012,7 @@ def to_str(s, encoding=None):
     else:
         if isinstance(s, bytearray):
             return str(s)
-        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             return s.encode(encoding or __salt_system_encoding__)
         raise TypeError('expected str, bytearray, or unicode')
 
@@ -3022,12 +3038,15 @@ def to_unicode(s, encoding=None):
     '''
     Given str or unicode, return unicode (str for python 3)
     '''
+    if not isinstance(s, (bytes, bytearray, six.string_types)):
+        return s
     if six.PY3:
-        return to_str(s, encoding)
+        if isinstance(s, (bytes, bytearray)):
+            return to_str(s, encoding)
     else:
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
-        return unicode(s)  # pylint: disable=incompatible-py3-code
+    return s
 
 
 def is_list(value):

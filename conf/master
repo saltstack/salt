@@ -549,11 +549,11 @@
 #default_top: base
 
 # The hash_type is the hash to use when discovering the hash of a file on
-# the master server. The default is md5 but sha1, sha224, sha256, sha384
-# and sha512 are also supported.
+# the master server. The default is sha256, but md5, sha1, sha224, sha384 and
+# sha512 are also supported.
 #
-# WARNING: While md5 is also supported, do not use it due to the high chance
-# of possible collisions and thus security breach.
+# WARNING: While md5 and sha1 are also supported, do not use them due to the
+# high chance of possible collisions and thus security breach.
 #
 # Prior to changing this value, the master should be stopped and all Salt
 # caches should be cleared.
