@@ -122,6 +122,7 @@ def proxytype():
     '''
     return 'junos'
 
+
 def get_serialized_facts():
     facts = dict(thisproxy['conn'].facts)
     if 'version_info' in facts:
