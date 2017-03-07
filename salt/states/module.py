@@ -116,6 +116,7 @@ import salt.loader
 import salt.utils
 import salt.utils.jid
 from salt.ext.six.moves import range
+from salt.exceptions import SaltInvocationError
 
 
 def wait(name, **kwargs):
@@ -208,6 +209,12 @@ def _call_function(name, **kwargs):
     :param kwargs:
     :return:
     '''
+    missing = []
+    for arg in argspec.args:
+        if arg not in func_args:
+            missing.append(arg)
+    if missing:
+        raise SaltInvocationError('Missing arguments: {0}'.format(', '.join(missing)))
 
     aspec = salt.utils.args.get_function_argspec(__salt__[name])
 
