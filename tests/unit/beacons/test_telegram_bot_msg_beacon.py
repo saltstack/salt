@@ -136,8 +136,3 @@ class TelegramBotMsgBeaconTestCase(TestCase):
         telegram_api.Bot.assert_called_once_with(token)
         self.assertTrue(ret)
         self.assertEqual(ret[0]['msgs'][0], message.to_dict())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TelegramBotMsgBeaconTestCase, needs_daemon=False)
