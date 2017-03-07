@@ -15,11 +15,39 @@ More information about Azure is located at `http://www.windowsazure.com/
 
 Dependencies
 ============
-* `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc5
+* `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc6
 * `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32
 * The python-requests library, for Python < 2.7.9.
 * A Microsoft Azure account
 * `Salt <https://github.com/saltstack/salt>`_
+
+
+Installation Tips
+=================
+Because the ``azure`` library requires the ``cryptography`` library, which is
+compiled on-the-fly by ``pip``, you may need to install the development tools
+for your operating system.
+
+Before you install ``azure`` with ``pip``, you should make sure that the
+required libraries are installed.
+
+Debian
+------
+For Debian and Ubuntu, the following command will ensure that the required
+dependencies are installed:
+
+.. code-block:: bash
+
+    sudo apt-get install build-essential libssl-dev libffi-dev python-dev
+
+Red Hat
+-------
+For Fedora and RHEL-derivatives, the following command will ensure that the
+required dependencies are installed:
+
+.. code-block:: bash
+
+    sudo yum install gcc libffi-devel python-devel openssl-devel
 
 
 Configuration
