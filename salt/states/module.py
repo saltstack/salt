@@ -344,21 +344,27 @@ def run(name, **kwargs):
         if kwargs['returner'] in returners:
             returners[kwargs['returner']](ret_ret)
     ret['comment'] = 'Module function {0} executed'.format(name)
+    ret['result'] = _get_result(mret, ret['changes'].get('ret', {}))
 
-    ret['result'] = True
+    return ret
+
+
+def _get_result(func_ret, changes):
+    res = True
     # if mret is a dict and there is retcode and its non-zero
-    if isinstance(mret, dict) and mret.get('retcode', 0) != 0:
-        ret['result'] = False
-    # if its a boolean, return that as the result
-    elif isinstance(mret, bool):
-        ret['result'] = mret
+    if isinstance(func_ret, dict) and func_ret.get('retcode', 0) != 0:
+        res = False
+        # if its a boolean, return that as the result
+    elif isinstance(func_ret, bool):
+        res = func_ret
     else:
-        changes_ret = ret['changes'].get('ret', {})
+        changes_ret = changes.get('ret', {})
         if isinstance(changes_ret, dict):
             if isinstance(changes_ret.get('result', {}), bool):
-                ret['result'] = changes_ret.get('result', {})
+                res = changes_ret.get('result', {})
             elif changes_ret.get('retcode', 0) != 0:
-                ret['result'] = False
-    return ret
+                res = False
+
+    return res
 
 mod_watch = salt.utils.alias_function(run, 'mod_watch')
