@@ -202,7 +202,8 @@ def xrun(**kwargs):
 
     return ret
 
-def _call_function(name, **kwargs):
+
+def _call_function(name, returner=None, **kwargs):
     '''
     Calls a function from the specified module.
 
@@ -210,6 +211,11 @@ def _call_function(name, **kwargs):
     :param kwargs:
     :return:
     '''
+    argspec = salt.utils.args.get_function_argspec(__salt__[name])
+    func_args = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
+    for funcset in kwargs.get('func_args', []):
+        func_args.update(funcset)
+
     missing = []
     for arg in argspec.args:
         if arg not in func_args:
@@ -217,9 +223,14 @@ def _call_function(name, **kwargs):
     if missing:
         raise SaltInvocationError('Missing arguments: {0}'.format(', '.join(missing)))
 
-    aspec = salt.utils.args.get_function_argspec(__salt__[name])
+    mret = __salt__[name](**func_args)
+    if returner is not None:
+        returners = salt.loader.returners(__opts__, __salt__)
+        if returner in returners:
+            returners[returner]({'id': __opts__['id'], 'ret': mret,
+                                 'fun': name, 'jid': salt.utils.jid.gen_jid()})
 
-    return None
+    return mret
 
 
 def run(name, **kwargs):
