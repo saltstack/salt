@@ -181,7 +181,7 @@ def xrun(**kwargs):
     :return:
     '''
 
-    _id = kwargs.pop('name')
+    kwargs.pop('name')
     ret = {
         'name': kwargs.keys(),
         'changes': {},
