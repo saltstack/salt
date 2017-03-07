@@ -185,7 +185,7 @@ def xrun(**kwargs):
         'name': kwargs.keys(),
         'changes': {},
         'comment': '',
-        'result': {}
+        'result': None,
     }
 
     for func in kwargs.keys():
