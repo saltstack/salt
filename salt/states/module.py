@@ -155,7 +155,10 @@ def xrun(**kwargs):
     Run a single module function or a range of module functions in a batch.
     Supersedes `module.run` function, which requires `m_` prefix to function-specific parameters.
 
-    ``kwargs``
+    :param returner:
+        Specify a common returner for the whole batch to send the return data
+
+    :param kwargs:
         Pass any arguments needed to execute the function(s)
 
     .. code-block:: yaml
@@ -175,8 +178,6 @@ def xrun(**kwargs):
             - delvol_on_destroy: True
 
 
-    :param call:
-    :param kwargs:
     :return:
     '''
 
