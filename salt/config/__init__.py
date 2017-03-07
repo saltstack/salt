@@ -575,6 +575,7 @@ VALID_OPTS = {
     'minionfs_mountpoint': str,
     'minionfs_whitelist': list,
     'minionfs_blacklist': list,
+    'minionfs_restrict': bool,
 
     # Specify a list of external pillar systems to use
     'ext_pillar': list,
@@ -1266,6 +1267,7 @@ DEFAULT_MASTER_OPTS = {
     'minionfs_mountpoint': '',
     'minionfs_whitelist': [],
     'minionfs_blacklist': [],
+    'minionfs_restrict': False,
     'ext_pillar': [],
     'pillar_version': 2,
     'pillar_opts': False,

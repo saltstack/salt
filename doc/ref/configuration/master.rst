@@ -2486,6 +2486,24 @@ exposed.
       - dev*
       - 'mail\d+.mydomain.tld'
 
+.. conf_master:: minionfs_whitelist
+
+``minionfs_restrict``
+**********************
+
+.. versionadded:: TODO
+
+Default: ``False``
+
+Used to restrict that minions can only access their own files in minionfs.
+
+If used, a minion is only allowed access to its *own* files, meaning files that the minion itself pushed with `cp.push`.
+
+
+.. code-block:: yaml
+
+    minionfs_restrict: True
+
 
 .. _pillar-configuration-master:
 
