@@ -1460,8 +1460,6 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('os.path.isfile')
     def test_file_copy(self, mock_isfile, mock_scp):
         mock_isfile.return_value = True
-        #mock_scp.side_effect = self.raise_exception
-        #mock_scp.assert_called_with('test/src/file', 'file')
         ret = dict()
         ret['message'] = 'Successfully copied file from test/src/file to file'
         ret['out'] = True
