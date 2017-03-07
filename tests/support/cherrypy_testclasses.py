@@ -120,5 +120,7 @@ if HAS_CHERRYPY:
 
         def tearDown(self):
             cherrypy.engine.exit()
-            if hasattr(self, '_cp_config'):
+            try:
                 del self._cp_config
+            except AttributeError:
+                pass
