@@ -123,6 +123,8 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
             del self._SaltnadoTestCase__auth
         if hasattr(self, '_test_generator'):
             del self._test_generator
+        if hasattr(self, 'application'):
+            del self.application
 
     def build_tornado_app(self, urls):
         application = tornado.web.Application(urls, debug=True)
