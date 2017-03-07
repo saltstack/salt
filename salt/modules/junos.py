@@ -469,12 +469,13 @@ def rollback(id=0, **kwargs):
             ret['out'] = True
         except Exception as exception:
             ret['out'] = False
-            ret['message'] = 'Rollback successful but commit \
-            failed with error "{0}"'.format(exception)
+            ret['message'] = \
+                'Rollback successful but commit failed with error "{0}"'\
+                    .format(exception)
             return ret
     else:
-        ret['out'] = False
         ret['message'] = 'Rollback succesfull but pre-commit check failed.'
+        ret['out'] = False
     return ret
 
 
@@ -501,9 +502,9 @@ def diff(id=0):
     try:
         ret['message'] = conn.cu.diff(rb_id=id)
     except Exception as exception:
-        ret['out'] = False
         ret['message'] = 'Could not get diff with error "{0}"'.format(
             exception)
+        ret['out'] = False
 
     return ret
 
