@@ -77,6 +77,8 @@ def facts_refresh():
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
+        return ret
+
     ret['facts'] = __proxy__['junos.get_serialized_facts']()
 
     try:
@@ -467,12 +469,13 @@ def rollback(id=0, **kwargs):
             ret['out'] = True
         except Exception as exception:
             ret['out'] = False
-            ret['message'] = 'Rollback successful but commit \
-            failed with error "{0}"'.format(exception)
+            ret['message'] = \
+                'Rollback successful but commit failed with error "{0}"'\
+                    .format(exception)
             return ret
     else:
-        ret['out'] = False
         ret['message'] = 'Rollback succesfull but pre-commit check failed.'
+        ret['out'] = False
     return ret
 
 
@@ -499,9 +502,9 @@ def diff(id=0):
     try:
         ret['message'] = conn.cu.diff(rb_id=id)
     except Exception as exception:
-        ret['out'] = False
         ret['message'] = 'Could not get diff with error "{0}"'.format(
             exception)
+        ret['out'] = False
 
     return ret
 
@@ -865,15 +868,6 @@ def install_config(path=None, **kwargs):
         ret['message'] = 'Configuration already applied!'
         ret['out'] = True
         return ret
-    try:
-        if write_diff and config_diff is not None:
-            with fopen(write_diff, 'w') as fp:
-                fp.write(config_diff)
-    except Exception as exception:
-        ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
-            exception)
-        ret['out'] = False
-        return ret
 
     commit_params = {}
     if 'confirm' in op:
@@ -885,8 +879,9 @@ def install_config(path=None, **kwargs):
         check = conn.cu.commit_check()
     except Exception as exception:
         ret['message'] = \
-            'Commit check threw the following exception: "{0}"' \
+            'Commit check threw the following exception: "{0}"'\
             .format(exception)
+
         ret['out'] = False
         return ret
 
@@ -896,7 +891,7 @@ def install_config(path=None, **kwargs):
             ret['message'] = 'Successfully loaded and committed!'
         except Exception as exception:
             ret['message'] = \
-                'Commit check successful but commit failed with "{0}"' \
+                'Commit check successful but commit failed with "{0}"'\
                 .format(exception)
             ret['out'] = False
             return ret
@@ -904,6 +899,16 @@ def install_config(path=None, **kwargs):
         ret['message'] = 'Loaded configuration but commit check failed.'
         ret['out'] = False
         conn.cu.rollback()
+
+    try:
+        if write_diff and config_diff is not None:
+            with fopen(write_diff, 'w') as fp:
+                fp.write(config_diff)
+    except Exception as exception:
+        ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
+            exception)
+        ret['out'] = False
+
     return ret
 
 
@@ -1017,7 +1022,7 @@ def install_os(path=None, **kwargs):
     return ret
 
 
-def file_copy(src=None, dest=None, **kwargs):
+def file_copy(src=None, dest=None):
     '''
     Copies the file from the local device to the junos device.
 
@@ -1055,14 +1060,6 @@ def file_copy(src=None, dest=None, **kwargs):
             'Please provide the absolute path of the destination where the file is to be copied.'
         ret['out'] = False
         return ret
-
-    op = dict()
-    if '__pub_arg' in kwargs:
-        if kwargs['__pub_arg']:
-            if isinstance(kwargs['__pub_arg'][-1], dict):
-                op.update(kwargs['__pub_arg'][-1])
-    else:
-        op.update(kwargs)
 
     try:
         with SCP(conn, progress=True) as scp:
