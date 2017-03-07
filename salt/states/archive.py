@@ -1333,10 +1333,6 @@ def extracted(name,
                                                           group=group,
                                                           recurse=recurse,
                                                           test=__opts__['test'])
-                try:
-                    dir_result = dir_result[next(iter(dir_result))]
-                except AttributeError:
-                    pass
                 log.debug('file.directory: %s', dir_result)
 
                 if __opts__['test']:
