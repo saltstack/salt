@@ -33,12 +33,12 @@ __virtualname__ = 'user'
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux, OpenBSD or NetBSD
+    Set the user module if the kernel is Linux, OpenBSD, NetBSD or AIX
     '''
 
-    if HAS_PWD and __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD'):
+    if HAS_PWD and __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD', 'AIX'):
         return __virtualname__
-    return (False, 'useradd execution module not loaded: either pwd python library not available or system not one of Linux, OpenBSD or NetBSD')
+    return (False, 'useradd execution module not loaded: either pwd python library not available or system not one of Linux, OpenBSD, NetBSD or AIX')
 
 
 def _quote_username(name):
@@ -94,7 +94,7 @@ def _update_gecos(name, key, value, root=None):
 
     cmd = ['usermod', '-c', _build_gecos(gecos_data), name]
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     __salt__['cmd.run'](cmd, python_shell=False)
@@ -181,7 +181,7 @@ def add(name,
     if home is not None:
         cmd.extend(['-d', home])
 
-    if not unique:
+    if not unique and __grains__['kernel'] != 'AIX':
         cmd.append('-o')
 
     if (system
@@ -195,7 +195,7 @@ def add(name,
 
     cmd.append(name)
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -244,7 +244,7 @@ def delete(name, remove=False, force=False, root=None):
 
     cmd.append(name)
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -324,7 +324,7 @@ def chgid(name, gid, root=None):
         return True
     cmd = ['usermod', '-g', '{0}'.format(gid), name]
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     __salt__['cmd.run'](cmd, python_shell=False)
@@ -346,7 +346,7 @@ def chshell(name, shell, root=None):
         return True
     cmd = ['usermod', '-s', shell, name]
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     __salt__['cmd.run'](cmd, python_shell=False)
@@ -369,7 +369,7 @@ def chhome(name, home, persist=False, root=None):
         return True
     cmd = ['usermod', '-d', '{0}'.format(home)]
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     if persist and __grains__['kernel'] != 'OpenBSD':
@@ -420,7 +420,7 @@ def chgroups(name, groups, append=False, root=None):
         cmd.append('-G')
     cmd.extend([','.join(groups), name])
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -652,7 +652,7 @@ def rename(name, new_name, root=None):
 
     cmd = ['usermod', '-l', '{0}'.format(new_name), '{0}'.format(name)]
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     __salt__['cmd.run'](cmd, python_shell=False)
