@@ -888,7 +888,7 @@ def install_config(path=None, **kwargs):
     except Exception as exception:
         ret['message'] = \
             'Commit check threw the following exception: "{0}"'\
-                .format(exception)
+            .format(exception)
 
         ret['out'] = False
         return ret
@@ -900,7 +900,7 @@ def install_config(path=None, **kwargs):
         except Exception as exception:
             ret['message'] = \
                 'Commit check successful but commit failed with "{0}"'\
-                    .format(exception)
+                .format(exception)
             ret['out'] = False
             return ret
     else:
