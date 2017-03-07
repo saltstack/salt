@@ -437,6 +437,14 @@ class Test_Junos_Module(unittest.TestCase):
         ret['message'] = 'Pre-commit check failed.'
         self.assertEqual(junos.commit(), ret)
 
+    @patch('jnpr.junos.utils.config.Config.rollback')
+    def test_rollback_exception(self, mock_rollback):
+        mock_rollback.side_effect = self.raise_exception
+        ret = dict()
+        ret['message'] = 'Rollback failed due to "Test exception"'
+        ret['out'] = False
+        self.assertEqual(junos.rollback(), ret)
+
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.rollback')
@@ -597,6 +605,43 @@ class Test_Junos_Module(unittest.TestCase):
         junos.rollback(**args)
         assert not mock_fopen.called
 
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.rollback')
+    def test_rollback_commit_check_exception(self,
+                                             mock_rollback,
+                                             mock_commit_check):
+        mock_commit_check.side_effect = self.raise_exception
+        ret = dict()
+        ret['message'] = 'Could not commit check due to "Test exception"'
+        ret['out'] = False
+        self.assertEqual(junos.rollback(), ret)
+
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.commit')
+    @patch('jnpr.junos.utils.config.Config.rollback')
+    def test_rollback_commit_exception(self,
+                                       mock_rollback,
+                                       mock_commit,
+                                       mock_commit_check):
+        mock_commit_check.return_value = True
+        mock_commit.side_effect = self.raise_exception
+        ret = dict()
+        ret['message'] = \
+            'Rollback successful but commit failed with error "Test exception"'
+        ret['out'] = False
+        self.assertEqual(junos.rollback(), ret)
+
+    @patch('jnpr.junos.utils.config.Config.commit_check')
+    @patch('jnpr.junos.utils.config.Config.rollback')
+    def test_rollback_commit_check_fails(self,
+                                         mock_rollback,
+                                         mock_commit_check):
+        mock_commit_check.return_value = False
+        ret = dict()
+        ret['message'] = 'Rollback succesfull but pre-commit check failed.'
+        ret['out'] = False
+        self.assertEqual(junos.rollback(), ret)
+
     @patch('jnpr.junos.utils.config.Config.diff')
     def test_diff_without_args(self, mock_diff):
         junos.diff()
@@ -606,6 +651,14 @@ class Test_Junos_Module(unittest.TestCase):
     def test_diff_with_arg(self, mock_diff):
         junos.diff(2)
         mock_diff.assert_called_with(rb_id=2)
+
+    @patch('jnpr.junos.utils.config.Config.diff')
+    def test_diff_exception(self, mock_diff):
+        mock_diff.side_effect = self.raise_exception
+        ret = dict()
+        ret['message'] = 'Could not get diff with error "Test exception"'
+        ret['out'] = False
+        self.assertEqual(junos.diff(), ret)
 
     def test_ping_without_args(self):
         ret = dict()
@@ -649,6 +702,11 @@ class Test_Junos_Module(unittest.TestCase):
         ret['message'] = 'Please provide the CLI command to be executed.'
         ret['out'] = False
         self.assertEqual(junos.cli(), ret)
+
+    @patch('jnpr.junos.device.Device.cli')
+    def test_cli_with_format_as_empty_string(self, mock_cli):
+        junos.cli('show version', '')
+        mock_cli.assert_called_with('show version', 'text', warning=False)
 
     @patch('jnpr.junos.device.Device.cli')
     def test_cli(self, mock_cli):
@@ -1132,16 +1190,16 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('os.path.isfile')
     @patch('os.path.getsize')
     def test_install_config_write_diff_exception(
-        self,
-        mock_getsize,
-        mock_isfile,
-        mock_mkstemp,
-        mock_safe_rm,
-        mock_load,
-        mock_diff,
-        mock_commit_check,
-        mock_commit,
-        mock_fopen):
+            self,
+            mock_getsize,
+            mock_isfile,
+            mock_mkstemp,
+            mock_safe_rm,
+            mock_load,
+            mock_diff,
+            mock_commit_check,
+            mock_commit,
+            mock_fopen):
         mock_isfile.return_value = True
         mock_getsize.return_value = 10
         mock_mkstemp.return_value = 'test/path/config'
@@ -1167,7 +1225,6 @@ class Test_Junos_Module(unittest.TestCase):
                 **args),
             ret)
         mock_fopen.assert_called_with('copy/config/here', 'w')
-
 
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.commit_check')
@@ -1463,7 +1520,11 @@ class Test_Junos_Module(unittest.TestCase):
         ret = dict()
         ret['message'] = 'Successfully copied file from test/src/file to file'
         ret['out'] = True
-        self.assertEqual(junos.file_copy(dest='file', src='test/src/file'), ret)
+        self.assertEqual(
+            junos.file_copy(
+                dest='file',
+                src='test/src/file'),
+            ret)
 
     @patch('salt.modules.junos.SCP')
     @patch('os.path.isfile')
@@ -1473,7 +1534,12 @@ class Test_Junos_Module(unittest.TestCase):
         ret = dict()
         ret['message'] = 'Could not copy file : "Test exception"'
         ret['out'] = False
-        self.assertEqual(junos.file_copy(dest='file', src='test/src/file'), ret)
+        self.assertEqual(
+            junos.file_copy(
+                dest='file',
+                src='test/src/file'),
+            ret)
+
 
 @attr('unit')
 class Test_Junos_RPC(unittest.TestCase):
@@ -1495,7 +1561,7 @@ class Test_Junos_RPC(unittest.TestCase):
         self.dev.bind(sw=SW)
         return self.dev
 
-    def test(self, *args, **kwargs):
+    def mock_func(self, *args, **kwargs):
         pass
 
     def raise_exception(self, *args, **kwargs):
@@ -1507,37 +1573,37 @@ class Test_Junos_RPC(unittest.TestCase):
         ret['out'] = False
         self.assertEqual(junos.rpc(), ret)
 
-    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.test')
+    @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mock_func')
     @patch('salt.modules.junos.getattr')
-    def test_rpc_get_config_exception(self, mock_attr, mock_test):
+    def test_rpc_get_config_exception(self, mock_attr, mock_func):
         mock_attr.return_value = self.raise_exception
         ret = dict()
         ret['message'] = 'RPC execution failed due to "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.rpc('get_config'), ret)
 
-    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.test')
+    @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mock_func')
     @patch('salt.modules.junos.getattr')
-    def test_rpc_get_interface_information(self, mock_attr, mock_test):
-        mock_attr.return_value = self.test
+    def test_rpc_get_interface_information(self, mock_attr, mock_func):
+        mock_attr.return_value = self.mock_func
         junos.rpc('get-interface-information', format='json')
-        mock_test.assert_called_with({'format': 'json'}, dev_timeout=30)
+        mock_func.assert_called_with({'format': 'json'}, dev_timeout=30)
 
-    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.test')
+    @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mock_func')
     @patch('salt.modules.junos.getattr')
     def test_rpc_get_interface_information_with_filter(
-            self, mock_attr, mock_test):
-        mock_attr.return_value = self.test
+            self, mock_attr, mock_func):
+        mock_attr.return_value = self.mock_func
         junos.rpc('get-interface-information', format='json',
                   filter='<configuration><system/></configuration>')
-        mock_test.assert_called_with({'format': 'json'},
+        mock_func.assert_called_with({'format': 'json'},
                                      dev_timeout=ANY,
                                      filter='<configuration><system/></configuration>')
 
-    @patch('tests.unit.modules.junos_test.Test_Junos_RPC.test')
+    @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mock_func')
     @patch('salt.modules.junos.getattr')
     def test_rpc_get_interface_information_exception(
-            self, mock_attr, mock_test):
+            self, mock_attr, mock_func):
         mock_attr.return_value = self.raise_exception
         ret = dict()
         ret['message'] = 'RPC execution failed due to "Test exception"'
