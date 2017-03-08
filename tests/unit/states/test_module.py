@@ -43,6 +43,7 @@ def _mocked_func_args(*args):
     :param args:
     :return:
     '''
+    assert args == ('foo', 'bar')
     return {'args': args}
 
 
@@ -103,6 +104,9 @@ class ModuleStateTest(TestCase):
                 CMD, module.__salt__[CMD].func_name)
             assert not ret['result']
 
+    def test_xrun_args(self):
+        with patch.dict(module.__salt__, {CMD: _mocked_func_args}):
+            assert module.xrun(**{CMD: ['foo', 'bar']})['result']
 
     def test_module_run_module_not_available(self):
         '''
