@@ -75,6 +75,16 @@ class ModuleStateTest(TestCase):
             ret = module.xrun(**{CMD: None})
             assert ret['comment'] == "'{0}' failed: Missing arguments: name".format(CMD)
 
+    def test_xrun_correct_arg(self):
+        '''
+        Tests the return of module.xrun state when arguments are correct
+        :return:
+        '''
+        with patch.dict(module.__salt__, {CMD: _mocked_func_named}):
+            ret = module.xrun(**{CMD: [{'name': 'Fred'}]})
+            assert ret['comment'] == '{0}: Success'.format(CMD)
+            assert ret['result']
+
 
     def test_module_run_module_not_available(self):
         '''
