@@ -137,6 +137,18 @@ class ModuleStateTest(TestCase):
             with patch.dict(module.__salt__, {CMD: _mocked_none_return}):
                 assert module.xrun(**{CMD: [{'ret': val}]})['result']
 
+    def test_xrun_batch_call(self):
+        '''
+        Test batch call
+        :return:
+        '''
+        with patch.dict(module.__salt__,
+                        {'first': _mocked_none_return,
+                         'second': _mocked_none_return,
+                         'third': _mocked_none_return}, clear=True):
+            for f_name in module.__salt__:
+                assert module.xrun(**{f_name: None})['result']
+
     def test_module_run_module_not_available(self):
         '''
         Tests the return of module.run state when the module function
