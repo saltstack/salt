@@ -273,13 +273,14 @@ def raw_mod(opts, name, functions, mod='modules'):
     return dict(loader._dict)  # return a copy of *just* the funcs for `name`
 
 
-def engines(opts, functions, runners, proxy=None):
+def engines(opts, functions, runners, utils, proxy=None):
     '''
     Return the master services plugins
     '''
     pack = {'__salt__': functions,
             '__runners__': runners,
-            '__proxy__': proxy}
+            '__proxy__': proxy,
+            '__utils__': utils}
     return LazyLoader(
         _module_dirs(opts, 'engines'),
         opts,
