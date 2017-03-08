@@ -222,7 +222,8 @@ def xrun(**kwargs):
     :return:
     '''
 
-    'name' in kwargs and kwargs.pop('name')
+    if 'name' in kwargs:
+        kwargs.pop('name')
     ret = {
         'name': kwargs.keys(),
         'changes': {},
