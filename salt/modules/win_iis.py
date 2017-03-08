@@ -1791,7 +1791,7 @@ def get_webapp_settings(name, site, settings):
     .. versionadded:: 2016.11.0
     CLI Example:
     .. code-block:: bash
-        salt '*' win_iisV2.get_webapp_settings name='app0' site='Default Web Site'
+        salt '*' win_iis.get_webapp_settings name='app0' site='Default Web Site'
             settings="['physicalPath','applicationPool']"
     '''
     ret = dict()
