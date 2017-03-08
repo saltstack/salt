@@ -25,6 +25,16 @@ module.__salt__ = {CMD: MOCK}
 module.__opts__ = {'test': False}
 
 
+def _mocked_func_named(name, names=('Fred', 'Swen',)):
+    '''
+    Mocked function with named defaults.
+
+    :param name:
+    :param names:
+    :return:
+    '''
+    return {'name': name, 'names': names}
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ModuleStateTest(TestCase):
     '''
@@ -57,6 +67,16 @@ class ModuleStateTest(TestCase):
             ret = module.xrun(**cmd)
             assert ret['comment'] == "Module function '{0}' is set to execute".format(CMD)
             assert ret['result']
+
+    def test_xrun_missing_arg(self):
+        '''
+        Tests the return of module.xrun state when arguments are missing
+        :return:
+        '''
+        with patch.dict(module.__salt__, {CMD: _mocked_func_named}):
+            ret = module.xrun(**{CMD: None})
+            assert ret['comment'] == "'{0}' failed: Missing arguments: name".format(CMD)
+
 
     def test_module_run_module_not_available(self):
         '''
