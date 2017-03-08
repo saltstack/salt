@@ -3811,13 +3811,13 @@ def get_managed(
         if cached_dest and (source_hash or skip_verify):
             htype = source_sum.get('hash_type', 'sha256')
             cached_sum = get_hash(cached_dest, form=htype)
-            if cached_sum != source_sum['hsum']:
-                cache_refetch = True
-            elif skip_verify:
+            if skip_verify:
                 # prev: if skip_verify or cached_sum == source_sum['hsum']:
                 # but `cached_sum == source_sum['hsum']` is elliptical as prev if
                 sfn = cached_dest
                 source_sum = {'hsum': cached_sum, 'hash_type': htype}
+            elif cached_sum != source_sum['hsum']:
+                cache_refetch = True
 
         # If we didn't have the template or remote file, let's get it
         # Similarly when the file has been updated and the cache has to be refreshed
