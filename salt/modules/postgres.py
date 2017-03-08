@@ -34,7 +34,6 @@ Module to provide Postgres compatibility to salt.
 # Import python libs
 from __future__ import absolute_import
 import datetime
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
 import hashlib
 import os
@@ -52,6 +51,7 @@ import salt.utils
 import salt.utils.files
 import salt.utils.itertools
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -293,7 +293,7 @@ def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
     )
 
     if psql_version:
-        return distutils.version.LooseVersion(psql_version)
+        return _LooseVersion(psql_version)
     else:
         log.warning('Attempt to parse version of Postgres server failed. '
                     'Is the server responding?')
@@ -810,11 +810,11 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
                           password=password,
                           runas=runas)
     if ver:
-        if ver >= distutils.version.LooseVersion('9.1'):
+        if ver >= _LooseVersion('9.1'):
             replication_column = 'pg_roles.rolreplication'
         else:
             replication_column = 'NULL'
-        if ver >= distutils.version.LooseVersion('9.5'):
+        if ver >= _LooseVersion('9.5'):
             rolcatupdate_column = 'NULL'
         else:
             rolcatupdate_column = 'pg_roles.rolcatupdate'

@@ -14,7 +14,6 @@ Sign, encrypt and sign plus encrypt text and files.
 
 # Import python libs
 from __future__ import absolute_import
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 import functools
 import logging
 import os
@@ -25,6 +24,7 @@ import time
 import salt.utils
 import salt.syspaths
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -97,7 +97,7 @@ def __virtual__():
         return (False, 'The gpg execution module cannot be loaded: '
                 'gpg binary is not in the path.')
     if HAS_LIBS:
-        gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
+        gnupg_version = _LooseVersion(gnupg.__version__)
         if gnupg_version >= '1.3.1':
             global GPG_1_3_1
             GPG_1_3_1 = True
@@ -1013,7 +1013,7 @@ def sign(user=None,
 
     # Check for at least one secret key to sign with
 
-    gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
+    gnupg_version = _LooseVersion(gnupg.__version__)
     if text:
         if gnupg_version >= '1.3.1':
             signed_data = gpg.sign(text, default_key=keyid, passphrase=gpg_passphrase)

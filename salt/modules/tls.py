@@ -103,29 +103,30 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import re
 import time
 import calendar
 import logging
 import math
 import binascii
 import salt.utils
-from salt._compat import string_types
-from salt.ext.six.moves import range as _range
 from datetime import datetime
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 
-import re
+# Import salt libs
+from salt.utils.versions import LooseVersion as _LooseVersion
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range as _range
 
 HAS_SSL = False
 X509_EXT_ENABLED = True
 try:
     import OpenSSL
     HAS_SSL = True
-    OpenSSL_version = LooseVersion(OpenSSL.__dict__.get('__version__', '0.0'))
+    OpenSSL_version = _LooseVersion(OpenSSL.__dict__.get('__version__', '0.0'))
 except ImportError:
     pass
-
-# Import salt libs
 
 
 log = logging.getLogger(__name__)
@@ -139,12 +140,12 @@ def __virtual__():
     Only load this module if the ca config options are set
     '''
     global X509_EXT_ENABLED
-    if HAS_SSL and OpenSSL_version >= LooseVersion('0.10'):
-        if OpenSSL_version < LooseVersion('0.14'):
+    if HAS_SSL and OpenSSL_version >= _LooseVersion('0.10'):
+        if OpenSSL_version < _LooseVersion('0.14'):
             X509_EXT_ENABLED = False
             log.debug('You should upgrade pyOpenSSL to at least 0.14.1 to '
                       'enable the use of X509 extensions in the tls module')
-        elif OpenSSL_version <= LooseVersion('0.15'):
+        elif OpenSSL_version <= _LooseVersion('0.15'):
             log.debug('You should upgrade pyOpenSSL to at least 0.15.1 to '
                       'enable the full use of X509 extensions in the tls module')
         # NOTE: Not having configured a cert path should not prevent this
@@ -548,18 +549,18 @@ def _check_onlyif_unless(onlyif, unless):
     ret = None
     retcode = __salt__['cmd.retcode']
     if onlyif is not None:
-        if not isinstance(onlyif, string_types):
+        if not isinstance(onlyif, six.string_types):
             if not onlyif:
                 ret = {'comment': 'onlyif execution failed', 'result': True}
-        elif isinstance(onlyif, string_types):
+        elif isinstance(onlyif, six.string_types):
             if retcode(onlyif) != 0:
                 ret = {'comment': 'onlyif execution failed', 'result': True}
                 log.debug('onlyif execution failed')
     if unless is not None:
-        if not isinstance(unless, string_types):
+        if not isinstance(unless, six.string_types):
             if unless:
                 ret = {'comment': 'unless execution succeeded', 'result': True}
-        elif isinstance(unless, string_types):
+        elif isinstance(unless, six.string_types):
             if retcode(unless) == 0:
                 ret = {'comment': 'unless execution succeeded', 'result': True}
                 log.debug('unless execution succeeded')

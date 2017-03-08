@@ -6,7 +6,6 @@ Tests for the file state
 
 # Import python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion
 import errno
 import glob
 import os
@@ -26,6 +25,7 @@ from tests.support.helpers import skip_if_not_root, with_system_user_and_group
 
 # Import salt libs
 import salt.utils
+from salt.utils.versions import LooseVersion
 
 HAS_PWD = True
 try:
