@@ -428,7 +428,7 @@ def run(name, **kwargs):
         if kwargs['returner'] in returners:
             returners[kwargs['returner']](ret_ret)
     ret['comment'] = 'Module function {0} executed'.format(name)
-    ret['result'] = _get_result(mret, ret['changes'].get('ret', {}))
+    ret['result'] = _get_result(mret, ret['changes'])
 
     return ret
 
