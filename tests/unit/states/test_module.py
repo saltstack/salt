@@ -47,6 +47,17 @@ class ModuleStateTest(TestCase):
             assert ret['comment'] == "Module function '{0}' is not available".format(cmd.keys()[0])
             assert not ret['result']
 
+    def test_xrun_testmode(self):
+        '''
+        Tests the return of the module.xrun state when test=True is passed.
+        :return:
+        '''
+        with patch.dict(module.__opts__, {'test': True}):
+            cmd = {CMD: None}
+            ret = module.xrun(**cmd)
+            assert ret['comment'] == "Module function '{0}' is set to execute".format(CMD)
+            assert ret['result']
+
     def test_module_run_module_not_available(self):
         '''
         Tests the return of module.run state when the module function
