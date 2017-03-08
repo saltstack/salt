@@ -52,9 +52,8 @@ class ModuleStateTest(TestCase):
         :return:
         '''
         with patch.dict(module.__salt__, {}, clear=True):
-            cmd = {CMD: None}
-            ret = module.xrun(**cmd)
-            assert ret['comment'] == "Module function '{0}' is not available".format(cmd.keys()[0])
+            ret = module.xrun(**{CMD: None})
+            assert ret['comment'] == "Module function '{0}' is not available".format(CMD)
             assert not ret['result']
 
     def test_xrun_testmode(self):
@@ -63,8 +62,7 @@ class ModuleStateTest(TestCase):
         :return:
         '''
         with patch.dict(module.__opts__, {'test': True}):
-            cmd = {CMD: None}
-            ret = module.xrun(**cmd)
+            ret = module.xrun(**{CMD: None})
             assert ret['comment'] == "Module function '{0}' is set to execute".format(CMD)
             assert ret['result']
 
