@@ -47,6 +47,13 @@ def _mocked_func_args(*args):
     return {'args': args}
 
 
+def _mocked_none_return():
+    '''
+    Mocked function returns None
+    :return:
+    '''
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ModuleStateTest(TestCase):
     '''
@@ -111,6 +118,14 @@ class ModuleStateTest(TestCase):
         '''
         with patch.dict(module.__salt__, {CMD: _mocked_func_args}):
             assert module.xrun(**{CMD: ['foo', 'bar']})['result']
+
+    def test_xrun_none_return(self):
+        '''
+        Test handling of a broken function that returns None.
+        :return:
+        '''
+        with patch.dict(module.__salt__, {CMD: _mocked_none_return}):
+            assert module.xrun(**{CMD: None})['result']
 
     def test_module_run_module_not_available(self):
         '''
