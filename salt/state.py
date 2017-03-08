@@ -1954,6 +1954,29 @@ class State(object):
         '''
         Iterate over a list of chunks and call them, checking for requires.
         '''
+        # Check for any disabled states
+        disabled = {}
+        if 'state_runs_disabled' in self.opts['grains']:
+            for low in chunks[:]:
+                state_ = '{0}.{1}'.format(low['state'], low['fun'])
+                for pat in self.opts['grains']['state_runs_disabled']:
+                    if fnmatch.fnmatch(state_, pat):
+                        comment = (
+                                    'The state function "{0}" is currently disabled by "{1}", '
+                                    'to re-enable, run state.enable {1}.'
+                                  ).format(
+                                    state_,
+                                    pat,
+                                  )
+                        _tag = _gen_tag(low)
+                        disabled[_tag] = {'changes': {},
+                                          'result': False,
+                                          'comment': comment,
+                                          '__run_num__': self.__run_num,
+                                          '__sls__': low['__sls__']}
+                        self.__run_num += 1
+                        chunks.remove(low)
+                        break
         running = {}
         for low in chunks:
             if '__FAILHARD__' in running:
@@ -1969,7 +1992,8 @@ class State(object):
             if self.reconcile_procs(running):
                 break
             time.sleep(0.01)
-        return running
+        ret = dict(list(disabled.items()) + list(running.items()))
+        return ret
 
     def check_failhard(self, low, running):
         '''
@@ -2455,35 +2479,11 @@ class State(object):
         # Compile and verify the raw chunks
         chunks = self.compile_high_data(high, orchestration_jid)
 
-        # Check for any disabled states
-        disabled = {}
-        if 'state_runs_disabled' in self.opts['grains']:
-            for low in chunks[:]:
-                state_ = '{0}.{1}'.format(low['state'], low['fun'])
-                for pat in self.opts['grains']['state_runs_disabled']:
-                    if fnmatch.fnmatch(state_, pat):
-                        comment = (
-                                    'The state function "{0}" is currently disabled by "{1}", '
-                                    'to re-enable, run state.enable {1}.'
-                                  ).format(
-                                    state_,
-                                    pat,
-                                  )
-                        _tag = _gen_tag(low)
-                        disabled[_tag] = {'changes': {},
-                                          'result': False,
-                                          'comment': comment,
-                                          '__run_num__': self.__run_num,
-                                          '__sls__': low['__sls__']}
-                        self.__run_num += 1
-                        chunks.remove(low)
-                        break
-
         # If there are extensions in the highstate, process them and update
         # the low data chunks
         if errors:
             return errors
-        ret = dict(list(disabled.items()) + list(self.call_chunks(chunks).items()))
+        ret = self.call_chunks(chunks)
         ret = self.call_listen(chunks, ret)
 
         def _cleanup_accumulator_data():
