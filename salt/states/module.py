@@ -211,7 +211,7 @@ def xrun(**kwargs):
                     failures.append("'{0}' failed: {1}".format(func_ret.get('comment', '(error message N/A)')))
                 else:
                     success.append('{0}: {1}'.format(func, func_ret.get('comment', 'Success')))
-            except SaltInvocationError as ex:
+            except (SaltInvocationError, TypeError) as ex:
                 failures.append("'{0}' failed: {1}".format(func, ex))
         ret['comment'] = ', '.join(failures + success)
         ret['result'] = not bool(failures)
