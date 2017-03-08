@@ -436,3 +436,6 @@ class PipModuleTest(integration.ModuleCase):
             shutil.rmtree(self.venv_test_dir)
         if os.path.isdir(self.pip_temp):
             shutil.rmtree(self.pip_temp)
+        del self.venv_dir
+        del self.venv_test_dir
+        del self.pip_temp

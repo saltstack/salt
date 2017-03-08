@@ -2,7 +2,7 @@
 
 # Import Python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import logging
 import random
 import string
 
@@ -18,15 +18,14 @@ from tests.support.mock import (
 # Import Salt libs
 import salt.config
 import salt.loader
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.utils.versions import LooseVersion
 
-# Import 3rd-party libs
-import logging
 
 # pylint: disable=import-error,no-name-in-module,unused-import
 from tests.unit.modules.test_boto_cloudtrail import BotoCloudTrailTestCaseMixin
 
 # Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 try:
     import boto
     import boto3

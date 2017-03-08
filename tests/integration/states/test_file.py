@@ -6,7 +6,6 @@ Tests for the file state
 
 # Import python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion
 import errno
 import glob
 import os
@@ -21,10 +20,12 @@ import filecmp
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import skipIf
+from tests.support.paths import FILES, TMP, TMP_STATE_TREE
 from tests.support.helpers import skip_if_not_root, with_system_user_and_group
 
 # Import salt libs
 import salt.utils
+from salt.utils.versions import LooseVersion
 
 HAS_PWD = True
 try:
@@ -53,7 +54,7 @@ try:
 except ImportError:
     HAS_GIT_PYTHON = False
 
-STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
+STATE_DIR = os.path.join(FILES, 'file', 'base')
 if IS_WINDOWS:
     FILEPILLAR = 'C:\\Windows\\Temp\\filepillar-python'
     FILEPILLARDEF = 'C:\\Windows\\Temp\\filepillar-defaultvalue'
@@ -69,8 +70,8 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
     DRY helper function to run the same test with a local or remote path
     '''
     rel_path = 'grail/scene33'
-    name = os.path.join(integration.TMP, os.path.basename(rel_path))
-    grail_fs_path = os.path.join(integration.FILES, 'file', 'base', rel_path)
+    name = os.path.join(TMP, os.path.basename(rel_path))
+    grail_fs_path = os.path.join(FILES, 'file', 'base', rel_path)
     grail = 'salt://' + rel_path if not local else grail_fs_path
 
     # Get the current mode so that we can put the file back the way we
@@ -139,8 +140,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.symlink
         '''
-        name = os.path.join(integration.TMP, 'symlink')
-        tgt = os.path.join(integration.TMP, 'target')
+        name = os.path.join(TMP, 'symlink')
+        tgt = os.path.join(TMP, 'target')
 
         # Windows must have a source directory to link to
         if IS_WINDOWS and not os.path.isdir(tgt):
@@ -157,8 +158,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.symlink test interface
         '''
-        name = os.path.join(integration.TMP, 'symlink2')
-        tgt = os.path.join(integration.TMP, 'target')
+        name = os.path.join(TMP, 'symlink2')
+        tgt = os.path.join(TMP, 'target')
         ret = self.run_state('file.symlink', test=True, name=name, target=tgt)
         self.assertSaltNoneReturn(ret)
 
@@ -166,7 +167,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.absent
         '''
-        name = os.path.join(integration.TMP, 'file_to_kill')
+        name = os.path.join(TMP, 'file_to_kill')
         with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('killme')
         ret = self.run_state('file.absent', name=name)
@@ -177,7 +178,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.absent
         '''
-        name = os.path.join(integration.TMP, 'dir_to_kill')
+        name = os.path.join(TMP, 'dir_to_kill')
         if not os.path.isdir(name):
             # left behind... Don't fail because of this!
             os.makedirs(name)
@@ -189,7 +190,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.absent
         '''
-        name = os.path.join(integration.TMP, 'link_to_kill')
+        name = os.path.join(TMP, 'link_to_kill')
         tgt = '{0}.tgt'.format(name)
 
         # Windows must have a source directory to link to
@@ -212,7 +213,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.absent test interface
         '''
-        name = os.path.join(integration.TMP, 'file_to_kill')
+        name = os.path.join(TMP, 'file_to_kill')
         with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('killme')
         ret = self.run_state('file.absent', test=True, name=name)
@@ -226,12 +227,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.managed
         '''
-        name = os.path.join(integration.TMP, 'grail_scene33')
+        name = os.path.join(TMP, 'grail_scene33')
         ret = self.run_state(
             'file.managed', name=name, source='salt://grail/scene33'
         )
         src = os.path.join(
-            integration.FILES, 'file', 'base', 'grail', 'scene33'
+            FILES, 'file', 'base', 'grail', 'scene33'
         )
         with salt.utils.fopen(src, 'r') as fp_:
             master_data = fp_.read()
@@ -245,7 +246,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         file.managed, correct file permissions
         '''
         desired_mode = 504    # 0770 octal
-        name = os.path.join(integration.TMP, 'grail_scene33')
+        name = os.path.join(TMP, 'grail_scene33')
         ret = self.run_state(
             'file.managed', name=name, mode='0770', source='salt://grail/scene33'
         )
@@ -281,7 +282,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         initial_mode = 504    # 0770 octal
         desired_mode = 384    # 0600 octal
-        name = os.path.join(integration.TMP, 'grail_scene33')
+        name = os.path.join(TMP, 'grail_scene33')
         ret = self.run_state(
             'file.managed', name=name, mode=oct(initial_mode), source='salt://grail/scene33'
         )
@@ -297,7 +298,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         )
         self.assertEqual(oct(initial_mode), oct(resulting_mode))
 
-        name = os.path.join(integration.TMP, 'grail_scene33')
+        name = os.path.join(TMP, 'grail_scene33')
         ret = self.run_state(
             'file.managed', name=name, replace=True, mode=oct(desired_mode), source='salt://grail/scene33'
         )
@@ -313,7 +314,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         initial_mode = 504    # 0770 octal
         desired_mode = 384    # 0600 octal
-        name = os.path.join(integration.TMP, 'grail_scene33')
+        name = os.path.join(TMP, 'grail_scene33')
         ret = self.run_state(
             'file.managed', name=name, replace=True, mode=oct(initial_mode), source='salt://grail/scene33'
         )
@@ -338,7 +339,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         Test to ensure we can render grains data into a managed
         file.
         '''
-        grain_path = os.path.join(integration.TMP, 'file-grain-test')
+        grain_path = os.path.join(TMP, 'file-grain-test')
         self.run_function('grains.set', ['grain_path', grain_path])
         state_file = 'file-grainget'
 
@@ -401,7 +402,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         permissions requested with the dir_mode argument
         '''
         desired_mode = 511  # 0777 in octal
-        name = os.path.join(integration.TMP, 'a', 'managed_dir_mode_test_file')
+        name = os.path.join(TMP, 'a', 'managed_dir_mode_test_file')
         desired_owner = 'nobody'
         ret = self.run_state(
             'file.managed',
@@ -419,9 +420,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             return
 
         resulting_mode = stat.S_IMODE(
-            os.stat(os.path.join(integration.TMP, 'a')).st_mode
+            os.stat(os.path.join(TMP, 'a')).st_mode
         )
-        resulting_owner = pwd.getpwuid(os.stat(os.path.join(integration.TMP, 'a')).st_uid).pw_name
+        resulting_owner = pwd.getpwuid(os.stat(os.path.join(TMP, 'a')).st_uid).pw_name
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
         self.assertEqual(desired_owner, resulting_owner)
@@ -430,7 +431,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.managed test interface
         '''
-        name = os.path.join(integration.TMP, 'grail_not_not_scene33')
+        name = os.path.join(TMP, 'grail_not_not_scene33')
         ret = self.run_state(
             'file.managed', test=True, name=name, source='salt://grail/scene33'
         )
@@ -441,7 +442,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.managed test interface
         '''
-        name = os.path.join(integration.TMP, 'grail_not_scene33')
+        name = os.path.join(TMP, 'grail_not_scene33')
         with salt.utils.fopen(name, 'wb') as fp_:
             fp_.write(six.b('test_managed_show_changes_false\n'))
 
@@ -583,7 +584,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.directory
         '''
-        name = os.path.join(integration.TMP, 'a_new_dir')
+        name = os.path.join(TMP, 'a_new_dir')
         ret = self.run_state('file.directory', name=name)
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(name))
@@ -594,8 +595,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         test=True
         '''
         try:
-            tmp_dir = os.path.join(integration.TMP, 'pgdata')
-            sym_dir = os.path.join(integration.TMP, 'pg_data')
+            tmp_dir = os.path.join(TMP, 'pgdata')
+            sym_dir = os.path.join(TMP, 'pg_data')
             os.mkdir(tmp_dir, 0o700)
             os.symlink(tmp_dir, sym_dir)
 
@@ -625,7 +626,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             '''
             return salt.utils.normalize_mode(oct(os.stat(name).st_mode & 0o777))
 
-        top = os.path.join(integration.TMP, 'top_dir')
+        top = os.path.join(TMP, 'top_dir')
         sub = os.path.join(top, 'sub_dir')
         subsub = os.path.join(sub, 'sub_sub_dir')
         dirs = [top, sub, subsub]
@@ -657,7 +658,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.directory
         '''
-        name = os.path.join(integration.TMP, 'a_not_dir')
+        name = os.path.join(TMP, 'a_not_dir')
         ret = self.run_state('file.directory', test=True, name=name)
         self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isdir(name))
@@ -666,7 +667,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.directory with clean=True
         '''
-        name = os.path.join(integration.TMP, 'directory_clean_dir')
+        name = os.path.join(TMP, 'directory_clean_dir')
         if not os.path.isdir(name):
             os.makedirs(name)
 
@@ -694,7 +695,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.directory with clean=True and exclude_pat set
         '''
-        name = os.path.join(integration.TMP, 'directory_clean_dir')
+        name = os.path.join(TMP, 'directory_clean_dir')
         if not os.path.isdir(name):
             os.makedirs(name)
 
@@ -735,7 +736,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.directory with test=True, clean=True and exclude_pat set
         '''
-        name = os.path.join(integration.TMP, 'directory_clean_dir')
+        name = os.path.join(TMP, 'directory_clean_dir')
         if not os.path.isdir(name):
             os.makedirs(name)
 
@@ -891,7 +892,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.recurse
         '''
-        name = os.path.join(integration.TMP, 'recurse_dir')
+        name = os.path.join(TMP, 'recurse_dir')
         ret = self.run_state('file.recurse', name=name, source='salt://grail')
         try:
             self.assertSaltTrueReturn(ret)
@@ -904,7 +905,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.recurse passing __env__
         '''
-        name = os.path.join(integration.TMP, 'recurse_dir_prod_env')
+        name = os.path.join(TMP, 'recurse_dir_prod_env')
         ret = self.run_state('file.recurse',
                              name=name,
                              source='salt://holy',
@@ -916,7 +917,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(name):
                 shutil.rmtree(name, ignore_errors=True)
 
-        name = os.path.join(integration.TMP, 'recurse_dir_prod_env')
+        name = os.path.join(TMP, 'recurse_dir_prod_env')
         ret = self.run_state('file.recurse',
                              name=name,
                              source='salt://holy',
@@ -932,7 +933,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.recurse passing __env__
         '''
-        name = os.path.join(integration.TMP, 'recurse_dir_prod_env')
+        name = os.path.join(TMP, 'recurse_dir_prod_env')
         ret = self.run_state('file.recurse',
                              name=name,
                              source='salt://holy?saltenv=prod')
@@ -943,7 +944,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(name):
                 shutil.rmtree(name, ignore_errors=True)
 
-        name = os.path.join(integration.TMP, 'recurse_dir_prod_env')
+        name = os.path.join(TMP, 'recurse_dir_prod_env')
         ret = self.run_state('file.recurse',
                              name=name,
                              source='salt://holy?saltenv=prod')
@@ -958,7 +959,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.recurse test interface
         '''
-        name = os.path.join(integration.TMP, 'recurse_test_dir')
+        name = os.path.join(TMP, 'recurse_test_dir')
         ret = self.run_state(
             'file.recurse', test=True, name=name, source='salt://grail',
         )
@@ -970,7 +971,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.recurse test interface
         '''
-        name = os.path.join(integration.TMP, 'recurse_test_dir_prod_env')
+        name = os.path.join(TMP, 'recurse_test_dir_prod_env')
         ret = self.run_state('file.recurse',
                              test=True,
                              name=name,
@@ -981,7 +982,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertFalse(os.path.isfile(os.path.join(name, '32', 'scene')))
         self.assertFalse(os.path.exists(name))
 
-        name = os.path.join(integration.TMP, 'recurse_test_dir_prod_env')
+        name = os.path.join(TMP, 'recurse_test_dir_prod_env')
         ret = self.run_state('file.recurse',
                              test=True,
                              name=name,
@@ -997,7 +998,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         file.recurse with jinja template enabled
         '''
         _ts = 'TEMPLATE TEST STRING'
-        name = os.path.join(integration.TMP, 'recurse_template_dir')
+        name = os.path.join(TMP, 'recurse_template_dir')
         ret = self.run_state(
             'file.recurse', name=name, source='salt://grail',
             template='jinja', defaults={'spam': _ts})
@@ -1013,7 +1014,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.recurse with clean=True
         '''
-        name = os.path.join(integration.TMP, 'recurse_clean_dir')
+        name = os.path.join(TMP, 'recurse_clean_dir')
         if not os.path.isdir(name):
             os.makedirs(name)
         strayfile = os.path.join(name, 'strayfile')
@@ -1038,7 +1039,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.recurse with clean=True and __env__=prod
         '''
-        name = os.path.join(integration.TMP, 'recurse_clean_dir_prod_env')
+        name = os.path.join(TMP, 'recurse_clean_dir_prod_env')
         if not os.path.isdir(name):
             os.makedirs(name)
         strayfile = os.path.join(name, 'strayfile')
@@ -1079,7 +1080,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         dir_mode = '2775'
         issue_dir = 'issue-34945'
-        name = os.path.join(integration.TMP, issue_dir)
+        name = os.path.join(TMP, issue_dir)
 
         try:
             ret = self.run_state('file.recurse',
@@ -1096,7 +1097,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.replace
         '''
-        name = os.path.join(integration.TMP, 'replace_test')
+        name = os.path.join(TMP, 'replace_test')
         with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('change_me')
 
@@ -1125,7 +1126,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         The commented line should be uncommented in the end, nothing else should change
         '''
         test_name = 'test_replace_issue_18612'
-        path_test = os.path.join(integration.TMP, test_name)
+        path_test = os.path.join(TMP, test_name)
 
         with salt.utils.fopen(path_test, 'w+') as fp_test_:
             fp_test_.write('# en_US.UTF-8')
@@ -1165,12 +1166,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         test_name = 'test_replace_issue_18612_prepend'
         path_in = os.path.join(
-            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+            FILES, 'file.replace', '{0}.in'.format(test_name)
         )
         path_out = os.path.join(
-            integration.FILES, 'file.replace', '{0}.out'.format(test_name)
+            FILES, 'file.replace', '{0}.out'.format(test_name)
         )
-        path_test = os.path.join(integration.TMP, test_name)
+        path_test = os.path.join(TMP, test_name)
 
         # create test file based on initial template
         shutil.copyfile(path_in, path_test)
@@ -1208,12 +1209,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         test_name = 'test_replace_issue_18612_append'
         path_in = os.path.join(
-            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+            FILES, 'file.replace', '{0}.in'.format(test_name)
         )
         path_out = os.path.join(
-            integration.FILES, 'file.replace', '{0}.out'.format(test_name)
+            FILES, 'file.replace', '{0}.out'.format(test_name)
         )
-        path_test = os.path.join(integration.TMP, test_name)
+        path_test = os.path.join(TMP, test_name)
 
         # create test file based on initial template
         shutil.copyfile(path_in, path_test)
@@ -1251,12 +1252,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         test_name = 'test_replace_issue_18612_append_not_found_content'
         path_in = os.path.join(
-            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+            FILES, 'file.replace', '{0}.in'.format(test_name)
         )
         path_out = os.path.join(
-            integration.FILES, 'file.replace', '{0}.out'.format(test_name)
+            FILES, 'file.replace', '{0}.out'.format(test_name)
         )
-        path_test = os.path.join(integration.TMP, test_name)
+        path_test = os.path.join(TMP, test_name)
 
         # create test file based on initial template
         shutil.copyfile(path_in, path_test)
@@ -1301,12 +1302,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         test_name = 'test_replace_issue_18612_change_mid_line_with_comment'
         path_in = os.path.join(
-            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+            FILES, 'file.replace', '{0}.in'.format(test_name)
         )
         path_out = os.path.join(
-            integration.FILES, 'file.replace', '{0}.out'.format(test_name)
+            FILES, 'file.replace', '{0}.out'.format(test_name)
         )
-        path_test = os.path.join(integration.TMP, test_name)
+        path_test = os.path.join(TMP, test_name)
 
         # create test file based on initial template
         shutil.copyfile(path_in, path_test)
@@ -1346,9 +1347,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         test_name = 'test_replace_issue_18841_no_changes'
         path_in = os.path.join(
-            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+            FILES, 'file.replace', '{0}.in'.format(test_name)
         )
-        path_test = os.path.join(integration.TMP, test_name)
+        path_test = os.path.join(TMP, test_name)
 
         # create test file based on initial template
         shutil.copyfile(path_in, path_test)
@@ -1394,7 +1395,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         Test to ensure that file.serialize returns a data structure that's
         both serialized and formatted properly
         '''
-        path_test = os.path.join(integration.TMP, 'test_serialize')
+        path_test = os.path.join(TMP, 'test_serialize')
         ret = self.run_state('file.serialize',
                 name=path_test,
                 dataset={'name': 'naive',
@@ -1435,9 +1436,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         test_name = 'test_replace_issue_18841_omit_backup'
         path_in = os.path.join(
-            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+            FILES, 'file.replace', '{0}.in'.format(test_name)
         )
-        path_test = os.path.join(integration.TMP, test_name)
+        path_test = os.path.join(TMP, test_name)
 
         # create test file based on initial template
         shutil.copyfile(path_in, path_test)
@@ -1481,7 +1482,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.comment
         '''
-        name = os.path.join(integration.TMP, 'comment_test')
+        name = os.path.join(TMP, 'comment_test')
         try:
             # write a line to file
             with salt.utils.fopen(name, 'w+') as fp_:
@@ -1519,7 +1520,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.comment test interface
         '''
-        name = os.path.join(integration.TMP, 'comment_test_test')
+        name = os.path.join(TMP, 'comment_test_test')
         try:
             with salt.utils.fopen(name, 'w+') as fp_:
                 fp_.write('comment_me')
@@ -1536,7 +1537,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.uncomment
         '''
-        name = os.path.join(integration.TMP, 'uncomment_test')
+        name = os.path.join(TMP, 'uncomment_test')
         try:
             with salt.utils.fopen(name, 'w+') as fp_:
                 fp_.write('#comment_me')
@@ -1551,7 +1552,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.comment test interface
         '''
-        name = os.path.join(integration.TMP, 'uncomment_test_test')
+        name = os.path.join(TMP, 'uncomment_test_test')
         try:
             with salt.utils.fopen(name, 'w+') as fp_:
                 fp_.write('#comment_me')
@@ -1568,7 +1569,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.append
         '''
-        name = os.path.join(integration.TMP, 'append_test')
+        name = os.path.join(TMP, 'append_test')
         try:
             with salt.utils.fopen(name, 'w+') as fp_:
                 fp_.write('#salty!')
@@ -1583,7 +1584,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.append test interface
         '''
-        name = os.path.join(integration.TMP, 'append_test_test')
+        name = os.path.join(TMP, 'append_test_test')
         try:
             with salt.utils.fopen(name, 'w+') as fp_:
                 fp_.write('#salty!')
@@ -1602,7 +1603,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         the file if it doesn't exist
         '''
         fname = 'append_issue_1864_makedirs'
-        name = os.path.join(integration.TMP, fname)
+        name = os.path.join(TMP, fname)
         try:
             self.assertFalse(os.path.exists(name))
         except AssertionError:
@@ -1621,7 +1622,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 os.remove(name)
 
         # Nested directory and file get's touched
-        name = os.path.join(integration.TMP, 'issue_1864', fname)
+        name = os.path.join(TMP, 'issue_1864', fname)
         try:
             ret = self.run_state(
                 'file.append', name=name, text='cheese', makedirs=True
@@ -1640,7 +1641,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertTrue(os.path.isfile(name))
         finally:
             shutil.rmtree(
-                os.path.join(integration.TMP, 'issue_1864'),
+                os.path.join(TMP, 'issue_1864'),
                 ignore_errors=True
             )
 
@@ -1650,7 +1651,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         the file if it doesn't exist
         '''
         fname = 'prepend_issue_27401'
-        name = os.path.join(integration.TMP, fname)
+        name = os.path.join(TMP, fname)
         try:
             self.assertFalse(os.path.exists(name))
         except AssertionError:
@@ -1669,7 +1670,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 os.remove(name)
 
         # Nested directory and file get's touched
-        name = os.path.join(integration.TMP, 'issue_27401', fname)
+        name = os.path.join(TMP, 'issue_27401', fname)
         try:
             ret = self.run_state(
                 'file.prepend', name=name, text='cheese', makedirs=True
@@ -1688,7 +1689,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertTrue(os.path.isfile(name))
         finally:
             shutil.rmtree(
-                os.path.join(integration.TMP, 'issue_27401'),
+                os.path.join(TMP, 'issue_27401'),
                 ignore_errors=True
             )
 
@@ -1696,7 +1697,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.touch
         '''
-        name = os.path.join(integration.TMP, 'touch_test')
+        name = os.path.join(TMP, 'touch_test')
         ret = self.run_state('file.touch', name=name)
         try:
             self.assertTrue(os.path.isfile(name))
@@ -1708,7 +1709,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.touch test interface
         '''
-        name = os.path.join(integration.TMP, 'touch_test')
+        name = os.path.join(TMP, 'touch_test')
         ret = self.run_state('file.touch', test=True, name=name)
         self.assertFalse(os.path.isfile(name))
         self.assertSaltNoneReturn(ret)
@@ -1717,7 +1718,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.touch a directory
         '''
-        name = os.path.join(integration.TMP, 'touch_test_dir')
+        name = os.path.join(TMP, 'touch_test_dir')
         try:
             if not os.path.isdir(name):
                 # left behind... Don't fail because of this!
@@ -1740,7 +1741,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         # let's make use of existing state to create a file with contents to
         # test against
         tmp_file_append = os.path.join(
-            integration.TMP, 'test.append'
+            TMP, 'test.append'
         )
         if os.path.isfile(tmp_file_append):
             os.remove(tmp_file_append)
@@ -1778,7 +1779,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     def do_patch(self, patch_name='hello', src='Hello\n'):
         if not self.run_function('cmd.has_exec', ['patch']):
             self.skipTest('patch is not installed')
-        src_file = os.path.join(integration.TMP, 'src.txt')
+        src_file = os.path.join(TMP, 'src.txt')
         with salt.utils.fopen(src_file, 'w+') as fp:
             fp.write(src)
         ret = self.run_state(
@@ -1810,7 +1811,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     def test_issue_2401_file_comment(self):
         # Get a path to the temporary file
-        tmp_file = os.path.join(integration.TMP, 'issue-2041-comment.txt')
+        tmp_file = os.path.join(TMP, 'issue-2041-comment.txt')
         # Write some data to it
         with salt.utils.fopen(tmp_file, 'w') as fp_:
             fp_.write('hello\nworld\n')
@@ -1845,7 +1846,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     def test_issue_2379_file_append(self):
         # Get a path to the temporary file
-        tmp_file = os.path.join(integration.TMP, 'issue-2379-file-append.txt')
+        tmp_file = os.path.join(TMP, 'issue-2379-file-append.txt')
         # Write some data to it
         with salt.utils.fopen(tmp_file, 'w') as fp_:
             fp_.write(
@@ -1874,7 +1875,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     def test_issue_2726_mode_kwarg(self):
-        testcase_temp_dir = os.path.join(integration.TMP, 'issue_2726')
+        testcase_temp_dir = os.path.join(TMP, 'issue_2726')
         # Let's test for the wrong usage approach
         bad_mode_kwarg_testfile = os.path.join(
             testcase_temp_dir, 'bad_mode_kwarg', 'testfile'
@@ -1925,8 +1926,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 shutil.rmtree(testcase_temp_dir)
 
     def test_issue_8343_accumulated_require_in(self):
-        template_path = os.path.join(integration.TMP_STATE_TREE, 'issue-8343.sls')
-        testcase_filedest = os.path.join(integration.TMP, 'issue-8343.txt')
+        template_path = os.path.join(TMP_STATE_TREE, 'issue-8343.sls')
+        testcase_filedest = os.path.join(TMP, 'issue-8343.txt')
         sls_template = [
             '{0}:',
             '  file.managed:',
@@ -1998,8 +1999,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     def test_issue_11003_immutable_lazy_proxy_sum(self):
         # causes the Import-Module ServerManager error on Windows
-        template_path = os.path.join(integration.TMP_STATE_TREE, 'issue-11003.sls')
-        testcase_filedest = os.path.join(integration.TMP, 'issue-11003.txt')
+        template_path = os.path.join(TMP_STATE_TREE, 'issue-11003.sls')
+        testcase_filedest = os.path.join(TMP, 'issue-11003.txt')
         sls_template = [
             'a{0}:',
             '  file.absent:',
@@ -2084,10 +2085,10 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         korean_3 = '마지막 행'
         korean_utf8_3 = '\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89'
         korean_unicode_3 = u'\ub9c8\uc9c0\ub9c9 \ud589'
-        test_file = os.path.join(integration.TMP,
+        test_file = os.path.join(TMP,
                                  'salt_utf8_tests/'+korean_utf8_1+'.txt'
         )
-        template_path = os.path.join(integration.TMP_STATE_TREE, 'issue-8947.sls')
+        template_path = os.path.join(TMP_STATE_TREE, 'issue-8947.sls')
         # create the sls template
         template_lines = [
             '# -*- coding: utf-8 -*-',
@@ -2230,7 +2231,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         Ensure that symlinks are properly chowned when recursing (following
         symlinks)
         '''
-        tmp_dir = os.path.join(integration.TMP, 'test.12209')
+        tmp_dir = os.path.join(TMP, 'test.12209')
 
         # Cleanup the path if it already exists
         if os.path.isdir(tmp_dir):
@@ -2277,7 +2278,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         Ensure that symlinks are properly chowned when recursing (not following
         symlinks)
         '''
-        tmp_dir = os.path.join(integration.TMP, 'test.12209')
+        tmp_dir = os.path.join(TMP, 'test.12209')
 
         # Cleanup the path if it already exists
         if os.path.isdir(tmp_dir):
@@ -2383,10 +2384,10 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         ensure force option in copy state does not delete target file
         '''
-        dest = os.path.join(integration.TMP, 'dest')
-        source = os.path.join(integration.TMP, 'source')
-        shutil.copyfile(os.path.join(integration.FILES, 'hosts'), source)
-        shutil.copyfile(os.path.join(integration.FILES, 'file/base/cheese'), dest)
+        dest = os.path.join(TMP, 'dest')
+        source = os.path.join(TMP, 'source')
+        shutil.copyfile(os.path.join(FILES, 'hosts'), source)
+        shutil.copyfile(os.path.join(FILES, 'file/base/cheese'), dest)
 
         self.run_state('file.copy', name=dest, source=source, force=True)
         self.assertTrue(os.path.exists(dest))

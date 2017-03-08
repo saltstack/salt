@@ -4,7 +4,6 @@
 from __future__ import absolute_import
 import copy
 import contextlib
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 import errno
 import fnmatch
 import glob
@@ -33,6 +32,7 @@ from salt.exceptions import (
     get_error_message
 )
 from salt.utils.event import tagify
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import third party libs
 import salt.ext.six as six
@@ -1158,8 +1158,8 @@ class Pygit2(GitProvider):
                  override_params, cache_root, role='gitfs'):
         self.provider = 'pygit2'
         self.use_callback = \
-            distutils.version.LooseVersion(pygit2.__version__) >= \
-            distutils.version.LooseVersion('0.23.2')
+            _LooseVersion(pygit2.__version__) >= \
+            _LooseVersion('0.23.2')
         GitProvider.__init__(self, opts, remote, per_remote_defaults,
                              per_remote_only, override_params, cache_root, role)
 
@@ -2187,8 +2187,8 @@ class GitBase(object):
             return False
 
         # pylint: disable=no-member
-        gitver = distutils.version.LooseVersion(git.__version__)
-        minver = distutils.version.LooseVersion(GITPYTHON_MINVER)
+        gitver = _LooseVersion(git.__version__)
+        minver = _LooseVersion(GITPYTHON_MINVER)
         # pylint: enable=no-member
         errors = []
         if gitver < minver:
@@ -2238,11 +2238,11 @@ class GitBase(object):
             return False
 
         # pylint: disable=no-member
-        pygit2ver = distutils.version.LooseVersion(pygit2.__version__)
-        pygit2_minver = distutils.version.LooseVersion(PYGIT2_MINVER)
+        pygit2ver = _LooseVersion(pygit2.__version__)
+        pygit2_minver = _LooseVersion(PYGIT2_MINVER)
 
-        libgit2ver = distutils.version.LooseVersion(pygit2.LIBGIT2_VERSION)
-        libgit2_minver = distutils.version.LooseVersion(LIBGIT2_MINVER)
+        libgit2ver = _LooseVersion(pygit2.LIBGIT2_VERSION)
+        libgit2_minver = _LooseVersion(LIBGIT2_MINVER)
         # pylint: enable=no-member
 
         errors = []

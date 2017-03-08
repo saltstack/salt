@@ -91,6 +91,10 @@ class ArchiveTest(integration.ModuleCase):
                     shutil.rmtree(f, ignore_errors=True)
                 else:
                     os.remove(f)
+        del self.dst
+        del self.src
+        del self.arch
+        del self.src_file
 
     def _assert_artifacts_in_ret(self, ret, file_only=False):
         '''

@@ -23,7 +23,6 @@ import copy
 import os
 import re
 import logging
-import distutils.version
 from salt.ext import six
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
@@ -33,6 +32,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -947,7 +947,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
                                         output_loglevel='trace',
                                         python_shell=False)
     opkg_version = output.split(' ')[2].strip()
-    if distutils.version.LooseVersion(opkg_version) >= distutils.version.LooseVersion('0.3.4'):
+    if _LooseVersion(opkg_version) >= _LooseVersion('0.3.4'):
         cmd_compare = ['opkg', 'compare-versions']
     elif salt.utils.which('opkg-compare-versions'):
         cmd_compare = ['opkg-compare-versions']

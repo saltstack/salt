@@ -49,13 +49,13 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import time
 
 # Import salt libs
 import salt.utils.compat
 import salt.utils.odict as odict
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 

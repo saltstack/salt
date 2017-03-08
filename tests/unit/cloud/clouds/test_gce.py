@@ -8,7 +8,6 @@
 
 # Import Python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion
 
 try:
     import libcloud.security
@@ -19,6 +18,7 @@ except ImportError:
 # Import Salt Libs
 from salt.cloud.clouds import gce
 from salt.exceptions import SaltCloudSystemExit
+from salt.utils.versions import LooseVersion
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf

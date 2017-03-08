@@ -2,7 +2,6 @@
 
 # Import Python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 import logging
 import random
 import string
@@ -14,6 +13,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 # Import Salt libs
 import salt.config
 import salt.loader
+from salt.utils.versions import LooseVersion
 from salt.modules import boto_cognitoidentity
 
 # Import Mock libraries

@@ -5,7 +5,6 @@
 
 # Import Python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 import random
 import string
 # pylint: disable=3rd-party-module-not-gated
@@ -21,6 +20,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 import salt.config
 import salt.loader
 from salt.modules import boto_vpc
+from salt.utils.versions import LooseVersion
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 

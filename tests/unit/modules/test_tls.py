@@ -11,7 +11,6 @@ NO_PYOPENSSL = False
 import shutil
 import tempfile
 import os
-from distutils.version import LooseVersion
 try:
     # We're not going to actually use OpenSSL, we just want to check that
     # it's installed.
@@ -20,6 +19,7 @@ except Exception:
     NO_PYOPENSSL = True
 
 # Import Salt Testing Libs
+import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
@@ -32,7 +32,7 @@ from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 from salt.modules import tls
-import tests.integration as integration
+from salt.utils.versions import LooseVersion
 
 
 # Globals
