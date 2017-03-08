@@ -3,8 +3,10 @@ r'''
 Execution of Salt modules from within states
 ============================================
 
-These states allow individual execution module calls to be made via states. To
-call a single module function use a :mod:`module.run <salt.states.module.run>`
+Here you have two options: `module.run` and `module.xrun`.
+
+With `module.run` these states allow individual execution module calls to be
+made via states. To call a single module function use a :mod:`module.run <salt.states.module.run>`
 state:
 
 .. code-block:: yaml
@@ -108,6 +110,45 @@ Windows system:
               start_date: '2017-1-20',
               start_time: '11:59PM'
         }
+
+Another option is to use the `module.xrun`. With which you can call one (or more!)
+functions at once the following way:
+
+.. code-block:: yaml
+
+    call_something:
+      module.xrun:
+        git.fetch:
+          - cwd: /path/to/my/repo
+          - user: myuser
+          - opts: '--all'
+
+Unlike `module.run`, the `module.xrun` does not have reserved words you should
+specially prefix to distinguish them. No need to extra-pass `kwargs` either.
+For example, this is the same example from `module.run`:
+
+.. code-block:: yaml
+
+    mine.send:
+      module.xrun:
+        network.ip_addrs:
+          - interface: eth0
+
+Or the examlpe above can be written as following:
+
+.. code-block:: yaml
+
+    eventsviewer:
+      module.xrun:
+        task.create_task:
+          - name: events-viewer
+          - user_name: System
+          - action_type: Execute
+          - cmd: 'c:\netops\scripts\events_viewer.bat'
+          - trigger_type: 'Daily'
+          - start_date: '2017-1-20'
+          - start_time: '11:59PM'
+
 '''
 from __future__ import absolute_import
 
