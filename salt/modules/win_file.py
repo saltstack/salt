@@ -59,17 +59,23 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
 from salt.utils import namespaced_function as _namespaced_function
 
 HAS_WINDOWS_MODULES = False
-if salt.utils.is_windows():
-    import win32api
-    import win32file
-    import win32con
-    from pywintypes import error as pywinerror
-    HAS_WINDOWS_MODULES = True
+try:
+    if salt.utils.is_windows():
+        import win32api
+        import win32file
+        import win32con
+        from pywintypes import error as pywinerror
+        HAS_WINDOWS_MODULES = True
+except ImportError:
+    HAS_WINDOWS_MODULES = False
 
 HAS_WIN_DACL = False
-if salt.utils.is_windows():
-    import salt.utils.win_dacl
-    HAS_WIN_DACL = salt.utils.win_dacl.HAS_WIN32
+try:
+    if salt.utils.is_windows():
+        import salt.utils.win_dacl
+        HAS_WIN_DACL = salt.utils.win_dacl.HAS_WIN32
+except ImportError:
+    HAS_WIN_DACL = False
 
 log = logging.getLogger(__name__)
 
