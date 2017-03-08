@@ -41,10 +41,9 @@ class ModuleStateTest(TestCase):
         Tests the return of module.run state when the module function
         name isn't available
         '''
-        with patch.dict(module.__salt__, {}):
-            cmd = 'hello.world'
-            ret = module.run(cmd)
-            comment = 'Module function {0} is not available'.format(cmd)
+        with patch.dict(module.__salt__, {}, clear=True):
+            ret = module.run(CMD)
+            comment = 'Module function {0} is not available'.format(CMD)
             self.assertEqual(ret['comment'], comment)
             self.assertFalse(ret['result'])
 
