@@ -1774,3 +1774,180 @@ def list_worker_processes(apppool):
         log.warning('No backups found in output: {0}'.format(cmd_ret))
 
     return ret
+
+def get_webapp_settings(name, site, settings):
+    '''
+    Get the value of the setting for the IIS web application.
+    .. note:
+        Params are case sensitive are case sensitive
+    :param str name: The name of the IIS web application.
+    :param str site: The site name contains the web application.
+        Example: Default web site
+    :param str settings: A dictionary of the setting names and their values.
+        Available settings: physicalPath, applicationPool, userName, password
+    :return: A dictionary of the provided settings and their values.
+    Returns:
+        dict: A dictionary of the provided settings and their values.
+    .. versionadded:: 2016.11.0
+    CLI Example:
+    .. code-block:: bash
+        salt '*' win_iisV2.get_webapp_settings name='app0' site='Default Web Site'
+            settings="['physicalPath','applicationPool']"
+    '''
+    ret = dict()
+    pscmd = list()
+    availableSettings = ('physicalPath', 'applicationPool', 'userName', 'password')
+
+    if not settings:
+        log.warning('No settings provided')
+        return ret
+
+    pscmd.append(r'$Settings = @{};')
+
+    # Verify setting is ine predefined settings and append relevant query command per setting key
+    for setting in settings:
+        if setting in availableSettings:
+            if setting == "userName" or setting == "password":
+                pscmd.append(" $Property = Get-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
+                pscmd.append(" -Name \"{0}\" -ErrorAction Stop | select Value;".format(setting))
+                pscmd.append(" $Property = $Property | Select-Object -ExpandProperty Value;")
+                pscmd.append(" $Settings['{0}'] = [String] $Property;".format(setting))
+                pscmd.append(' $Property = $Null;')
+
+            if setting == "physicalPath" or setting == "applicationPool":
+                pscmd.append(" $Property = (get-webapplication {0}).{1};".format(name, setting))
+                pscmd.append(" $Settings['{0}'] = [String] $Property;".format(setting))
+                pscmd.append(r' $Property = $Null;')
+        else:
+            availSetStr = ', '.join(availableSettings)
+
+            message = 'Unexpected setting:' + setting + '. Available settings are: ' + availSetStr
+            raise SaltInvocationError(message)
+
+    pscmd.append(' $Settings')
+    # Run commands and return data as json
+    cmd_ret = _srvmgr(cmd=str().join(pscmd), return_json=True)
+
+    # Update dict var to return data
+    try:
+        items = json.loads(cmd_ret['stdout'], strict=False)
+
+        if isinstance(items, list):
+            ret.update(items[0])
+        else:
+            ret.update(items)
+    except ValueError:
+        log.error('Unable to parse return data as Json.')
+
+    if None in ret.viewvalues():
+        message = 'Some values are empty - please validate site and web application names. Some commands are case sensitive'
+        raise SaltInvocationError(message)
+
+    return ret
+
+
+
+def set_webapp_settings(name, site, settings):
+    '''
+    Configure an IIS application.
+    .. note:
+        This function only configures existing app
+    :param str name: The IIS application.
+    :param str site: The IIS site name.
+    :param str settings: A dictionary of the setting names and their values.
+    :available settings:    physicalPath: The physical path of the webapp.
+    :                       applicationPool: The application pool for the webapp.
+    :                       userName: "connectAs" user
+    :                       password: "connectAs" password for user
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+    CLI Example:
+    .. code-block:: bash
+        salt '*' win_iis.set_webapp_settings name='app0' site='site0' settings="{'physicalPath': 'C:\site0', 'apppool': 'site0'}"
+    '''
+    pscmd = list()
+    current_apps = list_apps(site)
+    current_sites= list_sites()
+    availableSettings = ('physicalPath', 'applicationPool', 'userName', 'password')
+
+    # Validate params
+    if name not in current_apps:
+        log.debug("Application %s doesn't exist", name)
+        return False
+
+    if site not in current_sites:
+        log.debug("Site %s doesn't exist", site)
+        return False
+
+    if not settings:
+        log.warning('No settings provided')
+        return False
+
+    # Treat all values as strings for the purpose of comparing them to existing values & validate settings exists in predefined settings list
+    for setting in settings.keys():
+        if setting in availableSettings:
+            settings[setting] = str(settings[setting])
+        else:
+            log.debug("Unexpected setting: %s ", setting)
+            availSetStr = ', '.join(availableSettings)
+            log.debug("Available settings: %s", availSetStr)
+            return False
+
+
+
+    # Check if settings already configured
+    current_settings = get_webapp_settings(
+        name=name, site=site, settings=settings.keys())
+
+
+    if settings == current_settings:
+        log.debug('Settings already contain the provided values.')
+        return True
+
+    for setting in settings:
+        # If the value is numeric, don't treat it as a string in PowerShell.
+        try:
+            complex(settings[setting])
+            value = settings[setting]
+        except ValueError:
+            value = "'{0}'".format(settings[setting])
+
+
+        # Append relevant update command per setting key
+        if setting == "userName" or setting == "password":
+            pscmd.append(" Set-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
+            pscmd.append(" -Name \"{0}\" -Value {1};".format(setting, value))
+
+
+        if setting == "physicalPath" or setting == "applicationPool":
+            pscmd.append(" Set-ItemProperty \"IIS:\Sites\{0}\{1}\" -Name {2} -Value {3};".format(site, name, setting, value))
+            if setting == "physicalPath":
+                if not os.path.isdir(settings[setting]):
+                    log.error('Path is not present: {0}'.format(setting))
+                    return False
+
+    # Run commands
+    cmd_ret = _srvmgr(pscmd)
+
+    # Verify commands completed successfully
+    if cmd_ret['retcode'] != 0:
+        msg = 'Unable to set settings for web application {0}'.format(name)
+        raise SaltInvocationError(msg)
+
+    # verify changes
+    new_settings = get_webapp_settings(
+        name=name, site=site, settings=settings.keys())
+    failed_settings = dict()
+
+    for setting in settings:
+        if str(settings[setting]) != str(new_settings[setting]):
+            failed_settings[setting] = settings[setting]
+
+    if failed_settings:
+        log.error('Failed to change settings: {0}'.format(failed_settings))
+        return False
+
+    log.debug('Settings configured successfully: {0}'.format(settings.keys()))
+    return True
+
+
