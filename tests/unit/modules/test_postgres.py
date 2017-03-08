@@ -2,12 +2,11 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function
-from mock import call
 import re
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, call
 
 # Import salt libs
 from salt.modules import postgres

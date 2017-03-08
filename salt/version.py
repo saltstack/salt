@@ -644,7 +644,7 @@ def system_information():
     version = system_version()
     release = platform.release()
     if platform.win32_ver()[0]:
-        import win32api
+        import win32api  # pylint: disable=3rd-party-module-not-gated
         if ((sys.version_info.major == 2 and sys.version_info >= (2, 7, 12)) or
                 (sys.version_info.major == 3 and sys.version_info >= (3, 5, 2))):
             if win32api.GetVersionEx(1)[8] > 1:

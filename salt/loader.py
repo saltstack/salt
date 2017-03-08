@@ -10,7 +10,6 @@ from __future__ import absolute_import
 import os
 import imp
 import sys
-import salt
 import time
 import logging
 import inspect
@@ -20,14 +19,15 @@ from collections import MutableMapping
 from zipimport import zipimporter
 
 # Import salt libs
-from salt.exceptions import LoaderError
-from salt.template import check_render_pipe_str
-from salt.utils.decorators import Depends
-from salt.utils import is_proxy
+import salt
 import salt.utils.context
 import salt.utils.lazy
 import salt.utils.event
 import salt.utils.odict
+from salt.exceptions import LoaderError
+from salt.template import check_render_pipe_str
+from salt.utils.decorators import Depends
+from salt.utils import is_proxy
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.

@@ -25,7 +25,11 @@ from __future__ import absolute_import
 import logging
 
 # import third party
-import requests
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
 
 # import salt
 from salt.ext import six
@@ -63,6 +67,8 @@ def __virtual__():
     '''
     Return the execution module virtualname.
     '''
+    if HAS_REQUESTS is False:
+        return False, 'The requests python package is not installed'
     return __virtualname__
 
 

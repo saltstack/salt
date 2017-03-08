@@ -25,7 +25,8 @@ load-plugins=saltpylint.pep8,
   saltpylint.py3modernize,
   saltpylint.smartup,
   saltpylint.minpyver,
-  saltpylint.salttesting
+  saltpylint.salttesting,
+  saltpylint.thirdparty
 
 # Use multiple processes to speed up Pylint.
 # Don't bump this values on PyLint 1.4.0 - Know bug that ignores the passed --rcfile
@@ -46,6 +47,18 @@ fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests
 
 # Minimum Python Version To Enforce
 minimum-python-version = 2.7
+
+# Allowed 3rd-party package imports
+allowed-3rd-party-modules = msgpack,
+  tornado,
+  yaml,
+  jinja2,
+  Crypto,
+  requests,
+  libcloud,
+  zmq,
+  pytest,
+  pytestsalt
 
 [MESSAGES CONTROL]
 # Only show warnings with the listed confidence levels. Leave empty to show

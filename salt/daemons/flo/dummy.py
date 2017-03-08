@@ -12,6 +12,7 @@ without the need for a swarm of real minions.
 '''
 
 # pylint: disable=W0232
+# pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
 from __future__ import absolute_import

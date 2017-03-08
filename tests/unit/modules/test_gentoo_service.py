@@ -4,14 +4,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from mock import call
-
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
-    NO_MOCK_REASON
+    NO_MOCK_REASON,
+    call
 )
 
 # Import Salt Libs
