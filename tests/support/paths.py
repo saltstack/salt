@@ -21,9 +21,12 @@ import tempfile
 
 log = logging.getLogger(__name__)
 
-TESTS_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.normpath(__file__))))
-if os.name == 'nt':
-    TESTS_DIR = TESTS_DIR.replace('\\', '\\\\')
+TESTS_DIR = os.path.dirname(os.path.dirname(os.path.normpath(os.path.abspath(__file__))))
+if TESTS_DIR.startswith('//'):
+    # Have we been given an initial double forward slash? Ditch it!
+    TESTS_DIR = TESTS_DIR[1:]
+if sys.platform.startswith('win'):
+    TESTS_DIR = os.path.normcase(TESTS_DIR)
 CODE_DIR = os.path.dirname(TESTS_DIR)
 INTEGRATION_TEST_DIR = os.path.join(TESTS_DIR, 'integration')
 
