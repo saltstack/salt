@@ -35,6 +35,17 @@ def _mocked_func_named(name, names=('Fred', 'Swen',)):
     '''
     return {'name': name, 'names': names}
 
+
+def _mocked_func_args(*args):
+    '''
+    Mocked function with args.
+
+    :param args:
+    :return:
+    '''
+    return {'args': args}
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ModuleStateTest(TestCase):
     '''
@@ -84,6 +95,13 @@ class ModuleStateTest(TestCase):
             ret = module.xrun(**{CMD: [{'name': 'Fred'}]})
             assert ret['comment'] == '{0}: Success'.format(CMD)
             assert ret['result']
+
+    def test_xrun_unexpected_keywords(self):
+        with patch.dict(module.__salt__, {CMD: _mocked_func_args}):
+            ret = module.xrun(**{CMD: [{'foo': 'bar'}]})
+            assert ret['comment'] == "'{0}' failed: {1}() got an unexpected keyword argument 'foo'".format(
+                CMD, module.__salt__[CMD].func_name)
+            assert not ret['result']
 
 
     def test_module_run_module_not_available(self):
