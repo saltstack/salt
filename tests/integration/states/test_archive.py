@@ -7,7 +7,6 @@ from __future__ import absolute_import
 import errno
 import logging
 import os
-import platform
 import socket
 import threading
 import tornado.ioloop
@@ -34,15 +33,7 @@ UNTAR_FILE = os.path.join(ARCHIVE_DIR, 'custom/README')
 ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
-REDHAT7 = False
-QUERY_OS = platform.dist()
-OS_VERSION = QUERY_OS[1]
-OS_FAMILY = QUERY_OS[0]
-if '7' in OS_VERSION and 'centos' in OS_FAMILY:
-    REDHAT7 = True
 
-
-@skipIf(not REDHAT7, 'Only run on redhat7 for now due to hanging issues on other OS')
 class ArchiveTest(integration.ModuleCase,
                   integration.SaltReturnAssertsMixIn):
     '''
@@ -54,10 +45,12 @@ class ArchiveTest(integration.ModuleCase,
         method to start tornado
         static web app
         '''
-        application = tornado.web.Application([(r"/(.*)", tornado.web.StaticFileHandler,
-                                              {"path": STATE_DIR})])
-        application.listen(PORT)
-        tornado.ioloop.IOLoop.instance().start()
+        cls._ioloop = tornado.ioloop.IOLoop()
+        cls._ioloop.make_current()
+        cls._application = tornado.web.Application([(r'/(.*)', tornado.web.StaticFileHandler,
+                                                    {'path': STATE_DIR})])
+        cls._application.listen(PORT)
+        cls._ioloop.start()
 
     @classmethod
     def setUpClass(cls):
@@ -78,8 +71,13 @@ class ArchiveTest(integration.ModuleCase,
 
     @classmethod
     def tearDownClass(cls):
-        tornado.ioloop.IOLoop.instance().stop()
+        cls._ioloop.add_callback(cls._ioloop.stop)
         cls.server_thread.join()
+        for attrname in ('_ioloop', '_application', 'server_thread'):
+            try:
+                delattr(cls, attrname)
+            except AttributeError:
+                continue
 
     def setUp(self):
         self._clear_archive_dir()
