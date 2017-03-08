@@ -5,7 +5,6 @@ from __future__ import absolute_import
 import random
 import string
 from copy import deepcopy
-from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
@@ -14,6 +13,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 # Import Salt libs
 import salt.config
 import salt.loader
+from salt.utils.versions import LooseVersion
 
 # Import Third Party Libs
 # pylint: disable=import-error
