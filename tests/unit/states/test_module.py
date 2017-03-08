@@ -36,6 +36,17 @@ class ModuleStateTest(TestCase):
                     keywords=None,
                     defaults=False)
 
+    def test_xrun_module_not_available(self):
+        '''
+        Tests the return of module.xrun state when the module function is not available.
+        :return:
+        '''
+        with patch.dict(module.__salt__, {}, clear=True):
+            cmd = {CMD: None}
+            ret = module.xrun(**cmd)
+            assert ret['comment'] == "Module function '{0}' is not available".format(cmd.keys()[0])
+            assert not ret['result']
+
     def test_module_run_module_not_available(self):
         '''
         Tests the return of module.run state when the module function
