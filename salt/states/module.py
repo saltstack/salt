@@ -228,18 +228,22 @@ def _call_function(name, returner=None, **kwargs):
     :return:
     '''
     argspec = salt.utils.args.get_function_argspec(__salt__[name])
-    func_args = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
-    for funcset in kwargs.get('func_args', []):
-        func_args.update(funcset)
+    func_kw = dict(zip(argspec.args[-len(argspec.defaults or []):], argspec.defaults or []))
+    func_args = []
+    for funcset in kwargs.get('func_args') or {}:
+        if isinstance(funcset, dict):
+            func_kw.update(funcset)
+        else:
+            func_args.append(funcset)
 
     missing = []
     for arg in argspec.args:
-        if arg not in func_args:
+        if arg not in func_kw:
             missing.append(arg)
     if missing:
         raise SaltInvocationError('Missing arguments: {0}'.format(', '.join(missing)))
 
-    mret = __salt__[name](**func_args)
+    mret = __salt__[name](*func_args, **func_kw)
     if returner is not None:
         returners = salt.loader.returners(__opts__, __salt__)
         if returner in returners:
