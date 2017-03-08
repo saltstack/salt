@@ -153,6 +153,11 @@ def call(napalm_device, method, *args, **kwargs):
             'comment': comment,
             'traceback': err_tb
         }
+    # finally:
+    #     if salt.utils.is_proxy() and not napalm_device.get('ALWAYS_ALIVE', True):
+    #         # in case the proxy does not need to be always alive
+    #         # close the connection when the call is over
+    #         getattr(napalm_device.get('DRIVER'), 'close')()
     return {
         'out': out,
         'result': result,
@@ -172,7 +177,7 @@ def get_device(opts, salt_obj=None):
     device_dict = opts.get('proxy', {}) or opts.get('napalm', {})
     if salt_obj and not device_dict:
         # get the connection details from the opts
-        device_dict = salt_obj['config.option']('napalm')
+        device_dict = salt_obj['config.merge']('napalm')
     if not device_dict:
         # still not able to setup
         log.error('Incorrect minion config. Please specify at least the napalm driver name!')
@@ -183,8 +188,9 @@ def get_device(opts, salt_obj=None):
     network_device['PASSWORD'] = device_dict.get('passwd') or device_dict.get('password') or device_dict.get('pass')
     network_device['TIMEOUT'] = device_dict.get('timeout', 60)
     network_device['OPTIONAL_ARGS'] = device_dict.get('optional_args', {})
+    network_device['ALWAYS_ALIVE'] = device_dict.get('always_alive', True)
     network_device['UP'] = False
-    # get driver object form NAPALM
+    # get driver object from NAPALM
     if 'config_lock' not in list(network_device['OPTIONAL_ARGS'].keys()):
         network_device['OPTIONAL_ARGS']['config_lock'] = False
     _driver_ = napalm_base.get_network_driver(network_device.get('DRIVER_NAME'))
@@ -228,17 +234,47 @@ def proxy_napalm_wrap(func):
     '''
     def func_wrapper(*args, **kwargs):
         wrapped_global_namespace = func.__globals__
-        # get __proxy__ from func_globals
+        # get __opts__ and __proxy__ from func_globals
         proxy = wrapped_global_namespace.get('__proxy__')
-
+        opts = wrapped_global_namespace.get('__opts__')
         # in any case, will inject the `napalm_device` global
         # the execution modules will make use of this variable from now on
         # previously they were accessing the device properties through the __proxy__ object
-        if salt.utils.is_proxy():
+        always_alive = opts.get('proxy', {}).get('always_alive', True)
+        if salt.utils.is_proxy() and always_alive:
+            # if it is running in a proxy and it's using the default always alive behaviour,
+            # will get the cached copy of the network device
             wrapped_global_namespace['napalm_device'] = proxy['napalm.get_device']()
+        elif salt.utils.is_proxy() and not always_alive:
+            # if still proxy, but the user does not want the SSH session always alive
+            # get a new device instance
+            # which establishes a new connection
+            # which is closed just before the call() function defined above returns
+            if 'inherit_napalm_device' not in kwargs or ('inherit_napalm_device' in kwargs and
+                                                         not kwargs['inherit_napalm_device']):
+                # try to open a new connection
+                # but only if the function does not inherit the napalm driver
+                # for configuration management this is very important,
+                # in order to make sure we are editing the same session.
+                try:
+                    wrapped_global_namespace['napalm_device'] = get_device(opts)
+                except napalm_base.exceptions.ConnectionException as nce:
+                    log.error(nce)
+                    return '{base_msg}. See log for details.'.format(
+                        base_msg=str(nce.msg)
+                    )
+            else:
+                # in case the `inherit_napalm_device` is set
+                # and it also has a non-empty value,
+                # the global var `napalm_device` will be overriden.
+                # this is extremely important for configuration-related features
+                # as all actions must be issued within the same configuration session
+                # otherwise we risk to open multiple sessions
+                wrapped_global_namespace['napalm_device'] = kwargs['inherit_napalm_device']
         else:
-            # get __opts__ and __salt__ from func_globals
-            opts = wrapped_global_namespace.get('__opts__')
+            # if no proxy
+            # thus it is running on a regular minion, directly on the network device
+            # get __salt__ from func_globals
             _salt_obj = wrapped_global_namespace.get('__salt__')
             if 'inherit_napalm_device' not in kwargs or ('inherit_napalm_device' in kwargs and
                                                          not kwargs['inherit_napalm_device']):
@@ -249,6 +285,7 @@ def proxy_napalm_wrap(func):
                 try:
                     wrapped_global_namespace['napalm_device'] = get_device(opts, salt_obj=_salt_obj)
                 except napalm_base.exceptions.ConnectionException as nce:
+                    log.error(nce)
                     return '{base_msg}. See log for details.'.format(
                         base_msg=str(nce.msg)
                     )
