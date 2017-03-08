@@ -215,7 +215,7 @@ class Batch(object):
                                 print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(part['id']))
                         else:
                             parts.update(part)
-                            for id in part.keys():
+                            for id in part:
                                 if id in minion_tracker[queue]['minions']:
                                     minion_tracker[queue]['minions'].remove(id)
                                 else:

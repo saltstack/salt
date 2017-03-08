@@ -29,10 +29,10 @@ def hasDependency(module, fake_module=None):
     ..
         hasDependency('super_module')
     '''
-    import mock
     import sys
+    from tests.support.mock import MagicMock
     if fake_module is None:
-        fake_module = mock.MagicMock()
+        fake_module = MagicMock()
 
     if fake_module:
         sys.modules[module] = fake_module

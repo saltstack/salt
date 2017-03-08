@@ -6,10 +6,12 @@
 # Import Python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
-import pkg_resources
-from pkg_resources import DistributionNotFound
 import random
 import string
+# pylint: disable=3rd-party-module-not-gated
+import pkg_resources
+from pkg_resources import DistributionNotFound
+# pylint: enable=3rd-party-module-not-gated
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase

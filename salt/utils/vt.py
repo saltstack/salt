@@ -32,7 +32,7 @@ import logging
 
 mswindows = (sys.platform == "win32")
 
-if mswindows:
+try:
     # pylint: disable=F0401,W0611
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
@@ -41,7 +41,7 @@ if mswindows:
     import win32con
     import win32process
     # pylint: enable=F0401,W0611
-else:
+except ImportError:
     import pty
     import fcntl
     import struct

@@ -38,7 +38,7 @@ try:
     current_module_names = sys.modules.keys()
     import salt  # pylint: disable=unused-import
 
-    for name in sys.modules.keys():
+    for name in sys.modules:
         if name not in current_module_names:
             del sys.modules[name]
 except ImportError:

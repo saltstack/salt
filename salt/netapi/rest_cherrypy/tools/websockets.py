@@ -1,9 +1,13 @@
 # encoding: utf-8
 from __future__ import absolute_import
-import cherrypy
 
-from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
-from ws4py.websocket import WebSocket
+try:
+    import cherrypy
+
+    from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
+    from ws4py.websocket import WebSocket
+except ImportError:
+    raise
 
 cherrypy.tools.websocket = WebSocketTool()
 WebSocketPlugin(cherrypy.engine).subscribe()

@@ -56,7 +56,7 @@ def service(instantiated=True):
             self.stop_event = win32event.CreateEvent(None, 0, 0, None)
 
         def log(self, msg):
-            import servicemanager
+            import servicemanager  # pylint: disable=3rd-party-module-not-gated
             servicemanager.LogInfoMsg(str(msg))
 
         def sleep(self, sec):

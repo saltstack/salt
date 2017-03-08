@@ -1104,7 +1104,7 @@ def list_nodes(call=None, **kwargs):
         public = []
         if 'addresses' not in server_tmp:
             server_tmp['addresses'] = {}
-        for network in server_tmp['addresses'].keys():
+        for network in server_tmp['addresses']:
             for address in server_tmp['addresses'][network]:
                 if salt.utils.cloud.is_public_ip(address.get('addr', '')):
                     public.append(address['addr'])

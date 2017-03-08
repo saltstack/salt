@@ -838,7 +838,7 @@ def parse_cookie_header(header):
     for cookie in cookies:
         name = None
         value = None
-        for item in cookie.keys():
+        for item in cookie:
             if item in attribs:
                 continue
             name = item

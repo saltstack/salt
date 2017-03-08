@@ -121,7 +121,7 @@ def __virtual__():
     '''
     min_version = '1.3.1'
     if HAS_LIBS:
-        import sleekxmpp
+        import sleekxmpp  # pylint: disable=3rd-party-module-not-gated
         # Certain XMPP functionaility we're using doesn't work with versions under 1.3.1
         sleekxmpp_version = distutils.version.LooseVersion(sleekxmpp.__version__)
         valid_version = distutils.version.LooseVersion(min_version)

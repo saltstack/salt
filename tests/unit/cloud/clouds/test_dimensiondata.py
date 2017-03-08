@@ -9,7 +9,6 @@
 # Import Python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion
-import mock
 
 try:
     import libcloud.security
@@ -23,7 +22,7 @@ from salt.exceptions import SaltCloudSystemExit
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch, __version__ as mock_version
 
 # Global Variables
 dimensiondata.__active_provider_name__ = ''
@@ -149,7 +148,7 @@ class DimensionDataTestCase(ExtendedTestCase):
         with patch('salt.config.check_driver_dependencies', return_value=True) as p:
             get_deps = dimensiondata.get_dependencies()
             self.assertEqual(get_deps, True)
-            if LooseVersion(mock.__version__) >= LooseVersion('2.0.0'):
+            if LooseVersion(mock_version) >= LooseVersion('2.0.0'):
                 self.assertTrue(p.call_count >= 1)
 
     def test_provider_matches(self):

@@ -816,7 +816,7 @@ class CkMinions(object):
                     log.info('Malformed ACL: {0}'.format(auth_list_entry))
                     continue
             allowed_minions.update(set(auth_list_entry.keys()))
-            for key in auth_list_entry.keys():
+            for key in auth_list_entry:
                 for match in self._expand_matching(key):
                     if match in auth_dictionary:
                         auth_dictionary[match].extend(auth_list_entry[key])

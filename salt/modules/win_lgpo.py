@@ -3820,7 +3820,7 @@ def _checkAllAdmxPolicies(policy_class,
     if policy_vals and return_full_policy_names and not hierarchical_return:
         unpathed_dict = {}
         pathed_dict = {}
-        for policy_item in policy_vals.keys():
+        for policy_item in policy_vals:
             if full_names[policy_item] in policy_vals:
                 # add this item with the path'd full name
                 full_path_list = hierarchy[policy_item]
@@ -3832,7 +3832,7 @@ def _checkAllAdmxPolicies(policy_class,
                 policy_vals[full_names[policy_item]] = policy_vals.pop(policy_item)
                 unpathed_dict[full_names[policy_item]] = policy_item
         # go back and remove any "unpathed" policies that need a full path
-        for path_needed in unpathed_dict.keys():
+        for path_needed in unpathed_dict:
             # remove the item with the same full name and re-add it w/a path'd version
             full_path_list = hierarchy[unpathed_dict[path_needed]]
             full_path_list.reverse()
@@ -3841,7 +3841,7 @@ def _checkAllAdmxPolicies(policy_class,
             policy_vals['\\'.join(full_path_list)] = policy_vals.pop(path_needed)
     if policy_vals and hierarchical_return:
         if hierarchy:
-            for hierarchy_item in hierarchy.keys():
+            for hierarchy_item in hierarchy:
                 if hierarchy_item in policy_vals:
                     tdict = {}
                     first_item = True
@@ -4151,14 +4151,14 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                                      hierarchical_return=False,
                                                      return_not_configured=False)
         log.debug('preparing to loop through policies requested to be configured')
-        for adm_policy in admtemplate_data.keys():
+        for adm_policy in admtemplate_data:
             if str(admtemplate_data[adm_policy]).lower() == 'not configured':
                 if adm_policy in base_policy_settings:
                     base_policy_settings.pop(adm_policy)
             else:
                 log.debug('adding {0} to base_policy_settings'.format(adm_policy))
                 base_policy_settings[adm_policy] = admtemplate_data[adm_policy]
-        for admPolicy in base_policy_settings.keys():
+        for admPolicy in base_policy_settings:
             log.debug('working on admPolicy {0}'.format(admPolicy))
             explicit_enable_disable_value_setting = False
             this_key = None
@@ -4225,7 +4225,7 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                             # WARNING: no OOB adm files use true/falseList items
                                             # this has not been fully vetted
                                             temp_dict = {'trueList': TRUE_LIST_XPATH, 'falseList': FALSE_LIST_XPATH}
-                                            for this_list in temp_dict.keys():
+                                            for this_list in temp_dict:
                                                 disabled_list_strings = _checkListItem(
                                                         child_item,
                                                         admPolicy,
@@ -4731,7 +4731,7 @@ def get_policy_info(policy_name,
             ret['rights_assignment'] = True
         return ret
     else:
-        for pol in policy_data.policies[policy_class]['policies'].keys():
+        for pol in policy_data.policies[policy_class]['policies']:
             if policy_data.policies[policy_class]['policies'][pol]['Policy'].lower() == policy_name.lower():
                 ret['policy_aliases'].append(pol)
                 ret['policy_found'] = True
@@ -4833,7 +4833,7 @@ def get(policy_class=None, return_full_policy_names=True,
             if policy_name in _policydata.policies[p_class]['policies']:
                 _pol = _policydata.policies[p_class]['policies'][policy_name]
             else:
-                for policy in _policydata.policies[p_class]['policies'].keys():
+                for policy in _policydata.policies[p_class]['policies']:
                     if _policydata.policies[p_class]['policies'][policy]['Policy'].upper() == policy_name.upper():
                         _pol = _policydata.policies[p_class]['policies'][policy]
                         policy_name = policy
@@ -5072,7 +5072,7 @@ def set_(computer_policy=None, user_policy=None,
     policies['User'] = user_policy
     policies['Machine'] = computer_policy
     if policies:
-        for p_class in policies.keys():
+        for p_class in policies:
             _secedits = {}
             _modal_sets = {}
             _admTemplateData = {}
@@ -5081,13 +5081,13 @@ def set_(computer_policy=None, user_policy=None,
             _policydata = _policy_info()
             admxPolicyDefinitions, admlPolicyResources = _processPolicyDefinitions(display_language=adml_language)
             if policies[p_class]:
-                for policy_name in policies[p_class].keys():
+                for policy_name in policies[p_class]:
                     _pol = None
                     policy_key_name = policy_name
                     if policy_name in _policydata.policies[p_class]['policies']:
                         _pol = _policydata.policies[p_class]['policies'][policy_name]
                     else:
-                        for policy in _policydata.policies[p_class]['policies'].keys():
+                        for policy in _policydata.policies[p_class]['policies']:
                             if _policydata.policies[p_class]['policies'][policy]['Policy'].upper() == \
                                     policy_name.upper():
                                 _pol = _policydata.policies[p_class]['policies'][policy]
@@ -5237,7 +5237,7 @@ def set_(computer_policy=None, user_policy=None,
                                         msg = msg.format(policy_name)
                                         raise SaltInvocationError(msg)
                 if _regedits:
-                    for regedit in _regedits.keys():
+                    for regedit in _regedits:
                         log.debug('{0} is a Registry policy'.format(regedit))
                         # if the value setting is None or "(value not set)", we will delete the value from the registry
                         if _regedits[regedit]['value'] is not None and _regedits[regedit]['value'] != '(value not set)':
@@ -5257,7 +5257,7 @@ def set_(computer_policy=None, user_policy=None,
                                    '  Some changes may not be applied as expected')
                             raise CommandExecutionError(msg.format(regedit))
                 if _lsarights:
-                    for lsaright in _lsarights.keys():
+                    for lsaright in _lsarights:
                         _existingUsers = None
                         if not cumulative_rights_assignments:
                             _existingUsers = _getRightsAssignments(
@@ -5296,7 +5296,7 @@ def set_(computer_policy=None, user_policy=None,
                 if _modal_sets:
                     # we've got modalsets to make
                     log.debug(_modal_sets)
-                    for _modal_set in _modal_sets.keys():
+                    for _modal_set in _modal_sets:
                         try:
                             _existingModalData = win32net.NetUserModalsGet(None, _modal_set)
                             _newModalSetData = dictupdate.update(_existingModalData, _modal_sets[_modal_set])

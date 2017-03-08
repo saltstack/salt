@@ -392,7 +392,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
     if len(packages) == 0 and not kernel_restart:
         return 'No packages seem to need to be restarted.'
 
-    for package in packages.keys():
+    for package in packages:
         cmd = cmd_pkg_query + package
         paths = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
 
@@ -427,7 +427,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
         paths.stdout.close()
 
     # Alternatively, find init.d script or service that match the process name
-    for package in packages.keys():
+    for package in packages:
         if len(packages[package]['systemdservice']) == 0 and len(packages[package]['initscripts']) == 0:
             service = __salt__['service.available'](packages[package]['process_name'])
 
@@ -442,7 +442,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
     restartinitcommands = []
     restartservicecommands = []
 
-    for package in packages.keys():
+    for package in packages:
         if len(packages[package]['initscripts']) > 0:
             restartable.append(package)
             restartinitcommands.extend(['service ' + s + ' restart' for s in packages[package]['initscripts']])

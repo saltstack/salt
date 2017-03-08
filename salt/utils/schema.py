@@ -515,7 +515,7 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
                 'Please pass all arguments as named arguments. Un-named '
                 'arguments are not supported'
             )
-        for key in kwargs.copy().keys():
+        for key in kwargs.copy():
             # Store the kwarg keys as the instance attributes for the
             # serialization step
             if key == 'name':
