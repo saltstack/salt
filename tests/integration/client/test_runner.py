@@ -5,7 +5,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 import tests.integration as integration
-from tests.support.unit import skipIf
 
 # Import Salt libs
 import salt.runner
@@ -132,4 +131,3 @@ class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTes
                 'quuz': 'on',
             },
         })
-
