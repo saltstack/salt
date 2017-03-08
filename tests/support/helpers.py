@@ -25,7 +25,7 @@ import logging
 import functools
 
 # Import 3rd-party libs
-import psutil
+import psutil  # pylint: disable=3rd-party-module-not-gated
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 if six.PY2:
