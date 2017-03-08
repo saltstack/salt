@@ -1591,7 +1591,7 @@ def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
     for disk in disks:
         if disks[disk]['attached_to'] is None:
             del_kwargs = {
-                'name': disks[disk]['name'][0],
+                'name': disks[disk]['name'],
                 'delete_vhd': kwargs.get('delete_vhd', False)
             }
             log.info('Deleting disk {name}, deleting VHD: {delete_vhd}'.format(**del_kwargs))
