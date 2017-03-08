@@ -239,7 +239,7 @@ def delete(name, remove=False, force=False, root=None):
     if remove:
         cmd.append('-r')
 
-    if force and __grains__['kernel'] != 'OpenBSD':
+    if force and __grains__['kernel'] != 'OpenBSD' and __grains__['kernel'] != 'AIX':
         cmd.append('-f')
 
     cmd.append(name)
@@ -408,17 +408,19 @@ def chgroups(name, groups, append=False, root=None):
     cmd = ['usermod']
 
     if __grains__['kernel'] != 'OpenBSD':
-        if append:
+        if append and __grains__['kernel'] != 'AIX':
             cmd.append('-a')
+        cmd.append('-G')
     else:
         if append:
             cmd.append('-G')
         else:
             cmd.append('-S')
 
-    if __grains__['kernel'] != 'OpenBSD':
-        cmd.append('-G')
-    cmd.extend([','.join(groups), name])
+    if append and __grains__['kernel'] == 'AIX':
+        cmd.extend([','.join(ugrps) + ',' + ','.join(groups), name])
+    else:
+        cmd.extend([','.join(groups), name])
 
     if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
@@ -426,7 +428,7 @@ def chgroups(name, groups, append=False, root=None):
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
     # try to fallback on gpasswd to add user to localgroups
     # for old lib-pamldap support
-    if __grains__['kernel'] != 'OpenBSD':
+    if __grains__['kernel'] != 'OpenBSD' and __grains__['kernel'] != 'AIX':
         if result['retcode'] != 0 and 'not found in' in result['stderr']:
             ret = True
             for group in groups:
