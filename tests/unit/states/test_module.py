@@ -105,6 +105,10 @@ class ModuleStateTest(TestCase):
             assert not ret['result']
 
     def test_xrun_args(self):
+        '''
+        Test unnamed args.
+        :return:
+        '''
         with patch.dict(module.__salt__, {CMD: _mocked_func_args}):
             assert module.xrun(**{CMD: ['foo', 'bar']})['result']
 
