@@ -15,20 +15,17 @@ from tests.support.unit import skipIf
 import salt.version
 
 NO_DOCKERPY = False
+NO_DOCKERPY = False
 try:
-    import DOCKER  # pylint: disable=import-error,unused-import
+    import docker  # pylint: disable=import-error,unused-import
 except ImportError:
-    NO_DOCKER = True
-
-if not salt.utils.which('mysqladmin'):
-    NO_DOCKER = True
-
+    NO_DOCKERPY = True
 
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
 
 @skipIf(
-    NO_DOCKER,
+    NO_DOCKERPY,
     'Please install docker-py before running'
     'Docker integration tests.'
 )
