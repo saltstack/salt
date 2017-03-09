@@ -310,7 +310,7 @@ def sync_states(saltenv=None, refresh=True):
     return ret
 
 
-def refresh_grains(refresh_pillar=True):
+def refresh_grains(**kwargs):
     '''
     .. versionadded:: 2016.3.6,2016.11.4,Nitrogen
 
@@ -330,13 +330,17 @@ def refresh_grains(refresh_pillar=True):
 
         salt '*' saltutil.refresh_grains
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    _refresh_pillar = kwargs.pop('refresh_pillar', True)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
     # Modules and pillar need to be refreshed in case grains changes affected
     # them, and the module refresh process reloads the grains and assigns the
     # newly-reloaded grains to each execution module's __grains__ dunder.
     refresh_modules()
-    if refresh_pillar:
+    if _refresh_pillar:
         refresh_pillar()
-    return ret
+    return True
 
 
 def sync_grains(saltenv=None, refresh=True):
