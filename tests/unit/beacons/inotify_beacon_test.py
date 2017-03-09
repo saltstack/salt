@@ -12,7 +12,6 @@ from salt.beacons import inotify
 # Salt testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import destructiveTest, ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
 
 # Third-party libs
 try:
@@ -26,7 +25,6 @@ ensure_in_syspath('../../')
 
 
 @skipIf(not HAS_PYINOTIFY, 'pyinotify is not available')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class INotifyBeaconTestCase(TestCase):
     '''
     Test case for salt.beacons.inotify
