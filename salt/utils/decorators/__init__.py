@@ -532,8 +532,11 @@ class _WithDeprecated(_DeprecationDecorator):
 
         :return:
         '''
-        return "{m_name}.{f_name}".format(m_name=self._globals.get(self.MODULE_NAME, ''),
-                                          f_name=self._orig_f_name) in self._options.get(self.CFG_KEY, list())
+        func_path = "{m_name}.{f_name}".format(
+            m_name=self._globals.get(self.MODULE_NAME, '') or self._globals['__name__'].split('.')[-1],
+            f_name=self._orig_f_name)
+
+        return func_path in self._globals.get('__opts__', {}).get(self.CFG_KEY, list()), func_path
 
     def __call__(self, function):
         '''
@@ -554,7 +557,8 @@ class _WithDeprecated(_DeprecationDecorator):
             :return:
             '''
             self._set_function(function)
-            if self._is_used_deprecated():
+            is_deprecated, func_path = self._is_used_deprecated()
+            if is_deprecated:
                 if self._curr_version < self._exp_version:
                     msg = list()
                     if self._with_name:
