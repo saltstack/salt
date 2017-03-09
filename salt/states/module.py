@@ -158,6 +158,7 @@ import salt.utils
 import salt.utils.jid
 from salt.ext.six.moves import range
 from salt.exceptions import SaltInvocationError
+from salt.utils.decorators import with_deprecated
 
 
 def wait(name, **kwargs):
@@ -191,7 +192,8 @@ def wait(name, **kwargs):
 watch = salt.utils.alias_function(wait, 'watch')
 
 
-def xrun(**kwargs):
+@with_deprecated(globals(), "Oxygen")
+def run(**kwargs):
     '''
     Run a single module function or a range of module functions in a batch.
     Supersedes `module.run` function, which requires `m_` prefix to function-specific parameters.
@@ -298,7 +300,7 @@ def _call_function(name, returner=None, **kwargs):
     return mret
 
 
-def run(name, **kwargs):
+def _run(name, **kwargs):
     '''
     Run a single module function
 
