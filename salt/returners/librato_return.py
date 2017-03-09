@@ -10,6 +10,7 @@ The librato python client can be found at:
 https://github.com/librato/python-librato
 
 .. code-block:: yaml
+
     librato.email: example@librato.com
     librato.api_token: abc12345def
 
@@ -23,6 +24,7 @@ could be modified to include the ec2 tags. Multiple dimensions are added simply
 by adding more tags to the submission.
 
 .. code-block:: python
+
     pillar_data = __salt__['pillar.raw']()
     q.add(metric.name, value, tags={'Name': ret['id'],'Region': pillar_data['ec2_tags']['Name']})
 
