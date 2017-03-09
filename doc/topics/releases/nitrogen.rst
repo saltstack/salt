@@ -78,6 +78,7 @@ State Module Changes
           do_stuff: 'True'
         }
 
+
   After:
 
 .. code-block:: yaml
@@ -90,6 +91,7 @@ State Module Changes
           - second_arg: two
           - do_stuff: True
 
+
   Previous behaviour of the function :py:func:`module.run <salt.states.module.run>` is
   still supported and can be restored. Its implementation will be entirely removed in
   version "Oxygen". In order to access "old" function behaviour and restore compatibility
@@ -99,6 +101,7 @@ State Module Changes
 
     use_deprecated:
       - module.run
+
 
   The configuration above you can also deploy separately to all your minions and restart them.
 
