@@ -516,8 +516,9 @@ class _WithDeprecated(_DeprecationDecorator):
         Based on the configuration, set to execute an old or a new function.
         :return:
         '''
-        full_name = "{m_name}.{f_name}".format(m_name=self._globals.get(self.MODULE_NAME, ''),
-                                               f_name=function.__name__)
+        full_name = "{m_name}.{f_name}".format(
+            m_name=self._globals.get(self.MODULE_NAME, '') or self._globals['__name__'].split('.')[-1],
+            f_name=function.__name__)
         if full_name.startswith("."):
             self._raise_later = CommandExecutionError('Module not found for function "{f_name}"'.format(
                 f_name=function.__name__))
