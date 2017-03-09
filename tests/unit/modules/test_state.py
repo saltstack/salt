@@ -25,7 +25,7 @@ from salt.modules import state
 # Globals
 state.__salt__ = {}
 state.__context__ = {}
-state.__opts__ = {}
+state.__opts__ = {'cachedir': '/D'}
 state.__pillar__ = {}
 
 
@@ -137,7 +137,8 @@ class MockState(object):
             Mock HighState class
         '''
         flag = False
-        opts = {'state_top': ""}
+        opts = {'state_top': '',
+                'pillar': {}}
 
         def __init__(self, opts, pillar=None, *args, **kwargs):
             self.state = MockState.State(opts,
@@ -478,16 +479,15 @@ class StateTestCase(TestCase):
         '''
             Test to clear out cached state file
         '''
-        with patch.dict(state.__opts__, {"cachedir": "/D/"}):
-            mock = MagicMock(return_value=["A.cache.p", "B.cache.p", "C"])
-            with patch.object(os, 'listdir', mock):
+        mock = MagicMock(return_value=["A.cache.p", "B.cache.p", "C"])
+        with patch.object(os, 'listdir', mock):
+            mock = MagicMock(return_value=True)
+            with patch.object(os.path, 'isfile', mock):
                 mock = MagicMock(return_value=True)
-                with patch.object(os.path, 'isfile', mock):
-                    mock = MagicMock(return_value=True)
-                    with patch.object(os, 'remove', mock):
-                        self.assertEqual(state.clear_cache(),
-                                         ['A.cache.p',
-                                          'B.cache.p'])
+                with patch.object(os, 'remove', mock):
+                    self.assertEqual(state.clear_cache(),
+                                     ['A.cache.p',
+                                      'B.cache.p'])
 
     def test_single(self):
         '''
@@ -550,11 +550,10 @@ class StateTestCase(TestCase):
 
             mock = MagicMock(return_value=["True"])
             with patch.object(state, 'apply_', mock):
-                with patch.dict(state.__opts__, {"cachedir": "/D/"}):
-                    mock = MagicMock(return_value="")
-                    with patch.object(os, 'remove', mock):
-                        self.assertListEqual(state.run_request("name"),
-                                             ["True"])
+                mock = MagicMock(return_value="")
+                with patch.object(os, 'remove', mock):
+                    self.assertListEqual(state.run_request("name"),
+                                         ["True"])
 
     def test_show_highstate(self):
         '''
@@ -739,57 +738,53 @@ class StateTestCase(TestCase):
                                     mock = MagicMock(return_value=True)
                                     with patch.object(salt.payload, 'Serial',
                                                       mock):
-                                        with patch.dict(state.__opts__,
-                                                        {"cachedir": "D"}):
-                                            with patch.object(os.path,
-                                                              'join', mock):
-                                                with patch.object(
-                                                                  state,
-                                                                  '_set'
-                                                                  '_retcode',
-                                                                  mock):
-                                                    self.assertTrue(state.
-                                                                    highstate
-                                                                    (arg))
+                                        with patch.object(os.path,
+                                                          'join', mock):
+                                            with patch.object(
+                                                              state,
+                                                              '_set'
+                                                              '_retcode',
+                                                              mock):
+                                                self.assertTrue(state.
+                                                                highstate
+                                                                (arg))
 
     def test_clear_request(self):
         '''
             Test to clear out the state execution request without executing it
         '''
-        with patch.dict(state.__opts__, {"cachedir": "D"}):
+        mock = MagicMock(return_value=True)
+        with patch.object(os.path, 'join', mock):
             mock = MagicMock(return_value=True)
-            with patch.object(os.path, 'join', mock):
-                mock = MagicMock(return_value=True)
-                with patch.object(salt.payload, 'Serial', mock):
-                    mock = MagicMock(side_effect=[False, True, True])
-                    with patch.object(os.path, 'isfile', mock):
-                        self.assertTrue(state.clear_request("A"))
+            with patch.object(salt.payload, 'Serial', mock):
+                mock = MagicMock(side_effect=[False, True, True])
+                with patch.object(os.path, 'isfile', mock):
+                    self.assertTrue(state.clear_request("A"))
 
-                        mock = MagicMock(return_value=True)
-                        with patch.object(os, 'remove', mock):
-                            self.assertTrue(state.clear_request())
+                    mock = MagicMock(return_value=True)
+                    with patch.object(os, 'remove', mock):
+                        self.assertTrue(state.clear_request())
 
-                        mock = MagicMock(return_value={})
-                        with patch.object(state, 'check_request', mock):
-                            self.assertFalse(state.clear_request("A"))
+                    mock = MagicMock(return_value={})
+                    with patch.object(state, 'check_request', mock):
+                        self.assertFalse(state.clear_request("A"))
 
     @patch('salt.modules.state.salt.payload', MockSerial)
     def test_check_request(self):
         '''
             Test to return the state request information
         '''
-        with patch.dict(state.__opts__, {"cachedir": "D"}):
-            mock = MagicMock(return_value=True)
-            with patch.object(os.path, 'join', mock):
-                mock = MagicMock(side_effect=[True, True, False])
-                with patch.object(os.path, 'isfile', mock):
-                    with patch('salt.utils.fopen', mock_open()):
-                        self.assertDictEqual(state.check_request(), {'A': 'B'})
+        mock = MagicMock(return_value=True)
+        with patch.object(os.path, 'join', mock):
+            mock = MagicMock(side_effect=[True, True, False])
+            with patch.object(os.path, 'isfile', mock):
+                with patch('salt.utils.fopen', mock_open()):
+                    self.assertDictEqual(state.check_request(), {'A': 'B'})
 
-                    with patch('salt.utils.fopen', mock_open()):
-                        self.assertEqual(state.check_request("A"), 'B')
+                with patch('salt.utils.fopen', mock_open()):
+                    self.assertEqual(state.check_request("A"), 'B')
 
-                    self.assertDictEqual(state.check_request(), {})
+                self.assertDictEqual(state.check_request(), {})
 
     def test_request(self):
         '''
@@ -797,28 +792,21 @@ class StateTestCase(TestCase):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(state, 'apply_', mock):
-            with patch.dict(state.__opts__, {"cachedir": "D"}):
-                mock = MagicMock(return_value=True)
-                with patch.object(os.path, 'join', mock):
-                    mock = MagicMock(return_value=
-                                     {"test_run": "",
-                                      "mods": "",
-                                      "kwargs": ""})
-                    with patch.object(state, 'check_request', mock):
-                        mock = MagicMock(return_value=True)
-                        with patch.object(os, 'umask', mock):
-                            with patch.object(salt.utils, 'is_windows', mock):
-                                with patch.dict(state.__salt__,
-                                                {'cmd.run': mock}):
-                                    with patch('salt.utils.fopen',
-                                               mock_open()):
-                                        mock = MagicMock(
-                                                         return_value=True)
-                                        with patch.object(os, 'umask',
-                                                          mock):
-                                            self.assertTrue(
-                                                            state.request("A")
-                                                            )
+            mock = MagicMock(return_value=True)
+            with patch.object(os.path, 'join', mock):
+                mock = MagicMock(return_value=
+                                 {"test_run": "",
+                                  "mods": "",
+                                  "kwargs": ""})
+                with patch.object(state, 'check_request', mock):
+                    mock = MagicMock(return_value=True)
+                    with patch.object(os, 'umask', mock):
+                        with patch.object(salt.utils, 'is_windows', mock):
+                            with patch.dict(state.__salt__, {'cmd.run': mock}):
+                                with patch('salt.utils.fopen', mock_open()):
+                                    mock = MagicMock(return_value=True)
+                                    with patch.object(os, 'umask', mock):
+                                        self.assertTrue(state.request("A"))
 
     def test_sls(self):
         '''
@@ -875,59 +863,50 @@ class StateTestCase(TestCase):
                                                   True,
                                                   pillar="A")
 
-                                with patch.dict(
-                                                state.__opts__,
-                                                {"cachedir": "/D/"}):
-                                    mock = MagicMock(return_value=
-                                                     "/D/cache.cache.p")
+                                mock = MagicMock(return_value="/D/cache.cache.p")
+                                with patch.object(os.path,
+                                                  'join',
+                                                  mock):
+                                    mock = MagicMock(return_value=True)
                                     with patch.object(os.path,
-                                                      'join',
+                                                      'isfile',
                                                       mock):
-                                        mock = MagicMock(return_value=True)
-                                        with patch.object(os.path,
-                                                          'isfile',
+                                        with patch(
+                                                   'salt.utils.fopen',
+                                                   mock_open()):
+                                            self.assertTrue(
+                                                            state.sls(arg,
+                                                                      None,
+                                                                      None,
+                                                                      None,
+                                                                      True,
+                                                                      cache
+                                                                      =True
+                                                                      )
+                                                            )
+
+                                    MockState.HighState.flag = True
+                                    self.assertTrue(state.sls("core,edit"
+                                                              ".vim dev",
+                                                              None,
+                                                              None,
+                                                              None,
+                                                              True)
+                                                    )
+
+                                    MockState.HighState.flag = False
+                                    mock = MagicMock(return_value=True)
+                                    with patch.dict(state.__salt__,
+                                                    {'config.option':
+                                                     mock}):
+                                        mock = MagicMock(return_value=
+                                                         True)
+                                        with patch.object(
+                                                          state,
+                                                          '_filter_'
+                                                          'running',
                                                           mock):
-                                            with patch(
-                                                       'salt.utils.fopen',
-                                                       mock_open()):
-                                                self.assertTrue(
-                                                                state.sls(arg,
-                                                                          None,
-                                                                          None,
-                                                                          None,
-                                                                          True,
-                                                                          cache
-                                                                          =True
-                                                                          )
-                                                                )
-
-                                        MockState.HighState.flag = True
-                                        self.assertTrue(state.sls("core,edit"
-                                                                  ".vim dev",
-                                                                  None,
-                                                                  None,
-                                                                  None,
-                                                                  True)
-                                                        )
-
-                                        MockState.HighState.flag = False
-                                        mock = MagicMock(return_value=True)
-                                        with patch.dict(state.__salt__,
-                                                        {'config.option':
-                                                         mock}):
-                                            mock = MagicMock(return_value=
-                                                             True)
-                                            with patch.object(
-                                                              state,
-                                                              '_filter_'
-                                                              'running',
-                                                              mock):
-                                                with patch.dict(
-                                                                state.
-                                                                __opts__,
-                                                                {"cachedir":
-                                                                 "/D/"}):
-                                                    self.sub_test_sls()
+                                            self.sub_test_sls()
 
     def sub_test_sls(self):
         '''
