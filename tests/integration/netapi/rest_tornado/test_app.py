@@ -6,13 +6,13 @@ from __future__ import print_function
 import json
 import time
 import threading
-from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Libs
 from salt.netapi.rest_tornado import saltnado
-from tests.unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
+from salt.utils.versions import StrictVersion
 
 # Import Salt Testing Libs
+from tests.unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
 from tests.support.unit import skipIf
 
 # Import 3rd-party libs
