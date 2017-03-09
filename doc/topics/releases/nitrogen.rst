@@ -64,10 +64,11 @@ State Module Changes
 - The :py:func:`module.run <salt.states.module.run>` state dropped its previous
   syntax with ``m_`` prefix for reserved keywords. Additionally, it allows
   running several functions in a batch.
-  Before:
+  Before and after:
 
 .. code-block:: yaml
 
+    # Before
     run_something:
       module.run:
         - name: mymodule.something
@@ -78,11 +79,7 @@ State Module Changes
           do_stuff: 'True'
         }
 
-
-  After:
-
-.. code-block:: yaml
-
+    # After
     run_something:
       module.run:
         mymodule.something:
@@ -91,11 +88,13 @@ State Module Changes
           - second_arg: two
           - do_stuff: True
 
-
-  Previous behaviour of the function :py:func:`module.run <salt.states.module.run>` is
+- Previous behaviour of the function :py:func:`module.run <salt.states.module.run>` is
   still supported and can be restored. Its implementation will be entirely removed in
   version "Oxygen". In order to access "old" function behaviour and restore compatibility
-  with the current infrastructure, please add the following configuration to the minion setup:
+  with the current infrastructure, please add the following configuration to the minion setup.
+  Note that the configuration below you can also deploy separately to all your minions and
+  restart them.
+
 
 .. code-block:: yaml
 
@@ -103,7 +102,6 @@ State Module Changes
       - module.run
 
 
-  The configuration above you can also deploy separately to all your minions and restart them.
 
 Execution Module Changes
 ========================
