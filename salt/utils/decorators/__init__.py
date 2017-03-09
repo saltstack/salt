@@ -272,7 +272,6 @@ class _DeprecationDecorator(object):
         self._exp_version_name = version
         self._exp_version = SaltStackVersion.from_name(self._exp_version_name)
         self._curr_version = __saltstack_version__.info
-        self._options = self._globals['__opts__']
         self._raise_later = None
         self._function = None
         self._orig_f_name = None
@@ -523,7 +522,7 @@ class _WithDeprecated(_DeprecationDecorator):
             self._raise_later = CommandExecutionError('Module not found for function "{f_name}"'.format(
                 f_name=function.__name__))
 
-        if full_name in self._options.get(self.CFG_KEY, list()):
+        if full_name in self._globals.get('__opts__', '{}').get(self.CFG_KEY, list()):
             self._function = self._globals.get(self._with_name or "_{0}".format(function.__name__))
 
     def _is_used_deprecated(self):
