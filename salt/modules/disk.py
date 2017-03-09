@@ -481,12 +481,13 @@ def fstype(device):
                 fs_type = df_out[2]
                 if fs_type:
                     return fs_type
-        else:
-            df_out = __salt__['cmd.run']('df -T {0}'.format(device)).splitlines()
-            if len(df_out) > 1:
-                fs_type = df_out[1]
-                if fs_type:
-                    return fs_type
+                
+    if salt.utils.which('file'):
+        file_out = __salt__['cmd.run']('file -s {0}'.format(device)).split()
+        if len(file_out) > 4:
+            fs_type = file_out[4]
+            if fs_type:
+                return fs_type
 
     return ''
 
