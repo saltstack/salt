@@ -481,7 +481,7 @@ def fstype(device):
                 fs_type = df_out[2]
                 if fs_type:
                     return fs_type
-                
+
     if salt.utils.which('file'):
         file_out = __salt__['cmd.run']('file -s {0}'.format(device)).split()
         if len(file_out) > 4:
