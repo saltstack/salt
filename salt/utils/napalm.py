@@ -44,6 +44,20 @@ def is_proxy(opts):
     return salt.utils.is_proxy() and opts.get('proxy', {}).get('proxytype') == 'napalm'
 
 
+def is_always_alive(opts):
+    '''
+    Is always alive required?
+    '''
+    return opts.get('proxy', {}).get('always_alive', True)
+
+
+def not_always_alive(opts):
+    '''
+    Should this proxy be always alive?
+    '''
+    return (is_proxy(opts) and not is_always_alive(opts)) or is_minion(opts)
+
+
 def is_minion(opts):
     '''
     Is this a NAPALM straight minion?
@@ -113,6 +127,9 @@ def call(napalm_device, method, *args, **kwargs):
     '''
     result = False
     out = None
+    log.error('Calling')
+    log.error(method)
+    opts = napalm_device.get('__opts__', {})
     try:
         if not napalm_device.get('UP', False):
             raise Exception('not connected')
@@ -153,11 +170,12 @@ def call(napalm_device, method, *args, **kwargs):
             'comment': comment,
             'traceback': err_tb
         }
-    # finally:
-    #     if salt.utils.is_proxy() and not napalm_device.get('ALWAYS_ALIVE', True):
-    #         # in case the proxy does not need to be always alive
-    #         # close the connection when the call is over
-    #         getattr(napalm_device.get('DRIVER'), 'close')()
+    finally:
+        if not_always_alive(opts) and napalm_device.get('CLOSE', True):
+            # either running in a not-always-alive proxy
+            # either running in a regular minion
+            # close the connection when the call is over
+            napalm_device['DRIVER'].close()
     return {
         'out': out,
         'result': result,
@@ -297,5 +315,6 @@ def proxy_napalm_wrap(func):
                 # as all actions must be issued within the same configuration session
                 # otherwise we risk to open multiple sessions
                 wrapped_global_namespace['napalm_device'] = kwargs['inherit_napalm_device']
+        wrapped_global_namespace['napalm_device']['__opts__'] = opts
         return func(*args, **kwargs)
     return func_wrapper

@@ -185,6 +185,16 @@ def _config_logic(napalm_device,
             loaded_result['already_configured'] = True
             loaded_result['comment'] = 'Already configured.'
 
+    if salt.utils.napalm.not_always_alive(__opts__):
+        # force closing the configuration session
+        # when running in a non-always-alive proxy
+        # or regular minion
+        try:
+            napalm_device['DRIVER'].close()
+        except Exception as err:
+            log.error('Unable to close the temp connection with the device:')
+            log.error(err)
+            log.error('Please report.')
     return loaded_result
 
 
@@ -841,6 +851,8 @@ def load_config(filename=None,
     fun = 'load_merge_candidate'
     if replace:
         fun = 'load_replace_candidate'
+    if salt.utils.napalm.not_always_alive(__opts__):
+        napalm_device['CLOSE'] = False
     _loaded = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         fun,
@@ -1207,6 +1219,8 @@ def load_template(template_name,
             fun = 'load_merge_candidate'
             if replace:  # replace requested
                 fun = 'load_replace_candidate'
+            if salt.utils.napalm.not_always_alive(__opts__):
+                napalm_device['CLOSE'] = False
             _loaded = salt.utils.napalm.call(
                 napalm_device,  # pylint: disable=undefined-variable
                 fun,
@@ -1228,12 +1242,13 @@ def load_template(template_name,
                 'opts': __opts__  # inject opts content
             }
         )
+        if salt.utils.napalm.not_always_alive(__opts__):
+            napalm_device['CLOSE'] = False
         _loaded = salt.utils.napalm.call(
             napalm_device,  # pylint: disable=undefined-variable
             'load_template',
             **load_templates_params
         )
-
     return _config_logic(napalm_device,  # pylint: disable=undefined-variable
                          _loaded,
                          test=test,
