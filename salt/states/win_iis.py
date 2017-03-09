@@ -769,11 +769,13 @@ def remove_vdir(name, site, app='/'):
 
     return ret
 
+
 def set_app(name, site, settings=None):
     '''
     Set the value of the setting for an IIS web application.
-    .. note:
-        This function only configures existing app
+    .. note::
+        This function only configures existing app.
+        Params are case sensitive.
     :param str name: The IIS application.
     :param str site: The IIS site name.
     :param str settings: A dictionary of the setting names and their values.
@@ -782,6 +784,7 @@ def set_app(name, site, settings=None):
     :                       userName: "connectAs" user
     :                       password: "connectAs" password for user
     :rtype: bool
+    .. versionadded:: Nitrogen
     Example of usage:
 
     .. code-block:: yaml
