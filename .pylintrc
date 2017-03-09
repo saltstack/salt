@@ -43,7 +43,7 @@ extension-pkg-whitelist=
 
 # Fileperms Lint Plugin Settings
 fileperms-default=0644
-fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
+fileperms-ignore-paths=setup.py,tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
 
 # Minimum Python Version To Enforce
 minimum-python-version = 2.7
