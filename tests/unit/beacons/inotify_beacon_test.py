@@ -11,7 +11,7 @@ from salt.beacons import inotify
 
 # Salt testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import destructiveTest, ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath
 
 # Third-party libs
 try:

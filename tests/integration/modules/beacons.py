@@ -21,6 +21,7 @@ ensure_in_syspath('../../')
 
 beacons.__opts__ = {}
 
+
 class BeaconsAddDeleteTest(integration.ModuleCase):
     '''
     Tests the add and delete functions
