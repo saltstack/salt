@@ -779,8 +779,7 @@ def parallel_runners(name, runners):
                                            __orchestration_jid__=jid,
                                            __env__=__env__,
                                            full_return=True,
-                                           **(runner_config.get(['kwarg'],
-                                                                {})))
+                                           **(runner_config.get('kwarg', {})))
 
     outputs = _parallel_map(call_runner, runners)
 
