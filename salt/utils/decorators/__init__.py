@@ -286,11 +286,15 @@ class _DeprecationDecorator(object):
         _args = list()
         _kwargs = dict()
 
-        for arg_item in kwargs.get('__pub_arg', list()):
-            if type(arg_item) == dict:
-                _kwargs.update(arg_item.copy())
-            else:
-                _args.append(arg_item)
+        if '__pub_arg' in kwargs:  # For modules
+            for arg_item in kwargs.get('__pub_arg', list()):
+                if type(arg_item) == dict:
+                    _kwargs.update(arg_item.copy())
+                else:
+                    _args.append(arg_item)
+        else:
+            _kwargs = kwargs.copy()  # For states
+
         return _args, _kwargs
 
     def _call_function(self, kwargs):
