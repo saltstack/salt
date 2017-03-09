@@ -5,7 +5,7 @@ __author__ = "Rajvi Dhimar"
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
-from mock import patch, MagicMock, ANY, mock_open
+from mock import patch, MagicMock, mock_open
 from lxml import etree
 
 from jnpr.junos.utils.config import Config
@@ -776,7 +776,6 @@ class Test_Junos_Module(unittest.TestCase):
         self.assertEqual(junos.shutdown(), ret)
 
     @patch('salt.modules.junos.SW.reboot')
-#    @patch('jnpr.junos.utils.sw.SW.reboot')
     def test_shutdown_with_reboot_args(self, mock_reboot):
         ret = dict()
         ret['message'] = 'Successfully powered off/rebooted.'
@@ -932,6 +931,9 @@ class Test_Junos_Module(unittest.TestCase):
     #     mock_mkstemp.return_value = 'test/path/config'
     #     mock_diff.return_value = 'diff'
     #     mock_commit_check.return_value = True
+    #     ret = dict()
+    #     ret['message'] = 'reasons'
+    #     ret['out'] = True
     #     junos.install_config('/actual/path/config', template_vars={'test':'args'})
     #     mck.assert_called_with('/actual/path/config', 'test/path/config', template_vars={'test':'args'})
 
@@ -1577,13 +1579,12 @@ class Test_Junos_Module(unittest.TestCase):
 
     def test_virtual_proxy_unavailable(self):
         junos.__opts__ = {}
-        self.maxDiff = None
         res = (False, 'The junos module could not be \
                 loaded: junos-eznc or jxmlease or proxy could not be loaded.')
         self.assertEqual(junos.__virtual__(), res)
 
     def mck_import(self, name, *args, **kwargs):
-        if name=='jxmlease':
+        if name == 'jxmlease':
             return self.raise_exception()
         else:
             __import__(name)
@@ -1591,7 +1592,6 @@ class Test_Junos_Module(unittest.TestCase):
     def test_virtual_all_true(self):
         junos.__opts__ = {'proxy': 'test'}
         self.assertEqual(junos.__virtual__(), 'junos')
-
 
 
 @attr('unit')
@@ -1641,9 +1641,16 @@ class Test_Junos_RPC(unittest.TestCase):
     @patch('salt.modules.junos.etree.tostring')
     @patch('salt.modules.junos.etree.XML')
     @patch('salt.modules.junos.getattr')
-    def test_rpc_get_config_filter(self, mock_attr, mock_XML, mock_tostring, mock_jxmlease):
+    def test_rpc_get_config_filter(
+            self,
+            mock_attr,
+            mock_XML,
+            mock_tostring,
+            mock_jxmlease):
         mock_attr = self.mck_attr
-        junos.rpc('get-config', filter='<configuration><system/></configuration>')
+        junos.rpc(
+            'get-config',
+            filter='<configuration><system/></configuration>')
         mock_XML.assert_called_with('<configuration><system/></configuration>')
 
     @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mck_attr')
@@ -1655,14 +1662,39 @@ class Test_Junos_RPC(unittest.TestCase):
 
     @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mck_attr')
     @patch('salt.modules.junos.getattr')
-    def test_rpc_get_interface_information_with_kwargs(self, mock_attr, mck_attr):
+    def test_rpc_get_interface_information_with_kwargs(
+            self, mock_attr, mck_attr):
         mock_attr.return_value = self.mck_attr
         args = {'__pub_user': 'sudo_drajvi',
-                '__pub_arg': ['get-interface-information', '', 'text', {'terse': True}],
-                'interface-name': 'lo0', '__pub_fun': 'junos.rpc', '__pub_jid': '20170307233617793012',
-                '__pub_tgt': 'mac_min', '__pub_tgt_type': 'glob', '__pub_ret': ''}
+                '__pub_arg': ['get-interface-information',
+                              '',
+                              'text',
+                              {'terse': True}],
+                'interface-name': 'lo0',
+                '__pub_fun': 'junos.rpc',
+                '__pub_jid': '20170307233617793012',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
         junos.rpc('get-interface-information', format='text', **args)
-        mck_attr.assert_called_with({'format': 'text'}, dev_timeout=30, terse=True)
+        mck_attr.assert_called_with(
+            {'format': 'text'}, dev_timeout=30, terse=True)
+
+    @patch('salt.modules.junos.jxmlease.parse')
+    @patch('salt.modules.junos.etree.tostring')
+    @patch('salt.modules.junos.logging.Logger.warning')
+    @patch('salt.modules.junos.getattr')
+    def test_rpc_get_chassis_inventory_filter_as_arg(
+            self, mock_attr, mock_warning, mock_tostring, mock_jxmlease):
+        mock_attr.return_value = self.mck_attr
+
+        def mock_warn(msg, *args, **kwargs):
+            return msg
+        junos.rpc(
+            'get-chassis-inventory',
+            filter='<configuration><system/></configuration>')
+        mock_warning.assert_called_with(
+            'Filter ignored as it is only used with "get-config" rpc')
 
     @patch('salt.modules.junos.getattr')
     def test_rpc_get_interface_information_exception(
@@ -1702,4 +1734,4 @@ class Test_Junos_RPC(unittest.TestCase):
             junos.rpc('get-chassis-inventory', '/path/to/file')
             handle = m()
             handle.write.assert_called_with('xml rpc reply')
-
+            
