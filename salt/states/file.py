@@ -352,6 +352,37 @@ def _check_user(user, group):
     return err
 
 
+def _is_valid_relpath(
+        relpath,
+        maxdepth=None):
+    '''
+    Performs basic sanity checks on a relative path.
+
+    Requires slash-separated path components (i.e. the kind obtained
+    through cp.list_master or other such calls).
+
+    Ensures that the path does not contain directory transversal, and
+    that it does not exceed a stated maximum depth (if specified).
+    '''
+    # Check relpath surrounded by slashes, so that `..` can be caught as
+    # a path component at the start, end, and in the middle of the path.
+    if '/../' in '/{0}/'.format(relpath):
+        return False
+
+    # Check that the relative path's depth does not exceed maxdepth
+    if maxdepth is not None:
+        # Since paths are all master, just use POSIX separator
+        relpieces = relpath.split('/')
+        # Handle empty directories (include_empty==true) by removing the
+        # the last piece if it is an empty string
+        if not relpieces[-1]:
+            relpieces.pop()
+        if len(relpieces) > maxdepth + 1:
+            return False
+
+    return True
+
+
 def _gen_recurse_managed_files(
         name,
         source,
@@ -368,17 +399,12 @@ def _gen_recurse_managed_files(
     # Process symlinks and return the updated filenames list
     def process_symlinks(filenames, symlinks):
         for lname, ltarget in six.iteritems(symlinks):
-            if not salt.utils.check_include_exclude(
-                    os.path.relpath(lname, srcpath), include_pat, exclude_pat):
-                continue
             srelpath = os.path.relpath(lname, srcpath)
-            # Check for max depth
-            if maxdepth is not None:
-                srelpieces = srelpath.split('/')
-                if not srelpieces[-1]:
-                    srelpieces = srelpieces[:-1]
-                if len(srelpieces) > maxdepth + 1:
-                    continue
+            if not _is_valid_relpath(srelpath, maxdepth=maxdepth):
+                continue
+            if not salt.utils.check_include_exclude(
+                    srelpath, include_pat, exclude_pat):
+                continue
             # Check for all paths that begin with the symlink
             # and axe it leaving only the dirs/files below it.
             # This needs to use list() otherwise they reference
@@ -429,19 +455,8 @@ def _gen_recurse_managed_files(
         # empty dir(if include_empty==true).
 
         relname = sdecode(os.path.relpath(fn_, srcpath))
-        if relname.startswith('..'):
+        if not _is_valid_relpath(relname, maxdepth=maxdepth):
             continue
-
-        # Check for maxdepth of the relative path
-        if maxdepth is not None:
-            # Since paths are all master, just use POSIX separator
-            relpieces = relname.split('/')
-            # Handle empty directories (include_empty==true) by removing the
-            # the last piece if it is an empty string
-            if not relpieces[-1]:
-                relpieces = relpieces[:-1]
-            if len(relpieces) > maxdepth + 1:
-                continue
 
         # Check if it is to be excluded. Match only part of the path
         # relative to the target directory
@@ -463,10 +478,13 @@ def _gen_recurse_managed_files(
     if include_empty:
         mdirs = __salt__['cp.list_master_dirs'](senv, srcpath)
         for mdir in mdirs:
-            if not salt.utils.check_include_exclude(
-                    os.path.relpath(mdir, srcpath), include_pat, exclude_pat):
+            relname = os.path.relpath(mdir, srcpath)
+            if not _is_valid_relpath(relname, maxdepth=maxdepth):
                 continue
-            mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
+            if not salt.utils.check_include_exclude(
+                    relname, include_pat, exclude_pat):
+                continue
+            mdest = os.path.join(name, relname)
             # Check for symlinks that happen to point to an empty dir.
             if keep_symlinks:
                 islink = False
