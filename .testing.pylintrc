@@ -22,7 +22,7 @@ load-plugins=saltpylint.pep8,
   saltpylint.py3modernize,
   saltpylint.smartup,
   saltpylint.minpyver,
-  saltpylint.salttesting,
+  saltpylint.blacklist,
   saltpylint.thirdparty
 
 # Use multiple processes to speed up Pylint.
