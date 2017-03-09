@@ -3,8 +3,6 @@ r'''
 Execution of Salt modules from within states
 ============================================
 
-Here you have two options: `module.run` and `module.xrun`.
-
 With `module.run` these states allow individual execution module calls to be
 made via states. To call a single module function use a :mod:`module.run <salt.states.module.run>`
 state:
@@ -13,15 +11,57 @@ state:
 
     mine.send:
       module.run:
-        - name: network.interfaces
+        - network.interfaces
 
 Note that this example is probably unnecessary to use in practice, since the
 ``mine_functions`` and ``mine_interval`` config parameters can be used to
-schedule updates for the mine (see :ref:`here <salt-mine>` for more
-info).
+schedule updates for the mine (see :ref:`here <salt-mine>` for more info).
 
 It is sometimes desirable to trigger a function call after a state is executed,
 for this the :mod:`module.wait <salt.states.module.wait>` state can be used:
+
+.. code-block:: yaml
+
+    fetch_out_of_band:
+      module.run:
+        git.fetch:
+          - cwd: /path/to/my/repo
+          - user: myuser
+          - opts: '--all'
+
+Another example:
+
+.. code-block:: yaml
+
+    mine.send:
+      module.xrun:
+        network.ip_addrs:
+          - interface: eth0
+
+And more complex example:
+
+.. code-block:: yaml
+
+    eventsviewer:
+      module.xrun:
+        task.create_task:
+          - name: events-viewer
+          - user_name: System
+          - action_type: Execute
+          - cmd: 'c:\netops\scripts\events_viewer.bat'
+          - trigger_type: 'Daily'
+          - start_date: '2017-1-20'
+          - start_time: '11:59PM'
+
+Please note, this is a new behaviour of `module.run` function.
+
+With the previous `module.run` there are several differences:
+
+- The need of `name` keyword
+- The need of `m_` prefix
+- No way to call more than one function at once
+
+For example:
 
 .. code-block:: yaml
 
@@ -122,32 +162,6 @@ functions at once the following way:
           - cwd: /path/to/my/repo
           - user: myuser
           - opts: '--all'
-
-Unlike `module.run`, the `module.xrun` does not have reserved words you should
-specially prefix to distinguish them. No need to extra-pass `kwargs` either.
-For example, this is the same example from `module.run`:
-
-.. code-block:: yaml
-
-    mine.send:
-      module.xrun:
-        network.ip_addrs:
-          - interface: eth0
-
-Or the examlpe above can be written as following:
-
-.. code-block:: yaml
-
-    eventsviewer:
-      module.xrun:
-        task.create_task:
-          - name: events-viewer
-          - user_name: System
-          - action_type: Execute
-          - cmd: 'c:\netops\scripts\events_viewer.bat'
-          - trigger_type: 'Daily'
-          - start_date: '2017-1-20'
-          - start_time: '11:59PM'
 
 '''
 from __future__ import absolute_import
