@@ -906,37 +906,6 @@ class Test_Junos_Module(unittest.TestCase):
         self.assertEqual(junos.install_config('actual/path/config.set'), ret)
         mock_load.assert_called_with(path='test/path/config', format='set')
 
-    # @patch('tests.unit.modules.test_junos.Test_Junos_Module.mock_cp')
-    # @patch('jnpr.junos.utils.config.Config.commit')
-    # @patch('jnpr.junos.utils.config.Config.commit_check')
-    # @patch('jnpr.junos.utils.config.Config.diff')
-    # @patch('jnpr.junos.utils.config.Config.load')
-    # @patch('salt.modules.junos.safe_rm')
-    # @patch('salt.modules.junos.files.mkstemp')
-    # @patch('os.path.isfile')
-    # @patch('os.path.getsize')
-    # def test_install_config_template_vars_in_kwargs(
-    #         self,
-    #         mock_getsize,
-    #         mock_isfile,
-    #         mock_mkstemp,
-    #         mock_safe_rm,
-    #         mock_load,
-    #         mock_diff,
-    #         mock_commit_check,
-    #         mock_commit,
-    #         mck):
-    #     mock_isfile.return_value = True
-    #     mock_getsize.return_value = 10
-    #     mock_mkstemp.return_value = 'test/path/config'
-    #     mock_diff.return_value = 'diff'
-    #     mock_commit_check.return_value = True
-    #     ret = dict()
-    #     ret['message'] = 'reasons'
-    #     ret['out'] = True
-    #     junos.install_config('/actual/path/config', template_vars={'test':'args'})
-    #     mck.assert_called_with('/actual/path/config', 'test/path/config', template_vars={'test':'args'})
-
     @patch('jnpr.junos.utils.config.Config.commit')
     @patch('jnpr.junos.utils.config.Config.commit_check')
     @patch('jnpr.junos.utils.config.Config.diff')
@@ -1734,4 +1703,3 @@ class Test_Junos_RPC(unittest.TestCase):
             junos.rpc('get-chassis-inventory', '/path/to/file')
             handle = m()
             handle.write.assert_called_with('xml rpc reply')
-            
