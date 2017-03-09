@@ -524,7 +524,9 @@ class Client(object):
                                        keyid=s3_opt('keyid'),
                                        service_url=s3_opt('service_url'),
                                        verify_ssl=s3_opt('verify_ssl', True),
-                                       location=s3_opt('location'))
+                                       location=s3_opt('location'),
+                                       path_style=s3_opt('path_style', False),
+                                       https_enable=s3_opt('https_enable', True))
                 return dest
             except Exception as exc:
                 raise MinionError(
