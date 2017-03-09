@@ -258,6 +258,7 @@ def run(**kwargs):
                 else:
                     success.append('{0}: {1}'.format(
                         func, func_ret.get('comment', 'Success') if isinstance(func_ret, dict) else func_ret))
+                    ret['changes'][func] = func_ret
             except (SaltInvocationError, TypeError) as ex:
                 failures.append("'{0}' failed: {1}".format(func, ex))
         ret['comment'] = ', '.join(failures + success)
