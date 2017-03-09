@@ -117,6 +117,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
 
     # local client request body test
+    @skipIf(True, 'Undetermined race condition in test. Temporarily disabled.')
     def test_simple_local_post_only_dictionary_request(self):
         '''
         Test a basic API of /
