@@ -1414,6 +1414,8 @@ def managed(name,
             contents_grains=None,
             contents_newline=True,
             contents_delimiter=':',
+            encoding=None,
+            encoding_errors='strict',
             allow_empty=True,
             follow_symlinks=True,
             check_cmd=None,
@@ -1774,6 +1776,22 @@ def managed(name,
         or ``contents_grains``. This delimiter will be passed through to
         :py:func:`pillar.get <salt.modules.pillar.get>` or :py:func:`grains.get
         <salt.modules.grains.get>` when retrieving the contents.
+
+    encoding
+        Encoding used for the file, e.g. ```UTF-8```, ```base64```.
+        Default is None, which means str() will be applied to contents to
+        ensure an ascii encoded file and backwards compatibility.
+        See https://docs.python.org/3/library/codecs.html#standard-encodings
+        for available encodings.
+
+        .. versionadded:: Nitrogen
+
+    encoding_errors : 'strict'
+        Error encoding scheme. Default is ```'strict'```.
+        See https://docs.python.org/2/library/codecs.html#codec-base-classes
+        for the list of available schemes.
+
+        .. versionadded:: Nitrogen
 
     allow_empty : True
         .. versionadded:: 2015.8.4
@@ -2243,6 +2261,8 @@ def managed(name,
                 win_perms=win_perms,
                 win_deny_perms=win_deny_perms,
                 win_inheritance=win_inheritance,
+                encoding=encoding,
+                encoding_errors=encoding_errors,
                 **kwargs)
         except Exception as exc:
             ret['changes'] = {}
@@ -2310,6 +2330,8 @@ def managed(name,
                 win_perms=win_perms,
                 win_deny_perms=win_deny_perms,
                 win_inheritance=win_inheritance,
+                encoding=encoding,
+                encoding_errors=encoding_errors,
                 **kwargs)
         except Exception as exc:
             ret['changes'] = {}
@@ -5347,6 +5369,8 @@ def serialize(name,
               show_changes=True,
               create=True,
               merge_if_exists=False,
+              encoding=None,
+              encoding_errors='strict',
               **kwargs):
     '''
     Serializes dataset and store it into managed file. Useful for sharing
@@ -5371,6 +5395,22 @@ def serialize(name,
     formatter
         Write the data as this format. See the list of :py:mod:`serializer
         modules <salt.serializers>` for supported output formats.
+
+    encoding
+        Encoding used for the file, e.g. ```UTF-8```, ```base64```.
+        Default is None, which means str() will be applied to contents to
+        ensure an ascii encoded file.
+        See https://docs.python.org/3/library/codecs.html#standard-encodings
+        for available encodings.
+
+        .. versionadded:: Nitrogen
+
+    encoding_errors : 'strict'
+        Error encoding scheme. Default is ```'strict'```.
+        See https://docs.python.org/2/library/codecs.html#codec-base-classes
+        for the list of available schemes.
+
+        .. versionadded:: Nitrogen
 
     user
         The user to own the directory, this defaults to the user salt is
@@ -5466,6 +5506,10 @@ def serialize(name,
                                        'separators': (',', ': '),
                                        'sort_keys': True}
                               }
+    if encoding:
+        default_serializer_opts['yaml.serialize'].update({'allow_unicode': True})
+        default_serializer_opts['json.serialize'].update({'ensure_ascii': False})
+
     ret = {'changes': {},
            'comment': '',
            'name': name,
@@ -5589,6 +5633,8 @@ def serialize(name,
                                         makedirs=makedirs,
                                         template=None,
                                         show_changes=show_changes,
+                                        encoding=encoding,
+                                        encoding_errors=encoding_errors,
                                         contents=contents)
 
 

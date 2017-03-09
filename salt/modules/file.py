@@ -4567,6 +4567,8 @@ def manage_file(name,
                 follow_symlinks=True,
                 skip_verify=False,
                 keep_mode=False,
+                encoding=None,
+                encoding_errors='strict',
                 **kwargs):
     '''
     Checks the destination against what was retrieved with get_managed and
@@ -4632,6 +4634,21 @@ def manage_file(name,
         If ``True``, and the ``source`` is a file from the Salt fileserver (or
         a local file on the minion), the mode of the destination file will be
         set to the mode of the source file.
+
+    encoding : None
+        If None, str() will be applied to contents.
+        If not None, specified encoding will be used.
+        See https://docs.python.org/3/library/codecs.html#standard-encodings
+        for the list of available encodings.
+
+        .. versionadded:: Nitrogen
+
+    encoding_errors : 'strict'
+        Default is ```'strict'```.
+        See https://docs.python.org/2/library/codecs.html#codec-base-classes
+        for the error handling schemes.
+
+        .. versionadded:: Nitrogen
 
     CLI Example:
 
@@ -4751,7 +4768,11 @@ def manage_file(name,
             if salt.utils.is_windows():
                 contents = os.linesep.join(contents.splitlines())
             with salt.utils.fopen(tmp, 'w') as tmp_:
-                tmp_.write(str(contents))
+                if encoding:
+                    log.debug('File will be encoded with {0}'.format(encoding))
+                    tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
+                else:
+                    tmp_.write(str(contents))
 
             # Compare contents of files to know if we need to replace
             with salt.utils.fopen(tmp, 'r') as src:
@@ -4955,7 +4976,12 @@ def manage_file(name,
             if salt.utils.is_windows():
                 contents = os.linesep.join(contents.splitlines())
             with salt.utils.fopen(tmp, 'w') as tmp_:
-                tmp_.write(str(contents))
+                if encoding:
+                    log.debug('File will be encoded with {0}'.format(encoding))
+                    tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
+                else:
+                    tmp_.write(str(contents))
+
             # Copy into place
             salt.utils.files.copyfile(tmp,
                                 name,
