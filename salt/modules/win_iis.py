@@ -1775,20 +1775,20 @@ def list_worker_processes(apppool):
 
     return ret
 
+
 def get_webapp_settings(name, site, settings):
     '''
     Get the value of the setting for the IIS web application.
-    .. note:
-        Params are case sensitive are case sensitive
+    .. note::
+        Params are case sensitive.
     :param str name: The name of the IIS web application.
     :param str site: The site name contains the web application.
-        Example: Default web site
+        Example: Default Web Site
     :param str settings: A dictionary of the setting names and their values.
         Available settings: physicalPath, applicationPool, userName, password
-    :return: A dictionary of the provided settings and their values.
     Returns:
         dict: A dictionary of the provided settings and their values.
-    .. versionadded:: 2016.11.0
+    .. versionadded:: Nitrogen
     CLI Example:
     .. code-block:: bash
         salt '*' win_iis.get_webapp_settings name='app0' site='Default Web Site'
@@ -1820,7 +1820,6 @@ def get_webapp_settings(name, site, settings):
                 pscmd.append(r' $Property = $Null;')
         else:
             availSetStr = ', '.join(availableSettings)
-
             message = 'Unexpected setting:' + setting + '. Available settings are: ' + availSetStr
             raise SaltInvocationError(message)
 
@@ -1846,12 +1845,12 @@ def get_webapp_settings(name, site, settings):
     return ret
 
 
-
 def set_webapp_settings(name, site, settings):
     '''
     Configure an IIS application.
-    .. note:
-        This function only configures existing app
+    .. note::
+        This function only configures existing app.
+        Params are case sensitive.
     :param str name: The IIS application.
     :param str site: The IIS site name.
     :param str settings: A dictionary of the setting names and their values.
@@ -1861,6 +1860,7 @@ def set_webapp_settings(name, site, settings):
     :                       password: "connectAs" password for user
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
+    .. versionadded:: Nitrogen
     CLI Example:
     .. code-block:: bash
         salt '*' win_iis.set_webapp_settings name='app0' site='site0' settings="{'physicalPath': 'C:\site0', 'apppool': 'site0'}"
@@ -1893,12 +1893,9 @@ def set_webapp_settings(name, site, settings):
             log.debug("Available settings: %s", availSetStr)
             return False
 
-
-
     # Check if settings already configured
     current_settings = get_webapp_settings(
         name=name, site=site, settings=settings.keys())
-
 
     if settings == current_settings:
         log.debug('Settings already contain the provided values.')
@@ -1912,17 +1909,15 @@ def set_webapp_settings(name, site, settings):
         except ValueError:
             value = "'{0}'".format(settings[setting])
 
-
         # Append relevant update command per setting key
         if setting == "userName" or setting == "password":
             pscmd.append(" Set-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
             pscmd.append(" -Name \"{0}\" -Value {1};".format(setting, value))
 
-
         if setting == "physicalPath" or setting == "applicationPool":
             pscmd.append(" Set-ItemProperty \"IIS:\Sites\{0}\{1}\" -Name {2} -Value {3};".format(site, name, setting, value))
             if setting == "physicalPath":
-                if not os.path.isdir(settings[setting]):
+                if not os.path.isdir(value):
                     log.error('Path is not present: {0}'.format(setting))
                     return False
 
@@ -1949,5 +1944,3 @@ def set_webapp_settings(name, site, settings):
 
     log.debug('Settings configured successfully: {0}'.format(settings.keys()))
     return True
-
-
