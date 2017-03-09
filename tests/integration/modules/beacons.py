@@ -47,7 +47,7 @@ class BeaconsAddDeleteTest(integration.ModuleCase):
         '''
         Test adding and deleting a beacon
         '''
-        _add = self.run_function('beacons.add', ['ps', {'apache2': 'stopped'}])
+        _add = self.run_function('beacons.add', ['ps', [{'apache2': 'stopped'}]])
         self.assertTrue(_add['result'])
 
         # save added beacon
@@ -71,7 +71,7 @@ class BeaconsTest(integration.ModuleCase):
     def setUp(self):
         try:
             # Add beacon to disable
-            self.run_function('beacons.add', ['ps', {'apache2': 'stopped'}])
+            self.run_function('beacons.add', ['ps', [{'apache2': 'stopped'}]])
             self.run_function('beacons.save')
         except CommandExecutionError:
             self.skipTest('Unable to add beacon')
@@ -102,7 +102,10 @@ class BeaconsTest(integration.ModuleCase):
 
         # assert beacon ps is disabled
         _list = self.run_function('beacons.list', return_yaml=False)
-        self.assertFalse(_list['ps']['enabled'])
+        for bdict in _list['ps']:
+            if 'enabled' in bdict:
+                self.assertFalse(bdict['enabled'])
+                break
 
     def test_enable(self):
         '''
@@ -140,7 +143,7 @@ class BeaconsTest(integration.ModuleCase):
         # list beacons
         ret = self.run_function('beacons.list', return_yaml=False)
         if 'enabled' in ret:
-            self.assertEqual(ret, {'ps': {'apache2': 'stopped'}, 'enabled': True})
+            self.assertEqual(ret, {'ps': [{'apache2': 'stopped'}], 'enabled': True})
         else:
             self.assertEqual(ret, {'ps': {'apache': 'stopped'}})
 

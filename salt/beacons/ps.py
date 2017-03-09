@@ -60,18 +60,19 @@ def beacon(config):
         if _name not in procs:
             procs.append(_name)
 
-    for process in config:
-        ret_dict = {}
-        if config[process] == 'running':
-            if process not in procs:
-                ret_dict[process] = 'Stopped'
-                ret.append(ret_dict)
-        elif config[process] == 'stopped':
-            if process in procs:
-                ret_dict[process] = 'Running'
-                ret.append(ret_dict)
-        else:
-            if process not in procs:
-                ret_dict[process] = False
-                ret.append(ret_dict)
+    for entry in config:
+        for process in entry:
+            ret_dict = {}
+            if entry[process] == 'running':
+                if process not in procs:
+                    ret_dict[process] = 'Stopped'
+                    ret.append(ret_dict)
+            elif entry[process] == 'stopped':
+                if process in procs:
+                    ret_dict[process] = 'Running'
+                    ret.append(ret_dict)
+            else:
+                if process not in procs:
+                    ret_dict[process] = False
+                    ret.append(ret_dict)
     return ret
