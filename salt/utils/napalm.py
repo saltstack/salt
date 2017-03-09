@@ -127,8 +127,6 @@ def call(napalm_device, method, *args, **kwargs):
     '''
     result = False
     out = None
-    log.error('Calling')
-    log.error(method)
     opts = napalm_device.get('__opts__', {})
     try:
         if not napalm_device.get('UP', False):
@@ -171,10 +169,11 @@ def call(napalm_device, method, *args, **kwargs):
             'traceback': err_tb
         }
     finally:
-        if not_always_alive(opts) and napalm_device.get('CLOSE', True):
+        if opts and not_always_alive(opts) and napalm_device.get('CLOSE', True):
             # either running in a not-always-alive proxy
             # either running in a regular minion
             # close the connection when the call is over
+            # unless the CLOSE is explicitely set as False
             napalm_device['DRIVER'].close()
     return {
         'out': out,
@@ -315,6 +314,9 @@ def proxy_napalm_wrap(func):
                 # as all actions must be issued within the same configuration session
                 # otherwise we risk to open multiple sessions
                 wrapped_global_namespace['napalm_device'] = kwargs['inherit_napalm_device']
-        wrapped_global_namespace['napalm_device']['__opts__'] = opts
+        if not_always_alive(opts):
+            # inject the __opts__ only when not always alive
+            # otherwise, we don't want to overload the always-alive proxies
+            wrapped_global_namespace['napalm_device']['__opts__'] = opts
         return func(*args, **kwargs)
     return func_wrapper
