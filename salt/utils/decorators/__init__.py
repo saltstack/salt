@@ -569,8 +569,9 @@ class _WithDeprecated(_DeprecationDecorator):
                                        version_name=self._exp_version_name))
                         msg.append('Use its successor "{successor}" instead.'.format(successor=self._orig_f_name))
                     else:
-                        msg.append('The function is using its deprecated version and will '
-                                   'expire in version "{version_name}".'.format(version_name=self._exp_version_name))
+                        msg.append('The function "{f_name}" is using its deprecated version and will '
+                                   'expire in version "{version_name}".'.format(f_name=func_path,
+                                                                                version_name=self._exp_version_name))
                     log.warning(' '.join(msg))
                 else:
                     msg_patt = 'The lifetime of the function "{f_name}" expired.'
