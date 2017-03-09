@@ -48,6 +48,9 @@ try:
 except ImportError:
     HAS_NAPALM = False
 
+# import Salt modules
+from salt.utils.napalm import proxy_napalm_wrap
+
 # ------------------------------------------------------------------------------
 # module properties
 # ------------------------------------------------------------------------------
@@ -111,6 +114,7 @@ def _get_capirca_platform():  # pylint: disable=too-many-return-statements
 # ------------------------------------------------------------------------------
 
 
+@proxy_napalm_wrap
 def load_term_config(filter_name,
                      term_name,
                      filter_options=None,
@@ -443,9 +447,11 @@ def load_term_config(filter_name,
     return __salt__['net.load_config'](text=term_config,
                                        test=test,
                                        commit=commit,
-                                       debug=debug)
+                                       debug=debug,
+                                       inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
 
 
+@proxy_napalm_wrap
 def load_filter_config(filter_name,
                        filter_options=None,
                        terms=None,
@@ -633,9 +639,11 @@ def load_filter_config(filter_name,
     return __salt__['net.load_config'](text=filter_config,
                                        test=test,
                                        commit=commit,
-                                       debug=debug)
+                                       debug=debug,
+                                       inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
 
 
+@proxy_napalm_wrap
 def load_policy_config(filters=None,
                        pillar_key='acl',
                        pillarenv=None,
@@ -802,4 +810,5 @@ def load_policy_config(filters=None,
     return __salt__['net.load_config'](text=policy_config,
                                        test=test,
                                        commit=commit,
-                                       debug=debug)
+                                       debug=debug,
+                                       inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
