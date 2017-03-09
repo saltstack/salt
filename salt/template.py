@@ -14,15 +14,16 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.utils.files
-from salt.utils.odict import OrderedDict
+import salt.utils.stringio
 from salt._compat import string_io
-from salt.ext.six import string_types
 
+# Import 3rd-party libs
+import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 
-#FIXME: we should make the default encoding of a .sls file a configurable
-#       option in the config, and default it to 'utf-8'.
+# FIXME: we should make the default encoding of a .sls file a configurable
+#        option in the config, and default it to 'utf-8'.
 #
 SLS_ENCODING = 'utf-8'  # this one has no BOM.
 SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
@@ -58,7 +59,7 @@ def compile_template(template,
 
     if template != ':string:':
         # Template was specified incorrectly
-        if not isinstance(template, string_types):
+        if not isinstance(template, six.string_types):
             log.error('Template was specified incorrectly: {0}'.format(template))
             return ret
         # Template does not exist
@@ -67,7 +68,7 @@ def compile_template(template,
             return ret
         # Template is an empty file
         if salt.utils.is_empty(template):
-            log.warning('Template is an empty file: {0}'.format(template))
+            log.debug('Template is an empty file: {0}'.format(template))
             return ret
 
         with codecs.open(template, encoding=SLS_ENCODING) as ifile:
@@ -83,14 +84,8 @@ def compile_template(template,
 
     input_data = string_io(input_data)
     for render, argline in render_pipe:
-        # For GPG renderer, input_data can be an OrderedDict (from YAML) or dict (from py renderer).
-        # Repress the error.
-        if not isinstance(input_data, (dict, OrderedDict)):
-            try:
-                input_data.seek(0)
-            except Exception as exp:
-                log.error('error while compiling template \'{0}\': {1}'.format(template, exp))
-
+        if salt.utils.stringio.is_readable(input_data):
+            input_data.seek(0)      # pylint: disable=no-member
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
         if argline:
@@ -110,17 +105,14 @@ def compile_template(template,
             ret = render(input_data, saltenv, sls, **render_kwargs)
         input_data = ret
         if log.isEnabledFor(logging.GARBAGE):  # pylint: disable=no-member
-            try:
+            # If ret is not a StringIO (which means it was rendered using
+            # yaml, mako, or another engine which renders to a data
+            # structure) we don't want to log this.
+            if salt.utils.stringio.is_readable(ret):
                 log.debug('Rendered data from file: {0}:\n{1}'.format(
                     template,
-                    ret.read()))
-                ret.seek(0)
-            except Exception:
-                # ret is not a StringIO, which means it was rendered using
-                # yaml, mako, or another engine which renders to a data
-                # structure. We don't want to log this, so ignore this
-                # exception.
-                pass
+                    ret.read()))    # pylint: disable=no-member
+                ret.seek(0)         # pylint: disable=no-member
     return ret
 
 
@@ -153,8 +145,6 @@ def template_shebang(template, renderers, default, blacklist, whitelist, input_d
       #!mako|yaml_odict|stateconf
 
     '''
-    render_pipe = []
-
     line = ''
     # Open up the first line of the sls template
     if template == ':string:':
@@ -165,14 +155,12 @@ def template_shebang(template, renderers, default, blacklist, whitelist, input_d
 
     # Check if it starts with a shebang and not a path
     if line.startswith('#!') and not line.startswith('#!/'):
-
         # pull out the shebang data
-        render_pipe = check_render_pipe_str(line.strip()[2:], renderers, blacklist, whitelist)
-
-    if not render_pipe:
-        render_pipe = check_render_pipe_str(default, renderers, blacklist, whitelist)
-
-    return render_pipe
+        # If the shebang does not contain recognized/not-blacklisted/whitelisted
+        # renderers, do not fall back to the default renderer
+        return check_render_pipe_str(line.strip()[2:], renderers, blacklist, whitelist)
+    else:
+        return check_render_pipe_str(default, renderers, blacklist, whitelist)
 
 
 # A dict of combined renderer (i.e., rend1_rend2_...) to
@@ -202,6 +190,8 @@ def check_render_pipe_str(pipestr, renderers, blacklist, whitelist):
     If so, return the list of render functions in the pipe as
     (render_func, arg_str) tuples; otherwise return [].
     '''
+    if pipestr is None:
+        return []
     parts = [r.strip() for r in pipestr.split('|')]
     # Note: currently, | is not allowed anywhere in the shebang line except
     #       as pipes between renderers.

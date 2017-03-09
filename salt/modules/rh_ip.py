@@ -334,6 +334,9 @@ def _parse_settings_bond_1(opts, iface, bond_def):
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
 
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
+
     return bond
 
 
@@ -373,9 +376,6 @@ def _parse_settings_bond_2(opts, iface, bond_def):
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
         bond.update({'arp_interval': bond_def['arp_interval']})
-
-    if 'primary' in opts:
-        bond.update({'primary': opts['primary']})
 
     if 'hashing-algorithm' in opts:
         valid = ['layer2', 'layer2+3', 'layer3+4']
@@ -507,6 +507,9 @@ def _parse_settings_bond_5(opts, iface, bond_def):
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
 
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
+
     return bond
 
 
@@ -542,6 +545,9 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     else:
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
+
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
 
     return bond
 
@@ -870,9 +876,12 @@ def _read_file(path):
     Reads and returns the contents of a file
     '''
     try:
-        with salt.utils.fopen(path, 'rb') as contents:
+        with salt.utils.fopen(path, 'rb') as rfh:
+            contents = rfh.read()
+            if six.PY3:
+                contents = contents.encode(__salt_system_encoding__)
             # without newlines character. http://stackoverflow.com/questions/12330522/reading-a-file-without-newlines
-            lines = contents.read().splitlines()
+            lines = contents.splitlines()
             try:
                 lines.remove('')
             except ValueError:
@@ -968,7 +977,6 @@ def build_interface(iface, iface_type, enabled, **settings):
     else:
         rh_major = __grains__['osrelease'][:1]
 
-    iface = iface.lower()
     iface_type = iface_type.lower()
 
     if iface_type not in _IFACE_TYPES:

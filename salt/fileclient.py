@@ -11,7 +11,7 @@ import os
 import string
 import shutil
 import ftplib
-from tornado.httputil import parse_response_start_line, HTTPInputError
+from tornado.httputil import parse_response_start_line, HTTPHeaders, HTTPInputError
 
 # Import salt libs
 from salt.exceptions import (
@@ -356,9 +356,10 @@ class Client(object):
                         del dirs[:]
                     else:
                         for found_file in files:
-                            stripped_root = os.path.relpath(root, path).replace('/', '.')
+                            stripped_root = os.path.relpath(root, path)
                             if salt.utils.is_windows():
                                 stripped_root = stripped_root.replace('\\', '/')
+                            stripped_root = stripped_root.replace('/', '.')
                             if found_file.endswith(('.sls')):
                                 if found_file.endswith('init.sls'):
                                     if stripped_root.endswith('.'):
@@ -477,7 +478,7 @@ class Client(object):
                     'Path \'{0}\' is not absolute'.format(url_path)
                 )
             if dest is None:
-                with salt.utils.fopen(url_data.path, 'r') as fp_:
+                with salt.utils.fopen(url_path, 'r') as fp_:
                     data = fp_.read()
                 return data
             return url_path
@@ -531,10 +532,12 @@ class Client(object):
                 )
         if url_data.scheme == 'ftp':
             try:
-                ftp = ftplib.FTP(url_data.hostname)
-                ftp.login()
+                ftp = ftplib.FTP()
+                ftp.connect(url_data.hostname, url_data.port)
+                ftp.login(url_data.username, url_data.password)
                 with salt.utils.fopen(dest, 'wb') as fp_:
                     ftp.retrbinary('RETR {0}'.format(url_data.path), fp_.write)
+                ftp.quit()
                 return dest
             except Exception as exc:
                 raise MinionError('Could not retrieve {0} from FTP server. Exception: {1}'.format(url, exc))
@@ -588,21 +591,45 @@ class Client(object):
             # Use list here to make it writable inside the on_header callback. Simple bool doesn't
             # work here: on_header creates a new local variable instead. This could be avoided in
             # Py3 with 'nonlocal' statement. There is no Py2 alternative for this.
-            write_body = [False]
+            write_body = [None, False, None]
 
             def on_header(hdr):
+                if write_body[1] is not False and write_body[2] is None:
+                    # Try to find out what content type encoding is used if this is a text file
+                    write_body[1].parse_line(hdr)  # pylint: disable=no-member
+                    if 'Content-Type' in write_body[1]:
+                        content_type = write_body[1].get('Content-Type')  # pylint: disable=no-member
+                        if not content_type.startswith('text'):
+                            write_body[1] = write_body[2] = False
+                        else:
+                            encoding = 'utf-8'
+                            fields = content_type.split(';')
+                            for field in fields:
+                                if 'encoding' in field:
+                                    encoding = field.split('encoding=')[-1]
+                            write_body[2] = encoding
+                            # We have found our encoding. Stop processing headers.
+                            write_body[1] = False
+
+                if write_body[0] is not None:
+                    # We already parsed the first line. No need to run the code below again
+                    return
+
                 try:
                     hdr = parse_response_start_line(hdr)
                 except HTTPInputError:
                     # Not the first line, do nothing
                     return
                 write_body[0] = hdr.code not in [301, 302, 303, 307]
+                write_body[1] = HTTPHeaders()
 
             if no_cache:
                 result = []
 
                 def on_chunk(chunk):
                     if write_body[0]:
+                        if write_body[2]:
+                            chunk = chunk.decode(write_body[2])
                         result.append(chunk)
             else:
                 dest_tmp = "{0}.part".format(dest)
@@ -627,7 +654,9 @@ class Client(object):
             if 'handle' not in query:
                 raise MinionError('Error: {0} reading {1}'.format(query['error'], url))
             if no_cache:
-                return ''.join(result)
+                if write_body[2]:
+                    return six.u('').join(result)
+                return six.b('').join(result)
             else:
                 destfp.close()
                 destfp = None
@@ -1275,10 +1304,10 @@ class RemoteClient(Client):
                 hash_type = self.opts.get('hash_type', 'md5')
                 ret['hsum'] = salt.utils.get_hash(path, form=hash_type)
                 ret['hash_type'] = hash_type
-                return ret
+                return ret, list(os.stat(path))
         load = {'path': path,
                 'saltenv': saltenv,
-                'cmd': '_file_hash'}
+                'cmd': '_file_hash_and_stat'}
         return self.channel.send(load)
 
     def hash_file(self, path, saltenv='base'):
@@ -1287,33 +1316,14 @@ class RemoteClient(Client):
         master file server prepend the path with salt://<file on server>
         otherwise, prepend the file with / for a local file.
         '''
-        return self.__hash_and_stat_file(path, saltenv)
+        return self.__hash_and_stat_file(path, saltenv)[0]
 
     def hash_and_stat_file(self, path, saltenv='base'):
         '''
         The same as hash_file, but also return the file's mode, or None if no
         mode data is present.
         '''
-        hash_result = self.hash_file(path, saltenv)
-        try:
-            path = self._check_proto(path)
-        except MinionError as err:
-            if not os.path.isfile(path):
-                return hash_result, None
-            else:
-                try:
-                    return hash_result, list(os.stat(path))
-                except Exception:
-                    return hash_result, None
-        load = {'path': path,
-                'saltenv': saltenv,
-                'cmd': '_file_find'}
-        fnd = self.channel.send(load)
-        try:
-            stat_result = fnd.get('stat')
-        except AttributeError:
-            stat_result = None
-        return hash_result, stat_result
+        return self.__hash_and_stat_file(path, saltenv)
 
     def list_env(self, saltenv='base'):
         '''
@@ -1356,7 +1366,7 @@ class FSClient(RemoteClient):
     the FSChan object
     '''
     def __init__(self, opts):  # pylint: disable=W0231
-        self.opts = opts
+        Client.__init__(self, opts)  # pylint: disable=W0233
         self.channel = salt.fileserver.FSChan(opts)
         self.auth = DumbAuth()
 

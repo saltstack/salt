@@ -9,7 +9,6 @@ import contextlib
 import copy
 import collections
 import datetime
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 import errno
 import fnmatch
 import hashlib
@@ -32,6 +31,7 @@ import types
 import warnings
 import string
 import subprocess
+import getpass
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -120,6 +120,7 @@ import salt.log
 import salt.utils.dictupdate
 import salt.version
 from salt.utils.decorators import memoize as real_memoize
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.textformat import TextFormat
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,
@@ -750,10 +751,11 @@ def ip_bracket(addr):
     return addr
 
 
-def dns_check(addr, safe=False, ipv6=False):
+def dns_check(addr, port, safe=False, ipv6=None, connect=True):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception. Obeys system preference for IPv4/6 address resolution.
+    Tries to connect to the address before considering it useful.
     '''
     error = False
     lookup = addr
@@ -768,18 +770,30 @@ def dns_check(addr, safe=False, ipv6=False):
         if not hostnames:
             error = True
         else:
-            addr = False
+            resolved = False
             for h in hostnames:
-                if h[0] == socket.AF_INET:
-                    addr = ip_bracket(h[4][0])
+                if h[0] == socket.AF_INET and ipv6 is True:
+                    continue
+                if h[0] == socket.AF_INET6 and ipv6 is False:
+                    continue
+                if h[0] == socket.AF_INET6 and connect is False and ipv6 is None:
+                    continue
+
+                candidate_addr = ip_bracket(h[4][0])
+
+                if not connect:
+                    resolved = candidate_addr
+
+                s = socket.socket(h[0], socket.SOCK_STREAM)
+                try:
+                    s.connect((candidate_addr.strip('[]'), port))
+                    s.close()
+
+                    resolved = candidate_addr
                     break
-                elif h[0] == socket.AF_INET6:
-                    if not ipv6:
-                        seen_ipv6 = True
-                        continue
-                    addr = ip_bracket(h[4][0])
-                    break
-            if not addr:
+                except socket.error:
+                    pass
+            if not resolved:
                 error = True
     except TypeError:
         err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
@@ -788,10 +802,7 @@ def dns_check(addr, safe=False, ipv6=False):
         error = True
 
     if error:
-        if seen_ipv6 and not addr:
-            err = ('DNS lookup of \'{0}\' failed, but ipv6 address ignored. Enable ipv6 in config to use it.').format(lookup)
-        else:
-            err = ('DNS lookup of \'{0}\' failed.').format(lookup)
+        err = ('DNS lookup or connection check of \'{0}\' failed.').format(addr)
         if safe:
             if salt.log.is_console_configured():
                 # If logging is not configured it also means that either
@@ -800,7 +811,7 @@ def dns_check(addr, safe=False, ipv6=False):
                 log.error(err)
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
-    return addr
+    return resolved
 
 
 def required_module_list(docstring=None):
@@ -1015,7 +1026,8 @@ def build_whitespace_split_regex(text):
 def format_call(fun,
                 data,
                 initial_ret=None,
-                expected_extra_kws=()):
+                expected_extra_kws=(),
+                is_class_method=None):
     '''
     Build the required arguments and keyword arguments required for the passed
     function.
@@ -1027,6 +1039,13 @@ def format_call(fun,
                         None
     :param expected_extra_kws: Any expected extra keyword argument names which
                                should not trigger a :ref:`SaltInvocationError`
+    :param is_class_method: Pass True if you are sure that the function being passed
+                            is a class method. The reason for this is that on Python 3
+                            ``inspect.ismethod`` only returns ``True`` for bound methods,
+                            while on Python 2, it returns ``True`` for bound and unbound
+                            methods. So, on Python 3, in case of a class method, you'd
+                            need the class to which the function belongs to be instantiated
+                            and this is not always wanted.
     :returns: A dictionary with the function required arguments and keyword
               arguments.
     '''
@@ -1035,7 +1054,7 @@ def format_call(fun,
     ret['args'] = []
     ret['kwargs'] = {}
 
-    aspec = salt.utils.args.get_function_argspec(fun)
+    aspec = salt.utils.args.get_function_argspec(fun, is_class_method=is_class_method)
 
     arg_data = arg_lookup(fun, aspec)
     args = arg_data['args']
@@ -1094,10 +1113,10 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
-    # We'll be showing errors to the users until Salt Nitrogen comes out, after
+    # We'll be showing errors to the users until Salt Oxygen comes out, after
     # which, errors will be raised instead.
     warn_until(
-        'Nitrogen',
+        'Oxygen',
         'It\'s time to start raising `SaltInvocationError` instead of '
         'returning warnings',
         # Let's not show the deprecation warning on the console, there's no
@@ -1134,7 +1153,7 @@ def format_call(fun,
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
             '\'key: value\' pairs. Your approach will work until Salt '
-            'Nitrogen is out.{1}'.format(
+            'Oxygen is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
             )
@@ -1469,12 +1488,12 @@ def subdict_match(data,
             # We might want to search for a key
             return True
         elif subdict_match(target,
-                         pattern,
-                         regex_match=regex_match,
-                         exact_match=exact_match):
+                           pattern,
+                           regex_match=regex_match,
+                           exact_match=exact_match):
             return True
         if wildcard:
-            for key in target.keys():
+            for key in target:
                 if _match(key,
                           pattern,
                           regex_match=regex_match,
@@ -1534,7 +1553,7 @@ def subdict_match(data,
     return False
 
 
-def traverse_dict(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
+def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Traverse a dict using a colon-delimited (or otherwise delimited, using the
     'delimiter' param) target string. The target 'foo:bar:baz' will return
@@ -1550,7 +1569,7 @@ def traverse_dict(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
     return data
 
 
-def traverse_dict_and_list(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
+def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Traverse a dict or list using a colon-delimited (or otherwise delimited,
     using the 'delimiter' param) target string. The target 'foo:bar:0' will
@@ -1620,7 +1639,7 @@ def sanitize_win_path_string(winpath):
     '''
     intab = '<>:|?*'
     outtab = '_' * len(intab)
-    trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)
+    trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)  # pylint: disable=no-member
     if isinstance(winpath, str):
         winpath = winpath.translate(trantab)
     elif isinstance(winpath, six.text_type):
@@ -1876,6 +1895,8 @@ def normalize_mode(mode):
         return None
     if not isinstance(mode, six.string_types):
         mode = str(mode)
+    if six.PY3:
+        mode = mode.replace('0o', '0')
     # Strip any quotes any initial zeroes, then though zero-pad it up to 4.
     # This ensures that somethign like '00644' is normalized to '0644'
     return mode.strip('"').strip('\'').lstrip('0').zfill(4)
@@ -2207,8 +2228,8 @@ def date_cast(date):
         if HAS_TIMELIB:
             raise ValueError('Unable to parse {0}'.format(date))
 
-        raise RuntimeError('Unable to parse {0}.'
-            ' Consider installing timelib'.format(date))
+        raise RuntimeError(
+                'Unable to parse {0}. Consider installing timelib'.format(date))
 
 
 def date_format(date=None, format="%Y-%m-%d"):
@@ -2387,7 +2408,7 @@ def kwargs_warn_until(kwargs,
             version,
             message='The following parameter(s) have been deprecated and '
                     'will be removed in \'{0}\': {1}.'.format(version.string,
-                                                            arg_names),
+                                                              arg_names),
             category=category,
             stacklevel=stacklevel,
             _version_info_=_version_.info,
@@ -2397,7 +2418,7 @@ def kwargs_warn_until(kwargs,
 
 def version_cmp(pkg1, pkg2, ignore_epoch=False):
     '''
-    Compares two version strings using distutils.version.LooseVersion. This is
+    Compares two version strings using salt.utils.versions.LooseVersion. This is
     a fallback for providers which don't have a version comparison utility
     built into them.  Return -1 if version1 < version2, 0 if version1 ==
     version2, and 1 if version1 > version2. Return None if there was a problem
@@ -2409,14 +2430,11 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
 
     try:
         # pylint: disable=no-member
-        if distutils.version.LooseVersion(pkg1) < \
-                distutils.version.LooseVersion(pkg2):
+        if _LooseVersion(pkg1) < _LooseVersion(pkg2):
             return -1
-        elif distutils.version.LooseVersion(pkg1) == \
-                distutils.version.LooseVersion(pkg2):
+        elif _LooseVersion(pkg1) == _LooseVersion(pkg2):
             return 0
-        elif distutils.version.LooseVersion(pkg1) > \
-                distutils.version.LooseVersion(pkg2):
+        elif _LooseVersion(pkg1) > _LooseVersion(pkg2):
             return 1
     except Exception as exc:
         log.exception(exc)
@@ -2604,12 +2622,18 @@ def is_bin_file(path):
     a bin, False if the file is not and None if the file is not available.
     '''
     if not os.path.isfile(path):
-        return None
+        return False
     try:
-        with fopen(path, 'r') as fp_:
-            return is_bin_str(fp_.read(2048))
+        with fopen(path, 'rb') as fp_:
+            try:
+                data = fp_.read(2048)
+                if six.PY3:
+                    data = data.decode(__salt_system_encoding__)
+                return is_bin_str(data)
+            except UnicodeDecodeError:
+                return True
     except os.error:
-        return None
+        return False
 
 
 def is_bin_str(data):
@@ -2628,7 +2652,7 @@ def is_bin_str(data):
         trans = ''.maketrans('', '', text_characters)
         nontext = data.translate(trans)
     else:
-        trans = string.maketrans('', '')
+        trans = string.maketrans('', '')  # pylint: disable=no-member
         nontext = data.translate(trans, text_characters)
 
     # If more than 30% non-text characters, then
@@ -2913,7 +2937,7 @@ def chugid_and_umask(runas, umask):
     Helper method for for subprocess.Popen to initialise uid/gid and umask
     for the new process.
     '''
-    if runas is not None:
+    if runas is not None and runas != getpass.getuser():
         chugid(runas)
     if umask is not None:
         os.umask(umask)
@@ -2985,7 +3009,7 @@ def to_str(s, encoding=None):
     else:
         if isinstance(s, bytearray):
             return str(s)
-        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             return s.encode(encoding or __salt_system_encoding__)
         raise TypeError('expected str, bytearray, or unicode')
 
@@ -3011,12 +3035,15 @@ def to_unicode(s, encoding=None):
     '''
     Given str or unicode, return unicode (str for python 3)
     '''
+    if not isinstance(s, (bytes, bytearray, six.string_types)):
+        return s
     if six.PY3:
-        return to_str(s, encoding)
+        if isinstance(s, (bytes, bytearray)):
+            return to_str(s, encoding)
     else:
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
-        return unicode(s)  # pylint: disable=incompatible-py3-code
+    return s
 
 
 def is_list(value):
@@ -3187,10 +3214,10 @@ def filter_by(lookup_dict,
     # Iterate over the list of values to match against patterns in the
     # lookup_dict keys
     for each in val if isinstance(val, list) else [val]:
-        for key in sorted(lookup_dict):
-            if key not in six.string_types:
-                key = str(key)
-            if fnmatch.fnmatchcase(each, key):
+        for key in lookup_dict:
+            test_key = key if isinstance(key, six.string_types) else str(key)
+            test_each = each if isinstance(each, six.string_types) else str(each)
+            if fnmatch.fnmatchcase(test_each, test_key):
                 ret = lookup_dict[key]
                 break
         if ret is not None:
@@ -3222,3 +3249,25 @@ def filter_by(lookup_dict,
             salt.utils.dictupdate.update(ret, copy.deepcopy(merge))
 
     return ret
+
+
+def fnmatch_multiple(candidates, pattern):
+    '''
+    Convenience function which runs fnmatch.fnmatch() on each element of passed
+    iterable. The first matching candidate is returned, or None if there is no
+    matching candidate.
+    '''
+    # Make sure that candidates is iterable to avoid a TypeError when we try to
+    # iterate over its items.
+    try:
+        candidates_iter = iter(candidates)
+    except TypeError:
+        return None
+
+    for candidate in candidates_iter:
+        try:
+            if fnmatch.fnmatch(candidate, pattern):
+                return candidate
+        except TypeError:
+            pass
+    return None

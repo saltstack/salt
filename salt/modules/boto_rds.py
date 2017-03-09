@@ -48,20 +48,20 @@ Connection module for Amazon RDS
 # Import Python libs
 from __future__ import absolute_import
 import logging
-from salt.exceptions import SaltInvocationError
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
-from time import time, sleep
+import time
 
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.odict as odict
 import salt.utils
-import salt.ext.six as six
+from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
+import salt.ext.six as six
 # pylint: disable=import-error
 try:
     #pylint: disable=unused-import
@@ -220,7 +220,10 @@ def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None,
         rds = conn.describe_db_subnet_groups(DBSubnetGroupName=name)
         return {'exists': bool(rds)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        if "DBSubnetGroupNotFoundFault" in e.message:
+            return {'exists': False}
+        else:
+            return {'error': salt.utils.boto3.get_error(e)}
 
 
 def create(name, allocated_storage, db_instance_class, engine,
@@ -295,7 +298,7 @@ def create(name, allocated_storage, db_instance_class, engine,
 
         while True:
             log.info('Waiting 10 secs...')
-            sleep(10)
+            time.sleep(10)
             _describe = describe(name=name, tags=tags, region=region, key=key,
                                  keyid=keyid, profile=profile)['rds']
             if not _describe:
@@ -548,7 +551,7 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
                     'CopyTagsToSnapshot', 'MonitoringInterval',
                     'MonitoringRoleArn', 'PromotionTier',
                     'DomainMemberships')
-            return {'rds': dict([(k, rds.get(k)) for k in keys])}
+            return {'rds': dict([(k, rds.get('DBInstances', [{}])[0].get(k)) for k in keys])}
         else:
             return {'rds': None}
     except ClientError as e:
@@ -623,7 +626,7 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
             return {'deleted': bool(res), 'message':
                     'Deleted RDS instance {0}.'.format(name)}
 
-        start_time = time()
+        start_time = time.time()
         while True:
             res = __salt__['boto_rds.exists'](name=name, tags=tags, region=region,
                                                key=key, keyid=keyid,
@@ -632,11 +635,11 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
                 return {'deleted': bool(res), 'message':
                         'Deleted RDS instance {0} completely.'.format(name)}
 
-            if time() - start_time > timeout:
+            if time.time() - start_time > timeout:
                 raise SaltInvocationError('RDS instance {0} has not been '
                                           'deleted completely after {1} '
                                           'seconds'.format(name, timeout))
-            sleep(10)
+            time.sleep(10)
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 

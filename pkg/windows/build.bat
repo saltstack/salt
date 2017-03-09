@@ -1,7 +1,11 @@
 @echo off
-@echo Salt Windows Build Script
+@echo Salt Windows Build Script, which calls the other *.ps1 scripts.
 @echo ---------------------------------------------------------------------
 @echo.
+:: To activate caching, set environment variables
+::   SALTREPO_LOCAL_CACHE  for resources from saltstack.com/...
+::   SALT_REQ_LOCAL_CACHE  for pip resources specified in req.txt
+::   SALT_PIP_LOCAL_CACHE  for pip resources specified in req_pip.txt
 
 :: Make sure the script is run as Admin
 @echo Administrative permissions required. Detecting permissions...
@@ -40,7 +44,7 @@ for /f "delims=" %%a in ('git rev-parse --show-toplevel') do @set "SrcDir=%%a"
 :: Get the version from git if not passed
 if [%1]==[] (
     for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
-	echo ... Version from git describe == %Version%
+    echo ... Version from git describe == %Version%
 ) else (
     set "Version=%~1"
 )
@@ -68,6 +72,9 @@ if not %errorLevel%==0 (
 @echo %0 :: Install Current Version of salt...
 @echo ---------------------------------------------------------------------
 "%PyDir%\python.exe" "%SrcDir%\setup.py" --quiet install --force
+if not %errorLevel%==0 (
+    goto eof
+)
 @echo.
 
 :: Build the Salt Package

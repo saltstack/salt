@@ -427,18 +427,19 @@ def mounted(name,
                                     opts.remove('remount')
             if real_device not in device_list:
                 # name matches but device doesn't - need to umount
-                _device_mismatch_is_ignored = False
+                _device_mismatch_is_ignored = None
                 for regex in list(device_name_regex):
                     for _device in device_list:
                         if re.match(regex, _device):
                             _device_mismatch_is_ignored = _device
+                            break
                 if __opts__['test']:
                     ret['result'] = None
                     ret['comment'] = "An umount would have been forced " \
                                      + "because devices do not match.  Watched: " \
                                      + device
-                elif _device_mismatch_is_ignored is True:
-                    ret['result'] = None
+                elif _device_mismatch_is_ignored:
+                    ret['result'] = True
                     ret['comment'] = "An umount will not be forced " \
                                      + "because device matched device_name_regex: " \
                                      + _device_mismatch_is_ignored

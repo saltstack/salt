@@ -116,7 +116,7 @@ configuration, run :py:func:`test_vcenter_connection`
 # Import python libs
 from __future__ import absolute_import
 from random import randint
-from re import findall
+from re import findall, split
 import pprint
 import logging
 import time
@@ -134,14 +134,8 @@ from salt.exceptions import SaltCloudSystemExit
 # Import salt cloud libs
 import salt.config as config
 
-# Attempt to import pyVim and pyVmomi libs
-ESX_5_5_NAME_PORTION = 'VMware ESXi 5.5'
-SAFE_ESX_5_5_CONTROLLER_KEY_INDEX = 200
-FLATTEN_DISK_FULL_CLONE = 'moveAllDiskBackingsAndDisallowSharing'
-COPY_ALL_DISKS_FULL_CLONE = 'moveAllDiskBackingsAndAllowSharing'
-CURRENT_STATE_LINKED_CLONE = 'moveChildMostDiskBacking'
-QUICK_LINKED_CLONE = 'createNewChildDiskBacking'
-
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     from pyVmomi import vim
     HAS_PYVMOMI = True
@@ -155,15 +149,14 @@ try:
 except Exception:
     pass
 
-try:
-    import salt.ext.six as six
-    HAS_SIX = True
-except ImportError:
-    # Salt version <= 2014.7.0
-    try:
-        import six
-    except ImportError:
-        HAS_SIX = False
+# Attempt to import pyVim and pyVmomi libs
+ESX_5_5_NAME_PORTION = 'VMware ESXi 5.5'
+SAFE_ESX_5_5_CONTROLLER_KEY_INDEX = 200
+FLATTEN_DISK_FULL_CLONE = 'moveAllDiskBackingsAndDisallowSharing'
+COPY_ALL_DISKS_FULL_CLONE = 'moveAllDiskBackingsAndAllowSharing'
+CURRENT_STATE_LINKED_CLONE = 'moveChildMostDiskBacking'
+QUICK_LINKED_CLONE = 'createNewChildDiskBacking'
+
 
 IP_RE = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 
@@ -204,7 +197,6 @@ def get_dependencies():
     '''
     deps = {
         'pyVmomi': HAS_PYVMOMI,
-        'six': HAS_SIX
     }
     return config.check_driver_dependencies(
         __virtualname__,
@@ -656,10 +648,9 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                     if device.deviceInfo.label in list(devices['disk'].keys()):
                         disk_spec = None
                         if 'size' in devices['disk'][device.deviceInfo.label]:
-                            disk_spec = _get_size_spec(device, devices)
-                            size_kb = float(
-                                devices['disk'][device.deviceInfo.label]['size']
-                            ) * 1024 * 1024
+                            size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
+                            disk_spec = _get_size_spec(device, size_gb)
+                            size_kb = size_gb * 1024 * 1024
                         else:
                             # User didn't specify disk size
                             # in the cloud profile
@@ -672,6 +663,12 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         if device.capacityInKB < size_kb:
                             # expand the disk
                             disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
+                        elif device.capacityInKB > size_kb:
+                            raise SaltCloudSystemExit(
+                                'The specified disk size is smaller than the '
+                                'size of the disk image. It must be equal to '
+                                'or greater than the disk image'
+                            )
 
                         if 'mode' in devices['disk'][device.deviceInfo.label]:
                             if devices['disk'][device.deviceInfo.label]['mode'] \
@@ -686,7 +683,8 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                                 raise SaltCloudSystemExit('Invalid disk'
                                                           ' backing mode'
                                                           ' specified!')
-                        device_specs.append(disk_spec)
+                        if disk_spec is not None:
+                            device_specs.append(disk_spec)
 
             elif isinstance(device.backing, vim.vm.device.VirtualEthernetCard.NetworkBackingInfo) or isinstance(device.backing, vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
                 # this is a network adapter
@@ -2564,7 +2562,7 @@ def create(vm_):
             global_ip = vim.vm.customization.GlobalIPSettings()
             if 'dns_servers' in list(vm_.keys()):
                 global_ip.dnsServerList = vm_['dns_servers']
-            hostName = vm_name.split('.')[0]
+            hostName = split(r'[^\w-]', vm_name, maxsplit=1)[0]
             domainName = vm_name.split('.', 1)[-1]
             if 'Windows' not in object_ref.config.guestFullName:
                 identity = vim.vm.customization.LinuxPrep()

@@ -549,11 +549,11 @@
 #default_top: base
 
 # The hash_type is the hash to use when discovering the hash of a file on
-# the master server. The default is md5 but sha1, sha224, sha256, sha384
-# and sha512 are also supported.
+# the master server. The default is sha256, but md5, sha1, sha224, sha384 and
+# sha512 are also supported.
 #
-# WARNING: While md5 is also supported, do not use it due to the high chance
-# of possible collisions and thus security breach.
+# WARNING: While md5 and sha1 are also supported, do not use them due to the
+# high chance of possible collisions and thus security breach.
 #
 # Prior to changing this value, the master should be stopped and all Salt
 # caches should be cleared.
@@ -623,10 +623,11 @@
 
 # Git File Server Backend Configuration
 #
-# Optional parameter used to specify the provider to be used for gitfs. Must
-# be one of the following: pygit2, gitpython, or dulwich. If unset, then each
-# will be tried in that same order, and the first one with a compatible
-# version installed will be the provider that is used.
+# Optional parameter used to specify the provider to be used for gitfs. Must be
+# either pygit2 or gitpython. If unset, then both will be tried (in that
+# order), and the first one with a compatible version installed will be the
+# provider that is used.
+#
 #gitfs_provider: pygit2
 
 # Along with gitfs_password, is used to authenticate to HTTPS remotes.
@@ -679,6 +680,11 @@
 # repository and defaults to the repository root.
 #gitfs_root: somefolder/otherfolder
 #
+# The refspecs fetched by gitfs remotes
+#gitfs_refspecs:
+#  - '+refs/heads/*:refs/remotes/origin/*'
+#  - '+refs/tags/*:refs/tags/*'
+#
 #
 #####         Pillar settings        #####
 ##########################################
@@ -695,10 +701,37 @@
 #  - hiera: /etc/hiera.yaml
 #  - cmd_yaml: cat /etc/salt/yaml
 
+
+# A list of paths to be recursively decrypted during pillar compilation.
+# Entries in this list can be formatted either as a simple string, or as a
+# key/value pair, with the key being the pillar location, and the value being
+# the renderer to use for pillar decryption. If the former is used, the
+# renderer specified by decrypt_pillar_default will be used.
+#decrypt_pillar:
+#  - 'foo:bar': gpg
+#  - 'lorem:ipsum:dolor'
+
+# The delimiter used to distinguish nested data structures in the
+# decrypt_pillar option.
+#decrypt_pillar_delimiter: ':'
+
+# The default renderer used for decryption, if one is not specified for a given
+# pillar key in decrypt_pillar.
+#decrypt_pillar_default: gpg
+
+# List of renderers which are permitted to be used for pillar decryption.
+#decrypt_pillar_renderers:
+#  - gpg
+
 # The ext_pillar_first option allows for external pillar sources to populate
 # before file system pillar. This allows for targeting file system pillar from
 # ext_pillar.
 #ext_pillar_first: False
+
+# The external pillars permitted to be used on-demand using pillar.ext
+#on_demand_ext_pillar:
+#  - libvirt
+#  - virtkey
 
 # The pillar_gitfs_ssl_verify option specifies whether to ignore ssl certificate
 # errors when contacting the pillar gitfs backend. You might want to set this to
@@ -800,6 +833,11 @@
 # This parameter is optional, required only when the SSH key being used
 # to authenticate is protected by a passphrase.
 #git_pillar_passphrase: ''
+
+# The refspecs fetched by git_pillar remotes
+#git_pillar_refspecs:
+#  - '+refs/heads/*:refs/remotes/origin/*'
+#  - '+refs/tags/*:refs/tags/*'
 
 # A master can cache pillars locally to bypass the expense of having to render them
 # for each minion on every request. This feature should only be enabled in cases
@@ -1046,6 +1084,11 @@
 #winrepo_remotes:
 #  - 'https://github.com/saltstack/salt-winrepo.git'
 
+# The refspecs fetched by winrepo remotes
+#winrepo_refspecs:
+#  - '+refs/heads/*:refs/remotes/origin/*'
+#  - '+refs/tags/*:refs/tags/*'
+#
 
 #####      Returner settings          ######
 ############################################

@@ -11,6 +11,7 @@
 from __future__ import absolute_import
 
 # Import salt libs
+import salt.ext.six as six
 import salt.utils
 from salt.exceptions import SaltException
 
@@ -77,13 +78,21 @@ class BufferedReader(object):
         to be read.
         '''
         if self.__buffered is None:
-            multiplier = self.__max_in_mem / self.__chunk_size
+            # Use floor division to force multiplier to an integer
+            multiplier = self.__max_in_mem // self.__chunk_size
             self.__buffered = ""
         else:
             multiplier = 1
             self.__buffered = self.__buffered[self.__chunk_size:]
 
-        data = self.__file.read(self.__chunk_size * multiplier)
+        if six.PY3:
+            # Data is a byte object in Python 3
+            # Decode it in order to append to self.__buffered str later
+            data = self.__file.read(self.__chunk_size * multiplier).decode(
+                __salt_system_encoding__
+            )
+        else:
+            data = self.__file.read(self.__chunk_size * multiplier)
 
         if not data:
             self.__file.close()
@@ -91,6 +100,9 @@ class BufferedReader(object):
 
         self.__buffered += data
         return self.__buffered
+
+    # Alias next to __next__ for Py3 compatibility
+    __next__ = next
 
     # Support with statements
     def __enter__(self):

@@ -1,0 +1,12 @@
+mock
+boto
+boto3
+moto
+SaltPyLint>=v2017.3.6
+apache-libcloud
+virtualenv
+
+# Needed for archive, which is gated for Redhat
+# rarfile
+# Needed for keystone
+# python-keystoneclient

@@ -53,7 +53,13 @@ from __future__ import absolute_import
 import logging
 import pprint
 import time
-import packet
+
+# Import 3rd-party libs
+try:
+    import packet
+    HAS_PACKET = True
+except ImportError:
+    HAS_PACKET = False
 
 # Import Salt Libs
 import salt.config as config
@@ -89,6 +95,8 @@ def __virtual__():
     '''
     Check for Packet configs.
     '''
+    if HAS_PACKET is False:
+        return False, 'The packet python library is not installed'
     if get_configured_provider() is False:
         return False
 
@@ -500,7 +508,7 @@ def get_devices_by_token():
 
     devices = []
 
-    for profile_name in vm_['profiles'].keys():
+    for profile_name in vm_['profiles']:
         profile = vm_['profiles'][profile_name]
 
         devices.extend(manager.list_devices(profile['project_id']))

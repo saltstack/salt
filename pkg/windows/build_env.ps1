@@ -25,7 +25,6 @@ param(
     [switch]$Silent
 )
 
-# Clear-Host
 Write-Output "================================================================="
 Write-Output ""
 Write-Output "               Development Environment Installation"
@@ -44,6 +43,11 @@ Write-Output ""
 #==============================================================================
 $script_path = dir "$($myInvocation.MyCommand.Definition)"
 $script_path = $script_path.DirectoryName
+
+#==============================================================================
+# Get the name of actual script
+#==============================================================================
+$script_name = $MyInvocation.MyCommand.Name
 
 #==============================================================================
 # Import Modules
@@ -76,7 +80,6 @@ If (!(Get-IsAdministrator)) {
 
         # Exit from the current, unelevated, process
         Exit
-
     } Else {
         Throw "You must be administrator to run this script"
     }
@@ -91,29 +94,26 @@ $ini = Get-Settings
 # Create Directories
 #------------------------------------------------------------------------------
 $p = New-Item $ini['Settings']['DownloadDir'] -ItemType Directory -Force
+$p = New-Item "$($ini['Settings']['DownloadDir'])\64" -ItemType Directory -Force
+$p = New-Item "$($ini['Settings']['DownloadDir'])\32" -ItemType Directory -Force
 $p = New-Item $ini['Settings']['SaltDir'] -ItemType Directory -Force
 
 #------------------------------------------------------------------------------
 # Determine Architecture (32 or 64 bit) and assign variables
 #------------------------------------------------------------------------------
 If ([System.IntPtr]::Size -ne 4) {
-
     Write-Output "Detected 64bit Architecture..."
 
     $bitDLLs     = "64bitDLLs"
     $bitPaths    = "64bitPaths"
     $bitPrograms = "64bitPrograms"
     $bitFolder   = "64"
-  
- } Else {
-
+} Else {
     Write-Output "Detected 32bit Architecture"
-
     $bitDLLs     = "32bitDLLs"
     $bitPaths    = "32bitPaths"
     $bitPrograms = "32bitPrograms"
     $bitFolder   = "32"
-
 }
 
 #------------------------------------------------------------------------------
@@ -121,12 +121,9 @@ If ([System.IntPtr]::Size -ne 4) {
 #------------------------------------------------------------------------------
 Write-Output " - Checking for NSIS installation . . ."
 If (Test-Path "$($ini[$bitPaths]['NSISDir'])\NSIS.exe") {
-
     # Found NSIS, do nothing
     Write-Output " - NSIS Found . . ."
-
 } Else {
-
     # NSIS not found, install
     Write-Output " - NSIS Not Found . . ."
     Write-Output " - Downloading $($ini['Prerequisites']['NSIS']) . . ."
@@ -139,7 +136,6 @@ If (Test-Path "$($ini[$bitPaths]['NSISDir'])\NSIS.exe") {
     Write-Output " - Installing $($ini['Prerequisites']['NSIS']) . . ."
     $file = "$($ini['Settings']['DownloadDir'])\$($ini['Prerequisites']['NSIS'])"
     $p    = Start-Process $file -ArgumentList '/S' -Wait -NoNewWindow -PassThru
-
 }
 
 #------------------------------------------------------------------------------
@@ -147,12 +143,9 @@ If (Test-Path "$($ini[$bitPaths]['NSISDir'])\NSIS.exe") {
 #------------------------------------------------------------------------------
 Write-Output " - Checking for VC Compiler for Python 2.7 installation . . ."
 If (Test-Path "$($ini[$bitPaths]['VCforPythonDir'])\vcvarsall.bat") {
-
     # Found Microsoft Visual C++ for Python2.7, do nothing
     Write-Output " - Microsoft Visual C++ for Python 2.7 Found . . ."
-
 } Else {
-
     # Microsoft Visual C++ for Python2.7 not found, install
     Write-Output " - Microsoft Visual C++ for Python2.7 Not Found . . ."
     Write-Output " - Downloading $($ini['Prerequisites']['VCforPython']) . . ."
@@ -165,7 +158,6 @@ If (Test-Path "$($ini[$bitPaths]['VCforPythonDir'])\vcvarsall.bat") {
     Write-Output " - Installing $($ini['Prerequisites']['VCforPython']) . . ."
     $file = "$($ini['Settings']['DownloadDir'])\$($ini['Prerequisites']['VCforPython'])"
     $p    = Start-Process msiexec.exe -ArgumentList "/i $file /qb ALLUSERS=1" -Wait -NoNewWindow -PassThru
-
 }
 
 #------------------------------------------------------------------------------
@@ -173,22 +165,17 @@ If (Test-Path "$($ini[$bitPaths]['VCforPythonDir'])\vcvarsall.bat") {
 #------------------------------------------------------------------------------
 Write-Output " - Checking for Python 2.7 installation . . ."
 If (Test-Path "$($ini['Settings']['PythonDir'])\python.exe") {
-
     # Found Python2.7, do nothing
     Write-Output " - Python 2.7 Found . . ."
-
 } Else {
-
     Write-Output " - Downloading $($ini[$bitPrograms]['Python']) . . ."
     $file = "$($ini[$bitPrograms]['Python'])"
     $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-    $file = "$($ini['Settings']['DownloadDir'])\$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
     DownloadFileWithProgress $url $file
-    
-    Write-Output " - Installing $($ini[$bitPrograms]['Python']) . . ."
-    $file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['Python'])"
-    $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['PythonDir'])" -Wait -NoNewWindow -PassThru
 
+    Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python']) . . ."
+    $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['PythonDir'])" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -204,58 +191,81 @@ If (!($Path.ToLower().Contains("$($ini['Settings']['ScriptsDir'])".ToLower()))) 
 
 #==============================================================================
 # Update PIP and SetupTools
+#    caching depends on environmant variable SALT_PIP_LOCAL_CACHE
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Updating PIP and SetupTools . . ."
+Write-Output " - $script_name :: Updating PIP and SetupTools . . ."
 Write-Output " ----------------------------------------------------------------"
-Start_Process_and_test_exitcode "$($ini['Settings']['PythonDir'])\python.exe" "-m pip --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
+if ( ! [bool]$Env:SALT_PIP_LOCAL_CACHE) {
+    Start_Process_and_test_exitcode "$($ini['Settings']['PythonDir'])\python.exe" "-m pip --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
+} else {
+    $p = New-Item $Env:SALT_PIP_LOCAL_CACHE -ItemType Directory -Force # Ensure directory exists
+    if ( (Get-ChildItem $Env:SALT_PIP_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
+        # folder empty
+        Write-Output "    pip download from req_pip.txt into empty local cache SALT_REQ_PIP $Env:SALT_PIP_LOCAL_CACHE"
+        Start_Process_and_test_exitcode "$($ini['Settings']['PythonDir'])\python.exe"  "-m pip download --dest $Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip download"
+    }
+    Write-Output "    reading from local pip cache $Env:SALT_PIP_LOCAL_CACHE"
+    Write-Output "    If a (new) ressource is missing, please delete all files in this cache, go online and repeat"
+  Start_Process_and_test_exitcode "$($ini['Settings']['PythonDir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip install"
+}
 
 #==============================================================================
 # Install pypi resources using pip
+#    caching depends on environmant variable SALT_REQ_LOCAL_CACHE
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Installing pypi resources using pip . . ."
+Write-Output " - $script_name :: Installing pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
-Start_Process_and_test_exitcode "$($ini['Settings']['ScriptsDir'])\pip.exe"  "--no-cache-dir install -r $($script_path)\req.txt" "pip install"
+if ( ! [bool]$Env:SALT_REQ_LOCAL_CACHE) {
+    Start_Process_and_test_exitcode "$($ini['Settings']['ScriptsDir'])\pip.exe"  "--no-cache-dir install -r $($script_path)\req.txt" "pip install"
+} else {
+    if ( (Get-ChildItem $Env:SALT_REQ_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
+        # folder empty
+        Write-Output "    pip download from req.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
+        Start_Process_and_test_exitcode "$($ini['Settings']['PythonDir'])\python.exe"  "-m pip download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip download"
+    }
+    Write-Output "    reading from local pip cache $Env:SALT_REQ_LOCAL_CACHE"
+    Write-Output "    If a (new) ressource is missing, please delete all files in this cache, go online and repeat"
+  Start_Process_and_test_exitcode "$($ini['Settings']['PythonDir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip install"
+}
 
 #==============================================================================
 # Install PyYAML with CLoader
 # This has to be a compiled binary to get the CLoader
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Installing PyYAML . . ."
+Write-Output " - $script_name :: Installing PyYAML . . ."
 Write-Output " ----------------------------------------------------------------"
 # Download
 $file = "$($ini[$bitPrograms]['PyYAML'])"
 $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-$file = "$($ini['Settings']['DownloadDir'])\$file"
+$file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
 DownloadFileWithProgress $url $file
 
 # Install
-$file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['PyYAML'])"
 Start_Process_and_test_exitcode "$($ini['Settings']['ScriptsDir'])\easy_install.exe" "-Z $file " "easy_install PyYAML"
 
 #==============================================================================
 # Install PyCrypto from wheel file
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Installing PyCrypto . . ."
+Write-Output " - $script_name :: Installing PyCrypto . . ."
 Write-Output " ----------------------------------------------------------------"
 # Download
 $file = "$($ini[$bitPrograms]['PyCrypto'])"
 $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-$file = "$($ini['Settings']['DownloadDir'])\$file"
+$file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
 DownloadFileWithProgress $url $file
 
 # Install
-$file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['PyCrypto'])"
 Start_Process_and_test_exitcode  "$($ini['Settings']['ScriptsDir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyCrypto"
 
 #==============================================================================
 # Copy DLLs to Python Directory
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output "   - Copying DLLs . . ."
+Write-Output "   - $script_name :: Copying DLLs . . ."
 Write-Output " ----------------------------------------------------------------"
 # Architecture Specific DLL's
 ForEach($key in $ini[$bitDLLs].Keys) {
@@ -263,8 +273,9 @@ ForEach($key in $ini[$bitDLLs].Keys) {
         Write-Output "   - $key . . ."
         $file = "$($ini[$bitDLLs][$key])"
         $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-        $file = "$($ini['Settings']['PythonDir'])\$file"
+        $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
         DownloadFileWithProgress $url $file
+        Copy-Item $file  -destination $($ini['Settings']['PythonDir'])
     }
 }
 
@@ -272,7 +283,7 @@ ForEach($key in $ini[$bitDLLs].Keys) {
 # Script complete
 #------------------------------------------------------------------------------
 Write-Output "================================================================="
-Write-Output "Salt Stack Dev Environment Script Complete"
+Write-Output " $script_name :: Salt Stack Dev Environment Script Complete"
 Write-Output "================================================================="
 Write-Output ""
 
@@ -286,7 +297,9 @@ If (-Not $Silent) {
 # Remove the temporary download directory
 #------------------------------------------------------------------------------
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Cleaning up downloaded files"
+Write-Output " - $script_name :: Cleaning up downloaded files unless you use SALTREPO_LOCAL_CACHE"
 Write-Output " ----------------------------------------------------------------"
 Write-Output ""
-Remove-Item $($ini['Settings']['DownloadDir']) -Force -Recurse
+if ( ! [bool]$Env:SALTREPO_LOCAL_CACHE ) {
+    Remove-Item $($ini['Settings']['DownloadDir']) -Force -Recurse
+}

@@ -4,6 +4,12 @@ Connection module for Amazon CloudTrail
 
 .. versionadded:: 2016.3.0
 
+:depends:
+    - boto
+    - boto3
+
+The dependencies listed above can be installed via package or pip.
+
 :configuration: This module accepts explicit Lambda credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
@@ -39,8 +45,6 @@ Connection module for Amazon CloudTrail
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 
-:depends: boto3
-
 '''
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
@@ -48,13 +52,13 @@ Connection module for Amazon CloudTrail
 # Import Python libs
 from __future__ import absolute_import
 import logging
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.ext.six as six
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 

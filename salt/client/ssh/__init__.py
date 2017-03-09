@@ -551,7 +551,10 @@ class SSH(object):
             }
 
         # save load to the master job cache
-        self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+        if self.opts['master_job_cache'] == 'local_cache':
+            self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load, minions=self.targets.keys())
+        else:
+            self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
 
         for ret in self.handle_ssh(mine=mine):
             host = next(six.iterkeys(ret))
@@ -896,6 +899,15 @@ class Single(object):
             opts_pkg['id'] = self.id
 
             retcode = 0
+
+            # Restore master grains
+            for grain in conf_grains:
+                opts_pkg['grains'][grain] = conf_grains[grain]
+            # Enable roster grains support
+            if 'grains' in self.target:
+                for grain in self.target['grains']:
+                    opts_pkg['grains'][grain] = self.target['grains'][grain]
+
             popts = {}
             popts.update(opts_pkg['__master_opts__'])
             popts.update(opts_pkg)

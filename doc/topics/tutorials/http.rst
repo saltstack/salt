@@ -377,7 +377,8 @@ using the ``ca_bundle`` variable.
     )
 
 Updating CA Bundles
-'''''''''''''''''''
+```````````````````
+
 The ``update_ca_bundle()`` function can be used to update the bundle file at a
 specified location. If the target location is not specified, then it will
 attempt to auto-detect the location of the bundle file. If the URL to download

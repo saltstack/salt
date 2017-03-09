@@ -306,7 +306,7 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             for secret_key, secret_map in six.iteritems(SMaster.secrets):
                 # should be unnecessary-- since no one else should be modifying
                 with secret_map['secret'].get_lock():
-                    secret_map['secret'].value = secret_map['reload']()
+                    secret_map['secret'].value = six.b(secret_map['reload']())
                 self.event.fire_event({'rotate_{0}_key'.format(secret_key): True}, tag='key')
             self.rotate = now
             if self.opts.get('ping_on_rotate'):
@@ -323,11 +323,8 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             for pillar in self.git_pillar:
                 pillar.update()
         except Exception as exc:
-            log.error(
-                'Exception \'{0}\' caught while updating git_pillar'
-                .format(exc),
-                exc_info_on_loglevel=logging.DEBUG
-            )
+            log.error('Exception caught while updating git_pillar',
+                      exc_info=True)
 
     def handle_schedule(self):
         '''
@@ -458,19 +455,21 @@ class Master(SMaster):
                 'Cannot change to root directory ({1})'.format(err)
             )
 
-        fileserver = salt.fileserver.Fileserver(self.opts)
-        if not fileserver.servers:
-            errors.append(
-                'Failed to load fileserver backends, the configured backends '
-                'are: {0}'.format(', '.join(self.opts['fileserver_backend']))
-            )
-        else:
-            # Run init() for all backends which support the function, to
-            # double-check configuration
-            try:
-                fileserver.init()
-            except FileserverConfigError as exc:
-                critical_errors.append('{0}'.format(exc))
+        if self.opts.get('fileserver_verify_config', True):
+            fileserver = salt.fileserver.Fileserver(self.opts)
+            if not fileserver.servers:
+                errors.append(
+                    'Failed to load fileserver backends, the configured backends '
+                    'are: {0}'.format(', '.join(self.opts['fileserver_backend']))
+                )
+            else:
+                # Run init() for all backends which support the function, to
+                # double-check configuration
+                try:
+                    fileserver.init()
+                except FileserverConfigError as exc:
+                    critical_errors.append('{0}'.format(exc))
+
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
 
@@ -483,25 +482,29 @@ class Master(SMaster):
             except OSError:
                 pass
 
-        non_legacy_git_pillars = [
-            x for x in self.opts.get('ext_pillar', [])
-            if 'git' in x
-            and not isinstance(x['git'], six.string_types)
-        ]
-        if non_legacy_git_pillars:
-            try:
-                new_opts = copy.deepcopy(self.opts)
-                from salt.pillar.git_pillar \
-                    import PER_REMOTE_OVERRIDES as overrides
-                for repo in non_legacy_git_pillars:
-                    new_opts['ext_pillar'] = [repo]
-                    try:
-                        git_pillar = salt.utils.gitfs.GitPillar(new_opts)
-                        git_pillar.init_remotes(repo['git'], overrides)
-                    except FileserverConfigError as exc:
-                        critical_errors.append(exc.strerror)
-            finally:
-                del new_opts
+        if self.opts.get('git_pillar_verify_config', True):
+            non_legacy_git_pillars = [
+                x for x in self.opts.get('ext_pillar', [])
+                if 'git' in x
+                and not isinstance(x['git'], six.string_types)
+            ]
+            if non_legacy_git_pillars:
+                try:
+                    new_opts = copy.deepcopy(self.opts)
+                    from salt.pillar.git_pillar \
+                        import PER_REMOTE_OVERRIDES as per_remote_overrides, \
+                        PER_REMOTE_ONLY as per_remote_only
+                    for repo in non_legacy_git_pillars:
+                        new_opts['ext_pillar'] = [repo]
+                        try:
+                            git_pillar = salt.utils.gitfs.GitPillar(new_opts)
+                            git_pillar.init_remotes(repo['git'],
+                                                    per_remote_overrides,
+                                                    per_remote_only)
+                        except FileserverConfigError as exc:
+                            critical_errors.append(exc.strerror)
+                finally:
+                    del new_opts
 
         if errors or critical_errors:
             for error in errors:
@@ -535,7 +538,7 @@ class Master(SMaster):
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets['aes'] = {'secret': multiprocessing.Array(ctypes.c_char,
-                                                salt.crypt.Crypticle.generate_key_string().encode('ascii')),
+                                                six.b(salt.crypt.Crypticle.generate_key_string())),
                                       'reload': salt.crypt.Crypticle.generate_key_string
                                      }
             log.info('Creating master process manager')
@@ -957,7 +960,7 @@ class AESFuncs(object):
         self.mminion = salt.minion.MasterMinion(
             self.opts,
             states=False,
-            rend=True,
+            rend=False,
             ignore_config_errors=True
         )
         self.__setup_fileserver()
@@ -971,6 +974,7 @@ class AESFuncs(object):
         self._serve_file = self.fs_.serve_file
         self._file_find = self.fs_._find_file
         self._file_hash = self.fs_.file_hash
+        self._file_hash_and_stat = self.fs_.file_hash_and_stat
         self._file_list = self.fs_.file_list
         self._file_list_emptydirs = self.fs_.file_list_emptydirs
         self._dir_list = self.fs_.dir_list
@@ -1332,8 +1336,7 @@ class AESFuncs(object):
             load.get('saltenv', load.get('env')),
             ext=load.get('ext'),
             pillar=load.get('pillar_override', {}),
-            pillarenv=load.get('pillarenv'),
-            rend=self.mminion.rend)
+            pillarenv=load.get('pillarenv'))
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         self.fs_.update_opts()
         if self.opts.get('minion_data_cache', False):
@@ -1882,9 +1885,9 @@ class ClearFuncs(object):
                     'user': username}
 
             self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-            ret = self.wheel_.call_func(fun, **clear_load)
-            data['return'] = ret
-            data['success'] = True
+            ret = self.wheel_.call_func(fun, full_return=True, **clear_load)
+            data['return'] = ret['return']
+            data['success'] = ret['success']
             self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
             return {'tag': tag,
                     'data': data}
@@ -1918,7 +1921,7 @@ class ClearFuncs(object):
             name = self.loadauth.load_name(clear_load)
             groups = self.loadauth.get_groups(clear_load)
             eauth_config = self.opts['external_auth'][clear_load['eauth']]
-            if '*' not in eauth_config and name not in eauth_config:
+            if '^model' not in eauth_config and '*' not in eauth_config and name not in eauth_config:
                 found = False
                 for group in groups:
                     if "{0}%".format(group) in eauth_config:
@@ -2018,7 +2021,7 @@ class ClearFuncs(object):
                             break
             except KeyError:
                 pass
-            if '*' not in eauth_users and token['name'] not in eauth_users \
+            if '^model' not in eauth_users and '*' not in eauth_users and token['name'] not in eauth_users \
                 and not group_auth_match:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''

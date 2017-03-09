@@ -3,6 +3,7 @@
 The core behaviors used by minion and master
 '''
 # pylint: disable=W0232
+# pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
 from __future__ import absolute_import
@@ -20,10 +21,13 @@ import salt.utils.args
 import salt.utils.process
 import salt.transport
 import salt.engines
+
+# pylint: disable=import-error
 from raet import raeting
 from raet.road.stacking import RoadStack
 from raet.road.estating import RemoteEstate
 from raet.lane.stacking import LaneStack
+# pylint: enable=import-error
 
 from salt import daemons
 from salt.daemons import salting
@@ -32,10 +36,11 @@ from salt.utils import kinds, is_windows
 from salt.utils.event import tagify
 
 # Import ioflo libs
-
+# pylint: disable=import-error
 from ioflo.aid.odicting import odict  # pylint: disable=E0611,F0401
 import ioflo.base.deeding
 from ioflo.base.consoling import getConsole
+# pylint: enable=import-error
 console = getConsole()
 
 # Import Third Party Libs

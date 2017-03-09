@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon Kinesis
 
-.. versionadded:: develop
+.. versionadded:: Nitrogen
 
 :configuration: This module accepts explicit Kinesis credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.

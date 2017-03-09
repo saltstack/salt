@@ -412,6 +412,7 @@ def __get_artifact(salt_source):
                     template=None,
                     source=salt_source['source'],
                     source_hash=None,
+                    source_hash_name=None,
                     user=None,
                     group=None,
                     mode=None,

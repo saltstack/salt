@@ -298,7 +298,7 @@ def get_conn():
     kwargs['project_id'] = vm_['tenant']
     kwargs['auth_url'] = vm_['identity_url']
     kwargs['region_name'] = vm_['compute_region']
-    kwargs['use_keystoneauth'] = vm_['use_keystoneauth']
+    kwargs['use_keystoneauth'] = vm_.get('use_keystoneauth', False)
 
     if 'password' in vm_:
         kwargs['password'] = vm_['password']
@@ -921,6 +921,8 @@ def create(vm_):
             )
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
+                if private_ip is False:
+                    continue
                 if salt.utils.cloud.is_public_ip(private_ip):
                     log.warning('{0} is a public IP'.format(private_ip))
                     data.public_ips.append(private_ip)
@@ -1102,7 +1104,7 @@ def list_nodes(call=None, **kwargs):
         public = []
         if 'addresses' not in server_tmp:
             server_tmp['addresses'] = {}
-        for network in server_tmp['addresses'].keys():
+        for network in server_tmp['addresses']:
             for address in server_tmp['addresses'][network]:
                 if salt.utils.cloud.is_public_ip(address.get('addr', '')):
                     public.append(address['addr'])

@@ -138,11 +138,11 @@ import json
 import os
 
 # Import Salt Libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 import salt.utils
 import salt.utils.odict as odict
 import salt.utils.dictupdate as dictupdate
-from salt.ext import six
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd party libs
 try:
@@ -161,10 +161,10 @@ if six.PY2:
         # Note that we intentionally don't treat odicts here - they won't compare equal
         # in many circumstances where AWS treats them the same...
         if isinstance(thing, dict):
-            return dict([(_byteify(k), _byteify(v)) for k, v in thing.iteritems()])
+            return dict([(_byteify(k), _byteify(v)) for k, v in six.iteritems(thing)])
         elif isinstance(thing, list):
             return [_byteify(m) for m in thing]
-        elif isinstance(thing, unicode):  # pylint: disable=W1699
+        elif isinstance(thing, six.text_type):  # pylint: disable=W1699
             return thing.encode('utf-8')
         else:
             return thing

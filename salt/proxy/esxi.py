@@ -105,6 +105,7 @@ look like this:
         - first_password
         - second_password
         - third_password
+      credstore: <path to credential store>
 
 proxytype
 ^^^^^^^^^
@@ -168,6 +169,18 @@ port
 If the ESXi host is not using the default port, set this value to an
 alternate port. Default is ``443``.
 
+credstore
+^^^^^^^^^
+If the ESXi host is using an untrusted SSL certificate, set this value to
+the file path where the credential store is located. This file is passed to
+``esxcli``. Default is ``<HOME>/.vmware/credstore/vicredentials.xml`` on Linux
+and ``<APPDATA>/VMware/credstore/vicredentials.xml`` on Windows.
+
+.. note::
+
+    ``HOME`` variable is sometimes not set for processes running as system
+    services. If you want to rely on the default credential store location,
+    make sure ``HOME`` is set for the proxy process.
 
 Salt Proxy
 ----------
@@ -321,6 +334,7 @@ def init(opts):
     DETAILS['password'] = password
     DETAILS['protocol'] = opts['proxy'].get('protocol', 'https')
     DETAILS['port'] = opts['proxy'].get('port', '443')
+    DETAILS['credstore'] = opts['proxy'].get('credstore')
 
 
 def grains():
@@ -392,7 +406,7 @@ def ch_config(cmd, *args, **kwargs):
 
     '''
     # Strip the __pub_ keys...is there a better way to do this?
-    for k in kwargs.keys():
+    for k in kwargs:
         if k.startswith('__pub_'):
             kwargs.pop(k)
 
@@ -401,6 +415,7 @@ def ch_config(cmd, *args, **kwargs):
     kwargs['password'] = DETAILS['password']
     kwargs['port'] = DETAILS['port']
     kwargs['protocol'] = DETAILS['protocol']
+    kwargs['credstore'] = DETAILS['credstore']
 
     if 'vsphere.' + cmd not in __salt__:
         return {'retcode': -1, 'message': 'vsphere.' + cmd + ' is not available.'}

@@ -267,6 +267,7 @@ import difflib
 import itertools
 import logging
 import os
+import re
 import shutil
 import sys
 import traceback
@@ -282,7 +283,8 @@ import salt.utils.files
 import salt.utils.templates
 import salt.utils.url
 from salt.utils.locales import sdecode
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+
 if salt.utils.is_windows():
     import salt.utils.win_dacl
 
@@ -766,8 +768,8 @@ def _check_directory_win(name,
                     user = salt.utils.win_dacl.get_name(user)
 
                     # Get the proper applies_to text
-                    at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][applies_to]
-                    applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+                    at_flag = salt.utils.win_dacl.flags().ace_prop['file'][applies_to]
+                    applies_to_text = salt.utils.win_dacl.flags().ace_prop['file'][at_flag]
 
                     if 'grant' in perms[user]:
                         if not perms[user]['grant']['applies to'] == applies_to_text:
@@ -814,8 +816,8 @@ def _check_directory_win(name,
                     user = salt.utils.win_dacl.get_name(user)
 
                     # Get the proper applies_to text
-                    at_flag = salt.utils.win_dacl.Flags.ace_prop['file'][applies_to]
-                    applies_to_text = salt.utils.win_dacl.Flags.ace_prop['file'][at_flag]
+                    at_flag = salt.utils.win_dacl.flags().ace_prop['file'][applies_to]
+                    applies_to_text = salt.utils.win_dacl.flags().ace_prop['file'][at_flag]
 
                     if 'deny' in perms[user]:
                         if not perms[user]['deny']['applies to'] == applies_to_text:
@@ -1029,7 +1031,10 @@ def _get_template_texts(source_list=None,
         if rndrd_templ_fn:
             tmplines = None
             with salt.utils.fopen(rndrd_templ_fn, 'rb') as fp_:
-                tmplines = fp_.readlines()
+                tmplines = fp_.read()
+                if six.PY3:
+                    tmplines = tmplines.decode(__salt_system_encoding__)
+                tmplines = tmplines.splitlines(True)
             if not tmplines:
                 msg = 'Failed to read rendered template file {0} ({1})'
                 log.debug(msg.format(rndrd_templ_fn, source))
@@ -1117,7 +1122,10 @@ def symlink(
 
     mode
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
-        on Windows
+        on Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
     '''
     name = os.path.expanduser(name)
 
@@ -1442,7 +1450,7 @@ def managed(name,
         will not be changed or managed.
 
         If the file is hosted on a HTTP or FTP server then the source_hash
-        argument is also required
+        argument is also required.
 
         A list of sources can also be passed in to provide a default source and
         a set of fallbacks. The first source in the list that is found to exist
@@ -1581,7 +1589,10 @@ def managed(name,
         is running as on the minion On Windows, this is ignored
 
     mode
-        The mode to set on this file, e.g. ``644``, ``0775``, or ``4664``.
+        The permissions to set on this file, e.g. ``644``, ``0775``, or ``4664``.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
         .. note::
             This option is **not** supported on Windows.
@@ -1615,6 +1626,9 @@ def managed(name,
         permissions for those directories. If this is not set, directories
         will be assigned permissions by adding the execute bit to the mode of
         the files.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     replace : True
         If set to ``False`` and the file already exists, the file will not be
@@ -2225,10 +2239,10 @@ def managed(name,
                 follow_symlinks,
                 skip_verify,
                 keep_mode,
-                win_owner,
-                win_perms,
-                win_deny_perms,
-                win_inheritance,
+                win_owner=win_owner,
+                win_perms=win_perms,
+                win_deny_perms=win_deny_perms,
+                win_inheritance=win_inheritance,
                 **kwargs)
         except Exception as exc:
             ret['changes'] = {}
@@ -2429,11 +2443,17 @@ def directory(name,
 
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
-        Windows
+        Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     file_mode
         The permissions mode to set any files created if 'mode' is run in
-        'recurse'. This defaults to dir_mode. Not supported on Windows
+        'recurse'. This defaults to dir_mode. Not supported on Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     makedirs
         If the directory is located in a path without a parent directory, then
@@ -2871,14 +2891,19 @@ def recurse(name,
         salt is running as on the minion. On Windows, this is ignored
 
     dir_mode
-        The mode to set on any directories created.
+        The permissions mode to set on any directories created.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
         .. note::
             This option is **not** supported on Windows.
 
     file_mode
-        The mode to set on any files created.
-        Windows
+        The permissions mode to set on any files created.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
         .. note::
             This option is **not** supported on Windows.
@@ -2892,7 +2917,10 @@ def recurse(name,
             incompatible with the ``contents`` options.
 
     sym_mode
-        The mode to set on any symlink created.
+        The permissions mode to set on any symlink created.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
         .. note::
             This option is **not** supported on Windows.
@@ -3538,8 +3566,7 @@ def line(name, content=None, match=None, mode=None, location=None,
     if not name:
         return _error(ret, 'Must provide name to file.line')
 
-    if create and not os.path.isfile(name):
-        managed(name, create=create, user=user, group=group, mode=file_mode)
+    managed(name, create=create, user=user, group=group, mode=file_mode)
 
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -3818,7 +3845,7 @@ def blockreplace(
         will not be changed or managed.
 
         If the file is hosted on a HTTP or FTP server then the source_hash
-        argument is also required
+        argument is also required.
 
         A list of sources can also be passed in to provide a default source and
         a set of fallbacks. The first source in the list that is found to exist
@@ -3827,7 +3854,8 @@ def blockreplace(
         .. code-block:: yaml
 
             file_override_example:
-              file.managed:
+              file.blockreplace:
+                - name: /etc/example.conf
                 - source:
                   - salt://file_that_does_not_exist
                   - salt://file_that_exists
@@ -3852,45 +3880,8 @@ def blockreplace(
             sha1        40
             md5         32
 
-        **Using a Source Hash File**
-            The file can contain several checksums for several files. Each line
-            must contain both the file name and the hash.  If no file name is
-            matched, the first hash encountered will be used, otherwise the most
-            secure hash with the correct source file name will be used.
-
-            When using a source hash file the source_hash argument needs to be a
-            url, the standard download urls are supported, ftp, http, salt etc:
-
-            Example:
-
-            .. code-block:: yaml
-
-                tomdroid-src-0.7.3.tar.gz:
-                  file.managed:
-                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
-                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
-                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.hash
-
-            The following is an example of the supported source_hash format:
-
-            .. code-block:: text
-
-                /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
-                sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
-                ead48423703509d37c4a90e6a0d53e143b6fc268
-
-            Debian file type ``*.dsc`` files are also supported.
-
-        **Inserting the Source Hash in the sls Data**
-            Examples:
-
-            .. code-block:: yaml
-
-                tomdroid-src-0.7.3.tar.gz:
-                  file.managed:
-                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
-                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
-                    - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
+        See the ``source_hash`` parameter description for :mod:`file.managed
+        <salt.states.file.managed>` function for more details and examples.
 
     template
         The named templating engine will be used to render the downloaded file.
@@ -4107,7 +4098,9 @@ def comment(name, regex, char='#', backup='.bak'):
     if not check_res:
         return _error(ret, check_msg)
 
-    unanchor_regex = regex.lstrip('^').rstrip('$')
+    # remove (?i)-like flags, ^ and $
+    unanchor_regex = re.sub(r'^(\(\?[iLmsux]\))?\^?(.*?)\$?$', r'\2', regex)
+
     comment_regex = char + unanchor_regex
 
     # Check if the line is already commented
@@ -4131,13 +4124,19 @@ def comment(name, regex, char='#', backup='.bak'):
         ret['result'] = None
         return ret
     with salt.utils.fopen(name, 'rb') as fp_:
-        slines = fp_.readlines()
+        slines = fp_.read()
+        if six.PY3:
+            slines = slines.decode(__salt_system_encoding__)
+        slines = slines.splitlines(True)
 
     # Perform the edit
     __salt__['file.comment_line'](name, regex, char, True, backup)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        nlines = fp_.readlines()
+        nlines = fp_.read()
+        if six.PY3:
+            nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.splitlines(True)
 
     # Check the result
     ret['result'] = __salt__['file.search'](name, unanchor_regex, multiline=True)
@@ -4233,13 +4232,19 @@ def uncomment(name, regex, char='#', backup='.bak'):
         return ret
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        slines = fp_.readlines()
+        slines = fp_.read()
+        if six.PY3:
+            slines = slines.decode(__salt_system_encoding__)
+        slines = slines.splitlines(True)
 
     # Perform the edit
     __salt__['file.comment_line'](name, regex, char, False, backup)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        nlines = fp_.readlines()
+        nlines = fp_.read()
+        if six.PY3:
+            nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.splitlines(True)
 
     # Check the result
     ret['result'] = __salt__['file.search'](
@@ -4331,34 +4336,8 @@ def append(name,
             sha1        40
             md5         32
 
-        The file can contain several checksums for several files. Each line
-        must contain both the file name and the hash.  If no file name is
-        matched, the first hash encountered will be used, otherwise the most
-        secure hash with the correct source file name will be used.
-
-        Debian file type ``*.dsc`` is supported.
-
-        Examples:
-
-        .. code-block:: text
-
-            /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
-            sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
-            ead48423703509d37c4a90e6a0d53e143b6fc268
-
-        Known issues:
-            If the remote server URL has the hash file as an apparent
-            sub-directory of the source file, the module will discover that it
-            has already cached a directory where a file should be cached. For
-            example:
-
-            .. code-block:: yaml
-
-                tomdroid-src-0.7.3.tar.gz:
-                  file.managed:
-                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
-                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
-                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz/+md5
+        See the ``source_hash`` parameter description for :mod:`file.managed
+        <salt.states.file.managed>` function for more details and examples.
 
     template
         The named templating engine will be used to render the appended-to file.
@@ -4486,7 +4465,10 @@ def append(name,
     text = _validate_str_list(text)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        slines = fp_.read().splitlines()
+        slines = fp_.read()
+        if six.PY3:
+            slines = slines.decode(__salt_system_encoding__)
+        slines = slines.splitlines()
 
     append_lines = []
     try:
@@ -4534,7 +4516,10 @@ def append(name,
         ret['comment'] = 'File {0} is in correct state'.format(name)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        nlines = fp_.read().splitlines()
+        nlines = fp_.read()
+        if six.PY3:
+            nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.splitlines()
 
     if slines != nlines:
         if not salt.utils.istextfile(name):
@@ -4672,7 +4657,10 @@ def prepend(name,
     text = _validate_str_list(text)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        slines = fp_.readlines()
+        slines = fp_.read()
+        if six.PY3:
+            slines = slines.decode(__salt_system_encoding__)
+        slines = slines.splitlines(True)
 
     count = 0
     test_lines = []
@@ -4719,7 +4707,11 @@ def prepend(name,
     if header:
         with salt.utils.fopen(name, 'rb') as fp_:
             # read as many lines of target file as length of user input
-            target_head = fp_.readlines()[0:len(preface)]
+            contents = fp_.read()
+            if six.PY3:
+                contents = contents.decode(__salt_system_encoding__)
+            contents = contents.splitlines(True)
+            target_head = contents[0:len(preface)]
             target_lines = []
             # strip newline chars from list entries
             for chunk in target_head:
@@ -4735,7 +4727,10 @@ def prepend(name,
         __salt__['file.prepend'](name, *preface)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        nlines = fp_.readlines()
+        nlines = fp_.read()
+        if six.PY3:
+            nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.splitlines(True)
 
     if slines != nlines:
         if not salt.utils.istextfile(name):
@@ -4756,7 +4751,6 @@ def prepend(name,
 
 def patch(name,
           source=None,
-          hash=None,
           options='',
           dry_run_first=True,
           **kwargs):
@@ -4778,10 +4772,13 @@ def patch(name,
         salt://spam/eggs. A source is required.
 
     hash
-        Hash of the patched file. If the hash of the target file matches this
-        value then the patch is assumed to have been applied. The hash string
-        is the hash algorithm followed by the hash of the file:
-        md5=e138491e9d5b97023cea823fe17bac22
+        The hash of the patched file. If the hash of the target file matches
+        this value then the patch is assumed to have been applied. For versions
+        2016.11.4 and newer, the hash can be specified without an accompanying
+        hash type (e.g. ``e138491e9d5b97023cea823fe17bac22``), but for earlier
+        releases it is necessary to also specify the hash type in the format
+        ``<hash_type>:<hash_value>`` (e.g.
+        ``md5:e138491e9d5b97023cea823fe17bac22``).
 
     options
         Extra options to pass to patch.
@@ -4794,7 +4791,7 @@ def patch(name,
         by the ``source`` parameter. If not provided, this defaults to the
         environment from which the state is being executed.
 
-    Usage:
+    **Usage:**
 
     .. code-block:: yaml
 
@@ -4802,8 +4799,15 @@ def patch(name,
         /opt/file.txt:
           file.patch:
             - source: salt://file.patch
-            - hash: md5=e138491e9d5b97023cea823fe17bac22
+            - hash: e138491e9d5b97023cea823fe17bac22
+
+    .. note::
+        For minions running version 2016.11.3 or older, the hash in the example
+        above would need to be specified with the hash type (i.e.
+        ``md5:e138491e9d5b97023cea823fe17bac22``).
     '''
+    hash_ = kwargs.pop('hash', None)
+
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
@@ -4823,11 +4827,16 @@ def patch(name,
         return _error(ret, check_msg)
     if not source:
         return _error(ret, 'Source is required')
-    if hash is None:
+    if hash_ is None:
         return _error(ret, 'Hash is required')
 
-    if hash and __salt__['file.check_hash'](name, hash):
-        ret.update(result=True, comment='Patch is already applied')
+    try:
+        if hash_ and __salt__['file.check_hash'](name, hash_):
+            ret['result'] = True
+            ret['comment'] = 'Patch is already applied'
+            return ret
+    except (SaltInvocationError, ValueError) as exc:
+        ret['comment'] = exc.__str__()
         return ret
 
     # get cached file or copy it to cache
@@ -4838,9 +4847,8 @@ def patch(name,
         return ret
 
     log.debug(
-        'State patch.applied cached source {0} -> {1}'.format(
-            source, cached_source_path
-        )
+        'State patch.applied cached source %s -> %s',
+        source, cached_source_path
     )
 
     if dry_run_first or __opts__['test']:
@@ -4851,20 +4859,18 @@ def patch(name,
             ret['comment'] = 'File {0} will be patched'.format(name)
             ret['result'] = None
             return ret
-        if ret['changes']['retcode']:
+        if ret['changes']['retcode'] != 0:
             return ret
 
     ret['changes'] = __salt__['file.patch'](
         name, cached_source_path, options=options
     )
-    ret['result'] = not ret['changes']['retcode']
-    if ret['result'] and hash and not __salt__['file.check_hash'](name, hash):
-        ret.update(
-            result=False,
-            comment='File {0} hash mismatch after patch was applied'.format(
-                name
-            )
-        )
+    ret['result'] = ret['changes']['retcode'] == 0
+    # No need to check for SaltInvocationError or ValueError this time, since
+    # these exceptions would have been caught above.
+    if ret['result'] and hash_ and not __salt__['file.check_hash'](name, hash_):
+        ret['result'] = False
+        ret['comment'] = 'Hash mismatch after patch was applied'
     return ret
 
 
@@ -4995,7 +5001,10 @@ def copy(
 
         The permissions to set on the copied file, aka 644, '0775', '4664'.
         If ``preserve`` is set to ``True``, then this will be ignored.
-        Not supported on Windows
+        Not supported on Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     subdir
         .. versionadded:: 2015.5.0
@@ -5334,7 +5343,8 @@ def serialize(name,
               mode=None,
               backup='',
               makedirs=False,
-              show_diff=True,
+              show_diff=None,
+              show_changes=True,
               create=True,
               merge_if_exists=False,
               **kwargs):
@@ -5374,6 +5384,9 @@ def serialize(name,
         The permissions to set on this file, e.g. ``644``, ``0775``, or
         ``4664``.
 
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
+
         .. note::
             This option is **not** supported on Windows.
 
@@ -5386,7 +5399,14 @@ def serialize(name,
         .. versionadded:: 2014.1.3
 
     show_diff
-        If set to False, the diff will not be shown.
+        DEPRECATED: Please use show_changes.
+
+        If set to ``False``, the diff will not be shown in the return data if
+        changes are made.
+
+    show_changes
+        Output a unified diff of the old file and the new file. If ``False``
+        return a boolean if any changes were made.
 
     create
         Default is True, if create is set to False then the file will only be
@@ -5518,6 +5538,14 @@ def serialize(name,
     # Make sure that any leading zeros stripped by YAML loader are added back
     mode = salt.utils.normalize_mode(mode)
 
+    if show_diff is not None:
+        show_changes = show_diff
+        msg = (
+            'The \'show_diff\' argument to the file.serialized state has been '
+            'deprecated, please use \'show_changes\' instead.'
+        )
+        salt.utils.warn_until('Oxygen', msg)
+
     if __opts__['test']:
         ret['changes'] = __salt__['file.check_managed_changes'](
             name=name,
@@ -5540,10 +5568,12 @@ def serialize(name,
             ret['result'] = None
             ret['comment'] = 'Dataset will be serialized and stored into {0}'.format(
                 name)
+
+            if not show_changes:
+                ret['changes']['diff'] = '<show_changes=False>'
         else:
             ret['result'] = True
             ret['comment'] = 'The file {0} is in the correct state'.format(name)
-
         return ret
 
     return __salt__['file.manage_file'](name=name,
@@ -5558,7 +5588,7 @@ def serialize(name,
                                         backup=backup,
                                         makedirs=makedirs,
                                         template=None,
-                                        show_changes=show_diff,
+                                        show_changes=show_changes,
                                         contents=contents)
 
 

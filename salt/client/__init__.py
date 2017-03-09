@@ -493,7 +493,7 @@ class LocalClient(object):
                               'sys.list_functions',
                               tgt_type=tgt_type,
                               **kwargs)
-        minions = minion_ret.keys()
+        minions = list(minion_ret)
         random.shuffle(minions)
         f_tgt = []
         for minion in minions:
@@ -576,6 +576,7 @@ class LocalClient(object):
             tgt_type='glob',
             ret='',
             jid='',
+            full_return=False,
             kwarg=None,
             **kwargs):
         '''
@@ -664,6 +665,9 @@ class LocalClient(object):
 
         :param kwarg: A dictionary with keyword arguments for the function.
 
+        :param full_return: Output the job return only (default) or the full
+            return including exit code and other job metadata.
+
         :param kwargs: Optional keyword arguments.
             Authentication credentials may be passed when using
             :conf_master:`external_auth`.
@@ -714,9 +718,10 @@ class LocalClient(object):
 
                 if fn_ret:
                     for mid, data in six.iteritems(fn_ret):
-                        ret[mid] = data.get('ret', {})
+                        ret[mid] = (data if full_return
+                                else data.get('ret', {}))
 
-            for failed in list(set(pub_data['minions']) ^ set(ret.keys())):
+            for failed in list(set(pub_data['minions']) ^ set(ret)):
                 ret[failed] = False
             return ret
         finally:
@@ -938,7 +943,7 @@ class LocalClient(object):
                                                     block=False,
                                                     **kwargs):
                     if fn_ret and any([show_jid, verbose]):
-                        for minion in fn_ret.keys():
+                        for minion in fn_ret:
                             fn_ret[minion]['jid'] = pub_data['jid']
                     yield fn_ret
 
@@ -1241,6 +1246,10 @@ class LocalClient(object):
 
                 # if the job isn't running there anymore... don't count
                 if raw['data']['return'] == {}:
+                    continue
+
+                if 'return' in raw['data']['return'] and \
+                    raw['data']['return']['return'] == {}:
                     continue
 
                 # if we didn't originally target the minion, lets add it to the list

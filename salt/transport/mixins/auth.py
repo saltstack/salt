@@ -68,7 +68,7 @@ class AESReqServerMixin(object):
             # cases, 'aes' is already set in the secrets.
             salt.master.SMaster.secrets['aes'] = {
                 'secret': multiprocessing.Array(ctypes.c_char,
-                              salt.crypt.Crypticle.generate_key_string()),
+                              six.b(salt.crypt.Crypticle.generate_key_string())),
                 'reload': salt.crypt.Crypticle.generate_key_string
             }
 
@@ -243,6 +243,7 @@ class AESReqServerMixin(object):
                         fp_.write(load['pub'])
                     eload = {'result': False,
                              'id': load['id'],
+                             'act': 'denied',
                              'pub': load['pub']}
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                     return {'enc': 'clear',
@@ -331,6 +332,7 @@ class AESReqServerMixin(object):
                             fp_.write(load['pub'])
                         eload = {'result': False,
                                  'id': load['id'],
+                                 'act': 'denied',
                                  'pub': load['pub']}
                         self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                         return {'enc': 'clear',

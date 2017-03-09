@@ -246,7 +246,7 @@ main() {
     fi
 
     # Check to see if --notrim is a valid netstat option
-    if netstat --notrim 2>&1 >/dev/null | grep -q 'unrecognized'; then
+    if netstat --notrim -n 2>&1 >/dev/null | grep -q 'unrecognized'; then
         NS_NOTRIM=''
     fi
 

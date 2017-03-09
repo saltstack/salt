@@ -54,7 +54,7 @@ import salt.utils.files
 import salt.utils.locales
 import salt.utils.templates
 import salt.utils.url
-from salt.exceptions import CommandExecutionError, SaltInvocationError, get_error_message as _get_error_message
+from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
 
 log = logging.getLogger(__name__)
 
@@ -687,31 +687,54 @@ def check_hash(path, file_hash):
     '''
     Check if a file matches the given hash string
 
-    Returns true if the hash matched, otherwise false. Raises ValueError if
-    the hash was not formatted correctly.
+    Returns ``True`` if the hash matches, otherwise ``False``.
 
     path
-        A file path
+        Path to a file local to the minion.
+
     hash
-        A string in the form <hash_type>:<hash_value>. For example:
-        ``md5:e138491e9d5b97023cea823fe17bac22``
+        The hash to check against the file specified in the ``path`` argument.
+        For versions 2016.11.4 and newer, the hash can be specified without an
+        accompanying hash type (e.g. ``e138491e9d5b97023cea823fe17bac22``),
+        but for earlier releases it is necessary to also specify the hash type
+        in the format ``<hash_type>:<hash_value>`` (e.g.
+        ``md5:e138491e9d5b97023cea823fe17bac22``).
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.check_hash /etc/fstab md5:<md5sum>
+        salt '*' file.check_hash /etc/fstab e138491e9d5b97023cea823fe17bac22
+        salt '*' file.check_hash /etc/fstab md5:e138491e9d5b97023cea823fe17bac22
     '''
     path = os.path.expanduser(path)
 
-    hash_parts = file_hash.split(':', 1)
-    if len(hash_parts) != 2:
-        # Support "=" for backward compatibility.
-        hash_parts = file_hash.split('=', 1)
-        if len(hash_parts) != 2:
-            raise ValueError('Bad hash format: \'{0}\''.format(file_hash))
-    hash_form, hash_value = hash_parts
-    return get_hash(path, hash_form) == hash_value
+    if not isinstance(file_hash, six.string_types):
+        raise SaltInvocationError('hash must be a string')
+
+    for sep in (':', '='):
+        if sep in file_hash:
+            hash_type, hash_value = file_hash.split(sep, 1)
+            break
+    else:
+        hash_value = file_hash
+        hash_len = len(file_hash)
+        hash_type = HASHES_REVMAP.get(hash_len)
+        if hash_type is None:
+            raise SaltInvocationError(
+                'Hash {0} (length: {1}) could not be matched to a supported '
+                'hash type. The supported hash types and lengths are: '
+                '{2}'.format(
+                    file_hash,
+                    hash_len,
+                    ', '.join(
+                        ['{0} ({1})'.format(HASHES_REVMAP[x], x)
+                         for x in sorted(HASHES_REVMAP)]
+                    ),
+                )
+            )
+
+    return get_hash(path, hash_type) == hash_value
 
 
 def find(path, *args, **kwargs):
@@ -1275,6 +1298,8 @@ def comment_line(path,
             # Loop through each line of the file and look for a match
             for line in r_file:
                 # Is it in this line
+                if six.PY3:
+                    line = line.decode(__salt_system_encoding__)
                 if re.match(regex, line):
                     # Load lines into dictionaries, set found to True
                     orig_file.append(line)
@@ -1316,17 +1341,22 @@ def comment_line(path,
                                       buffering=bufsize) as r_file:
                     # Loop through each line of the file and look for a match
                     for line in r_file:
+                        if six.PY3:
+                            line = line.decode(__salt_system_encoding__)
                         try:
                             # Is it in this line
                             if re.match(regex, line):
                                 # Write the new line
                                 if cmnt:
-                                    w_file.write('{0}{1}'.format(char, line))
+                                    wline = '{0}{1}'.format(char, line)
                                 else:
-                                    w_file.write(line.lstrip(char))
+                                    wline = line.lstrip(char)
                             else:
                                 # Write the existing line (no change)
-                                w_file.write(line)
+                                wline = line
+                            if six.PY3:
+                                wline = wline.encode(__salt_system_encoding__)
+                            w_file.write(wline)
                         except (OSError, IOError) as exc:
                             raise CommandExecutionError(
                                 "Unable to write file '{0}'. Contents may "
@@ -1538,7 +1568,7 @@ def _get_line_indent(src, line, indent):
     '''
     Indent the line with the source line.
     '''
-    if not (indent or line):
+    if not indent:
         return line
 
     idt = []
@@ -1748,7 +1778,6 @@ def line(path, content=None, match=None, mode=None, location=None,
     elif mode == 'ensure':
         after = after and after.strip()
         before = before and before.strip()
-        content = content and content.strip()
 
         if before and after:
             _assert_occurrence(body, before, 'before')
@@ -1999,7 +2028,7 @@ def replace(path,
         )
 
     flags_num = _get_flags(flags)
-    cpattern = re.compile(str(pattern), flags_num)
+    cpattern = re.compile(salt.utils.to_bytes(pattern), flags_num)
     filesize = os.path.getsize(path)
     if bufsize == 'file':
         bufsize = filesize
@@ -2013,15 +2042,18 @@ def replace(path,
         pre_group = get_group(path)
         pre_mode = salt.utils.normalize_mode(get_mode(path))
 
-    # Avoid TypeErrors by forcing repl to be a string
-    repl = str(repl)
+    # Avoid TypeErrors by forcing repl to be bytearray related to mmap
+    # Replacement text may contains integer: 123 for example
+    repl = salt.utils.to_bytes(str(repl))
+    if not_found_content:
+        not_found_content = salt.utils.to_bytes(not_found_content)
 
     found = False
     temp_file = None
-    content = str(not_found_content) if not_found_content and \
+    content = salt.utils.to_str(not_found_content) if not_found_content and \
                                        (prepend_if_not_found or
                                         append_if_not_found) \
-                                     else repl
+                                     else salt.utils.to_str(repl)
 
     try:
         # First check the whole file, determine whether to make the replacement
@@ -2038,7 +2070,7 @@ def replace(path,
                                    access=mmap.ACCESS_READ)
             except (ValueError, mmap.error):
                 # size of file in /proc is 0, but contains data
-                r_data = "".join(r_file)
+                r_data = salt.utils.to_bytes("".join(r_file))
             if search_only:
                 # Just search; bail as early as a match is found
                 if re.search(cpattern, r_data):
@@ -2055,7 +2087,7 @@ def replace(path,
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, to avoid pre/appending the
                     # content if it was pre/appended in a previous run.
-                    if re.search('^{0}$'.format(re.escape(content)),
+                    if re.search(salt.utils.to_bytes('^{0}$'.format(re.escape(content))),
                                  r_data,
                                  flags=flags_num):
                         # Content was found, so set found.
@@ -2066,7 +2098,7 @@ def replace(path,
                 if show_changes or append_if_not_found or \
                    prepend_if_not_found:
                     orig_file = r_data.read(filesize).splitlines(True) \
-                        if hasattr(r_data, 'read') \
+                        if isinstance(r_data, mmap.mmap) \
                         else r_data.splitlines(True)
                     new_file = result.splitlines(True)
 
@@ -2105,7 +2137,7 @@ def replace(path,
                         result, nrepl = re.subn(cpattern, repl,
                                                 r_data, count)
                         try:
-                            w_file.write(result)
+                            w_file.write(salt.utils.to_str(result))
                         except (OSError, IOError) as exc:
                             raise CommandExecutionError(
                                 "Unable to write file '{0}'. Contents may "
@@ -2125,14 +2157,14 @@ def replace(path,
         if not_found_content is None:
             not_found_content = repl
         if prepend_if_not_found:
-            new_file.insert(0, not_found_content + '\n')
+            new_file.insert(0, not_found_content + b'\n')
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith('\n'):
-                    new_file[-1] += '\n'
-            new_file.append(not_found_content + '\n')
+                if not new_file[-1].endswith(b'\n'):
+                    new_file[-1] += b'\n'
+            new_file.append(not_found_content + b'\n')
         has_changes = True
         if not dry_run:
             try:
@@ -2145,7 +2177,7 @@ def replace(path,
             try:
                 fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
                 for line in new_file:
-                    fh_.write(line)
+                    fh_.write(salt.utils.to_str(line))
             finally:
                 fh_.close()
 
@@ -2191,7 +2223,9 @@ def replace(path,
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
     if show_changes:
-        return ''.join(difflib.unified_diff(orig_file, new_file))
+        orig_file_as_str = ''.join([salt.utils.to_str(x) for x in orig_file])
+        new_file_as_str = ''.join([salt.utils.to_str(x) for x in new_file])
+        return ''.join(difflib.unified_diff(orig_file_as_str, new_file_as_str))
 
     return has_changes
 
@@ -3001,6 +3035,13 @@ def symlink(src, path):
     '''
     path = os.path.expanduser(path)
 
+    try:
+        if os.path.normpath(os.readlink(path)) == os.path.normpath(src):
+            log.debug('link already in correct state: %s -> %s', path, src)
+            return True
+    except OSError:
+        pass
+
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
 
@@ -3546,9 +3587,14 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith('http') or proto == 'ftp':
-                    if __salt__['cp.cache_file'](single_src):
-                        ret = (single_src, single_hash)
-                        break
+                    try:
+                        if __salt__['cp.cache_file'](single_src):
+                            ret = (single_src, single_hash)
+                            break
+                    except MinionError as exc:
+                        # Error downloading file. Log the caught exception and
+                        # continue on to the next source.
+                        log.exception(exc)
                 elif proto == 'file' and os.path.exists(urlparsed_single_src.path):
                     ret = (single_src, single_hash)
                     break
@@ -3631,7 +3677,12 @@ def apply_template_on_contents(
             grains=__opts__['grains'],
             pillar=__pillar__,
             salt=__salt__,
-            opts=__opts__)['data'].encode('utf-8')
+            opts=__opts__)['data']
+        if six.PY2:
+            contents = contents.encode('utf-8')
+        elif six.PY3 and isinstance(contents, bytes):
+            # bytes -> str
+            contents = contents.decode('utf-8')
     else:
         ret = {}
         ret['result'] = False
@@ -3755,16 +3806,22 @@ def get_managed(
 
     if source and (template or parsed_scheme in salt.utils.files.REMOTE_PROTOS):
         # Check if we have the template or remote file cached
+        cache_refetch = False
         cached_dest = __salt__['cp.is_cached'](source, saltenv)
         if cached_dest and (source_hash or skip_verify):
             htype = source_sum.get('hash_type', 'sha256')
             cached_sum = get_hash(cached_dest, form=htype)
-            if skip_verify or cached_sum == source_sum['hsum']:
+            if cached_sum != source_sum['hsum']:
+                cache_refetch = True
+            elif skip_verify:
+                # prev: if skip_verify or cached_sum == source_sum['hsum']:
+                # but `cached_sum == source_sum['hsum']` is elliptical as prev if
                 sfn = cached_dest
                 source_sum = {'hsum': cached_sum, 'hash_type': htype}
 
         # If we didn't have the template or remote file, let's get it
-        if not sfn:
+        # Similarly when the file has been updated and the cache has to be refreshed
+        if not sfn or cache_refetch:
             try:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             except Exception as exc:
@@ -4993,6 +5050,9 @@ def makedirs_(path,
         salt '*' file.makedirs /opt/code/
     '''
     path = os.path.expanduser(path)
+
+    if mode:
+        mode = salt.utils.normalize_mode(mode)
 
     # walk up the directory structure until we find the first existing
     # directory

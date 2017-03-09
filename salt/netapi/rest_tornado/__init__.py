@@ -1,10 +1,14 @@
 # encoding: utf-8
 
+# Import python libs
 from __future__ import absolute_import, print_function
 import hashlib
 import logging
 import os
-import distutils.version  # pylint: disable=no-name-in-module
+
+# Import salt libs
+import salt.auth
+from salt.utils.versions import StrictVersion as _StrictVersion
 
 __virtualname__ = os.path.abspath(__file__).rsplit('/')[-2] or 'rest_tornado'
 
@@ -15,16 +19,13 @@ min_tornado_version = '4.0'
 has_tornado = False
 try:
     import tornado
-    if distutils.version.StrictVersion(tornado.version) >= \
-       distutils.version.StrictVersion(min_tornado_version):
+    if _StrictVersion(tornado.version) >= _StrictVersion(min_tornado_version):
         has_tornado = True
     else:
         logger.error('rest_tornado requires at least tornado {0}'.format(min_tornado_version))
 except (ImportError, TypeError) as err:
     has_tornado = False
     logger.error('ImportError! {0}'.format(str(err)))
-
-import salt.auth
 
 
 def __virtual__():
@@ -36,26 +37,14 @@ def __virtual__():
     return False
 
 
-def start():
-    '''
-    Start the saltnado!
-    '''
+def get_application(opts):
     try:
         from . import saltnado
     except ImportError as err:
         logger.error('ImportError! {0}'.format(str(err)))
         return None
 
-    mod_opts = __opts__.get(__virtualname__, {})
-
-    if 'num_processes' not in mod_opts:
-        mod_opts['num_processes'] = 1
-
-    if mod_opts['num_processes'] > 1 and mod_opts.get('debug', False) is True:
-        raise Exception((
-            'Tornado\'s debug implementation is not compatible with multiprocess. '
-            'Either disable debug, or set num_processes to 1.'
-        ))
+    mod_opts = opts.get(__virtualname__, {})
 
     paths = [
         (r"/", saltnado.SaltAPIHandler),
@@ -73,7 +62,7 @@ def start():
     if mod_opts.get('websockets', False):
         from . import saltnado_websockets
 
-        token_pattern = r"([0-9A-Fa-f]{{{0}}})".format(len(getattr(hashlib, __opts__.get('hash_type', 'md5'))().hexdigest()))
+        token_pattern = r"([0-9A-Fa-f]{{{0}}})".format(len(getattr(hashlib, opts.get('hash_type', 'md5'))().hexdigest()))
         all_events_pattern = r"/all_events/{0}".format(token_pattern)
         formatted_events_pattern = r"/formatted_events/{0}".format(token_pattern)
         logger.debug("All events URL pattern is {0}".format(all_events_pattern))
@@ -89,9 +78,26 @@ def start():
 
     application = tornado.web.Application(paths, debug=mod_opts.get('debug', False))
 
-    application.opts = __opts__
+    application.opts = opts
     application.mod_opts = mod_opts
-    application.auth = salt.auth.LoadAuth(__opts__)
+    application.auth = salt.auth.LoadAuth(opts)
+    return application
+
+
+def start():
+    '''
+    Start the saltnado!
+    '''
+    mod_opts = __opts__.get(__virtualname__, {})
+
+    if 'num_processes' not in mod_opts:
+        mod_opts['num_processes'] = 1
+
+    if mod_opts['num_processes'] > 1 and mod_opts.get('debug', False) is True:
+        raise Exception((
+            'Tornado\'s debug implementation is not compatible with multiprocess. '
+            'Either disable debug, or set num_processes to 1.'
+        ))
 
     # the kwargs for the HTTPServer
     kwargs = {}
@@ -109,7 +115,7 @@ def start():
             ssl_opts.update({'keyfile': mod_opts['ssl_key']})
         kwargs['ssl_options'] = ssl_opts
 
-    http_server = tornado.httpserver.HTTPServer(application, **kwargs)
+    http_server = tornado.httpserver.HTTPServer(get_application(__opts__), **kwargs)
     try:
         http_server.bind(mod_opts['port'],
                          address=mod_opts.get('address'),

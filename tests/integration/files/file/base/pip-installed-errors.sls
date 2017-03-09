@@ -1,4 +1,4 @@
-supervisord-pip:
+pep8-pip:
     pip.installed:
-      - name: supervisor
+      - name: pep8
       - bin_env: {{ salt['runtests_helpers.get_sys_temp_dir_for_path']('pip-installed-errors') }}

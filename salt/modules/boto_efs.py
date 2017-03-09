@@ -52,15 +52,18 @@ Connection module for Amazon EFS
 # Import python libs
 from __future__ import absolute_import
 import logging
-from distutils.version import LooseVersion as _LooseVersion
 
 
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     import boto3
     HAS_BOTO3 = True
 except ImportError:
     HAS_BOTO3 = False
 
+# Import salt libs
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -255,7 +258,7 @@ def create_tags(filesystemid,
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     new_tags = []
-    for k, v in tags.iteritems():
+    for k, v in six.iteritems(tags):
         new_tags.append({'Key': k, 'Value': v})
 
     client.create_tags(FileSystemId=filesystemid, Tags=new_tags)

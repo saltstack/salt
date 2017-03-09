@@ -644,7 +644,7 @@ def system_information():
     version = system_version()
     release = platform.release()
     if platform.win32_ver()[0]:
-        import win32api
+        import win32api  # pylint: disable=3rd-party-module-not-gated
         if ((sys.version_info.major == 2 and sys.version_info >= (2, 7, 12)) or
                 (sys.version_info.major == 3 and sys.version_info >= (3, 5, 2))):
             if win32api.GetVersionEx(1)[8] > 1:
@@ -710,5 +710,26 @@ def versions_report(include_salt_cloud=False):
         yield line
 
 
+def msi_conformant_version():
+    '''
+    A msi conformant version consists of up to 4 numbers, each smaller than 256, except the 4th.
+    Therefore, the year must be represented as 'short year'.
+
+    Examples (depend on git checkout):
+      develop                2016.11.0-742-g5ca4d20     16.11.0.742
+      20166.11 (branch)      2016.11.2-78-gce1f01f      16.11.2.78
+      v20166.11.2 (tag)      2016.11.2                  16.11.2.0
+
+    Note that the commit count for tags is 0(zero)
+    '''
+    year2 = int(str(__saltstack_version__.major)[2:])
+    month = __saltstack_version__.minor
+    minor = __saltstack_version__.bugfix
+    commi = __saltstack_version__.noc
+    return '{0}.{1}.{2}.{3}'.format(year2, month, minor, commi)
+
 if __name__ == '__main__':
-    print(__version__)
+    if len(sys.argv) == 2 and sys.argv[1] == 'msi':
+        print(msi_conformant_version())     # Building the msi requires a msi-conformant version
+    else:
+        print(__version__)

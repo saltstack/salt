@@ -16,7 +16,7 @@ def clean_args(args):
     '''
     Cleans up the args that weren't passed in
     '''
-    for arg in args.keys():
+    for arg in args:
         if not args[arg]:
             del args[arg]
     return args
@@ -1138,7 +1138,7 @@ def mksls(src, dst=None):
                     sls[device]['ipv6'] = {'enabled': False}
                     del interface['noipv6']
 
-                for option in interface.keys():
+                for option in interface:
                     if type(interface[option]) is bool:
                         sls[device][option] = {'enabled': [interface[option]]}
                     else:

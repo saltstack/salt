@@ -339,8 +339,8 @@ def output(ret, **kwargs):
     for argk in argks:
         argv = kwargs.get(argk) \
             or __opts__.get('out.table.{key}'.format(key=argk))
-        if argv:
-            class_kvargs[argv] = argk
+        if argv is not None:
+            class_kvargs[argk] = argv
 
     table = TableDisplay(**class_kvargs)
 

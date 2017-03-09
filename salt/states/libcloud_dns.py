@@ -46,14 +46,13 @@ Example:
 
 # Import Python Libs
 from __future__ import absolute_import
-
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
-
-import salt.modules.libcloud_dns as libcloud_dns_module
+import logging
 
 # Import salt libs
 import salt.utils
-import logging
+import salt.modules.libcloud_dns as libcloud_dns_module
+from salt.utils.versions import LooseVersion as _LooseVersion
+
 log = logging.getLogger(__name__)
 
 # Import third party libs

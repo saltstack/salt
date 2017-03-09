@@ -2,6 +2,8 @@
 '''
 Module for solrcloud configuration
 
+.. versionadded:: Nitrogen
+
 For now, module is limited to http-exposed API. It doesn't implement config upload via Solr zkCli
 '''
 from __future__ import absolute_import
@@ -96,17 +98,19 @@ def _validate_core_properties(properties):
     props_string = ""
 
     for prop_name, prop_value in six.iteritems(properties):
-        if prop_name in STRING_PROPS_LIST:
-            if not isinstance(prop_value, six.string_types):
-                raise ValueError('In option "properties", core property "'+prop_name+'" value must be a string')
-
-            props_string = props_string+"&"+prop_name+"="+prop_value
-
-        elif prop_name in BOOL_PROPS_LIST:
+        if prop_name in BOOL_PROPS_LIST:
             if not isinstance(prop_value, bool):
                 raise ValueError('Option "'+prop_name+'" value must be an boolean')
 
             props_string = props_string+"&property."+prop_name+"="+("true" if prop_value else "false")
+        elif prop_name in STRING_PROPS_LIST:
+            if not isinstance(prop_value, six.string_types):
+                raise ValueError('In option "properties", core property "'+prop_name+'" value must be a string')
+
+            props_string = props_string+"&property."+prop_name+"="+prop_value
+
+        else:
+            props_string = props_string+"&property."+str(prop_name)+"="+str(prop_value)
 
     return props_string
 
@@ -227,7 +231,10 @@ def alias_get_collections(alias_name, **kwargs):
     if not isinstance(alias_name, six.string_types):
         raise ValueError('Alias name must be a string')
 
-    collection_aliases = [(k_v[0], k_v[1]["aliases"]) for k_v in six.iteritems(cluster_status(**kwargs)["collections"])]
+    collection_aliases = [
+        (k_v[0], k_v[1]["aliases"])
+        for k_v in six.iteritems(cluster_status(**kwargs)["collections"])
+        if "aliases" in k_v[1]]
     aliases = [k_v1[0] for k_v1 in [k_v for k_v in collection_aliases if alias_name in k_v[1]]]
 
     return aliases
@@ -419,8 +426,9 @@ def collection_create(collection_name, options=None, **kwargs):
 
 def collection_check_options(options):
     '''
-
     Check collections options
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -436,10 +444,11 @@ def collection_check_options(options):
 
 def collection_get_options(collection_name, **kwargs):
     '''
-
     Get collection options
 
     Additional parameters (kwargs) may be passed, they will be proxied to http.query
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -466,12 +475,13 @@ def collection_get_options(collection_name, **kwargs):
 
 def collection_set_options(collection_name, options, **kwargs):
     '''
-
     Change collection options
 
     Additional parameters (kwargs) may be passed, they will be proxied to http.query
 
     Note that not every parameter can be changed after collection creation
+
+    CLI Example:
 
     .. code-block:: bash
 

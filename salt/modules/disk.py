@@ -75,9 +75,7 @@ def usage(args=None):
         return {}
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
-    elif __grains__['kernel'] == 'OpenBSD':
-        cmd = 'df -kP'
-    elif __grains__['kernel'] == 'AIX':
+    elif __grains__['kernel'] == 'OpenBSD' or __grains__['kernel'] == 'AIX':
         cmd = 'df -kP'
     else:
         cmd = 'df'
@@ -141,7 +139,10 @@ def inodeusage(args=None):
         salt '*' disk.inodeusage
     '''
     flags = _clean_flags(args, 'disk.inodeusage')
-    cmd = 'df -iP'
+    if __grains__['kernel'] == 'AIX':
+        cmd = 'df -i'
+    else:
+        cmd = 'df -iP'
     if flags:
         cmd += ' -{0}'.format(flags)
     ret = {}
@@ -161,6 +162,14 @@ def inodeusage(args=None):
                     'used': comps[5],
                     'free': comps[6],
                     'use': comps[7],
+                    'filesystem': comps[0],
+                }
+            elif __grains__['kernel'] == 'AIX':
+                ret[comps[6]] = {
+                    'inodes': comps[4],
+                    'used': comps[5],
+                    'free': comps[2],
+                    'use': comps[5],
                     'filesystem': comps[0],
                 }
             else:
@@ -189,7 +198,7 @@ def percent(args=None):
     '''
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
-    elif __grains__['kernel'] == 'OpenBSD':
+    elif __grains__['kernel'] == 'OpenBSD' or __grains__['kernel'] == 'AIX':
         cmd = 'df -kP'
     else:
         cmd = 'df'
@@ -201,9 +210,11 @@ def percent(args=None):
         if line.startswith('Filesystem'):
             continue
         comps = line.split()
-        while not comps[1].isdigit():
+        while len(comps) >= 2 and not comps[1].isdigit():
             comps[0] = '{0} {1}'.format(comps[0], comps[1])
             comps.pop(1)
+        if len(comps) < 2:
+            continue
         try:
             if __grains__['kernel'] == 'Darwin':
                 ret[comps[8]] = comps[4]
@@ -464,11 +475,18 @@ def fstype(device):
     if salt.utils.which('df'):
         # the fstype was not set on the block device, so inspect the filesystem
         # itself for its type
-        df_out = __salt__['cmd.run']('df -T {0}'.format(device)).splitlines()
-        if len(df_out) > 1:
-            fs_type = df_out[1]
-            if fs_type:
-                return fs_type
+        if __grains__['kernel'] == 'AIX' and os.path.isfile('/usr/sysv/bin/df'):
+            df_out = __salt__['cmd.run']('/usr/sysv/bin/df -n {0}'.format(device)).split()
+            if len(df_out) > 2:
+                fs_type = df_out[2]
+                if fs_type:
+                    return fs_type
+        else:
+            df_out = __salt__['cmd.run']('df -T {0}'.format(device)).splitlines()
+            if len(df_out) > 1:
+                fs_type = df_out[1]
+                if fs_type:
+                    return fs_type
 
     return ''
 
@@ -682,7 +700,7 @@ def smart_attributes(dev, attributes=None, values=None):
         except:  # pylint: disable=bare-except
             pass
 
-        for field in data.keys():
+        for field in data:
             val = data[field]
             try:
                 val = int(val)

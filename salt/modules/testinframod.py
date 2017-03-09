@@ -235,7 +235,7 @@ def _copy_function(module_name, name=None):
             return success, pass_msgs, fail_msgs
         if hasattr(inspect, 'signature'):
             mod_sig = inspect.signature(mod)
-            parameters = mod_sig.parameters.keys()
+            parameters = mod_sig.parameters
         else:
             if isinstance(mod.__init__, types.MethodType):
                 mod_sig = inspect.getargspec(mod.__init__)
@@ -243,7 +243,7 @@ def _copy_function(module_name, name=None):
                 mod_sig = inspect.getargspec(mod.__call__)
             parameters = mod_sig.args
         additional_args = {}
-        for arg in set(parameters).intersection(set(methods.keys())):
+        for arg in set(parameters).intersection(set(methods)):
             additional_args[arg] = methods.pop(arg)
         try:
             if len(parameters) > 1:
