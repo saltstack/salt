@@ -129,6 +129,8 @@ def alive(opts):
 
     .. versionadded:: Nitrogen
     '''
+    if not opts.get('proxy', {}).get('always_alive', True):
+        return True
     is_alive_ret = call('is_alive', **{})
     if not is_alive_ret.get('result', False):
         log.debug('[{proxyid}] Unable to execute `is_alive`: {comment}'.format(
