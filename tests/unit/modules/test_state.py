@@ -123,6 +123,15 @@ class MockState(object):
             data = data
             return True
 
+        @staticmethod
+        def call_listen(data, ret):
+            '''
+                Mock call_listen method
+            '''
+            data = data
+            ret = ret
+            return True
+
     class HighState(object):
         '''
             Mock HighState class
