@@ -1691,6 +1691,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
     st_ = salt.state.State(popts, pillar=pillar)
     snapper_pre = _snapper_pre(popts, kwargs.get('__pub_jid', 'called localy'))
     ret = st_.call_chunks(lowstate)
+    ret = st_.call_listen(lowstate, ret)
     try:
         shutil.rmtree(root)
     except (IOError, OSError):
