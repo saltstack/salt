@@ -10,15 +10,16 @@
 
     XML Unit Tests
 '''
+# pylint: disable=wrong-import-order,wrong-import-position
 
 # Import python libs
 from __future__ import absolute_import
+import io
 import sys
 import logging
 
 # Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ try:
         '''
 
         def __init__(self, delegate):
-            self._captured = StringIO()
+            self._captured = six.StringIO()
             self.delegate = delegate
 
         def write(self, text):
@@ -44,10 +45,13 @@ try:
             self._captured.write(text)
             self.delegate.write(text)
 
+        def fileno(self):
+            return self.delegate.fileno()
+
         def __getattr__(self, attr):
             try:
                 return getattr(self._captured, attr)
-            except AttributeError:
+            except (AttributeError, io.UnsupportedOperation):
                 return getattr(self.delegate, attr)
 
     class _XMLTestResult(xmlrunner.result._XMLTestResult):
