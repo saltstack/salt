@@ -11,7 +11,6 @@ from salt.beacons import inotify
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Third-party libs
 try:
@@ -22,7 +21,6 @@ except ImportError:
 
 
 @skipIf(not HAS_PYINOTIFY, 'pyinotify is not available')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class INotifyBeaconTestCase(TestCase):
     '''
     Test case for salt.beacons.inotify
