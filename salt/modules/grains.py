@@ -415,7 +415,7 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     return setval(key, grains)
 
 
-def delval(key, destructive=False, refresh=True):
+def delval(key, destructive=False):
     '''
     .. versionadded:: 0.17.0
 
@@ -426,9 +426,6 @@ def delval(key, destructive=False, refresh=True):
 
     destructive
         Delete the key, too. Defaults to False.
-
-    refresh
-        Refresh modules and pillar after removing the grain.
 
     CLI Example:
 
