@@ -4,12 +4,12 @@
 The setup script for salt
 '''
 
-from __future__ import absolute_import
-# pylint: disable=file-perms
+# pylint: disable=file-perms,ungrouped-imports,wrong-import-order,wrong-import-position,repr-flag-used-in-string
+# pylint: disable=3rd-party-local-module-not-gated
 # pylint: disable=C0111,E1101,E1103,F0401,W0611,W0201,W0232,R0201,R0902,R0903
 
 # For Python 2.5.  A no-op on 2.6 and above.
-from __future__ import print_function, with_statement
+from __future__ import absolute_import, print_function, with_statement
 
 import os
 import sys
@@ -398,12 +398,13 @@ class InstallPyCryptoWindowsWheel(Command):
         with indent_log():
             call_subprocess(call_arguments)
 
+
 def uri_to_resource(resource_file):
-    ### Returns the URI for a resource 
+    # ## Returns the URI for a resource
     # The basic case is that the resource is on saltstack.com
     # It could be the case that the resource is cached.
-    salt_uri = 'https://repo.saltstack.com/windows/dependencies/'  + resource_file
-    if os.getenv('SALTREPO_LOCAL_CACHE') == None:
+    salt_uri = 'https://repo.saltstack.com/windows/dependencies/' + resource_file
+    if os.getenv('SALTREPO_LOCAL_CACHE') is None:
         # if environment variable not set, return the basic case
         return salt_uri
     if not os.path.isdir(os.getenv('SALTREPO_LOCAL_CACHE')):
@@ -412,14 +413,14 @@ def uri_to_resource(resource_file):
     cached_resource = os.path.join(os.getenv('SALTREPO_LOCAL_CACHE'), resource_file)
     cached_resource = cached_resource.replace('/', '\\')
     if not os.path.isfile(cached_resource):
-        # if file does not exist, return the basic case    
+        # if file does not exist, return the basic case
         return salt_uri
     if os.path.getsize(cached_resource) == 0:
-        # if file has zero size, return the basic case        
-        return salt_uri            
+        # if file has zero size, return the basic case
+        return salt_uri
     return cached_resource
 
-            
+
 class InstallCompiledPyYaml(Command):
 
     description = 'Install PyYAML on Windows'
@@ -429,7 +430,6 @@ class InstallCompiledPyYaml(Command):
 
     def finalize_options(self):
         pass
-        
 
     def run(self):
         if getattr(self.distribution, 'salt_installing_pyyaml_windows', None) is None:
@@ -505,7 +505,7 @@ class DownloadWindowsDlls(Command):
                                     while True:
                                         chunk = req.read(4096)
                                         if len(chunk) == 0:
-                                            break;
+                                            break
                                         wfh.write(chunk)
                                         wfh.flush()
                                 else:
@@ -546,7 +546,7 @@ class Sdist(sdist):
             os.unlink(PACKAGED_FOR_SALT_SSH_FILE)
 
 
-class CloudSdist(Sdist):
+class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
     user_options = Sdist.user_options + [
         ('download-bootstrap-script', None,
          'Download the latest stable bootstrap-salt.sh script. This '
@@ -566,7 +566,7 @@ class CloudSdist(Sdist):
     def finalize_options(self):
         Sdist.finalize_options(self)
         if 'SKIP_BOOTSTRAP_DOWNLOAD' in os.environ:
-            log('Please stop using \'SKIP_BOOTSTRAP_DOWNLOAD\' and use '
+            log('Please stop using \'SKIP_BOOTSTRAP_DOWNLOAD\' and use '  # pylint: disable=not-callable
                 '\'DOWNLOAD_BOOTSTRAP_SCRIPT\' instead')
 
         if 'DOWNLOAD_BOOTSTRAP_SCRIPT' in os.environ:
@@ -987,7 +987,7 @@ class SaltDistribution(distutils.dist.Distribution):
                                            'virt/*.jinja',
                                            'git/*',
                                            'lxc/*',
-                                          ]}
+                                           ]}
         if not IS_WINDOWS_PLATFORM:
             package_data['salt.cloud'] = ['deploy/*.sh']
 

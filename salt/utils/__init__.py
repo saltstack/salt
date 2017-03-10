@@ -2155,7 +2155,8 @@ def namespaced_function(function, global_dict, defaults=None, preserve_context=F
         function.__code__,
         global_dict,
         name=function.__name__,
-        argdefs=defaults
+        argdefs=defaults,
+        closure=function.__closure__
     )
     new_namespaced_function.__dict__.update(function.__dict__)
     return new_namespaced_function
