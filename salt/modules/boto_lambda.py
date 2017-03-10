@@ -600,6 +600,13 @@ def get_permissions(FunctionName, Qualifier=None,
 def list_functions(region=None, key=None, keyid=None, profile=None):
     '''
     List all Lambda functions visible in the current scope.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lambda.list_functions
+
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
