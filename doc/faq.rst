@@ -168,6 +168,7 @@ information.
 
 Module ``X`` isn't available, even though the shell command it uses is installed. Why?
 --------------------------------------------------------------------------------------
+
 This is most likely a PATH issue. Did you custom-compile the software which the
 module requires? RHEL/CentOS/etc. in particular override the root user's path
 in ``/etc/init.d/functions``, setting it to ``/sbin:/usr/sbin:/bin:/usr/bin``,
@@ -246,86 +247,116 @@ specifying the pillar variable is the same one used for :py:func:`pillar.get
     <salt.states.file.managed>` state is only supported in Salt 2015.8.4 and
     newer.
 
-What is the best way to restart a Salt daemon using Salt?
----------------------------------------------------------
+What is the best way to restart a Salt Minion daemon using Salt after upgrade?
+------------------------------------------------------------------------------
 
-Updating the salt-minion package requires a restart of the salt-minion service.
-But restarting the service while in the middle of a state run interrupts the
-process of the minion running states and sending results back to the master.
-It's a tricky problem to solve, and we're working on it, but in the meantime
-one way of handling this (on Linux and UNIX-based operating systems) is to use
-**at** (a job scheduler which predates cron) to schedule a restart of the
-service. **at** is not installed by default on most distros, and requires a
-service to be running (usually called **atd**) in order to schedule jobs.
-Here's an example of how to upgrade the salt-minion package at the end of a
-Salt run, and schedule a service restart for one minute after the package
-update completes.
+Updating the ``salt-minion`` package requires a restart of the ``salt-minion``
+service. But restarting the service while in the middle of a state run
+interrupts the process of the Minion running states and sending results back to
+the Master. A common way to workaround that is to schedule restarting of the
+Minion service using :ref:`masterless mode <masterless-quickstart>` after all
+other states have been applied. This allows to keep Minion to Master connection
+alive for the Minion to report the final results to the Master, while the
+service is restarting in the background.
 
-Linux/Unix
-**********
+Upgrade without automatic restart
+*********************************
+
+Doing the Minion upgrade seems to be a simplest state in your SLS file at
+first. But the operating systems such as Debian GNU/Linux, Ununtu and their
+derivatives start the service after the package installation by default.
+To prevent this, we need to create policy layer which will prevent the Minion
+service to restart right after the upgrade:
 
 .. code-block:: yaml
 
-    salt-minion:
+    {%- if grains['os_family'] == 'Debian' %}
+
+    Disable starting services:
+      file.managed:
+        - name: /usr/sbin/policy-rc.d
+        - user: root
+        - group: root
+        - mode: 0755
+        - contents:
+          - '#!/bin/sh'
+          - exit 101
+        # do not touch if already exists
+        - replace: False
+        - prereq:
+          - pkg: Upgrade Salt Minion
+
+    {%- endif %}
+
+    Upgrade Salt Minion:
       pkg.installed:
         - name: salt-minion
-        - version: 2014.1.7-3.el6
+        - version: 2016.11.3{% if grains['os_family'] == 'Debian' %}+ds-1{% endif %}
         - order: last
-      service.running:
+
+    Enable Salt Minion:
+      service.enabled:
         - name: salt-minion
         - require:
-          - pkg: salt-minion
-      cmd.run:
-        - name: echo service salt-minion restart | at now + 1 minute
+          - pkg: Upgrade Salt Minion
+
+    {%- if grains['os_family'] == 'Debian' %}
+
+    Enable starting services:
+      file.absent:
+        - name: /usr/sbin/policy-rc.d
         - onchanges:
-          - pkg: salt-minion
+          - pkg: Upgrade Salt Minion
 
-To ensure that **at** is installed and **atd** is running, the following states
-can be used (be sure to double-check the package name and service name for the
-distro the minion is running, in case they differ from the example below.
+    {%- endif %}
 
-.. code-block:: yaml
+Restart using states
+********************
 
-    at:
-      pkg.installed:
-        - name: at
-      service.running:
-        - name: atd
-        - enable: True
-
-An alternative to using the :program:`atd` daemon is to fork and disown the
-process.
+Now we can apply the workaround to restart the Minion in reliable way.
+The following example works on both UNIX-like and Windows operating systems:
 
 .. code-block:: yaml
 
-    restart_minion:
+    Restart Salt Minion:
       cmd.run:
-        - name: |
+    {%- if grains['kernel'] == 'Windows' %}
+        - name: 'C:\salt\salt-call.bat --local service.restart salt-minion'
+    {%- else %}
+        - name: 'salt-call --local service.restart salt-minion'
+    {%- endif %}
+        - bg: True
+        - onchanges:
+          - pkg: Upgrade Salt Minion
+
+However, it requires more advanced tricks to upgrade from legacy version of
+Salt (before ``2016.3.0``), where executing commands in the background is not
+supported:
+
+.. code-block:: yaml
+
+    Restart Salt Minion:
+      cmd.run:
+    {%- if grains['kernel'] == 'Windows' %}
+        - name: 'start powershell "Restart-Service -Name salt-minion"'
+    {%- else %}
+        # fork and disown the process
+        - name: |-
             exec 0>&- # close stdin
             exec 1>&- # close stdout
             exec 2>&- # close stderr
-            nohup /bin/sh -c 'sleep 10 && salt-call --local service.restart salt-minion' &
-        - python_shell: True
-        - order: last
+            nohup salt-call --local service.restart salt-minion &
+    {%- endif %}
 
-Windows
-*******
+Restart using remote executions
+*******************************
 
-For Windows machines, restarting the minion can be accomplished using the
-following state:
-
-.. code-block:: yaml
-
-    schedule-start:
-      cmd.run:
-        - name: 'start powershell "Restart-Service -Name salt-minion"'
-        - order: last
-
-or running immediately from the command line:
+Restart the Minion from the command line:
 
 .. code-block:: bash
 
-    salt -G kernel:Windows cmd.run 'start powershell "Restart-Service -Name salt-minion"'
+    salt -G kernel:Windows cmd.run_bg 'C:\salt\salt-call.bat --local service.restart salt-minion'
+    salt -C 'not G@kernel:Windows' cmd.run_bg 'salt-call --local service.restart salt-minion'
 
 Salting the Salt Master
 -----------------------
