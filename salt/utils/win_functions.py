@@ -104,7 +104,7 @@ def get_sid_from_name(name):
         sid = win32security.LookupAccountName(None, name)[0]
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'User {0} found: {1}'.format(name, exc[2]))
+            'User {0} found: {1}'.format(name, exc.strerror))
 
     return win32security.ConvertSidToStringSid(sid)
 
@@ -128,7 +128,7 @@ def get_current_user():
                 user_name = 'SYSTEM'
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'Failed to get current user: {0}'.format(exc[2]))
+            'Failed to get current user: {0}'.format(exc.strerror))
 
     if not user_name:
         return False

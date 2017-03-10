@@ -3,7 +3,7 @@ backports.ssl-match-hostname
 certifi
 psutil
 python-dateutil
-pypiwin32
+pywin32
 pyzmq
 six
 timelib
