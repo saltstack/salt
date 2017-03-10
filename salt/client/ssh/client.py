@@ -210,7 +210,19 @@ class SSHClient(object):
             sub=3,
             **kwargs):
         '''
-        Execute a single command via the salt-ssh subsystem on a subset of the targeted minions
+        Execute a command on a random subset of the targeted systems
+
+        The function signature is the same as :py:meth:`cmd` with the
+        following exceptions.
+
+        :param sub: The number of systems to execute on
+
+        .. code-block:: python
+
+            >>> import salt.client.ssh.client
+            >>> sshclient= salt.client.ssh.client.SSHClient()
+            >>> sshclient.cmd_subset('*', 'test.ping', sub=1)
+            {'jerry': True}
 
         .. versionadded:: Nitrogen
         '''
