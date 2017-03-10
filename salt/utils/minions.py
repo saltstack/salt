@@ -854,7 +854,8 @@ class CkMinions(object):
                    tgt_type='glob',
                    groups=None,
                    publish_validate=False,
-                   minions=None):
+                   minions=None,
+                   whitelist=None):
         '''
         Returns a bool which defines if the requested function is authorized.
         Used to evaluate the standard structure under external master
@@ -882,6 +883,8 @@ class CkMinions(object):
             args = [args]
         try:
             for num, fun in enumerate(funs):
+                if whitelist and fun in whitelist:
+                    return True
                 for ind in auth_list:
                     if isinstance(ind, six.string_types):
                         # Allowed for all minions

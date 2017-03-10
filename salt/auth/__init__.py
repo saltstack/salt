@@ -50,11 +50,12 @@ class LoadAuth(object):
     '''
     Wrap the authentication system to handle peripheral components
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, ckminions=None):
         self.opts = opts
         self.max_fail = 1.0
         self.serial = salt.payload.Serial(opts)
         self.auth = salt.loader.auth(opts)
+        self.ckminions = ckminions or salt.utils.minions.CkMinions(opts)
 
     def load_name(self, load):
         '''
@@ -118,6 +119,26 @@ class LoadAuth(object):
             time.sleep(0.001)
         return False
 
+    def __get_acl(self, load):
+        '''
+        Returns ACL for a specific user.
+        Returns None if eauth doesn't provide any for the user. I. e. None means: use acl declared
+        in master config.
+        '''
+        if 'eauth' not in load:
+            return None
+        fstr = '{0}.acl'.format(load['eauth'])
+        if fstr not in self.auth:
+            return None
+        fcall = salt.utils.format_call(self.auth[fstr],
+                                       load,
+                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        try:
+            return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
+        except Exception as e:
+            log.debug('Authentication module threw {0}'.format(e))
+            return None
+
     def get_groups(self, load):
         '''
         Read in a load and return the groups a user is a member of
@@ -159,10 +180,7 @@ class LoadAuth(object):
         '''
         Run time_auth and create a token. Return False or the token
         '''
-        auth_ret = self.time_auth(load)
-        if not isinstance(auth_ret, list) and not isinstance(auth_ret, bool):
-            auth_ret = False
-        if auth_ret is False:
+        if not self.authenticate_eauth(load):
             return {}
         fstr = '{0}.auth'.format(load['eauth'])
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
@@ -187,8 +205,9 @@ class LoadAuth(object):
                  'eauth': load['eauth'],
                  'token': tok}
 
-        if auth_ret is not True:
-            tdata['auth_list'] = auth_ret
+        acl_ret = self.__get_acl(load)
+        if acl_ret is not None:
+            tdata['auth_list'] = acl_ret
 
         if 'groups' in load:
             tdata['groups'] = load['groups']
@@ -220,6 +239,157 @@ class LoadAuth(object):
             except (IOError, OSError):
                 pass
         return tdata
+
+    def authenticate_token(self, load):
+        '''
+        Authenticate a user by the token specified in load.
+        Return the token object or False if auth failed.
+        '''
+        try:
+            token = self.get_tok(load['token'])
+        except Exception as exc:
+            log.error('Exception occurred when generating auth token: {0}'.format(exc))
+            return False
+
+        # Bail if the token is empty or if the eauth type specified is not allowed
+        if not token or token['eauth'] not in self.opts['external_auth']:
+            log.warning('Authentication failure of type "token" occurred.')
+            return False
+
+        return token
+
+    def authenticate_eauth(self, load):
+        '''
+        Authenticate a user by the external auth module specified in load.
+        Return True on success or False on failure.
+        '''
+        if 'eauth' not in load:
+            log.warning('Authentication failure of type "eauth" occurred.')
+            return False
+
+        if load['eauth'] not in self.opts['external_auth']:
+            # The eauth system is not enabled, fail
+            log.warning('Authentication failure of type "eauth" occurred.')
+            return False
+
+        # Perform the actual authentication. If we fail here, do not
+        # continue.
+        if not self.time_auth(load):
+            log.warning('Authentication failure of type "eauth" occurred.')
+            return False
+
+        return True
+
+    def authenticate_key(self, load):
+        '''
+        Authenticate a user by the key passed in load.
+        Return the effective user id (name) if it's differ from the specified one (for sudo).
+        If the effective user id is the same as passed one return True on success or False on
+        failure.
+        '''
+        auth_key = load.pop('key')
+        if not auth_key:
+            log.warning('Authentication failure of type "user" occurred.')
+            return False
+        if 'user' in load:
+            auth_user = AuthUser(load['user'])
+            if auth_user.is_sudo():
+                # If someone sudos check to make sure there is no ACL's around their username
+                if auth_key != self.key[self.opts.get('user', 'root')]:
+                    log.warning('Authentication failure of type "user" occurred.')
+                    return False
+                return auth_user.sudo_name()
+            elif load['user'] == self.opts.get('user', 'root') or load['user'] == 'root':
+                if auth_key != self.key[self.opts.get('user', 'root')]:
+                    log.warning('Authentication failure of type "user" occurred.')
+                    return False
+            elif auth_user.is_running_user():
+                if auth_key != self.key.get(load['user']):
+                    log.warning('Authentication failure of type "user" occurred.')
+                    return False
+            elif auth_key == self.key.get('root'):
+                pass
+            else:
+                if load['user'] in self.key:
+                    # User is authorised, check key and check perms
+                    if auth_key != self.key[load['user']]:
+                        log.warning('Authentication failure of type "user" occurred.')
+                        return False
+                    return load['user']
+                else:
+                    log.warning('Authentication failure of type "user" occurred.')
+                    return False
+        else:
+            if auth_key != self.key[salt.utils.get_user()]:
+                log.warning('Authentication failure of type "other" occurred.')
+                return False
+        return True
+
+    def get_auth_list(self, load):
+        '''
+        Retrieve access list for the user specified in load.
+        The list is built by eauth module or from master eauth configuration.
+        Return None if current configuration doesn't provide any ACL for the user. Return an empty
+        list if the user has no rights to execute anything on this master and returns non-empty list
+        if user is allowed to execute particular functions.
+        '''
+        # Get acl from eauth module.
+        auth_list = self.__get_acl(load)
+        if auth_list is not None:
+            return auth_list
+
+        name = self.load_name(load)  # The username we are attempting to auth with
+        groups = self.get_groups(load)  # The groups this user belongs to
+        if groups is None or groups is False:
+            groups = []
+        group_perm_keys = [item for item in self.opts['external_auth'][load['eauth']] if item.endswith('%')]  # The configured auth groups
+
+        # First we need to know if the user is allowed to proceed via any of their group memberships.
+        group_auth_match = False
+        for group_config in group_perm_keys:
+            group_config = group_config.rstrip('%')
+            for group in groups:
+                if group == group_config:
+                    group_auth_match = True
+        # If a group_auth_match is set it means only that we have a
+        # user which matches at least one or more of the groups defined
+        # in the configuration file.
+
+        external_auth_in_db = False
+        for entry in self.opts['external_auth'][load['eauth']]:
+            if entry.startswith('^'):
+                external_auth_in_db = True
+                break
+
+        # If neither a catchall, a named membership or a group
+        # membership is found, there is no need to continue. Simply
+        # deny the user access.
+        if not ((name in self.opts['external_auth'][load['eauth']]) |
+                ('*' in self.opts['external_auth'][load['eauth']]) |
+                group_auth_match | external_auth_in_db):
+            # Auth successful, but no matching user found in config
+            log.warning('Authentication failure of type "eauth" occurred.')
+            return None
+
+        # We now have an authenticated session and it is time to determine
+        # what the user has access to.
+        auth_list = []
+        if name in self.opts['external_auth'][load['eauth']]:
+            auth_list = self.opts['external_auth'][load['eauth']][name]
+        elif '*' in self.opts['external_auth'][load['eauth']]:
+            auth_list = self.opts['external_auth'][load['eauth']]['*']
+        if group_auth_match:
+            auth_list = self.ckminions.fill_auth_list_from_groups(
+                    self.opts['external_auth'][load['eauth']],
+                    groups,
+                    auth_list)
+
+        if load['eauth'] == 'ldap':
+            auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
+
+        log.trace("Compiled auth_list: {0}".format(auth_list))
+
+        return auth_list
 
 
 class Authorize(object):
@@ -533,3 +703,10 @@ class AuthUser(object):
         this process and False if not.
         '''
         return self.user == salt.utils.get_user()
+
+    def sudo_name(self):
+        '''
+        Returns the username of the sudoer, i.e. self.user without the
+        'sudo_' prefix.
+        '''
+        return self.user.split('_', 1)[-1]
