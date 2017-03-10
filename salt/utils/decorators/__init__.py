@@ -259,6 +259,9 @@ class _DeprecationDecorator(object):
     Takes care of a common functionality, used in its derivatives.
     '''
 
+    OPT_IN = 1
+    OPT_OUT = 2
+
     def __init__(self, globals, version):
         '''
         Constructor.
@@ -504,17 +507,19 @@ class _WithDeprecated(_DeprecationDecorator):
     CFG_USE_DEPRECATED = 'use_deprecated'
     CFG_USE_SUPERSEDED = 'use_superseded'
 
-    def __init__(self, globals, version, with_name=None):
+    def __init__(self, globals, version, with_name=None, policy=_DeprecationDecorator.OPT_OUT):
         '''
         Constructor of the decorator 'with_deprecated'
 
         :param globals:
         :param version:
         :param with_name:
+        :param policy:
         :return:
         '''
         _DeprecationDecorator.__init__(self, globals, version)
         self._with_name = with_name
+        self._policy = policy
 
     def _set_function(self, function):
         '''
@@ -534,10 +539,11 @@ class _WithDeprecated(_DeprecationDecorator):
         if use_deprecated and use_superseded:
             raise SaltConfigurationError("Function '{0}' is mentioned both in deprecated "
                                          "and superseded sections. Please remove any of that.".format(full_name))
-        if use_superseded:
-            self._function = function
+        old_function = self._globals.get(self._with_name or "_{0}".format(function.__name__))
+        if self._policy == self.OPT_IN:
+            self._function = function if use_superseded else old_function
         else:
-            self._function = self._globals.get(self._with_name or "_{0}".format(function.__name__))
+            self._function = old_function if use_deprecated else function
 
     def _is_used_deprecated(self):
         '''
@@ -550,7 +556,8 @@ class _WithDeprecated(_DeprecationDecorator):
             m_name=self._globals.get(self.MODULE_NAME, '') or self._globals['__name__'].split('.')[-1],
             f_name=self._orig_f_name)
 
-        return not (func_path in self._globals.get('__opts__', {}).get(self.CFG_USE_SUPERSEDED, list())), func_path
+        return self._policy == self.OPT_IN and not (func_path in self._globals.get('__opts__', {}).get(
+            self.CFG_USE_SUPERSEDED, list())), func_path
 
     def __call__(self, function):
         '''
