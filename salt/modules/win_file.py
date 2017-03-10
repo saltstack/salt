@@ -54,7 +54,8 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
         lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
-        comment, uncomment, _add_flags, comment_line, apply_template_on_contents)
+        comment, uncomment, _add_flags, comment_line, _regex_to_static,
+        _get_line_indent, apply_template_on_contents)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -96,12 +97,13 @@ def __virtual__():
             global append, _error, directory_exists, touch, contains
             global contains_regex, contains_glob, get_source_sum
             global find, psed, get_sum, check_hash, get_hash, delete_backup
-            global get_diff, _get_flags, extract_hash, comment_line
+            global get_diff, line, _get_flags, extract_hash, comment_line
             global access, copy, readdir, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
+            global _regex_to_static, _get_line_indent
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -134,6 +136,7 @@ def __virtual__():
             check_hash = _namespaced_function(check_hash, globals())
             get_hash = _namespaced_function(get_hash, globals())
             get_diff = _namespaced_function(get_diff, globals())
+            line = _namespaced_function(line, globals())
             access = _namespaced_function(access, globals())
             copy = _namespaced_function(copy, globals())
             readdir = _namespaced_function(readdir, globals())
@@ -152,6 +155,8 @@ def __virtual__():
             comment = _namespaced_function(comment, globals())
             uncomment = _namespaced_function(uncomment, globals())
             comment_line = _namespaced_function(comment_line, globals())
+            _regex_to_static = _namespaced_function(_regex_to_static, globals())
+            _get_line_indent = _namespaced_function(_get_line_indent, globals())
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
             _add_flags = _namespaced_function(_add_flags, globals())
             apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())
