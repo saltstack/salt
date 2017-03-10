@@ -76,15 +76,14 @@ Set up the provider config at ``/etc/salt/cloud.providers.d/azurearm.conf``:
       cleanup_vhds: True
       cleanup_data_disks: True
       cleanup_interfaces: True
-      custom_data: 'This is a Joseph test'
-      expire_publisher_cache: 604800  # 1 week
-      expire_offer_cache: 604800  # 1 week
-      expire_sku_cache: 604800  # 1 week
-      expire_version_cache: 604800  # 1 week
-      expire_group_cache: 86400  # 1 day
+      custom_data: 'This is custom data'
+      expire_publisher_cache: 604800  # 7 days
+      expire_offer_cache: 518400  # 6 days
+      expire_sku_cache: 432000  # 5 days
+      expire_version_cache: 345600  # 4 days
+      expire_group_cache: 14400  # 4 hours
       expire_interface_cache: 3600  # 1 hour
       expire_network_cache: 3600  # 1 hour
-      expire_subnet_cache: 3600  # 1 hour
 
 Cloud Profiles
 ==============
@@ -259,41 +258,41 @@ cache.
 
 expire_offer_cache
 ------------------
-Optional. Default is ``604800``. See ``expire_publisher_cache`` for details on
+Optional. Default is ``518400``. See ``expire_publisher_cache`` for details on
 why this exists.
 
-By default, the offer data will be cached, and only updated every ``604800``
-seconds (7 days). If you need the offer cache to be updated at a different
+By default, the offer data will be cached, and only updated every ``518400``
+seconds (6 days). If you need the offer cache to be updated at a different
 frequency, change this setting. Setting it to ``0`` will turn off the publiser
 cache.
 
 expire_sku_cache
 ----------------
-Optional. Default is ``604800``. See ``expire_publisher_cache`` for details on
+Optional. Default is ``432000``. See ``expire_publisher_cache`` for details on
 why this exists.
 
-By default, the sku data will be cached, and only updated every ``604800``
-seconds (7 days). If you need the sku cache to be updated at a different
+By default, the sku data will be cached, and only updated every ``432000``
+seconds (5 days). If you need the sku cache to be updated at a different
 frequency, change this setting. Setting it to ``0`` will turn off the sku
 cache.
 
 expire_version_cache
 --------------------
-Optional. Default is ``604800``. See ``expire_publisher_cache`` for details on
+Optional. Default is ``345600``. See ``expire_publisher_cache`` for details on
 why this exists.
 
-By default, the version data will be cached, and only updated every ``604800``
-seconds (7 days). If you need the version cache to be updated at a different
+By default, the version data will be cached, and only updated every ``345600``
+seconds (4 days). If you need the version cache to be updated at a different
 frequency, change this setting. Setting it to ``0`` will turn off the version
 cache.
 
 expire_group_cache
 ------------------
-Optional. Default is ``604800``. See ``expire_publisher_cache`` for details on
+Optional. Default is ``14400``. See ``expire_publisher_cache`` for details on
 why this exists.
 
 By default, the resource group data will be cached, and only updated every
-``604800`` seconds (7 days). If you need the resource group cache to be updated
+``14400`` seconds (4 hours). If you need the resource group cache to be updated
 at a different frequency, change this setting. Setting it to ``0`` will turn
 off the resource group cache.
 
@@ -315,16 +314,6 @@ why this exists.
 By default, the network data will be cached, and only updated every ``3600``
 seconds (1 hour). If you need the network cache to be updated at a different
 frequency, change this setting. Setting it to ``0`` will turn off the network
-cache.
-
-expire_subnet_cache
--------------------
-Optional. Default is ``3600``. See ``expire_publisher_cache`` for details on
-why this exists.
-
-By default, the subnet data will be cached, and only updated every ``3600``
-seconds (1 hour). If you need the subnet cache to be updated at a different
-frequency, change this setting. Setting it to ``0`` will turn off the subnet
 cache.
 
 Show Instance

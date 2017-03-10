@@ -253,23 +253,6 @@ def avail_locations(conn=None, call=None):  # pylint: disable=unused-argument
     return ret
 
 
-def _cache(bank, key, fun, **kwargs):
-    '''
-    Cache an Azure ARM object
-    '''
-    items = cache.fetch(bank, key)
-    if items is None:
-        items = {}
-        try:
-            item_list = fun(**kwargs)
-        except CloudError as exc:
-            log.warning('There was a cloud error calling {0} with kwargs {1}: {2}'.format(fun, kwargs, exc))
-        for item in item_list:
-            items[item.name] = object_to_dict(item)
-        cache.store(bank, key, items)
-    return items
-
-
 def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
     '''
     List available images for Azure
@@ -286,59 +269,79 @@ def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
 
     region = get_location()
     bank = 'cloud/metadata/azurearm/{0}'.format(region)
-    publishers = _cache(
+    publishers = cache.cache(
         bank,
         'publishers',
         compconn.virtual_machine_images.list_publishers,
+        loop_fun=object_to_dict,
+        expire=config.get_cloud_config_value(
+            'expire_publisher_cache', get_configured_provider(),
+            __opts__, search_global=False, default=604800,  # 7 days
+        ),
         location=region,
     )
 
     ret = {}
     for publisher in publishers:
-        pub_bank = os.path.join(bank, 'publishers', publisher)
-        offers = _cache(
+        pub_bank = os.path.join(bank, 'publishers', publisher['name'])
+        offers = cache.cache(
             pub_bank,
             'offers',
             compconn.virtual_machine_images.list_offers,
+            loop_fun=object_to_dict,
+            expire=config.get_cloud_config_value(
+                'expire_offer_cache', get_configured_provider(),
+                __opts__, search_global=False, default=518400,  # 6 days
+            ),
             location=region,
-            publisher_name=publishers[publisher]['name'],
+            publisher_name=publisher['name'],
         )
 
         for offer in offers:
-            offer_bank = os.path.join(pub_bank, 'offers', offer)
-            skus = _cache(
+            offer_bank = os.path.join(pub_bank, 'offers', offer['name'])
+            skus = cache.cache(
                 offer_bank,
                 'skus',
                 compconn.virtual_machine_images.list_skus,
+                loop_fun=object_to_dict,
+                expire=config.get_cloud_config_value(
+                    'expire_sku_cache', get_configured_provider(),
+                    __opts__, search_global=False, default=432000,  # 5 days
+                ),
                 location=region,
-                publisher_name=publishers[publisher]['name'],
-                offer=offers[offer]['name'],
+                publisher_name=publisher['name'],
+                offer=offer['name'],
             )
 
             for sku in skus:
-                sku_bank = os.path.join(offer_bank, 'skus', sku)
-                results = _cache(
+                sku_bank = os.path.join(offer_bank, 'skus', sku['name'])
+                results = cache.cache(
                     sku_bank,
                     'results',
                     compconn.virtual_machine_images.list,
+                    loop_fun=object_to_dict,
+                    expire=config.get_cloud_config_value(
+                        'expire_version_cache', get_configured_provider(),
+                        __opts__, search_global=False, default=345600,  # 4 days
+                    ),
                     location=region,
-                    publisher_name=publishers[publisher]['name'],
-                    offer=offers[offer]['name'],
-                    skus=skus[sku]['name'],
+                    publisher_name=publisher['name'],
+                    offer=offer['name'],
+                    skus=sku['name'],
                 )
 
                 for version in results:
                     name = '|'.join((
-                        publishers[publisher]['name'],
-                        offers[offer]['name'],
-                        skus[sku]['name'],
-                        results[version]['name'],
+                        publisher['name'],
+                        offer['name'],
+                        sku['name'],
+                        version['name'],
                     ))
                     ret[name] = {
-                        'publisher': publishers[publisher]['name'],
-                        'offer': offers[offer]['name'],
-                        'sku': skus[sku]['name'],
-                        'version': results[version]['name'],
+                        'publisher': publisher['name'],
+                        'offer': offer['name'],
+                        'sku': sku['name'],
+                        'version': version['name'],
                     }
     return ret
 
@@ -412,6 +415,7 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
             ret[node.name]['private_ips'] = node.network_profile.network_interfaces
             ret[node.name]['public_ips'] = node.network_profile.network_interfaces
             ret[node.name]['storage_profile']['data_disks'] = []
+            ret[node.name]['resource_group'] = group
             for disk in node.storage_profile.data_disks:
                 ret[node.name]['storage_profile']['data_disks'].append(make_safe(disk))
             try:
@@ -454,7 +458,7 @@ def list_resource_groups(conn=None, call=None):  # pylint: disable=unused-argume
         loop_fun=object_to_dict,
         expire=config.get_cloud_config_value(
             'expire_group_cache', get_configured_provider(),
-            __opts__, search_global=False, default=86400,
+            __opts__, search_global=False, default=14400,
         )
     )
 
@@ -561,7 +565,7 @@ def list_networks(call=None, kwargs=None):  # pylint: disable=unused-argument
                 loop_fun=make_safe,
                 expire=config.get_cloud_config_value(
                     'expire_network_cache', get_configured_provider(),
-                    __opts__, search_global=False, default=86400,
+                    __opts__, search_global=False, default=3600,
                 ),
                 resource_group_name=group,
             )
@@ -763,6 +767,9 @@ def list_interfaces(call=None, kwargs=None):  # pylint: disable=unused-argument
         kwargs = {}
 
     if kwargs.get('resource_group') is None:
+        kwargs['resource_group'] = kwargs.get('group')
+
+    if kwargs['resource_group'] is None:
         kwargs['resource_group'] = config.get_cloud_config_value(
             'resource_group', {}, __opts__, search_global=True,
             default=config.get_cloud_config_value(
@@ -779,7 +786,7 @@ def list_interfaces(call=None, kwargs=None):  # pylint: disable=unused-argument
         loop_fun=make_safe,
         expire=config.get_cloud_config_value(
             'expire_interface_cache', get_configured_provider(),
-            __opts__, search_global=False, default=86400,
+            __opts__, search_global=False, default=3600,
         ),
         resource_group_name=kwargs['resource_group']
     )
