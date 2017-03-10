@@ -28,6 +28,7 @@ import salt.transport.mixins.auth
 from salt.exceptions import SaltReqTimeoutError
 
 import zmq
+import zmq.error
 import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
 if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
@@ -1064,9 +1065,14 @@ class ZeroMQSocketMonitor(object):
 
     def start_poll(self):
         log.trace("Event monitor start!")
-        while self._monitor_socket is not None and self._monitor_socket.poll():
-            msg = self._monitor_socket.recv_multipart()
-            self.monitor_callback(msg)
+        try:
+            while self._monitor_socket is not None and self._monitor_socket.poll():
+                msg = self._monitor_socket.recv_multipart()
+                self.monitor_callback(msg)
+        except (AttributeError, zmq.error.ContextTerminated):
+            # We cannot log here because we'll get an interrupted system call in trying
+            # to flush the logging buffer as we terminate
+            pass
 
     @property
     def event_map(self):

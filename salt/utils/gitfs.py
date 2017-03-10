@@ -82,7 +82,11 @@ except ImportError:
     HAS_GITPYTHON = False
 
 try:
-    import pygit2
+    # Squelch warning on cent7 due to them upgrading cffi
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        import pygit2
     HAS_PYGIT2 = True
     try:
         GitError = pygit2.errors.GitError

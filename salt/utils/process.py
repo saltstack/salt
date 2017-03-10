@@ -399,6 +399,8 @@ class ProcessManager(object):
                     yield gen.sleep(10)
                 else:
                     time.sleep(10)
+                if len(self._process_map) == 0:
+                    break
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
@@ -416,6 +418,7 @@ class ProcessManager(object):
         if self._restart_processes is True:
             for pid, mapping in six.iteritems(self._process_map):
                 if not mapping['Process'].is_alive():
+                    log.trace('Process restart of {0}'.format(pid))
                     self.restart_process(pid)
 
     def kill_children(self, *args, **kwargs):
