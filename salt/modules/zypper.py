@@ -1042,7 +1042,7 @@ def install(name=None,
     if not refresh:
         cmd_install.insert(0, '--no-refresh')
     if skip_verify:
-        cmd_install.append('--no-gpg-checks')
+        cmd_install.insert(0, '--no-gpg-checks')
     if downloadonly:
         cmd_install.append('--download-only')
     if fromrepo:
