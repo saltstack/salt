@@ -597,6 +597,18 @@ def get_permissions(FunctionName, Qualifier=None,
         return {'permissions': None, 'error': err}
 
 
+def list_functions(region=None, key=None, keyid=None, profile=None):
+    '''
+    List all Lambda functions visible in the current scope.
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    ret = []
+    for funcs in salt.utils.boto3.paged_call(conn.list_functions):
+        ret += funcs['Functions']
+    return ret
+
+
 def list_function_versions(FunctionName,
                            region=None, key=None, keyid=None, profile=None):
     '''
