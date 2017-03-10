@@ -88,6 +88,7 @@ import salt.utils.jid
 import salt.pillar
 import salt.utils.args
 import salt.utils.event
+import salt.utils.network
 import salt.utils.minion
 import salt.utils.minions
 import salt.utils.schedule
@@ -179,9 +180,11 @@ def resolve_dns(opts, fallback=True, connect=True):
             if master == '':
                 master = unknown_str
             if opts.get('__role') == 'syndic':
-                err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. Set \'syndic_master\' value in minion config.'.format(master)
+                err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. ' \
+                      'Set \'syndic_master\' value in minion config.'.format(master)
             else:
-                err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. Set \'master\' value in minion config.'.format(master)
+                err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. ' \
+                      'Set \'master\' value in minion config.'.format(master)
             log.error(err)
             raise SaltSystemExit(code=42, msg=err)
     else:
@@ -199,7 +202,10 @@ def resolve_dns(opts, fallback=True, connect=True):
 
 def prep_ip_port(opts):
     ret = {}
-    if opts['master_uri_format'] == 'ip_only':
+    # Use given master IP if "ip_only" is set or if master_ip is an ipv6 address without
+    # a port specified. The is_ipv6 check returns False if brackets are used in the IP
+    # definition such as master: '[::1]:1234'.
+    if opts['master_uri_format'] == 'ip_only' or salt.utils.network.is_ipv6(opts['master']):
         ret['master'] = opts['master']
     else:
         ip_port = opts['master'].rsplit(":", 1)
@@ -209,9 +215,13 @@ def prep_ip_port(opts):
         else:
             # e.g. master: localhost:1234
             # e.g. master: 127.0.0.1:1234
-            # e.g. master: ::1:1234
-            ret['master'] = ip_port[0]
-            ret['master_port'] = ip_port[1]
+            # e.g. master: [::1]:1234
+            # Strip off brackets for ipv6 support
+            ret['master'] = ip_port[0].strip('[]')
+
+            # Cast port back to an int! Otherwise a TypeError is thrown
+            # on some of the socket calls elsewhere in the minion and utils code.
+            ret['master_port'] = int(ip_port[1])
     return ret
 
 

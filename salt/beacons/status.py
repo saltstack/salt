@@ -138,6 +138,7 @@ def beacon(config):
         # To support the old dictionary config format
         config = [config]
 
+    ret = {}
     for entry in config:
         for func in entry:
             ret[func] = {}
