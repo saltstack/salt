@@ -14,7 +14,7 @@ from collections import defaultdict
 # Import salt libs
 import salt.utils
 import salt.utils.args
-from salt.exceptions import CommandNotFoundError, CommandExecutionError
+from salt.exceptions import CommandNotFoundError, CommandExecutionError, SaltConfigurationError
 from salt.version import SaltStackVersion, __saltstack_version__
 from salt.log import LOG_LEVELS
 
@@ -501,7 +501,8 @@ class _WithDeprecated(_DeprecationDecorator):
 
     '''
     MODULE_NAME = '__virtualname__'
-    CFG_KEY = 'use_deprecated'
+    CFG_USE_DEPRECATED = 'use_deprecated'
+    CFG_USE_SUPERSEDED = 'use_superseded'
 
     def __init__(self, globals, version, with_name=None):
         '''
@@ -527,7 +528,15 @@ class _WithDeprecated(_DeprecationDecorator):
             self._raise_later = CommandExecutionError('Module not found for function "{f_name}"'.format(
                 f_name=function.__name__))
 
-        if full_name in self._globals.get('__opts__', '{}').get(self.CFG_KEY, list()):
+        opts = self._globals.get('__opts__', '{}')
+        use_deprecated = full_name in opts.get(self.CFG_USE_DEPRECATED, list())
+        use_superseded = full_name in opts.get(self.CFG_USE_SUPERSEDED, list())
+        if use_deprecated and use_superseded:
+            raise SaltConfigurationError("Function '{0}' is mentioned both in deprecated "
+                                         "and superseded sections. Please remove any of that.".format(full_name))
+        if use_superseded:
+            self._function = function
+        else:
             self._function = self._globals.get(self._with_name or "_{0}".format(function.__name__))
 
     def _is_used_deprecated(self):
@@ -541,7 +550,7 @@ class _WithDeprecated(_DeprecationDecorator):
             m_name=self._globals.get(self.MODULE_NAME, '') or self._globals['__name__'].split('.')[-1],
             f_name=self._orig_f_name)
 
-        return func_path in self._globals.get('__opts__', {}).get(self.CFG_KEY, list()), func_path
+        return not (func_path in self._globals.get('__opts__', {}).get(self.CFG_USE_SUPERSEDED, list())), func_path
 
     def __call__(self, function):
         '''
