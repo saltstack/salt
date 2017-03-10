@@ -139,6 +139,22 @@ class LoadAuth(object):
             log.debug('Authentication module threw {0}'.format(e))
             return None
 
+    def __process_acl(self, load, auth_list):
+        '''
+        Allows eauth module to modify the access list right before it'll be applied to the request.
+        For example ldap auth module expands entries
+        '''
+        if 'eauth' not in load:
+            return auth_list
+        fstr = '{0}.process_acl'.format(load['eauth'])
+        if fstr not in self.auth:
+            return auth_list
+        try:
+            return self.auth[fstr](auth_list, self.opts)
+        except Exception as e:
+            log.debug('Authentication module threw {0}'.format(e))
+            return auth_list
+
     def get_groups(self, load):
         '''
         Read in a load and return the groups a user is a member of
@@ -384,8 +400,7 @@ class LoadAuth(object):
                     groups,
                     auth_list)
 
-        if load['eauth'] == 'ldap':
-            auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
+        auth_list = self.__process_acl(load, auth_list)
 
         log.trace("Compiled auth_list: {0}".format(auth_list))
 
@@ -458,7 +473,7 @@ class Authorize(object):
                                                     merge_lists=merge_lists)
 
         if 'ldap' in auth_data and __opts__.get('auth.ldap.activedirectory', False):
-            auth_data['ldap'] = salt.auth.ldap.expand_ldap_entries(auth_data['ldap'])
+            auth_data['ldap'] = salt.auth.ldap.__expand_ldap_entries(auth_data['ldap'])
             log.debug(auth_data['ldap'])
 
         #for auth_back in self.opts.get('external_auth_sources', []):

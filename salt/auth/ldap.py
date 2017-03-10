@@ -390,7 +390,7 @@ def groups(username, **kwargs):
     return group_list
 
 
-def expand_ldap_entries(entries, opts=None):
+def __expand_ldap_entries(entries, opts=None):
     '''
 
     :param entries: ldap subtree in external_auth config option
@@ -456,5 +456,24 @@ def expand_ldap_entries(entries, opts=None):
             else:
                 acl_tree.append({minion_or_ou: matchers})
 
-    log.trace('expand_ldap_entries: {0}'.format(acl_tree))
+    log.trace('__expand_ldap_entries: {0}'.format(acl_tree))
     return acl_tree
+
+
+def process_acl(auth_list, opts=None):
+    '''
+    Query LDAP, retrieve list of minion_ids from an OU or other search.
+    For each minion_id returned from the LDAP search, copy the perms
+    matchers into the auth dictionary
+    :param auth_list:
+    :param opts: __opts__ for when __opts__ is not injected
+    :return: Modified auth list.
+    '''
+    ou_names = []
+    for item in auth_list:
+        if isinstance(item, six.string_types):
+            continue
+        ou_names.extend([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
+    if ou_names:
+        auth_list = __expand_ldap_entries(auth_list, opts)
+    return auth_list
