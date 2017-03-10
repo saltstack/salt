@@ -1151,6 +1151,13 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
             'ret': ret, 'kwarg': kwarg, 'batch': kwargs['batch'],
         }
         del kwargs['batch']
+    elif 'subset' in kwargs:
+        _cmd = client.cmd_subset
+        cmd_kwargs = {
+            'tgt': tgt, 'fun': fun, 'arg': arg, 'tgt_type': tgt_type,
+            'ret': ret, 'kwarg': kwarg, 'sub': kwargs['subset'],
+        }
+        del kwargs['subset']
     else:
         _cmd = client.cmd_iter
         cmd_kwargs = {
