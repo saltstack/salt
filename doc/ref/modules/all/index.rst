@@ -70,6 +70,7 @@ execution modules
     bsd_shadow
     btrfs
     cabal
+    capirca_acl
     cassandra
     cassandra_cql
     celery
