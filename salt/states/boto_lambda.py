@@ -268,7 +268,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
                                     Environment, region, key, keyid,
                                     profile, RoleRetries)
     if not _ret.get('result'):
-        ret['result'] = False
+        ret['result'] = _ret.get('result', False)
         ret['comment'] = _ret['comment']
         ret['changes'] = {}
         return ret
@@ -277,7 +277,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
     _ret = _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key, S3ObjectVersion,
                                   region, key, keyid, profile)
     if not _ret.get('result'):
-        ret['result'] = False
+        ret['result'] = _ret.get('result', False)
         ret['comment'] = _ret['comment']
         ret['changes'] = {}
         return ret
@@ -286,7 +286,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
     _ret = _function_permissions_present(FunctionName, Permissions,
                                          region, key, keyid, profile)
     if not _ret.get('result'):
-        ret['result'] = False
+        ret['result'] = _ret.get('result', False)
         ret['comment'] = _ret['comment']
         ret['changes'] = {}
         return ret
