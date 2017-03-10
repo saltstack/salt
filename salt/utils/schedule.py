@@ -444,9 +444,6 @@ class Schedule(object):
             config_dir,
             os.path.dirname(self.opts.get('default_include',
                                           salt.config.DEFAULT_MINION_OPTS['default_include'])))
-        if salt.utils.is_proxy():
-            # each proxy will have a separate _schedule.conf file
-            minion_d_dir = os.path.join(minion_d_dir, self.opts['proxyid'])
 
         if not os.path.isdir(minion_d_dir):
             os.makedirs(minion_d_dir)
@@ -746,7 +743,10 @@ class Schedule(object):
             # This also needed for ZeroMQ transport to reset all functions
             # context data that could keep paretns connections. ZeroMQ will
             # hang on polling parents connections from the child process.
-            self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy)
+            if self.opts['__role'] == 'master':
+                self.functions = salt.loader.runner(self.opts)
+            else:
+                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy)
             self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
