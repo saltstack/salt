@@ -223,10 +223,10 @@ def list_rules(region=None, key=None, keyid=None, profile=None):
         ret = []
         NextToken = ''
         while NextToken is not None:
-          args = {'NextToken': NextToken} if NextToken else {}
-          r = conn.list_rules(**args)
-          ret += r.get('Rules', [])
-          NextToken = r.get('NextToken')
+            args = {'NextToken': NextToken} if NextToken else {}
+            r = conn.list_rules(**args)
+            ret += r.get('Rules', [])
+            NextToken = r.get('NextToken')
         return ret
     except ClientError as e:
         return {'error': __utils__['boto3.get_error'](e)}
