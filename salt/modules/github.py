@@ -1714,6 +1714,124 @@ def list_teams(profile="github", ignore_cache=False):
     return __context__[key]
 
 
+def get_prs(repo_name=None,
+            profile='github',
+            state='open',
+            head=None,
+            base=None,
+            sort='created',
+            direction='desc',
+            output='min',
+            per_page=None):
+    '''
+    Returns information for all pull requests in a given repository, based on
+    the search options provided.
+
+    .. versionadded:: Nitrogen
+
+    repo_name
+        The name of the repository for which to list pull requests. This
+        argument is required, either passed via the CLI, or defined in the
+        configured profile. A ``repo_name`` passed as a CLI argument will
+        override the ``repo_name`` defined in the configured profile, if
+        provided.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    state
+        Indicates the state of the pull requests to return. Can be either
+        ``open``, ``closed``, or ``all``. Default is ``open``.
+
+    head
+        Filter pull requests by head user and branch name in the format of
+        ``user:ref-name``. Example: ``'github:new-script-format'``. Default
+        is ``None``.
+
+    base
+        Filter pulls by base branch name. Example: ``gh-pages``. Default is
+        ``None``.
+
+    sort
+        What to sort results by. Can be either ``created``, ``updated``,
+        ``popularity`` (comment count), or ``long-running`` (age, filtering
+        by pull requests updated within the last month). Default is ``created``.
+
+    direction
+        The direction of the sort. Can be either ``asc`` or ``desc``. Default
+        is ``desc``.
+
+    output
+        The amount of data returned by each pull request. Defaults to ``min``.
+        Change to ``full`` to see all pull request output.
+
+    per_page
+        GitHub paginates data in their API calls. Use this value to increase or
+        decrease the number of pull requests gathered from GitHub, per page. If
+        not set, GitHub defaults are used. Maximum is 100.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.get_prs
+        salt myminion github.get_prs base=2016.11
+    '''
+    org_name = _get_config_value(profile, 'org_name')
+    if repo_name is None:
+        repo_name = _get_config_value(profile, 'repo_name')
+
+    action = '/'.join(['repos', org_name, repo_name])
+    args = {}
+
+    # Build API arguments, as necessary.
+    if head:
+        args['head'] = head
+    if base:
+        args['base'] = base
+    if per_page:
+        args['per_page'] = per_page
+
+    # Only pass the following API args if they're not the defaults listed.
+    if state and state != 'open':
+        args['state'] = state
+    if sort and sort != 'created':
+        args['sort'] = sort
+    if direction and direction != 'desc':
+        args['direction'] = direction
+
+    ret = {}
+    prs = _query(profile, action=action, command='pulls', args=args)
+
+    for pr_ in prs:
+        pr_id = pr_.get('id')
+        if output == 'full':
+            ret[pr_id] = pr_
+        else:
+            ret[pr_id] = _format_pr(pr_)
+
+    return ret
+
+
+def _format_pr(pr_):
+    '''
+    Helper function to format API return information into a more manageable
+    and useful dictionary for pull request information.
+
+    pr_
+        The pull request to format.
+    '''
+    ret = {'id': pr_.get('id'),
+           'pr_number': pr_.get('number'),
+           'state': pr_.get('state'),
+           'title': pr_.get('title'),
+           'user': pr_.get('user').get('login'),
+           'html_url': pr_.get('html_url'),
+           'base_branch': pr_.get('base').get('ref')}
+
+    return ret
+
+
 def _format_issue(issue):
     '''
     Helper function to format API return information into a more manageable
