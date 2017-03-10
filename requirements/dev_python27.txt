@@ -8,4 +8,5 @@ moto>=0.3.6
 SaltPyLint>=v2017.3.6
 GitPython>=0.3
 pytest
+git+https://github.com/eisensheng/pytest-catchlog.git@develop#egg=Pytest-catchlog
 git+https://github.com/saltstack/pytest-salt.git@master#egg=pytest-salt

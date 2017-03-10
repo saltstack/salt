@@ -22,7 +22,7 @@ load-plugins=saltpylint.pep8,
   saltpylint.py3modernize,
   saltpylint.smartup,
   saltpylint.minpyver,
-  saltpylint.salttesting,
+  saltpylint.blacklist,
   saltpylint.thirdparty
 
 # Use multiple processes to speed up Pylint.
@@ -40,7 +40,7 @@ extension-pkg-whitelist=
 
 # Fileperms Lint Plugin Settings
 fileperms-default=0644
-fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
+fileperms-ignore-paths=setup.py,tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
 
 # Minimum Python Version To Enforce
 minimum-python-version = 2.7

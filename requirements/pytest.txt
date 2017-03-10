@@ -1,4 +1,3 @@
 pytest
-git+https://github.com/eisensheng/pytest-catchlog.git@develop#egg=Pytest-catchlog
 pytest-helpers-namespace
 pytest-tempdir
