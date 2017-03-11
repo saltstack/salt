@@ -616,6 +616,7 @@ def present(
                 asg_action = asg['scheduled_actions'].get(s_name, {})
                 if 'start_time' in asg_action:
                     del asg_action['start_time']
+        proposed = {}
         # note: do not loop using "key, value" - this can modify the value of
         # the aws access key
         for asg_property, value in six.iteritems(config):
@@ -624,18 +625,21 @@ def present(
             # always be returned from AWS.
             if value is None:
                 continue
+            value = __utils__['boto3.ordered'](value)
             if asg_property in asg:
-                _value = asg[asg_property]
-                if not _recursive_compare(value, _value):
+                _value = __utils__['boto3.ordered'](asg[asg_property])
+                if not value == _value:
                     log_msg = '{0} asg_property differs from {1}'
                     log.debug(log_msg.format(value, _value))
+                    proposed.setdefault('old', {}).update({asg_property: _value})
+                    proposed.setdefault('new', {}).update({asg_property: value})
                     need_update = True
-                    break
         if need_update:
             if __opts__['test']:
                 msg = 'Autoscale group set to be updated.'
                 ret['comment'] = msg
                 ret['result'] = None
+                ret['changes'] = proposed
                 return ret
             # add in alarms
             notification_arn, notification_types = _determine_notification_info(
@@ -813,32 +817,6 @@ def _alarms_present(name, min_size_equals_max_size, alarms, alarms_from_pillar, 
         if 'comment' in results:
             merged_return_value['comment'] += results['comment']
     return merged_return_value
-
-
-def _recursive_compare(v1, v2):
-    '''
-    return v1 == v2.  compares list, dict, OrderedDict, recursively
-    '''
-    if isinstance(v1, list):
-        if len(v1) != len(v2):
-            return False
-        v1.sort()
-        v2.sort()
-        for x, y in zip(v1, v2):
-            if not _recursive_compare(x, y):
-                return False
-        return True
-    elif isinstance(v1, dict):
-        v1 = dict(v1)
-        v2 = dict(v2)
-        if sorted(v1) != sorted(v2):
-            return False
-        for k in v1:
-            if not _recursive_compare(v1[k], v2[k]):
-                return False
-        return True
-    else:
-        return v1 == v2
 
 
 def absent(
