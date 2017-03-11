@@ -116,6 +116,52 @@ def _get_zone_etc_timezone():
         return fp_.read().strip()
 
 
+def _get_zone_aix():
+    tzfile = '/etc/environment'
+    with salt.utils.fopen(tzfile, 'r') as fp_:
+        for line in fp_:
+            if 'TZ=' in line:
+                zonepart = line.rstrip('\n').split('=')[-1]
+                return zonepart.strip('\'"') or 'UTC'
+    raise CommandExecutionError('Unable to get timezone from ' + tzfile)
+
+
+def _parse_aix_posix(timezone):
+    '''
+    Parse POSIX timezone to retrieve the time zone offset
+
+    .. note::
+
+        MST7MDT,M3.2.0/2:00:00,M11.1.0/2:00:00
+    '''
+    tzstrg = timezone.split(',')
+    test_offset = tzstrg[0]
+    ref = re.compile(r'([A-Z]+)\D?(\d+)([A-Z]+)')
+    refgrps = ref.search(test_offset)
+    offset_number = refgrps.group(2)
+    if test_offset.find('-') == -1:
+        offset_prefix = '-'
+    else:
+        offset_prefix = '+'
+    offset = '{0}{1:02d}00'.format(offset_prefix, int(offset_number))
+    return offset
+
+
+def _parse_aix_olson(timezone):
+    '''
+    Parse Olson timezone to retrieve the time zone offset
+
+    .. note::
+
+        America/Denver
+
+    '''
+    log.debug('DGM _parser_aix_olson,  timezone \'{0}\''.format(timezone))
+    offset = 0
+
+    return offset
+
+
 def get_zone():
     '''
     Get current timezone (i.e. America/Denver)
@@ -153,6 +199,8 @@ def get_zone():
             return _get_zone_etc_localtime()
         elif 'Solaris' in os_family:
             return _get_zone_solaris()
+        elif 'AIX' in os_family:
+            return _get_zone_aix()
     raise CommandExecutionError('Unable to get timezone')
 
 
@@ -179,7 +227,19 @@ def get_offset():
 
         salt '*' timezone.get_offset
     '''
-    return __salt__['cmd.run'](['date', '+%z'], python_shell=False)
+    if 'AIX' not in __grains__['os_family']:
+        return __salt__['cmd.run'](['date', '+%z'], python_shell=False)
+
+    timezone = get_zone()
+    zonepath = '/usr/share/lib/zoneinfo/{0}'.format(timezone)
+
+    log.debug('DGM get_offset, timezone \'{0}\', zonepath \'{1}\''.format(timezone, zonepath))
+
+    if not os.path.exists(zonepath):
+        offset = _parse_aix_posix(timezone)
+    else:
+        offset = _parse_aix_olson(timezone)
+    return offset
 
 
 def set_zone(timezone):
@@ -203,10 +263,11 @@ def set_zone(timezone):
         except CommandExecutionError:
             pass
 
-    if 'Solaris' in __grains__['os_family']:
+    if 'Solaris' in __grains__['os_family'] or 'AIX' in __grains__['os_family']:
         zonepath = '/usr/share/lib/zoneinfo/{0}'.format(timezone)
     else:
         zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
+
     if not os.path.exists(zonepath):
         return 'Zone does not exist: {0}'.format(zonepath)
 
@@ -216,6 +277,9 @@ def set_zone(timezone):
     if 'Solaris' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/default/init', '^TZ=.*', 'TZ={0}'.format(timezone))
+    elif 'AIX' in __grains__['os_family']:
+        cmd = ['chtz', timezone]
+        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
     else:
         os.symlink(zonepath, '/etc/localtime')
 
@@ -249,13 +313,19 @@ def zone_compare(timezone):
 
         On Solaris-link operating systems only a string comparison is done.
 
+    .. versionchanged:: 2016.11.4
+
+    .. note::
+
+        On AIX operating systems only a string comparison is done.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' timezone.zone_compare 'America/Denver'
     '''
-    if 'Solaris' in __grains__['os_family']:
+    if 'Solaris' in __grains__['os_family'] or 'AIX' in __grains__['os_family']:
         return timezone == get_zone()
 
     curtzstring = get_zone()
@@ -382,6 +452,23 @@ def get_hwclock():
                     .format(offset_file, exc.strerror)
                 )
 
+        if 'AIX' in __grains__['os_family']:
+            offset_file = '/etc/environment'
+            try:
+                with salt.utils.fopen(offset_file, 'r') as fp_:
+                    for line in fp_:
+                        if line.startswith('TZ=UTC'):
+                            return 'UTC'
+                    return 'localtime'
+            except IOError as exc:
+                if exc.errno == errno.ENOENT:
+                    # offset file does not exist
+                    return 'UTC'
+                raise CommandExecutionError(
+                    'Problem reading offset file {0}: {1}'
+                    .format(offset_file, exc.strerror)
+                )
+
 
 def set_hwclock(clock):
     '''
@@ -393,6 +480,13 @@ def set_hwclock(clock):
 
         salt '*' timezone.set_hwclock UTC
     '''
+    if 'AIX' in __grains__['os_family']:
+        if clock.lower() != 'utc':
+            raise SaltInvocationError(
+                'UTC is the only permitted value'
+            )
+        return True
+
     timezone = get_zone()
 
     if 'Solaris' in __grains__['os_family']:
