@@ -156,6 +156,24 @@ _DEFAULT_SERVICES = {}
 # ------------------------------------------------------------------------------
 
 
+if HAS_CAPIRCA:
+    class _Policy(aclgen.policy.Policy):
+        '''
+        Extending the Capirca Policy class to allow inserting custom filters.
+        '''
+        def __init__(self):
+            self.filters = []
+            self.filename = ''
+
+    class _Term(aclgen.policy.Term):
+        '''
+        Extending the Capirca Term class to allow setting field valued on the fly.
+        '''
+        def __init__(self):
+            for field, default in six.iteritems(_TERM_FIELDS):
+                setattr(self, field, default)
+
+
 def _import_platform_generator(platform):
     '''
     Given a specific platform (under the Capirca conventions),
@@ -173,24 +191,6 @@ def _import_platform_generator(platform):
                         plat=platform))
                     return plat_obj
     log.error('Unable to identify any Capirca plaform class for {plat}'.format(plat=platform))
-
-
-class _Policy(aclgen.policy.Policy):
-    '''
-    Extending the Capirca Policy class to allow inserting custom filters.
-    '''
-    def __init__(self):
-        self.filters = []
-        self.filename = ''
-
-
-class _Term(aclgen.policy.Term):
-    '''
-    Extending the Capirca Term class to allow setting field valued on the fly.
-    '''
-    def __init__(self):
-        for field, default in six.iteritems(_TERM_FIELDS):
-            setattr(self, field, default)
 
 
 def _get_services_mapping():
