@@ -9,7 +9,7 @@
 
     Test support helpers
 '''
-# pylint: disable=repr-flag-used-in-string
+# pylint: disable=repr-flag-used-in-string,wrong-import-order
 
 # Import Python libs
 from __future__ import absolute_import
@@ -33,7 +33,7 @@ if six.PY2:
 else:
     import builtins as pybuiltins  # pylint: disable=import-error
 try:
-    from pytestsalt.utils import get_unused_localhost_port
+    from pytestsalt.utils import get_unused_localhost_port  # pylint: disable=unused-import
 except ImportError:
     def get_unused_localhost_port():
         '''
