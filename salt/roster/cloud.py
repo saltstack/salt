@@ -50,11 +50,6 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     with salt.utils.fopen(cache, 'r') as fh_:
         cache_data = msgpack.load(fh_)
 
-    indexed_minion = cache_data.get(tgt, None)
-
-    if indexed_minion is None:
-        return {}
-
     client = salt.cloud.CloudClient(
             os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
             )
@@ -66,9 +61,17 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     if not_actioned and tgt in not_actioned:
         return {}
 
-    provider = indexed_minion.get('provider', None)
-    profile = indexed_minion.get('profile', None)
-    driver = indexed_minion.get('driver', None)
+    indexed_minion = cache_data.get(tgt, None)
+
+    if indexed_minion:
+        provider = indexed_minion.get('provider', None)
+        driver = indexed_minion.get('driver', None)
+        profile = indexed_minion.get('profile', None)
+    else:
+        provider = next(iter(info))
+        driver = next(iter(info[provider]))
+        profile = None
+
     vm_ = {
         'provider': provider,
         'profile': profile,
