@@ -15,6 +15,7 @@ import tornado.web
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import skipIf
+from tests.support.helpers import get_unused_localhost_port
 
 # Import salt libs
 import salt.utils
@@ -27,8 +28,6 @@ if salt.utils.is_windows():
 else:
     ARCHIVE_DIR = '/tmp/archive'
 
-PORT = 9999
-ARCHIVE_TAR_SOURCE = 'http://localhost:{0}/custom.tar.gz'.format(PORT)
 UNTAR_FILE = os.path.join(ARCHIVE_DIR, 'custom/README')
 ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
@@ -49,7 +48,7 @@ class ArchiveTest(integration.ModuleCase,
         cls._ioloop.make_current()
         cls._application = tornado.web.Application([(r'/(.*)', tornado.web.StaticFileHandler,
                                                     {'path': STATE_DIR})])
-        cls._application.listen(PORT)
+        cls._application.listen(cls.server_port)
         cls._ioloop.start()
 
     @classmethod
@@ -61,11 +60,13 @@ class ArchiveTest(integration.ModuleCase,
         cls.server_thread = threading.Thread(target=cls.webserver)
         cls.server_thread.daemon = True
         cls.server_thread.start()
+        cls.server_port = get_unused_localhost_port()
+        cls.archive_tar_source = 'http://localhost:{0}/custom.tar.gz'.format(cls.server_port)
         # check if tornado app is up
         port_closed = True
         while port_closed:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex(('127.0.0.1', PORT))
+            result = sock.connect_ex(('127.0.0.1', cls.server_port))
             if result == 0:
                 port_closed = False
 
@@ -105,7 +106,7 @@ class ArchiveTest(integration.ModuleCase,
         test archive.extracted with skip_verify
         '''
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=ARCHIVE_TAR_SOURCE, archive_format='tar',
+                             source=self.archive_tar_source, archive_format='tar',
                              skip_verify=True)
         log.debug('ret = %s', ret)
         if 'Timeout' in ret:
@@ -121,7 +122,7 @@ class ArchiveTest(integration.ModuleCase,
         ensure source_hash is verified correctly
         '''
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=ARCHIVE_TAR_SOURCE, archive_format='tar',
+                             source=self.archive_tar_source, archive_format='tar',
                              source_hash=ARCHIVE_TAR_HASH)
         log.debug('ret = %s', ret)
         if 'Timeout' in ret:
@@ -137,7 +138,7 @@ class ArchiveTest(integration.ModuleCase,
         test archive.extracted with user and group set to "root"
         '''
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=ARCHIVE_TAR_SOURCE, archive_format='tar',
+                             source=self.archive_tar_source, archive_format='tar',
                              source_hash=ARCHIVE_TAR_HASH,
                              user='root', group='root')
         log.debug('ret = %s', ret)
@@ -153,7 +154,7 @@ class ArchiveTest(integration.ModuleCase,
         test archive.extracted with --strip in options
         '''
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=ARCHIVE_TAR_SOURCE,
+                             source=self.archive_tar_source,
                              source_hash=ARCHIVE_TAR_HASH,
                              options='--strip=1',
                              enforce_toplevel=False)
@@ -170,7 +171,7 @@ class ArchiveTest(integration.ModuleCase,
         test archive.extracted with --strip-components in options
         '''
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=ARCHIVE_TAR_SOURCE,
+                             source=self.archive_tar_source,
                              source_hash=ARCHIVE_TAR_HASH,
                              options='--strip-components=1',
                              enforce_toplevel=False)
@@ -187,7 +188,7 @@ class ArchiveTest(integration.ModuleCase,
         test archive.extracted with no archive_format option
         '''
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=ARCHIVE_TAR_SOURCE,
+                             source=self.archive_tar_source,
                              source_hash=ARCHIVE_TAR_HASH)
         log.debug('ret = %s', ret)
         if 'Timeout' in ret:

@@ -32,6 +32,18 @@ if six.PY2:
     import __builtin__ as pybuiltins  # pylint: disable=incompatible-py3-code,import-error
 else:
     import builtins as pybuiltins  # pylint: disable=import-error
+try:
+    from pytestsalt.utils import get_unused_localhost_port
+except ImportError:
+    def get_unused_localhost_port():
+        '''
+        Return a random unused port on localhost
+        '''
+        usock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        usock.bind(('127.0.0.1', 0))
+        port = usock.getsockname()[1]
+        usock.close()
+        return port
 
 # Import Salt Tests Support libs
 from tests.support.unit import skip, _id
