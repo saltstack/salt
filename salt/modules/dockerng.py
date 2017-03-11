@@ -775,7 +775,8 @@ def _get_client(timeout=None):
         - docker.url: URL to the docker service
         - docker.version: API version to use (default: "auto")
     '''
-    if 'docker.client' not in __context__:
+    if 'docker.client' not in __context__ \
+            or not hasattr(__context__['docker.client'], 'timeout'):
         client_kwargs = {}
         for key, val in (('base_url', 'docker.url'),
                          ('version', 'docker.version')):
