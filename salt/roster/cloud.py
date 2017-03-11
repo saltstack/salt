@@ -92,7 +92,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     cloud_opts = salt.config.cloud_config(
         os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
     )
-    ssh_username = salt.utils.cloud.ssh_usernames({}, cloud_opts)
+    ssh_username = salt.utils.cloud.ssh_usernames(vm_, cloud_opts)
     if isinstance(ssh_username, string_types):
         ret[tgt]['user'] = ssh_username
     elif isinstance(ssh_username, list):
