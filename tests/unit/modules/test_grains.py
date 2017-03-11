@@ -605,7 +605,7 @@ class GrainsModuleTestCase(TestCase):
                                   ('z', 'zval'),
                                   ]))
 
-    def test_key_value_match(self):
+    def test_is(self):
         grainsmod.__grains__ = OrderedDict([
                                 ('a', 'aval'),
                                 ('b', OrderedDict([
@@ -615,10 +615,10 @@ class GrainsModuleTestCase(TestCase):
                                             OrderedDict([('l23', 'l23val')])])
                                     ])),
                                 ('c', 8)])
-        res = grainsmod.key_value_match('a', 'aval')
+        res = grainsmod.is('a', 'aval')
         self.assertEqual(type(res), bool)
         self.assertTrue(res)
-        res = grainsmod.key_value_match('b:z', 'zval')
+        res = grainsmod.is('b:z', 'zval')
         self.assertTrue(res)
-        res = grainsmod.key_value_match('b:z', 'aval')
+        res = grainsmod.is('b:z', 'aval')
         self.assertFalse(res)
