@@ -90,6 +90,7 @@ def __virtual__():
             global get_diff, _get_flags, extract_hash, comment_line
             global access, copy, readdir, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
+            global _splitlines_preserving_trailing_newline
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
@@ -98,6 +99,8 @@ def __virtual__():
             search = _namespaced_function(search, globals())
             _get_flags = _namespaced_function(_get_flags, globals())
             _binary_replace = _namespaced_function(_binary_replace, globals())
+            _splitlines_preserving_trailing_newline = _namespaced_function(
+                _splitlines_preserving_trailing_newline, globals())
             _error = _namespaced_function(_error, globals())
             _get_bkroot = _namespaced_function(_get_bkroot, globals())
             list_backups = _namespaced_function(list_backups, globals())
