@@ -57,10 +57,10 @@ class ArchiveTest(integration.ModuleCase,
         start tornado app on thread
         and wait till its running
         '''
+        cls.server_port = get_unused_localhost_port()
         cls.server_thread = threading.Thread(target=cls.webserver)
         cls.server_thread.daemon = True
         cls.server_thread.start()
-        cls.server_port = get_unused_localhost_port()
         cls.archive_tar_source = 'http://localhost:{0}/custom.tar.gz'.format(cls.server_port)
         # check if tornado app is up
         port_closed = True
