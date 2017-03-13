@@ -7,7 +7,7 @@ License. We cannot accept contributions that already hold a License other
 than Apache 2.0 without explicit exception.
 
 
-Reporting issues
+Reporting Issues
 ================
 
 The Salt issue tracker is used for feature requests and bug reports.
@@ -17,15 +17,16 @@ Bugs
 
 A bug is a *demonstrable problem* that is caused by the code in the repository.
 
-Please read the following guidelines before you `report an issue`_
+Please read the following guidelines before you 
+[report an issue](https://github.com/saltstack/salt/issues).
 
 1. **Use the GitHub issue search** -- check if the issue has
    already been reported. If it has been, please comment on the existing issue.
 
 2. **Check if the issue has been fixed** — Various point-release branches, such
-   as ``2015.5``, ``2015.8``, ``2016.3``, or even ``develop``, may already contain
-   a fix. Please try to reproduce the bug against the latest git HEAD or the latest
-   release.
+   as ``2016.3``, ``2016.11``, or even ``develop``, may already contain
+   a fix. Please try to reproduce the bug against the latest git ``HEAD`` or
+   the latest release.
 
 3. **Isolate the demonstrable problem** -- make sure that the
    code in the project's repository is *definitely* responsible for the issue.
@@ -41,7 +42,7 @@ assess and fix any potential bugs.
 **Including the output of** ``salt --versions-report`` **will always help.**
 
 Valid bugs will be categorized for the next release and worked on as quickly
-as resources can be reasonably allocated
+as resources can be reasonably allocated.
 
 Features
 --------
@@ -65,25 +66,23 @@ reason to ask first.
 Fixing issues
 =============
 
-If you wish to help us fix the issue you're reporting, `Salt's documentation`_
+If you wish to help us fix the issue you're reporting, 
+[Salt's documentation](http://docs.saltstack.com/en/latest/index.html)
 already includes information to help you setup a development environment,
-under `Developing Salt`_.
+under [Developing Salt](http://docs.saltstack.com/en/latest/topics/development/hacking.html).
 
-`SaltStack's Contributing documentation`_ is also helpful, as it explains
-sending in pull requests, keeping your salt branches in sync, and knowing
-`which branch`_ new features or bug fixes should be submitted against.
+[SaltStack's Contributing documentation](https://docs.saltstack.com/en/latest/topics/development/contributing.html) 
+is also helpful, as it explains sending in pull requests, keeping your 
+salt branches in sync, and knowing
+[which branch](https://docs.saltstack.com/en/latest/topics/development/contributing.html#which-salt-branch) 
+new features or bug fixes should be submitted against.
 
-Fix the issue you have in hands, if possible also add a test case to Salt's
-testing suite, create a `pull request`_, and **that's it**!
+Fix the issue you have in hand and, if possible, also add a test case to Salt's
+testing suite. Then, create a 
+[pull request](http://docs.saltstack.com/en/latest/topics/development/contributing.html#sending-a-github-pull-request), 
+and **that's it**!
 
 Salt's development team will review your fix and if everything is OK, your fix
 will be merged into Salt's code.
-
-.. _`report an issue`: https://github.com/saltstack/salt/issues
-.. _`Salt's documentation`: http://docs.saltstack.com/en/latest/index.html
-.. _`Developing Salt`: http://docs.saltstack.com/en/latest/topics/development/hacking.html
-.. _`pull request`: http://docs.saltstack.com/en/latest/topics/development/contributing.html#sending-a-github-pull-request
-.. _`SaltStack's Contributing documentation`: https://docs.saltstack.com/en/latest/topics/development/contributing.html
-.. _`which branch`: https://docs.saltstack.com/en/latest/topics/development/contributing.html#which-salt-branch
 
 .. vim: set fenc=utf-8 spell spl=en:
