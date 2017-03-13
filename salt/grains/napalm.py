@@ -90,7 +90,7 @@ def _retrieve_device_cache(proxy=None):
                 DEVICE_CACHE = proxy['napalm.get_device']()
         elif not proxy and salt.utils.napalm.is_minion(__opts__):
             # if proxy var not passed and is running in a straight minion
-            DEVICE_CACHE = salt.utils.napalm.get_device(__opts__)
+            DEVICE_CACHE = salt.utils.napalm.get_device_opts(__opts__)
     return DEVICE_CACHE
 
 

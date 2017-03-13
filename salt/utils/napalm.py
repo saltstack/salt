@@ -160,13 +160,12 @@ def call(napalm_device, method, *args, **kwargs):
     }
 
 
-def get_device(opts, salt_obj=None):
+def get_device_opts(opts, salt_obj=None):
     '''
-    Initialise the connection with the network device through NAPALM.
-    :param: opts
-    :return: the network device object
+    Returns the options of the napalm device.
+    :pram: opts
+    :return: the network device opts
     '''
-    log.debug('Setting up NAPALM connection')
     network_device = {}
     # by default, look in the proxy config details
     device_dict = opts.get('proxy', {}) or opts.get('napalm', {})
@@ -185,8 +184,19 @@ def get_device(opts, salt_obj=None):
     network_device['OPTIONAL_ARGS'] = device_dict.get('optional_args', {})
     network_device['UP'] = False
     # get driver object form NAPALM
-    if 'config_lock' not in list(network_device['OPTIONAL_ARGS'].keys()):
+    if 'config_lock' not in network_device['OPTIONAL_ARGS']:
         network_device['OPTIONAL_ARGS']['config_lock'] = False
+    return network_device
+
+
+def get_device(opts, salt_obj=None):
+    '''
+    Initialise the connection with the network device through NAPALM.
+    :param: opts
+    :return: the network device object
+    '''
+    log.debug('Setting up NAPALM connection')
+    network_device = get_device_opts(opts, salt_obj=salt_obj)
     _driver_ = napalm_base.get_network_driver(network_device.get('DRIVER_NAME'))
     try:
         network_device['DRIVER'] = _driver_(
