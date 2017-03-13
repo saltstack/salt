@@ -98,7 +98,7 @@ def _filter_dict(input_dict, search_key, search_value):
 def _explicit_close(napalm_device):
     '''
     Will explicitely close the config session with the network device,
-    when runnin in a now-always-alive proxy minion or regular minion.
+    when running in a now-always-alive proxy minion or regular minion.
     This helper must be used in configuration-related functions,
     as the session is preserved and not closed before making any changes.
     '''
