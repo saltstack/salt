@@ -1067,7 +1067,6 @@ class ZeroMQSocketMonitor(object):
 
     def start_io_loop(self, io_loop):
         log.trace("Event monitor start!")
-        log.info("Event monitor start!")
         self._monitor_stream = zmq.eventloop.zmqstream.ZMQStream(self._monitor_socket, io_loop=io_loop)
         self._monitor_stream.on_recv(self.monitor_callback)
 
