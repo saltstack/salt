@@ -18,7 +18,6 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
-from distutils.version import LooseVersion
 
 # Import Salt Testing libs
 import tests.integration as integration
@@ -30,6 +29,7 @@ from tests.support.helpers import (
 
 # Import salt libs
 import salt.utils
+from salt.utils.versions import LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -132,6 +132,11 @@ class GitModuleTest(integration.ModuleCase):
         subprocess.check_call(['git', 'checkout', '--quiet', 'master'])
         # Go back to original cwd
         os.chdir(self.orig_cwd)
+
+    def tearDown(self):
+        for key in ('orig_cwd', 'repo', 'files', 'dirs', 'branches', 'tags'):
+            delattr(self, key)
+        super(GitModuleTest, self).tearDown()
 
     def test_add_dir(self):
         '''

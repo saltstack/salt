@@ -79,6 +79,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
 
     def tearDown(self):
         cherrypy.engine.exit()
+        del self.app
 
 
 class Root(object):
@@ -119,3 +120,7 @@ if HAS_CHERRYPY:
 
         def tearDown(self):
             cherrypy.engine.exit()
+            try:
+                del self._cp_config
+            except AttributeError:
+                pass

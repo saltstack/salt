@@ -70,6 +70,12 @@ class LazyLoaderTest(TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.module_dir)
+        del self.opts
+        if os.path.isdir(self.module_dir):
+            shutil.rmtree(self.module_dir)
+        del self.module_dir
+        del self.module_file
+        del self.loader
 
     def test_depends(self):
         '''
@@ -98,6 +104,10 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
                                  self.opts,
                                  tag='module')
+
+    def tearDown(self):
+        del self.opts
+        del self.loader
 
     def test_basic(self):
         '''
@@ -187,6 +197,10 @@ class LazyLoaderVirtualDisabledTest(TestCase):
                                  tag='module',
                                  virtual_enable=False)
 
+    def tearDown(self):
+        del self.opts
+        del self.loader
+
     def test_virtual(self):
         self.assertTrue(inspect.isfunction(self.loader['test_virtual.ping']))
 
@@ -201,6 +215,10 @@ class LazyLoaderWhitelistTest(TestCase):
                                  self.opts,
                                  tag='module',
                                  whitelist=['test', 'pillar'])
+
+    def tearDown(self):
+        del self.opts
+        del self.loader
 
     def test_whitelist(self):
         self.assertTrue(inspect.isfunction(self.loader['test.ping']))
@@ -261,6 +279,11 @@ class LazyLoaderReloadingTest(TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
+        for attrname in ('opts', 'tmp_dir', 'util', 'proxy', 'loader'):
+            try:
+                delattr(self, attrname)
+            except AttributeError:
+                continue
 
     def update_module(self):
         self.count += 1
@@ -387,6 +410,14 @@ class LazyLoaderVirtualAliasTest(TestCase):
                                        '__proxy__': self.proxy,
                                        '__salt__': self.minion_mods})
 
+    def tearDown(self):
+        del self.opts
+        del self.tmp_dir
+        del self.utils
+        del self.proxy
+        del self.minion_mods
+        del self.loader
+
     def update_module(self):
         with open(self.module_path, 'wb') as fh:
             fh.write(salt.utils.to_bytes(virtual_alias_module_template))
@@ -464,8 +495,13 @@ class LazyLoaderSubmodReloadingTest(TestCase):
                                  )
 
     def tearDown(self):
-        #shutil.rmtree(self.tmp_dir)
-        pass
+        shutil.rmtree(self.tmp_dir)
+        del self.opts
+        del self.tmp_dir
+        del self.utils
+        del self.proxy
+        del self.minion_mods
+        del self.loader
 
     def update_module(self):
         self.count += 1
@@ -607,6 +643,9 @@ class LazyLoaderModulePackageTest(TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
+        del self.opts
+        del self.tmp_dir
+        del self.loader
 
     def update_pyfile(self, pyfile, contents):
         dirname = os.path.dirname(pyfile)
@@ -725,6 +764,16 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
                                        '__salt__': self.minion_mods}
                                  )
 
+    def tearDown(self):
+        shutil.rmtree(self.tmp_dir)
+        del self.opts
+        del self.tmp_dir
+        del self.lib_paths
+        del self.utils
+        del self.proxy
+        del self.minion_mods
+        del self.loader
+
     @property
     def module_dir(self):
         return os.path.join(self.tmp_dir, self.module_name)
@@ -749,9 +798,6 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
             os.unlink(path + 'c')
         except OSError:
             pass
-
-    def tearDown(self):
-        shutil.rmtree(self.tmp_dir)
 
     def test_basic(self):
         self.assertIn('{0}.top'.format(self.module_name), self.loader)

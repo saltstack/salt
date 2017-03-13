@@ -538,7 +538,7 @@ class Schedule(object):
 
         # if enabled is not included in the job,
         # assume job is enabled.
-        for job in data.keys():
+        for job in data:
             if 'enabled' not in data[job]:
                 data[job]['enabled'] = True
 
@@ -743,7 +743,10 @@ class Schedule(object):
             # This also needed for ZeroMQ transport to reset all functions
             # context data that could keep paretns connections. ZeroMQ will
             # hang on polling parents connections from the child process.
-            self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy)
+            if self.opts['__role'] == 'master':
+                self.functions = salt.loader.runner(self.opts)
+            else:
+                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy)
             self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,

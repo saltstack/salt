@@ -2,12 +2,14 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import skipIf
 from tests.support.helpers import requires_network
+
+# Import salt libs
+from salt.utils.versions import LooseVersion
 
 GIT_PYTHON = '0.3.2'
 HAS_GIT_PYTHON = False

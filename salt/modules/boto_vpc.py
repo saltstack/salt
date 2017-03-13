@@ -127,7 +127,6 @@ Deleting VPC peering connection via this module
 from __future__ import absolute_import
 import logging
 import socket
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import time
 import random
 
@@ -136,7 +135,7 @@ import salt.utils.boto
 import salt.utils.boto3
 import salt.utils.compat
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.ext.six.moves import range  # pylint: disable=import-error
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # from salt.utils import exactly_one
 # TODO: Uncomment this and s/_exactly_one/exactly_one/
@@ -149,6 +148,7 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error
 # pylint: disable=import-error
 try:
     #pylint: disable=unused-import
@@ -2599,7 +2599,13 @@ def _maybe_set_name_tag(name, obj):
 
 def _maybe_set_tags(tags, obj):
     if tags:
-        obj.add_tags(tags)
+        # Not all objects in Boto have an 'add_tags()' method.
+        try:
+            obj.add_tags(tags)
+
+        except AttributeError:
+            for tag, value in tags.items():
+                obj.add_tag(tag, value)
 
         log.debug('The following tags: {0} were added to {1}'.format(', '.join(tags), obj))
 

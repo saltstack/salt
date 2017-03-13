@@ -201,17 +201,13 @@ def item(*args, **kwargs):
     return ret
 
 
-def setvals(grains, destructive=False, refresh=True):
+def setvals(grains, destructive=False):
     '''
     Set new grains values in the grains config file
 
     destructive
         If an operation results in a key being removed, delete the key, too.
         Defaults to False.
-
-    refresh
-        Refresh modules and pillar after adding the new grains.
-        Defaults to True.
 
     CLI Example:
 
@@ -287,13 +283,13 @@ def setvals(grains, destructive=False, refresh=True):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
     if not __opts__.get('local', False):
-        # Sync the grains
-        __salt__['saltutil.sync_grains'](refresh=refresh)
+        # Refresh the grains
+        __salt__['saltutil.refresh_grains']()
     # Return the grains we just set to confirm everything was OK
     return new_grains
 
 
-def setval(key, val, destructive=False, refresh=True):
+def setval(key, val, destructive=False):
     '''
     Set a grains value in the grains config file
 
@@ -307,10 +303,6 @@ def setval(key, val, destructive=False, refresh=True):
         If an operation results in a key being removed, delete the key, too.
         Defaults to False.
 
-    refresh
-        Refresh modules and pillar after adding the new grain.
-        Defaults to True.
-
     CLI Example:
 
     .. code-block:: bash
@@ -318,7 +310,7 @@ def setval(key, val, destructive=False, refresh=True):
         salt '*' grains.setval key val
         salt '*' grains.setval key "{'sub-key': 'val', 'sub-key2': 'val2'}"
     '''
-    return setvals({key: val}, destructive, refresh)
+    return setvals({key: val}, destructive)
 
 
 def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):

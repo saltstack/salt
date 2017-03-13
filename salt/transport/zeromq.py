@@ -28,6 +28,7 @@ import salt.transport.mixins.auth
 from salt.exceptions import SaltReqTimeoutError
 
 import zmq
+import zmq.error
 import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
 if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):

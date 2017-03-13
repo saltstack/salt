@@ -134,14 +134,8 @@ from salt.exceptions import SaltCloudSystemExit
 # Import salt cloud libs
 import salt.config as config
 
-# Attempt to import pyVim and pyVmomi libs
-ESX_5_5_NAME_PORTION = 'VMware ESXi 5.5'
-SAFE_ESX_5_5_CONTROLLER_KEY_INDEX = 200
-FLATTEN_DISK_FULL_CLONE = 'moveAllDiskBackingsAndDisallowSharing'
-COPY_ALL_DISKS_FULL_CLONE = 'moveAllDiskBackingsAndAllowSharing'
-CURRENT_STATE_LINKED_CLONE = 'moveChildMostDiskBacking'
-QUICK_LINKED_CLONE = 'createNewChildDiskBacking'
-
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     from pyVmomi import vim
     HAS_PYVMOMI = True
@@ -155,15 +149,14 @@ try:
 except Exception:
     pass
 
-try:
-    import salt.ext.six as six
-    HAS_SIX = True
-except ImportError:
-    # Salt version <= 2014.7.0
-    try:
-        import six
-    except ImportError:
-        HAS_SIX = False
+# Attempt to import pyVim and pyVmomi libs
+ESX_5_5_NAME_PORTION = 'VMware ESXi 5.5'
+SAFE_ESX_5_5_CONTROLLER_KEY_INDEX = 200
+FLATTEN_DISK_FULL_CLONE = 'moveAllDiskBackingsAndDisallowSharing'
+COPY_ALL_DISKS_FULL_CLONE = 'moveAllDiskBackingsAndAllowSharing'
+CURRENT_STATE_LINKED_CLONE = 'moveChildMostDiskBacking'
+QUICK_LINKED_CLONE = 'createNewChildDiskBacking'
+
 
 IP_RE = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 
@@ -204,7 +197,6 @@ def get_dependencies():
     '''
     deps = {
         'pyVmomi': HAS_PYVMOMI,
-        'six': HAS_SIX
     }
     return config.check_driver_dependencies(
         __virtualname__,

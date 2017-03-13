@@ -52,9 +52,10 @@ import os
 import json
 import shutil
 import logging
-import platform
-import tempfile
 import multiprocessing
+
+# Import tests support libs
+import tests.support.paths as paths
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -180,33 +181,25 @@ class RuntimeVars(object):
 # <---- Helper Methods -----------------------------------------------------------------------------------------------
 
 # ----- Global Variables -------------------------------------------------------------------------------------------->
-CONF_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '_saltconf')
-SYS_TMP_DIR = os.path.realpath(
-    # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long for unix sockets:
-    # 'error: AF_UNIX path too long'
-    # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
-    os.environ.get('TMPDIR', tempfile.gettempdir()) if platform.system() != 'Darwin' else '/tmp'
-)
-__TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
-XML_OUTPUT_DIR = os.environ.get('SALT_XML_TEST_REPORTS_DIR', os.path.join(__TMP, 'xml-test-reports'))
+XML_OUTPUT_DIR = os.environ.get('SALT_XML_TEST_REPORTS_DIR', os.path.join(paths.TMP, 'xml-test-reports'))
 # <---- Global Variables ---------------------------------------------------------------------------------------------
 
 
 # ----- Tests Runtime Variables ------------------------------------------------------------------------------------->
 
 RUNTIME_VARS = RuntimeVars(
-    TMP=__TMP,
-    TMP_CONF_DIR=os.path.join(__TMP, 'conf'),
-    TMP_CONF_MASTER_INCLUDES=os.path.join(__TMP, 'conf', 'master.d'),
-    TMP_CONF_MINION_INCLUDES=os.path.join(__TMP, 'conf', 'minion.d'),
-    TMP_CONF_CLOUD_INCLUDES=os.path.join(__TMP, 'conf', 'cloud.conf.d'),
-    TMP_CONF_CLOUD_PROFILE_INCLUDES=os.path.join(__TMP, 'conf', 'cloud.profiles.d'),
-    TMP_CONF_CLOUD_PROVIDER_INCLUDES=os.path.join(__TMP, 'conf', 'cloud.providers.d'),
-    TMP_SCRIPT_DIR=os.path.join(__TMP, 'scripts'),
-    TMP_SALT_INTEGRATION_FILES=os.path.join(__TMP, 'integration-files'),
-    TMP_BASEENV_STATE_TREE=os.path.join(__TMP, 'integration-files', 'file', 'base'),
-    TMP_PRODENV_STATE_TREE=os.path.join(__TMP, 'integration-files', 'file', 'prod'),
-    TMP_BASEENV_PILLAR_TREE=os.path.join(__TMP, 'integration-files', 'pillar', 'base'),
-    TMP_PRODENV_PILLAR_TREE=os.path.join(__TMP, 'integration-files', 'pillar', 'prod')
+    TMP=paths.TMP,
+    TMP_CONF_DIR=os.path.join(paths.TMP, 'conf'),
+    TMP_CONF_MASTER_INCLUDES=os.path.join(paths.TMP, 'conf', 'master.d'),
+    TMP_CONF_MINION_INCLUDES=os.path.join(paths.TMP, 'conf', 'minion.d'),
+    TMP_CONF_CLOUD_INCLUDES=os.path.join(paths.TMP, 'conf', 'cloud.conf.d'),
+    TMP_CONF_CLOUD_PROFILE_INCLUDES=os.path.join(paths.TMP, 'conf', 'cloud.profiles.d'),
+    TMP_CONF_CLOUD_PROVIDER_INCLUDES=os.path.join(paths.TMP, 'conf', 'cloud.providers.d'),
+    TMP_SCRIPT_DIR=os.path.join(paths.TMP, 'scripts'),
+    TMP_SALT_INTEGRATION_FILES=os.path.join(paths.TMP, 'integration-files'),
+    TMP_BASEENV_STATE_TREE=os.path.join(paths.TMP, 'integration-files', 'file', 'base'),
+    TMP_PRODENV_STATE_TREE=os.path.join(paths.TMP, 'integration-files', 'file', 'prod'),
+    TMP_BASEENV_PILLAR_TREE=os.path.join(paths.TMP, 'integration-files', 'pillar', 'base'),
+    TMP_PRODENV_PILLAR_TREE=os.path.join(paths.TMP, 'integration-files', 'pillar', 'prod')
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------

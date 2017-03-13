@@ -464,6 +464,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     return output
 
 
+# pylint: disable=3rd-party-module-not-gated
 def render_mako_tmpl(tmplstr, context, tmplpath=None):
     import mako.exceptions
     from mako.template import Template
@@ -534,6 +535,7 @@ def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
     '''
     from Cheetah.Template import Template
     return str(Template(tmplstr, searchList=[context]))
+# pylint: enable=3rd-party-module-not-gated
 
 
 def py(sfn, string=False, **kwargs):  # pylint: disable=C0103

@@ -195,7 +195,7 @@ class GrainsAppendTestCase(integration.ModuleCase):
         # Now make sure the grain doesn't show up twice.
         grains = self.run_function('grains.items')
         count = 0
-        for grain in grains.keys():
+        for grain in grains:
             if grain == self.GRAIN_KEY:
                 count += 1
 

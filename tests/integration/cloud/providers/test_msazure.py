@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import os
 import random
 import string
-from distutils.version import LooseVersion
 
 # Import Salt Testing Libs
 import tests.integration as integration
@@ -17,6 +16,7 @@ from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
+from salt.utils.versions import LooseVersion
 
 # Import Third-Party Libs
 from salt.ext.six.moves import range

@@ -24,13 +24,17 @@ class RawModTest(TestCase):
     '''
     Test the interface of raw_mod
     '''
-    def test_basic(self):
+    def setUp(self):
         self.opts = minion_config(None)
+
+    def tearDown(self):
+        del self.opts
+
+    def test_basic(self):
         testmod = salt.loader.raw_mod(self.opts, 'test', None)
         for k, v in six.iteritems(testmod):
             self.assertEqual(k.split('.')[0], 'test')
 
     def test_bad_name(self):
-        self.opts = minion_config(None)
         testmod = salt.loader.raw_mod(self.opts, 'module_we_do_not_have', None)
         self.assertEqual(testmod, {})

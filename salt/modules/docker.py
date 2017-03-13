@@ -259,7 +259,6 @@ import bz2
 import copy
 # Remove unused-import from disabled pylint checks when we uncomment the logic
 # in _get_exec_driver() which checks the docker version
-import distutils.version  # pylint: disable=import-error,no-name-in-module,unused-import
 import fnmatch
 import functools
 import gzip
@@ -290,6 +289,7 @@ import salt.utils.thin
 import salt.pillar
 import salt.exceptions
 import salt.fileclient
+from salt.utils.versions import StrictVersion as _StrictVersion
 
 from salt.state import HighState
 import salt.client.ssh.state
@@ -678,7 +678,7 @@ class _client_version(object):
     Enforce a specific Docker client version
     '''
     def __init__(self, version):
-        self.version = distutils.version.StrictVersion(version)
+        self.version = _StrictVersion(version)
 
     def __call__(self, func):
         def wrapper(*args, **kwargs):
@@ -687,7 +687,7 @@ class _client_version(object):
             '''
             _get_client()
             current_version = '.'.join(map(str, _get_docker_py_versioninfo()))
-            if distutils.version.StrictVersion(current_version) < self.version:
+            if _StrictVersion(current_version) < self.version:
                 error_message = (
                     'This function requires a Docker Client version of at least '
                     '{0}. Version in use is {1}.'
@@ -888,8 +888,8 @@ def _get_exec_driver():
         if 'VersionInfo' in _version:
             if _version['VersionInfo'] >= (1, 3, 0):
                 __context__[contextkey] = 'docker-exec'
-        elif distutils.version.LooseVersion(version()['Version']) \
-                >= distutils.version.LooseVersion('1.3.0'):
+        elif salt.utils.versions.LooseVersion(version()['Version']) \
+                >= salt.utils.versions.LooseVersion('1.3.0'):
             # LooseVersion is less preferable, but OK as a fallback.
             __context__[contextkey] = 'docker-exec'
 

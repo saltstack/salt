@@ -27,6 +27,9 @@ class NetapiClientTest(TestCase):
         opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, 'master'))
         self.netapi = salt.netapi.NetapiClient(opts)
 
+    def tearDown(self):
+        del self.netapi
+
     def test_local(self):
         low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping'}
         low.update(self.eauth_creds)

@@ -2,16 +2,16 @@
 
 # Import python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 
 # Import Salt libs
-from salt.exceptions import SaltInvocationError
 import salt.utils.boto
 import salt.utils.boto3
+from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
 # pylint: disable=import-error

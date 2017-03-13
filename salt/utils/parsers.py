@@ -2633,7 +2633,7 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
             raise ValueError(emsg)
 
         if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.minion]:  # minion check
-            from raet.lane.yarding import Yard
+            from raet.lane.yarding import Yard  # pylint: disable=3rd-party-module-not-gated
             ha, dirpath = Yard.computeHa(dirpath, lanename, yardname)  # pylint: disable=invalid-name
             if (os.path.exists(ha) and
                     not os.path.isfile(ha) and

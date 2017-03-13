@@ -84,11 +84,17 @@ class BaseZMQReqCase(TestCase):
             return
         # Attempting to kill the children hangs the test suite.
         # Let the test suite handle this instead.
+        cls.process_manager.stop_restarting()
         cls.process_manager.kill_children()
         time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
         cls.io_loop.stop()
         cls.server_channel.close()
         del cls.server_channel
+        del cls.io_loop
+        del cls.process_manager
+        del cls.server_thread
+        del cls.master_opts
+        del cls.minion_opts
 
     @classmethod
     def _handle_payload(cls, payload):
@@ -105,6 +111,9 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     def setUp(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts, crypt='clear')
 
+    def tearDown(self):
+        del self.channel
+
     @classmethod
     @tornado.gen.coroutine
     def _handle_payload(cls, payload):
@@ -119,6 +128,9 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
 class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     def setUp(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts)
+
+    def tearDown(self):
+        del self.channel
 
     @classmethod
     @tornado.gen.coroutine
@@ -185,17 +197,26 @@ class BaseZMQPubCase(AsyncTestCase):
         cls.server_thread.start()
 
     @classmethod
+    def tearDownClass(cls):
+        cls.process_manager.kill_children()
+        cls.process_manager.stop_restarting()
+        time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
+        cls.req_server_channel.close()
+        cls.server_channel.close()
+        cls._server_io_loop.stop()
+        del cls.server_channel
+        del cls._server_io_loop
+        del cls.process_manager
+        del cls.server_thread
+        del cls.master_opts
+        del cls.minion_opts
+
+    @classmethod
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
         return payload, {'fun': 'send_clear'}
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.process_manager.kill_children()
-        cls._server_io_loop.stop()
-        cls.req_server_channel.close()
 
     def setUp(self):
         super(BaseZMQPubCase, self).setUp()
@@ -207,6 +228,7 @@ class BaseZMQPubCase(AsyncTestCase):
         for k, v in six.iteritems(self.io_loop._handlers):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
+        del self._start_handlers
         if len(failures) > 0:
             raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
 

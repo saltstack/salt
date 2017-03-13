@@ -137,7 +137,7 @@ if salt.utils.is_windows():
         import msgpack
     except ImportError:
         import msgpack_pure as msgpack
-    from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
+    from salt.utils.versions import LooseVersion
     # pylint: enable=import-error,unused-import
 # pylint: enable=invalid-name
 

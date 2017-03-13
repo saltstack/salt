@@ -879,7 +879,7 @@ def netdev():
         '''
         ret = {}
         ##NOTE: we cannot use hwaddr_interfaces here, so we grab both ip4 and ip6
-        for dev in __grains__['ip4_interfaces'].keys() + __grains__['ip6_interfaces'].keys():
+        for dev in __grains__['ip4_interfaces'].keys() + __grains__['ip6_interfaces']:
             # fetch device info
             netstat_ipv4 = __salt__['cmd.run']('netstat -i -I {dev} -n -f inet'.format(dev=dev)).splitlines()
             netstat_ipv6 = __salt__['cmd.run']('netstat -i -I {dev} -n -f inet6'.format(dev=dev)).splitlines()

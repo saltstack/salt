@@ -9,7 +9,6 @@ import copy
 import logging
 import os
 import re
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=no-name-in-module
 
 # Import salt libs
 import salt.utils
@@ -17,6 +16,7 @@ import salt.utils.files
 import salt.utils.itertools
 import salt.utils.url
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext import six
 
 log = logging.getLogger(__name__)

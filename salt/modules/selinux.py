@@ -89,8 +89,11 @@ def getenforce():
 
         salt '*' selinux.getenforce
     '''
+    _selinux_fs_path = selinux_fs_path()
+    if _selinux_fs_path is None:
+        return 'Disabled'
     try:
-        enforce = os.path.join(selinux_fs_path(), 'enforce')
+        enforce = os.path.join(_selinux_fs_path, 'enforce')
         with salt.utils.fopen(enforce, 'r') as _fp:
             if _fp.readline().strip() == '0':
                 return 'Permissive'
@@ -514,7 +517,7 @@ def fcontext_apply_policy(name, recursive=False):
             for key, value in six.iteritems(old):
                 if new.get(key) == value:
                     intersect.update({key: value})
-            for key in intersect.keys():
+            for key in intersect:
                 del old[key]
                 del new[key]
             ret['changes'].update({filespec: {'old': old, 'new': new}})

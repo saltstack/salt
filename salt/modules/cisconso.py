@@ -149,7 +149,7 @@ def _proxy_cmd(command, *args, **kwargs):
     proxy_cmd = '.'.join([proxy_prefix, command])
     if proxy_cmd not in __proxy__:
         return False
-    for k in kwargs.keys():
+    for k in kwargs:
         if k.startswith('__pub_'):
             kwargs.pop(k)
     return __proxy__[proxy_cmd](*args, **kwargs)
