@@ -26,8 +26,9 @@ except ImportError:
 p = Popen('docker ps -a', shell=True, stdout=PIPE, stderr=PIPE)
 output = p.communicate()[0]
 
+print(p.returncode)
 
-if (p.returncode != '1'):
+if (p.returncode != 0):
     NO_DOCKERPY = True
 
 if not salt.utils.which('docker'):
