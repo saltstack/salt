@@ -12,7 +12,7 @@
 #
 #          BUGS: https://github.com/saltstack/salt-windows-bootstrap/issues
 #
-#     COPYRIGHT: (c) 2012-2015 by the SaltStack Team, see AUTHORS.rst for more
+#     COPYRIGHT: (c) 2012-2017 by the SaltStack Team, see AUTHORS.rst for more
 #                details.
 #
 #       LICENSE: Apache 2.0
@@ -164,18 +164,18 @@ If (Test-Path "$($ini[$bitPaths]['VCforPythonDir'])\vcvarsall.bat") {
 # Install Python
 #------------------------------------------------------------------------------
 Write-Output " - Checking for Python 2.7 installation . . ."
-If (Test-Path "$($ini['Settings']['PythonDir'])\python.exe") {
+If (Test-Path "$($ini['Settings']['Python2Dir'])\python.exe") {
     # Found Python2.7, do nothing
     Write-Output " - Python 2.7 Found . . ."
 } Else {
-    Write-Output " - Downloading $($ini[$bitPrograms]['Python']) . . ."
-    $file = "$($ini[$bitPrograms]['Python'])"
+    Write-Output " - Downloading $($ini[$bitPrograms]['Python2']) . . ."
+    $file = "$($ini[$bitPrograms]['Python2'])"
     $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
     $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
     DownloadFileWithProgress $url $file
 
-    Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python']) . . ."
-    $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['PythonDir'])" -Wait -NoNewWindow -PassThru
+    Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python2']) . . ."
+    $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['Python2Dir'])" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -183,8 +183,8 @@ If (Test-Path "$($ini['Settings']['PythonDir'])\python.exe") {
 #------------------------------------------------------------------------------
 Write-Output " - Updating Environment Variables . . ."
 $Path = (Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH).Path
-If (!($Path.ToLower().Contains("$($ini['Settings']['ScriptsDir'])".ToLower()))) {
-    $newPath  = "$($ini['Settings']['ScriptsDir']);$Path"
+If (!($Path.ToLower().Contains("$($ini['Settings']['Scripts2Dir'])".ToLower()))) {
+    $newPath  = "$($ini['Settings']['Scripts2Dir']);$Path"
     Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $newPath
     $env:Path = $newPath
 }
@@ -197,17 +197,17 @@ Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Updating PIP and SetupTools . . ."
 Write-Output " ----------------------------------------------------------------"
 if ( ! [bool]$Env:SALT_PIP_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "$($ini['Settings']['PythonDir'])\python.exe" "-m pip --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
+    Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe" "-m pip --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
 } else {
     $p = New-Item $Env:SALT_PIP_LOCAL_CACHE -ItemType Directory -Force # Ensure directory exists
     if ( (Get-ChildItem $Env:SALT_PIP_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
         # folder empty
         Write-Output "    pip download from req_pip.txt into empty local cache SALT_REQ_PIP $Env:SALT_PIP_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "$($ini['Settings']['PythonDir'])\python.exe"  "-m pip download --dest $Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip download"
+        Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe"  "-m pip download --dest $Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip download"
     }
     Write-Output "    reading from local pip cache $Env:SALT_PIP_LOCAL_CACHE"
     Write-Output "    If a (new) ressource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "$($ini['Settings']['PythonDir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip install"
+  Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip install"
 }
 
 #==============================================================================
@@ -218,16 +218,16 @@ Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Installing pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
 if ( ! [bool]$Env:SALT_REQ_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "$($ini['Settings']['ScriptsDir'])\pip.exe"  "--no-cache-dir install -r $($script_path)\req.txt" "pip install"
+    Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\pip.exe"  "--no-cache-dir install -r $($script_path)\req_2.txt" "pip install"
 } else {
     if ( (Get-ChildItem $Env:SALT_REQ_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
         # folder empty
-        Write-Output "    pip download from req.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "$($ini['Settings']['PythonDir'])\python.exe"  "-m pip download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip download"
+        Write-Output "    pip download from req_2.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
+        Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe"  "-m pip download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req_2.txt" "pip download"
     }
     Write-Output "    reading from local pip cache $Env:SALT_REQ_LOCAL_CACHE"
     Write-Output "    If a (new) ressource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "$($ini['Settings']['PythonDir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip install"
+  Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req_2.txt" "pip install"
 }
 
 #==============================================================================
@@ -238,13 +238,13 @@ Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Installing PyYAML . . ."
 Write-Output " ----------------------------------------------------------------"
 # Download
-$file = "$($ini[$bitPrograms]['PyYAML'])"
+$file = "$($ini[$bitPrograms]['PyYAML2'])"
 $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
 $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
 DownloadFileWithProgress $url $file
 
 # Install
-Start_Process_and_test_exitcode "$($ini['Settings']['ScriptsDir'])\easy_install.exe" "-Z $file " "easy_install PyYAML"
+Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\easy_install.exe" "-Z $file " "easy_install PyYAML"
 
 #==============================================================================
 # Install PyCrypto from wheel file
@@ -253,13 +253,13 @@ Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Installing PyCrypto . . ."
 Write-Output " ----------------------------------------------------------------"
 # Download
-$file = "$($ini[$bitPrograms]['PyCrypto'])"
+$file = "$($ini[$bitPrograms]['PyCrypto2'])"
 $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
 $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
 DownloadFileWithProgress $url $file
 
 # Install
-Start_Process_and_test_exitcode  "$($ini['Settings']['ScriptsDir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyCrypto"
+Start_Process_and_test_exitcode  "$($ini['Settings']['Scripts2Dir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyCrypto"
 
 #==============================================================================
 # Copy DLLs to Python Directory
@@ -275,7 +275,7 @@ ForEach($key in $ini[$bitDLLs].Keys) {
         $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
         $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
         DownloadFileWithProgress $url $file
-        Copy-Item $file  -destination $($ini['Settings']['PythonDir'])
+        Copy-Item $file  -destination $($ini['Settings']['Python2Dir'])
     }
 }
 

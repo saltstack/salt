@@ -145,8 +145,8 @@ def _parse_requirements_file(requirements_file):
             if IS_WINDOWS_PLATFORM:
                 if 'libcloud' in line:
                     continue
-                if 'pycrypto' in line.lower():
-                    # On windows we install PyCrypto using python wheels
+                if 'pycrypto' in line.lower() and not IS_PY3:
+                    # On Python 2 in Windows we install PyCrypto using python wheels
                     continue
                 if 'm2crypto' in line.lower() and __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
                     # In Windows, we're installing M2CryptoWin{32,64} which comes
@@ -314,15 +314,17 @@ if WITH_SETUPTOOLS:
                     self.run_command('install-m2crypto-windows')
                     self.distribution.salt_installing_m2crypto_windows = None
 
-                # Install PyCrypto
-                self.distribution.salt_installing_pycrypto_windows = True
-                self.run_command('install-pycrypto-windows')
-                self.distribution.salt_installing_pycrypto_windows = None
+                if not IS_PY3:
 
-                # Install PyYAML
-                self.distribution.salt_installing_pyyaml_windows = True
-                self.run_command('install-pyyaml-windows')
-                self.distribution.salt_installing_pyyaml_windows = None
+                    # Install PyCrypto
+                    self.distribution.salt_installing_pycrypto_windows = True
+                    self.run_command('install-pycrypto-windows')
+                    self.distribution.salt_installing_pycrypto_windows = None
+
+                    # Install PyYAML
+                    self.distribution.salt_installing_pyyaml_windows = True
+                    self.run_command('install-pyyaml-windows')
+                    self.distribution.salt_installing_pyyaml_windows = None
 
                 # Download the required DLLs
                 self.distribution.salt_download_windows_dlls = True
@@ -759,14 +761,18 @@ class Install(install):
                 self.distribution.salt_installing_m2crypto_windows = True
                 self.run_command('install-m2crypto-windows')
                 self.distribution.salt_installing_m2crypto_windows = None
-            # Install PyCrypto
-            self.distribution.salt_installing_pycrypto_windows = True
-            self.run_command('install-pycrypto-windows')
-            self.distribution.salt_installing_pycrypto_windows = None
-            # Install PyYAML
-            self.distribution.salt_installing_pyyaml_windows = True
-            self.run_command('install-pyyaml-windows')
-            self.distribution.salt_installing_pyyaml_windows = None
+
+            if not IS_PY3:
+                # Install PyCrypto
+                self.distribution.salt_installing_pycrypto_windows = True
+                self.run_command('install-pycrypto-windows')
+                self.distribution.salt_installing_pycrypto_windows = None
+
+                # Install PyYAML
+                self.distribution.salt_installing_pyyaml_windows = True
+                self.run_command('install-pyyaml-windows')
+                self.distribution.salt_installing_pyyaml_windows = None
+
             # Download the required DLLs
             self.distribution.salt_download_windows_dlls = True
             self.run_command('download-windows-dlls')
@@ -901,9 +907,12 @@ class SaltDistribution(distutils.dist.Distribution):
             self.cmdclass.update({'sdist': CloudSdist,
                                   'install_lib': InstallLib})
         if IS_WINDOWS_PLATFORM:
-            self.cmdclass.update({'install-pycrypto-windows': InstallPyCryptoWindowsWheel,
-                                  'install-pyyaml-windows': InstallCompiledPyYaml,
-                                  'download-windows-dlls': DownloadWindowsDlls})
+            if IS_PY3:
+                self.cmdclass.update({'download-windows-dlls': DownloadWindowsDlls})
+            else:
+                self.cmdclass.update({'install-pycrypto-windows': InstallPyCryptoWindowsWheel,
+                                      'install-pyyaml-windows': InstallCompiledPyYaml,
+                                      'download-windows-dlls': DownloadWindowsDlls})
             if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
                 self.cmdclass.update({'install-m2crypto-windows': InstallM2CryptoWindows})
 

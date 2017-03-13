@@ -32,38 +32,80 @@ if %errorLevel%==0 (
 @echo =====================================================================
 @echo.
 
+:: Get Passed Parameters
+@echo %0 :: Get Passed Parameters...
+@echo ---------------------------------------------------------------------
+
+set "Version="
+set "Python="
+:: First Parameter
+if not "%~1"=="" (
+    echo.%1 | FIND /I "=" > nul && (
+        :: Named Parameter
+        echo Named Parameter
+        set "%~1"
+    ) || (
+        :: Positional Parameter
+        echo Positional Parameter
+        set "Version=%~1"
+    )
+)
+
+:: Second Parameter
+if not "%~2"=="" (
+    echo.%2 | FIND /I "=" > nul && (
+        :: Named Parameter
+        set "%~2"
+    ) || (
+        :: Positional Parameter
+        set "Python=%~2"
+    )
+)
+
+:: If Version not defined, Get the version from Git
+if "%Version%"=="" (
+    for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
+)
+
+:: If Python not defined, Assume Python 2
+if "%Python%"=="" (
+    set Python=2
+)
+
+:: Verify valid Python value (2 or 3)
+set "x="
+for /f "delims=23" %%i in ("%Python%") do set x=%%i
+if Defined x (
+    echo Invalid Python Version specified. Must be 2 or 3. Passed %Python%
+    goto eof
+)
+
+@echo =====================================================================
+@echo.
 
 :: Define Variables
 @echo %0 :: Defining Variables...
 @echo ---------------------------------------------------------------------
-Set "PyDir=C:\Python27"
+if %Python%==2 (
+    Set "PyDir=C:\Python27"
+) else (
+    Set "PyDir=C:\Program Files\Python35"
+)
+Set "PATH=%PATH%;%PyDir%;%PyDir%\Scripts"
+
 Set "CurDir=%~dp0"
-Set PATH=%PATH%;C:\Python27;C:\Python27\Scripts
 for /f "delims=" %%a in ('git rev-parse --show-toplevel') do @set "SrcDir=%%a"
 
-:: Get the version from git if not passed
-if [%1]==[] (
-    for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
-    echo ... Version from git describe == %Version%
-) else (
-    set "Version=%~1"
-)
 @echo =====================================================================
 @echo.
-
-:: Version must be set
-if [%Version%]==[] (
-    echo Failure: Version must be set
-    goto eof
-)
 
 :: Create Build Environment
 @echo %0 :: Create the Build Environment...
 @echo ---------------------------------------------------------------------
-PowerShell.exe -ExecutionPolicy RemoteSigned -File "%CurDir%build_env.ps1" -Silent
+PowerShell.exe -ExecutionPolicy RemoteSigned -File "%CurDir%build_env_%Python%.ps1" -Silent
 
 if not %errorLevel%==0 (
-    echo "%CurDir%build_env.ps1" returned errorlevel %errorLevel%. Aborting %0
+    echo "%CurDir%build_env_%Python%.ps1" returned errorlevel %errorLevel%. Aborting %0
     goto eof
 )
 @echo.
@@ -80,7 +122,7 @@ if not %errorLevel%==0 (
 :: Build the Salt Package
 @echo %0 :: Build the Salt Package...
 @echo ---------------------------------------------------------------------
-call "%CurDir%build_pkg.bat" "%Version%"
+call "%CurDir%build_pkg.bat" "%Version%" %Python%
 @echo.
 
 :eof
