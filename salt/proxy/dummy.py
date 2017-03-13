@@ -16,13 +16,9 @@ __proxyenabled__ = ['dummy']
 GRAINS_CACHE = {}
 DETAILS = {}
 
-DETAILS['services'] = {'apache':'running',
-                       'ntp':'running',
-                       'samba':'stopped'}
-DETAILS['packages'] = {'coreutils':'1.0',
-                       'apache':'2.4',
-                       'tinc':'1.4',
-                       'redbull':'999.99'}
+DETAILS['services'] = {'apache':'running', 'ntp':'running', 'samba':'stopped'}
+DETAILS['packages'] = {'coreutils':'1.0', 'apache':'2.4', 'tinc':'1.4', 'redbull':'999.99'}
+
 FILENAME = os.tmpnam()
 
 # Want logging!
@@ -76,10 +72,11 @@ def grains():
     '''
     Make up some grains
     '''
-    DETAILS['grains_cache'] = { 'dummy_grain_1': 'one',
-                                'dummy_grain_2': 'two',
-                                'dummy_grain_3': 'three',
-    }
+    DETAILS = _load_state()
+    if 'grains_cache' not in DETAILS:
+        DETAILS['grains_cache'] = {'dummy_grain_1': 'one', 'dummy_grain_2': 'two', 'dummy_grain_3': 'three'}
+        _save_state(DETAILS)
+
     return DETAILS['grains_cache']
 
 
