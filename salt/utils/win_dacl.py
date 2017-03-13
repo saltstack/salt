@@ -1005,7 +1005,7 @@ def dacl(obj_name=None, obj_type='file'):
                     None, None, self.dacl, None)
             except pywintypes.error as exc:
                 raise CommandExecutionError(
-                    'Failed to set permissions: {0}'.format(exc[2]))
+                    'Failed to set permissions: {0}'.format(exc.strerror))
 
             return True
 
@@ -1161,7 +1161,7 @@ def get_owner(obj_name):
             owner_sid = 'S-1-1-0'
         else:
             raise CommandExecutionError(
-                'Failed to set permissions: {0}'.format(exc[2]))
+                'Failed to set permissions: {0}'.format(exc.strerror))
 
     return get_name(win32security.ConvertSidToStringSid(owner_sid))
 
@@ -1201,7 +1201,7 @@ def get_primary_group(obj_name):
             primary_group_gid = 'S-1-1-0'
         else:
             raise CommandExecutionError(
-                'Failed to set permissions: {0}'.format(exc[2]))
+                'Failed to set permissions: {0}'.format(exc.strerror))
 
     return get_name(win32security.ConvertSidToStringSid(primary_group_gid))
 
@@ -1265,9 +1265,9 @@ def set_owner(obj_name, principal, obj_type='file'):
             sid,
             None, None, None)
     except pywintypes.error as exc:
-        log.debug('Failed to make {0} the owner: {1}'.format(principal, exc[2]))
+        log.debug('Failed to make {0} the owner: {1}'.format(principal, exc.strerror))
         raise CommandExecutionError(
-            'Failed to set owner: {0}'.format(exc[2]))
+            'Failed to set owner: {0}'.format(exc.strerror))
 
     return True
 
@@ -1340,9 +1340,9 @@ def set_primary_group(obj_name, principal, obj_type='file'):
     except pywintypes.error as exc:
         log.debug(
             'Failed to make {0} the primary group: {1}'
-            ''.format(principal, exc[2]))
+            ''.format(principal, exc.strerror))
         raise CommandExecutionError(
-            'Failed to set primary group: {0}'.format(exc[2]))
+            'Failed to set primary group: {0}'.format(exc.strerror))
 
     return True
 
