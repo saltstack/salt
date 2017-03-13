@@ -775,6 +775,8 @@ def _get_client(timeout=None):
         - docker.url: URL to the docker service
         - docker.version: API version to use (default: "auto")
     '''
+    # In some edge cases, the client instance is missing attributes. Don't use
+    # the cached client in those cases.
     if 'docker.client' not in __context__ \
             or not hasattr(__context__['docker.client'], 'timeout'):
         client_kwargs = {}
