@@ -95,6 +95,25 @@ def _filter_dict(input_dict, search_key, search_value):
     return output_dict
 
 
+def _explicit_close(napalm_device):
+    '''
+    Will explicitely close the config session with the network device,
+    when running in a now-always-alive proxy minion or regular minion.
+    This helper must be used in configuration-related functions,
+    as the session is preserved and not closed before making any changes.
+    '''
+    if salt.utils.napalm.not_always_alive(__opts__):
+        # force closing the configuration session
+        # when running in a non-always-alive proxy
+        # or regular minion
+        try:
+            napalm_device['DRIVER'].close()
+        except Exception as err:
+            log.error('Unable to close the temp connection with the device:')
+            log.error(err)
+            log.error('Please report.')
+
+
 def _config_logic(napalm_device,
                   loaded_result,
                   test=False,
@@ -131,7 +150,6 @@ def _config_logic(napalm_device,
         loaded_result.pop('out', '')  # not needed
 
     _loaded_res = loaded_result.get('result', False)
-
     if not _loaded_res or test:
         # if unable to load the config (errors / warnings)
         # or in testing mode,
@@ -147,11 +165,13 @@ def _config_logic(napalm_device,
             loaded_result['result'] = False
             # make sure it notifies
             # that something went wrong
+            _explicit_close(napalm_device)
             return loaded_result
 
         loaded_result['comment'] += 'Configuration discarded.'
         # loaded_result['result'] = False not necessary
         # as the result can be true when test=True
+        _explicit_close(napalm_device)
         return loaded_result
 
     if not test and commit_config:
@@ -181,10 +201,11 @@ def _config_logic(napalm_device,
                                                                   else 'Unable to discard config.'
                 loaded_result['result'] = False
                 # notify if anything goes wrong
+                _explicit_close(napalm_device)
                 return loaded_result
             loaded_result['already_configured'] = True
             loaded_result['comment'] = 'Already configured.'
-
+    _explicit_close(napalm_device)
     return loaded_result
 
 
@@ -841,6 +862,15 @@ def load_config(filename=None,
     fun = 'load_merge_candidate'
     if replace:
         fun = 'load_replace_candidate'
+    if salt.utils.napalm.not_always_alive(__opts__):
+        # if a not-always-alive proxy
+        # or regular minion
+        # do not close the connection after loading the config
+        # this will be handled in _config_logic
+        # after running the other features:
+        # compare_config, discard / commit
+        # which have to be over the same session
+        napalm_device['CLOSE'] = False  # pylint: disable=undefined-variable
     _loaded = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         fun,
@@ -1207,6 +1237,15 @@ def load_template(template_name,
             fun = 'load_merge_candidate'
             if replace:  # replace requested
                 fun = 'load_replace_candidate'
+            if salt.utils.napalm.not_always_alive(__opts__):
+                # if a not-always-alive proxy
+                # or regular minion
+                # do not close the connection after loading the config
+                # this will be handled in _config_logic
+                # after running the other features:
+                # compare_config, discard / commit
+                # which have to be over the same session
+                napalm_device['CLOSE'] = False  # pylint: disable=undefined-variable
             _loaded = salt.utils.napalm.call(
                 napalm_device,  # pylint: disable=undefined-variable
                 fun,
@@ -1228,12 +1267,21 @@ def load_template(template_name,
                 'opts': __opts__  # inject opts content
             }
         )
+        if salt.utils.napalm.not_always_alive(__opts__):
+            # if a not-always-alive proxy
+            # or regular minion
+            # do not close the connection after loading the config
+            # this will be handled in _config_logic
+            # after running the other features:
+            # compare_config, discard / commit
+            # which have to be over the same session
+            # so we'll set the CLOSE global explicitely as False
+            napalm_device['CLOSE'] = False  # pylint: disable=undefined-variable
         _loaded = salt.utils.napalm.call(
             napalm_device,  # pylint: disable=undefined-variable
             'load_template',
             **load_templates_params
         )
-
     return _config_logic(napalm_device,  # pylint: disable=undefined-variable
                          _loaded,
                          test=test,
