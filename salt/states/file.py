@@ -372,12 +372,8 @@ def _is_valid_relpath(
     # Check that the relative path's depth does not exceed maxdepth
     if maxdepth is not None:
         # Since paths are all master, just use POSIX separator
-        relpieces = relpath.split('/')
-        # Handle empty directories (include_empty==true) by removing the
-        # the last piece if it is an empty string
-        if not relpieces[-1]:
-            relpieces.pop()
-        if len(relpieces) > maxdepth + 1:
+        path_depth = relpath.strip('/').count('/')
+        if path_depth > maxdepth:
             return False
 
     return True
