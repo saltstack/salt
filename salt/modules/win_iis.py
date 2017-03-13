@@ -20,6 +20,7 @@ import decimal
 # Import salt libs
 from salt.ext.six.moves import range
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.ext import six
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -1777,7 +1778,7 @@ def list_worker_processes(apppool):
 
 
 def get_webapp_settings(name, site, settings):
-    '''
+    r'''
     Get the value of the setting for the IIS web application.
     .. note::
         Params are case sensitive.
@@ -1808,15 +1809,15 @@ def get_webapp_settings(name, site, settings):
     for setting in settings:
         if setting in availableSettings:
             if setting == "userName" or setting == "password":
-                pscmd.append(" $Property = Get-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
-                pscmd.append(" -Name \"{0}\" -ErrorAction Stop | select Value;".format(setting))
-                pscmd.append(" $Property = $Property | Select-Object -ExpandProperty Value;")
-                pscmd.append(" $Settings['{0}'] = [String] $Property;".format(setting))
-                pscmd.append(' $Property = $Null;')
+                pscmd.append(r" $Property = Get-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
+                pscmd.append(r" -Name \"{0}\" -ErrorAction Stop | select Value;".format(setting))
+                pscmd.append(r" $Property = $Property | Select-Object -ExpandProperty Value;")
+                pscmd.append(r" $Settings['{0}'] = [String] $Property;".format(setting))
+                pscmd.append(r' $Property = $Null;')
 
             if setting == "physicalPath" or setting == "applicationPool":
-                pscmd.append(" $Property = (get-webapplication {0}).{1};".format(name, setting))
-                pscmd.append(" $Settings['{0}'] = [String] $Property;".format(setting))
+                pscmd.append(r" $Property = (get-webapplication {0}).{1};".format(name, setting))
+                pscmd.append(r" $Settings['{0}'] = [String] $Property;".format(setting))
                 pscmd.append(r' $Property = $Null;')
         else:
             availSetStr = ', '.join(availableSettings)
@@ -1838,7 +1839,7 @@ def get_webapp_settings(name, site, settings):
     except ValueError:
         log.error('Unable to parse return data as Json.')
 
-    if None in ret.viewvalues():
+    if None in six.viewvalues(ret):
         message = 'Some values are empty - please validate site and web application names. Some commands are case sensitive'
         raise SaltInvocationError(message)
 
@@ -1846,7 +1847,7 @@ def get_webapp_settings(name, site, settings):
 
 
 def set_webapp_settings(name, site, settings):
-    '''
+    r'''
     Configure an IIS application.
     .. note::
         This function only configures existing app.
@@ -1867,7 +1868,7 @@ def set_webapp_settings(name, site, settings):
     '''
     pscmd = list()
     current_apps = list_apps(site)
-    current_sites= list_sites()
+    current_sites = list_sites()
     availableSettings = ('physicalPath', 'applicationPool', 'userName', 'password')
 
     # Validate params
@@ -1911,11 +1912,11 @@ def set_webapp_settings(name, site, settings):
 
         # Append relevant update command per setting key
         if setting == "userName" or setting == "password":
-            pscmd.append(" Set-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
-            pscmd.append(" -Name \"{0}\" -Value {1};".format(setting, value))
+            pscmd.append(r" Set-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
+            pscmd.append(r" -Name \"{0}\" -Value {1};".format(setting, value))
 
         if setting == "physicalPath" or setting == "applicationPool":
-            pscmd.append(" Set-ItemProperty \"IIS:\Sites\{0}\{1}\" -Name {2} -Value {3};".format(site, name, setting, value))
+            pscmd.append(r" Set-ItemProperty \"IIS:\Sites\{0}\{1}\" -Name {2} -Value {3};".format(site, name, setting, value))
             if setting == "physicalPath":
                 if not os.path.isdir(value):
                     log.error('Path is not present: {0}'.format(setting))
