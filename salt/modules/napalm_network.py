@@ -870,7 +870,7 @@ def load_config(filename=None,
         # after running the other features:
         # compare_config, discard / commit
         # which have to be over the same session
-        napalm_device['CLOSE'] = False
+        napalm_device['CLOSE'] = False  # pylint: disable=undefined-variable
     _loaded = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         fun,
@@ -1245,7 +1245,7 @@ def load_template(template_name,
                 # after running the other features:
                 # compare_config, discard / commit
                 # which have to be over the same session
-                napalm_device['CLOSE'] = False
+                napalm_device['CLOSE'] = False  # pylint: disable=undefined-variable
             _loaded = salt.utils.napalm.call(
                 napalm_device,  # pylint: disable=undefined-variable
                 fun,
@@ -1276,7 +1276,7 @@ def load_template(template_name,
             # compare_config, discard / commit
             # which have to be over the same session
             # so we'll set the CLOSE global explicitely as False
-            napalm_device['CLOSE'] = False
+            napalm_device['CLOSE'] = False  # pylint: disable=undefined-variable
         _loaded = salt.utils.napalm.call(
             napalm_device,  # pylint: disable=undefined-variable
             'load_template',
