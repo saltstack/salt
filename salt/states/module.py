@@ -248,13 +248,24 @@ def run(**kwargs):
     }
 
     functions = [func for func in kwargs.keys() if '.' in func]
+    missing = []
+    tests = []
     for func in functions:
         if func not in __salt__:
-            ret['comment'] = "Module function '{0}' is not available".format(func)
-            ret['result'] = False
+            missing.append(func)
         elif __opts__['test']:
-            ret['comment'] = "Module function '{0}' is set to execute".format(func)
-            ret['result'] = True
+            tests.append(func)
+
+    if tests or missing:
+        ret['comment'] = ' '.join([
+            missing and "Unavailable function{plr}: "
+                        "{func}.".format(plr=(len(missing) > 1 or ''),
+                                         func=(', '.join(missing) or '')) or '',
+            tests and "Function{plr} {func} to be "
+                      "executed.".format(plr=(len(tests) > 1 or ''),
+                                         func=(', '.join(tests)) or '') or '',
+        ]).strip()
+        ret['result'] = not (missing or not tests)
 
     if ret['result'] is None:
         ret['result'] = True
