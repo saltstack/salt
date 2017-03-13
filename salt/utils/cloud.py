@@ -1736,8 +1736,37 @@ def run_inline_script(host,
     return True
 
 
+def filter_event(tag, data, defaults):
+    '''
+    Accept a tag, a dict and a list of default keys to return from the dict, and
+    check them against the cloud configuration for that tag
+    '''
+    ret = {}
+    keys = []
+    use_defaults = True
+
+    for ktag in __opts__.get('filter_events', {}):
+        if tag != ktag:
+            continue
+        keys = __opts__['filter_events'][ktag]['keys']
+        use_defaults = __opts__['filter_events'][ktag].get('use_defaults', True)
+
+    if use_defaults is False:
+        defaults = []
+
+    defaults = list(set(defaults + keys))
+
+    for key in defaults:
+        if key in data:
+            ret[key] = data[key]
+
+    return ret
+
+
 def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
-    # Fire deploy action
+    '''
+    Fire deploy action
+    '''
     if sock_dir is None:
         salt.utils.warn_until(
             'Oxygen',

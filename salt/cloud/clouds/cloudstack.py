@@ -264,11 +264,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         transport=__opts__['transport']
     )
 
@@ -296,13 +292,21 @@ def create(vm_):
     if get_project(conn, vm_) is not False:
         kwargs['project'] = get_project(conn, vm_)
 
+    event_data = kwargs.copy()
+    event_data['image'] = kwargs['image'].name 
+    event_data['size'] = kwargs['size'].name 
+
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': {'name': kwargs['name'],
-                    'image': kwargs['image'].name,
-                    'size': kwargs['size'].name}},
+        args={
+            'kwargs': __utils__['cloud.filter_event'](
+                'requesting',
+                event_data,
+                ['name', 'profile', 'provider', 'driver', 'image', 'size'],
+            ),
+        },
         transport=__opts__['transport']
     )
 
@@ -398,11 +402,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         transport=__opts__['transport']
     )
 
