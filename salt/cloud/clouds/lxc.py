@@ -436,17 +436,18 @@ def create(vm_, call=None):
         'lxc_profile',
         vm_.get('container_profile', None))
 
+    event_data = vm_.copy()
+    event_data['profile'] = profile
+
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': profile,
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', event_data, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
-        transport=__opts__['transport'])
+        transport=__opts__['transport']
+    )
+
     ret = {'name': vm_['name'], 'changes': {}, 'result': True, 'comment': ''}
     if 'pub_key' not in vm_ and 'priv_key' not in vm_:
         log.debug('Generating minion keys for {0}'.format(vm_['name']))
@@ -457,6 +458,16 @@ def create(vm_, call=None):
     kwarg = copy.deepcopy(vm_)
     kwarg['host'] = prov['target']
     kwarg['profile'] = profile
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'requesting instance',
+        'salt/cloud/{0}/requesting'.format(name),
+        args=__utils__['cloud.filter_event']('requesting', vm_, ['name', 'profile', 'provider', 'driver']),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
     cret = _runner().cmd('lxc.cloud_init', [vm_['name']], kwarg=kwarg)
     ret['runner_return'] = cret
     ret['result'] = cret['result']
@@ -480,11 +491,7 @@ def create(vm_, call=None):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
