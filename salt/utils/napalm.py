@@ -19,6 +19,7 @@ from __future__ import absolute_import
 
 import traceback
 import logging
+from functools import wraps
 log = logging.getLogger(__file__)
 
 import salt.utils
@@ -249,6 +250,7 @@ def proxy_napalm_wrap(func):
     :param func:
     :return:
     '''
+    @wraps(func)
     def func_wrapper(*args, **kwargs):
         wrapped_global_namespace = func.__globals__
         # get __opts__ and __proxy__ from func_globals
