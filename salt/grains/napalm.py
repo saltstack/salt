@@ -321,7 +321,7 @@ def host(proxy=None):
     provides the physical hostname of the network device,
     as it would be on an ordinary minion server.
     When running in a proxy minion, ``host`` points to the
-    value configured in the pillar: :mod:`NAPALM proxy module <salt.proxies.napalm>`.
+    value configured in the pillar: :mod:`NAPALM proxy module <salt.proxy.napalm>`.
 
     .. note::
 
