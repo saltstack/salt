@@ -1066,11 +1066,13 @@ class ZeroMQSocketMonitor(object):
 
     def start_io_loop(self, io_loop):
         log.trace("Event monitor start!")
+        log.info("Event monitor start!")
         self._monitor_stream = zmq.eventloop.zmqstream.ZMQStream(self._monitor_socket, io_loop=io_loop)
         self._monitor_stream.on_recv(self.monitor_callback)
 
     def start_poll(self):
         log.trace("Event monitor start!")
+        log.info("Event monitor start!")
         while self._monitor_socket is not None and self._monitor_socket.poll():
             msg = self._monitor_socket.recv_multipart()
             self.monitor_callback(msg)

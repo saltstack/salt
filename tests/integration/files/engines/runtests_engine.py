@@ -93,14 +93,19 @@ class PyTestEngine(object):
     @gen.coroutine
     def listen_to_minion_connected_event(self):
         log.info('Listening for minion connected event...')
+        log.info('Hi from here...')
         minion_start_event_match = 'salt/minion/{0}/start'.format(self.opts['id'])
+        log.info(minion_start_event_match)
         event_bus = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=True)
         event_bus.subscribe(minion_start_event_match)
         while True:
             event = event_bus.get_event(full=True, no_block=True)
+            # log.info(event)
+            # log.info(event['tag'])
             if event is not None and event['tag'] == minion_start_event_match:
                 log.info('Got minion connected event: %s', event)
                 break
+            log.info('Still not connected')
             yield gen.sleep(0.25)
 
     @gen.coroutine
