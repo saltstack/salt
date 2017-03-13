@@ -42,14 +42,14 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def test_empty_config(self, *args, **kwargs):
         config = {}
         ret = status.beacon(config)
-        self.assertEqual(ret[0]['data'].keys(), ['loadavg', 'meminfo', 'cpustats', 'vmstats', 'time'])
+        self.assertEqual(sorted(list(ret[0]['data'])), sorted(['loadavg', 'meminfo', 'cpustats', 'vmstats', 'time']))
 
     def test_deprecated_dict_config(self):
         config = {'time': ['all']}
         ret = status.beacon(config)
-        self.assertEqual(ret[0]['data'].keys(), ['time'])
+        self.assertEqual(list(ret[0]['data']), ['time'])
 
     def test_list_config(self):
         config = [{'time': ['all']}]
         ret = status.beacon(config)
-        self.assertEqual(ret[0]['data'].keys(), ['time'])
+        self.assertEqual(list(ret[0]['data']), ['time'])
