@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import textwrap
 import os
 import json
+from subprocess import Popen, PIPE
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import skipIf
@@ -18,7 +19,18 @@ NO_DOCKERPY = False
 NO_DOCKERPY = False
 try:
     import docker  # pylint: disable=import-error,unused-import
+    client = docker.from_env()
 except ImportError:
+    NO_DOCKERPY = True
+# Checking if docker is running.
+p = Popen('docker ps -a', shell=True, stdout=PIPE, stderr=PIPE)
+output = p.communicate()[0]
+
+
+if (p.returncode != '1'):
+    NO_DOCKERPY = True
+
+if not salt.utils.which('docker'):
     NO_DOCKERPY = True
 
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
@@ -26,9 +38,11 @@ STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
 @skipIf(
     NO_DOCKERPY,
-    'Please install docker-py before running'
-    'Docker integration tests.'
+    'Please install docker-py  '
+    'and make sure docker daemon is ruuning before running '
+    'Docker integration tests. '
 )
+@skipIf(salt.utils.which('docker') is None, 'Docker is not installed')
 class TestModuleDockereng(integration.ModuleCase,
                           integration.AdaptedConfigurationTestCaseMixIn):
     '''
