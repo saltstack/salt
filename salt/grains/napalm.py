@@ -222,7 +222,7 @@ def uptime(proxy=None):
 
     CLI Example - select all devices started/restarted within the last hour:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt -G 'uptime<3600' test.ping
     '''
