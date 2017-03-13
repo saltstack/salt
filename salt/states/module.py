@@ -34,7 +34,7 @@ Another example:
 .. code-block:: yaml
 
     mine.send:
-      module.xrun:
+      module.run:
         network.ip_addrs:
           - interface: eth0
 
@@ -43,7 +43,7 @@ And more complex example:
 .. code-block:: yaml
 
     eventsviewer:
-      module.xrun:
+      module.run:
         task.create_task:
           - name: events-viewer
           - user_name: System
@@ -151,17 +151,24 @@ Windows system:
               start_time: '11:59PM'
         }
 
-Another option is to use the `module.xrun`. With which you can call one (or more!)
+Another option is to use the new version of `module.run`. With which you can call one (or more!)
 functions at once the following way:
 
 .. code-block:: yaml
 
     call_something:
-      module.xrun:
+      module.run:
         git.fetch:
           - cwd: /path/to/my/repo
           - user: myuser
           - opts: '--all'
+
+By default this behaviour is not turned on. In ordder to do so, please add the following
+configuration to the minion:
+
+.. code-block:: yaml
+    use_superseded:
+      - module.run
 
 '''
 from __future__ import absolute_import
