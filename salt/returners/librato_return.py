@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Salt returner to return highstate stats to librato
+Salt returner to return highstate stats to Librato
 
-To enable this returner the minion will need the librato
+To enable this returner the minion will need the Librato
 client importable on the python path and the following
 values configured in the minion or master config.
 
@@ -14,7 +14,7 @@ https://github.com/librato/python-librato
     librato.email: example@librato.com
     librato.api_token: abc12345def
 
-This return supports multi-dimension metrics for librato. To enable
+This return supports multi-dimension metrics for Librato. To enable
 support for more metrics, the tags JSON object can be modified to include
 other tags.
 
