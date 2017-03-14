@@ -1581,7 +1581,7 @@ class Test_Junos_Module(unittest.TestCase):
             self,
             mock_execute):
         mock_execute.return_value = etree.XML('<reply><rpc/></reply>')
-        args = {'__pub_user': 'sudo_drajvi',
+        args = {'__pub_user': 'root',
                 '__pub_arg': ['get-config',
                               {'filter': '<configuration><system/></configuration>'}],
                 '__pub_fun': 'junos.rpc',
@@ -1607,7 +1607,7 @@ class Test_Junos_Module(unittest.TestCase):
     @patch('jnpr.junos.device.Device.execute')
     def test_rpc_get_interface_information_with_kwargs(
             self, mock_execute):
-        args = {'__pub_user': 'sudo_drajvi',
+        args = {'__pub_user': 'root',
                 '__pub_arg': ['get-interface-information',
                               '',
                               'text',
