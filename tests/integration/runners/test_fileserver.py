@@ -8,6 +8,10 @@ import contextlib
 
 # Import Salt Testing libs
 import tests.integration as integration
+from tests.support.unit import skipIf
+
+# Import salt libs
+import salt.utils
 
 
 class FileserverTest(integration.ShellCase):
@@ -157,6 +161,10 @@ class FileserverTest(integration.ShellCase):
         self.assertIsInstance(ret['return'], list)
         self.assertTrue('grail/scene33' in ret['return'])
 
+    # Git doesn't handle symlinks in Windows. See the thread below:
+    # http://stackoverflow.com/questions/5917249/git-symlinks-in-windows
+    @skipIf(salt.utils.is_windows(),
+            'Git for Windows does not preserve symbolic links when cloning')
     def test_symlink_list(self):
         '''
         fileserver.symlink_list
