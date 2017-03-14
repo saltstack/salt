@@ -293,8 +293,8 @@ def create(vm_):
         kwargs['project'] = get_project(conn, vm_)
 
     event_data = kwargs.copy()
-    event_data['image'] = kwargs['image'].name 
-    event_data['size'] = kwargs['size'].name 
+    event_data['image'] = kwargs['image'].name
+    event_data['size'] = kwargs['size'].name
 
     __utils__['cloud.fire_event'](
         'event',

@@ -126,7 +126,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
-            'kwargs': __utils__['cloud.filter_event']('requesting', event_kwargs, event_kwargs.keys()),
+            'kwargs': __utils__['cloud.filter_event']('requesting', create_kwargs, create_kwargs.keys()),
         },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']

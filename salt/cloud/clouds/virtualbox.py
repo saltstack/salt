@@ -140,7 +140,7 @@ def create(vm_info):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_info['name']),
-        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
+        args=__utils__['cloud.filter_event']('creating', vm_info, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )

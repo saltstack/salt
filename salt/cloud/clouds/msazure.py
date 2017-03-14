@@ -654,7 +654,7 @@ def create(vm_):
             'event',
             'attaching volumes',
             'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
-            args=__utils__['cloud.filter_event']('attaching_volumes', vm_, ['volumes',]),
+            args=__utils__['cloud.filter_event']('attaching_volumes', vm_, ['volumes']),
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
