@@ -631,6 +631,36 @@ def _import_api():
     api_json = re_filter.findall(returned_data.text)[0]
     api = json.loads(api_json)
 
+def _get_properties(path="",method="GET"):
+    '''
+    Return the parameter list from api for defined path and HTTP method
+    '''
+    if api is None:
+        _import_api()
+
+    sub = api
+    path_levels = [level for level in path.split('/') if level != '']
+    search_path = ''
+    props = []
+    for elem in path_levels[:-1]:
+        search_path += '/' + elem
+        sub = (item for item in sub if item["path"] == search_path).next()['children']
+    search_path += '/' + path_levels[-1]
+    sub = (item for item in sub if item["path"] == search_path).next()
+    try:
+        props = sub['info'][method]['parameters']['properties'].keys()
+    except KeyError, e:
+        print 'method not found: "{0}"'.format(str(e))
+    except:
+        raise
+    for prop in props:
+        numerical = re.match('(\w+)\[n\]', prop)
+        if numerical:
+            for i in range(10):
+                yield numerical.group(1) + str(i)
+        else:
+            yield prop
+
 def create_node(vm_, newid):
     '''
     Build and submit the requestdata to create a new node
