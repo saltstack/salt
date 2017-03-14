@@ -43,13 +43,13 @@ def cert(name,
          aliases=None,
          email=None,
          webroot=None,
-         certname=None,
          test_cert=False,
          renew=None,
          keysize=None,
          server=None,
          owner='root',
-         group='root'):
+         group='root',
+         certname=None):
     '''
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
 
@@ -57,13 +57,13 @@ def cert(name,
     :param aliases: subjectAltNames (Additional DNS names on certificate)
     :param email: e-mail address for interaction with ACME provider
     :param webroot: True or a full path to use to use webroot. Otherwise use standalone mode
-    :param certname: Name of the certificate to save
     :param test_cert: Request a certificate from the Happy Hacker Fake CA (mutually exclusive with 'server')
     :param renew: True/'force' to force a renewal, or a window of renewal before expiry in days
     :param keysize: RSA key bits
     :param server: API endpoint to talk to
     :param owner: owner of private key
     :param group: group of private key
+    :param certname: Name of the certificate to save
     '''
 
     if __opts__['test']:
