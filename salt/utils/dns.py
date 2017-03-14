@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Compendium of generic DNS utilities
-
 # Examples:
 dns.lookup(name, rdtype, ...)
 dns.records(name, rdtype, ...)
@@ -10,30 +9,6 @@ dns.srv_rec(data)
 dns.srv_data('my1.example.com', 389, prio=10, weight=100)
 dns.srv_name('ldap/tcp', 'example.com')
 
-# can replace
-- my stuff
-    - gai
-    - tmpltools.dns_secure
-    - dnsutil lookup parts
-- modules
-    - dig
-
-# should replace/augment
-https://github.com/saltstack/salt/pull/39615/files
-https://blog.widodh.nl/2016/07/calculating-ds-record-from-dnskey-with-python-3/
-https://github.com/saltstack/salt/pull/36180
-- modules:
-    - ddns
-    - dnsutil
-    - libcloud dns
-- states
-    - libcoud dns
-- utils
-    - network
-
-# should fix
-https://github.com/saltstack/salt/issues/25953
-https://github.com/saltstack/salt/issues/20275
 '''
 from __future__ import print_function, absolute_import
 # Python
@@ -45,7 +20,7 @@ import random
 import socket
 import ssl
 import string
-from salt.ext.six.moves import zip
+from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from salt._compat import ipaddress
 from salt.utils.odict import OrderedDict
 
@@ -76,6 +51,9 @@ ppr = pprint.PrettyPrinter(indent=2).pprint
 
 
 class RFC(object):
+    '''
+    Simple holding class for all RFC/IANA registered lists & standards
+    '''
     # http://www.iana.org/assignments/dns-sshfp-rr-parameters/dns-sshfp-rr-parameters.xhtml
     SSHFP_ALGO = OrderedDict((
         (1, 'rsa'),
@@ -168,8 +146,8 @@ def _data2rec(rschema, rdata):
         return dict((
             (fname, rcb(rdata)) for (fname, rcb), rdata in zip(rschema, rdata)
         ))
-    except:  # pylint: disable=bare-except
-        log.error('Cant parse DNS record data: {}'.format(rdata))
+    except (AttributeError, TypeError, ValueError):
+        log.error('Cant parse DNS record data: {0}'.format(rdata))
         return False
 
 
@@ -179,12 +157,8 @@ def _data2rec_group(rschema, rdatas, groupon):
 
     res = OrderedDict()
     for rdata in rdatas:
-        ppr('RDATA PREPROPECSS: {}'.format(rdata))
         rdata = _data2rec(rschema, rdata)
         assert rdata and groupon in rdata
-
-        ppr('RDATA POSTS: {}'.format(rdata))
-
         idx = rdata.pop(groupon)
         if idx not in res:
             res[idx] = []
@@ -219,12 +193,13 @@ def _query_simple(name, rdtype, timeout=None):
         return False
 
 
-def _query_dig(name, rdtype, timeout=None, servers=[], secure=None):
+def _query_dig(name, rdtype, timeout=None, servers=None, secure=None):
     '''
     Use dig to lookup addresses
     :param name: Name of record to search
     :param rdtype: DNS record type
     :param timeout: server response timeout
+    :param servers: [] of servers to use
     :return: [] of records or False if error
     '''
     cmd = 'dig +search +fail +noall +answer +noclass +nottl -t {0} '.format(rdtype)
@@ -251,7 +226,7 @@ def _query_dig(name, rdtype, timeout=None, servers=[], secure=None):
     validated = False
     res = []
     for line in cmd['stdout'].splitlines():
-        rname, rtype, rdata = line.split(None, 2)
+        _, rtype, rdata = line.split(None, 2)
         if rtype == 'CNAME' and rdtype != 'CNAME':
             continue
         elif rtype == 'RRSIG':
@@ -265,12 +240,13 @@ def _query_dig(name, rdtype, timeout=None, servers=[], secure=None):
         return res
 
 
-def _query_drill(name, rdtype, timeout=None, servers=[], secure=None):
+def _query_drill(name, rdtype, timeout=None, servers=None, secure=None):
     '''
     Use drill to lookup addresses
     :param name: Name of record to search
     :param rdtype: DNS record type
     :param timeout: command return timeout
+    :param servers: [] of servers to use
     :return: [] of records or False if error
     '''
     cmd = 'drill '
@@ -313,11 +289,11 @@ def _query_drill(name, rdtype, timeout=None, servers=[], secure=None):
 
     except StopIteration:
         pass
-    finally:
-        if res and secure and not validated:
-            return False
-        else:
-            return res
+
+    if res and secure and not validated:
+        return False
+    else:
+        return res
 
 
 def _query_host(name, rdtype, timeout=None, server=None):
@@ -361,16 +337,16 @@ def _query_host(name, rdtype, timeout=None, server=None):
     return res
 
 
-def _query_pydns(name, rdtype, timeout=None, servers=[], secure=None):
+def _query_pydns(name, rdtype, timeout=None, servers=None, secure=None):
     '''
     Use dnspython to lookup addresses
     :param name: Name of record to search
     :param rdtype: DNS record type
     :param timeout: query timeout
-    :param server: (list of) server(s) to try in order
+    :param server: [] of server(s) to try in order
     :return: [] of records or False if error
     '''
-    resolver = dns.resolver.Resolver(configure=False)
+    resolver = dns.resolver.Resolver()
 
     if timeout is not None:
         resolver.lifetime = float(timeout)
@@ -380,12 +356,13 @@ def _query_pydns(name, rdtype, timeout=None, servers=[], secure=None):
         resolver.ednsflags += dns.flags.DO
 
     try:
-        # ARGH... DNSPython actually does a lot already as well :(
         res = [str(rr.to_text().strip(string.whitespace + '"'))
                for rr in resolver.query(name, rdtype, raise_on_no_answer=False)]
         return res
-    except:  # pylint: disable=bare-except
-        # raise TODO>strange errors
+    except (dns.resolver.NXDOMAIN,
+            dns.resolver.YXDOMAIN,
+            dns.exception.Timeout,
+            dns.exception.Timeout):
         return False
 
 
@@ -447,11 +424,11 @@ def _query_nslookup(name, rdtype, timeout=None, server=None):
 
     except StopIteration:
         pass
-    finally:
-        if rdtype == 'SOA':
-            return [' '.join(res[1:])]
-        else:
-            return res
+
+    if rdtype == 'SOA':
+        return [' '.join(res[1:])]
+    else:
+        return res
 
 
 def query(
@@ -476,6 +453,7 @@ def query(
     opts = {}
     rdtype = rdtype.upper()
 
+    # pylint: disable=bad-whitespace,multiple-spaces-before-keyword
     query_methods = (
         ('simple',   _query_simple,   not any((rdtype not in ('A', 'AAAA'), servers, secure))),
         ('pydns',    _query_pydns,    HAS_PYDNS),
@@ -484,6 +462,7 @@ def query(
         ('host',     _query_host,     HAS_HOST and not secure),
         ('nslookup', _query_nslookup, HAS_NSLOOKUP and not secure),
     )
+    # pylint: enable=bad-whitespace,multiple-spaces-before-keyword
 
     method = method or opts.get('method', 'auto')
     try:
@@ -581,6 +560,11 @@ def records(
 
 
 def a_rec(rdata):
+    '''
+    Validate and parse DNS record data for an A record
+    :param rdata: DNS record data
+    :return: dict w/fields
+    '''
     rschema = OrderedDict((
         ('address', ipaddress.IPv4Address),
     ))
@@ -588,6 +572,11 @@ def a_rec(rdata):
 
 
 def aaaa_rec(rdata):
+    '''
+    Validate and parse DNS record data for an AAAA record
+    :param rdata: DNS record data
+    :return: dict w/fields
+    '''
     rschema = OrderedDict((
         ('address', ipaddress.IPv6Address),
     ))
@@ -596,18 +585,19 @@ def aaaa_rec(rdata):
 
 def mx_data(target, preference=10):
     '''
-    Generate SRV record data
+    Generate MX record data
     :param target: server
     :param preference: preference number
-    :return:
+    :return: DNS record data
     '''
     return _rec2data(int(preference), target)
 
 
 def mx_rec(rdatas):
     '''
-    Generate MX record from data
-    :return:
+    Validate and parse DNS record data for MX record(s)
+    :param rdata: DNS record data
+    :return: dict w/fields
     '''
     rschema = OrderedDict((
         ('preference', int),
@@ -624,12 +614,17 @@ def ptr_name(rdata):
     '''
     try:
         return ipaddress.ip_address(rdata).reverse_pointer
-    except:  # pylint: disable=bare-except
+    except ValueError:
         log.error('Unable to generate PTR record; {0} is not a valid IP address'.format(rdata))
         return False
 
 
 def soa_rec(rdata):
+    '''
+    Validate and parse DNS record data for SOA record(s)
+    :param rdata: DNS record data
+    :return: dict w/fields
+    '''
     rschema = OrderedDict((
         ('mname', str),
         ('rname', str),
@@ -644,11 +639,9 @@ def soa_rec(rdata):
 
 def spf_rec(rdata):
     '''
-    Structuralize an SPF record
-    http://www.openspf.org/SPF_Record_Syntax
-    http://www.openspf.org/RFC_4408
-    :param rdata:
-    :return:
+    Validate and parse DNS record data for SPF record(s)
+    :param rdata: DNS record data
+    :return: dict w/fields
     '''
     spf_fields = rdata.split(' ')
     if not spf_fields.pop(0).startswith('v=spf'):
@@ -732,7 +725,7 @@ def srv_name(svc, name=None):
 
 def srv_pick(srv_records):
     res = []
-    for prio, recs in srv_records.items():
+    for _, recs in srv_records.items():
         res.append(_weighted_order(recs))
 
     return res
@@ -740,9 +733,9 @@ def srv_pick(srv_records):
 
 def srv_rec(rdatas):
     '''
-    Parse SRV record fields
-    :param rdata:
-    :return:
+    Validate and parse DNS record data for SRV record(s)
+    :param rdata: DNS record data
+    :return: dict w/fields
     '''
     rschema = OrderedDict((
         ('prio', int),
@@ -767,9 +760,9 @@ def sshfp_data(key_t, hash_t, pub):
     hasher.update(
         base64.b64decode(pub)
     )
-    fp = hasher.hexdigest()
+    ssh_fp = hasher.hexdigest()
 
-    return _rec2data(key_t, hash_t, fp)
+    return _rec2data(key_t, hash_t, ssh_fp)
 
 
 def tlsa_data(pub, usage, selector, matching):
@@ -787,15 +780,15 @@ def tlsa_data(pub, usage, selector, matching):
 
     pub = ssl.PEM_cert_to_DER_cert(pub.strip())
     if matching == 0:
-        fp = binascii.b2a_hex(pub)
+        cert_fp = binascii.b2a_hex(pub)
     else:
         hasher = hashlib.new(RFC.TLSA_MATCHING[matching])
         hasher.update(
             pub
         )
-        fp = hasher.hexdigest()
+        cert_fp = hasher.hexdigest()
 
-    return _rec2data(usage, selector, matching, fp)
+    return _rec2data(usage, selector, matching, cert_fp)
 
 
 def parse_resolv(src='/etc/resolv.conf'):
