@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -5,8 +7,11 @@ __author__ = "Rajvi Dhimar"
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
-from mock import patch, MagicMock, mock_open
-from lxml import etree
+from tests.support.mock import patch, MagicMock, mock_open
+try:
+    from lxml import etree
+except ImportError:
+    from salt._compat import ElementTree as etree
 
 from jnpr.junos.utils.config import Config
 from jnpr.junos.utils.sw import SW
@@ -34,6 +39,7 @@ class Test_Junos_Module(unittest.TestCase):
             password='test123',
             gather_facts=False)
         self.dev.open()
+        self.dev.timeout = 30
         self.dev.bind(cu=Config)
         self.dev.bind(sw=SW)
         return self.dev
@@ -1552,45 +1558,9 @@ class Test_Junos_Module(unittest.TestCase):
                 loaded: junos-eznc or jxmlease or proxy could not be loaded.')
         self.assertEqual(junos.__virtual__(), res)
 
-    def mck_import(self, name, *args, **kwargs):
-        if name == 'jxmlease':
-            return self.raise_exception()
-        else:
-            __import__(name)
-
     def test_virtual_all_true(self):
         junos.__opts__ = {'proxy': 'test'}
         self.assertEqual(junos.__virtual__(), 'junos')
-
-
-@attr('unit')
-class Test_Junos_RPC(unittest.TestCase):
-
-    def setUp(self):
-        junos.__proxy__ = {'junos.conn': self.make_connect}
-
-    @patch('ncclient.manager.connect')
-    def make_connect(self, mock_connect):
-        self.dev = self.dev = Device(
-            host='1.1.1.1',
-            user='test',
-            password='test123',
-            gather_facts=False)
-        self.dev.rpc = MagicMock
-        self.dev.open()
-        self.dev.timeout = 30
-        self.dev.bind(cu=Config)
-        self.dev.bind(sw=SW)
-        return self.dev
-
-    def mck_attr(self, *args, **kwargs):
-        return self.get_text_rpc
-
-    def get_text_rpc(self, *args, **kwargs):
-        return etree.XML('<rpc-reply>text rpc reply</rpc-reply>')
-
-    def raise_exception(self, *args, **kwargs):
-        raise Exception('Test exception')
 
     def test_rpc_without_args(self):
         ret = dict()
@@ -1606,59 +1576,62 @@ class Test_Junos_RPC(unittest.TestCase):
         ret['out'] = False
         self.assertEqual(junos.rpc('get_config'), ret)
 
-    @patch('salt.modules.junos.jxmlease.parse')
-    @patch('salt.modules.junos.etree.tostring')
-    @patch('salt.modules.junos.etree.XML')
-    @patch('salt.modules.junos.getattr')
+    @patch('jnpr.junos.device.Device.execute')
     def test_rpc_get_config_filter(
             self,
-            mock_attr,
-            mock_XML,
-            mock_tostring,
-            mock_jxmlease):
-        mock_attr = self.mck_attr
-        junos.rpc(
-            'get-config',
-            filter='<configuration><system/></configuration>')
-        mock_XML.assert_called_with('<configuration><system/></configuration>')
+            mock_execute):
+        mock_execute.return_value = etree.XML('<reply><rpc/></reply>')
+        args = {'__pub_user': 'sudo_drajvi',
+                '__pub_arg': ['get-config',
+                              {'filter': '<configuration><system/></configuration>'}],
+                '__pub_fun': 'junos.rpc',
+                '__pub_jid': '20170314162715866528',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                'filter': '<configuration><system/></configuration>',
+                '__pub_ret': ''}
+        junos.rpc('get-config', **args)
+        exec_args = mock_execute.call_args
+        expected_rpc = '<get-configuration dev_timeout="30" ' \
+                       'format="xml"><configuration><system/></configuration></get-configuration>'
+        self.assertEqual(etree.tostring(exec_args[0][0]), expected_rpc)
 
-    @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mck_attr')
-    @patch('salt.modules.junos.getattr')
-    def test_rpc_get_interface_information(self, mock_attr, mck_attr):
-        mock_attr.return_value = self.mck_attr
+    @patch('jnpr.junos.device.Device.execute')
+    def test_rpc_get_interface_information(self, mock_execute):
         junos.rpc('get-interface-information', format='json')
-        mck_attr.assert_called_with({'format': 'json'}, dev_timeout=30)
+        args = mock_execute.call_args
+        expected_rpc = '<get-interface-information format="json"/>'
+        self.assertEqual(etree.tostring(args[0][0]), expected_rpc)
+        self.assertEqual(args[1], {'dev_timeout': 30})
 
-    @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mck_attr')
-    @patch('salt.modules.junos.getattr')
+    @patch('jnpr.junos.device.Device.execute')
     def test_rpc_get_interface_information_with_kwargs(
-            self, mock_attr, mck_attr):
-        mock_attr.return_value = self.mck_attr
+            self, mock_execute):
         args = {'__pub_user': 'sudo_drajvi',
                 '__pub_arg': ['get-interface-information',
                               '',
                               'text',
-                              {'terse': True}],
-                'interface-name': 'lo0',
+                              {'terse': True,
+                               'interface_name': 'lo0'}],
+                'terse': True,
                 '__pub_fun': 'junos.rpc',
-                '__pub_jid': '20170307233617793012',
+                '__pub_jid': '20170314160943363563',
                 '__pub_tgt': 'mac_min',
+                'interface_name': 'lo0',
                 '__pub_tgt_type': 'glob',
                 '__pub_ret': ''}
         junos.rpc('get-interface-information', format='text', **args)
-        mck_attr.assert_called_with(
-            {'format': 'text'}, dev_timeout=30, terse=True)
+        args = mock_execute.call_args
+        expected_rpc = '<get-interface-information format="text">' \
+                       '<terse/><interface-name>lo0</interface-name></get-interface-information>'
+        self.assertEqual(etree.tostring(args[0][0]), expected_rpc)
 
     @patch('salt.modules.junos.jxmlease.parse')
     @patch('salt.modules.junos.etree.tostring')
     @patch('salt.modules.junos.logging.Logger.warning')
-    @patch('salt.modules.junos.getattr')
+    @patch('jnpr.junos.device.Device.execute')
     def test_rpc_get_chassis_inventory_filter_as_arg(
-            self, mock_attr, mock_warning, mock_tostring, mock_jxmlease):
-        mock_attr.return_value = self.mck_attr
-
-        def mock_warn(msg, *args, **kwargs):
-            return msg
+            self, mock_execute, mock_warning, mock_tostring, mock_jxmlease):
         junos.rpc(
             'get-chassis-inventory',
             filter='<configuration><system/></configuration>')
@@ -1674,18 +1647,19 @@ class Test_Junos_RPC(unittest.TestCase):
         ret['out'] = False
         self.assertEqual(junos.rpc('get_interface_information'), ret)
 
-    @patch('salt.modules.junos.getattr')
-    def test_rpc_write_file_format_text(self, mock_attr):
-        mock_attr.side_effect = self.mck_attr
+    @patch('jnpr.junos.device.Device.execute')
+    def test_rpc_write_file_format_text(self, mock_execute):
+        mock_execute.return_value = etree.XML(
+            '<rpc-reply>text rpc reply</rpc-reply>')
         m = mock_open()
         with patch('salt.modules.junos.fopen', m, create=True):
-            junos.rpc('get-chassis-inventory', '/path/to/file', format='text')
+            junos.rpc('get-chassis-inventory', '/path/to/file', 'text')
             handle = m()
             handle.write.assert_called_with('text rpc reply')
 
     @patch('salt.modules.junos.json.dumps')
-    @patch('salt.modules.junos.getattr')
-    def test_rpc_write_file_format_json(self, mock_attr, mock_dumps):
+    @patch('jnpr.junos.device.Device.execute')
+    def test_rpc_write_file_format_json(self, mock_execute, mock_dumps):
         mock_dumps.return_value = 'json rpc reply'
         m = mock_open()
         with patch('salt.modules.junos.fopen', m, create=True):
@@ -1695,8 +1669,8 @@ class Test_Junos_RPC(unittest.TestCase):
 
     @patch('salt.modules.junos.jxmlease.parse')
     @patch('salt.modules.junos.etree.tostring')
-    @patch('salt.modules.junos.getattr')
-    def test_rpc_write_file(self, mock_attr, mock_tostring, mock_parse):
+    @patch('jnpr.junos.device.Device.execute')
+    def test_rpc_write_file(self, mock_execute, mock_tostring, mock_parse):
         mock_tostring.return_value = 'xml rpc reply'
         m = mock_open()
         with patch('salt.modules.junos.fopen', m, create=True):
