@@ -796,9 +796,17 @@ def install_config(path=None, **kwargs):
         ret['out'] = False
         return ret
 
+    op = dict()
+    if '__pub_arg' in kwargs:
+        if kwargs['__pub_arg']:
+            if isinstance(kwargs['__pub_arg'][-1], dict):
+                op.update(kwargs['__pub_arg'][-1])
+    else:
+        op.update(kwargs)
+
     template_vars = dict()
-    if "template_vars" in kwargs:
-        template_vars = kwargs["template_vars"]
+    if "template_vars" in op:
+        template_vars = op["template_vars"]
 
     template_cached_path = files.mkstemp()
     __salt__['cp.get_template'](
@@ -815,14 +823,6 @@ def install_config(path=None, **kwargs):
         ret['message'] = 'Template failed to render'
         ret['out'] = False
         return ret
-
-    op = dict()
-    if '__pub_arg' in kwargs:
-        if kwargs['__pub_arg']:
-            if isinstance(kwargs['__pub_arg'][-1], dict):
-                op.update(kwargs['__pub_arg'][-1])
-    else:
-        op.update(kwargs)
 
     write_diff = ''
     if 'diffs_file' in op and op['diffs_file'] is not None:
