@@ -205,9 +205,6 @@ class LoadAuth(object):
         while os.path.isfile(t_path):
             tok = str(hash_type(os.urandom(512)).hexdigest())
             t_path = os.path.join(self.opts['token_dir'], tok)
-        fcall = salt.utils.format_call(self.auth[fstr],
-                                       load,
-                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
 
         if self._allow_custom_expire(load):
             token_expire = load.pop('token_expire', self.opts['token_expire'])
@@ -217,7 +214,7 @@ class LoadAuth(object):
 
         tdata = {'start': time.time(),
                  'expire': time.time() + token_expire,
-                 'name': fcall['args'][0],
+                 'name': self.load_name(load),
                  'eauth': load['eauth'],
                  'token': tok}
 
@@ -228,8 +225,12 @@ class LoadAuth(object):
         if 'groups' in load:
             tdata['groups'] = load['groups']
 
-        with salt.utils.fopen(t_path, 'w+b') as fp_:
-            fp_.write(self.serial.dumps(tdata))
+        try:
+            with salt.utils.fopen(t_path, 'w+b') as fp_:
+                fp_.write(self.serial.dumps(tdata))
+        except (IOError, OSError):
+            log.warning('Authentication failure: can not write token file "{0}".'.format(t_path))
+            return {}
         return tdata
 
     def get_tok(self, tok):
@@ -240,8 +241,12 @@ class LoadAuth(object):
         t_path = os.path.join(self.opts['token_dir'], tok)
         if not os.path.isfile(t_path):
             return {}
-        with salt.utils.fopen(t_path, 'rb') as fp_:
-            tdata = self.serial.loads(fp_.read())
+        try:
+            with salt.utils.fopen(t_path, 'rb') as fp_:
+                tdata = self.serial.loads(fp_.read())
+        except (IOError, OSError):
+            log.warning('Authentication failure: can not read token file "{0}".'.format(t_path))
+            return {}
         rm_tok = False
         if 'expire' not in tdata:
             # invalid token, delete it!
@@ -261,11 +266,7 @@ class LoadAuth(object):
         Authenticate a user by the token specified in load.
         Return the token object or False if auth failed.
         '''
-        try:
-            token = self.get_tok(load['token'])
-        except Exception as exc:
-            log.error('Exception occurred when generating auth token: {0}'.format(exc))
-            return False
+        token = self.get_tok(load['token'])
 
         # Bail if the token is empty or if the eauth type specified is not allowed
         if not token or token['eauth'] not in self.opts['external_auth']:
