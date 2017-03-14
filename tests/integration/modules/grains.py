@@ -142,9 +142,8 @@ class GrainsAppendTestCase(integration.ModuleCase):
     GRAIN_VAL = 'my-grain-val'
 
     def tearDown(self):
-        test_grain = self.run_function('grains.get', [self.GRAIN_KEY])
-        if test_grain and test_grain == [self.GRAIN_VAL]:
-            self.run_function('grains.remove', [self.GRAIN_KEY, self.GRAIN_VAL])
+        for item in self.run_function('grains.get', [self.GRAIN_KEY])
+            self.run_function('grains.remove', [self.GRAIN_KEY, item])
 
     def test_grains_append(self):
         '''
