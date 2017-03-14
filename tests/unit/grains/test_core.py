@@ -6,7 +6,6 @@
 # Import Python libs
 from __future__ import absolute_import
 import os
-import platform
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
