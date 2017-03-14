@@ -220,7 +220,7 @@ class LocalClient(object):
         Return the information about a given job
         '''
         log.debug('Checking whether jid {0} is still running'.format(jid))
-        timeout = self.opts['gather_job_timeout']
+        timeout = kwargs.get('gather_job_timeout', self.opts['gather_job_timeout'])
 
         pub_data = self.run_job(tgt,
                                 'saltutil.find_job',
@@ -921,6 +921,7 @@ class LocalClient(object):
 
         if timeout is None:
             timeout = self.opts['timeout']
+        gather_job_timeout = kwargs.get('gather_job_timeout', self.opts['gather_job_timeout'])
         start = int(time.time())
 
         # timeouts per minion, id_ -> timeout time
@@ -1019,7 +1020,7 @@ class LocalClient(object):
                     jinfo_iter = []
                 else:
                     jinfo_iter = self.get_returns_no_block('salt/job/{0}'.format(jinfo['jid']))
-                timeout_at = time.time() + self.opts['gather_job_timeout']
+                timeout_at = time.time() + gather_job_timeout
                 # if you are a syndic, wait a little longer
                 if self.opts['order_masters']:
                     timeout_at += self.opts.get('syndic_wait', 1)
