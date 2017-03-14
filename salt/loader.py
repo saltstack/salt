@@ -1613,7 +1613,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     error_reason = (
                         'Exception raised when processing __virtual__ function'
                         ' for {0}. Module will not be loaded: {1}'.format(
-                            module_name, exc))
+                            mod.__name__, exc))
                     log.error(error_reason, exc_info_on_loglevel=logging.DEBUG)
                     virtual = None
                 # Get the module's virtual name

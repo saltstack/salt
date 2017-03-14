@@ -23,12 +23,16 @@ import salt.ext.six as six
 
 
 class StrictVersion(_StrictVersion):
-
     def parse(self, vstring):
         _StrictVersion.parse(self, vstring)
         if six.PY3:
             # Convert every part of the version to string in order to be able to compare
             self.version = [str(vp) for vp in self.version]
+
+    def _cmp(self, other):
+        if isinstance(other, six.string_types):
+            other = StrictVersion(other)
+        return _StrictVersion._cmp(self, other)
 
 
 class LooseVersion(_LooseVersion):
@@ -38,3 +42,8 @@ class LooseVersion(_LooseVersion):
         if six.PY3:
             # Convert every part of the version to string in order to be able to compare
             self.version = [str(vp) for vp in self.version]
+
+    def _cmp(self, other):
+        if isinstance(other, six.string_types):
+            other = LooseVersion(other)
+        return _LooseVersion._cmp(self, other)
