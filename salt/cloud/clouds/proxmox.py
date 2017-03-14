@@ -722,7 +722,9 @@ def create_node(vm_, newid):
         newnode['hostname'] = vm_['name']
         newnode['ostemplate'] = vm_['image']
 
-        for prop in 'cpuunits', 'description', 'memory', 'onboot', 'net0', 'password', 'nameserver', 'swap', 'storage', 'rootfs':
+        for prop in _get_properties('/nodes/{node}/lxc',
+                                    'POST',
+                                    'cpuunits', 'description', 'memory', 'onboot', 'net0', 'password', 'nameserver', 'swap', 'storage', 'rootfs'):
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
