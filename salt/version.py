@@ -9,6 +9,12 @@ import re
 import sys
 import platform
 
+# linux_distribution depreacted in py3.7
+try:
+    from platform import linux_distribution
+except ImportError:
+    from distro import linux_distribution
+
 # pylint: disable=invalid-name,redefined-builtin
 # Import 3rd-party libs
 from salt.ext import six
@@ -625,7 +631,7 @@ def system_information():
         '''
         Return host system version.
         '''
-        lin_ver = platform.linux_distribution()
+        lin_ver = linux_distribution()
         mac_ver = platform.mac_ver()
         win_ver = platform.win32_ver()
 
@@ -660,7 +666,7 @@ def system_information():
 
     system = [
         ('system', platform.system()),
-        ('dist', ' '.join(platform.dist())),
+        ('dist', ' '.join(linux_distribution(full_distribution_name=False))),
         ('release', release),
         ('machine', platform.machine()),
         ('version', version),

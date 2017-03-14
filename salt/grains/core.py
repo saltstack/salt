@@ -28,10 +28,16 @@ __proxyenabled__ = ['*']
 __FQDN__ = None
 
 # Extend the default list of supported distros. This will be used for the
-# /etc/DISTRO-release checking that is part of platform.linux_distribution()
+# /etc/DISTRO-release checking that is part of linux_distribution()
 from platform import _supported_dists
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'ovs', 'system', 'mint', 'oracle', 'void')
+
+# linux_distribution deprecated in py3.7
+try:
+    from platform import linux_distribution
+except ImportError:
+    from distro import linux_distribution
 
 # Import salt libs
 import salt.log
@@ -1496,12 +1502,12 @@ def os_data():
         # (though apparently it's not intelligent enough to strip quotes)
         (osname, osrelease, oscodename) = \
             [x.strip('"').strip("'") for x in
-             platform.linux_distribution(supported_dists=_supported_dists)]
+             linux_distribution(supported_dists=_supported_dists)]
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
-        # so that platform.linux_distribution() does the /etc/lsb-release
-        # parsing, but we do it anyway here for the sake for full portability.
+        # so that linux_distribution() does the /etc/lsb-release parsing, but
+        # we do it anyway here for the sake for full portability.
         if 'osfullname' not in grains:
             grains['osfullname'] = \
                 grains.get('lsb_distrib_id', osname).strip()
