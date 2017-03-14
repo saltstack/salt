@@ -79,13 +79,13 @@ class CoreGrainsTestCase(TestCase):
                                side_effect=_import_mock):
                         # Skip all the /etc/*-release stuff (not pertinent)
                         with patch.object(os.path, 'isfile', path_isfile_mock):
-                            # Mock platform.linux_distribution to give us the
-                            # OS name that we want.
+                            # Mock linux_distribution to give us the OS name
+                            # that we want.
                             distro_mock = MagicMock(
                                 return_value=('Debian GNU/Linux', '8.3', '')
                             )
                             with patch.object(
-                                    platform,
+                                    core,
                                     'linux_distribution',
                                     distro_mock):
                                 # Make a bunch of functions return empty dicts,
@@ -177,12 +177,12 @@ class CoreGrainsTestCase(TestCase):
                         # Skip all the /etc/*-release stuff (not pertinent)
                         with patch.object(os.path, 'isfile', path_isfile_mock):
                             with patch.object(core, '_parse_os_release', os_release_mock):
-                                # Mock platform.linux_distribution to give us the
-                                # OS name that we want.
+                                # Mock linux_distribution to give us the OS
+                                # name that we want.
                                 distro_mock = MagicMock(
                                     return_value=('SUSE Linux Enterprise Server ', '12', 'x86_64')
                                 )
-                                with patch.object(platform, 'linux_distribution', distro_mock):
+                                with patch.object(core, 'linux_distribution', distro_mock):
                                     with patch.object(core, '_linux_gpu_data', empty_mock):
                                         with patch.object(core, '_linux_cpudata', empty_mock):
                                             with patch.object(core, '_virtual', empty_mock):
@@ -224,14 +224,14 @@ class CoreGrainsTestCase(TestCase):
                         # Skip all the /etc/*-release stuff (not pertinent)
                         with patch.object(os.path, 'isfile', path_isfile_mock):
                             with patch.object(core, '_parse_os_release', os_release_mock):
-                                # Mock platform.linux_distribution to give us the
-                                # OS name that we want.
+                                # Mock linux_distribution to give us the OS
+                                # name that we want.
                                 distro_mock = MagicMock(
                                     return_value=('SUSE test', 'version', 'arch')
                                 )
                                 with patch("salt.utils.fopen", mock_open()) as suse_release_file:
                                     suse_release_file.return_value.__iter__.return_value = os_release_map.get('suse_release_file', '').splitlines()
-                                    with patch.object(platform, 'linux_distribution', distro_mock):
+                                    with patch.object(core, 'linux_distribution', distro_mock):
                                         with patch.object(core, '_linux_gpu_data', empty_mock):
                                             with patch.object(core, '_linux_cpudata', empty_mock):
                                                 with patch.object(core, '_virtual', empty_mock):
@@ -440,13 +440,13 @@ PATCHLEVEL = 3
                         # Skip all the /etc/*-release stuff (not pertinent)
                         with patch.object(os.path, 'isfile', path_isfile_mock):
                             with patch.object(core, '_parse_os_release', os_release_mock):
-                                # Mock platform.linux_distribution to give us the
-                                # OS name that we want.
+                                # Mock linux_distribution to give us the OS
+                                # name that we want.
                                 distro_mock = MagicMock(return_value=('Ubuntu', '16.04', 'xenial'))
                                 with patch("salt.utils.fopen", mock_open()) as suse_release_file:
                                     suse_release_file.return_value.__iter__.return_value = os_release_map.get(
                                         'suse_release_file', '').splitlines()
-                                    with patch.object(platform, 'linux_distribution', distro_mock):
+                                    with patch.object(core, 'linux_distribution', distro_mock):
                                         with patch.object(core, '_linux_gpu_data', empty_mock):
                                             with patch.object(core, '_linux_cpudata', empty_mock):
                                                 with patch.object(core, '_virtual', empty_mock):
