@@ -91,6 +91,7 @@ def cert(name,
          email=None,
          webroot=None,
          test_cert=False,
+         certname=None,
          renew=None,
          keysize=None,
          server=None,
@@ -104,6 +105,7 @@ def cert(name,
     :param email: e-mail address for interaction with ACME provider
     :param webroot: True or a full path to use to use webroot. Otherwise use standalone mode
     :param test_cert: Request a certificate from the Happy Hacker Fake CA (mutually exclusive with 'server')
+    :param certname: Name of the certificate to save
     :param renew: True/'force' to force a renewal, or a window of renewal before expiry in days
     :param keysize: RSA key bits
     :param server: API endpoint to talk to
@@ -137,6 +139,9 @@ def cert(name,
 
     if server:
         cmd.append('--server {0}'.format(server))
+
+    if certname:
+        cmd.append('--cert-name {0}'.format(certname))
 
     if test_cert:
         if server:
