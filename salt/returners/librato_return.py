@@ -155,5 +155,5 @@ def returner(ret):
         q.add("saltstack.highstate.total_states", stats[
               'num_failed_states'] + stats['num_passed_states'], tags={'Name': ret['id']})
 
-    log.info("Sending Metrics to Librato.")
+    log.info("Sending metrics to Librato.")
     q.submit()
