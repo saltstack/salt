@@ -15,6 +15,9 @@ Connection module for Amazon S3
         s3.keyid: GKTADJGHEIQSXMKKRBJ08H
         s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
+    (Note: this is literally the pillar key 's3.keyid' or the config option 's3.keyid',
+    not "s3:\\n  keyid: blah".)
+
     A service_url may also be specified in the configuration::
 
         s3.service_url: s3.amazonaws.com
