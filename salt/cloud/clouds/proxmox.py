@@ -106,6 +106,7 @@ url = None
 ticket = None
 csrf = None
 verify_ssl = None
+api = None
 
 
 def _authenticate():
@@ -616,6 +617,19 @@ def create(vm_):
 
     return ret
 
+def _import_api():
+    '''
+    Download https://<url>/pve-docs/api-viewer/apidoc.js
+    Extract content of pveapi var (json formated)
+    Load this json content into global variable "api"
+    '''
+    global api
+    full_url = 'https://{0}:8006/pve-docs/api-viewer/apidoc.js'.format(url)
+    returned_data = requests.get(full_url, verify=verify_ssl)
+
+    re_filter = re.compile('(?<=pveapi =)(.*)(?=^;)', re.DOTALL | re.MULTILINE)
+    api_json = re_filter.findall(returned_data.text)[0]
+    api = json.loads(api_json)
 
 def create_node(vm_, newid):
     '''
