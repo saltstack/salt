@@ -15,6 +15,9 @@ Connection module for Amazon S3
         s3.keyid: GKTADJGHEIQSXMKKRBJ08H
         s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
+    (Note: this is literally the pillar key 's3.keyid' or the config option 's3.keyid',
+    not "s3:\\n  keyid: blah".)
+
     A service_url may also be specified in the configuration::
 
         s3.service_url: s3.amazonaws.com
@@ -103,7 +106,7 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
                                  role_arn=role_arn)
 
 
-def get(bucket=None, path=None, return_bin=False, action=None,
+def get(bucket='', path='', return_bin=False, action=None,
         local_file=None, key=None, keyid=None, service_url=None,
         verify_ssl=None, kms_keyid=None, location=None, role_arn=None):
     '''
@@ -182,7 +185,7 @@ def get(bucket=None, path=None, return_bin=False, action=None,
                                  role_arn=role_arn)
 
 
-def head(bucket, path=None, key=None, keyid=None, service_url=None,
+def head(bucket, path='', key=None, keyid=None, service_url=None,
          verify_ssl=None, kms_keyid=None, location=None, role_arn=None):
     '''
     Return the metadata for a bucket, or an object in a bucket.
