@@ -759,5 +759,20 @@ def set(key,
     return ret
 
 
+def equals(key, value):
+    '''
+    Used to make sure the minion's grain key/value matches.
+
+    Returns ``True`` if matches otherwise ``False``
+
+    CLI Example:
+
+        salt '*' grains.equals fqdn <expected_fqdn>
+
+        salt '*' grains.equals systemd:version 219
+    '''
+    return str(value) == str(get(key))
+
+
 # Provide a jinja function call compatible get aliased as fetch
 fetch = get
