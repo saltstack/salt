@@ -763,12 +763,15 @@ def equals(key, value):
     '''
     Used to make sure the minion's grain key/value matches.
 
-    Returns ``True`` if matches otherwise ``False``
+    Returns ``True`` if matches otherwise ``False``.
+
+    .. versionadded:: Nitrogen
 
     CLI Example:
 
-        salt '*' grains.equals fqdn <expected_fqdn>
+    .. code-block:: bash
 
+        salt '*' grains.equals fqdn <expected_fqdn>
         salt '*' grains.equals systemd:version 219
     '''
     return str(value) == str(get(key))
