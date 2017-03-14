@@ -6,7 +6,7 @@ To enable this returner the minion will need the Librato
 client importable on the Python path and the following
 values configured in the minion or master config.
 
-The librato python client can be found at:
+The Librato python client can be found at:
 https://github.com/librato/python-librato
 
 .. code-block:: yaml
