@@ -2602,7 +2602,7 @@ def create(vm_):
             pprint.pformat(config_spec))
         )
 
-    event_kwargs = kwargs.copy()
+    event_kwargs = vm_.copy()
     del event_kwargs['password']
 
     try:

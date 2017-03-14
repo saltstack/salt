@@ -462,7 +462,7 @@ def create(vm_, call=None):
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
-        'salt/cloud/{0}/requesting'.format(name),
+        'salt/cloud/{0}/requesting'.format(vm_['name']),
         args=__utils__['cloud.filter_event']('requesting', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
