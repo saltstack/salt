@@ -361,7 +361,7 @@ def _query_pydns(name, rdtype, timeout=None, servers=None, secure=None):
         return res
     except (dns.resolver.NXDOMAIN,
             dns.resolver.YXDOMAIN,
-            dns.exception.Timeout,
+            dns.resolver.NoNameservers,
             dns.exception.Timeout):
         return False
 
