@@ -13,6 +13,7 @@ from salt.utils.versions import StrictVersion
 
 # Import Salt Testing Libs
 from tests.unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
+from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 # Import 3rd-party libs
@@ -287,6 +288,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         self.assertIn('tag', response_obj['return'][0])
 
 
+@flaky
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestMinionSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
