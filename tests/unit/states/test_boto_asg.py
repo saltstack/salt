@@ -18,6 +18,7 @@ from salt.states import boto_asg
 
 boto_asg.__salt__ = {}
 boto_asg.__opts__ = {}
+boto_asg.__utils__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -45,7 +46,7 @@ class BotoAsgTestCase(TestCase):
         mock = MagicMock(side_effect=[False, {'min_size': 2}, ['']])
         with patch.dict(boto_asg.__salt__, {'boto_asg.get_config': mock}):
             with patch.dict(boto_asg.__opts__, {'test': True}):
-                comt = ('Autoscale group set to be created.')
+                comt = 'Autoscale group set to be created.'
                 ret.update({'comment': comt})
                 with patch.dict(boto_asg.__salt__,
                                 {'config.option': MagicMock(return_value={})}):
@@ -60,35 +61,45 @@ class BotoAsgTestCase(TestCase):
                         ret
                     )
 
-                comt = ('Autoscale group set to be updated.')
+                comt = 'Autoscale group set to be updated.'
                 ret.update({'comment': comt, 'result': None})
+                ret.update({'changes': {'new': {'min_size': 4},
+                                        'old': {'min_size': 2}}})
+                utils_ordered_mock = MagicMock(
+                    side_effect=['', 4, 2, '', '', '', '', '', '']
+                )
                 with patch.dict(boto_asg.__salt__,
                                 {'config.option': MagicMock(return_value={})}):
-                    self.assertDictEqual(
-                        boto_asg.present(
-                            name,
-                            launch_config_name,
-                            availability_zones,
-                            min_size,
-                            max_size
-                        ),
-                        ret
-                    )
+                    with patch.dict(boto_asg.__utils__,
+                                    {'boto3.ordered': utils_ordered_mock}):
+                        self.assertDictEqual(
+                            boto_asg.present(
+                                name,
+                                launch_config_name,
+                                availability_zones,
+                                min_size,
+                                max_size
+                            ),
+                            ret
+                        )
 
                 with patch.dict(boto_asg.__salt__,
                                 {'config.option': MagicMock(return_value={})}):
-                    comt = ('Autoscale group present. ')
-                    ret.update({'comment': comt, 'result': True})
-                    self.assertDictEqual(
-                        boto_asg.present(
-                            name,
-                            launch_config_name,
-                            availability_zones,
-                            min_size,
-                            max_size
-                        ),
-                        ret
-                    )
+                    with patch.dict(boto_asg.__utils__,
+                                    {'boto3.ordered': MagicMock(return_value='')}):
+                        comt = 'Autoscale group present. '
+                        ret.update({'comment': comt, 'result': True})
+                        ret.update({'changes': {}})
+                        self.assertDictEqual(
+                            boto_asg.present(
+                                name,
+                                launch_config_name,
+                                availability_zones,
+                                min_size,
+                                max_size
+                            ),
+                            ret
+                        )
 
     # 'absent' function tests: 1
 
