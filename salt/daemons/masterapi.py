@@ -500,16 +500,13 @@ class RemoteFuncs(object):
             for arg in load['arg']:
                 arg_.append(arg.split())
             load['arg'] = arg_
-        good = self.ckminions.auth_check(
+        return self.ckminions.auth_check(
                 perms,
                 load['fun'],
                 load['arg'],
                 load['tgt'],
                 load.get('tgt_type', 'glob'),
                 publish_validate=True)
-        if not good:
-            return False
-        return True
 
     def _master_opts(self, load):
         '''
