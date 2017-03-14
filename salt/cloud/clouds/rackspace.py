@@ -207,11 +207,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -224,16 +220,18 @@ def create(vm_):
         'size': get_size(conn, vm_)
     }
 
+    event_kwargs = {
+        'name': kwargs['name'],
+        'image': kwargs['image'].name,
+        'size': kwargs['size'].name,
+    }
+
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
-            'kwargs': {
-                'name': kwargs['name'],
-                'image': kwargs['image'].name,
-                'size': kwargs['size'].name,
-            }
+            'kwargs': __utils__['cloud.filter_event']('requesting', event_kwargs, event_kwargs.keys()),
         },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
@@ -372,11 +370,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
