@@ -5,7 +5,7 @@ __author__ = "Rajvi Dhimar"
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
-from mock import patch, MagicMock, ANY
+from mock import patch, MagicMock, mock_open
 from lxml import etree
 
 from jnpr.junos.utils.config import Config
@@ -21,7 +21,10 @@ class Test_Junos_Module(unittest.TestCase):
         junos.__proxy__ = {
             'junos.conn': self.make_connect,
             'junos.get_serialized_facts': self.get_facts}
-        junos.__salt__ = {'cp.get_template': MagicMock}
+        junos.__salt__ = {'cp.get_template': self.mock_cp}
+
+    def mock_cp(self, *args, **kwargs):
+        pass
 
     @patch('ncclient.manager.connect')
     def make_connect(self, mock_connect):
@@ -773,7 +776,6 @@ class Test_Junos_Module(unittest.TestCase):
         self.assertEqual(junos.shutdown(), ret)
 
     @patch('salt.modules.junos.SW.reboot')
-#    @patch('jnpr.junos.utils.sw.SW.reboot')
     def test_shutdown_with_reboot_args(self, mock_reboot):
         ret = dict()
         ret['message'] = 'Successfully powered off/rebooted.'
@@ -1540,6 +1542,26 @@ class Test_Junos_Module(unittest.TestCase):
                 src='test/src/file'),
             ret)
 
+    # These test cases test the __virtual__ function, used internally by salt
+    # to check if the given module is loadable. This function is not used by
+    # an external user.
+
+    def test_virtual_proxy_unavailable(self):
+        junos.__opts__ = {}
+        res = (False, 'The junos module could not be \
+                loaded: junos-eznc or jxmlease or proxy could not be loaded.')
+        self.assertEqual(junos.__virtual__(), res)
+
+    def mck_import(self, name, *args, **kwargs):
+        if name == 'jxmlease':
+            return self.raise_exception()
+        else:
+            __import__(name)
+
+    def test_virtual_all_true(self):
+        junos.__opts__ = {'proxy': 'test'}
+        self.assertEqual(junos.__virtual__(), 'junos')
+
 
 @attr('unit')
 class Test_Junos_RPC(unittest.TestCase):
@@ -1561,8 +1583,11 @@ class Test_Junos_RPC(unittest.TestCase):
         self.dev.bind(sw=SW)
         return self.dev
 
-    def mock_func(self, *args, **kwargs):
-        pass
+    def mck_attr(self, *args, **kwargs):
+        return self.get_text_rpc
+
+    def get_text_rpc(self, *args, **kwargs):
+        return etree.XML('<rpc-reply>text rpc reply</rpc-reply>')
 
     def raise_exception(self, *args, **kwargs):
         raise Exception('Test exception')
@@ -1573,39 +1598,108 @@ class Test_Junos_RPC(unittest.TestCase):
         ret['out'] = False
         self.assertEqual(junos.rpc(), ret)
 
-    @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mock_func')
     @patch('salt.modules.junos.getattr')
-    def test_rpc_get_config_exception(self, mock_attr, mock_func):
+    def test_rpc_get_config_exception(self, mock_attr):
         mock_attr.return_value = self.raise_exception
         ret = dict()
         ret['message'] = 'RPC execution failed due to "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.rpc('get_config'), ret)
 
-    @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mock_func')
+    @patch('salt.modules.junos.jxmlease.parse')
+    @patch('salt.modules.junos.etree.tostring')
+    @patch('salt.modules.junos.etree.XML')
     @patch('salt.modules.junos.getattr')
-    def test_rpc_get_interface_information(self, mock_attr, mock_func):
-        mock_attr.return_value = self.mock_func
+    def test_rpc_get_config_filter(
+            self,
+            mock_attr,
+            mock_XML,
+            mock_tostring,
+            mock_jxmlease):
+        mock_attr = self.mck_attr
+        junos.rpc(
+            'get-config',
+            filter='<configuration><system/></configuration>')
+        mock_XML.assert_called_with('<configuration><system/></configuration>')
+
+    @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mck_attr')
+    @patch('salt.modules.junos.getattr')
+    def test_rpc_get_interface_information(self, mock_attr, mck_attr):
+        mock_attr.return_value = self.mck_attr
         junos.rpc('get-interface-information', format='json')
-        mock_func.assert_called_with({'format': 'json'}, dev_timeout=30)
+        mck_attr.assert_called_with({'format': 'json'}, dev_timeout=30)
 
-    @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mock_func')
+    @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mck_attr')
     @patch('salt.modules.junos.getattr')
-    def test_rpc_get_interface_information_with_filter(
-            self, mock_attr, mock_func):
-        mock_attr.return_value = self.mock_func
-        junos.rpc('get-interface-information', format='json',
-                  filter='<configuration><system/></configuration>')
-        mock_func.assert_called_with({'format': 'json'},
-                                     dev_timeout=ANY,
-                                     filter='<configuration><system/></configuration>')
+    def test_rpc_get_interface_information_with_kwargs(
+            self, mock_attr, mck_attr):
+        mock_attr.return_value = self.mck_attr
+        args = {'__pub_user': 'sudo_drajvi',
+                '__pub_arg': ['get-interface-information',
+                              '',
+                              'text',
+                              {'terse': True}],
+                'interface-name': 'lo0',
+                '__pub_fun': 'junos.rpc',
+                '__pub_jid': '20170307233617793012',
+                '__pub_tgt': 'mac_min',
+                '__pub_tgt_type': 'glob',
+                '__pub_ret': ''}
+        junos.rpc('get-interface-information', format='text', **args)
+        mck_attr.assert_called_with(
+            {'format': 'text'}, dev_timeout=30, terse=True)
 
-    @patch('tests.unit.modules.test_junos.Test_Junos_RPC.mock_func')
+    @patch('salt.modules.junos.jxmlease.parse')
+    @patch('salt.modules.junos.etree.tostring')
+    @patch('salt.modules.junos.logging.Logger.warning')
+    @patch('salt.modules.junos.getattr')
+    def test_rpc_get_chassis_inventory_filter_as_arg(
+            self, mock_attr, mock_warning, mock_tostring, mock_jxmlease):
+        mock_attr.return_value = self.mck_attr
+
+        def mock_warn(msg, *args, **kwargs):
+            return msg
+        junos.rpc(
+            'get-chassis-inventory',
+            filter='<configuration><system/></configuration>')
+        mock_warning.assert_called_with(
+            'Filter ignored as it is only used with "get-config" rpc')
+
     @patch('salt.modules.junos.getattr')
     def test_rpc_get_interface_information_exception(
-            self, mock_attr, mock_func):
+            self, mock_attr):
         mock_attr.return_value = self.raise_exception
         ret = dict()
         ret['message'] = 'RPC execution failed due to "Test exception"'
         ret['out'] = False
         self.assertEqual(junos.rpc('get_interface_information'), ret)
+
+    @patch('salt.modules.junos.getattr')
+    def test_rpc_write_file_format_text(self, mock_attr):
+        mock_attr.side_effect = self.mck_attr
+        m = mock_open()
+        with patch('salt.modules.junos.fopen', m, create=True):
+            junos.rpc('get-chassis-inventory', '/path/to/file', format='text')
+            handle = m()
+            handle.write.assert_called_with('text rpc reply')
+
+    @patch('salt.modules.junos.json.dumps')
+    @patch('salt.modules.junos.getattr')
+    def test_rpc_write_file_format_json(self, mock_attr, mock_dumps):
+        mock_dumps.return_value = 'json rpc reply'
+        m = mock_open()
+        with patch('salt.modules.junos.fopen', m, create=True):
+            junos.rpc('get-chassis-inventory', '/path/to/file', format='json')
+            handle = m()
+            handle.write.assert_called_with('json rpc reply')
+
+    @patch('salt.modules.junos.jxmlease.parse')
+    @patch('salt.modules.junos.etree.tostring')
+    @patch('salt.modules.junos.getattr')
+    def test_rpc_write_file(self, mock_attr, mock_tostring, mock_parse):
+        mock_tostring.return_value = 'xml rpc reply'
+        m = mock_open()
+        with patch('salt.modules.junos.fopen', m, create=True):
+            junos.rpc('get-chassis-inventory', '/path/to/file')
+            handle = m()
+            handle.write.assert_called_with('xml rpc reply')
