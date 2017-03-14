@@ -2562,14 +2562,14 @@ def create(vm_):
             global_ip = vim.vm.customization.GlobalIPSettings()
             if 'dns_servers' in list(vm_.keys()):
                 global_ip.dnsServerList = vm_['dns_servers']
-                
+
             non_hostname_chars = compile(r'[^\w-]')
             if search(non_hostname_chars, vm_name):
                 hostName = split(non_hostname_chars, vm_name, maxsplit=1)[0]
             else:
                 hostName = vm_name
             domainName = hostName.split('.', 1)[-1]
-            
+
             if 'Windows' not in object_ref.config.guestFullName:
                 identity = vim.vm.customization.LinuxPrep()
                 identity.hostName = vim.vm.customization.FixedName(name=hostName)
