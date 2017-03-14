@@ -639,7 +639,7 @@ def _import_api():
     api_json = re_filter.findall(returned_data.text)[0]
     api = json.loads(api_json)
 
-def _get_properties(path="",method="GET"):
+def _get_properties(path="",method="GET",forced_params=[]):
     '''
     Return the parameter list from api for defined path and HTTP method
     '''
@@ -650,6 +650,7 @@ def _get_properties(path="",method="GET"):
     path_levels = [level for level in path.split('/') if level != '']
     search_path = ''
     props = []
+    parameters = set(forced_params)
     for elem in path_levels[:-1]:
         search_path += '/' + elem
         sub = (item for item in sub if item["path"] == search_path).next()['children']
@@ -665,9 +666,10 @@ def _get_properties(path="",method="GET"):
         numerical = re.match('(\w+)\[n\]', prop)
         if numerical:
             for i in range(10):
-                yield numerical.group(1) + str(i)
+                parameters.add(numerical.group(1) + str(i))
         else:
-            yield prop
+            parameters.add(prop)
+    return parameters
 
 def create_node(vm_, newid):
     '''
