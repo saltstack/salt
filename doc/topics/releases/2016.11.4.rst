@@ -4,3 +4,10 @@ Salt 2016.11.4 Release Notes
 
 Version 2016.11.4 is a bugfix release for :ref:`2016.11.0 <release-2016-11-0>`.
 
+
+AIX Fixes
+=========
+
+Added module execution support for user and group
+
+
