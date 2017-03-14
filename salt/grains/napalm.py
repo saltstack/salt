@@ -59,55 +59,63 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def _retrieve_grains(proxy=None):
+def _retrieve_grains_cache(proxy=None):
     '''
     Retrieves the grains from the network device if not cached already.
     '''
-
     global GRAINS_CACHE
-    global DEVICE_CACHE
-
     if not GRAINS_CACHE:
         if proxy and salt.utils.napalm.is_proxy(__opts__):
             # if proxy var passed and is NAPALM-type proxy minion
             GRAINS_CACHE = proxy['napalm.get_grains']()
-            if 'napalm.get_device' in proxy:
-                DEVICE_CACHE = proxy['napalm.get_device']()
         elif not proxy and salt.utils.napalm.is_minion(__opts__):
             # if proxy var not passed and is running in a straight minion
-            DEVICE_CACHE = salt.utils.napalm.get_device(__opts__)
             GRAINS_CACHE = salt.utils.napalm.call(
                 DEVICE_CACHE,
                 'get_facts',
                 **{}
             )
-
     return GRAINS_CACHE
+
+
+def _retrieve_device_cache(proxy=None):
+    '''
+    Loads the network device details if not cached already.
+    '''
+    global DEVICE_CACHE
+    if not DEVICE_CACHE:
+        if proxy and salt.utils.napalm.is_proxy(__opts__):
+            # if proxy var passed and is NAPALM-type proxy minion
+            if 'napalm.get_device' in proxy:
+                DEVICE_CACHE = proxy['napalm.get_device']()
+        elif not proxy and salt.utils.napalm.is_minion(__opts__):
+            # if proxy var not passed and is running in a straight minion
+            DEVICE_CACHE = salt.utils.napalm.get_device_opts(__opts__)
+    return DEVICE_CACHE
 
 
 def _get_grain(name, proxy=None):
     '''
     Retrieves the grain value from the cached dictionary.
     '''
-    grains = _retrieve_grains(proxy=proxy)
+    grains = _retrieve_grains_cache(proxy=proxy)
     if grains.get('result', False) and grains.get('out', {}):
         return grains.get('out').get(name)
 
 
-def _get_device_grain(name):
+def _get_device_grain(name, proxy=None):
     '''
     Retrieves device-specific grains.
     '''
-    if not DEVICE_CACHE:
-        return
-    return DEVICE_CACHE.get(name.upper())
+    device = _retrieve_device_cache(proxy=proxy)
+    return device.get(name.upper())
 
 # ----------------------------------------------------------------------------------------------------------------------
 # actual grains
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def getos():
+def getos(proxy=None):
     '''
     Returns the Operating System name running on the network device.
 
@@ -119,7 +127,7 @@ def getos():
 
         salt -G 'os:junos' test.ping
     '''
-    return {'os': _get_device_grain('driver_name')}
+    return {'os': _get_device_grain('driver_name', proxy=proxy)}
 
 
 def version(proxy=None):
@@ -214,7 +222,7 @@ def uptime(proxy=None):
 
     CLI Example - select all devices started/restarted within the last hour:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt -G 'uptime<3600' test.ping
     '''
@@ -277,7 +285,7 @@ def username(proxy=None):
     if proxy and salt.utils.napalm.is_proxy(__opts__):
         # only if proxy will override the username
         # otherwise will use the default Salt grains
-        return {'username': _get_device_grain('username')}
+        return {'username': _get_device_grain('username', proxy=proxy)}
 
 
 def hostname(proxy=None):
@@ -313,7 +321,7 @@ def host(proxy=None):
     provides the physical hostname of the network device,
     as it would be on an ordinary minion server.
     When running in a proxy minion, ``host`` points to the
-    value configured in the pillar: :mod:`NAPALM proxy module <salt.proxies.napalm>`.
+    value configured in the pillar: :mod:`NAPALM proxy module <salt.proxy.napalm>`.
 
     .. note::
 
@@ -344,10 +352,10 @@ def host(proxy=None):
     if proxy and salt.utils.napalm.is_proxy(__opts__):
         # this grain is set only when running in a proxy minion
         # otherwise will use the default Salt grains
-        return {'host': _get_device_grain('hostname')}
+        return {'host': _get_device_grain('hostname', proxy=proxy)}
 
 
-def optional_args():
+def optional_args(proxy=None):
     '''
     Return the connection optional args.
 
@@ -372,7 +380,7 @@ def optional_args():
         device2:
             True
     '''
-    opt_args = _get_device_grain('optional_args')
+    opt_args = _get_device_grain('optional_args', proxy=proxy)
     if _FORBIDDEN_OPT_ARGS:
         for arg in _FORBIDDEN_OPT_ARGS:
             opt_args.pop(arg, None)
