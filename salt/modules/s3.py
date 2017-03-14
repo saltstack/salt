@@ -103,7 +103,7 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
                                  role_arn=role_arn)
 
 
-def get(bucket=None, path=None, return_bin=False, action=None,
+def get(bucket='', path='', return_bin=False, action=None,
         local_file=None, key=None, keyid=None, service_url=None,
         verify_ssl=None, kms_keyid=None, location=None, role_arn=None):
     '''
