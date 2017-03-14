@@ -201,7 +201,6 @@ import copy
 # Import Salt libs
 import salt.utils.dictupdate as dictupdate
 import salt.ext.six as six
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
