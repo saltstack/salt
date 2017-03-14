@@ -645,12 +645,16 @@ def _get_properties(path="",method="GET",forced_params=[]):
     search_path = ''
     props = []
     parameters = set(forced_params)
+    # Browse all path elements but last
     for elem in path_levels[:-1]:
         search_path += '/' + elem
+        # Lookup for a dictionnary with path = "requested path" in list" and return its children
         sub = (item for item in sub if item["path"] == search_path).next()['children']
+    # Get leaf element in path
     search_path += '/' + path_levels[-1]
     sub = (item for item in sub if item["path"] == search_path).next()
     try:
+        # get list of properties for requested method
         props = sub['info'][method]['parameters']['properties'].keys()
     except KeyError, e:
         print 'method not found: "{0}"'.format(str(e))
@@ -658,6 +662,8 @@ def _get_properties(path="",method="GET",forced_params=[]):
         raise
     for prop in props:
         numerical = re.match('(\w+)\[n\]', prop)
+        # generate (arbitrarily) 10 properties for duplicatable properties identified by:
+        # "prop[n]"
         if numerical:
             for i in range(10):
                 parameters.add(numerical.group(1) + str(i))
