@@ -3,7 +3,7 @@
 Salt returner to return highstate stats to Librato
 
 To enable this returner the minion will need the Librato
-client importable on the python path and the following
+client importable on the Python path and the following
 values configured in the minion or master config.
 
 The librato python client can be found at:
@@ -64,7 +64,7 @@ def __virtual__():
 
 def _get_options(ret=None):
     '''
-    Get the librato options from salt.
+    Get the Librato options from salt.
     '''
     attrs = {'email': 'email',
              'api_token': 'api_token',
@@ -85,7 +85,7 @@ def _get_options(ret=None):
 
 def _get_librato(ret=None):
     '''
-    Return a librato connection object.
+    Return a Librato connection object.
     '''
     _options = _get_options(ret)
 
@@ -122,7 +122,7 @@ def _calculate_runtimes(states):
 
 def returner(ret):
     '''
-    Parse the return data and return metrics to librato.
+    Parse the return data and return metrics to Librato.
     '''
     librato_conn = _get_librato(ret)
 
