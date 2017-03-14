@@ -619,6 +619,7 @@ def create(vm_):
 
     return ret
 
+
 def _import_api():
     '''
     Download https://<url>/pve-docs/api-viewer/apidoc.js
@@ -633,7 +634,8 @@ def _import_api():
     api_json = re_filter.findall(returned_data.text)[0]
     api = json.loads(api_json)
 
-def _get_properties(path="",method="GET",forced_params=[]):
+
+def _get_properties(path="", method="GET", forced_params=None):
     '''
     Return the parameter list from api for defined path and HTTP method
     '''
@@ -644,7 +646,7 @@ def _get_properties(path="",method="GET",forced_params=[]):
     path_levels = [level for level in path.split('/') if level != '']
     search_path = ''
     props = []
-    parameters = set(forced_params)
+    parameters = set([] if forced_params is None else forced_params)
     # Browse all path elements but last
     for elem in path_levels[:-1]:
         search_path += '/' + elem
@@ -652,12 +654,12 @@ def _get_properties(path="",method="GET",forced_params=[]):
         sub = (item for item in sub if item["path"] == search_path).next()['children']
     # Get leaf element in path
     search_path += '/' + path_levels[-1]
-    sub = (item for item in sub if item["path"] == search_path).next()
+    sub = next((item for item in sub if item["path"] == search_path))
     try:
         # get list of properties for requested method
         props = sub['info'][method]['parameters']['properties'].keys()
-    except KeyError, e:
-        print 'method not found: "{0}"'.format(str(e))
+    except KeyError as exc:
+        log.error('method not found: "{0}"'.format(str(exc)))
     except:
         raise
     for prop in props:
@@ -670,6 +672,7 @@ def _get_properties(path="",method="GET",forced_params=[]):
         else:
             parameters.add(prop)
     return parameters
+
 
 def create_node(vm_, newid):
     '''
@@ -741,7 +744,9 @@ def create_node(vm_, newid):
 
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
-        for prop in _get_properties('/nodes/{node}/qemu','POST',('acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0')):
+        for prop in _get_properties('/nodes/{node}/qemu',
+                                    'POST',
+                                    ('acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0')):
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
