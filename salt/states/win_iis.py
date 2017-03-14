@@ -771,7 +771,7 @@ def remove_vdir(name, site, app='/'):
 
 
 def set_app(name, site, settings=None):
-    '''
+    r'''
     Set the value of the setting for an IIS web application.
     .. note::
         This function only configures existing app.
