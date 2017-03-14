@@ -126,45 +126,16 @@ def _get_zone_aix():
     raise CommandExecutionError('Unable to get timezone from ' + tzfile)
 
 
-def _parse_aix_posix(timezone):
-    '''
-    Parse POSIX timezone to retrieve the time zone offset
-
-    .. note::
-
-        MST7MDT,M3.2.0/2:00:00,M11.1.0/2:00:00
-    '''
-    tzstrg = timezone.split(',')
-    test_offset = tzstrg[0]
-    ref = re.compile(r'([A-Z]+)\D?(\d+)([A-Z]+)')
-    refgrps = ref.search(test_offset)
-    offset_number = refgrps.group(2)
-    if test_offset.find('-') == -1:
-        offset_prefix = '-'
-    else:
-        offset_prefix = '+'
-    offset = '{0}{1:02d}00'.format(offset_prefix, int(offset_number))
-    return offset
-
-
-def _parse_aix_olson(timezone):
-    '''
-    Parse Olson timezone to retrieve the time zone offset
-
-    .. note::
-
-        America/Denver
-
-    '''
-    log.debug('DGM _parser_aix_olson,  timezone \'{0}\''.format(timezone))
-    offset = 0
-
-    return offset
-
-
 def get_zone():
     '''
     Get current timezone (i.e. America/Denver)
+
+    .. versionchanged:: 2016.11.4
+
+    .. note::
+
+        On AIX operating systems, Posix values can also be returned
+        'CST6CDT,M3.2.0/2:00:00,M11.1.0/2:00:00'
 
     CLI Example:
 
@@ -230,16 +201,12 @@ def get_offset():
     if 'AIX' not in __grains__['os_family']:
         return __salt__['cmd.run'](['date', '+%z'], python_shell=False)
 
-    timezone = get_zone()
-    zonepath = '/usr/share/lib/zoneinfo/{0}'.format(timezone)
+    salt_path = '/opt/salt/bin/date'
 
-    log.debug('DGM get_offset, timezone \'{0}\', zonepath \'{1}\''.format(timezone, zonepath))
+    if not os.path.exists(salt_path):
+        return 'date in salt binaries does not exist: {0}'.format(salt_path)
 
-    if not os.path.exists(zonepath):
-        offset = _parse_aix_posix(timezone)
-    else:
-        offset = _parse_aix_olson(timezone)
-    return offset
+    return __salt__['cmd.run']([salt_path, '+%z'], python_shell=False)
 
 
 def set_zone(timezone):
@@ -256,6 +223,17 @@ def set_zone(timezone):
     .. code-block:: bash
 
         salt '*' timezone.set_zone 'America/Denver'
+
+    .. versionchanged:: 2016.11.4
+
+    .. note::
+
+        On AIX operating systems, Posix values are also allowed, see below
+
+    .. code-block:: bash
+
+        salt '*' timezone.set_zone 'CST6CDT,M3.2.0/2:00:00,M11.1.0/2:00:00'
+
     '''
     if salt.utils.which('timedatectl'):
         try:
@@ -268,7 +246,7 @@ def set_zone(timezone):
     else:
         zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
 
-    if not os.path.exists(zonepath):
+    if not os.path.exists(zonepath) and 'AIX' not in __grains__['os_family']:
         return 'Zone does not exist: {0}'.format(zonepath)
 
     if os.path.exists('/etc/localtime'):
@@ -278,8 +256,17 @@ def set_zone(timezone):
         __salt__['file.sed'](
             '/etc/default/init', '^TZ=.*', 'TZ={0}'.format(timezone))
     elif 'AIX' in __grains__['os_family']:
+        ## timezone could be Olson or Posix
+        curtzstring = get_zone()
         cmd = ['chtz', timezone]
-        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+        result = __salt__['cmd.retcode'](cmd, python_shell=False)
+        if result == 0:
+            return True
+
+        # restore orig timezone, since AIX chtz failure sets UTC
+        cmd = ['chtz', curtzstring]
+        __salt__['cmd.retcode'](cmd, python_shell=False)
+        return False
     else:
         os.symlink(zonepath, '/etc/localtime')
 
