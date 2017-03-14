@@ -605,7 +605,7 @@ class GrainsModuleTestCase(TestCase):
                                   ('z', 'zval'),
                                   ]))
 
-    def test_is(self):
+    def test_equals(self):
         grainsmod.__grains__ = OrderedDict([
                                 ('a', 'aval'),
                                 ('b', OrderedDict([
@@ -615,10 +615,10 @@ class GrainsModuleTestCase(TestCase):
                                             OrderedDict([('l23', 'l23val')])])
                                     ])),
                                 ('c', 8)])
-        res = grainsmod.is('a', 'aval')
+        res = grainsmod.equals('a', 'aval')
         self.assertEqual(type(res), bool)
         self.assertTrue(res)
-        res = grainsmod.is('b:z', 'zval')
+        res = grainsmod.equals('b:z', 'zval')
         self.assertTrue(res)
-        res = grainsmod.is('b:z', 'aval')
+        res = grainsmod.equals('b:z', 'aval')
         self.assertFalse(res)

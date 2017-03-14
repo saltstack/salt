@@ -767,7 +767,7 @@ def set(key,
     return ret
 
 
-def is(key, value):
+def equals(key, value):
     '''
     Used to make sure the minion's grain key/value matches.
 
@@ -775,9 +775,9 @@ def is(key, value):
 
     CLI Example:
 
-        salt '*' grains.is fqdn <expected_fqdn>
+        salt '*' grains.equals fqdn <expected_fqdn>
 
-        salt '*' grains.is systemd:version 219
+        salt '*' grains.equals systemd:version 219
     '''
     return str(value) == str(get(key))
 
