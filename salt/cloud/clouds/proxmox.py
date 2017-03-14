@@ -31,6 +31,8 @@ from __future__ import absolute_import
 import time
 import pprint
 import logging
+import re
+import json
 
 # Import salt libs
 import salt.ext.six as six
@@ -733,7 +735,7 @@ def create_node(vm_, newid):
 
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
-        for prop in 'acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0':
+        for prop in _get_properties('/nodes/{node}/qemu','POST',('acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0')):
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
