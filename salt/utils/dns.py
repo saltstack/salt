@@ -41,6 +41,7 @@ import base64
 import binascii
 import hashlib
 import itertools
+import random
 import socket
 import ssl
 import string
@@ -126,6 +127,30 @@ class RFC(object):
             return ref.keys()[ref.values().index(lookup)]
 
 
+def _to_port(port):
+    try:
+        port = int(port)
+        assert 1 <= port <= 65535
+        return port
+    except (ValueError, AssertionError):
+        raise ValueError('Invalid port {0}'.format(port))
+
+
+def _weighted_order(recs):
+    res = []
+    weights = [rec['weight'] for rec in recs]
+    while weights:
+        rnd = random.random() * sum(weights)
+        for i, w in enumerate(weights):
+            rnd -= w
+            if rnd < 0:
+                res.append(recs.pop(i)['name'])
+                weights.pop(i)
+                break
+
+    return res
+
+
 def _data2rec(rschema, rdata):
     '''
     OrderedDict({
@@ -148,17 +173,27 @@ def _data2rec(rschema, rdata):
         return False
 
 
+def _data2rec_group(rschema, rdatas, groupon):
+    if not isinstance(rdatas, (list, tuple)):
+        rdatas = [rdatas]
+
+    res = OrderedDict()
+    for rdata in rdatas:
+        ppr('RDATA PREPROPECSS: {}'.format(rdata))
+        rdata = _data2rec(rschema, rdata)
+        assert rdata and groupon in rdata
+
+        ppr('RDATA POSTS: {}'.format(rdata))
+
+        idx = rdata.pop(groupon)
+        if idx not in res:
+            res[idx] = []
+        res[idx].append(rdata)
+    return res
+
+
 def _rec2data(*rdata):
     return ' '.join(rdata)
-
-
-def _to_port(port):
-    try:
-        port = int(port)
-        assert 1 <= port <= 65535
-        return port
-    except (ValueError, AssertionError):
-        raise ValueError('Invalid port {0}'.format(port))
 
 
 def _query_simple(name, rdtype, timeout=None):
@@ -525,22 +560,22 @@ def records(
         # 'SPF' has become a regular 'TXT' again
         qres = [answer for answer in query(name, 'TXT', **qargs) if answer.startswith('v=spf')]
 
-    if not qres:
-        return qres
+    rec_map = {
+        'A':    a_rec,
+        'AAAA': aaaa_rec,
+        'MX':   mx_rec,
+        'SOA':  soa_rec,
+        'SPF':  spf_rec,
+        'SRV':  srv_rec,
+    }
+    rdmap = rec_map.get(rdtype, None)
 
-    res = []
-    for answer in qres:
-        ares = {
-            'A':    a_rec,
-            'AAAA': aaaa_rec,
-            'MX':   mx_rec,
-            'SOA':  soa_rec,
-            'SPF':  spf_rec,
-            'SRV':  srv_rec,
-        }
-        if rdtype in ares:
-            answer = ares[rdtype](answer)
-        res.append(answer)
+    if not all((qres, rdmap)):
+        return qres
+    elif rdtype in ('MX', 'SRV'):
+        res = rdmap(qres)
+    else:
+        res = [rdmap(answer) for answer in qres]
 
     return res
 
@@ -559,28 +594,6 @@ def aaaa_rec(rdata):
     return _data2rec(rschema, rdata)
 
 
-# def _weight_pick(domain):
-#     pass
-#
-#
-# def weighted_choice(choices):
-#
-#     qres = records(domain, 'MX')
-#
-#     total = sum(rec['weight'])
-#     count = len(qres)
-#
-#     values, weights = zip(*choices)
-#     total = 0
-#     cum_weights = []
-#     for w in weights:
-#         total += w
-#         cum_weights.append(total)
-#     x = random() * total
-#     i = bisect(cum_weights, x)
-#     return values[i]
-
-
 def mx_data(target, preference=10):
     '''
     Generate SRV record data
@@ -591,7 +604,7 @@ def mx_data(target, preference=10):
     return _rec2data(int(preference), target)
 
 
-def mx_rec(rdata):
+def mx_rec(rdatas):
     '''
     Generate MX record from data
     :return:
@@ -600,7 +613,7 @@ def mx_rec(rdata):
         ('preference', int),
         ('name', str),
     ))
-    return _data2rec(rschema, rdata)
+    return _data2rec_group(rschema, rdatas, 'preference')
 
 
 def ptr_name(rdata):
@@ -717,7 +730,15 @@ def srv_name(svc, name=None):
     return '_{0}._{1}{2}'.format(svc, proto, name)
 
 
-def srv_rec(rdata):
+def srv_pick(srv_records):
+    res = []
+    for prio, recs in srv_records.items():
+        res.append(_weighted_order(recs))
+
+    return res
+
+
+def srv_rec(rdatas):
     '''
     Parse SRV record fields
     :param rdata:
@@ -729,7 +750,7 @@ def srv_rec(rdata):
         ('port', _to_port),
         ('name', str),
     ))
-    return _data2rec(rschema, rdata)
+    return _data2rec_group(rschema, rdatas, 'prio')
 
 
 def sshfp_data(key_t, hash_t, pub):
