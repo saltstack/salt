@@ -1235,7 +1235,20 @@ def managed(name,
             Debian file type ``*.dsc`` files are also supported.
 
         **Inserting the Source Hash in the SLS Data**
-            Examples:
+
+        The source_hash can be specified as a simple checksum, like so:
+
+        .. code-block:: yaml
+
+            tomdroid-src-0.7.3.tar.gz:
+              file.managed:
+                - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                - source_hash: 79eef25f9b0b2c642c62b7f737d4f53f
+
+        .. note::
+            Releases prior to 2016.11.0 must also include the hash type, like
+            in the below example:
 
             .. code-block:: yaml
 
@@ -1244,7 +1257,6 @@ def managed(name,
                     - name: /tmp/tomdroid-src-0.7.3.tar.gz
                     - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
                     - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
-
 
         Known issues:
             If the remote server URL has the hash file as an apparent
