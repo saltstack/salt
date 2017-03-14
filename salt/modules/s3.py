@@ -182,7 +182,7 @@ def get(bucket='', path='', return_bin=False, action=None,
                                  role_arn=role_arn)
 
 
-def head(bucket, path=None, key=None, keyid=None, service_url=None,
+def head(bucket, path='', key=None, keyid=None, service_url=None,
          verify_ssl=None, kms_keyid=None, location=None, role_arn=None):
     '''
     Return the metadata for a bucket, or an object in a bucket.
