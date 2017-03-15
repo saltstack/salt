@@ -267,6 +267,7 @@ import difflib
 import itertools
 import logging
 import os
+import posixpath
 import re
 import shutil
 import sys
@@ -358,25 +359,33 @@ def _is_valid_relpath(
     '''
     Performs basic sanity checks on a relative path.
 
-    Requires slash-separated path components (i.e. the kind obtained
-    through cp.list_master or other such calls).
+    Requires POSIX-compatible paths (i.e. the kind obtained through
+    cp.list_master or other such calls).
 
     Ensures that the path does not contain directory transversal, and
     that it does not exceed a stated maximum depth (if specified).
     '''
     # Check relpath surrounded by slashes, so that `..` can be caught as
     # a path component at the start, end, and in the middle of the path.
-    if '/../' in '/{0}/'.format(relpath):
+    sep, pardir = posixpath.sep, posixpath.pardir
+    if (sep + pardir + sep) in (sep + relpath + sep):
         return False
 
     # Check that the relative path's depth does not exceed maxdepth
     if maxdepth is not None:
-        # Since paths are all master, just use POSIX separator
-        path_depth = relpath.strip('/').count('/')
+        path_depth = relpath.strip(sep).count(sep)
         if path_depth > maxdepth:
             return False
 
     return True
+
+
+def _salt_to_os_path(path):
+    '''
+    Converts a path from the form received via salt master to the OS's native
+    path format.
+    '''
+    return os.path.normpath(path.replace(posixpath.sep, os.path.sep))
 
 
 def _gen_recurse_managed_files(
@@ -392,10 +401,15 @@ def _gen_recurse_managed_files(
     Generate the list of files managed by a recurse state
     '''
 
+    # Convert a relative path generated from salt master paths to an OS path
+    # using "name" as the base directory
+    def full_path(master_relpath):
+        return os.path.join(name, _salt_to_os_path(master_relpath))
+
     # Process symlinks and return the updated filenames list
     def process_symlinks(filenames, symlinks):
         for lname, ltarget in six.iteritems(symlinks):
-            srelpath = os.path.relpath(lname, srcpath)
+            srelpath = posixpath.relpath(lname, srcpath)
             if not _is_valid_relpath(srelpath, maxdepth=maxdepth):
                 continue
             if not salt.utils.check_include_exclude(
@@ -417,7 +431,7 @@ def _gen_recurse_managed_files(
             managed_symlinks.add((srelpath, ltarget))
 
             # Add the path to the keep set in case clean is set to True
-            keep.add(os.path.join(name, srelpath))
+            keep.add(full_path(srelpath))
         vdir.update(keep)
         return filenames
 
@@ -430,10 +444,9 @@ def _gen_recurse_managed_files(
     srcpath, senv = salt.utils.url.parse(source)
     if senv is None:
         senv = __env__
-    if not srcpath.endswith(os.sep):
+    if not srcpath.endswith(posixpath.sep):
         # we're searching for things that start with this *directory*.
-        # use '/' since #master only runs on POSIX
-        srcpath = srcpath + os.sep
+        srcpath = srcpath + posixpath.sep
     fns_ = __salt__['cp.list_master'](senv, srcpath)
 
     # If we are instructed to keep symlinks, then process them.
@@ -450,7 +463,7 @@ def _gen_recurse_managed_files(
         # the file to copy from; it is either a normal file or an
         # empty dir(if include_empty==true).
 
-        relname = sdecode(os.path.relpath(fn_, srcpath))
+        relname = sdecode(posixpath.relpath(fn_, srcpath))
         if not _is_valid_relpath(relname, maxdepth=maxdepth):
             continue
 
@@ -459,7 +472,7 @@ def _gen_recurse_managed_files(
         if not salt.utils.check_include_exclude(
                 relname, include_pat, exclude_pat):
             continue
-        dest = os.path.join(name, relname)
+        dest = full_path(relname)
         dirname = os.path.dirname(dest)
         keep.add(dest)
 
@@ -474,13 +487,13 @@ def _gen_recurse_managed_files(
     if include_empty:
         mdirs = __salt__['cp.list_master_dirs'](senv, srcpath)
         for mdir in mdirs:
-            relname = os.path.relpath(mdir, srcpath)
+            relname = posixpath.relpath(mdir, srcpath)
             if not _is_valid_relpath(relname, maxdepth=maxdepth):
                 continue
             if not salt.utils.check_include_exclude(
                     relname, include_pat, exclude_pat):
                 continue
-            mdest = os.path.join(name, relname)
+            mdest = full_path(relname)
             # Check for symlinks that happen to point to an empty dir.
             if keep_symlinks:
                 islink = False
@@ -2369,7 +2382,7 @@ def _depth_limited_walk(top, max_depth=None):
     '''
     for root, dirs, files in os.walk(top):
         if max_depth is not None:
-            rel_depth = root.count(os.sep) - top.count(os.sep)
+            rel_depth = root.count(os.path.sep) - top.count(os.path.sep)
             if rel_depth >= max_depth:
                 del dirs[:]
         yield (str(root), list(dirs), list(files))
