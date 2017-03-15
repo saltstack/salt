@@ -502,16 +502,16 @@ def present(name,
                 continue
             # run chhome once to avoid any possible bad side-effect
             if key == 'home' and 'homeDoesNotExist' not in changes:
-                if __grains__['kernel'] == 'Darwin':
+                if __grains__['kernel'] in ('Darwin', 'Windows'):
                     __salt__['user.chhome'](name, val)
                 else:
-                    __salt__['user.chhome'](name, val, False)
+                    __salt__['user.chhome'](name, val, persist=False)
                 continue
             if key == 'homeDoesNotExist':
-                if __grains__['kernel'] == 'Darwin':
+                if __grains__['kernel'] in ('Darwin', 'Windows'):
                     __salt__['user.chhome'](name, val)
                 else:
-                    __salt__['user.chhome'](name, val, True)
+                    __salt__['user.chhome'](name, val, persist=True)
                 if not os.path.isdir(val):
                     __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0o755)
                 continue
