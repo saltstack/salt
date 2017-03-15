@@ -73,7 +73,6 @@ import salt.ext.six as six
 import salt.utils.dictupdate as dictupdate
 import salt.utils
 from salt.exceptions import SaltInvocationError
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
