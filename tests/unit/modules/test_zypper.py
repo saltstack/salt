@@ -86,6 +86,10 @@ class ZypperTestCase(TestCase):
             'mod_repo': Mock(wraps=zypper.mod_repo)
         }
 
+    def tearDown(self):
+        del self.new_repo_config
+        del self.zypper_patcher_config
+
     def test_list_upgrades(self):
         '''
         List package upgrades

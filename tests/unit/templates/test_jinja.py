@@ -1052,6 +1052,9 @@ class TestDotNotationLookup(ModuleCase):
         render = salt.loader.render(minion_opts, functions)
         self.jinja = render.get('jinja')
 
+    def tearDown(self):
+        del self.jinja
+
     def render(self, tmpl_str, context=None):
         return self.jinja(tmpl_str, context=context or {}, from_str=True).read()
 

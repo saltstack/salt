@@ -147,10 +147,12 @@ class BotoVpcTestCaseBase(TestCase):
 
         self.patcher = patch('boto3.session.Session')
         self.addCleanup(self.patcher.stop)
+        self.addCleanup(delattr, self, 'patcher')
         mock_session = self.patcher.start()
 
         session_instance = mock_session.return_value
         self.conn3 = MagicMock()
+        self.addCleanup(delattr, self, 'conn3')
         session_instance.client.return_value = self.conn3
 
 

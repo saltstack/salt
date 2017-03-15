@@ -41,6 +41,7 @@ class TimezoneTestCase(TestCase):
                 os.remove(tempfile.name)
             except OSError:
                 pass
+        del self.tempfiles
 
     def test_zone_compare_equal(self):
         etc_localtime = self.create_tempfile_with_contents('a')

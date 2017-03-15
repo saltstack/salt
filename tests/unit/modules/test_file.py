@@ -65,6 +65,7 @@ class FileReplaceTestCase(TestCase):
 
     def tearDown(self):
         os.remove(self.tfile.name)
+        del self.tfile
 
     def test_replace(self):
         filemod.replace(self.tfile.name, r'Etiam', 'Salticus', backup=False)
