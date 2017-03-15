@@ -308,7 +308,8 @@ def _call_function(name, returner=None, **kwargs):
     :return:
     '''
     argspec = salt.utils.args.get_function_argspec(__salt__[name])
-    func_kw = dict(zip(argspec.args[-len(argspec.defaults or []):], argspec.defaults or []))
+    func_kw = dict(zip(argspec.args[-len(argspec.defaults or []):],  # pylint: disable=incompatible-py3-code
+                       argspec.defaults or []))
     func_args = []
     for funcset in kwargs.get('func_args') or {}:
         if isinstance(funcset, dict):
