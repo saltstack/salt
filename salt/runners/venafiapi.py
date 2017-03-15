@@ -64,7 +64,7 @@ def _api_key():
 def gen_rsa(minion_id, dns_name=None, zone='default', password=None):
     '''
     Generate and return an RSA private_key. If a ``dns_name`` is passed in, the
-    private_key will be cached under that name. 
+    private_key will be cached under that name.
     '''
     gen = RSA.generate(bits=2048)
     private_key = gen.exportKey('PEM', password)
@@ -103,7 +103,7 @@ def gen_csr(
             -l "Palo Alto" -st "California" -c US
     '''
     tmpdir = tempfile.mkdtemp()
-    os.chmod(tmpdir, 0700)
+    os.chmod(tmpdir, 0o700)
 
     bank = 'venafi/domains'
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
@@ -225,7 +225,7 @@ def request(
         org_unit=org_unit,
     )
 
-    pdata=json.dumps({
+    pdata = json.dumps({
         'zoneId': zone_id,
         'certificateSigningRequest': csr,
     })
