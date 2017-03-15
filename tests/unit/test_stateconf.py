@@ -50,6 +50,13 @@ class StateConfigRendererTestCase(TestCase):
             {'config.get': lambda a, b: False}
         )
 
+    def tearDown(self):
+        for attrname in ('config', '_renderers'):
+            try:
+                delattr(self, attrname)
+            except AttributeError:
+                continue
+
     def _render_sls(self,
                     content,
                     sls='',
