@@ -368,7 +368,7 @@ def _is_valid_relpath(
     # Check relpath surrounded by slashes, so that `..` can be caught as
     # a path component at the start, end, and in the middle of the path.
     sep, pardir = posixpath.sep, posixpath.pardir
-    if (sep + pardir + sep) in (sep + relpath + sep):
+    if sep + pardir + sep in sep + relpath + sep:
         return False
 
     # Check that the relative path's depth does not exceed maxdepth
