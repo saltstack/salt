@@ -663,7 +663,7 @@ def _get_properties(path="", method="GET", forced_params=None):
     except:
         raise
     for prop in props:
-        numerical = re.match('(\w+)\[n\]', prop)
+        numerical = re.match(r'(\w+)\[n\]', prop)
         # generate (arbitrarily) 10 properties for duplicatable properties identified by:
         # "prop[n]"
         if numerical:
@@ -722,9 +722,11 @@ def create_node(vm_, newid):
         newnode['hostname'] = vm_['name']
         newnode['ostemplate'] = vm_['image']
 
+        static_props = ('cpuunits', 'description', 'memory', 'onboot', 'net0',
+                        'password', 'nameserver', 'swap', 'storage', 'rootfs')
         for prop in _get_properties('/nodes/{node}/lxc',
                                     'POST',
-                                    'cpuunits', 'description', 'memory', 'onboot', 'net0', 'password', 'nameserver', 'swap', 'storage', 'rootfs'):
+                                    static_props):
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
@@ -746,9 +748,10 @@ def create_node(vm_, newid):
 
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
+        static_props = ('acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0')
         for prop in _get_properties('/nodes/{node}/qemu',
                                     'POST',
-                                    ('acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0')):
+                                    static_props):
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
