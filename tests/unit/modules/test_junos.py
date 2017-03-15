@@ -5,7 +5,7 @@ from __future__ import print_function
 
 __author__ = "Rajvi Dhimar"
 
-import unittest2 as unittest
+import unittest
 from nose.plugins.attrib import attr
 from tests.support.mock import patch, mock_open
 try:
