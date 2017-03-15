@@ -28,10 +28,10 @@ from __future__ import absolute_import
 import logging
 import socket
 import json
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 
 # Import salt libs
 import salt.utils
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
@@ -675,7 +675,7 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
     try:
         if conn_args:
             # usergroup.exists deprecated
-            if LooseVersion(zabbix_version) > LooseVersion("2.5"):
+            if _LooseVersion(zabbix_version) > _LooseVersion("2.5"):
                 if not name:
                     name = ''
                 ret = usergroup_get(name, None, **connection_args)
@@ -690,7 +690,7 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
                 if name:
                     params['name'] = name
                 # deprecated in 2.4
-                if LooseVersion(zabbix_version) < LooseVersion("2.4"):
+                if _LooseVersion(zabbix_version) < _LooseVersion("2.4"):
                     if node:
                         params['node'] = node
                     if nodeids:
@@ -931,7 +931,7 @@ def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **co
     try:
         if conn_args:
             # hostgroup.exists deprecated
-            if LooseVersion(zabbix_version) > LooseVersion("2.5"):
+            if _LooseVersion(zabbix_version) > _LooseVersion("2.5"):
                 if not host:
                     host = None
                 if not name:
@@ -951,7 +951,7 @@ def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **co
                 if name:
                     params['name'] = name
                 # deprecated in 2.4
-                if LooseVersion(zabbix_version) < LooseVersion("2.4"):
+                if _LooseVersion(zabbix_version) < _LooseVersion("2.4"):
                     if node:
                         params['node'] = node
                     if nodeids:
@@ -1180,7 +1180,7 @@ def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connect
     try:
         if conn_args:
             # hostgroup.exists deprecated
-            if LooseVersion(zabbix_version) > LooseVersion("2.5"):
+            if _LooseVersion(zabbix_version) > _LooseVersion("2.5"):
                 if not groupid:
                     groupid = None
                 if not name:
@@ -1196,7 +1196,7 @@ def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connect
                 if name:
                     params['name'] = name
                 # deprecated in 2.4
-                if LooseVersion(zabbix_version) < LooseVersion("2.4"):
+                if _LooseVersion(zabbix_version) < _LooseVersion("2.4"):
                     if node:
                         params['node'] = node
                     if nodeids:

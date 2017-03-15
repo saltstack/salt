@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
-Salt returner to return highstate stats to librato
+Salt returner to return highstate stats to Librato
 
-To enable this returner the minion will need the librato
-client importable on the python path and the following
+To enable this returner the minion will need the Librato
+client importable on the Python path and the following
 values configured in the minion or master config.
 
-The librato python client can be found at:
+The Librato python client can be found at:
 https://github.com/librato/python-librato
 
 .. code-block:: yaml
+
     librato.email: example@librato.com
     librato.api_token: abc12345def
 
-This return supports multi-dimension metrics for librato. To enable
+This return supports multi-dimension metrics for Librato. To enable
 support for more metrics, the tags JSON object can be modified to include
 other tags.
 
@@ -23,6 +24,7 @@ could be modified to include the ec2 tags. Multiple dimensions are added simply
 by adding more tags to the submission.
 
 .. code-block:: python
+
     pillar_data = __salt__['pillar.raw']()
     q.add(metric.name, value, tags={'Name': ret['id'],'Region': pillar_data['ec2_tags']['Name']})
 
@@ -62,7 +64,7 @@ def __virtual__():
 
 def _get_options(ret=None):
     '''
-    Get the librato options from salt.
+    Get the Librato options from salt.
     '''
     attrs = {'email': 'email',
              'api_token': 'api_token',
@@ -83,7 +85,7 @@ def _get_options(ret=None):
 
 def _get_librato(ret=None):
     '''
-    Return a librato connection object.
+    Return a Librato connection object.
     '''
     _options = _get_options(ret)
 
@@ -120,7 +122,7 @@ def _calculate_runtimes(states):
 
 def returner(ret):
     '''
-    Parse the return data and return metrics to librato.
+    Parse the return data and return metrics to Librato.
     '''
     librato_conn = _get_librato(ret)
 
@@ -153,5 +155,5 @@ def returner(ret):
         q.add("saltstack.highstate.total_states", stats[
               'num_failed_states'] + stats['num_passed_states'], tags={'Name': ret['id']})
 
-    log.info("Sending Metrics to librato.")
+    log.info("Sending metrics to Librato.")
     q.submit()

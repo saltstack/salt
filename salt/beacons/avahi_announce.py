@@ -162,6 +162,16 @@ def beacon(config):
         servicename = config['servicename']
     else:
         servicename = __grains__['host']
+        # Check for hostname change
+        if LAST_GRAINS and LAST_GRAINS['host'] != servicename:
+            changes['servicename'] = servicename
+
+    if LAST_GRAINS and config.get('reset_on_change', False):
+        # Check for IP address change in the case when we reset on change
+        if LAST_GRAINS.get('ipv4', []) != __grains__.get('ipv4', []):
+            changes['ipv4'] = __grains__.get('ipv4', [])
+        if LAST_GRAINS.get('ipv6', []) != __grains__.get('ipv6', []):
+            changes['ipv6'] = __grains__.get('ipv6', [])
 
     for item in config['txt']:
         if config['txt'][item].startswith('grains.'):
@@ -192,11 +202,15 @@ def beacon(config):
             changes['servicename'] = servicename
             changes['servicetype'] = config['servicetype']
             changes['port'] = config['port']
+            changes['ipv4'] = __grains__.get('ipv4', [])
+            changes['ipv6'] = __grains__.get('ipv6', [])
             GROUP.AddService(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC, dbus.UInt32(0),
                              servicename, config['servicetype'], '', '',
                              dbus.UInt16(config['port']), avahi.dict_to_txt_array(txt))
             GROUP.Commit()
-        elif config.get('reset_on_change', False):
+        elif config.get('reset_on_change', False) or 'servicename' in changes:
+            # A change in 'servicename' requires a reset because we can only
+            # directly update TXT records
             GROUP.Reset()
             reset_wait = config.get('reset_wait', 0)
             if reset_wait > 0:

@@ -4,11 +4,12 @@
 from __future__ import absolute_import
 import os
 import uuid
+import shutil
 import hashlib
-import tempfile
 
 # Import Salt Testing libs
 import tests.integration as integration
+import tests.support.paths as paths
 
 # Import salt libs
 import salt.ext.six as six
@@ -23,7 +24,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.get_file
         '''
-        tgt = os.path.join(integration.TMP, 'scene33')
+        tgt = os.path.join(paths.TMP, 'scene33')
         self.run_function(
                 'cp.get_file',
                 [
@@ -39,7 +40,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.get_file
         '''
-        tgt = os.path.join(integration.TMP, 'cheese')
+        tgt = os.path.join(paths.TMP, 'cheese')
         self.run_function(
             'cp.get_file',
             [
@@ -57,8 +58,8 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.get_file
         '''
-        tgt = os.path.join(integration.TMP, 'file.big')
-        src = os.path.join(integration.FILES, 'file/base/file.big')
+        tgt = os.path.join(paths.TMP, 'file.big')
+        src = os.path.join(paths.FILES, 'file', 'base', 'file.big')
         with salt.utils.fopen(src, 'r') as fp_:
             data = fp_.read()
             if six.PY3:
@@ -85,7 +86,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.get_file
         '''
-        tgt = os.path.join(integration.TMP, 'make/dirs/scene33')
+        tgt = os.path.join(paths.TMP, 'make', 'dirs', 'scene33')
         self.run_function(
             'cp.get_file',
             [
@@ -94,6 +95,7 @@ class CPModuleTest(integration.ModuleCase):
             ],
             makedirs=True
         )
+        self.addCleanup(shutil.rmtree, os.path.join(paths.TMP, 'make'), ignore_errors=True)
         with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
@@ -103,7 +105,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.get_template
         '''
-        tgt = os.path.join(integration.TMP, 'scene33')
+        tgt = os.path.join(paths.TMP, 'scene33')
         self.run_function(
                 'cp.get_template',
                 ['salt://grail/scene33', tgt],
@@ -117,7 +119,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.get_dir
         '''
-        tgt = os.path.join(integration.TMP, 'many')
+        tgt = os.path.join(paths.TMP, 'many')
         self.run_function(
                 'cp.get_dir',
                 [
@@ -133,7 +135,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.get_dir
         '''
-        tgt = os.path.join(integration.TMP, 'many')
+        tgt = os.path.join(paths.TMP, 'many')
         self.run_function(
             'cp.get_dir',
             [
@@ -152,7 +154,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.get_url with salt:// source given
         '''
-        tgt = os.path.join(integration.TMP, 'scene33')
+        tgt = os.path.join(paths.TMP, 'scene33')
         self.run_function(
             'cp.get_url',
             [
@@ -168,15 +170,16 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.get_url
         '''
-        tgt = os.path.join(integration.TMP, 'make/dirs/scene33')
+        tgt = os.path.join(paths.TMP, 'make', 'dirs', 'scene33')
         self.run_function(
-               'cp.get_url',
+                'cp.get_url',
                 [
                     'salt://grail/scene33',
                     tgt,
                 ],
                 makedirs=True
             )
+        self.addCleanup(shutil.rmtree, os.path.join(paths.TMP, 'make'), ignore_errors=True)
         with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
@@ -226,7 +229,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.get_url with https:// source given
         '''
-        tgt = os.path.join(integration.TMP, 'test_get_url_https')
+        tgt = os.path.join(paths.TMP, 'test_get_url_https')
         self.run_function(
             'cp.get_url',
             [
@@ -277,7 +280,7 @@ class CPModuleTest(integration.ModuleCase):
         cp.get_url with file:// source given
         '''
         tgt = ''
-        src = os.path.join('file://', integration.FILES, 'file/base/file.big')
+        src = os.path.join('file://', paths.FILES, 'file', 'base', 'file.big')
         ret = self.run_function(
             'cp.get_url',
             [
@@ -294,7 +297,7 @@ class CPModuleTest(integration.ModuleCase):
         cp.get_url with file:// source given and destination set as None
         '''
         tgt = None
-        src = os.path.join('file://', integration.FILES, 'file/base/file.big')
+        src = os.path.join('file://', paths.FILES, 'file', 'base', 'file.big')
         ret = self.run_function(
             'cp.get_url',
             [
@@ -349,7 +352,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.get_file_str with file:// source given
         '''
-        src = os.path.join('file://', integration.FILES, 'file/base/file.big')
+        src = os.path.join('file://', paths.FILES, 'file', 'base', 'file.big')
         ret = self.run_function(
             'cp.get_file_str',
             [
@@ -403,7 +406,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.cache_local_file
         '''
-        src = os.path.join(integration.TMP, 'random')
+        src = os.path.join(paths.TMP, 'random')
         with salt.utils.fopen(src, 'w+') as fn_:
             fn_.write('foo')
         ret = self.run_function(
@@ -439,6 +442,7 @@ class CPModuleTest(integration.ModuleCase):
         for path in ret:
             if search in path:
                 found = True
+                break
         self.assertTrue(found)
 
     def test_is_cached(self):
@@ -488,7 +492,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.get_file
         '''
-        tgt = os.path.join(integration.TMP, 'cheese')
+        tgt = os.path.join(paths.TMP, 'cheese')
         try:
             self.run_function('cp.get_file', ['salt://cheese', tgt])
             with salt.utils.fopen(tgt, 'r') as cheese:
@@ -499,7 +503,7 @@ class CPModuleTest(integration.ModuleCase):
             os.unlink(tgt)
 
     def test_get_file_from_env_in_url(self):
-        tgt = os.path.join(integration.TMP, 'cheese')
+        tgt = os.path.join(paths.TMP, 'cheese')
         try:
             self.run_function('cp.get_file', ['salt://cheese?saltenv=prod', tgt])
             with salt.utils.fopen(tgt, 'r') as cheese:
@@ -510,18 +514,18 @@ class CPModuleTest(integration.ModuleCase):
             os.unlink(tgt)
 
     def test_push(self):
-        log_to_xfer = os.path.join(tempfile.gettempdir(), uuid.uuid4().hex)
+        log_to_xfer = os.path.join(paths.TMP, uuid.uuid4().hex)
         open(log_to_xfer, 'w').close()
         try:
             self.run_function('cp.push', [log_to_xfer])
             tgt_cache_file = os.path.join(
-                    integration.TMP,
+                    paths.TMP,
                     'master-minion-root',
                     'cache',
                     'minions',
                     'minion',
                     'files',
-                    tempfile.gettempdir(),
+                    paths.TMP,
                     log_to_xfer)
             self.assertTrue(os.path.isfile(tgt_cache_file), 'File was not cached on the master')
         finally:

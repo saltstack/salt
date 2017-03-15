@@ -129,6 +129,9 @@ def alive(opts):
 
     .. versionadded:: Nitrogen
     '''
+    if salt.utils.napalm.not_always_alive(opts):
+        return True  # don't force reconnection for not-always alive proxies
+        # or regular minion
     is_alive_ret = call('is_alive', **{})
     if not is_alive_ret.get('result', False):
         log.debug('[{proxyid}] Unable to execute `is_alive`: {comment}'.format(

@@ -83,7 +83,6 @@ The dependencies listed above can be installed via package or pip.
 from __future__ import absolute_import
 import logging
 import json
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import time
 import random
 
@@ -92,6 +91,7 @@ import salt.ext.six as six
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range  # pylint: disable=import-error
 
@@ -595,6 +595,25 @@ def get_permissions(FunctionName, Qualifier=None,
         if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
             return {'permissions': None}
         return {'permissions': None, 'error': err}
+
+
+def list_functions(region=None, key=None, keyid=None, profile=None):
+    '''
+    List all Lambda functions visible in the current scope.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lambda.list_functions
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    ret = []
+    for funcs in salt.utils.boto3.paged_call(conn.list_functions):
+        ret += funcs['Functions']
+    return ret
 
 
 def list_function_versions(FunctionName,

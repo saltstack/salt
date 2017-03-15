@@ -2004,7 +2004,12 @@ def request_instance(vm_=None, call=None):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args={'kwargs': params, 'location': location},
+        args={
+            'kwargs': __utils__['cloud.filter_event'](
+                'requesting', params, params.keys()
+            ),
+            'location': location,
+        },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -2552,11 +2557,7 @@ def create(vm_=None, call=None):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -2790,7 +2791,7 @@ def create(vm_=None, call=None):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args=event_data,
+        args=__utils__['cloud.filter_event']('created', event_data, event_data.keys()),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -2816,11 +2817,7 @@ def queue_instances(instances):
     '''
     for instance_id in instances:
         node = _get_node(instance_id=instance_id)
-        for name in node:
-            if instance_id == node[name]['instanceId']:
-                __utils__['cloud.cache_node'](node[name],
-                                            __active_provider_name__,
-                                            __opts__)
+        __utils__['cloud.cache_node'](node, __active_provider_name__, __opts__)
 
 
 def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
@@ -3371,10 +3368,7 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
         )
 
     node = _get_node(name=name, instance_id=instance_id)
-    for name in node:
-        __utils__['cloud.cache_node'](node[name],
-                                    __active_provider_name__,
-                                    __opts__)
+    __utils__['cloud.cache_node'](node, __active_provider_name__, __opts__)
     return node
 
 
