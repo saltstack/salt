@@ -2,14 +2,6 @@
 Venafi Tools for Salt
 =====================
 
-Depends
-~~~~~~~
-
-- `Python 2.6-2.7`
-- `PyYAML`
-- `Jinja2`
-
-
 Introduction
 ~~~~~~~~~~~~
 Before using these modules you need to register an account with Venafi, and
