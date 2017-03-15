@@ -73,6 +73,7 @@ import salt.ext.six as six
 import salt.utils.dictupdate as dictupdate
 import salt.utils
 from salt.exceptions import SaltInvocationError
+from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -317,6 +318,22 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
     return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
 
 
+def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
+    if isinstance(conf, six.string_types):
+        conf = json.loads(conf)
+    if not conf:
+        return {}
+    if not isinstance(conf, dict):
+        raise SaltInvocationError('VpcConfig must be a dict.')
+    sns = [__salt__['boto_vpc.get_resource_id']('subnet', s, region=region, key=key,
+            keyid=keyid, profile=profile).get('id') for s in conf.pop('SubnetNames', [])]
+    sgs = [__salt__['boto_secgroup.get_group_id'](s, region=region, key=key, keyid=keyid,
+            profile=profile) for s in conf.pop('SecurityGroupNames', [])]
+    conf.setdefault('SubnetIds', []).extend(sns)
+    conf.setdefault('SecurityGroupIds', []).extend(sgs)
+    return conf
+
+
 def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
                              MemorySize, VpcConfig, Environment, region,
                              key, keyid, profile, RoleRetries):
@@ -341,7 +358,8 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
     oldval = func.get('VpcConfig')
     if oldval is not None:
         oldval.pop('VpcId', None)
-    if __utils__['boto3.ordered'](oldval) != __utils__['boto3.ordered'](VpcConfig):
+    fixed_VpcConfig = _resolve_vpcconfig(VpcConfig, region, key, keyid, profile)
+    if __utils__['boto3.ordered'](oldval) != __utils__['boto3.ordered'](fixed_VpcConfig):
         need_update = True
         ret['changes'].setdefault('new', {})['VpcConfig'] = VpcConfig
         ret['changes'].setdefault(
