@@ -48,7 +48,7 @@ class ScheduleTestCase(TestCase):
         '''
         Tests ensuring the job exists and deleting it
         '''
-        self.schedule.opts.update({'schedule': {'foo': 'bar'}, 'pillar': ''})
+        self.schedule.opts.update({'schedule': {'foo': 'bar'}, 'pillar': {}})
         self.assertIn('foo', self.schedule.opts['schedule'])
         self.schedule.delete_job('foo')
         self.assertNotIn('foo', self.schedule.opts['schedule'])
@@ -57,7 +57,7 @@ class ScheduleTestCase(TestCase):
         '''
         Tests ignoring deletion job from pillar
         '''
-        self.schedule.opts.update({'pillar': {'schedule': {'foo': 'bar'}}, 'schedule': ''})
+        self.schedule.opts.update({'pillar': {'schedule': {'foo': 'bar'}}, 'schedule': {}})
         self.assertIn('foo', self.schedule.opts['pillar']['schedule'])
         self.schedule.delete_job('foo')
         self.assertIn('foo', self.schedule.opts['pillar']['schedule'])
@@ -66,7 +66,7 @@ class ScheduleTestCase(TestCase):
         '''
         Tests removing job from intervals
         '''
-        self.schedule.opts.update({'pillar': '', 'schedule': ''})
+        self.schedule.opts.update({'pillar': {}, 'schedule': {}})
         self.schedule.intervals = {'foo': 'bar'}
         self.schedule.delete_job('foo')
         self.assertNotIn('foo', self.schedule.intervals)
@@ -76,7 +76,7 @@ class ScheduleTestCase(TestCase):
         Tests ensuring jobs exists and deleting them by prefix
         '''
         self.schedule.opts.update({'schedule': {'foobar': 'bar', 'foobaz': 'baz', 'fooboo': 'boo'},
-                                   'pillar': ''})
+                                   'pillar': {}})
         ret = copy.deepcopy(self.schedule.opts)
         del ret['schedule']['foobar']
         del ret['schedule']['foobaz']
@@ -88,7 +88,7 @@ class ScheduleTestCase(TestCase):
         Tests ignoring deletion jobs by prefix from pillar
         '''
         self.schedule.opts.update({'pillar': {'schedule': {'foobar': 'bar', 'foobaz': 'baz', 'fooboo': 'boo'}},
-                                   'schedule': ''})
+                                   'schedule': {}})
         ret = copy.deepcopy(self.schedule.opts)
         self.schedule.delete_job_prefix('fooba')
         self.assertEqual(self.schedule.opts, ret)
@@ -117,9 +117,9 @@ class ScheduleTestCase(TestCase):
         ret = copy.deepcopy(self.schedule.opts)
         ret.update({'schedule': {'foo': {'bar': 'baz', 'enabled': True},
                                  'hello': {'world': 'peace', 'enabled': True}},
-                    'pillar': ''})
+                    'pillar': {}})
         self.schedule.opts.update({'schedule': {'hello': {'world': 'peace', 'enabled': True}},
-                                   'pillar': ''})
+                                   'pillar': {}})
         Schedule.add_job(self.schedule, data)
         self.assertEqual(self.schedule.opts, ret)
 
