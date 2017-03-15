@@ -2,6 +2,6 @@
  "skipTitle": "Merge forward",
  "delayed": true,
  "delayedUntil": "2h",
- "userBlacklist": []
+ "userBlacklist": ["olliewalsh"]
 }
 
