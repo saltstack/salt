@@ -67,3 +67,4 @@ class ModuleTestCase(TestCase):
         Instantiate a loader to your test case
         '''
         self.loader = self.loaderCls()
+        self.addCleanup(delattr, self, 'loader')
