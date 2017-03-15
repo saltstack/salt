@@ -1296,7 +1296,9 @@ class Cloud(object):
                     client = salt.client.get_local_client(mopts=self.opts)
 
                     ret = client.cmd(
-                        vm_['name'],
+                        # if vm name is different with minion id
+                        # key_id represent vm name or minion id
+                        key_id,
                         'saltutil.sync_{0}'.format(self.opts['sync_after_install']),
                         timeout=self.opts['timeout']
                     )
@@ -1327,7 +1329,9 @@ class Cloud(object):
             )
             client = salt.client.get_local_client(mopts=self.opts)
             action_out = client.cmd(
-                vm_['name'],
+                # if vm name is different with minion id
+                # key_id represent vm name or minion id
+                key_id,
                 self.opts['start_action'],
                 timeout=self.opts['timeout'] * 60
             )
