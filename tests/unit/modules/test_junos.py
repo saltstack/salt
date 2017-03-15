@@ -7,7 +7,7 @@ __author__ = "Rajvi Dhimar"
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
-from tests.support.mock import patch, MagicMock, mock_open
+from tests.support.mock import patch, mock_open
 try:
     from lxml import etree
 except ImportError:
@@ -794,7 +794,7 @@ class Test_Junos_Module(unittest.TestCase):
         assert mock_reboot.called
 
     @patch('salt.modules.junos.SW.poweroff')
-    def test_shutdown_with_reboot_args(self, mock_poweroff):
+    def test_shutdown_with_poweroff_args(self, mock_poweroff):
         ret = dict()
         ret['message'] = 'Successfully powered off/rebooted.'
         ret['out'] = True
