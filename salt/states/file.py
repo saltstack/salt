@@ -5138,6 +5138,11 @@ def copy(
     try:
         if os.path.isdir(source):
             shutil.copytree(source, name, symlinks=True)
+            for root, dirs, files in os.walk(name):
+                for dir_ in dirs:
+                    __salt__['file.chown'](os.path.join(root, dir_), user, group)
+                for file_ in files:
+                    __salt__['file.chown'](os.path.join(root, file_), user, group)
         else:
             shutil.copy(source, name)
         ret['changes'] = {name: source}
