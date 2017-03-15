@@ -321,7 +321,7 @@ def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
     if isinstance(conf, six.string_types):
         conf = json.loads(conf)
     if not conf:
-        return {}
+        return None
     if not isinstance(conf, dict):
         raise SaltInvocationError('VpcConfig must be a dict.')
     sns = [__salt__['boto_vpc.get_resource_id']('subnet', s, region=region, key=key,
