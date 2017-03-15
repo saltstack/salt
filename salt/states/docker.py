@@ -1605,6 +1605,8 @@ def running(name,
         the format ``<ulimit_name>:<soft_limit>:<hard_limit>``, with the hard
         limit being optional.
 
+        .. versionadded:: 2016.3.6,2016.11.4,Nitrogen
+
         .. code-block:: yaml
 
             foo:
@@ -2575,7 +2577,7 @@ def volume_absent(name, driver=None):
     '''
     Ensure that a volume is absent.
 
-    .. versionadded:: 2015.8.4
+    .. versionadded:: 2015.8.4,
 
     name
         Name of the volume
