@@ -21,11 +21,11 @@ from __future__ import absolute_import
 import logging
 import json
 import os
-import distutils.version  # pylint: disable=no-name-in-module
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.utils.versions import StrictVersion as _StrictVersion
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -47,8 +47,8 @@ def __virtual__():
     if not powershell_info['installed']:
         return False, 'Module DSC: PowerShell not available'
 
-    if distutils.version.StrictVersion(powershell_info['version']) < \
-            distutils.version.StrictVersion('5.0'):
+    if _StrictVersion(powershell_info['version']) < \
+            _StrictVersion('5.0'):
         return False, 'Module DSC: Requires PowerShell 5 or later'
 
     return __virtualname__

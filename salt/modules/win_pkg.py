@@ -39,7 +39,6 @@ import logging
 import os
 import re
 import time
-from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import third party libs
 import salt.ext.six as six
@@ -59,6 +58,7 @@ from salt.exceptions import (CommandExecutionError,
 import salt.utils
 import salt.syspaths
 from salt.exceptions import MinionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -1588,7 +1588,7 @@ def _reverse_cmp_pkg_versions(pkg1, pkg2):
     '''
     Compare software package versions
     '''
-    if LooseVersion(pkg1) > LooseVersion(pkg2):
+    if _LooseVersion(pkg1) > _LooseVersion(pkg2):
         return 1
     else:
         return -1
