@@ -32,6 +32,8 @@ import time
 
 # Import salt libs
 import salt.syspaths
+import salt.exceptions
+import salt.output
 import salt.utils
 import salt.utils.event
 import salt.ext.six as six
@@ -88,7 +90,7 @@ def _parallel_map(func, inputs):
         def run_thread():
             try:
                 outputs[index] = func(inputs[index])
-            except:
+            except:  # pylint: disable=bare-except
                 errors[index] = sys.exc_info()
         thread = threading.Thread(target=run_thread)
         thread.start()
@@ -758,15 +760,49 @@ def parallel_runners(name, runners):
     .. code-block:: yaml
 
         parallel-state:
-           salt.parallel-runner:
+           salt.parallel_runners:
              - runners:
-               - name: state.orchestrate
-                 kwarg:
-                   mods: orchestrate_state_1
-               - name: state.orchestrate
-                 kwarg:
-                   mods: orchestrate_state_2
+                 my_runner_1:
+                   - name: state.orchestrate
+                   - kwarg:
+                       mods: orchestrate_state_1
+                 my_runner_2:
+                   - name: state.orchestrate
+                   - kwarg:
+                       mods: orchestrate_state_2
     '''
+    # For the sake of consistency, we treat a single string in the same way as
+    # a key without a value. This allows something like
+    #     salt.parallel_runners:
+    #       - runners:
+    #           state.orchestrate
+    # Obviously, this will only work if the specified runner does not need any
+    # arguments.
+    if isinstance(runners, six.string_types):
+        runners = {runners: [{name: runners}]}
+    # If the runners argument is not a string, it must be a dict. Everything
+    # else is considered an error.
+    if not isinstance(runners, dict):
+        return {
+            'name': name,
+            'result': False,
+            'changes': {},
+            'comment': 'The runners parameter must be a string or dict.'
+        }
+    # The configuration for each runner is given as a list of key-value pairs.
+    # This is not very useful for what we want to do, but it is the typical
+    # style used in Salt. For further processing, we convert each of these
+    # lists to a dict. This also makes it easier to check whether a name has
+    # been specified explicitly.
+    for runner_id, runner_config in six.iteritems(runners):
+        if runner_config is None:
+            runner_config = {}
+        else:
+            runner_config = salt.utils.repack_dictlist(runner_config)
+        if 'name' not in runner_config:
+            runner_config['name'] = runner_id
+        runners[runner_id] = runner_config
+
     try:
         jid = __orchestration_jid__
     except NameError:
@@ -781,81 +817,98 @@ def parallel_runners(name, runners):
                                            full_return=True,
                                            **(runner_config.get('kwarg', {})))
 
-    outputs = _parallel_map(call_runner, runners)
+    try:
+        outputs = _parallel_map(call_runner, list(six.itervalues(runners)))
+    except salt.exceptions.SaltException as exc:
+        return {
+            'name': name,
+            'result': False,
+            'success': False,
+            'changes': {},
+            'comment': 'One of the runners raised an exception: {0}'.format(
+                exc)
+        }
+    # We bundle the results of the runners with the IDs of the runners so that
+    # we can easily identify which output belongs to which runner. At the same
+    # time we exctract the actual return value of the runner (saltutil.runner
+    # adds some extra information that is not interesting to us).
+    outputs = {
+        runner_id: out['return']for runner_id, out in
+        six.moves.zip(six.iterkeys(runners), outputs)
+    }
 
-    success = six.moves.reduce(
-        lambda x, y: x and y,
-        [not ('success' in out and not out['success']) for out in outputs],
-        True)
-
-    def find_new_and_old_in_changes(data, prefix):
-        if isinstance(data, dict) and data:
-            if 'new' in data and 'old' in data:
-                return [(prefix, {'new': data['new'], 'old': data['old']})]
+    # If each of the runners returned its output in the format compatible with
+    # the 'highstate' outputter, we can leverage this fact when merging the
+    # outputs.
+    highstate_output = all(
+        [out.get('outputter', '') == 'highstate' and 'data' in out for out in
+         six.itervalues(outputs)]
+    )
+    # The following helper function is used to extract changes from highstate
+    # output.
+    def extract_changes(obj):
+        if not isinstance(obj, dict):
+            return {}
+        elif 'changes' in obj:
+            if (isinstance(obj['changes'], dict)
+                    and obj['changes'].get('out', '') == 'highstate'
+                    and 'ret' in obj['changes']):
+                return obj['changes']['ret']
             else:
-                return [
-                    change_item
-                    for key, value in six.iteritems(data)
-                    for change_item in find_new_and_old_in_changes(
-                        value, prefix + '[' + str(key) + ']')
-                ]
-        if isinstance(data, list) and list:
-            return [
-                change_item
-                for index, value in six.moves.zip(
-                    six.moves.range(len(data)), data)
-                for change_item in find_new_and_old_in_changes(
-                    value, prefix + '[' + str(index) + ']')
+                return obj['changes']
+        else:
+            found_changes = {}
+            for key, value in six.iteritems(obj):
+                change = extract_changes(value)
+                if change:
+                    found_changes[key] = change
+            return found_changes
+    if highstate_output:
+        failed_runners = [runner_id for runner_id, out in
+                          six.iteritems(outputs) if
+                          out['data'].get('retcode', 0) != 0]
+        all_successful = not failed_runners
+        if all_successful:
+            comment = 'All runner functions executed successfully.'
+        else:
+            runner_comments = [
+                'Runner {0} failed with return value:\n{1}'.format(
+                    runner_id,
+                    salt.output.out_format(outputs[runner_id],
+                                           'nested',
+                                           __opts__,
+                                           nested_indent=2)
+                ) for runner_id in failed_runners
             ]
+            comment = '\n'.join(runner_comments)
+        changes = {}
+        for runner_id, out in six.iteritems(outputs):
+            runner_changes = extract_changes(out['data'])
+            if runner_changes:
+                changes[runner_id] = runner_changes
+    else:
+        failed_runners = [runner_id for runner_id, out in
+                          six.iteritems(outputs) if
+                          out.get('exit_code', 0) != 0]
+        all_successful = not failed_runners
+        if all_successful:
+            comment = 'All runner functions executed successfully.'
         else:
-            return []
-    def find_changes(data, prefix):
-        if isinstance(data, dict) and data:
-            if 'changes' in data:
-                return find_new_and_old_in_changes(data['changes'], prefix)
+            if len(failed_runners) == 1:
+                comment = 'Runner {0} failed.'.format(failed_runners[0])
             else:
-                return [
-                    change_item
-                    for key, value in six.iteritems(data)
-                    for change_item in find_changes(
-                        value, prefix + '[' + str(key) + ']')
-                ]
-        else:
-            return []
-    def find_changes_in_output(output, index):
-        try:
-            data = output['return']['data']
-        except KeyError:
-            data = {}
-        return find_changes(data, '[' + str(index) + ']')
-    changes = dict([
-        change_item
-        for change_items in six.moves.map(
-            find_changes_in_output, outputs, six.moves.range(len(outputs)))
-        for change_item in change_items
-    ])
-
-    def generate_comment(index, out):
-        runner_failed = 'success' in out and not out['success']
-        runner_return = out.get('return')
-        comment = (
-            'Runner ' + str(index) + ' was '
-            + ('not ' if runner_failed else '')
-            + 'successful and returned '
-            + (str(runner_return) if runner_return else ' nothing') + '.')
-        return comment
-    comment = '\n'.join(six.moves.map(generate_comment,
-                                      six.moves.range(len(outputs)),
-                                      outputs))
-
+                comment =\
+                    'Runners {0} failed.'.format(', '.join(failed_runners))
+        changes = {'ret': {
+            runner_id: out for runner_id, out in six.iteritems(outputs)
+        }}
     ret = {
         'name': name,
-        'result': success,
+        'result': all_successful,
         'changes': changes,
         'comment': comment
     }
 
-    ret['__orchestration__'] = True
     # The 'runner' function includes out['jid'] as '__jid__' in the returned
     # dict, but we cannot do this here because we have more than one JID if
     # we have more than one runner.
