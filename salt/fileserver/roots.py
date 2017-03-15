@@ -25,6 +25,7 @@ import logging
 # Import salt libs
 import salt.fileserver
 import salt.utils
+import salt.utils.path
 from salt.utils.event import tagify
 import salt.ext.six as six
 
@@ -304,7 +305,7 @@ def _file_lists(load, form):
     if load['saltenv'] not in __opts__['file_roots']:
         return []
 
-    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/roots')
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists', 'roots')
     if not os.path.isdir(list_cachedir):
         try:
             os.makedirs(list_cachedir)
@@ -340,7 +341,7 @@ def _file_lists(load, form):
             for item in items:
                 abs_path = os.path.join(parent_dir, item)
                 log.trace('roots: Processing %s', abs_path)
-                is_link = os.path.islink(abs_path)
+                is_link = salt.utils.path.islink(abs_path)
                 log.trace(
                     'roots: %s is %sa link',
                     abs_path, 'not ' if not is_link else ''
@@ -361,7 +362,7 @@ def _file_lists(load, form):
                     # WindowsError on Windows.
                     pass
                 if is_link:
-                    link_dest = os.readlink(abs_path)
+                    link_dest = salt.utils.path.readlink(abs_path)
                     log.trace(
                         'roots: %s symlink destination is %s',
                         abs_path, link_dest
@@ -372,9 +373,11 @@ def _file_lists(load, form):
                         joined = os.path.join(
                             os.path.dirname(abs_path), link_dest
                         )
-                    rel_dest = os.path.relpath(
-                        os.path.realpath(os.path.normpath(joined)),
-                        fs_root
+                    rel_dest = _translate_sep(
+                        os.path.relpath(
+                            os.path.realpath(os.path.normpath(joined)),
+                            fs_root
+                        )
                     )
                     log.trace(
                         'roots: %s relative path is %s',

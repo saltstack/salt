@@ -8,7 +8,12 @@ from __future__ import absolute_import
 import os
 import time
 import threading
-import platform
+
+# linux_distribution deprecated in py3.7
+try:
+    from platform import linux_distribution
+except ImportError:
+    from distro import linux_distribution
 
 # Import 3rd-party libs
 import zmq.eventloop.ioloop
@@ -34,7 +39,7 @@ from tests.unit.transport.test_req import ReqChannelMixin
 from tests.unit.transport.test_pub import PubChannelMixin
 
 ON_SUSE = False
-if 'SuSE' in platform.dist():
+if 'SuSE' in linux_distribution(full_distribution_name=False):
     ON_SUSE = True
 
 

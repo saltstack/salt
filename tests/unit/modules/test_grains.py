@@ -604,3 +604,21 @@ class GrainsModuleTestCase(TestCase):
                                           OrderedDict([('l23', 'l23val')])]),
                                   ('z', 'zval'),
                                   ]))
+
+    def test_equals(self):
+        grainsmod.__grains__ = OrderedDict([
+                                ('a', 'aval'),
+                                ('b', OrderedDict([
+                                    ('z', 'zval'),
+                                    ('l1', ['l21',
+                                            'l22',
+                                            OrderedDict([('l23', 'l23val')])])
+                                    ])),
+                                ('c', 8)])
+        res = grainsmod.equals('a', 'aval')
+        self.assertEqual(type(res), bool)
+        self.assertTrue(res)
+        res = grainsmod.equals('b:z', 'zval')
+        self.assertTrue(res)
+        res = grainsmod.equals('b:z', 'aval')
+        self.assertFalse(res)

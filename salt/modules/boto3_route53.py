@@ -114,6 +114,7 @@ def _collect_results(func, item, args, marker='Marker', nextmarker='NextMarker')
 def _wait_for_sync(change, conn, tries=10, sleep=20):
     for retry in range(1, tries+1):
         log.info('Getting route53 status (attempt {0})'.format(retry))
+        status = 'wait'
         try:
             status = conn.get_change(Id=change)['ChangeInfo']['Status']
         except ClientError as e:
