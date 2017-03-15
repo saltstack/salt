@@ -436,10 +436,16 @@ class Schedule(object):
         Return the schedule data structure
         '''
         schedule = {}
-        if include_pillar and 'schedule' in self.opts['pillar']:
-            schedule.update(self.opts['pillar']['schedule'])
+        if include_pillar:
+            pillar_schedule = self.opts['pillar'].get('schedule', {})
+            if not isinstance(pillar_schedule, dict):
+                raise ValueError('Schedule must be of type dict.')
+            schedule.update(pillar_schedule)
         if include_opts:
-            schedule.update(self.opts['schedule'])
+            opts_schedule = self.opts.get('schedule', {})
+            if not isinstance(opts_schedule, dict):
+                raise ValueError('Schedule must be of type dict.')
+            schedule.update(opts_schedule)
         return schedule
 
     def persist(self):
@@ -914,8 +920,6 @@ class Schedule(object):
         Evaluate and execute the schedule
         '''
         schedule = self._get_schedule()
-        if not isinstance(schedule, dict):
-            raise ValueError('Schedule must be of type dict.')
         if 'enabled' in schedule and not schedule['enabled']:
             return
         for job, data in six.iteritems(schedule):
