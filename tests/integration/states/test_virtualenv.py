@@ -29,11 +29,7 @@ class VirtualenvTest(integration.ModuleCase,
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_issue_1959_virtualenv_runas(self):
         user = 'issue-1959'
-        if not self.run_function('user.add', [user]):
-            # Left behind on a canceled test run?
-            self.run_function('user.delete', [user, True, True])
-            if not self.run_function('user.add', [user]):
-                self.skipTest('Failed to create the \'{0}\' user'.format(user))
+        self.assertSaltTrueReturn(self.run_state('user.present', name=user))
 
         uinfo = self.run_function('user.info', [user])
 
@@ -53,7 +49,7 @@ class VirtualenvTest(integration.ModuleCase,
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
-            self.run_function('user.delete', [user, True, True])
+            self.assertSaltTrueReturn(self.run_state('user.absent', name=user))
 
     def test_issue_2594_non_invalidated_cache(self):
         # Testing virtualenv directory
