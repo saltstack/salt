@@ -569,6 +569,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         Test file.managed passing a basic check_cmd kwarg. See Issue #38111.
         '''
+        if not salt.utils.which('visudo'):
+            self.fail('sudo is missing')
         try:
             ret = self.run_state(
                 'file.managed',
