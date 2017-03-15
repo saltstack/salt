@@ -147,12 +147,24 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
         64 MB.
 
     VpcConfig
-        If your Lambda function accesses resources in a VPC, you provide this
-        parameter identifying the list of security group IDs and subnet IDs.
-        These must belong to the same VPC. You must provide at least one
-        security group and one subnet ID.
+        If your Lambda function accesses resources in a VPC, you must provide this parameter
+        identifying the list of security group IDs/Names and subnet IDs/Name.  These must all belong
+        to the same VPC.  This is a dict of the form:
 
-        .. versionadded:: 2016.11.0
+        .. code-block:: yaml
+            VpcConfig:
+                SecurityGroupNames:
+                - mysecgroup1
+                - mysecgroup2
+                SecurityGroupIds:
+                - sg-abcdef1234
+                SubnetNames:
+                - mysubnet1
+                SubnetIds:
+                - subnet-1234abcd
+                - subnet-abcd1234
+
+        If VpcConfig is provided at all, you MUST pass at least one security group and one subnet.
 
     Permissions
         A list of permission definitions to be added to the function's policy
@@ -329,7 +341,7 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
     oldval = func.get('VpcConfig')
     if oldval is not None:
         oldval.pop('VpcId', None)
-    if oldval != VpcConfig:
+    if __utils__['boto3.ordered'](oldval) != __utils__['boto3.ordered'](VpcConfig):
         need_update = True
         ret['changes'].setdefault('new', {})['VpcConfig'] = VpcConfig
         ret['changes'].setdefault(
