@@ -419,7 +419,6 @@ def managed(name, type, enabled=True, **kwargs):
                         __salt__['ip.down'](name, type)
                         __salt__['ip.up'](name, type)
                         ret['changes']['status'] = 'Interface {0} restart to validate'.format(name)
-                        return ret
                 else:
                     __salt__['ip.up'](name, type)
                     ret['changes']['status'] = 'Interface {0} is up'.format(name)
@@ -431,6 +430,36 @@ def managed(name, type, enabled=True, **kwargs):
     except Exception as error:
         ret['result'] = False
         ret['comment'] = str(error)
+        return ret
+
+    # Try to enslave bonding interfaces after master was created
+    if type == 'bond' and 'noifupdown' not in kwargs:
+
+        if 'slaves' in kwargs and kwargs['slaves']:
+            # Check that there are new slaves for this master
+            present_slaves = __salt__['cmd.run'](
+                ['cat', '/sys/class/net/{0}/bonding/slaves'.format(name)]).split()
+            desired_slaves = kwargs['slaves'].split()
+            missing_slaves = set(desired_slaves) - set(present_slaves)
+
+            # Enslave only slaves missing in master
+            if missing_slaves:
+                ifenslave_path = __salt__['cmd.run'](['which', 'ifenslave']).strip()
+                if ifenslave_path:
+                    log.info("Adding slaves '{0}' to the master {1}".format(' '.join(missing_slaves), name))
+                    cmd = [ifenslave_path, name] + list(missing_slaves)
+                    __salt__['cmd.run'](cmd, python_shell=False)
+                else:
+                    log.error("Command 'ifenslave' not found")
+                ret['changes']['enslave'] = (
+                    "Added slaves '{0}' to master '{1}'"
+                    .format(' '.join(missing_slaves), name))
+            else:
+                log.info("All slaves '{0}' are already added to the master {1}"
+                         ", no actions required".format(' '.join(missing_slaves), name))
+
+    if enabled and interface_status:
+        # Interface was restarted, return
         return ret
 
     # TODO: create saltutil.refresh_grains that fires events to the minion daemon

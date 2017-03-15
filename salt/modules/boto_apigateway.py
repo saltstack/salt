@@ -80,12 +80,12 @@ from __future__ import absolute_import
 import logging
 import json
 import datetime
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.ext.six as six
 import salt.utils.boto3
 import salt.utils.compat
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 

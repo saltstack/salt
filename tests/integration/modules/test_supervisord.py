@@ -14,7 +14,11 @@ from tests.support.unit import skipIf
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
+# Import 3rd-party libs
+import salt.ext.six as six
 
+
+@skipIf(six.PY3, 'supervisor does not work under python 3')
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 @skipIf(salt.utils.which('supervisorctl') is None, 'supervisord not installed')
 class SupervisordModuleTest(integration.ModuleCase):
@@ -74,6 +78,11 @@ class SupervisordModuleTest(integration.ModuleCase):
                 'supervisord.custom', ['shutdown'],
                 conf_file=self.supervisor_conf, bin_env=self.venv_dir)
             self.supervisor_proc.wait()
+        del self.venv_dir
+        del self.venv_test_dir
+        del self.supervisor_sock
+        del self.supervisord
+        del self.supervisor_conf
 
     def test_start_all(self):
         '''

@@ -465,7 +465,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace):
                 for sub in namespace.split(':')[::-1]:
                     obj = {sub: obj}
             stack = _merge_dict(stack, obj)
-            log.info('Stack template {0} parsed'.format(path))
+            log.info('Stack template "{0}" parsed'.format(path))
         except exceptions.TopLevelLookupException as e:
             log.info('Stack template "{0}" not found.'.format(path))
             continue

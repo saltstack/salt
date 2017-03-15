@@ -50,6 +50,9 @@ class FileClientTest(integration.ModuleCase):
     def setUp(self):
         self.file_client = fileclient.Client(self.master_opts)
 
+    def tearDown(self):
+        del self.file_client
+
     def test_file_list_emptydirs(self):
         '''
         Ensure that the fileclient class won't allow a direct call to file_list_emptydirs()

@@ -338,11 +338,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(name),
-        args={
-            'name': name,
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -350,6 +346,15 @@ def create(vm_):
     log.info('Creating Packet VM {0}'.format(name))
 
     manager = packet.Manager(auth_token=vm_['token'])
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'requesting instance',
+        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        args=__utils__['cloud.filter_event']('requesting', vm_, ['name', 'profile', 'provider', 'driver']),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
     device = manager.create_device(project_id=vm_['project_id'],
                                 hostname=name,
@@ -426,11 +431,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(name),
-        args={
-            'name': name,
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )

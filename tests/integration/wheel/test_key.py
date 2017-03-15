@@ -12,6 +12,9 @@ class KeyWheelModuleTest(integration.TestCase, integration.AdaptedConfigurationT
     def setUp(self):
         self.wheel = salt.wheel.Wheel(dict(self.get_config('client_config')))
 
+    def tearDown(self):
+        del self.wheel
+
     def test_list_all(self):
         ret = self.wheel.cmd('key.list_all', print_event=False)
         for host in ['minion', 'sub_minion']:

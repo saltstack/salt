@@ -9,7 +9,7 @@
 
     Test support helpers
 '''
-# pylint: disable=repr-flag-used-in-string
+# pylint: disable=repr-flag-used-in-string,wrong-import-order
 
 # Import Python libs
 from __future__ import absolute_import
@@ -32,6 +32,18 @@ if six.PY2:
     import __builtin__ as pybuiltins  # pylint: disable=incompatible-py3-code,import-error
 else:
     import builtins as pybuiltins  # pylint: disable=import-error
+try:
+    from pytestsalt.utils import get_unused_localhost_port  # pylint: disable=unused-import
+except ImportError:
+    def get_unused_localhost_port():
+        '''
+        Return a random unused port on localhost
+        '''
+        usock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        usock.bind(('127.0.0.1', 0))
+        port = usock.getsockname()[1]
+        usock.close()
+        return port
 
 # Import Salt Tests Support libs
 from tests.support.unit import skip, _id
@@ -982,6 +994,17 @@ def requires_salt_modules(*names):
                     if name not in self.__salt_sys_docs__:
                         self.skipTest('Salt module {0!r} is not available'.format(name))
             caller.setUp = setUp
+
+            old_teardown = getattr(caller, 'tearDown', None)
+
+            def teardown(self, *args, **kwargs):
+                if hasattr(self, '__salt_sys_docs__'):
+                    del self.__salt_sys_docs__
+
+                if old_teardown is not None:
+                    old_teardown(self, *args, **kwargs)
+
+            caller.tearDown = teardown
             return caller
 
         # We're simply decorating functions
@@ -1218,3 +1241,49 @@ def terminate_process_pid(pid, only_children=False):
     if only_children:
         return terminate_process(children=children, kill_children=True, slow_stop=True)
     return terminate_process(pid=pid, process=process, children=children, kill_children=True, slow_stop=True)
+
+
+def repeat(caller=None, condition=True, times=5):
+    '''
+    Repeat a test X amount of times until the first failure.
+
+    .. code-block:: python
+
+        class MyTestCase(TestCase):
+
+        @repeat
+        def test_sometimes_works(self):
+            pass
+    '''
+    if caller is None:
+        return functools.partial(repeat, condition=condition, times=times)
+
+    if isinstance(condition, bool) and condition is False:
+        # Don't even decorate
+        return caller
+    elif callable(condition):
+        if condition() is False:
+            # Don't even decorate
+            return caller
+
+    if inspect.isclass(caller):
+        attrs = [n for n in dir(caller) if n.startswith('test_')]
+        for attrname in attrs:
+            try:
+                function = getattr(caller, attrname)
+                if not inspect.isfunction(function) and not inspect.ismethod(function):
+                    continue
+                setattr(caller, attrname, repeat(caller=function, condition=condition, times=times))
+            except Exception as exc:
+                log.exception(exc)
+                continue
+        return caller
+
+    @functools.wraps(caller)
+    def wrap(cls):
+        result = None
+        for attempt in range(1, times+1):
+            log.info('%s test run %d of %s times', cls, attempt, times)
+            caller(cls)
+        return cls
+    return wrap

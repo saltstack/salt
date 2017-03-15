@@ -7,7 +7,6 @@ from __future__ import absolute_import
 import errno
 import logging
 import os
-import platform
 import socket
 import threading
 import tornado.ioloop
@@ -16,6 +15,7 @@ import tornado.web
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import skipIf
+from tests.support.helpers import get_unused_localhost_port
 
 # Import salt libs
 import salt.utils
@@ -28,21 +28,11 @@ if salt.utils.is_windows():
 else:
     ARCHIVE_DIR = '/tmp/archive'
 
-PORT = 9999
-ARCHIVE_TAR_SOURCE = 'http://localhost:{0}/custom.tar.gz'.format(PORT)
 UNTAR_FILE = os.path.join(ARCHIVE_DIR, 'custom/README')
 ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
-REDHAT7 = False
-QUERY_OS = platform.dist()
-OS_VERSION = QUERY_OS[1]
-OS_FAMILY = QUERY_OS[0]
-if '7' in OS_VERSION and 'centos' in OS_FAMILY:
-    REDHAT7 = True
 
-
-@skipIf(not REDHAT7, 'Only run on redhat7 for now due to hanging issues on other OS')
 class ArchiveTest(integration.ModuleCase,
                   integration.SaltReturnAssertsMixIn):
     '''
@@ -54,10 +44,12 @@ class ArchiveTest(integration.ModuleCase,
         method to start tornado
         static web app
         '''
-        application = tornado.web.Application([(r"/(.*)", tornado.web.StaticFileHandler,
-                                              {"path": STATE_DIR})])
-        application.listen(PORT)
-        tornado.ioloop.IOLoop.instance().start()
+        cls._ioloop = tornado.ioloop.IOLoop()
+        cls._ioloop.make_current()
+        cls._application = tornado.web.Application([(r'/(.*)', tornado.web.StaticFileHandler,
+                                                    {'path': STATE_DIR})])
+        cls._application.listen(cls.server_port)
+        cls._ioloop.start()
 
     @classmethod
     def setUpClass(cls):
@@ -65,21 +57,28 @@ class ArchiveTest(integration.ModuleCase,
         start tornado app on thread
         and wait till its running
         '''
+        cls.server_port = get_unused_localhost_port()
         cls.server_thread = threading.Thread(target=cls.webserver)
         cls.server_thread.daemon = True
         cls.server_thread.start()
+        cls.archive_tar_source = 'http://localhost:{0}/custom.tar.gz'.format(cls.server_port)
         # check if tornado app is up
         port_closed = True
         while port_closed:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex(('127.0.0.1', PORT))
+            result = sock.connect_ex(('127.0.0.1', cls.server_port))
             if result == 0:
                 port_closed = False
 
     @classmethod
     def tearDownClass(cls):
-        tornado.ioloop.IOLoop.instance().stop()
+        cls._ioloop.add_callback(cls._ioloop.stop)
         cls.server_thread.join()
+        for attrname in ('_ioloop', '_application', 'server_thread'):
+            try:
+                delattr(cls, attrname)
+            except AttributeError:
+                continue
 
     def setUp(self):
         self._clear_archive_dir()
@@ -107,7 +106,7 @@ class ArchiveTest(integration.ModuleCase,
         test archive.extracted with skip_verify
         '''
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=ARCHIVE_TAR_SOURCE, archive_format='tar',
+                             source=self.archive_tar_source, archive_format='tar',
                              skip_verify=True)
         log.debug('ret = %s', ret)
         if 'Timeout' in ret:
@@ -123,7 +122,7 @@ class ArchiveTest(integration.ModuleCase,
         ensure source_hash is verified correctly
         '''
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=ARCHIVE_TAR_SOURCE, archive_format='tar',
+                             source=self.archive_tar_source, archive_format='tar',
                              source_hash=ARCHIVE_TAR_HASH)
         log.debug('ret = %s', ret)
         if 'Timeout' in ret:
@@ -139,7 +138,7 @@ class ArchiveTest(integration.ModuleCase,
         test archive.extracted with user and group set to "root"
         '''
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=ARCHIVE_TAR_SOURCE, archive_format='tar',
+                             source=self.archive_tar_source, archive_format='tar',
                              source_hash=ARCHIVE_TAR_HASH,
                              user='root', group='root')
         log.debug('ret = %s', ret)
@@ -155,7 +154,7 @@ class ArchiveTest(integration.ModuleCase,
         test archive.extracted with --strip in options
         '''
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=ARCHIVE_TAR_SOURCE,
+                             source=self.archive_tar_source,
                              source_hash=ARCHIVE_TAR_HASH,
                              options='--strip=1',
                              enforce_toplevel=False)
@@ -172,7 +171,7 @@ class ArchiveTest(integration.ModuleCase,
         test archive.extracted with --strip-components in options
         '''
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=ARCHIVE_TAR_SOURCE,
+                             source=self.archive_tar_source,
                              source_hash=ARCHIVE_TAR_HASH,
                              options='--strip-components=1',
                              enforce_toplevel=False)
@@ -189,7 +188,7 @@ class ArchiveTest(integration.ModuleCase,
         test archive.extracted with no archive_format option
         '''
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=ARCHIVE_TAR_SOURCE,
+                             source=self.archive_tar_source,
                              source_hash=ARCHIVE_TAR_HASH)
         log.debug('ret = %s', ret)
         if 'Timeout' in ret:

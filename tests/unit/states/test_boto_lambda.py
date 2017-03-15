@@ -2,7 +2,6 @@
 
 # Import Python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 import json
 import logging
 import random
@@ -20,6 +19,7 @@ from tests.support.mock import (
 # Import Salt libs
 import salt.config
 import salt.loader
+from salt.utils.versions import LooseVersion
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module

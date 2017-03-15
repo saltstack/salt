@@ -479,6 +479,7 @@ import salt.ext.six as six
 # Import Salt libs
 import salt
 import salt.auth
+import salt.utils
 import salt.utils.event
 
 # Import salt-api libs
@@ -751,7 +752,10 @@ def hypermedia_handler(*args, **kwargs):
     cherrypy.response.headers['Content-Type'] = best
     out = cherrypy.response.processors[best]
     try:
-        return out(ret)
+        response = out(ret)
+        if six.PY3:
+            response = salt.utils.to_bytes(response)
+        return response
     except Exception:
         msg = 'Could not serialize the return data from Salt.'
         logger.debug(msg, exc_info=True)
@@ -770,11 +774,11 @@ def hypermedia_out():
     request.handler = hypermedia_handler
 
 
-@functools.wraps
 def process_request_body(fn):
     '''
     A decorator to skip a processor function if process_request_body is False
     '''
+    @functools.wraps(fn)
     def wrapped(*args, **kwargs):  # pylint: disable=C0111
         if cherrypy.request.process_request_body is not False:
             fn(*args, **kwargs)
@@ -799,7 +803,19 @@ def urlencoded_processor(entity):
 
     :param entity: raw POST data
     '''
+    if six.PY3:
+        # https://github.com/cherrypy/cherrypy/pull/1572
+        contents = six.StringIO()
+        entity.fp.read(fp_out=contents)
+        contents.seek(0)
+        body_str = contents.read()
+        body_bytes = salt.utils.to_bytes(body_str)
+        body_bytes = six.BytesIO(body_bytes)
+        body_bytes.seek(0)
+        # Patch fp
+        entity.fp = body_bytes
     # First call out to CherryPy's default processor
+    cherrypy._cpreqbody.process_urlencoded(entity)
     cherrypy._cpreqbody.process_urlencoded(entity)
     cherrypy.serving.request.unserialized_data = entity.params
     cherrypy.serving.request.raw_body = ''
@@ -812,7 +828,14 @@ def json_processor(entity):
 
     :param entity: raw POST data
     '''
-    body = entity.fp.read()
+    if six.PY2:
+        body = entity.fp.read()
+    else:
+        # https://github.com/cherrypy/cherrypy/pull/1572
+        contents = six.StringIO()
+        body = entity.fp.read(fp_out=contents)
+        contents.seek(0)
+        body = contents.read()
     try:
         cherrypy.serving.request.unserialized_data = json.loads(body)
     except ValueError:
@@ -828,7 +851,14 @@ def yaml_processor(entity):
 
     :param entity: raw POST data
     '''
-    body = entity.fp.read()
+    if six.PY2:
+        body = entity.fp.read()
+    else:
+        # https://github.com/cherrypy/cherrypy/pull/1572
+        contents = six.StringIO()
+        body = entity.fp.read(fp_out=contents)
+        contents.seek(0)
+        body = contents.read()
     try:
         cherrypy.serving.request.unserialized_data = yaml.safe_load(body)
     except ValueError:
@@ -847,7 +877,14 @@ def text_processor(entity):
 
     :param entity: raw POST data
     '''
-    body = entity.fp.read()
+    if six.PY2:
+        body = entity.fp.read()
+    else:
+        # https://github.com/cherrypy/cherrypy/pull/1572
+        contents = six.StringIO()
+        body = entity.fp.read(fp_out=contents)
+        contents.seek(0)
+        body = contents.read()
     try:
         cherrypy.serving.request.unserialized_data = json.loads(body)
     except ValueError:
@@ -894,6 +931,7 @@ def lowdata_fmt():
 
     This tool requires that the hypermedia_in tool has already been run.
     '''
+
     if cherrypy.request.method.upper() != 'POST':
         return
 
@@ -1521,10 +1559,10 @@ class Keys(LowDataAdapter):
         priv_key_file = tarfile.TarInfo('minion.pem')
         priv_key_file.size = len(priv_key)
 
-        fileobj = six.moves.StringIO()
+        fileobj = six.StringIO()
         tarball = tarfile.open(fileobj=fileobj, mode='w')
-        tarball.addfile(pub_key_file, six.moves.StringIO(pub_key))
-        tarball.addfile(priv_key_file, six.moves.StringIO(priv_key))
+        tarball.addfile(pub_key_file, six.StringIO(pub_key))
+        tarball.addfile(priv_key_file, six.StringIO(priv_key))
         tarball.close()
 
         headers = cherrypy.response.headers

@@ -27,6 +27,9 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
         '''
         self.wheel = salt.wheel.Wheel(dict(self.get_config('client_config')))
 
+    def tearDown(self):
+        del self.wheel
+
     def test_master_call(self):
         '''
         Test executing master_call with lowdata

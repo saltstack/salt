@@ -2,10 +2,14 @@
 
 # Import Python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
-import platform
 import random
 import string
+
+# linux_distribution deprecated in py3.7
+try:
+    from platform import linux_distribution
+except ImportError:
+    from distro import linux_distribution
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
@@ -22,6 +26,7 @@ import salt.ext.six as six
 import salt.loader
 from salt.modules import boto_lambda
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 import salt.utils
 
@@ -40,7 +45,7 @@ except ImportError:
     HAS_BOTO = False
 
 ON_SUSE = False
-if 'SuSE' in platform.dist():
+if 'SuSE' in linux_distribution(full_distribution_name=False):
     ON_SUSE = True
 
 # pylint: enable=import-error,no-name-in-module

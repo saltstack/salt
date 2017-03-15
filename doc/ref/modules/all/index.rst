@@ -70,6 +70,7 @@ execution modules
     bsd_shadow
     btrfs
     cabal
+    capirca_acl
     cassandra
     cassandra_cql
     celery
@@ -248,6 +249,7 @@ execution modules
     namecheap_ssl
     namecheap_users
     napalm
+    napalm_acl
     napalm_bgp
     napalm_network
     napalm_ntp

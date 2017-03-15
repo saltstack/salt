@@ -273,13 +273,14 @@ def raw_mod(opts, name, functions, mod='modules'):
     return dict(loader._dict)  # return a copy of *just* the funcs for `name`
 
 
-def engines(opts, functions, runners, proxy=None):
+def engines(opts, functions, runners, utils, proxy=None):
     '''
     Return the master services plugins
     '''
     pack = {'__salt__': functions,
             '__runners__': runners,
-            '__proxy__': proxy}
+            '__proxy__': proxy,
+            '__utils__': utils}
     return LazyLoader(
         _module_dirs(opts, 'engines'),
         opts,
@@ -1612,7 +1613,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     error_reason = (
                         'Exception raised when processing __virtual__ function'
                         ' for {0}. Module will not be loaded: {1}'.format(
-                            module_name, exc))
+                            mod.__name__, exc))
                     log.error(error_reason, exc_info_on_loglevel=logging.DEBUG)
                     virtual = None
                 # Get the module's virtual name

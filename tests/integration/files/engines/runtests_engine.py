@@ -26,6 +26,7 @@ import salt.utils.event
 from tornado import gen
 from tornado import ioloop
 from tornado import netutil
+from tornado import iostream
 
 log = logging.getLogger(__name__)
 
@@ -114,7 +115,10 @@ class PyTestEngine(object):
         timeout = 60
         while True:
             timeout -= 1
-            event_bus.fire_event(load, master_start_event_tag, timeout=500)
-            if timeout <= 0:
+            try:
+                event_bus.fire_event(load, master_start_event_tag, timeout=500)
+                if timeout <= 0:
+                    break
+                yield gen.sleep(1)
+            except iostream.StreamClosedError:
                 break
-            yield gen.sleep(1)

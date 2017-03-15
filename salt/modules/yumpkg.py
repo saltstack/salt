@@ -24,7 +24,6 @@ import logging
 import os
 import re
 import string
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=no-name-in-module,import-error
 
 # pylint: disable=import-error,redefined-builtin
 # Import 3rd-party libs
@@ -45,6 +44,7 @@ import salt.utils.itertools
 import salt.utils.systemd
 import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )

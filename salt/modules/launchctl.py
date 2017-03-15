@@ -10,10 +10,9 @@ Module for the management of MacOS systems that use launchd/launchctl
 
 :depends:   - plistlib Python module
 '''
-from __future__ import absolute_import
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import plistlib
@@ -22,6 +21,7 @@ import re
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.utils.versions import LooseVersion as _LooseVersion
 import salt.ext.six as six
 
 # Set up logging
@@ -45,11 +45,11 @@ def __virtual__():
         return (False, 'Failed to load the mac_service module:\n'
                        'Required binary not found: "/bin/launchctl"')
 
-    if LooseVersion(__grains__['osrelease']) >= LooseVersion('10.11'):
+    if _LooseVersion(__grains__['osrelease']) >= _LooseVersion('10.11'):
         return (False, 'Failed to load the mac_service module:\n'
                        'Not available on El Capitan, uses mac_service.py')
 
-    if LooseVersion(__grains__['osrelease']) >= LooseVersion('10.10'):
+    if _LooseVersion(__grains__['osrelease']) >= _LooseVersion('10.10'):
         global BEFORE_YOSEMITE
         BEFORE_YOSEMITE = False
 

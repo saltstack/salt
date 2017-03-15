@@ -48,7 +48,8 @@ def cert(name,
          keysize=None,
          server=None,
          owner='root',
-         group='root'):
+         group='root',
+         certname=None):
     '''
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
 
@@ -62,6 +63,7 @@ def cert(name,
     :param server: API endpoint to talk to
     :param owner: owner of private key
     :param group: group of private key
+    :param certname: Name of the certificate to save
     '''
 
     if __opts__['test']:
@@ -96,6 +98,7 @@ def cert(name,
         aliases=aliases,
         email=email,
         webroot=webroot,
+        certname=certname,
         test_cert=test_cert,
         renew=renew,
         keysize=keysize,

@@ -13,7 +13,6 @@ ioloop==0.1a0
 ipaddress==1.0.16
 Jinja2==2.9.4
 libnacl==1.4.5
-lxml==3.6.0
 Mako==1.0.4
 MarkupSafe==0.23
 msgpack-python==0.4.8
@@ -22,7 +21,6 @@ pyasn1==0.1.9
 pycparser==2.14
 pycurl==7.43.0
 PyMySQL==0.7.6
-pypiwin32==219
 pyOpenSSL==16.1.0
 python-dateutil==2.5.3
 python-gnupg==0.3.8

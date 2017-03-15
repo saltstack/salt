@@ -42,19 +42,23 @@ Connection module for Amazon ELB
 :depends: boto >= 2.33.0
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
+# pylint: disable=E0602
 
 from __future__ import absolute_import
 
 # Import Python libs
 import logging
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import json
-import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
+# Import Salt libs
+import salt.utils.odict as odict
+from salt.utils.versions import LooseVersion as _LooseVersion
+
 # Import third party libs
+import salt.ext.six as six
+from salt.ext.six import string_types
 try:
     import boto
     import boto.ec2  # pylint: enable=unused-import
@@ -74,10 +78,6 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
-
-# Import Salt libs
-from salt.ext.six import string_types
-import salt.utils.odict as odict
 
 
 def __virtual__():

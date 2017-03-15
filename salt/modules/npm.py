@@ -11,12 +11,12 @@ except ImportError:
 # Import python libs
 import json
 import logging
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
 import salt.utils
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 
 log = logging.getLogger(__name__)
@@ -48,9 +48,9 @@ def _check_valid_version():
     npm must be at least version 1.2.
     '''
     # pylint: disable=no-member
-    npm_version = distutils.version.LooseVersion(
+    npm_version = _LooseVersion(
         salt.modules.cmdmod.run('npm --version', output_loglevel='quiet'))
-    valid_version = distutils.version.LooseVersion('1.2')
+    valid_version = _LooseVersion('1.2')
     # pylint: enable=no-member
     if npm_version < valid_version:
         raise CommandExecutionError(

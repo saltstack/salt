@@ -9,7 +9,6 @@ import contextlib
 import copy
 import collections
 import datetime
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 import errno
 import fnmatch
 import hashlib
@@ -121,6 +120,7 @@ import salt.log
 import salt.utils.dictupdate
 import salt.version
 from salt.utils.decorators import memoize as real_memoize
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.textformat import TextFormat
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,
@@ -2155,7 +2155,8 @@ def namespaced_function(function, global_dict, defaults=None, preserve_context=F
         function.__code__,
         global_dict,
         name=function.__name__,
-        argdefs=defaults
+        argdefs=defaults,
+        closure=function.__closure__
     )
     new_namespaced_function.__dict__.update(function.__dict__)
     return new_namespaced_function
@@ -2418,7 +2419,7 @@ def kwargs_warn_until(kwargs,
 
 def version_cmp(pkg1, pkg2, ignore_epoch=False):
     '''
-    Compares two version strings using distutils.version.LooseVersion. This is
+    Compares two version strings using salt.utils.versions.LooseVersion. This is
     a fallback for providers which don't have a version comparison utility
     built into them.  Return -1 if version1 < version2, 0 if version1 ==
     version2, and 1 if version1 > version2. Return None if there was a problem
@@ -2430,14 +2431,11 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
 
     try:
         # pylint: disable=no-member
-        if distutils.version.LooseVersion(pkg1) < \
-                distutils.version.LooseVersion(pkg2):
+        if _LooseVersion(pkg1) < _LooseVersion(pkg2):
             return -1
-        elif distutils.version.LooseVersion(pkg1) == \
-                distutils.version.LooseVersion(pkg2):
+        elif _LooseVersion(pkg1) == _LooseVersion(pkg2):
             return 0
-        elif distutils.version.LooseVersion(pkg1) > \
-                distutils.version.LooseVersion(pkg2):
+        elif _LooseVersion(pkg1) > _LooseVersion(pkg2):
             return 1
     except Exception as exc:
         log.exception(exc)

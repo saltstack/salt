@@ -7,7 +7,6 @@
 '''
 # Import python libs
 from __future__ import absolute_import, print_function
-from distutils.version import LooseVersion as _LooseVersion
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
@@ -15,6 +14,7 @@ from tests.support.unit import TestCase, skipIf
 # Import Salt Libs
 from salt.config.schemas import ssh as ssh_schemas
 from salt.config.schemas.minion import MinionConfiguration
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 import salt.ext.six as six

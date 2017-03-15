@@ -417,35 +417,59 @@ class _FixLoaderModuleMockMixinMroOrder(type):
 
 class LoaderModuleMockMixin(six.with_metaclass(_FixLoaderModuleMockMixinMroOrder, object)):
     def setUp(self):
-        loader_module = getattr(self, 'loader_module', None)
-        if loader_module is not None:
-            if NO_MOCK:
-                self.skipTest(NO_MOCK_REASON)
+        loader_modules = getattr(self, 'loader_module', None)
+        if loader_modules is None:
+            return
 
-            loader_module_name = loader_module.__name__
-            loader_module_globals = getattr(self, 'loader_module_globals', None)
-            loader_module_blacklisted_dunders = getattr(self, 'loader_module_blacklisted_dunders', ())
-            if loader_module_globals is None:
-                loader_module_globals = {}
-            elif callable(loader_module_globals):
-                loader_module_globals = loader_module_globals()
-            else:
-                loader_module_globals = copy.deepcopy(loader_module_globals)
+        if NO_MOCK:
+            self.skipTest(NO_MOCK_REASON)
 
-            salt_dunders = (
-                '__opts__', '__salt__', '__runner__', '__context__', '__utils__',
-                '__ext_pillar__', '__thorium__', '__states__', '__serializers__', '__ret__',
-                '__grains__', '__pillar__', '__sdb__',
-                # Proxy is commented out on purpose since some code in salt expects a NameError
-                # and is most of the time not a required dunder
-                # '__proxy__'
+        if not isinstance(loader_modules, (list, tuple)):
+            loader_modules = [loader_modules]
+
+        loader_module_globals = getattr(self, 'loader_module_globals', None)
+        loader_module_blacklisted_dunders = getattr(self, 'loader_module_blacklisted_dunders', ())
+        if loader_module_globals is None:
+            loader_module_globals = {}
+        elif callable(loader_module_globals):
+            loader_module_globals = loader_module_globals()
+        else:
+            loader_module_globals = copy.deepcopy(loader_module_globals)
+
+        minion_funcs = None
+        if '__salt__' in loader_module_globals and loader_module_globals['__salt__'] == 'autoload':
+            if '__opts__' not in loader_module_globals:
+                raise RuntimeError(
+                    'You must provide __opts__ in the loader_module_globals to auto load the minion functions'
+                )
+            import salt.loader
+            ctx = {}
+            if '__utils__' not in loader_module_globals:
+                utils = salt.loader.utils(loader_module_globals['__opts__'],
+                                          context=loader_module_globals.get('__context__') or ctx)
+                loader_module_globals['__utils__'] = utils
+            minion_funcs = salt.loader.minion_mods(
+                loader_module_globals['__opts__'],
+                context=loader_module_globals.get('__context__') or ctx,
+                utils=loader_module_globals.get('__utils__'),
             )
-            for dunder_name in salt_dunders:
-                if dunder_name not in loader_module_globals:
-                    if dunder_name in loader_module_blacklisted_dunders:
-                        continue
-                    loader_module_globals[dunder_name] = {}
+            loader_module_globals['__salt__'] = minion_funcs
 
+        salt_dunders = (
+            '__opts__', '__salt__', '__runner__', '__context__', '__utils__',
+            '__ext_pillar__', '__thorium__', '__states__', '__serializers__', '__ret__',
+            '__grains__', '__pillar__', '__sdb__',
+            # Proxy is commented out on purpose since some code in salt expects a NameError
+            # and is most of the time not a required dunder
+            # '__proxy__'
+        )
+        for dunder_name in salt_dunders:
+            if dunder_name not in loader_module_globals:
+                if dunder_name in loader_module_blacklisted_dunders:
+                    continue
+                loader_module_globals[dunder_name] = {}
+
+        for loader_module in loader_modules:
             for key in loader_module_globals:
                 if not hasattr(loader_module, key):
                     if key in salt_dunders:
@@ -454,7 +478,7 @@ class LoaderModuleMockMixin(six.with_metaclass(_FixLoaderModuleMockMixinMroOrder
                         setattr(loader_module, key, None)
 
             if loader_module_globals:
-                patcher = patch.multiple(loader_module_name, **loader_module_globals)
+                patcher = patch.multiple(loader_module, **loader_module_globals)
                 patcher.start()
 
                 def cleanup(patcher, loader_module_globals):
@@ -462,4 +486,14 @@ class LoaderModuleMockMixin(six.with_metaclass(_FixLoaderModuleMockMixinMroOrder
                     del loader_module_globals
 
                 self.addCleanup(cleanup, patcher, loader_module_globals)
+        if minion_funcs is not None:
+            # Since we autoloaded the minion_funcs, let's namespace the functions with the globals
+            # used to patch above
+            import salt.utils
+            for func in minion_funcs:
+                minion_funcs[func] = salt.utils.namespaced_function(
+                    minion_funcs[func],
+                    loader_module_globals,
+                    preserve_context=True
+                )
         super(LoaderModuleMockMixin, self).setUp()

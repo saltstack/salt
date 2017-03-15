@@ -89,8 +89,11 @@ def getenforce():
 
         salt '*' selinux.getenforce
     '''
+    _selinux_fs_path = selinux_fs_path()
+    if _selinux_fs_path is None:
+        return 'Disabled'
     try:
-        enforce = os.path.join(selinux_fs_path(), 'enforce')
+        enforce = os.path.join(_selinux_fs_path, 'enforce')
         with salt.utils.fopen(enforce, 'r') as _fp:
             if _fp.readline().strip() == '0':
                 return 'Permissive'
