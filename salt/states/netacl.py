@@ -219,7 +219,7 @@ def term(name,
         To see what fields are supported, please consult the list of supported keywords_.
             Some platforms have few other optional_ keyworkds.
 
-            .. _keywords:https://github.com/google/capirca/wiki/Policy-format#keywords
+            .. _keywords: https://github.com/google/capirca/wiki/Policy-format#keywords
             .. _optional: https://github.com/google/capirca/wiki/Policy-format#optionally-supported-keywords
 
     .. note::
@@ -354,8 +354,6 @@ def term(name,
                 - [3000, 4000]
 
         With the configuration above, the user is able to select the 1000-2000 and 3000-4000 source port ranges.
-
-    The output is a dictionary having the same form as :mod:`net.load_config <salt.modules.napalm_network.load_config>`.
 
     CLI Example:
 
@@ -531,7 +529,6 @@ def filter(name,  # pylint: disable=redefined-builtin
         Debug mode. Will insert a new key under the output dictionary,
         as ``loaded_config`` contaning the raw configuration loaded on the device.
 
-    The output is a dictionary having the same form as :mod:`net.load_config <salt.modules.napalm_network.load_config>`.
     CLI Example:
 
     .. code-block:: bash
@@ -708,8 +705,6 @@ def managed(name,
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
         as ``loaded_config`` contaning the raw configuration loaded on the device.
-
-    The output is a dictionary having the same form as :mod:`net.load_config <salt.modules.napalm_network.load_config>`.
 
     CLI Example:
 
