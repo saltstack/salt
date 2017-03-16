@@ -11,7 +11,7 @@ this:
 
     ext_pillar:
       - stack: /path/to/stack.cfg
-      - decrypt: {}
+      - gpg: {}
 
 Set ``gpg_keydir`` in your config to adjust the homedir the renderer uses.
 
