@@ -378,7 +378,7 @@ class Schedule(object):
     '''
     instance = None
 
-    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None):
+    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None):
         '''
         Only create one instance of Schedule
         '''
@@ -388,18 +388,19 @@ class Schedule(object):
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
             cls.instance = object.__new__(cls)
-            cls.instance.__singleton_init__(opts, functions, returners, intervals, cleanup)
+            cls.instance.__singleton_init__(opts, functions, returners, intervals, cleanup, proxy)
         else:
             log.debug('Re-using Schedule')
         return cls.instance
 
     # has to remain empty for singletons, since __init__ will *always* be called
-    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None):
+    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None):
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None):
+    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None):
         self.opts = opts
+        self.proxy = proxy
         self.functions = functions
         if isinstance(intervals, dict):
             self.intervals = intervals
@@ -745,8 +746,8 @@ class Schedule(object):
             if self.opts['__role'] == 'master':
                 self.functions = salt.loader.runner(self.opts)
             else:
-                self.functions = salt.loader.minion_mods(self.opts)
-            self.returners = salt.loader.returners(self.opts, self.functions)
+                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy)
+            self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'fun_args': [],
