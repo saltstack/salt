@@ -541,7 +541,7 @@ class MinionBase(object):
             for master in opts['local_masters']:
                 opts['master'] = master
                 opts.update(prep_ip_port(opts))
-                opts['master_uri_list'].append(resolve_dns(opts)['master_uri'])
+                opts['master_uri_list'].append(resolve_dns(opts, connect=False)['master_uri'])
 
             while True:
                 if attempts != 0:
