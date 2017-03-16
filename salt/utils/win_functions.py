@@ -100,6 +100,10 @@ def get_sid_from_name(name):
     Returns:
         str: The corresponding SID
     '''
+    # If None is passed, use the Universal Well-known SID "Null SID"
+    if name is None:
+        name = 'NULL SID'
+
     try:
         sid = win32security.LookupAccountName(None, name)[0]
     except pywintypes.error as exc:
