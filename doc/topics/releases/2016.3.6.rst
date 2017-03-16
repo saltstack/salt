@@ -10,16 +10,52 @@ Changes for v2016.3.5..v2016.3.6
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2017-03-14T19:33:29Z*
+*Generated at: 2017-03-15T22:31:23Z*
 
 Statistics:
 
-- Total Merges: **96**
-- Total Issue references: **47**
-- Total PR references: **140**
+- Total Merges: **101**
+- Total Issue references: **49**
+- Total PR references: **145**
 
 Changes:
 
+
+- **PR** `#40018`_: (*meaksh*) Allows overriding 'timeout' and 'gather_job_timeout' to 'manage.up' runner call
+  @ *2017-03-15T19:43:01Z*
+
+  * 8dcffc7 Merge pull request `#40018`_ from meaksh/2016.3-handling-timeouts-for-manage.up-runner
+  * 9f5c3b7 Allows to set custom timeouts for 'manage.up' and 'manage.status'
+
+  * 2102d9c Allows to set 'timeout' and 'gather_job_timeout' via kwargs
+
+- **PR** `#40038`_: (*velom*) correctly parse "pkg_name===version" from pip freeze
+  @ *2017-03-15T19:30:03Z*
+
+  * 22fc529 Merge pull request `#40038`_ from velom/fix-pip-freeze-parsing
+  * 3fae91d correctly parse "pkg_name===version" from pip freeze
+
+- **PR** `#40053`_: (*gtmanfred*) Update rh_ip.py
+  @ *2017-03-15T18:57:32Z*
+
+  - **ISSUE** `#40036`_: (*oogali*) UnboundLocalError: local variable 'ifcfg' referenced before assignment
+    | refs: `#40053`_
+  * 3584f93 Merge pull request `#40053`_ from saltstack/rh_ip_patch
+  * 219947a Update rh_ip.py
+
+- **PR** `#40041`_: (*terminalmage*) Fix transposed lines in salt.utils.process
+  @ *2017-03-15T17:58:24Z*
+
+  - **ISSUE** `#40011`_: (*tsaridas*) salt-minion does not shutdown properly 2016.11.3 rh6
+    | refs: `#40041`_
+  * 837432d Merge pull request `#40041`_ from terminalmage/issue40011
+  * 5b5d1b3 Fix transposed lines in salt.utils.process
+
+- **PR** `#40021`_: (*Ch3LL*) 2016.3.6 release notes with change log
+  @ *2017-03-14T21:06:18Z*
+
+  * ee7f3b1 Merge pull request `#40021`_ from Ch3LL/2016.3.6_release
+  * f3e7e4f Add 2016.3.6 Release Notes
 
 - **PR** `#40016`_: (*terminalmage*) Attempt to fix failing grains tests in 2016.3
   @ *2017-03-14T18:34:32Z*
@@ -1071,7 +1107,14 @@ Changes:
 .. _`#39980`: https://github.com/saltstack/salt/pull/39980
 .. _`#39988`: https://github.com/saltstack/salt/pull/39988
 .. _`#39994`: https://github.com/saltstack/salt/pull/39994
+.. _`#40011`: https://github.com/saltstack/salt/issues/40011
 .. _`#40016`: https://github.com/saltstack/salt/pull/40016
+.. _`#40018`: https://github.com/saltstack/salt/pull/40018
+.. _`#40021`: https://github.com/saltstack/salt/pull/40021
+.. _`#40036`: https://github.com/saltstack/salt/issues/40036
+.. _`#40038`: https://github.com/saltstack/salt/pull/40038
+.. _`#40041`: https://github.com/saltstack/salt/pull/40041
+.. _`#40053`: https://github.com/saltstack/salt/pull/40053
 .. _`bp-37632`: https://github.com/saltstack/salt/pull/37632
 .. _`bp-39170`: https://github.com/saltstack/salt/pull/39170
 .. _`fix-2016`: https://github.com/saltstack/salt/issues/2016
