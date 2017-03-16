@@ -20,6 +20,7 @@ Set ``gpg_keydir`` in your config to adjust the homedir the renderer uses.
 from __future__ import absolute_import
 import salt.utils
 
+
 def ext_pillar(minion_id, pillar, *args, **kwargs):
     render_function = salt.loader.render(__opts__, __salt__).get("gpg")
     return render_function(pillar)
