@@ -219,7 +219,7 @@ def load_term_config(filter_name,
         To see what fields are supported, please consult the list of supported keywords_.
             Some platforms have few other optional_ keyworkds.
 
-            .. _keywords:https://github.com/google/capirca/wiki/Policy-format#keywords
+            .. _keywords: https://github.com/google/capirca/wiki/Policy-format#keywords
             .. _optional: https://github.com/google/capirca/wiki/Policy-format#optionally-supported-keywords
 
     .. note::

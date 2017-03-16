@@ -149,7 +149,7 @@ _IP_FILEDS = [
     'next_ip'
 ]
 
-_DEFAULT_SERVICES = {}
+_SERVICES = {}
 
 # ------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -208,8 +208,8 @@ def _get_services_mapping():
     services shortcut and they will need to specify the protocol / port combination
     using the source_port / destination_port & protocol fields.
     '''
-    services = {}
-    services.update(_DEFAULT_SERVICES)
+    if _SERVICES:
+        return _SERVICES
     services_txt = ''
     try:
         with salt.utils.fopen('/etc/services', 'r') as srv_f:
@@ -217,27 +217,38 @@ def _get_services_mapping():
     except IOError as ioe:
         log.error('Unable to read from /etc/services:')
         log.error(ioe)
-        return services  # no mapping possible, sorry
+        return _SERVICES  # no mapping possible, sorry
         # will return the default mapping
     service_rgx = re.compile(r'^([a-zA-Z0-9-]+)\s+(\d+)\/(tcp|udp)(.*)$')
     for line in services_txt.splitlines():
         service_rgx_s = service_rgx.search(line)
         if service_rgx_s and len(service_rgx_s.groups()) == 4:
             srv_name, port, protocol, _ = service_rgx_s.groups()
-            if srv_name not in services:
-                services[srv_name] = {
+            if srv_name not in _SERVICES:
+                _SERVICES[srv_name] = {
                     'port': [],
                     'protocol': []
                 }
             try:
-                services[srv_name]['port'].append(int(port))
+                _SERVICES[srv_name]['port'].append(int(port))
             except ValueError as verr:
                 log.error(verr)
                 log.error('Did not read that properly:')
                 log.error(line)
                 log.error('Please report the above error: {port} does not seem a valid port value!'.format(port=port))
-            services[srv_name]['protocol'].append(protocol)
-    return services
+            _SERVICES[srv_name]['protocol'].append(protocol)
+    return _SERVICES
+
+
+def _translate_port(port):
+    '''
+    Look into services and return the port value using the
+    service name as lookup value.
+    '''
+    services = _get_services_mapping()
+    if port in services and services[port]['port']:
+        return services[port]['port'][0]
+    return port
 
 
 def _make_it_list(dict_, field_name, value):
@@ -269,9 +280,23 @@ def _make_it_list(dict_, field_name, value):
                     portval.append((port, port))
                 else:
                     portval.append(port)
-            return list(set(prev_value + portval))
+            translated_portval = []
+            # and the ports sent as string, e.g. ntp instead of 123
+            # needs to be translated
+            # again, using the same /etc/services
+            for port_start, port_end in portval:
+                if not isinstance(port_start, int):
+                    port_start = _translate_port(port_start)
+                if not isinstance(port_end, int):
+                    port_end = _translate_port(port_end)
+                translated_portval.append(
+                    (port_start, port_end)
+                )
+            return list(set(prev_value + translated_portval))
         return list(set(prev_value + list(value)))
     if field_name in ('source_port', 'destination_port'):
+        if not isinstance(value, int):
+            value = _translate_port(value)
         return list(set(prev_value + [(value, value)]))  # a list of tuples
     # anything else will be enclosed in a list-type
     return list(set(prev_value + [value]))
@@ -584,7 +609,7 @@ def get_term_config(platform,
         To see what fields are supported, please consult the list of supported keywords_.
         Some platforms have few other optional_ keywords.
 
-        .. _keywords:https://github.com/google/capirca/wiki/Policy-format#keywords
+        .. _keywords: https://github.com/google/capirca/wiki/Policy-format#keywords
         .. _optional: https://github.com/google/capirca/wiki/Policy-format#optionally-supported-keywords
 
     .. note::
