@@ -41,7 +41,7 @@ import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'venafi'
-base_url = 'https://api.beta.venafi.com/v1'
+base_url = 'http://vpc-51255c36.qa.projectc.venafi.com/v1'
 log = logging.getLogger(__name__)
 
 
@@ -61,24 +61,73 @@ def _api_key():
     return __opts__.get('venafi', {}).get('api_key', '')
 
 
-def gen_rsa(minion_id, dns_name=None, zone='default', password=None):
+def gen_key(minion_id, dns_name=None, zone='default', password=None):
     '''
-    Generate and return an RSA private_key. If a ``dns_name`` is passed in, the
-    private_key will be cached under that name.
+    Generate and return an private_key. If a ``dns_name`` is passed in, the
+    private_key will be cached under that name. The type of key and the
+    parameters used to generate the key are based on the default certificate
+    use policy associated with the specified zone.
     '''
-    gen = RSA.generate(bits=2048)
-    private_key = gen.exportKey('PEM', password)
-    if dns_name is not None:
-        bank = 'venafi/domains'
-        cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
-        try:
-            data = cache.fetch(bank, dns_name)
-            data['private_key'] = private_key
-            data['minion_id'] = minion_id
-        except TypeError:
-            data = {'private_key': private_key,
-                    'minion_id': minion_id}
-        cache.store(bank, dns_name, data)
+    # Get the default certificate use policy associated with the zone
+    # so we can generate keys that conform with policy
+
+    # The /v1/zones/tag/{name} API call is a shortcut to get the zoneID
+    # directly from the name
+
+    qdata = salt.utils.http.query(
+        '{0}/zones/tag/{1}'.format(base_url,zone),
+        method='GET',
+        decode=True,
+        decode_type='json',
+        header_dict={
+            'tppl-api-key': _api_key(),
+            'Content-Type': 'application/json',
+        },
+    )
+
+    zone_id = qdata['dict']['id']
+
+    # the /v1/certificatepolicies?zoneId API call returns the default
+    # certificate use and certificate identity policies
+
+    qdata = salt.utils.http.query(
+        '{0}/certificatepolicies?zoneId={1}'.format(base_url,zone_id),
+        method='GET',
+        decode=True,
+        decode_type='json',
+        header_dict={
+            'tppl-api-key': _api_key(),
+            'Content-Type': 'application/json',
+        },
+    )
+
+    policies = qdata['dict']['certificatePolicies']
+
+    # Extract the key length and key type from the certificate use policy
+    # and generate the private key accordingly
+
+    for policy in policies:
+        if policy['certificatePolicyType'] == "CERTIFICATE_USE":
+            keyTypes = policy['keyTypes']
+            # in case multiple keytypes and key lengths are supported
+            # always use the first key type and key length
+            keygen_type =  keyTypes[0]['keyType']
+            key_len = keyTypes[0]['keyLengths'][0] 
+
+    if keygen_type == "RSA":
+        gen = RSA.generate(bits=key_len)
+        private_key = gen.exportKey('PEM', password)
+        if dns_name is not None:
+            bank = 'venafi/domains'
+            cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
+            try:
+                data = cache.fetch(bank, dns_name)
+                data['private_key'] = private_key
+                data['minion_id'] = minion_id
+            except TypeError:
+                data = {'private_key': private_key,
+                        'minion_id': minion_id}
+            cache.store(bank, dns_name, data)
     return private_key
 
 
@@ -111,7 +160,7 @@ def gen_csr(
     if data is None:
         data = {}
     if 'private_key' not in data:
-        data['private_key'] = gen_rsa(minion_id, dns_name, zone, password)
+        data['private_key'] = gen_key(minion_id, dns_name, zone, password)
 
     tmppriv = '{0}/priv'.format(tmpdir)
     tmpcsr = '{0}/csr'.format(tmpdir)
@@ -177,7 +226,6 @@ def request(
         org='Beta Organization',
         org_unit='Beta Group',
         password=None,
-        company_id=None,
         zone_id=None,
     ):
     '''
@@ -196,23 +244,17 @@ def request(
     if zone_id is None:
         zone_id = __opts__.get('venafi', {}).get('zone_id')
 
-    if company_id is None:
-        company_id = __opts__.get('venafi', {}).get('company_id')
-
-    if zone_id is None and zone is not None and company_id is not None:
-        zones = show_zones(company_id)
-        for zoned in zones['zones']:
-            if zoned['tag'] == zone:
-                zone_id = zoned['id']
-
-    if zone_id is None and company_id is None:
+    if zone_id is None and zone is not None:
+        zone_id = get_zone_id(zone)
+    
+    if zone_id is None:
         raise CommandExecutionError(
-            'A company_id and either a zone or a zone_id must be passed in or '
+            'Either a zone or a zone_id must be passed in or '
             'configured in the master file. This id can be retreived using '
             'venafi.show_company <domain>'
         )
 
-    private_key = gen_rsa(minion_id, dns_name, zone, password)
+    private_key = gen_key(minion_id, dns_name, zone, password)
 
     csr = gen_csr(
         minion_id,
@@ -229,6 +271,7 @@ def request(
         'zoneId': zone_id,
         'certificateSigningRequest': csr,
     })
+
     qdata = salt.utils.http.query(
         '{0}/certificaterequests'.format(base_url),
         method='POST',
@@ -352,13 +395,34 @@ def show_csrs():
         )
     return data.get('dict', {})
 
-
-def show_zones(company_id):
+def get_zone_id(zone_name):
     '''
-    Show certificate requests for this API key
+    Get the zone ID for the given zone name
     '''
     data = salt.utils.http.query(
-        '{0}/companies/{1}/zones'.format(base_url, company_id),
+        '{0}/zones/tag/{1}'.format(base_url,zone_name),
+        status=True,
+        decode=True,
+        decode_type='json',
+        header_dict={
+            'tppl-api-key': _api_key(),
+        },
+    )
+
+    status = data['status']
+    if str(status).startswith('4') or str(status).startswith('5'):
+        raise CommandExecutionError(
+            'There was an API error: {0}'.format(data['error'])
+        )
+    return data['dict']['id']
+
+
+def show_zones():
+    '''
+    Show zone details for the API key owner's company
+    '''
+    data = salt.utils.http.query(
+        '{0}/zones'.format(base_url),
         status=True,
         decode=True,
         decode_type='json',

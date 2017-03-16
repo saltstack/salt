@@ -15,7 +15,7 @@ Open up ``/etc/salt/master`` and add:
 
     api_key: None
 
-Then register your email address with Venagi using the following command:
+Then register your email address with Venafi using the following command:
 
 .. code-block:: bash
 
@@ -53,14 +53,27 @@ file and set the ``api_key`` to it:
 
     api_key: abcdef01-2345-6789-abcd-ef0123456789
 
+Example Usage
+~~~~~~~~~~~~~~~~
+Generate a CSR and submit it to Venafi for issuance, using the 'Internet' zone:
+salt-run venafi.request minion.example.com minion.example.com zone=Internet
+
+Retrieve a certificate for a previously submitted request with request ID
+aaa-bbb-ccc-dddd:
+salt-run venafi.pickup aaa-bbb-ccc-dddd
 
 Runner Functions
 ~~~~~~~~~~~~~~~~
 
-gen_rsa
+gen_key
 -------
-Generate and return an RSA ``private_key``. If a ``dns_name`` is passed in, the
+Generate and return a ``private_key``. If a ``dns_name`` is passed in, the
 ``private_key`` will be cached under that name. 
+
+The key will be generated based on the policy values that were configured
+by the Venafi administrator. A default Certificate Use Policy is associated
+with a zone; the key type and key length parameters associated with this value
+will be used.
 
 :param str minion_id: Required. The name of the minion which hosts the domain
     name in question.
@@ -68,11 +81,11 @@ Generate and return an RSA ``private_key``. If a ``dns_name`` is passed in, the
 :param str dns_name: Required. The FQDN of the domain that will be hosted on
     the minion.
 
-:param str zone: Optional. Default value is "default". The zone on Venafi that
+:param str zone: Required. Default value is "default". The zone on Venafi that
     the domain belongs to.
 
 :param str password: Optional. If specified, the password to use to access the
-    generated RSA key.
+    generated key.
 
 
 gen_csr
@@ -121,8 +134,8 @@ Request a new certificate. Analogous to:
 
 :param str dns_name: Required.
 
-:param str zone: Optional. Default value is "default". The zone on Venafi that
-    the domain belongs to.
+:param str zone: Required. Default value is "default". The zone on Venafi that
+    the certificate request will be submitted to.
 
 :param str country=None: Optional. The two-letter ISO abbreviation for your
     country.
@@ -143,13 +156,6 @@ Request a new certificate. Analogous to:
 
 :param str company_id=None: Required, but may be configured in ``master`` file
     instead.
-
-:param str zone_id=None: Required. Specify the zone used to determine enrollment
-    configuration. In Trust Protection Platform this is equivelant to the policy
-    path where the certificate object will be stored. vCert prepends
-    \VED\Policy\, so you only need to specify policy folders within the root
-    Policy folder. Example: -z Corp\Engineering
-
 
 register
 --------
