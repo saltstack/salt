@@ -2387,7 +2387,7 @@ class Webhook(object):
 
         And finally deploy the new build:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set secret_key = data.get('headers', {}).get('X-My-Secret-Key') %}
             {% set build = data.get('post', {}) %}

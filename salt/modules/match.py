@@ -320,7 +320,7 @@ def filter_by(lookup, expr_form='compound', minion_id=None):
 
     Pillar Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         # Filter the data for the current minion into a variable:
         {% set roles = salt['match.filter_by']({

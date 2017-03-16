@@ -268,7 +268,7 @@ derivatives start the service after the package installation by default.
 To prevent this, we need to create policy layer which will prevent the Minion
 service to restart right after the upgrade:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {%- if grains['os_family'] == 'Debian' %}
 
@@ -316,7 +316,7 @@ Restart using states
 Now we can apply the workaround to restart the Minion in reliable way.
 The following example works on both UNIX-like and Windows operating systems:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     Restart Salt Minion:
       cmd.run:
@@ -333,7 +333,7 @@ However, it requires more advanced tricks to upgrade from legacy version of
 Salt (before ``2016.3.0``), where executing commands in the background is not
 supported:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     Restart Salt Minion:
       cmd.run:

@@ -122,7 +122,7 @@ example, to check if a minion is in the 'webserver' nodegroup:
     nodegroups:
       webserver: 'G@os:Debian and L@minion1,minion2'
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if grains.id in salt['pillar.get']('master:nodegroups:webserver', [])
     and grains.os in salt['pillar.get']('master:nodegroups:webserver', []) %}
