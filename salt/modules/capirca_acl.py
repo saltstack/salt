@@ -210,7 +210,6 @@ def _get_services_mapping():
     '''
     if _SERVICES:
         return _SERVICES
-    global _SERVICES
     services_txt = ''
     try:
         with salt.utils.fopen('/etc/services', 'r') as srv_f:
