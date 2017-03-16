@@ -14,6 +14,7 @@ import salt.log
 import salt.utils
 import salt.utils.master
 import salt.payload
+import salt.cache
 from salt.exceptions import SaltInvocationError
 from salt.fileserver import clear_lock as _clear_lock
 from salt.fileserver.gitfs import PER_REMOTE_OVERRIDES as __GITFS_OVERRIDES
@@ -396,3 +397,17 @@ def cloud(tgt, provider=None):
                     ret[name] = data
                     ret['name']['provider'] = provider
     return ret
+
+
+def fetch(bank, key, cachedir=None):
+    '''
+    Fetch data from a salt.cache bank
+    '''
+    if cachedir is None:
+        cachedir = __opts__['cachedir']
+
+    try:
+        cache = salt.cache.Cache(__opts__, cachedir)
+    except TypeError:
+        cache = salt.cache.Cache(__opts__)
+    return cache.fetch(bank, key)
