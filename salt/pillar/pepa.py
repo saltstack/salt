@@ -211,7 +211,7 @@ This was designed to be run as a build job in Jenkins or similar tool. You can p
 
 **File Example: host/validation/network.yaml**
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     network..dns..search:
       type: list
