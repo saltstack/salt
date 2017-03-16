@@ -24,7 +24,6 @@ from __future__ import absolute_import
 
 # import python std lib
 import time
-import string
 import logging
 
 # import salt
