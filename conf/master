@@ -362,6 +362,11 @@
 #
 #token_expire_user_override: False
 
+# Set to True to enable keeping the calculated user's auth list in the token
+# file. This is disabled by default and the auth list is calculated or requested
+# from the eauth driver each time.
+#keep_acl_in_token: False
+
 # Allow minions to push files to the master. This is disabled by default, for
 # security purposes.
 #file_recv: False

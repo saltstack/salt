@@ -688,6 +688,9 @@ VALID_OPTS = {
     'fileserver_limit_traversal': bool,
     'fileserver_verify_config': bool,
 
+    # Optionally enables keeping the calculated user's auth list in the token file.
+    'keep_acl_in_token': bool,
+
     # The number of open files a daemon is allowed to have open. Frequently needs to be increased
     # higher than the system default in order to account for the way zeromq consumes file handles.
     'max_open_files': int,
@@ -1386,6 +1389,7 @@ DEFAULT_MASTER_OPTS = {
     'external_auth': {},
     'token_expire': 43200,
     'token_expire_user_override': False,
+    'keep_acl_in_token': False,
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
     'file_recv': False,
     'file_recv_max_size': 100,

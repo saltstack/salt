@@ -1031,6 +1031,21 @@ and usernames may be given:
       ldap:
         - gary
 
+.. conf_master:: keep_acl_in_token
+
+``keep_acl_in_token``
+---------------------
+
+Default: ``False``
+
+Set to True to enable keeping the calculated user's auth list in the token
+file. This is disabled by default and the auth list is calculated or requested
+from the eauth driver each time.
+
+.. code-block:: yaml
+
+    keep_acl_in_token: False
+
 .. conf_master:: file_recv
 
 ``file_recv``

@@ -218,8 +218,8 @@ class LoadAuth(object):
                  'eauth': load['eauth'],
                  'token': tok}
 
-        acl_ret = self.__get_acl(load)
-        if acl_ret is not None:
+        if self.opts['keep_acl_in_token']:
+            acl_ret = self.__get_acl(load)
             tdata['auth_list'] = acl_ret
 
         if 'groups' in load:
