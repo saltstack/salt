@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 '''
 StatusPage
 ==========
@@ -18,9 +19,12 @@ In the minion configuration file, the following block is required:
 .. versionadded:: Nitrogen
 '''
 
+from __future__ import unicode_literals
 from __future__ import absolute_import
 
 # import python std lib
+import time
+import string
 import logging
 
 # import salt
@@ -43,6 +47,8 @@ _MATCH_KEYS = [
     'id',
     'name'
 ]
+
+_PACE = 1  # 1 request per second
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -102,6 +108,17 @@ def _ignore_keys(endpoint_props):
     )
 
 
+def _unique(list_of_dicts):
+    '''
+    Returns an unique list of dictionaries given a list that may contain duplicates.
+    '''
+    unique_list = []
+    for ele in list_of_dicts:
+        if ele not in unique_list:
+            unique_list.append(ele)
+    return unique_list
+
+
 def _clear_ignore(endpoint_props):
     '''
     Both _clear_dict and _ignore_keys in a single iteration.
@@ -117,10 +134,10 @@ def _clear_ignore_list(lst):
     '''
     Apply _clear_ignore to a list.
     '''
-    return [
+    return _unique([
         _clear_ignore(ele)
         for ele in lst
-    ]
+    ])
 
 
 def _find_match(ele, lst):
@@ -130,18 +147,25 @@ def _find_match(ele, lst):
     for _ele in lst:
         for match_key in _MATCH_KEYS:
             if _ele.get(match_key) == ele.get(match_key):
-                return _ele
+                return ele
 
 
 def _update_on_fields(prev_ele, new_ele):
     '''
     Return a dict with fields that differ between two dicts.
     '''
-    return dict(
+    fields_update = dict(
         (prop_name, prop_val)
         for prop_name, prop_val in six.iteritems(new_ele)
         if new_ele.get(prop_name) != prev_ele.get(prop_name) or prop_name in _MATCH_KEYS
     )
+    if len(set(fields_update.keys()) | set(_MATCH_KEYS)) > len(set(_MATCH_KEYS)):
+        if 'id' not in fields_update:
+            # in case of update, the ID is necessary
+            # if not specified in the pillar,
+            # will try to get it from the prev_ele
+            fields_update['id'] = prev_ele['id']
+        return fields_update
 
 
 def _compute_diff(expected_endpoints, configured_endpoints):
@@ -180,9 +204,9 @@ def _compute_diff(expected_endpoints, configured_endpoints):
                 new_endpoints.append(expected_endpoint_clear)
             else:
                 # element matched, but some fields are different
-                update_endpoints.append(
-                    _update_on_fields(matching_ele, expected_endpoint_clear)
-                )
+                update_fields = _update_on_fields(matching_ele, expected_endpoint_clear)
+                if update_fields:
+                    update_endpoints.append(update_fields)
     for configured_endpoint_clear in configured_endpoints_clear:
         if configured_endpoint_clear not in expected_endpoints_clear:
             matching_ele = _find_match(configured_endpoint_clear, expected_endpoints_clear)
@@ -398,7 +422,9 @@ def managed(name,
             api_url=None,
             page_id=None,
             api_key=None,
-            api_version=None):
+            api_version=None,
+            pace=_PACE,
+            allow_empty=False):
     '''
     Manage the StatusPage configuration.
 
@@ -418,6 +444,12 @@ def managed(name,
 
     api_url
         Custom API URL in case the user has a StatusPage service running in a custom environment.
+
+    pace: 1
+        Max requests per second allowed by the API.
+
+    allow_empty: False
+        Allow empty config.
 
     SLS example:
 
@@ -442,7 +474,16 @@ def managed(name,
     '''
     complete_diff = {}
     ret = _default_ret(name)
+    if not config and not allow_empty:
+        ret.update({
+            'result': False,
+            'comment': 'Cannot remove everything. To allow this, please set the option `allow_empty` as True.'
+        })
+        return ret
+    is_empty = True
     for endpoint_name, endpoint_expected_config in six.iteritems(config):
+        if endpoint_expected_config:
+            is_empty = False
         endpoint_existing_config_ret = __salt__['statuspage.retrieve'](endpoint=endpoint_name,
                                                                        api_url=api_url,
                                                                        page_id=page_id,
@@ -455,6 +496,23 @@ def managed(name,
             return ret  # stop at first error
         endpoint_existing_config = endpoint_existing_config_ret.get('out')
         complete_diff[endpoint_name] = _compute_diff(endpoint_expected_config, endpoint_existing_config)
+    if is_empty and not allow_empty:
+        ret.update({
+            'result': False,
+            'comment': 'Cannot remove everything. To allow this, please set the option `allow_empty` as True.'
+        })
+        return ret
+    any_changes = False
+    for endpoint_name, endpoint_diff in six.iteritems(complete_diff):
+        if endpoint_diff.get('add') or endpoint_diff.get('update') or endpoint_diff.get('remove'):
+            any_changes = True
+    if not any_changes:
+        ret.update({
+            'result': True,
+            'comment': 'No changes required.',
+            'changes': {}
+        })
+        return ret
     ret.update({
         'changes': complete_diff
     })
@@ -471,35 +529,65 @@ def managed(name,
                 endpoint=endpoint_sg,
                 props=new_endpoint
             ))
-            __salt__['statuspage.create'](endpoint=endpoint_name,
-                                          api_url=api_url,
-                                          page_id=page_id,
-                                          api_key=api_key,
-                                          api_version=api_version,
-                                          **new_endpoint)
+            adding = __salt__['statuspage.create'](endpoint=endpoint_name,
+                                                   api_url=api_url,
+                                                   page_id=page_id,
+                                                   api_key=api_key,
+                                                   api_version=api_version,
+                                                   **new_endpoint)
+            if not adding.get('result'):
+                ret.update({
+                    'comment': adding.get('comment')
+                })
+                return ret
+            if pace:
+                time.sleep(1/pace)
         for update_endpoint in endpoint_diff.get('update'):
+            if 'id' not in update_endpoint:
+                continue
             endpoint_id = update_endpoint.pop('id')
             log.debug('Updating {endpoint} #{id}: {props}'.format(
                 endpoint=endpoint_sg,
                 id=endpoint_id,
                 props=update_endpoint
             ))
-            __salt__['statuspage.update'](endpoint=endpoint_name,
-                                          id=endpoint_id,
-                                          api_url=api_url,
-                                          page_id=page_id,
-                                          api_key=api_key,
-                                          api_version=api_version,
-                                          **update_endpoint)
+            updating = __salt__['statuspage.update'](endpoint=endpoint_name,
+                                                     id=endpoint_id,
+                                                     api_url=api_url,
+                                                     page_id=page_id,
+                                                     api_key=api_key,
+                                                     api_version=api_version,
+                                                     **update_endpoint)
+            if not updating.get('result'):
+                ret.update({
+                    'comment': updating.get('comment')
+                })
+                return ret
+            if pace:
+                time.sleep(1/pace)
         for remove_endpoint in endpoint_diff.get('remove'):
+            if 'id' not in remove_endpoint:
+                continue
             endpoint_id = remove_endpoint.pop('id')
             log.debug('Removing {endpoint} #{id}'.format(
                 endpoint=endpoint_sg,
                 id=endpoint_id
             ))
-            __salt__['statuspage.update'](endpoint=endpoint_name,
-                                          id=endpoint_id,
-                                          api_url=api_url,
-                                          page_id=page_id,
-                                          api_key=api_key,
-                                          api_version=api_version)
+            removing = __salt__['statuspage.delete'](endpoint=endpoint_name,
+                                                     id=endpoint_id,
+                                                     api_url=api_url,
+                                                     page_id=page_id,
+                                                     api_key=api_key,
+                                                     api_version=api_version)
+            if not removing.get('result'):
+                ret.update({
+                    'comment': removing.get('comment')
+                })
+                return ret
+            if pace:
+                time.sleep(1/pace)
+    ret.update({
+        'result': True,
+        'comment': 'StatusPage updated.'
+    })
+    return ret
