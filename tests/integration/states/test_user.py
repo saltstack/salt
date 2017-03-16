@@ -34,33 +34,30 @@ else:
     NOGROUPGID = 'nogroup'
 
 
+@destructiveTest
+@skipIf(os.geteuid() != 0, 'you must be root to run this test')
 class UserTest(integration.ModuleCase,
                integration.SaltReturnAssertsMixIn):
     '''
     test for user absent
     '''
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    user_name = 'salt_test'
+    user_home = '/var/lib/salt_test'
+
     def setUp(self):
         if salt.utils.is_darwin():
             #on mac we need to add user, because there is
             #no creationtime for nobody user.
             add_user = self.run_function('user.add', [USER], gid=GID)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_absent(self):
         ret = self.run_state('user.absent', name='unpossible')
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_if_present(self):
         ret = self.run_state('user.present', name=USER)
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_if_present_with_gid(self):
         if self.run_function('group.info', [USER]):
             ret = self.run_state('user.present', name=USER, gid=GID)
@@ -72,21 +69,15 @@ class UserTest(integration.ModuleCase,
             )
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_not_present(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the minion.
         And then destroys that user.
         Assume that it will break any system you run it on.
         '''
-        ret = self.run_state('user.present', name='salt_test')
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('user.absent', name='salt_test')
+        ret = self.run_state('user.present', name=self.user_name)
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_present_when_home_dir_does_not_18843(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the minion.
@@ -94,36 +85,27 @@ class UserTest(integration.ModuleCase,
         Assume that it will break any system you run it on.
         '''
         if salt.utils.is_darwin():
-            HOMEDIR = '/Users/home_of_salt_test'
+            HOMEDIR = '/Users/home_of_' + self.user_name
         else:
-            HOMEDIR = '/home/home_of_salt_test'
-        ret = self.run_state('user.present', name='salt_test',
+            HOMEDIR = '/home/home_of_' + self.user_name
+        ret = self.run_state('user.present', name=self.user_name,
                              home=HOMEDIR)
         self.assertSaltTrueReturn(ret)
 
         self.run_function('file.absent', name=HOMEDIR)
-        ret = self.run_state('user.present', name='salt_test',
+        ret = self.run_state('user.present', name=self.user_name,
                              home=HOMEDIR)
         self.assertSaltTrueReturn(ret)
 
-        ret = self.run_state('user.absent', name='salt_test')
-        self.assertSaltTrueReturn(ret)
-
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_present_nondefault(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
         '''
-        ret = self.run_state('user.present', name='salt_test',
-                             home='/var/lib/salt_test')
+        ret = self.run_state('user.present', name=self.user_name,
+                             home=self.user_home)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir('/var/lib/salt_test'))
-        ret = self.run_state('user.absent', name='salt_test')
-        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isdir(self.user_home))
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     @requires_system_grains
     def test_user_present_gid_from_name_default(self, grains=None):
         '''
@@ -137,52 +119,45 @@ class UserTest(integration.ModuleCase,
         # user
         gid_from_name = False if grains['os_family'] == 'MacOS' else True
 
-        ret = self.run_state('user.present', name='salt_test',
-                             gid_from_name=gid_from_name, home='/var/lib/salt_test')
+        ret = self.run_state('user.present', name=self.user_name,
+                             gid_from_name=gid_from_name, home=self.user_home)
         self.assertSaltTrueReturn(ret)
 
-        ret = self.run_function('user.info', ['salt_test'])
+        ret = self.run_function('user.info', [self.user_name])
         self.assertReturnNonEmptySaltType(ret)
         group_name = grp.getgrgid(ret['gid']).gr_name
 
-        self.assertTrue(os.path.isdir('/var/lib/salt_test'))
+        self.assertTrue(os.path.isdir(self.user_home))
         if grains['os_family'] in ('Suse',):
             self.assertEqual(group_name, 'users')
         elif grains['os_family'] == 'MacOS':
             self.assertEqual(group_name, 'staff')
         else:
-            self.assertEqual(group_name, 'salt_test')
+            self.assertEqual(group_name, self.user_name)
 
-        ret = self.run_state('user.absent', name='salt_test')
-        self.assertSaltTrueReturn(ret)
-
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_present_gid_from_name(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
         This is a unit test, NOT an integration test. We create a group of the
         same name as the user beforehand, so it should all run smoothly.
         '''
-        ret = self.run_state('group.present', name='salt_test')
+        ret = self.run_state('group.present', name=self.user_name)
         self.assertSaltTrueReturn(ret)
-        ret = self.run_state('user.present', name='salt_test',
-                             gid_from_name=True, home='/var/lib/salt_test')
+        ret = self.run_state('user.present', name=self.user_name,
+                             gid_from_name=True, home=self.user_home)
         self.assertSaltTrueReturn(ret)
 
-        ret = self.run_function('user.info', ['salt_test'])
+        ret = self.run_function('user.info', [self.user_name])
         self.assertReturnNonEmptySaltType(ret)
         group_name = grp.getgrgid(ret['gid']).gr_name
 
-        self.assertTrue(os.path.isdir('/var/lib/salt_test'))
-        self.assertEqual(group_name, 'salt_test')
-        ret = self.run_state('user.absent', name='salt_test')
+        self.assertTrue(os.path.isdir(self.user_home))
+        self.assertEqual(group_name, self.user_name)
+        ret = self.run_state('user.absent', name=self.user_name)
         self.assertSaltTrueReturn(ret)
-        ret = self.run_state('group.absent', name='salt_test')
+        ret = self.run_state('group.absent', name=self.user_name)
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     @skipIf(sys.getfilesystemencoding().startswith('ANSI'), 'A system encoding which supports Unicode characters must be set. Current setting is: {0}. Try setting $LANG=\'en_US.UTF-8\''.format(sys.getfilesystemencoding()))
     def test_user_present_unicode(self):
         '''
@@ -192,21 +167,25 @@ class UserTest(integration.ModuleCase,
         any encoding-related failures.
         '''
         ret = self.run_state(
-            'user.present', name='salt_test', fullname=u'Sålt Test', roomnumber=u'①②③',
-            workphone=u'١٢٣٤', homephone=u'६७८'
+            'user.present',
+            name=self.user_name,
+            fullname=u'Sålt Test',
+            roomnumber=u'①②③',
+            workphone=u'١٢٣٤',
+            homephone=u'६७८'
         )
         self.assertSaltTrueReturn(ret)
         # Ensure updating a user also works
         ret = self.run_state(
-            'user.present', name='salt_test', fullname=u'Sølt Test', roomnumber=u'①③②',
-            workphone=u'٣٤١٢', homephone=u'६८७'
+            'user.present',
+            name=self.user_name,
+            fullname=u'Sølt Test',
+            roomnumber=u'①③②',
+            workphone=u'٣٤١٢',
+            homephone=u'६८७'
         )
         self.assertSaltTrueReturn(ret)
-#        ret = self.run_state('user.absent', name='salt_test')
-#        self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_present_gecos(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -217,15 +196,15 @@ class UserTest(integration.ModuleCase,
         comparison will fail, since '12345' != 12345.
         '''
         ret = self.run_state(
-            'user.present', name='salt_test', fullname=12345, roomnumber=123,
-            workphone=1234567890, homephone=1234567890
+            'user.present',
+            name=self.user_name,
+            fullname=12345,
+            roomnumber=123,
+            workphone=1234567890,
+            homephone=1234567890
         )
         self.assertSaltTrueReturn(ret)
-        ret = self.run_state('user.absent', name='salt_test')
-        self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_present_gecos_none_fields(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -234,12 +213,16 @@ class UserTest(integration.ModuleCase,
         into empty strings as opposed to the string "None".
         '''
         ret = self.run_state(
-            'user.present', name='salt_test', fullname=None, roomnumber=None,
-            workphone=None, homephone=None
+            'user.present',
+            name=self.user_name,
+            fullname=None,
+            roomnumber=None,
+            workphone=None,
+            homephone=None
         )
         self.assertSaltTrueReturn(ret)
 
-        ret = self.run_function('user.info', ['salt_test'])
+        ret = self.run_function('user.info', [self.user_name])
         self.assertReturnNonEmptySaltType(ret)
         self.assertEqual('', ret['fullname'])
         # MacOS does not supply the following GECOS fields
@@ -248,13 +231,11 @@ class UserTest(integration.ModuleCase,
             self.assertEqual('', ret['workphone'])
             self.assertEqual('', ret['homephone'])
 
-        ret = self.run_state('user.absent', name='salt_test')
-        self.assertSaltTrueReturn(ret)
-
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def tearDown(self):
         if salt.utils.is_darwin():
             check_user = self.run_function('user.list_users')
             if USER in check_user:
                 del_user = self.run_function('user.delete', [USER], remove=True)
+        self.assertSaltTrueReturn(
+            self.run_state('user.absent', name=self.user_name)
+        )
