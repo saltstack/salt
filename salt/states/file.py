@@ -2059,7 +2059,11 @@ def directory(name,
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
-    if os.path.isfile(name) or (not allow_symlink and os.path.islink(name)):
+
+    # Check for existing file or symlink
+    if os.path.isfile(name) or (not allow_symlink and os.path.islink(name))\
+       or not os.path.exists(os.readlink(name)):
+        # Was a backupname specified
         if backupname is not None:
             # Make a backup first
             if os.path.lexists(backupname):
