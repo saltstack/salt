@@ -25,6 +25,7 @@ except ImportError:
     HAS_CRYPT = False
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import SaltInvocationError
 
 
@@ -36,7 +37,11 @@ def secure_password(length=20, use_random=True):
     pw = ''
     while len(pw) < length:
         if HAS_RANDOM and use_random:
-            pw += re.sub(r'\W', '', Crypto.Random.get_random_bytes(1))
+            pw += re.sub(
+                r'\W',
+                '',
+                salt.utils.to_str(Crypto.Random.get_random_bytes(1))
+            )
         else:
             pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
     return pw

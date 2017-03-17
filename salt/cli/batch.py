@@ -166,7 +166,7 @@ class Batch(object):
 
             if next_:
                 if not self.quiet:
-                    print_cli('\nExecuting run on {0}\n'.format(next_))
+                    print_cli('\nExecuting run on {0}\n'.format(sorted(next_)))
                 # create a new iterator for this batch of minions
                 new_iter = self.local.cmd_iter_no_block(
                                 *args,

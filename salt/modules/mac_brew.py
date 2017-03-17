@@ -12,6 +12,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import functools
 import json
 import logging
 
@@ -125,7 +126,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
             name_and_versions = line.split(' ')
             name = name_and_versions[0]
             installed_versions = name_and_versions[1:]
-            newest_version = sorted(installed_versions, cmp=salt.utils.version_cmp).pop()
+            key_func = functools.cmp_to_key(salt.utils.version_cmp)
+            newest_version = sorted(installed_versions, key=key_func).pop()
         except ValueError:
             continue
         __salt__['pkg_resource.add_pkg'](ret, name, newest_version)

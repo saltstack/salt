@@ -2401,7 +2401,7 @@ def exec_code_all(lang, code, cwd=None):
     return ret
 
 
-def tty(device, echo=None):
+def tty(device, echo=''):
     '''
     Echo a string to a specific tty
 
@@ -2420,7 +2420,7 @@ def tty(device, echo=None):
         return {'Error': 'The specified device is not a valid TTY'}
     try:
         with salt.utils.fopen(teletype, 'wb') as tty_device:
-            tty_device.write(echo)
+            tty_device.write(salt.utils.to_bytes(echo))
         return {
             'Success': 'Message was successfully echoed to {0}'.format(teletype)
         }

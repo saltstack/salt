@@ -27,7 +27,7 @@ class BatchTest(integration.ShellCase):
         Tests executing a simple batch command using a number division instead of
         a percentage with full batch CLI call.
         '''
-        ret = "Executing run on ['sub_minion', 'minion']"
+        ret = "Executing run on ['minion', 'sub_minion']"
         cmd = self.run_salt('\'*\' test.ping --batch-size 2')
         self.assertIn(ret, cmd)
 
