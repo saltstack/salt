@@ -7,7 +7,7 @@ prefaced with a ``!``.
 
 .. versionadded: 2016.3.0
 
-:configuration: Example configuration
+:configuration: Example configuration using only the "default" group, which is special
 
     .. code-block:: yaml
 
@@ -15,41 +15,46 @@ prefaced with a ``!``.
             slack:
                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
                control: True
-               valid_users:
-                   - garethgreenaway
-               valid_commands:
-                   - test.ping
-                   - cmd.run
-                   - list_jobs
-                   - list_commands
-               aliases:
-                   list_jobs:
-                       cmd: jobs.list_jobs
-                   list_commands:
-                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
+               groups:
+                 default:
+                   users:
+                       - *
+                   commands:
+                       - test.ping
+                       - cmd.run
+                       - list_jobs
+                       - list_commands
+                   aliases:
+                       list_jobs:
+                           cmd: jobs.list_jobs
+                       list_commands:
+                           cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
 
-    :configuration: Example configuration using groups
+    :configuration: Example configuration using the "default" group and a non-default group and a pillar that will be merged in
+        If the user is '*' (without the quotes) then the group's users or commands will match all users as appropriate
     .. versionadded: Nitrogen
 
         engines:
             slack:
+               groups_pillar: slack_engine_pillar
                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
                control: True
                groups:
+                 default:
+                   valid_users:
+                       - *
+                   valid_commands:
+                       - test.ping
+                 aliases:
+                     list_jobs:
+                         cmd: jobs.list_jobs
+                     list_commands:
+                         cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
                  gods:
                    users:
                      - garethgreenaway
                    commands:
-                     - test.ping
-                     - cmd.run
-                     - list_jobs
-                     - list_commands
-               aliases:
-                   list_jobs:
-                       cmd: jobs.list_jobs
-                   list_commands:
-                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
-
+                     - *
 
 :depends: slackclient
 '''
@@ -78,6 +83,7 @@ import salt.utils.event
 import salt.utils.http
 import salt.utils.slack
 
+import time
 
 def __virtual__():
     return HAS_SLACKCLIENT
@@ -102,25 +108,41 @@ def _get_users(token):
                     users[item['id']] = item['name']
     return users
 
+def _get_groups(groups_conf, groups_pillar_name):
+    """
+    get info from groups in config, and from the named pillar
 
-def start(token,
-          aliases=None,
-          valid_users=None,
-          valid_commands=None,
-          control=False,
-          trigger="!",
-          groups=None,
-          tag='salt/engines/slack'):
-    '''
-    Listen to Slack events and forward them to Salt
-    '''
+    XXX change to getting data from pillars
+    """
+    # Get groups
+    # Default to returning something that'll never match
+    # XXX: add pillars as group config sources
+    ret_groups = {
+        "default": {
+            "users": set(),
+            "commands": set(),
+            "aliases": dict()
+        }
+    }
+    if not groups:
+        use_groups = {}
+    # Merge in group lists from different sources
+    for name, config in groups_conf.items():
+        ret_groups.setdefault(name, {
+            "users": set(), "commands": set(), "aliases": set()
+        })
+        ret_groups[name]['users'].update(set(config['users'], []))
+        ret_groups[name]['commands'].update(set(config['commands'], []))
+        ret_groups[name]['aliases'].update(config['aliases'], {}))
+    return ret_groups
 
-    if valid_users is None:
-        valid_users = []
 
-    if valid_commands is None:
-        valid_commands = []
+def _fire(tag, msg):
+    """
+    This replaces a function in main called "fire"
 
+    It fires an event into the salt bus.
+    """
     if __opts__.get('__role') == 'master':
         fire_master = salt.utils.event.get_master_event(
             __opts__,
@@ -128,23 +150,55 @@ def start(token,
     else:
         fire_master = None
 
-    def fire(tag, msg):
-        '''
-        Fire event to salt bus
-        '''
-        if fire_master:
-            fire_master(msg, tag)
-        else:
-            __salt__['event.send'](tag, msg)
+    # XXX does this return anything?
+    if fire_master:
+        fire_master(msg, tag)
+    else:
+        __salt__['event.send'](tag, msg)
 
+def _can_user_run(user, command, groups):
+    """
+    Break out the permissions into the folowing:
+
+    Check whether a user is in any group, including whether a group has the '*' membership
+
+    :type user: str
+    :param user: The username being checked against
+
+    :type command: str
+    :param command: The command that will be run
+
+    :type groups: dict
+    :param groups: the dictionary with groups permissions structure.
+    """
+
+    for k, v in groups.items():
+        # XXX Add logging
+        if user not in v['users']:
+            if '*' not in v['users']:
+                continue # pass
+        if command not in v['commands']:
+            if '*' not in v['commands']:
+                continue # again, pass
+        return True # matched
+    return False
+
+
+
+
+def start(token,
+          aliases=None,
+          control=False,
+          trigger="!",
+          groups=None,
+          tag='salt/engines/slack'):
+    '''
+    Listen to Slack events and forward them to Salt
+    '''
     if not token:
-        raise UserWarning('Slack Bot token not found')
+        raise UserWarning('Slack Bot token not found') # Maybe a sleep and then an exit?
 
-    all_users = _get_users(token)
-
-    sc = slackclient.SlackClient(token)
-    slack_connect = sc.rtm_connect()
-    log.debug('connected to slack')
+    # all_users = _get_users(token)
 
     runner_functions = sorted(salt.runner.Runner(__opts__).functions)
 
@@ -167,20 +221,8 @@ def start(token,
                         if _text:
                             if _text.startswith(trigger) and control:
 
-                                # Get groups
-                                if groups:
-                                    for group in groups:
-                                        if 'users' in groups[group]:
-                                            # Add users to valid_users
-                                            valid_users.extend(groups[group]['users'])
-
-                                            # Add commands to valid_commands
-                                            if 'commands' in groups[group]:
-                                                valid_commands.extend(groups[group]['commands'])
-
-                                            # Add group aliases to aliases
-                                            if 'aliases' in groups[group]:
-                                                aliases.update(groups[group]['aliases'])
+                                # Check groups
+                                loaded_groups = _get_groups()
 
                                 # Ensure the user is allowed to run commands
                                 if valid_users:
@@ -273,10 +315,10 @@ def start(token,
                                         channel.send_message('Error: {0}'.format(result['error']))
                             else:
                                 # Fire event to event bus
-                                fire('{0}/{1}'.format(tag, _m['type']), _m)
+                                _fire('{0}/{1}'.format(tag, _m['type']), _m)
                     else:
                         # Fire event to event bus
-                        fire('{0}/{1}'.format(tag, _m['type']), _m)
+                        _fire('{0}/{1}'.format(tag, _m['type']), _m)
             time.sleep(1)
     else:
         raise UserWarning("Could not connect to slack")
