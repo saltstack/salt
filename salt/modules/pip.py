@@ -87,6 +87,7 @@ import salt.utils
 import tempfile
 import salt.utils.locales
 import salt.utils.url
+import salt.ext.six as six
 from salt.ext.six import string_types, iteritems
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
@@ -119,6 +120,8 @@ def _get_pip_bin(bin_env):
     '''
     if not bin_env:
         which_result = __salt__['cmd.which_bin'](['pip', 'pip2', 'pip3', 'pip-python'])
+        if salt.utils.is_windows() and six.py2:
+            which_result.encode('string-escape')
         if which_result is None:
             raise CommandNotFoundError('Could not find a `pip` binary')
         return which_result
@@ -126,8 +129,11 @@ def _get_pip_bin(bin_env):
     # try to get pip bin from virtualenv, bin_env
     if os.path.isdir(bin_env):
         if salt.utils.is_windows():
-            pip_bin = os.path.join(
-                bin_env, 'Scripts', 'pip.exe')
+            if six.py2:
+                pip_bin = os.path.join(
+                    bin_env, 'Scripts', 'pip.exe').encode('string-escape')
+            else:
+                pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe')
         else:
             pip_bin = os.path.join(bin_env, 'bin', 'pip')
         if os.path.isfile(pip_bin):
