@@ -6125,6 +6125,12 @@ def get_client_args():
 
     .. _`low-level API`: http://docker-py.readthedocs.io/en/stable/api.html
         salt myminion docker.get_client_args
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion docker.get_client_args
     '''
     try:
         config_args = _argspec(docker.types.ContainerConfig.__init__).args
