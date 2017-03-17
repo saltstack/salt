@@ -1559,6 +1559,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.loaded = True
 
+    def reload_modules(self):
+        self.loaded_files = set()
+        self._load_all()
+
     def _apply_outputter(self, func, mod):
         '''
         Apply the __outputter__ variable to the functions
