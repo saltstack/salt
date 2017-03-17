@@ -3109,6 +3109,9 @@ class ProxyMinion(Minion):
         self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
         self.proxy.pack['__utils__'] = self.utils
 
+        # Reload all modules so all dunder variables are injected
+        self.proxy.reload_modules()
+
         # Start engines here instead of in the Minion superclass __init__
         # This is because we need to inject the __proxy__ variable but
         # it is not setup until now.
