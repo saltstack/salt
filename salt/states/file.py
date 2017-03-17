@@ -2639,7 +2639,6 @@ def directory(name,
 
     # checkng if bad symlink and force is applied
     bad_link = False
-    log.debug(allow_symlink)
     if os.path.islink(name) and force:
         if not os.path.exists(os.readlink(name)):
             bad_link = True
