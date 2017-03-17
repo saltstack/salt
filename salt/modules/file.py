@@ -2035,8 +2035,8 @@ def replace(path,
 
     # Search the file; track if any changes have been made for the return val
     has_changes = False
-    orig_file = []  # used if show_changes
-    new_file = []  # used if show_changes
+    orig_file = []  # used for show_changes and change detection
+    new_file = []  # used for show_changes and change detection
     if not salt.utils.is_windows():
         pre_user = get_user(path)
         pre_group = get_group(path)
@@ -2093,14 +2093,10 @@ def replace(path,
                         # Content was found, so set found.
                         found = True
 
-                # Keep track of show_changes here, in case the file isn't
-                # modified
-                if show_changes or append_if_not_found or \
-                   prepend_if_not_found:
-                    orig_file = r_data.read(filesize).splitlines(True) \
-                        if isinstance(r_data, mmap.mmap) \
-                        else r_data.splitlines(True)
-                    new_file = result.splitlines(True)
+                orig_file = r_data.read(filesize).splitlines(True) \
+                    if isinstance(r_data, mmap.mmap) \
+                    else r_data.splitlines(True)
+                new_file = result.splitlines(True)
 
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
@@ -2226,6 +2222,12 @@ def replace(path,
         orig_file_as_str = ''.join([salt.utils.to_str(x) for x in orig_file])
         new_file_as_str = ''.join([salt.utils.to_str(x) for x in new_file])
         return ''.join(difflib.unified_diff(orig_file_as_str, new_file_as_str))
+
+    # We may have found a regex line match but don't need to change the line
+    # (for situations where the pattern also matches the repl). Revert the
+    # has_changes flag to False if the final result is unchanged.
+    if not ''.join(difflib.unified_diff(orig_file, new_file)):
+        has_changes = False
 
     return has_changes
 
