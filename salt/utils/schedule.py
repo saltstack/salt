@@ -934,9 +934,6 @@ class Schedule(object):
                               'end must be larger than start. Ignoring splay.')
             else:
                 splay_ = random.randint(1, splaytime)
-            if splay_:
-                log.debug('schedule.handle_func: Adding splay of '
-                          '{0} seconds to next run.'.format(splay_))
             return splay_
 
         schedule = self.option('schedule')
@@ -1051,18 +1048,25 @@ class Schedule(object):
                         self.loop_interval = interval
 
             elif 'once' in data:
-                once_fmt = data.get('once_fmt', '%Y-%m-%dT%H:%M:%S')
-
-                try:
-                    once = datetime.datetime.strptime(data['once'], once_fmt)
-                    once = int(time.mktime(once.timetuple()))
-                except (TypeError, ValueError):
-                    log.error('Date string could not be parsed: %s, %s',
-                            data['once'], once_fmt)
+                if data['_next_fire_time'] and \
+                        data['_next_fire_time'] != now and \
+                        not data['_splay']:
                     continue
 
-                if not data['_next_fire_time']:
-                    data['_next_fire_time'] = once
+                if not data['_next_fire_time'] and \
+                        not data['_splay']:
+                    once_fmt = data.get('once_fmt', '%Y-%m-%dT%H:%M:%S')
+                    try:
+                        once = datetime.datetime.strptime(data['once'],
+                                                          once_fmt)
+                        data['_next_fire_time'] = int(
+                            time.mktime(once.timetuple()))
+                    except (TypeError, ValueError):
+                        log.error('Date string could not be parsed: %s, %s',
+                                  data['once'], once_fmt)
+                        continue
+                    if data['_next_fire_time'] != now:
+                        continue
 
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
@@ -1118,10 +1122,20 @@ class Schedule(object):
                         # Grab the first element
                         # which is the next run time
                         when = _when[0]
-                        if not data['_next_fire_time'] or \
-                                now > data['_next_fire_time']:
+
+                        if '_run' not in data:
+                            data['_run'] = True
+
+                        if not data['_next_fire_time']:
                             data['_next_fire_time'] = when
-                    else:
+
+                        if data['_next_fire_time'] < when and \
+                                not data['_run']:
+                            data['_next_fire_time'] = when
+                            data['_run'] = True
+
+                    elif not data.get('_run', False):
+                        data['_next_fire_time'] = None
                         continue
 
                 else:
@@ -1156,9 +1170,22 @@ class Schedule(object):
                             continue
                     when = int(time.mktime(when__.timetuple()))
 
-                    if not data['_next_fire_time'] or \
-                            now > data['_next_fire_time']:
+                    if when < now and \
+                            not data.get('_run', False) and \
+                            not data['_splay']:
+                        data['_next_fire_time'] = None
+                        continue
+
+                    if '_run' not in data:
+                        data['_run'] = True
+
+                    if not data['_next_fire_time']:
                         data['_next_fire_time'] = when
+
+                    if data['_next_fire_time'] < when and \
+                            not data['_run']:
+                        data['_next_fire_time'] = when
+                        data['_run'] = True
 
             elif 'cron' in data:
                 if not _CRON_SUPPORTED:
@@ -1166,7 +1193,7 @@ class Schedule(object):
                     continue
 
                 if not data['_next_fire_time'] or \
-                        now > data['_next_fire_time']:
+                        data['_next_fire_time'] < now:
                     try:
                         data['_next_fire_time'] = int(
                             croniter.croniter(data['cron'], now).get_next())
@@ -1181,17 +1208,28 @@ class Schedule(object):
             seconds = data['_next_fire_time'] - now
             if data['_splay']:
                 seconds = data['_splay'] - now
-            if -1 < seconds <= 0:
-                run = True
+            if seconds <= 0:
+                if '_seconds' in data:
+                    run = True
+                elif 'when' in data and data['_run']:
+                    data['_run'] = False
+                    run = True
+                elif -1 <= seconds:
+                    run = True
 
             if '_run_on_start' in data and data['_run_on_start']:
                 run = True
                 data['_run_on_start'] = False
             elif run:
                 if 'splay' in data and not data['_splay']:
-                    run = False
                     splay = _splay(data['splay'])
-                    data['_splay'] = data['_next_fire_time'] + splay
+                    if now < data['_next_fire_time'] + splay:
+                        log.debug('schedule.handle_func: Adding splay of '
+                                  '{0} seconds to next run.'.format(splay))
+                        run = False
+                        data['_splay'] = data['_next_fire_time'] + splay
+                        if 'when' in data:
+                            data['_run'] = True
 
                 if 'range' in data:
                     if not _RANGE_SUPPORTED:
@@ -1232,7 +1270,12 @@ class Schedule(object):
             if not run:
                 continue
 
-            log.info('Running scheduled job: {0}'.format(job))
+            miss_msg = ''
+            if seconds < -1:
+                miss_msg = ' (runtime missed ' \
+                           'by {1} seconds)'.format(job, abs(seconds))
+
+            log.info('Running scheduled job: {0}{1}'.format(job, miss_msg))
 
             if 'jid_include' not in data or data['jid_include']:
                 data['jid_include'] = True
