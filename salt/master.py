@@ -1146,7 +1146,7 @@ class AESFuncs(object):
         :return: The master options
         '''
         mopts = {}
-        file_roots = {}
+        file_roots = dict(self.opts['file_roots'])
         envs = self._file_envs()
         for saltenv in envs:
             if saltenv not in file_roots:
