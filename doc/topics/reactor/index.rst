@@ -75,7 +75,7 @@ They differ because of the addition of the ``tag`` and ``data`` variables.
 
 Here is a simple reactor sls:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if data['id'] == 'mysql1' %}
     highstate_run:
@@ -92,7 +92,7 @@ API and the runner system.  In this example, a command is published to the
 ``mysql1`` minion with a function of :py:func:`state.apply
 <salt.modules.state.apply_>`. Similarly, a runner can be called:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if data['data']['custom_var'] == 'runit' %}
     call_runit_orch:
@@ -161,7 +161,7 @@ so using the Reactor to kick off an Orchestrate run is a very common pairing.
 
 For example:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # /etc/salt/master.d/reactor.conf
     # A custom event containing: {"foo": "Foo!", "bar: "bar*", "baz": "Baz!"}
@@ -169,7 +169,7 @@ For example:
       - myco/custom/event:
         - /srv/reactor/some_event.sls
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # /srv/reactor/some_event.sls
     invoke_orchestrate_file:
@@ -180,7 +180,7 @@ For example:
               event_tag: {{ tag }}
               event_data: {{ data|json() }}
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # /srv/salt/_orch/do_complex_thing.sls
     {% set tag = salt.pillar.get('event_tag') %}
@@ -478,7 +478,7 @@ from the event to the state file via inline Pillar.
 
 :file:`/srv/salt/haproxy/react_new_minion.sls`:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if data['act'] == 'accept' and data['id'].startswith('web') %}
     add_new_minion_to_pool:
@@ -524,7 +524,7 @@ won't yet direct traffic to it.
 
 :file:`/srv/salt/haproxy/refresh_pool.sls`:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% set new_minion = salt['pillar.get']('new_minion') %}
 
@@ -574,7 +574,7 @@ authentication every ten seconds by default.
 
 :file:`/srv/reactor/auth-pending.sls`:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {# Ink server failed to authenticate -- remove accepted key #}
     {% if not data['result'] and data['id'].startswith('ink') %}
@@ -600,7 +600,7 @@ Ink servers in the master configuration.
 
 :file:`/srv/reactor/auth-complete.sls`:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {# When an Ink server connects, run state.apply. #}
     highstate_run:
@@ -630,7 +630,7 @@ each minion fires when it first starts up and connects to the master.
 On the master, create **/srv/reactor/sync_grains.sls** with the following
 contents:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     sync_grains:
       local.saltutil.sync_grains:

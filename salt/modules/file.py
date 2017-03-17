@@ -5805,7 +5805,7 @@ def pardir():
 
     This can be useful when constructing Salt Formulas.
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set pardir = salt['file.pardir']() %}
         {% set final_path = salt['file.join']('subdir', pardir, 'confdir') %}
@@ -5827,7 +5827,7 @@ def normpath(path):
 
     This can be useful at the CLI but is frequently useful when scripting.
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {%- from salt['file.normpath'](tpldir + '/../vars.jinja') import parent_vars %}
 
@@ -5848,7 +5848,7 @@ def basename(path):
 
     This can be useful at the CLI but is frequently useful when scripting.
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {%- set filename = salt['file.basename'](source_file) %}
 
@@ -5869,7 +5869,7 @@ def dirname(path):
 
     This can be useful at the CLI but is frequently useful when scripting.
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {%- from salt['file.dirname'](tpldir) + '/vars.jinja' import parent_vars %}
 
@@ -5891,7 +5891,7 @@ def join(*args):
     This can be useful at the CLI but is frequently useful when scripting
     combining path variables:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set www_root = '/var' %}
         {% set app_dir = 'myapp' %}
