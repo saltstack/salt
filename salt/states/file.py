@@ -2060,8 +2060,15 @@ def directory(name,
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
+    # checkng if bad symlink and force is applied
+    bad_link = False
+    log.debug(allow_symlink)
+    if os.path.islink(name) and force:
+        if not os.path.exists(os.readlink(name)):
+            bad_link = True
+
     # Check for existing file or symlink
-    if os.path.isfile(name) or (not allow_symlink and os.path.islink(name)):
+    if os.path.isfile(name) or (not allow_symlink and os.path.islink(name)) or bad_link:
         # Was a backupname specified
         if backupname is not None:
             # Make a backup first
