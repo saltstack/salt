@@ -535,7 +535,7 @@ def set_computer_desc(desc):
         salt '*' system.set_computer_desc "Michael's laptop"
     '''
     if six.PY3:
-        desc = desc.encode('unicode_escape').replace('"', '\\"')
+        desc = desc.replace('"', '\\"')
     else:
         desc = desc.encode('string_escape').replace('"', '\\"')
     hostname_cmd = salt.utils.which('hostnamectl')
