@@ -108,7 +108,7 @@ def _get_users(token):
                     users[item['id']] = item['name']
     return users
 
-def _get_groups(groups_conf, groups_pillar_name):
+def _get_groups(groups_conf): # , groups_pillar_name):
     """
     get info from groups in config, and from the named pillar
 
@@ -124,16 +124,16 @@ def _get_groups(groups_conf, groups_pillar_name):
             "aliases": dict()
         }
     }
-    if not groups:
+    if not groups_conf:
         use_groups = {}
     # Merge in group lists from different sources
     for name, config in groups_conf.items():
         ret_groups.setdefault(name, {
             "users": set(), "commands": set(), "aliases": set()
         })
-        ret_groups[name]['users'].update(set(config['users'], []))
-        ret_groups[name]['commands'].update(set(config['commands'], []))
-        ret_groups[name]['aliases'].update(config['aliases'], {}))
+        ret_groups[name]['users'].update(set(config.get('users', [])))
+        ret_groups[name]['commands'].update(set(config.get('commands', [])))
+        ret_groups[name]['aliases'].update(config.get('aliases', {}))
     return ret_groups
 
 
@@ -184,6 +184,206 @@ def _can_user_run(user, command, groups):
     return False
 
 
+def _generate_triggered_messages(token, trigger_string, groups, control):
+    """
+    slack_token = string
+    trigger_string = string
+    input_valid_users = set
+    input_valid_commands = set
+
+    when control is False, yields a dictionary of {
+        "control": False,
+        "message_data": m_data
+    }
+
+    When control is True, yields a dictionary of {
+        "control": True,
+        "message_data": m_data,
+        "cmdline": cmdline_list, # this is a list
+        "channel": channel,
+        "user": m_data['user'],
+        "slack_client": sc
+    }
+
+    """
+    sc = slackclient.SlackClient(token)
+    slack_connect = sc.rtm_connect()
+    log.info('connected to slack')
+    all_users = _get_users(token) # Aside here: re-check this if we have an empty lookup result
+    # Check groups
+    loaded_groups = _get_groups(groups)
+    while True:
+        if not slack_connect:
+            # XXX  VERY IMPORTANT ADD DIAGNOSIS
+            # e.g. if the error message is too many requests, try to respect the retry-after header
+            # see https://api.slack.com/docs/rate-limits
+            time.sleep(1)
+            raise UserWarning, "Connection to slack is invalid" # Boom!
+
+        msg = sc.rtm_read()
+        for m_data in msg:
+            if m_data.get('type') != 'message':
+                continue
+            # Find the channel where the message came from
+            channel = sc.server.channels.find(m_data['channel'])
+
+            # Edited messages have text in message
+            _text = m_data.get('text', None) or m_data.get('message', {}).get('text', None)
+
+            # Convert UTF to string
+            _text = json.dumps(_text)
+            _text = yaml.safe_load(_text)
+
+            if not control:
+                yield {
+                    "control": False,
+                    "message": m_data
+                }
+
+            if not _text:
+                continue
+            if _text.startswith(trigger_string) and control:
+                # Trim the trigger string from the front
+                # cmdline = _text[1:].split(' ', 1)
+                cmdline = salt.utils.shlex_split(_text[len(trigger_string):])
+
+                # Remove slack url parsing
+                #  Translate target=<http://host.domain.net|host.domain.net>
+                #  to target=host.domain.net
+                cmdlist = []
+                for cmditem in cmdline:
+                    pattern = r'(?P<begin>.*)(<.*\|)(?P<url>.*)(>)(?P<remainder>.*)'
+                    m = re.match(pattern, cmditem)
+                    if m:
+                        origtext = m.group('begin') + m.group('url') + m.group('remainder')
+                        cmdlist.append(origtext)
+                    else:
+                        cmdlist.append(cmditem)
+                cmdline = cmdlist
+
+                # XXX: fix aliases
+                # # Evaluate aliases
+                # if 'keys' in dir(aliases) and cmd in aliases.keys():
+                #     cmdline = aliases[cmd].get('cmd')
+                #     cmdline = salt.utils.shlex_split(cmdline)
+                #     cmd = cmdline[0]
+
+                # Ensure the command is allowed
+                if _can_user_run(m_data['user'], cmdline[0], groups):
+                    yield {
+                        "control": True,
+                        "message_data": m_data,
+                        "cmdline": cmdline,
+                        "channel": channel,
+                        "user": m_data['user'],
+                        "slack_client": sc
+                    }
+                else:
+                    channel.send_message('{0} is not allowed to use command {1}.'.format(all_users[m_data['user']], cmdline))
+                    continue
+
+        time.sleep(1) # Sleep for a bit before asking slack again.
+
+
+
+def fire_msgs_to_event_bus(tag, message_generator):
+    """
+    :type tag: str
+    :param tag: The prefix of the tag to be sent onto the event bus
+
+    :type message_generator: generator
+    :param message_generator: A generator that yields dictionaries that
+        contain messages that will be sent to the salt event bus
+        as returned by _generate_triggered_messages when control=False
+    """
+    for _msg in message_generator:
+        _fire('{0}/{1}'.format(tag, _msg['type']), _msg)
+        time.sleep(1)
+
+
+def run_commands_from_slack(message_generator):
+    """
+    :type tag: str
+    :param tag: The prefix of the tag to be sent onto the event bus
+
+    :type message_generator: generator
+    :param message_generator: A generator that yields dictionaries that
+        contain the keys/values as returned by _generate_triggered_messages
+        when control=False
+    """
+
+    runner_functions = sorted(salt.runner.Runner(__opts__).functions)
+
+    for msg in message_generator:
+        log.info("got message from message_generator: {}".format(msg))
+        # Parse args and kwargs
+        cmdline = msg['cmdline']
+        cmd = cmdline[0]
+        args = []
+        kwargs = {}
+        ret = {}
+
+        if len(cmdline) > 1:
+            for item in cmdline[1:]:
+                if '=' in item:
+                    (key, value) = item.split('=', 1)
+                    kwargs[key] = value
+                else:
+                    args.append(item)
+
+        # Check for target. Otherwise assume *
+        if 'target' not in kwargs:
+            target = '*'
+        else:
+            target = kwargs['target']
+            del kwargs['target']
+        log.info("target is: {}".format(target))
+
+        # Check for tgt_type. Otherwise assume glob
+        if 'tgt_type' not in kwargs:
+            tgt_type = 'glob'
+        else:
+            tgt_type = kwargs['tgt_type']
+            del kwargs['tgt_type']
+        log.info("target_type is: {}".format(tgt_type))
+
+        if cmd in runner_functions:
+            runner = salt.runner.RunnerClient(__opts__)
+            log.info("Command {} will run via runner_functions".format(cmd))
+            ret = runner.cmd(cmd, arg=args, kwarg=kwargs)
+
+        # Default to trying to run as a client module.
+        else:
+            local = salt.client.LocalClient()
+            log.info("Command {} will be run via local.cmd, targeting {}".format(cmd, target))
+            log.info("Running {}, {}, {}, {}, {}".format(str(target), cmd, args, kwargs, str(tgt_type)))
+            # according to https://github.com/saltstack/salt-api/issues/164, tgt_type should change to expr_form
+            ret = local.cmd(str(target), cmd, args, kwargs, expr_form=str(tgt_type))
+            log.info("ret from local.cmd is {}".format(ret))
+
+        if ret:
+            log.info("ret to send back is {}".format(ret))
+            return_text = json.dumps(ret, sort_keys=True, indent=1)
+            ts = time.time()
+            st = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d%H%M%S%f')
+            filename = '/tmp/salt-results-{0}.yaml'.format(st)
+            with open(filename, 'w') as retfile:
+                log.info("Returning {} via the slack client".format(filename))
+                json.dump(ret, retfile, sort_keys=True)
+                # r = msg["slack_client"].api_call(
+                #     "files.upload", channels=msg['channel'], file=open(filename),
+                #     content=return_text
+                # )
+                log.info("the channel objects' dir looks like: {}".format(dir(msg['channel'])))
+                r = msg["slack_client"].api_call(
+                    "files.upload", channels=msg['channel'].id, files=filename,
+                    content=return_text
+                )
+                # Handle unicode return
+                log.info("Got back {} via the slack client".format(r))
+                result = yaml.safe_load(json.dumps(r))
+                if 'ok' in result and result['ok'] is False:
+                    msg['channel'].send_message('Error: {0}'.format(result['error']))
 
 
 def start(token,
@@ -193,132 +393,16 @@ def start(token,
           groups=None,
           tag='salt/engines/slack'):
     '''
-    Listen to Slack events and forward them to Salt
+    Listen to slack events and forward them to salt, new version
     '''
+
     if not token:
-        raise UserWarning('Slack Bot token not found') # Maybe a sleep and then an exit?
+        time.sleep(2) # don't respawn too quickly
+        raise UserWarning('Slack Engine token not found')
 
-    # all_users = _get_users(token)
+    message_generator = _generate_triggered_messages(token, trigger, groups, control)
 
-    runner_functions = sorted(salt.runner.Runner(__opts__).functions)
-
-    if slack_connect:
-        while True:
-            _msg = sc.rtm_read()
-            for _m in _msg:
-                if 'type' in _m:
-                    if _m['type'] == 'message':
-                        # Find the channel where the message came from
-                        channel = sc.server.channels.find(_m['channel'])
-
-                        # Edited messages have text in message
-                        _text = _m.get('text', None) or _m.get('message', {}).get('text', None)
-
-                        # Convert UTF to string
-                        _text = json.dumps(_text)
-                        _text = yaml.safe_load(_text)
-
-                        if _text:
-                            if _text.startswith(trigger) and control:
-
-                                # Check groups
-                                loaded_groups = _get_groups()
-
-                                # Ensure the user is allowed to run commands
-                                if valid_users:
-                                    log.debug('{0} {1}'.format(all_users, _m['user']))
-                                    if _m['user'] not in valid_users and all_users.get(_m['user'], None) not in valid_users:
-                                        channel.send_message('{0} not authorized to run Salt commands'.format(all_users[_m['user']]))
-                                        return
-
-                                # Trim the ! from the front
-                                # cmdline = _text[1:].split(' ', 1)
-                                cmdline = salt.utils.shlex_split(_text[len(trigger):])
-
-                                # Remove slack url parsing
-                                #  Translate target=<http://host.domain.net|host.domain.net>
-                                #  to target=host.domain.net
-                                cmdlist = []
-                                for cmditem in cmdline:
-                                    pattern = r'(?P<begin>.*)(<.*\|)(?P<url>.*)(>)(?P<remainder>.*)'
-                                    m = re.match(pattern, cmditem)
-                                    if m:
-                                        origtext = m.group('begin') + m.group('url') + m.group('remainder')
-                                        cmdlist.append(origtext)
-                                    else:
-                                        cmdlist.append(cmditem)
-                                cmdline = cmdlist
-
-                                cmd = cmdline[0]
-                                args = []
-                                kwargs = {}
-
-                                # Evaluate aliases
-                                if aliases and isinstance(aliases, dict) and cmd in aliases.keys():
-                                    cmdline = aliases[cmd].get('cmd')
-                                    cmdline = salt.utils.shlex_split(cmdline)
-                                    cmd = cmdline[0]
-
-                                # Ensure the command is allowed
-                                if valid_commands:
-                                    if cmd not in valid_commands:
-                                        channel.send_message('{0} is not allowed to use command {1}.'.format(all_users[_m['user']], cmd))
-                                        return
-
-                                # Parse args and kwargs
-                                if len(cmdline) > 1:
-                                    for item in cmdline[1:]:
-                                        if '=' in item:
-                                            (key, value) = item.split('=', 1)
-                                            kwargs[key] = value
-                                        else:
-                                            args.append(item)
-
-                                # Check for target. Otherwise assume *
-                                if 'target' not in kwargs:
-                                    target = '*'
-                                else:
-                                    target = kwargs['target']
-                                    del kwargs['target']
-
-                                # Check for tgt_type. Otherwise assume glob
-                                if 'tgt_type' not in kwargs:
-                                    tgt_type = 'glob'
-                                else:
-                                    tgt_type = kwargs['tgt_type']
-                                    del kwargs['tgt_type']
-
-                                ret = {}
-
-                                if cmd in runner_functions:
-                                    runner = salt.runner.RunnerClient(__opts__)
-                                    ret = runner.cmd(cmd, arg=args, kwarg=kwargs)
-
-                                # Default to trying to run as a client module.
-                                else:
-                                    local = salt.client.LocalClient()
-                                    ret = local.cmd('{0}'.format(target), cmd, args, kwargs, tgt_type='{0}'.format(tgt_type))
-
-                                if ret:
-                                    return_text = json.dumps(ret, sort_keys=True, indent=1)
-                                    ts = time.time()
-                                    st = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d%H%M%S%f')
-                                    filename = 'salt-results-{0}.yaml'.format(st)
-                                    result = sc.api_call(
-                                        "files.upload", channels=_m['channel'], filename=filename,
-                                        content=return_text
-                                    )
-                                    # Handle unicode return
-                                    result = json.dumps(result)
-                                    result = yaml.safe_load(result)
-                                    if 'ok' in result and result['ok'] is False:
-                                        channel.send_message('Error: {0}'.format(result['error']))
-                            else:
-                                # Fire event to event bus
-                                _fire('{0}/{1}'.format(tag, _m['type']), _m)
-                    else:
-                        # Fire event to event bus
-                        _fire('{0}/{1}'.format(tag, _m['type']), _m)
-            time.sleep(1)
+    if control:
+        run_commands_from_slack(message_generator)
     else:
-        raise UserWarning("Could not connect to slack")
+        fire_msgs_to_event_bus(tag, message_generator)
