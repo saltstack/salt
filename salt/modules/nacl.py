@@ -50,7 +50,7 @@ When the key is defined in the master config you can use it from the nacl runner
 
 Now you can create a pillar with protected data like:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     pillarexample:
         user: root
@@ -58,7 +58,7 @@ Now you can create a pillar with protected data like:
 
 Or do something interesting with grains like:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     salt-call nacl.enc minionname:dbrole
     AL24Z2C5OlkReer3DuQTFdrNLchLuz3NGIhGjZkLtKRYry/b/CksWM8O9yskLwH2AGVLoEXI5jAa
@@ -92,7 +92,7 @@ Pillar data should look the same, even though the secret will be quite long. How
 multiline encrypted secrets from pillar in a state, use the following format to avoid issues with /n
 creating extra whitespace at the beginning of each line in the cert file:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     secret.txt:
         file.managed:
