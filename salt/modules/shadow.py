@@ -27,9 +27,6 @@ try:
 except ImportError:
     HAS_CRYPT = False
 
-# Import 3rd-party libs
-import salt.ext.six as six
-
 
 def __virtual__():
     return __grains__.get('kernel', '') == 'Linux'
