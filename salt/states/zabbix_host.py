@@ -31,6 +31,7 @@ def present(host, groups, interfaces, **kwargs):
     :param host: technical name of the host
     :param groups: groupids of host groups to add the host to
     :param interfaces: interfaces to be created for the host
+    :param proxy_host: Optional proxy name or proxyid to monitor host
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
@@ -42,6 +43,7 @@ def present(host, groups, interfaces, **kwargs):
         create_test_host:
             zabbix_host.present:
                 - host: TestHostWithInterfaces
+                - proxy_host: 12345
                 - groups:
                     - 5
                     - 6
@@ -148,14 +150,43 @@ def present(host, groups, interfaces, **kwargs):
             groupids.append(group)
     groups = groupids
 
+    # Get and validate proxyid
+    proxy_hostid = None
+    if 'proxy_host' in kwargs:
+        if isinstance(kwargs['proxy_host'], six.string_types):
+            try:
+                proxy_hostid = __salt__['zabbix.run_query']('proxy.get', {"output": "proxyid",
+                                                            "selectInterface": "extend",
+                                                            "filter": {"host": "{0}".format(kwargs['proxy_host'])}},
+                                                            **connection_args)[0]['proxyid']
+            except TypeError:
+                # pylint: disable=E0602
+                ret['comment'] = 'Invalid proxy_host {0}'.format(proxy_host)
+                return ret
+        else:
+            try:
+                proxy_hostid = __salt__['zabbix.run_query']('proxy.get', {"proxyids":
+                                                            "{0}".format(kwargs['proxy_host']),
+                                                            "output": "proxyid"},
+                                                            **connection_args)[0]['proxyid']
+            except TypeError:
+                # pylint: disable=E0602
+                ret['comment'] = 'Invalid proxy_host {0}'.format(proxy_host)
+                return ret
+
     host_exists = __salt__['zabbix.host_exists'](host, **connection_args)
 
     if host_exists:
         host = __salt__['zabbix.host_get'](name=host, **connection_args)[0]
         hostid = host['hostid']
 
+        update_proxy = False
         update_hostgroups = False
         update_interfaces = False
+
+        cur_proxy_hostid = host['proxy_hostid']
+        if proxy_hostid != cur_proxy_hostid:
+            update_proxy = True
 
         hostgroups = __salt__['zabbix.hostgroup_get'](hostids=hostid, **connection_args)
         cur_hostgroups = list()
@@ -186,7 +217,7 @@ def present(host, groups, interfaces, **kwargs):
     # Dry run, test=true mode
     if __opts__['test']:
         if host_exists:
-            if update_hostgroups or update_interfaces:
+            if update_hostgroups or update_interfaces or update_proxy:
                 ret['result'] = None
                 ret['comment'] = comment_host_updated
             else:
@@ -202,8 +233,13 @@ def present(host, groups, interfaces, **kwargs):
 
     if host_exists:
         ret['result'] = True
-        if update_hostgroups or update_interfaces:
+        if update_hostgroups or update_interfaces or update_proxy:
 
+            if update_proxy:
+                hostupdate = __salt__['zabbix.host_update'](hostid, proxy_hostid=proxy_hostid, **connection_args)
+                ret['changes']['proxy_hostid'] = str(proxy_hostid)
+                if 'error' in hostupdate:
+                    error.append(hostupdate['error'])
             if update_hostgroups:
                 hostupdate = __salt__['zabbix.host_update'](hostid, groups=groups, **connection_args)
                 ret['changes']['groups'] = str(groups)
@@ -237,7 +273,11 @@ def present(host, groups, interfaces, **kwargs):
         else:
             ret['comment'] = comment_host_exists
     else:
-        host_create = __salt__['zabbix.host_create'](host, groups, interfaces_formated, **connection_args)
+        host_create = __salt__['zabbix.host_create'](host,
+                                                     groups,
+                                                     interfaces_formated,
+                                                     proxy_hostid=proxy_hostid,
+                                                     **connection_args)
 
         if 'error' not in host_create:
             ret['result'] = True
@@ -359,7 +399,7 @@ def assign_templates(host, templates, **kwargs):
 
     # Set comments
     comment_host_templates_updated = 'Templates updated.'
-    comment_host_templates_notupdated = 'Unable to update templates on host: {0}.'.format(host)
+    comment_host_templ_notupdated = 'Unable to update templates on host: {0}.'.format(host)
     comment_host_templates_in_sync = 'Templates already synced.'
 
     update_host_templates = False
@@ -372,7 +412,7 @@ def assign_templates(host, templates, **kwargs):
     # Fail out if host does not exist
     if not host_exists:
         ret['result'] = False
-        ret['comment'] = comment_host_templates_notupdated
+        ret['comment'] = comment_host_templ_notupdated
         return ret
 
     host_info = __salt__['zabbix.host_get'](name=host, **connection_args)[0]
@@ -425,7 +465,7 @@ def assign_templates(host, templates, **kwargs):
         update_output = __salt__['zabbix.host_update'](hostid, templates=(requested_template_ids), **connection_args)
         if update_output is False:
             ret['result'] = False
-            ret['comment'] = comment_host_templates_notupdated
+            ret['comment'] = comment_host_templ_notupdated
             return ret
         ret['comment'] = comment_host_templates_updated
         ret['changes'] = changes_host_templates_modified
