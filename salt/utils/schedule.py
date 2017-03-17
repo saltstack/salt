@@ -1273,7 +1273,7 @@ class Schedule(object):
             miss_msg = ''
             if seconds < -1:
                 miss_msg = ' (runtime missed ' \
-                           'by {1} seconds)'.format(job, abs(seconds))
+                           'by {0} seconds)'.format(abs(seconds))
 
             log.info('Running scheduled job: {0}{1}'.format(job, miss_msg))
 
