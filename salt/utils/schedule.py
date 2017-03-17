@@ -1214,7 +1214,7 @@ class Schedule(object):
                 elif 'when' in data and data['_run']:
                     data['_run'] = False
                     run = True
-                elif -1 <= seconds:
+                elif seconds == 0:
                     run = True
 
             if '_run_on_start' in data and data['_run_on_start']:
@@ -1271,7 +1271,7 @@ class Schedule(object):
                 continue
 
             miss_msg = ''
-            if seconds < -1:
+            if seconds < 0:
                 miss_msg = ' (runtime missed ' \
                            'by {0} seconds)'.format(abs(seconds))
 
