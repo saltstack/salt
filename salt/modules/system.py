@@ -510,7 +510,7 @@ def get_computer_desc():
         except IOError:
             return False
     if six.PY3:
-        desc = desc.replace('\\"', '"').decode('unicode_escape')
+        desc = desc.replace('\\"', '"')
     else:
         desc = desc.replace('\\"', '"').decode('string_escape')
     return desc
