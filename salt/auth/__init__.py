@@ -127,7 +127,10 @@ class LoadAuth(object):
         '''
         if 'eauth' not in load:
             return None
-        fstr = '{0}.acl'.format(load['eauth'])
+        mod = self.opts['eauth_acl_module']
+        if not mod:
+            mod = load['eauth']
+        fstr = '{0}.acl'.format(mod)
         if fstr not in self.auth:
             return None
         fcall = salt.utils.format_call(self.auth[fstr],

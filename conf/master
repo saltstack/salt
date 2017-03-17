@@ -367,6 +367,10 @@
 # from the eauth driver each time.
 #keep_acl_in_token: False
 
+# Auth subsystem module to use to get authorized access list for a user. By default it's
+# the same module used for external authentication.
+#eauth_acl_module: django
+
 # Allow minions to push files to the master. This is disabled by default, for
 # security purposes.
 #file_recv: False

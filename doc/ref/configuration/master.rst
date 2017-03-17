@@ -1046,6 +1046,20 @@ from the eauth driver each time.
 
     keep_acl_in_token: False
 
+.. conf_master:: eauth_acl_module
+
+``eauth_acl_module``
+---------------------
+
+Default: ``''``
+
+Auth subsystem module to use to get authorized access list for a user. By default it's
+the same module used for external authentication.
+
+.. code-block:: yaml
+
+    eauth_acl_module: django
+
 .. conf_master:: file_recv
 
 ``file_recv``
