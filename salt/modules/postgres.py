@@ -369,7 +369,7 @@ def _psql_prepare_and_run(cmd,
 
 
 def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
-               password=None, runas=None):
+               password=None, runas=None, write=False):
     '''
     Run an SQL-Query and return the results as a list. This command
     only supports SELECT statements.  This limitation can be worked around
@@ -399,6 +399,9 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
     runas
         User to run the command as.
 
+    write
+        Mark query as READ WRITE transaction.
+
     CLI Example:
 
     .. code-block:: bash
@@ -409,6 +412,11 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
 
     csv_query = 'COPY ({0}) TO STDOUT WITH CSV HEADER'.format(
         query.strip().rstrip(';'))
+
+    # Mark transaction as R/W to achieve write will be allowed
+    # Commit is necessary due to transaction
+    if write:
+        csv_query = 'START TRANSACTION READ WRITE; {0}; COMMIT TRANSACTION;'.format(csv_query)
 
     # always use the same datestyle settings to allow parsing dates
     # regardless what server settings are configured
@@ -430,6 +438,10 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
             header = row
             continue
         ret.append(dict(zip(header, row)))
+
+    # Remove 'COMMIT' message if query is inside R/W transction
+    if write:
+        ret = ret[0:-1]
 
     return ret
 
