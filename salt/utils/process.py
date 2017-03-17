@@ -706,8 +706,7 @@ def default_signals(*signals):
     old_signals = {}
     for signum in signals:
         try:
-            signal.signal(signum, signal.SIG_DFL)
-            old_signals[signum] = signal.getsignal(signum)
+            old_signals[signum] = signal.signal(signum, signal.SIG_DFL)
         except ValueError as exc:
             # This happens when a netapi module attempts to run a function
             # using wheel_async, because the process trying to register signals
@@ -725,3 +724,19 @@ def default_signals(*signals):
         signal.signal(signum, old_signals[signum])
 
     del old_signals
+
+
+@contextlib.contextmanager
+def handle_signal(signum, handler):
+    old_signal = 0
+    try:
+        old_signal = signal.signal(signum, handler)
+    except ValueError as exc:
+        log.trace(
+            'Failed to register signal for signum %d: %s',
+            signum, exc
+        )
+
+    yield
+
+    signal.signal(signum, old_signal)
