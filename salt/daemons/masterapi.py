@@ -563,7 +563,7 @@ class RemoteFuncs(object):
             if fun not in self.opts.get('master_tops', {}):
                 continue
             try:
-                ret.update(self.tops[fun](opts=opts, grains=grains))
+                ret = salt.utils.dictupdate.merge(ret, self.tops[fun](opts=opts, grains=grains), merge_lists=True)
             except Exception as exc:
                 # If anything happens in the top generation, log it and move on
                 log.error(
