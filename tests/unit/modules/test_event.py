@@ -2,8 +2,12 @@
 '''
     :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
 '''
+# Import python libs
 from __future__ import absolute_import
+
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -13,24 +17,24 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-
 from salt.modules import event
 import salt.utils.event
-import sys
-sys.path.append('/home/kapil/salt/salt/utils')
-
-# Globals
-event.__grains__ = {}
-event.__salt__ = {}
-event.__context__ = {}
-event.__opts__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class EventTestCase(TestCase):
+class EventTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.event
     '''
+    loader_module = event
+    loader_module_globals = {
+        '__opts__': {
+            'id': 'id',
+            'sock_dir': TMP,
+            'transport': 'zeromq'
+        }
+    }
+
     @patch('salt.crypt.SAuth')
     @patch('salt.transport.Channel.factory')
     def test_fire_master(self,
@@ -44,14 +48,12 @@ class EventTestCase(TestCase):
                    'tok': 'salt', 'cmd': '_minion_event'}
 
         with patch.dict(event.__opts__, {'transport': 'raet',
-                                         'id': 'id',
                                          'local': False}):
             with patch.object(salt_transport_channel_factory, 'send',
                               return_value=None):
                 self.assertTrue(event.fire_master('data', 'tag'))
 
         with patch.dict(event.__opts__, {'transport': 'A',
-                                         'id': 'id',
                                          'master_uri': 'localhost',
                                          'local': False}):
             with patch.object(salt_crypt_sauth, 'gen_token',
@@ -71,13 +73,9 @@ class EventTestCase(TestCase):
         Test to fire an event on the local minion event bus.
         Data must be formed as a dict.
         '''
-        with patch.object(salt_utils_event, 'get_event'):
-            self.assertFalse(event.fire('data', 'tag'))
-
-        with patch.dict(event.__opts__, {'sock_dir': True, 'transport': True}):
-            with patch.object(salt_utils_event, 'get_event') as mock:
-                mock.fire_event = MagicMock(return_value=True)
-                self.assertTrue(event.fire('data', 'tag'))
+        with patch.object(salt_utils_event, 'get_event') as mock:
+            mock.fire_event = MagicMock(return_value=True)
+            self.assertTrue(event.fire('data', 'tag'))
 
     def test_send(self):
         '''
