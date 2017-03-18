@@ -716,11 +716,12 @@ def ip_bracket(addr):
     return addr
 
 
-def dns_check(addr, port, safe=False, ipv6=None, connect=True):
+def dns_check(addr, port, safe=False, ipv6=None):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception. Obeys system preference for IPv4/6 address resolution.
-    Tries to connect to the address before considering it useful.
+    Tries to connect to the address before considering it useful. If no address
+    can be reached, the first one resolved is used as a fallback.
     '''
     error = False
     try:
@@ -734,18 +735,21 @@ def dns_check(addr, port, safe=False, ipv6=None, connect=True):
             error = True
         else:
             resolved = False
+            candidates = []
             for h in hostnames:
+                # It's an IP address, just return it
+                if h[4][0] == addr:
+                    resolved = addr
+                    break
+
                 if h[0] == socket.AF_INET and ipv6 is True:
                     continue
                 if h[0] == socket.AF_INET6 and ipv6 is False:
                     continue
-                if h[0] == socket.AF_INET6 and connect is False and ipv6 is None:
-                    continue
 
                 candidate_addr = ip_bracket(h[4][0])
-
-                if not connect:
-                    resolved = candidate_addr
+                if h[0] != socket.AF_INET6 or ipv6 is not None:
+                    candidates.append(candidate_addr)
 
                 s = socket.socket(h[0], socket.SOCK_STREAM)
                 try:
@@ -757,7 +761,10 @@ def dns_check(addr, port, safe=False, ipv6=None, connect=True):
                 except socket.error:
                     pass
             if not resolved:
-                error = True
+                if len(candidates) > 0:
+                    resolved = candidates[0]
+                else:
+                    error = True
     except TypeError:
         err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(addr)
         raise SaltSystemExit(code=42, msg=err)
