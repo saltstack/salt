@@ -46,6 +46,7 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+from salt.ext.six.moves import range
 
 # Import Third Party Libs
 try:
