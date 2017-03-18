@@ -31,6 +31,7 @@ import salt.utils.timed_subprocess
 import salt.grains.extra
 import salt.ext.six as six
 from salt.utils import vt
+import salt.utils.templates
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
     SaltInvocationError
 from salt.log import LOG_LEVELS
