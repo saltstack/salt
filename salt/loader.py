@@ -19,7 +19,8 @@ from collections import MutableMapping
 from zipimport import zipimporter
 
 # Import salt libs
-import salt
+import salt.config
+import salt.syspaths
 import salt.utils.context
 import salt.utils.lazy
 import salt.utils.event
@@ -40,7 +41,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-SALT_BASE_PATH = os.path.abspath(os.path.dirname(salt.__file__))
+SALT_BASE_PATH = os.path.abspath(salt.syspaths.INSTALL_DIR)
 LOADED_BASE_NAME = 'salt.loaded'
 
 if six.PY3:
@@ -627,6 +628,8 @@ def grains(opts, force_refresh=False, proxy=None):
         __grains__ = salt.loader.grains(__opts__)
         print __grains__['id']
     '''
+    # Need to re-import salt.config, somehow it got lost when a minion is starting
+    import salt.config
     # if we have no grains, lets try loading from disk (TODO: move to decorator?)
     cfn = os.path.join(
         opts['cachedir'],
