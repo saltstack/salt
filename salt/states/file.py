@@ -270,6 +270,7 @@ import os
 import re
 import shutil
 import sys
+import time
 import traceback
 from collections import Iterable, Mapping, defaultdict
 from datetime import datetime   # python3 problem in the making?
@@ -292,6 +293,9 @@ if salt.utils.is_windows():
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import zip_longest
+if salt.utils.is_windows():
+    import pywintypes
+    import win32com.client
 
 log = logging.getLogger(__name__)
 
@@ -1068,6 +1072,90 @@ def _validate_str_list(arg):
     else:
         ret = [str(arg)]
     return ret
+
+
+def _get_shortcut_ownership(path):
+    return __salt__['file.get_user'](path, follow_symlinks=False)
+
+
+def _check_shortcut_ownership(path, user):
+    '''
+    Check if the shortcut ownership matches the specified user
+    '''
+    cur_user = _get_shortcut_ownership(path)
+    return (cur_user == user)
+
+
+def _set_shortcut_ownership(path, user):
+    '''
+    Set the ownership of a shortcut and return a boolean indicating
+    success/failure
+    '''
+    try:
+        __salt__['file.lchown'](path, user)
+    except OSError:
+        pass
+    return _check_shortcut_ownership(path, user)
+
+
+def _shortcut_check(name,
+                    target,
+                    arguments,
+                    working_dir,
+                    description,
+                    icon_location,
+                    force,
+                    user):
+    '''
+    Check the shortcut function
+    '''
+    pchanges = {}
+    if not os.path.exists(name):
+        pchanges['new'] = name
+        return None, 'Shortcut {0!r} to {1!r} is set for creation'.format(
+            name, target
+        ), pchanges
+
+    if os.path.isfile(name):
+        shell = win32com.client.Dispatch("WScript.Shell")
+        scut = shell.CreateShortcut(name)
+        state_checks = [scut.TargetPath.lower() == target.lower()]
+        if arguments is not None:
+            state_checks.append(scut.Arguments == arguments)
+        if working_dir is not None:
+            state_checks.append(
+                scut.WorkingDirectory.lower() == working_dir.lower()
+            )
+        if description is not None:
+            state_checks.append(scut.Description == description)
+        if icon_location is not None:
+            state_checks.append(
+                scut.IconLocation.lower() == icon_location.lower()
+            )
+
+        if not all(state_checks):
+            pchanges['change'] = name
+            return None, 'Shortcut {0!r} target is set to be changed to {1!r}'.format(
+                name, target
+            ), pchanges
+        else:
+            result = True
+            msg = 'The shortcut {0!r} is present'.format(name)
+            if not _check_shortcut_ownership(name, user):
+                result = None
+                pchanges['ownership'] = '{0}'.format(_get_shortcut_ownership(name))
+                msg += (
+                    ', but the ownership of the shortcut would be changed '
+                    'from {1} to {0}'
+                ).format(user, _get_shortcut_ownership(name))
+            return result, msg, pchanges
+    else:
+        if force:
+            return None, ('The link or directory {0!r} is set for removal to '
+                          'make way for a new shortcut targeting {1!r}'
+                          .format(name, target)), pchanges
+        return False, ('Link or directory exists where the shortcut {0!r} '
+                       'should be. Did you mean to use force?'.format(name)), pchanges
 
 
 def symlink(
@@ -6011,4 +6099,254 @@ def decode(name,
             'new': __salt__['hashutil.digest_file'](name, checksum),
         }
 
+    return ret
+
+
+def shortcut(
+        name,
+        target,
+        arguments=None,
+        working_dir=None,
+        description=None,
+        icon_location=None,
+        force=False,
+        backupname=None,
+        makedirs=False,
+        user=None,
+        **kwargs):
+    '''
+    Create a Windows shortcut
+
+    If the file already exists and is a shortcut pointing to any location other
+    than the specified target, the shortcut will be replaced. If it is
+    a regular file or directory then the state will return False. If the
+    regular file or directory is desired to be replaced with a shortcut pass
+    force: True, if it is to be renamed, pass a backupname.
+
+    name
+        The location of the shortcut to create. Must end with either
+        ".lnk" or ".url"
+
+    target
+        The location that the shortcut points to
+
+    arguments
+        Any arguments to pass in the shortcut
+
+    working_dir
+        Working directory in which to execute target
+
+    description
+        Description to set on shortcut
+
+    icon_location
+        Location of shortcut's icon
+
+    force
+        If the name of the shortcut exists and is not a file and
+        force is set to False, the state will fail. If force is set to
+        True, the link or directory in the way of the shortcut file
+        will be deleted to make room for the shortcut, unless
+        backupname is set, when it will be renamed
+
+    backupname
+        If the name of the shortcut exists and is not a file, it will be
+        renamed to the backupname. If the backupname already
+        exists and force is False, the state will fail. Otherwise, the
+        backupname will be removed first.
+
+    makedirs
+        If the location of the shortcut does not already have a parent
+        directory then the state will fail, setting makedirs to True will
+        allow Salt to create the parent directory. Setting this to True will
+        also create the parent for backupname if necessary.
+
+    user
+        The user to own the file, this defaults to the user salt is running as
+        on the minion
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
+    '''
+    user = _test_owner(kwargs, user=user)
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+    if not salt.utils.is_windows():
+        return _error(ret, 'Shortcuts are only supported on Windows')
+    if not name:
+        return _error(ret, 'Must provide name to file.shortcut')
+    if not name.endswith('.lnk') and not name.endswith('.url'):
+        return _error(ret, 'Name must end with either ".lnk" or ".url"')
+
+    # Normalize paths; do this after error checks to avoid invalid input
+    # getting expanded, e.g. '' turning into '.'
+    name = os.path.realpath(os.path.expanduser(name))
+    if name.endswith('.lnk'):
+        target = os.path.realpath(os.path.expanduser(target))
+    if working_dir:
+        working_dir = os.path.realpath(os.path.expanduser(working_dir))
+    if icon_location:
+        icon_location = os.path.realpath(os.path.expanduser(icon_location))
+
+    if user is None:
+        user = __opts__['user']
+
+    # Make sure the user exists in Windows
+    # Salt default is 'root'
+    if not __salt__['user.info'](user):
+        # User not found, use the account salt is running under
+        # If username not found, use System
+        user = __salt__['user.current']()
+        if not user:
+            user = 'SYSTEM'
+
+    preflight_errors = []
+    uid = __salt__['file.user_to_uid'](user)
+
+    if uid == '':
+        preflight_errors.append('User {0} does not exist'.format(user))
+
+    if not os.path.isabs(name):
+        preflight_errors.append(
+            'Specified file {0} is not an absolute path'.format(name)
+        )
+
+    if preflight_errors:
+        msg = '. '.join(preflight_errors)
+        if len(preflight_errors) > 1:
+            msg += '.'
+        return _error(ret, msg)
+
+    presult, pcomment, ret['pchanges'] = _shortcut_check(name,
+                                                         target,
+                                                         arguments,
+                                                         working_dir,
+                                                         description,
+                                                         icon_location,
+                                                         force,
+                                                         user)
+    if __opts__['test']:
+        ret['result'] = presult
+        ret['comment'] = pcomment
+        return ret
+
+    if not os.path.isdir(os.path.dirname(name)):
+        if makedirs:
+            __salt__['file.makedirs'](
+                name,
+                user=user)
+        else:
+            return _error(
+                ret,
+                'Directory {0!r} for shortcut is not present'.format(
+                    os.path.dirname(name)
+                )
+            )
+
+    if os.path.isdir(name) or os.path.islink(name):
+        # It is not a shortcut, but a dir or symlink
+        if backupname is not None:
+            # Make a backup first
+            if os.path.lexists(backupname):
+                if not force:
+                    return _error(ret, ((
+                                            'File exists where the backup target {0} should go'
+                                        ).format(backupname)))
+                else:
+                    __salt__['file.remove'](backupname)
+                    time.sleep(1)  # wait for asynchronous deletion
+            if not os.path.isdir(os.path.dirname(backupname)):
+                if makedirs:
+                    os.makedirs(backupname)
+                else:
+                    return _error(ret, (
+                                            'Directory does not exist for'
+                                            ' backup at {0!r}'
+                                        ).format(os.path.dirname(backupname)))
+            os.rename(name, backupname)
+            time.sleep(1)  # wait for asynchronous rename
+        elif force:
+            # Remove whatever is in the way
+            __salt__['file.remove'](name)
+            ret['changes']['forced'] = 'Shortcut was forcibly replaced'
+            time.sleep(1)  # wait for asynchronous deletion
+        else:
+            # Otherwise throw an error
+            return _error(ret, ((
+                                    'Directory or symlink exists where the'
+                                    ' shortcut {0!r} should be'
+                                ).format(name)))
+
+    # This will just load the shortcut if it already exists
+    # It won't create the file until calling scut.Save()
+    shell = win32com.client.Dispatch("WScript.Shell")
+    scut = shell.CreateShortcut(name)
+
+    # The shortcut target will automatically be created with its
+    # canonical capitalization; no way to override it, so ignore case
+    state_checks = [scut.TargetPath.lower() == target.lower()]
+    if arguments is not None:
+        state_checks.append(scut.Arguments == arguments)
+    if working_dir is not None:
+        state_checks.append(
+            scut.WorkingDirectory.lower() == working_dir.lower()
+        )
+    if description is not None:
+        state_checks.append(scut.Description == description)
+    if icon_location is not None:
+        state_checks.append(scut.IconLocation.lower() == icon_location.lower())
+
+    if __salt__['file.file_exists'](name):
+        # The shortcut exists, verify that it matches the desired state
+        if not all(state_checks):
+            # The target is wrong, delete it
+            os.remove(name)
+        else:
+            if _check_shortcut_ownership(name, user):
+                # The shortcut looks good!
+                ret['comment'] = ('Shortcut {0} is present and owned by '
+                                  '{1}'.format(name, user))
+            else:
+                if _set_shortcut_ownership(name, user):
+                    ret['comment'] = ('Set ownership of shortcut {0} to '
+                                      '{1}'.format(name, user))
+                    ret['changes']['ownership'] = '{0}'.format(user)
+                else:
+                    ret['result'] = False
+                    ret['comment'] += (
+                        'Failed to set ownership of shortcut {0} to '
+                        '{1}'.format(name, user)
+                    )
+            return ret
+
+    if not os.path.exists(name):
+        # The shortcut is not present, make it
+        try:
+            scut.TargetPath = target
+            if arguments is not None:
+                scut.Arguments = arguments
+            if working_dir is not None:
+                scut.WorkingDirectory = working_dir
+            if description is not None:
+                scut.Description = description
+            if icon_location is not None:
+                scut.IconLocation = icon_location
+            scut.Save()
+        except (AttributeError, pywintypes.com_error) as exc:
+            ret['result'] = False
+            ret['comment'] = ('Unable to create new shortcut {0} -> '
+                              '{1}: {2}'.format(name, target, exc))
+            return ret
+        else:
+            ret['comment'] = ('Created new shortcut {0} -> '
+                              '{1}'.format(name, target))
+            ret['changes']['new'] = name
+
+        if not _check_shortcut_ownership(name, user):
+            if not _set_shortcut_ownership(name, user):
+                ret['result'] = False
+                ret['comment'] += (', but was unable to set ownership to '
+                                   '{0}'.format(user))
     return ret
