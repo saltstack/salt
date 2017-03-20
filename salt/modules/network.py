@@ -308,10 +308,15 @@ def _netstat_sunos():
     Return netstat information for SunOS flavors
     '''
     log.warning('User and program not (yet) supported on SunOS')
+
+    tailpath = '/usr/xpg4/bin/tail'
+    if not os.path.exists(tailpath):
+        return 'required version of command tail does not exist: {0}'.format(tailpath)
+
     ret = []
     for addr_family in ('inet', 'inet6'):
         # Lookup TCP connections
-        cmd = 'netstat -f {0} -P tcp -an | tail -n+5'.format(addr_family)
+        cmd = 'netstat -f {0} -P tcp -an | {1} -n +5'.format(addr_family, tailpath)
         out = __salt__['cmd.run'](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
@@ -323,7 +328,7 @@ def _netstat_sunos():
                 'remote-address': comps[1],
                 'state': comps[6]})
         # Lookup UDP connections
-        cmd = 'netstat -f {0} -P udp -an | tail -n+5'.format(addr_family)
+        cmd = 'netstat -f {0} -P udp -an | {1} -n +5'.format(addr_family, tailpath)
         out = __salt__['cmd.run'](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
