@@ -178,6 +178,7 @@ import salt.loader
 import salt.utils
 import salt.utils.jid
 from salt.ext.six.moves import range
+from salt.ext.six.moves import zip
 from salt.exceptions import SaltInvocationError
 from salt.utils.decorators import with_deprecated
 
