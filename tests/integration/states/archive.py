@@ -10,6 +10,7 @@ import os
 import platform
 import socket
 import threading
+import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 
@@ -35,7 +36,6 @@ PORT = 9999
 ARCHIVE_TAR_SOURCE = 'http://localhost:{0}/custom.tar.gz'.format(PORT)
 UNTAR_FILE = os.path.join(ARCHIVE_DIR, 'custom/README')
 ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
-STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
 REDHAT7 = False
 QUERY_OS = platform.dist()
@@ -59,7 +59,8 @@ class ArchiveTest(integration.ModuleCase,
         '''
         application = tornado.web.Application([(r"/(.*)", tornado.web.StaticFileHandler,
                                               {"path": STATE_DIR})])
-        application.listen(PORT)
+        cls.server = tornado.httpserver.HTTPServer(application)
+        cls.server.listen(PORT)
         tornado.ioloop.IOLoop.instance().start()
 
     @classmethod
@@ -83,6 +84,7 @@ class ArchiveTest(integration.ModuleCase,
     def tearDownClass(cls):
         tornado.ioloop.IOLoop.instance().stop()
         cls.server_thread.join()
+        cls.server.stop()
 
     def setUp(self):
         self._clear_archive_dir()

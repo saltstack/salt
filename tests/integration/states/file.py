@@ -19,6 +19,7 @@ import stat
 import tempfile
 import textwrap
 import threading
+import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 import filecmp
@@ -2403,7 +2404,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 PORT = 9999
 FILE_SOURCE = 'http://localhost:{0}/grail/scene33'.format(PORT)
 FILE_HASH = 'd2feb3beb323c79fc7a0f44f1408b4a3'
-STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
 
 class RemoteFileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -2419,7 +2419,8 @@ class RemoteFileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn)
         application = tornado.web.Application([
             (r'/(.*)', tornado.web.StaticFileHandler, {'path': STATE_DIR})
         ])
-        application.listen(PORT)
+        cls.server = tornado.httpserver.HTTPServer(application)
+        cls.server.listen(PORT)
         tornado.ioloop.IOLoop.instance().start()
 
     @classmethod
@@ -2442,6 +2443,7 @@ class RemoteFileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn)
     def tearDownClass(cls):
         tornado.ioloop.IOLoop.instance().stop()
         cls.server_thread.join()
+        cls.server.stop()
 
     def setUp(self):
         fd_, self.name = tempfile.mkstemp(dir=integration.TMP)
@@ -2499,4 +2501,4 @@ class RemoteFileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn)
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(FileTest)
+    run_tests(FileTest, RemoteFileTest)
