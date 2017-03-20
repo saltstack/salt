@@ -783,6 +783,7 @@ def dns_check(addr, port, safe=False, ipv6=None, connect=True):
 
                 if not connect:
                     resolved = candidate_addr
+                    break
 
                 s = socket.socket(h[0], socket.SOCK_STREAM)
                 try:
