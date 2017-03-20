@@ -445,7 +445,7 @@ def _get_policy_object(platform,
         ]
         filter_options = filter_config.pop('options', None)
         if filter_options:
-            filter_options = _make_it_list(filter_options, filter_name, filter_options)
+            filter_options = _make_it_list({}, filter_name, filter_options)
             # make sure the filter options are sent as list
             target_opts.extend(filter_options)
         target = aclgen.policy.Target(target_opts)
@@ -906,7 +906,7 @@ def get_filter_config(platform,
         # new terms won't be removed
     filters = {
         filter_name: {
-            'options': _make_it_list(filter_options, filter_name, filter_options)
+            'options': _make_it_list({}, filter_name, filter_options)
         }
     }
     filters[filter_name].update(terms)
