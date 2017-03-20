@@ -287,6 +287,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 if salt.utils.is_windows():
     import salt.utils.win_dacl
+    import salt.utils.win_functions
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -2598,7 +2599,7 @@ def directory(name,
 
         # If win_owner not passed, use user
         if win_owner is None:
-            win_owner = user if user else None
+            win_owner = user if user else salt.utils.win_functions.get_current_user()
 
         # Group isn't relevant to Windows, use win_perms/win_deny_perms
         if group is not None:
