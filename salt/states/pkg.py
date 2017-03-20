@@ -635,6 +635,7 @@ def installed(
         normalize=True,
         ignore_epoch=False,
         reinstall=False,
+        downloadonly=False,
         **kwargs):
     '''
     Ensure that the package is installed, and that it is the correct version
@@ -1282,6 +1283,7 @@ def installed(
                                               pkgs=pkgs,
                                               sources=sources,
                                               reinstall=bool(to_reinstall),
+                                              downloadonly=downloadonly,
                                               normalize=normalize,
                                               **kwargs)
         except CommandExecutionError as exc:
@@ -1436,7 +1438,7 @@ def installed(
 
     result = True
 
-    if failed:
+    if failed and not downloadonly:
         if sources:
             summary = ', '.join(failed)
         else:
@@ -1446,7 +1448,7 @@ def installed(
                           'install/update: {0}'.format(summary))
         result = False
 
-    if failed_hold:
+    if failed_hold and not downloadonly:
         for i in failed_hold:
             comment.append(i['comment'])
         result = False
@@ -1496,7 +1498,7 @@ def installed(
             else:
                 comment.append(msg)
 
-    if failed:
+    if failed and not downloadonly:
         # Add a comment for each package in failed with its pkg.verify output
         for failed_pkg in failed:
             if sources:
