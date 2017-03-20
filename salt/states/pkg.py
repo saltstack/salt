@@ -1524,6 +1524,25 @@ def installed(
     return ret
 
 
+def downloaded(**kwargs):
+    '''
+    Ensure that the package is downloaded.
+    Functionally identical to :mod:`installed <salt.states.pkg.installed>`
+    but only downloads the packages without actually installing them.
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        zsh:
+          pkg.downloaded:
+            - fromrepo: "myrepository"
+    '''
+    if 'downloadonly' in kwargs:
+        del kwargs['downloadonly']
+    return installed(downloadonly=True, **kwargs)
+
+
 def latest(
         name,
         refresh=None,
