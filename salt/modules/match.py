@@ -309,7 +309,8 @@ def glob(tgt, minion_id=None):
 def filter_by(lookup,
               tgt_type='compound',
               minion_id=None,
-              expr_form=None):
+              expr_form=None,
+              default=None):
     '''
     Return the first match in a dictionary of target patterns
 
@@ -329,7 +330,7 @@ def filter_by(lookup,
         {% set roles = salt['match.filter_by']({
             'web*': ['app', 'caching'],
             'db*': ['db'],
-        }) %}
+        }, default=['other']) %}
 
         # Make the filtered data available to Pillar:
         roles: {{ roles | yaml() }}
@@ -353,7 +354,7 @@ def filter_by(lookup,
         if expr_funcs[tgt_type](*params):
             return lookup[key]
 
-    return None
+    return default
 
 
 def search_by(lookup, tgt_type='compound', minion_id=None):
