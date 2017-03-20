@@ -364,7 +364,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         syndic_opts = sconfig.syndic_config(
             syndic_conf_path, minion_conf_path
         )
-        syndic_opts.update(salt.minion.resolve_dns(syndic_opts, connect=False))
+        syndic_opts.update(salt.minion.resolve_dns(syndic_opts))
         root_dir = syndic_opts['root_dir']
         # id & pki dir are shared & so configured on the minion side
         self.assertEqual(syndic_opts['id'], 'minion')
