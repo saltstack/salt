@@ -160,8 +160,7 @@ def present(host, groups, interfaces, **kwargs):
                                                             "filter": {"host": "{0}".format(kwargs['proxy_host'])}},
                                                             **connection_args)[0]['proxyid']
             except TypeError:
-                # pylint: disable=E0602
-                ret['comment'] = 'Invalid proxy_host {0}'.format(proxy_host)
+                ret['comment'] = 'Invalid proxy_host {0}'.format(kwargs['proxy_host'])
                 return ret
         else:
             try:
@@ -170,8 +169,7 @@ def present(host, groups, interfaces, **kwargs):
                                                             "output": "proxyid"},
                                                             **connection_args)[0]['proxyid']
             except TypeError:
-                # pylint: disable=E0602
-                ret['comment'] = 'Invalid proxy_host {0}'.format(proxy_host)
+                ret['comment'] = 'Invalid proxy_host {0}'.format(kwargs['proxy_host'])
                 return ret
 
     host_exists = __salt__['zabbix.host_exists'](host, **connection_args)
