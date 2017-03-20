@@ -1356,7 +1356,7 @@ DEFAULT_MASTER_OPTS = {
 DEFAULT_PROXY_MINION_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
-    'sign_pub_messages': True
+    'sign_pub_messages': True,
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': False,
     'append_minionid_config_dirs': ['cachedir'],
