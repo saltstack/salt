@@ -484,8 +484,12 @@ def _netstat_route_sunos():
     '''
     Return netstat routing information for SunOS
     '''
+    tailpath = '/usr/xpg4/bin/tail'
+    if not os.path.exists(tailpath):
+        return 'required version of command tail does not exist: {0}'.format(tailpath)
+
     ret = []
-    cmd = 'netstat -f inet -rn | tail -n+5'
+    cmd = 'netstat -f inet -rn | {0} -n +5'.format(tailpath)
     out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
@@ -496,7 +500,7 @@ def _netstat_route_sunos():
             'netmask': '',
             'flags': comps[2],
             'interface': comps[5] if len(comps) >= 6 else ''})
-    cmd = 'netstat -f inet6 -rn | tail -n+5'
+    cmd = 'netstat -f inet6 -rn | {0} -n +5'.format(tailpath)
     out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
