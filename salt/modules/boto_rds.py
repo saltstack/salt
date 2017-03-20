@@ -551,7 +551,7 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
                     'CopyTagsToSnapshot', 'MonitoringInterval',
                     'MonitoringRoleArn', 'PromotionTier',
                     'DomainMemberships')
-            return {'rds': dict([(k, rds.get('DBInstances', [{}])[0].get(k)) for k in keys])}
+            return {'rds': dict([(k, rds.get(k)) for k in keys])}
         else:
             return {'rds': None}
     except ClientError as e:
