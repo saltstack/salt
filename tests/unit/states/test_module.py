@@ -113,7 +113,7 @@ class ModuleStateTest(TestCase):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
                 ret = module.run(**{CMD: [{'foo': 'bar'}]})
                 assert ret['comment'] == "'{0}' failed: {1}() got an unexpected keyword argument " \
-                                         "'foo'".format(CMD, module.__salt__[CMD].func_name)
+                                         "'foo'".format(CMD, module.__salt__[CMD].__name__)
                 assert not ret['result']
 
     def test_run_args(self):
