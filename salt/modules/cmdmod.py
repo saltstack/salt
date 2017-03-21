@@ -439,7 +439,7 @@ def _run(cmd,
                     env_encoded = env_encoded.encode(__salt_system_encoding__)
                 env_runas = dict(list(zip(*[iter(env_encoded.split(b'\0'))]*2)))
 
-            env_runas = dict( (sdecode(k), sdecode(v)) for k, v in six.iteritems(env_runas) )
+            env_runas = dict((sdecode(k), sdecode(v)) for k, v in six.iteritems(env_runas))
             env_runas.update(env)
             env = env_runas
             # Encode unicode kwargs to filesystem encoding to avoid a
