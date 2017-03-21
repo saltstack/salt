@@ -5,21 +5,23 @@
 # Import the future
 from __future__ import absolute_import
 
-NO_PYOPENSSL = False
 
 # Import Python libs
 import shutil
 import tempfile
 import os
+import logging
 try:
     # We're not going to actually use OpenSSL, we just want to check that
     # it's installed.
     import OpenSSL  # pylint: disable=unused-import
+    NO_PYOPENSSL = False
 except Exception:
     NO_PYOPENSSL = True
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
@@ -34,12 +36,7 @@ from tests.support.helpers import destructiveTest
 import salt.modules.tls as tls
 from salt.utils.versions import LooseVersion
 
-
-# Globals
-tls.__grains__ = {}
-tls.__salt__ = {}
-tls.__context__ = {}
-tls.__opts__ = {}
+log = logging.getLogger(__name__)
 
 _TLS_TEST_DATA = {
     'ca_cert': '''-----BEGIN CERTIFICATE-----
@@ -119,12 +116,11 @@ bymYbi0l2pWqQLA2sPoRHNw=
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(NO_PYOPENSSL, 'PyOpenSSL must be installed to run these tests.')
-class TLSAddTestCase(TestCase):
-    maxDiff = None
-
+class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.tls
     '''
+    loader_module = tls
 
     def test_cert_base_path(self):
         '''
@@ -271,6 +267,7 @@ class TLSAddTestCase(TestCase):
                 del source['signature_algorithm']
             if 'extensions' not in reference:
                 del source['extensions']
+
         with patch('salt.utils.fopen',
                    mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
             try:
@@ -281,6 +278,14 @@ class TLSAddTestCase(TestCase):
                 # the cert_info attribute, which doesn't exist. This was fixed in subsequent
                 # releases of PyOpenSSL with https://github.com/pyca/pyopenssl/pull/476
                 if '\'_cffi_backend.CDataGCP\' object has no attribute \'cert_info\'' == str(err):
+                    log.exception(err)
+                    self.skipTest(
+                        'Encountered an upstream error with PyOpenSSL: {0}'.format(
+                            err
+                        )
+                    )
+                if '\'_cffi_backend.CDataGCP\' object has no attribute \'object\'' == str(err):
+                    log.exception(err)
                     self.skipTest(
                         'Encountered an upstream error with PyOpenSSL: {0}'.format(
                             err
@@ -298,7 +303,7 @@ class TLSAddTestCase(TestCase):
         '''
         Test creating CA cert
         '''
-        ca_path = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        ca_path = tempfile.mkdtemp(dir=TMP)
         try:
             ca_name = 'test_ca'
             certp = '{0}/{1}/{2}_ca_cert.crt'.format(
@@ -334,7 +339,7 @@ class TLSAddTestCase(TestCase):
         '''
         Test creating CA cert when one already exists
         '''
-        ca_path = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        ca_path = tempfile.mkdtemp(dir=TMP)
         try:
             ca_name = 'test_ca'
             certp = '{0}/{1}/{2}_ca_cert.crt'.format(
@@ -373,7 +378,7 @@ class TLSAddTestCase(TestCase):
         '''
         Test creating certificate signing request
         '''
-        ca_path = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        ca_path = tempfile.mkdtemp(dir=TMP)
         try:
             ca_name = 'test_ca'
             certp = '{0}/{1}/certs/{2}.csr'.format(
@@ -410,7 +415,7 @@ class TLSAddTestCase(TestCase):
         '''
         Test creating certificate signing request when one already exists
         '''
-        ca_path = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        ca_path = tempfile.mkdtemp(dir=TMP)
         try:
             ca_name = 'test_ca'
             certp = '{0}/{1}/certs/{2}.csr'.format(
@@ -450,7 +455,7 @@ class TLSAddTestCase(TestCase):
         '''
         Test creating self signed certificate
         '''
-        ca_path = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        ca_path = tempfile.mkdtemp(dir=TMP)
         try:
             tls_dir = 'test_tls'
             certp = '{0}/{1}/certs/{2}.crt'.format(
@@ -485,7 +490,7 @@ class TLSAddTestCase(TestCase):
         '''
         Test creating self signed certificate when one already exists
         '''
-        ca_path = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        ca_path = tempfile.mkdtemp(dir=TMP)
         try:
             tls_dir = 'test_tls'
             certp = '{0}/{1}/certs/{2}.crt'.format(
@@ -520,7 +525,7 @@ class TLSAddTestCase(TestCase):
         '''
         Test signing certificate from request
         '''
-        ca_path = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        ca_path = tempfile.mkdtemp(dir=TMP)
         try:
             ca_name = 'test_ca'
             certp = '{0}/{1}/certs/{2}.crt'.format(
@@ -553,7 +558,7 @@ class TLSAddTestCase(TestCase):
         '''
         Test signing certificate from request when certificate exists
         '''
-        ca_path = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        ca_path = tempfile.mkdtemp(dir=TMP)
         try:
             ca_name = 'test_ca'
             certp = '{0}/{1}/certs/{2}.crt'.format(
@@ -589,7 +594,7 @@ class TLSAddTestCase(TestCase):
         '''
         Test creating pkcs12
         '''
-        ca_path = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        ca_path = tempfile.mkdtemp(dir=TMP)
         try:
             ca_name = 'test_ca'
             certp = '{0}/{1}/certs/{2}.p12'.format(
@@ -624,7 +629,7 @@ class TLSAddTestCase(TestCase):
         '''
         Test creating pkcs12 when it already exists
         '''
-        ca_path = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        ca_path = tempfile.mkdtemp(dir=TMP)
         try:
             ca_name = 'test_ca'
             certp = '{0}/{1}/certs/{2}.p12'.format(
@@ -696,7 +701,7 @@ class TLSAddTestCase(TestCase):
         '''
         pillarval = {'csr': {'extendedKeyUsage': 'serverAuth'}}
         mock_pgt = MagicMock(return_value=pillarval)
-        ca_path = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        ca_path = tempfile.mkdtemp(dir=TMP)
         ca_name = 'test_ca'
         certp = '{0}/{1}/{2}_ca_cert.crt'.format(
             ca_path,

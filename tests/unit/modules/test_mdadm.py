@@ -11,17 +11,21 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.modules.mdadm as mdadm
 
-mdadm.__salt__ = {}
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MdadmTestCase(TestCase):
+class MdadmTestCase(TestCase, LoaderModuleMockMixin):
+
+    loader_module = mdadm
 
     @patch('salt.utils.which', lambda exe: exe)
     def test_create(self):
@@ -35,10 +39,32 @@ class MdadmTestCase(TestCase):
                     chunk=256
             )
             self.assertEqual('salt', ret)
-            mock.assert_called_once_with(
-                ['mdadm', '-C', '/dev/md0', '-R', '-v', '--chunk', '256', '--force',
-                 '-l', '5', '-e', 'default', '-n', '3', '/dev/sdb1', '/dev/sdc1',
-                 '/dev/sdd1'], python_shell=False)
+            if six.PY2:
+                expected_args = [
+                    'mdadm',
+                    '-C', '/dev/md0',
+                    '-R',
+                    '-v',
+                    '--chunk', '256',
+                    '--force',
+                     '-l', '5',
+                     '-e', 'default',
+                     '-n', '3',
+                     '/dev/sdb1', '/dev/sdc1', '/dev/sdd1']
+            else:
+                expected_args = [
+                    'mdadm',
+                    '-C', '/dev/md0',
+                    '-R',
+                    '-v',
+                    '--force',
+                    '--chunk', '256',
+                    '-l', '5',
+                    '-e', 'default',
+                    '-n', '3',
+                    '/dev/sdb1', '/dev/sdc1', '/dev/sdd1'
+                ]
+            mock.assert_called_once_with(expected_args, python_shell=False)
 
     def test_create_test_mode(self):
         mock = MagicMock()
