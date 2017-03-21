@@ -561,6 +561,7 @@ def init(name,
          priv_key=None,
          seed_cmd='seed.apply',
          enable_vnc=False,
+         enable_qcow=False,
          **kwargs):
     '''
     Initialize a new vm
@@ -621,9 +622,22 @@ def init(name,
             except OSError:
                 pass
 
+            qcow2 = False
+            if salt.utils.which('qemu-img'):
+                res = __salt__['cmd.run']('qemu-img info {}'.format(sfn))
+                imageinfo = yaml.load(res)
+                qcow2 = imageinfo['file format'] == 'qcow2'
+
             try:
-                log.debug('Copying {0} to {1}'.format(sfn, img_dest))
-                salt.utils.files.copyfile(sfn, img_dest)
+                if enable_qcow and qcow2:
+                    log.info('Cloning qcow2 image {} using copy on write'
+                              .format(sfn))
+                    __salt__['cmd.run'](
+                        'qemu-img create -f qcow2 -o backing_file={} {}'
+                        .format(sfn, img_dest).split())
+                else:
+                    log.debug('Copying {0} to {1}'.format(sfn, img_dest))
+                    salt.utils.files.copyfile(sfn, img_dest)
                 mask = os.umask(0)
                 os.umask(mask)
                 # Apply umask and remove exec bit
