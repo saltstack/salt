@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from tests.support.unit import TestCase
 from salt.utils import decorators
 from salt.version import SaltStackVersion
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltConfigurationError
 
 
 class DummyLogger(object):
@@ -38,6 +38,9 @@ class DecoratorsTest(TestCase):
     def new_function(self):
         return "new"
 
+    def _new_function(self):
+        return "old"
+
     def _mk_version(self, name):
         '''
         Make a version
@@ -56,6 +59,7 @@ class DecoratorsTest(TestCase):
             '__opts__': {},
             'old_function': self.old_function,
             'new_function': self.new_function,
+            '_new_function': self._new_function,
         }
         self.messages = list()
         decorators.log = DummyLogger(self.messages)
@@ -249,3 +253,15 @@ class DecoratorsTest(TestCase):
         assert depr(self.new_function)() == self.new_function()
         assert not self.messages
 
+    def test_with_deprecated_opt_in_use_superseded_and_deprecated(self):
+        '''
+        Test with_deprecated misconfiguration.
+
+        :return:
+        '''
+        self.globs['__opts__']['use_deprecated'] = ['test.new_function']
+        self.globs['__opts__']['use_superseded'] = ['test.new_function']
+        depr = decorators.with_deprecated(self.globs, "Beryllium")
+        depr._curr_version = self._mk_version("Helium")[1]
+        with self.assertRaises(SaltConfigurationError):
+            assert depr(self.new_function)() == self.new_function()
