@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import win_groupadd
+import salt.modules.win_groupadd as win_groupadd
 
 # Import Other Libs
 # pylint: disable=W0611

@@ -10,7 +10,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import vsphere
+import salt.modules.vsphere as vsphere
 from salt.exceptions import CommandExecutionError, VMwareSaltError
 
 # Import Salt Testing Libs
