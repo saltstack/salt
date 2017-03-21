@@ -54,6 +54,23 @@ def is_writeable(path, check_parent=False):
     return os.access(parent_dir, os.W_OK)
 
 
+def exists(path, quiet=False):
+    '''
+    Check if a given path exists.
+
+    :param path: The path to check
+    :param quiet: Suppresses the log message
+    :returns: True or False
+    '''
+
+    _exists = os.access(path, os.F_OK)
+    if not _exists:
+        if not quiet:
+            log.error('Failed to read configuration from {0} - file does not exists'.format(path))
+
+    return _exists
+
+
 def is_readable(path, quiet=False):
     '''
     Check if a given path is readable by the current user.
