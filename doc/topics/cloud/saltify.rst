@@ -135,5 +135,3 @@ Return values:
   - ``True``: Credential verification succeeded
   - ``False``: Credential verification succeeded
   - ``None``: Credential verification was not attempted.
-
-.. note:: This feature is not available for Windows targets.
