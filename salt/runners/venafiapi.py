@@ -11,7 +11,8 @@ Open up ``/etc/salt/master`` and add:
 
 .. code-block:: yaml
 
-    api_key: None
+    venafi:
+      api_key: None
 
 Then register your email address with Venagi using the following command:
 
@@ -25,7 +26,8 @@ file and set the ``api_key`` to it:
 
 .. code-block:: yaml
 
-    api_key: abcdef01-2345-6789-abcd-ef0123456789
+    venafi:
+      api_key: abcdef01-2345-6789-abcd-ef0123456789
 '''
 from __future__ import absolute_import
 import os
