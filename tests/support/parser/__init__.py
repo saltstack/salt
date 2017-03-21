@@ -306,7 +306,7 @@ class SaltTestingParser(optparse.OptionParser):
             with open(self.options.names_file, 'rb') as fp_:
                 lines = []
                 for line in fp_.readlines():
-                    lines.append(line.strip())
+                    lines.append(line.strip().decode())
             if self.options.name:
                 self.options.name.extend(lines)
             else:
