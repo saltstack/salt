@@ -281,6 +281,7 @@ def _find_install_targets(name=None,
                           version=None,
                           pkgs=None,
                           sources=None,
+                          patches=None,
                           skip_suggestions=False,
                           pkg_verify=False,
                           normalize=True,
@@ -291,11 +292,11 @@ def _find_install_targets(name=None,
     Inspect the arguments to pkg.installed and discover what packages need to
     be installed. Return a dict of desired packages
     '''
-    if all((pkgs, sources)):
+    if len(filter(lambda x: bool(x), [pkgs, sources, patches])) > 1:
         return {'name': name,
                 'changes': {},
                 'result': False,
-                'comment': 'Only one of "pkgs" and "sources" is permitted.'}
+                'comment': 'Only one of "pkgs", "sources" or "patches" is permitted.'}
 
     # dict for packages that fail pkg.verify and their altered files
     altered_files = {}
@@ -322,7 +323,7 @@ def _find_install_targets(name=None,
                 'result': False,
                 'comment': exc.strerror}
 
-    if any((pkgs, sources)):
+    if any((pkgs, sources, patches)):
         if pkgs:
             desired = _repack_pkgs(pkgs)
         elif sources:
@@ -330,6 +331,8 @@ def _find_install_targets(name=None,
                 sources,
                 normalize=normalize,
             )
+        elif patches:
+            desired = _repack_pkgs(patches)
 
         if not desired:
             # Badly-formatted SLS
@@ -393,7 +396,7 @@ def _find_install_targets(name=None,
                                    'installed'.format(name)}
 
     version_spec = False
-    if not sources:
+    if not sources and not patches:
         # Check for alternate package names if strict processing is not
         # enforced. Takes extra time. Disable for improved performance
         if not skip_suggestions:
@@ -630,6 +633,7 @@ def installed(
         skip_suggestions=False,
         pkgs=None,
         sources=None,
+        patches=None,
         allow_updates=False,
         pkg_verify=False,
         normalize=True,
@@ -1122,7 +1126,7 @@ def installed(
     if salt.utils.is_windows():
         kwargs['refresh'] = refresh
 
-    result = _find_install_targets(name, version, pkgs, sources,
+    result = _find_install_targets(name, version, pkgs, sources, patches,
                                    fromrepo=fromrepo,
                                    skip_suggestions=skip_suggestions,
                                    pkg_verify=pkg_verify,
@@ -1221,8 +1225,10 @@ def installed(
             else:
                 summary = ', '.join([_get_desired_pkg(x, targets)
                                      for x in targets])
-            comment.append('The following packages would be '
-                           'installed/updated: {0}'.format(summary))
+            comment.append('The following {0} would be {1}: {2}'.format(
+                           'patches' if patches else 'packages',
+                           'downloaded' if downloadonly else 'installed/updated',
+                           summary))
         if to_unpurge:
             comment.append(
                 'The following packages would have their selection status '
@@ -1283,6 +1289,7 @@ def installed(
                                               pkgs=pkgs,
                                               sources=sources,
                                               reinstall=bool(to_reinstall),
+                                              patches=patches,
                                               downloadonly=downloadonly,
                                               normalize=normalize,
                                               **kwargs)
@@ -1438,7 +1445,7 @@ def installed(
 
     result = True
 
-    if failed and not downloadonly:
+    if failed and not downloadonly and not patches:
         if sources:
             summary = ', '.join(failed)
         else:

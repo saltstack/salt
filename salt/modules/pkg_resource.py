@@ -89,6 +89,7 @@ def pack_sources(sources, normalize=True):
 def parse_targets(name=None,
                   pkgs=None,
                   sources=None,
+                  patches=None,
                   saltenv='base',
                   normalize=True,
                   **kwargs):
@@ -116,8 +117,8 @@ def parse_targets(name=None,
     if __grains__['os'] == 'MacOS' and sources:
         log.warning('Parameter "sources" ignored on MacOS hosts.')
 
-    if pkgs and sources:
-        log.error('Only one of "pkgs" and "sources" can be used.')
+    if len(filter(lambda x: bool(x), [pkgs, sources, patches])) > 1:
+        log.error('Only one of "pkgs", "sources" or "patches" can be used.')
         return None, None
 
     elif pkgs:
@@ -126,6 +127,13 @@ def parse_targets(name=None,
             return None, None
         else:
             return pkgs, 'repository'
+
+    elif patches:
+        patches = _repack_pkgs(patches, normalize=normalize)
+        if not patches:
+            return None, None
+        else:
+            return patches, 'repository'
 
     elif sources and __grains__['os'] != 'MacOS':
         sources = pack_sources(sources, normalize=normalize)
