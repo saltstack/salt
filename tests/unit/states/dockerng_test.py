@@ -22,8 +22,8 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
-from salt.modules import dockerng as dockerng_mod
-from salt.states import dockerng as dockerng_state
+import salt.modules.dockerng as dockerng_mod
+import salt.states.dockerng as dockerng_state
 
 dockerng_mod.__context__ = {'docker.docker_version': ''}
 dockerng_mod.__salt__ = {}
