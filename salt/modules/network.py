@@ -1522,5 +1522,5 @@ def iphexval(ip):
         salt '*' network.iphexval 10.0.0.1
     '''
     a = ip.split('.')
-    hexval = ['%02X' % int(x) for x in a]
+    hexval = ['%02X' % int(x) for x in a]  # pylint: disable=E1321
     return ''.join(hexval)
