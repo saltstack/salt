@@ -62,6 +62,10 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     if not info:
         return {}
 
+    not_actioned = info.get('Not Actioned/Not Running')
+    if not_actioned and tgt in not_actioned:
+        return {}
+
     provider = indexed_minion.get('provider', None)
     profile = indexed_minion.get('profile', None)
     driver = indexed_minion.get('driver', None)
