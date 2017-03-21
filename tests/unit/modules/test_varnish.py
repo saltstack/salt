@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,15 +17,14 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.varnish as varnish
 
-# Globals
-varnish.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class VarnishTestCase(TestCase):
+class VarnishTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.varnish
     '''
+    loader_module = varnish
+
     def test_version(self):
         '''
         Test to return server version from varnishd -V

@@ -4,16 +4,17 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
 # Import Salt libs
 import salt.renderers.yaml as yaml
 
-yaml.__salt__ = {}
-yaml.__opts__ = {}
 
+class YAMLRendererTestCase(TestCase, LoaderModuleMockMixin):
 
-class YAMLRendererTestCase(TestCase):
+    loader_module = yaml
+
     def test_yaml_render_string(self):
         data = "string"
         result = yaml.render(data)

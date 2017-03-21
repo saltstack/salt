@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 
 # Import Salt libs
@@ -39,7 +40,10 @@ class RendererMixin(object):
                                     _state.opts['renderer_whitelist'])
 
 
-class RendererTests(TestCase, RendererMixin):
+class RendererTests(TestCase, RendererMixin, LoaderModuleMockMixin):
+
+    loader_module = yamlex
+
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'yamlex')
     def test_basic(self):
         sls_obj = self.render(basic_template)

@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -22,13 +23,13 @@ import salt.runners.vault as vault
 
 log = logging.getLogger(__name__)
 
-vault.__opts__ = {}
 
-
-class VaultTest(TestCase):
+class VaultTest(TestCase, LoaderModuleMockMixin):
     '''
     Tests for the runner module of the Vault integration
     '''
+
+    loader_module = vault
 
     def setUp(self):
         self.grains = {
@@ -51,6 +52,9 @@ class VaultTest(TestCase):
                             {'baz': 'qux'}
                         ]
                       }
+
+    def tearDown(self):
+        del self.grains
 
     def test_pattern_list_expander(self):
         '''

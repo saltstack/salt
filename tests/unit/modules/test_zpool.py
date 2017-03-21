@@ -10,9 +10,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-
-# Import Mock libraries
 from tests.support.mock import (
     MagicMock,
     patch,
@@ -26,16 +25,14 @@ import salt.modules.zpool as zpool
 # Import Salt Utils
 from salt.utils.odict import OrderedDict
 
-# Globals
-zpool.__salt__ = {}
-
 
 # Skip this test case if we don't have access to mock!
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ZpoolTestCase(TestCase):
+class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
     '''
     This class contains a set of functions that test salt.modules.zpool module
     '''
+    loader_module = zpool
 
     @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
     def test_exists_success(self):

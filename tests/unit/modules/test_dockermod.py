@@ -7,6 +7,7 @@ Unit tests for the docker module
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -21,10 +22,6 @@ from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
 import salt.modules.dockermod as docker_mod
 
-docker_mod.__context__ = {'docker.docker_version': ''}
-docker_mod.__salt__ = {}
-docker_mod.__opts__ = {}
-
 
 def _docker_py_version():
     try:
@@ -37,10 +34,16 @@ def _docker_py_version():
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(docker_mod.HAS_DOCKER_PY is False, 'docker-py must be installed to run these tests. Skipping.')
-class DockerTestCase(TestCase):
+class DockerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Validate docker module
     '''
+    loader_module = docker_mod
+
+    def loader_module_globals(self):
+        return {
+            '__context__': {'docker.docker_version': ''}
+        }
 
     def test_ps_with_host_true(self):
         '''
