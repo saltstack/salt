@@ -553,8 +553,12 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
                                   )
             response_obj = json_loads(response.body)
             self.assertTrue(response_obj['success'])
-            self._future_resolved.wait(30)
-            event = future.result()
+            resolve_future_timeout = 60
+            self._future_resolved.wait(resolve_future_timeout)
+            try:
+                event = future.result()
+            except Exception as exc:
+                self.fail('Failed to resolve future under {} secs: {}'.format(resolve_future_timeout, exc))
             self.assertEqual(event['tag'], 'salt/netapi/hook')
             self.assertIn('headers', event['data'])
             self.assertEqual(
