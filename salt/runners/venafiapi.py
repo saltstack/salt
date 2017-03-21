@@ -127,8 +127,8 @@ def gen_key(minion_id, dns_name=None, zone='default', password=None):
             keyTypes = policy['keyTypes']
             # in case multiple keytypes and key lengths are supported
             # always use the first key type and key length
-            keygen_type =  keyTypes[0]['keyType']
-            key_len = keyTypes[0]['keyLengths'][0] 
+            keygen_type = keyTypes[0]['keyType']
+            key_len = keyTypes[0]['keyLengths'][0]
 
     if keygen_type == "RSA":
         gen = RSA.generate(bits=key_len)
@@ -274,7 +274,7 @@ def request(
 
     if zone_id is None and zone is not None:
         zone_id = get_zone_id(zone)
-    
+
     if zone_id is None:
         raise CommandExecutionError(
             'Either a zone or a zone_id must be passed in or '
@@ -440,6 +440,7 @@ def show_csrs():
             'There was an API error: {0}'.format(data['error'])
         )
     return data.get('dict', {})
+
 
 def get_zone_id(zone_name):
     '''
