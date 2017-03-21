@@ -1983,15 +1983,22 @@ def start(name, call=None):
     return 'powered on'
 
 
-def stop(name, call=None):
+def stop(name, call=None, soft=False):
     '''
     To stop/power off a VM using its name
+
+    .. note::
+
+        If ``soft=True`` issues a command to the guest operating system
+        asking it to perform a clean shutdown of all services.
+        Default is soft=False
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -a stop vmname
+        salt-cloud -a stop vmname soft=True
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2014,7 +2021,10 @@ def stop(name, call=None):
                 return ret
             try:
                 log.info('Stopping VM {0}'.format(name))
-                task = vm["object"].PowerOff()
+                if soft:
+                    task = vm["object"].ShutdownGuest()
+                else:
+                    task = vm["object"].PowerOff()
                 salt.utils.vmware.wait_for_task(task, name, 'power off')
             except Exception as exc:
                 log.error(
@@ -2081,15 +2091,22 @@ def suspend(name, call=None):
     return 'suspended'
 
 
-def reset(name, call=None):
+def reset(name, call=None, soft=False):
     '''
     To reset a VM using its name
+
+    .. note::
+
+        If ``soft=True`` Issues a command to the guest operating system
+        asking it to perform a reboot. Otherwise hypervisor will terminate VM and start it again.
+        Default is soft=False
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -a reset vmname
+        salt-cloud -a reset vmname soft=True
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2112,7 +2129,10 @@ def reset(name, call=None):
                 return ret
             try:
                 log.info('Resetting VM {0}'.format(name))
-                task = vm["object"].ResetVM_Task()
+                if soft:
+                    task = vm["object"].RebootGuest()
+                else:
+                    task = vm["object"].ResetVM_Task()
                 salt.utils.vmware.wait_for_task(task, name, 'reset')
             except Exception as exc:
                 log.error(
