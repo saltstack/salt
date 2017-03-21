@@ -514,3 +514,73 @@ def index_template_get(name, hosts=None, profile=None):
     except elasticsearch.exceptions.NotFoundError:
         return None
     return None
+
+
+def pipeline_get(id, hosts=None, profile=None):
+    '''
+    Retrieve Ingest pipeline definition.
+
+    CLI example::
+
+        salt myminion elasticsearch.pipeline_get mypipeline
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        # TODO check for ingest existence (not available in EPEL version)
+        ret = es.ingest.get_pipeline(id=id)
+        return ret
+    except elasticsearch.NotFoundError:
+        return None
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot create pipeline {0}, server returned code {1} with message {2}".format(id, e.status_code, e.error))
+
+
+def pipeline_delete(id, hosts=None, profile=None):
+    '''
+    Delete Ingest pipeline.
+
+    CLI example::
+
+        salt myminion elasticsearch.pipeline_delete mypipeline
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        ret = es.ingest.delete_pipeline(id=id)
+        return True
+    except elasticsearch.NotFoundError:
+        return True
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot delete pipeline {0}, server returned code {1} with message {2}".format(id, e.status_code, e.error))
+
+
+def pipeline_create(id, body, hosts=None, profile=None):
+    '''
+    Create Ingest pipeline by supplied definition.
+
+    CLI example::
+
+        salt myminion elasticsearch.pipeline_create mypipeline '{"description": "my custom pipeline", "processors": [{"set" : {"field": "collector_timestamp_millis", "value": "{{_ingest.timestamp}}"}}]}'
+    '''
+    es = _get_instance(hosts, profile)
+    try:
+        out = es.ingest.put_pipeline(id=id, body=body)
+        return out.get("acknowledged", False)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot create pipeline {0}, server returned code {1} with message {2}".format(id, e.status_code, e.error))
+
+
+def pipeline_simulate(id, body, verbose=False, hosts=None, profile=None):
+    '''
+    Simulate existing Ingest pipeline on provided data
+
+    CLI example::
+
+        salt myminion elasticsearch.pipeline_simulate mypipeline '{"docs":[{"_index":"index","_type":"type","_id":"id","_source":{"foo":"bar"}},{"_index":"index","_type":"type","_id":"id","_source":{"foo":"rab"}+}]}' verbose=True
+    '''
+    es = _get_instance(hosts, profile)
+    try:
+        return es.ingest.simulate(id=id, body=body, verbose=verbose)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot simulate pipeline {0}, server returned code {1} with message {2}".format(id, e.status_code, e.error))
