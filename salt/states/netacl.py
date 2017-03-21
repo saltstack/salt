@@ -161,7 +161,6 @@ def term(name,
 
     pillar_key: ``acl``
         The key in the pillar containing the default attributes values. Default: ``acl``.
-        If the pillar contains the following structure:
 
     pillarenv
         Query the master to generate fresh pillar data on the fly,
@@ -217,7 +216,7 @@ def term(name,
     **term_fields
         Term attributes.
         To see what fields are supported, please consult the list of supported keywords_.
-            Some platforms have few other optional_ keyworkds.
+            Some platforms have few other optional_ keywords.
 
             .. _keywords: https://github.com/google/capirca/wiki/Policy-format#keywords
             .. _optional: https://github.com/google/capirca/wiki/Policy-format#optionally-supported-keywords
@@ -428,7 +427,11 @@ def term(name,
             - filter_options:
                 - not-interface-specific
             - term_name: {{ term_name }}
-            - {{ my_term_cfg }}
+            - {{ my_term_cfg | json }}
+
+    When passing retrieved pillar data into the state file, it is strongly
+    recommended to use the json serializer explicitly (`` | json``),
+    instead of relying on the default Python serializer.
     '''
     ret = _default_ret(name)
     test = __opts__['test'] or test
@@ -499,7 +502,7 @@ def filter(name,  # pylint: disable=redefined-builtin
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
     merge_pillar: ``False``
-        Merge the CLI variables with the pillar. Default: ``True``
+        Merge the CLI variables with the pillar. Default: ``False``
 
     only_lower_merge: ``False``
         Specify if it should merge only the terms fields. Otherwise it will try
@@ -609,7 +612,7 @@ def filter(name,  # pylint: disable=redefined-builtin
         my-filter_state:
           netacl.filter:
             - filter_name: my-filter
-            - terms: {{ my_filter_cfg }}
+            - terms: {{ my_filter_cfg | json }}
             - revision_date: false
             - revision_no: 5
             - debug: true
@@ -617,6 +620,10 @@ def filter(name,  # pylint: disable=redefined-builtin
     In the example above, as ``inet6`` has been specified in the ``filter_options``,
     the configuration chunk referring to ``my-term`` has been ignored as it referred to
     IPv4 only (from ``source_address`` field).
+
+    When passing retrieved pillar data into the state file, it is strongly
+    recommended to use the json serializer explicitly (`` | json``),
+    instead of relying on the default Python serializer.
     '''
     ret = _default_ret(name)
     test = __opts__['test'] or test
@@ -871,9 +878,13 @@ def managed(name,
         {%- set fw_filters = pillar.get('firewall', {}) -%}
         netacl_example:
           netacl.managed:
-            - filters: {{ fw_filters }}
+            - filters: {{ fw_filters | json }}
             - revision_no: 2
             - debug: true
+
+    When passing retrieved pillar data into the state file, it is strongly
+    recommended to use the json serializer explicitly (`` | json``),
+    instead of relying on the default Python serializer.
     '''
     ret = _default_ret(name)
     test = __opts__['test'] or test
