@@ -7,8 +7,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from tests.support.unit import skipIf
 from tests.unit import ModuleTestCase, hasDependency
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf
 from tests.support.mock import (
     patch,
     NO_MOCK,
@@ -17,7 +18,6 @@ from tests.support.mock import (
 import salt.modules.servicenow as servicenow
 
 SERVICE_NAME = 'servicenow'
-servicenow.__salt__ = {}
 
 
 class MockServiceNowClient(object):
@@ -31,10 +31,14 @@ class MockServiceNowClient(object):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('servicenow_rest.api.Client', MockServiceNowClient)
-class ServiceNowModuleTestCase(ModuleTestCase):
+class ServiceNowModuleTestCase(ModuleTestCase, LoaderModuleMockMixin):
+    loader_module = servicenow
+
+    def loader_module_globals(self):
+        return {'Client': MockServiceNowClient}
+
     def setUp(self):
         hasDependency('servicenow_rest')
-        servicenow.Client = MockServiceNowClient
 
         def get_config(service):
             if service == SERVICE_NAME:

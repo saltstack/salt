@@ -4,8 +4,10 @@
 '''
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,18 +18,15 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.nagios as nagios
-import os
-
-
-# Globals
-nagios.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NagiosTestCase(TestCase):
+class NagiosTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.nagios
     '''
+    loader_module = nagios
+
     def test_run(self):
         '''
         Test for Run nagios plugin and return all
