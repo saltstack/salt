@@ -178,7 +178,7 @@ def alias_create(indices, alias, hosts=None, body=None, profile=None):
 
     try:
         result = es.indices.put_alias(index=indices, name=alias, body=body)
-        return result.get("acknowledged", False)
+        return result.get('acknowledged', False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot create alias {0} in index {1}, server returned code {2} with message {3}".format(alias, indices, e.status_code, e.error))
 
@@ -267,7 +267,7 @@ def document_delete(index, doc_type, id, hosts=None, profile=None):
     try:
         return es.delete(index=index, doc_type=doc_type, id=id)
     except elasticsearch.exceptions.NotFoundError:
-        return True
+        return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot delete document {0} in index {1}, server returned code {2} with message {3}".format(id, index, e.status_code, e.error))
 
@@ -320,7 +320,7 @@ def index_create(index, body=None, hosts=None, profile=None):
 
     try:
         result = es.indices.create(index=index, body=body)
-        return result.get("acknowledged", False) and result.get("shards_acknowledged", True)
+        return result.get('acknowledged', False) and result.get("shards_acknowledged", True)
     except elasticsearch.TransportError as e:
         if "index_already_exists_exception" == e.error:
             return True
@@ -396,7 +396,7 @@ def mapping_create(index, doc_type, body, hosts=None, profile=None):
     try:
         result = es.indices.put_mapping(index=index, doc_type=doc_type, body=body)
 
-        return result.get("acknowledged", False)
+        return result.get('acknowledged', False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot create mapping {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
@@ -520,8 +520,7 @@ def pipeline_get(id, hosts=None, profile=None):
     es = _get_instance(hosts, profile)
 
     try:
-        ret = es.ingest.get_pipeline(id=id)
-        return ret
+        return es.ingest.get_pipeline(id=id)
     except elasticsearch.NotFoundError:
         return None
     except elasticsearch.TransportError as e:
@@ -542,7 +541,7 @@ def pipeline_delete(id, hosts=None, profile=None):
 
     try:
         ret = es.ingest.delete_pipeline(id=id)
-        return True
+        return ret.get('acknowledged', False)
     except elasticsearch.NotFoundError:
         return True
     except elasticsearch.TransportError as e:
@@ -562,7 +561,7 @@ def pipeline_create(id, body, hosts=None, profile=None):
     es = _get_instance(hosts, profile)
     try:
         out = es.ingest.put_pipeline(id=id, body=body)
-        return out.get("acknowledged", False)
+        return out.get('acknowledged', False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot create pipeline {0}, server returned code {1} with message {2}".format(id, e.status_code, e.error))
     except AttributeError:
