@@ -556,8 +556,10 @@ class _WithDeprecated(_DeprecationDecorator):
             m_name=self._globals.get(self.MODULE_NAME, '') or self._globals['__name__'].split('.')[-1],
             f_name=self._orig_f_name)
 
-        return self._policy == self.OPT_IN and not (func_path in self._globals.get('__opts__', {}).get(
-            self.CFG_USE_SUPERSEDED, list())), func_path
+        return func_path in self._globals.get('__opts__').get(
+            self.CFG_USE_DEPRECATED, list()) or (self._policy == self.OPT_IN
+                                                 and not (func_path in self._globals.get('__opts__', {}).get(
+                                                          self.CFG_USE_SUPERSEDED, list()))), func_path
 
     def __call__(self, function):
         '''
