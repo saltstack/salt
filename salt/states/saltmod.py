@@ -86,6 +86,7 @@ def _parallel_map(func, inputs):
     '''
     outputs = len(inputs) * [None]
     errors = len(inputs) * [None]
+
     def create_thread(index):
         def run_thread():
             try:
@@ -844,8 +845,10 @@ def parallel_runners(name, runners):
         [out.get('outputter', '') == 'highstate' and 'data' in out for out in
          six.itervalues(outputs)]
     )
+
     # The following helper function is used to extract changes from highstate
     # output.
+
     def extract_changes(obj):
         if not isinstance(obj, dict):
             return {}
