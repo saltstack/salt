@@ -1983,7 +1983,7 @@ def start(name, call=None):
     return 'powered on'
 
 
-def stop(name, call=None, soft=False):
+def stop(name, soft=False, call=None):
     '''
     To stop/power off a VM using its name
 
@@ -2091,7 +2091,7 @@ def suspend(name, call=None):
     return 'suspended'
 
 
-def reset(name, call=None, soft=False):
+def reset(name, soft=False, call=None):
     '''
     To reset a VM using its name
 
