@@ -43,7 +43,6 @@ import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'venafi'
-base_url = 'http://vpc-51255c36.qa.projectc.venafi.com/v1'
 log = logging.getLogger(__name__)
 
 
@@ -54,6 +53,15 @@ def __virtual__():
     if __opts__.get('venafi', {}).get('api_key'):
         return __virtualname__
     return False
+
+
+def _base_url():
+    '''
+    Return the base_url
+    '''
+    return __opts__.get('venafi', {}).get(
+        'base_url', 'http://vpc-51255c36.qa.projectc.venafi.com/v1'
+    )
 
 
 def _api_key():
@@ -83,7 +91,7 @@ def gen_key(minion_id, dns_name=None, zone='default', password=None):
     # directly from the name
 
     qdata = salt.utils.http.query(
-        '{0}/zones/tag/{1}'.format(base_url,zone),
+        '{0}/zones/tag/{1}'.format(_base_url(), zone),
         method='GET',
         decode=True,
         decode_type='json',
@@ -99,7 +107,7 @@ def gen_key(minion_id, dns_name=None, zone='default', password=None):
     # certificate use and certificate identity policies
 
     qdata = salt.utils.http.query(
-        '{0}/certificatepolicies?zoneId={1}'.format(base_url,zone_id),
+        '{0}/certificatepolicies?zoneId={1}'.format(_base_url(), zone_id),
         method='GET',
         decode=True,
         decode_type='json',
@@ -293,7 +301,7 @@ def request(
     })
 
     qdata = salt.utils.http.query(
-        '{0}/certificaterequests'.format(base_url),
+        '{0}/certificaterequests'.format(_base_url()),
         method='POST',
         data=pdata,
         decode=True,
@@ -359,7 +367,7 @@ def register(email):
         salt-run venafi.register email@example.com
     '''
     data = salt.utils.http.query(
-        '{0}/useraccounts'.format(base_url),
+        '{0}/useraccounts'.format(_base_url()),
         method='POST',
         data=json.dumps({
             'username': email,
@@ -391,7 +399,7 @@ def show_company(domain):
         salt-run venafi.show_company example.com
     '''
     data = salt.utils.http.query(
-        '{0}/companies/domain/{1}'.format(base_url, domain),
+        '{0}/companies/domain/{1}'.format(_base_url(), domain),
         status=True,
         decode=True,
         decode_type='json',
@@ -418,7 +426,7 @@ def show_csrs():
         salt-run venafi.show_csrs
     '''
     data = salt.utils.http.query(
-        '{0}/certificaterequests'.format(base_url),
+        '{0}/certificaterequests'.format(_base_url()),
         status=True,
         decode=True,
         decode_type='json',
@@ -444,7 +452,7 @@ def get_zone_id(zone_name):
         salt-run venafi.get_zone_id default
     '''
     data = salt.utils.http.query(
-        '{0}/zones/tag/{1}'.format(base_url,zone_name),
+        '{0}/zones/tag/{1}'.format(_base_url(), zone_name),
         status=True,
         decode=True,
         decode_type='json',
@@ -461,6 +469,33 @@ def get_zone_id(zone_name):
     return data['dict']['id']
 
 
+def show_policies():
+    '''
+    Show zone details for the API key owner's company
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run venafi.show_zones
+    '''
+    data = salt.utils.http.query(
+        '{0}/certificatepolicies'.format(_base_url()),
+        status=True,
+        decode=True,
+        decode_type='json',
+        header_dict={
+            'tppl-api-key': _api_key(),
+        },
+    )
+    status = data['status']
+    if str(status).startswith('4') or str(status).startswith('5'):
+        raise CommandExecutionError(
+            'There was an API error: {0}'.format(data['error'])
+        )
+    return data['dict']
+
+
 def show_zones():
     '''
     Show zone details for the API key owner's company
@@ -472,7 +507,7 @@ def show_zones():
         salt-run venafi.show_zones
     '''
     data = salt.utils.http.query(
-        '{0}/zones'.format(base_url),
+        '{0}/zones'.format(_base_url()),
         status=True,
         decode=True,
         decode_type='json',
@@ -499,7 +534,7 @@ def show_cert(id_):
         salt-run venafi.show_cert 01234567-89ab-cdef-0123-456789abcdef
     '''
     data = salt.utils.http.query(
-        '{0}/certificaterequests/{1}/certificate'.format(base_url, id_),
+        '{0}/certificaterequests/{1}/certificate'.format(_base_url(), id_),
         params={
             'format': 'PEM',
             'chainOrder': 'ROOT_FIRST'
@@ -515,7 +550,7 @@ def show_cert(id_):
         )
     data = data.get('body', '')
     csr_data = salt.utils.http.query(
-        '{0}/certificaterequests/{1}'.format(base_url, id_),
+        '{0}/certificaterequests/{1}'.format(_base_url(), id_),
         status=True,
         decode=True,
         decode_type='json',
