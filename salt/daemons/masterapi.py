@@ -1065,6 +1065,8 @@ class LocalFuncs(object):
             if self.opts['keep_acl_in_token'] and 'auth_list' in token:
                 auth_list = token['auth_list']
             else:
+                load['eauth'] = token['eauth']
+                load['username'] = username
                 auth_list = self.loadauth.get_auth_list(load)
         else:
             auth_type = 'eauth'
@@ -1110,6 +1112,8 @@ class LocalFuncs(object):
             if self.opts['keep_acl_in_token'] and 'auth_list' in token:
                 auth_list = token['auth_list']
             else:
+                load['eauth'] = token['eauth']
+                load['username'] = username
                 auth_list = self.loadauth.get_auth_list(load)
         elif 'eauth' in load:
             auth_type = 'eauth'
@@ -1124,7 +1128,7 @@ class LocalFuncs(object):
             auth_type = 'user'
             err_name = 'UserAuthenticationError'
             username = load.get('username', 'UNKNOWN')
-            if not self.loadauth.authenticate_key(load):
+            if not self.loadauth.authenticate_key(load, self.key):
                 return dict(error=dict(name=err_name,
                                        message=('Authentication failure of type "user" occurred for '
                                                 'user {0}.').format(username)))
@@ -1223,6 +1227,8 @@ class LocalFuncs(object):
             if self.opts['keep_acl_in_token'] and 'auth_list' in token:
                 auth_list = token['auth_list']
             else:
+                extra['eauth'] = token['eauth']
+                extra['username'] = token['name']
                 auth_list = self.loadauth.get_auth_list(extra)
 
             # Authorize the request
@@ -1264,7 +1270,7 @@ class LocalFuncs(object):
             load['user'] = self.loadauth.load_name(extra)  # The username we are attempting to auth with
         # Verify that the caller has root on master
         else:
-            auth_ret = self.loadauth.authenticate_key(load)
+            auth_ret = self.loadauth.authenticate_key(load, self.key)
             if auth_ret is False:
                 return ''
 

@@ -67,11 +67,9 @@ class LoadAuth(object):
         fstr = '{0}.auth'.format(load['eauth'])
         if fstr not in self.auth:
             return ''
-        fcall = salt.utils.format_call(self.auth[fstr],
-                                       load,
-                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
-            return fcall['args'][0]
+            pname_arg = salt.utils.arg_lookup(self.auth[fstr])['args'][0]
+            return load[pname_arg]
         except IndexError:
             return ''
 
@@ -300,7 +298,7 @@ class LoadAuth(object):
 
         return True
 
-    def authenticate_key(self, load):
+    def authenticate_key(self, load, key):
         '''
         Authenticate a user by the key passed in load.
         Return the effective user id (name) if it's differ from the specified one (for sudo).
@@ -315,24 +313,24 @@ class LoadAuth(object):
             auth_user = AuthUser(load['user'])
             if auth_user.is_sudo():
                 # If someone sudos check to make sure there is no ACL's around their username
-                if auth_key != self.key[self.opts.get('user', 'root')]:
+                if auth_key != key[self.opts.get('user', 'root')]:
                     log.warning('Authentication failure of type "user" occurred.')
                     return False
                 return auth_user.sudo_name()
             elif load['user'] == self.opts.get('user', 'root') or load['user'] == 'root':
-                if auth_key != self.key[self.opts.get('user', 'root')]:
+                if auth_key != key[self.opts.get('user', 'root')]:
                     log.warning('Authentication failure of type "user" occurred.')
                     return False
             elif auth_user.is_running_user():
-                if auth_key != self.key.get(load['user']):
+                if auth_key != key.get(load['user']):
                     log.warning('Authentication failure of type "user" occurred.')
                     return False
-            elif auth_key == self.key.get('root'):
+            elif auth_key == key.get('root'):
                 pass
             else:
-                if load['user'] in self.key:
+                if load['user'] in key:
                     # User is authorised, check key and check perms
-                    if auth_key != self.key[load['user']]:
+                    if auth_key != key[load['user']]:
                         log.warning('Authentication failure of type "user" occurred.')
                         return False
                     return load['user']
@@ -340,7 +338,7 @@ class LoadAuth(object):
                     log.warning('Authentication failure of type "user" occurred.')
                     return False
         else:
-            if auth_key != self.key[salt.utils.get_user()]:
+            if auth_key != key[salt.utils.get_user()]:
                 log.warning('Authentication failure of type "other" occurred.')
                 return False
         return True

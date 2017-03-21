@@ -37,15 +37,11 @@ class LoadAuthTestCase(TestCase):
         self.assertEqual(ret, '', "Did not bail when the auth loader didn't have the auth type.")
 
         # Test a case with valid params
-        with patch('salt.utils.format_call') as format_call_mock:
-            expected_ret = call('fake_func_str', {
-                'username': 'test_user',
-                'test_password': '',
-                'show_timeout': False,
-                'eauth': 'pam'
-            }, expected_extra_kws=auth.AUTH_INTERNAL_KEYWORDS)
+        with patch('salt.utils.arg_lookup', MagicMock(return_value={'args': ['username', 'password']})) as format_call_mock:
+            expected_ret = call('fake_func_str')
             ret = self.lauth.load_name(valid_eauth_load)
             format_call_mock.assert_has_calls((expected_ret,), any_order=True)
+            self.assertEqual(ret, 'test_user')
 
     def test_get_groups(self):
         valid_eauth_load = {'username': 'test_user',
@@ -540,7 +536,8 @@ class AuthACLTestCase(integration.ModuleCase):
         self.assertEqual(auth_check_mock.call_args[0][0],
                          [{'alpha_minion': ['test.ping']}])
 
-    @patch('salt.auth.LoadAuth.time_auth', MagicMock(return_value=[{'beta_minion': ['test.ping']}]))
+    @patch('salt.auth.LoadAuth.time_auth', MagicMock(return_value=True))
+    @patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[{'beta_minion': ['test.ping']}]))
     @patch('salt.utils.minions.CkMinions.auth_check', return_value=True)
     def test_acl_simple_deny(self, auth_check_mock):
         self.clear.publish(self.valid_clear_load)
