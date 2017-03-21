@@ -133,6 +133,7 @@ class DecoratorsTest(TestCase):
 
         :return:
         '''
+        del self.globs['_new_function']
         self.globs['__opts__']['use_deprecated'] = ['test.new_function']
         depr = decorators.with_deprecated(self.globs, "Beryllium")
         depr._curr_version = self._mk_version("Helium")[1]
