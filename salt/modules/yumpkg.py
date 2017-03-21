@@ -1171,9 +1171,14 @@ def install(name=None,
     reinstall = salt.utils.is_true(reinstall)
 
     try:
-        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
-            name, pkgs, sources, normalize=normalize, **kwargs
-        )
+        if "advisory_ids" in kwargs:
+            if pkgs:
+                raise SaltInvocationError('Cannot use "advisory_ids" and "pkgs" at the same time')
+            pkg_params, pkg_type = kwargs['advisory_ids'], 'advisory'
+        else:
+            pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+                name, pkgs, sources, normalize=normalize, **kwargs
+            )
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
@@ -1418,6 +1423,8 @@ def install(name=None,
     targets = []
     with _temporarily_unhold(to_install, targets):
         if targets:
+            if pkg_type == 'advisory':
+                targets = ["--advisory={0}".format(t) for t in targets]
             cmd = []
             if salt.utils.systemd.has_scope(__context__) \
                 and __salt__['config.get']('systemd.scope', True):
@@ -1426,7 +1433,7 @@ def install(name=None,
             if _yum() == 'dnf':
                 cmd.extend(['--best', '--allowerasing'])
             _add_common_args(cmd)
-            cmd.append('install')
+            cmd.append('install' if pkg_type is not 'advisory' else 'update')
             cmd.extend(targets)
             out = __salt__['cmd.run_all'](
                 cmd,
