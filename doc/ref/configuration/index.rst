@@ -51,6 +51,19 @@ After updating the configuration file, restart the Salt minion.
 See the :ref:`minion configuration reference <configuration-salt-minion>`
 for more details about other configurable options.
 
+Proxy Minion Configuration
+==========================
+
+A proxy minion emulates the behaviour of a regular minion
+and inherits their options.
+
+Similarly, the configuration file is ``/etc/salt/proxy`` and the proxy
+tries to connect to the DNS name "salt".
+
+In addition to the regular minion options,
+there are several proxy-specific - see the
+:ref:`proxy minion configuration reference <configuration-salt-proxy>`.
+
 Running Salt
 ============
 
