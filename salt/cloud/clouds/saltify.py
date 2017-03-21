@@ -58,9 +58,14 @@ def create(vm_):
     '''
     Provision a single machine
     '''
-    log.info('Provisioning existing machine {0}'.format(vm_['name']))
+    deploy_config = config.get_cloud_config_value(
+        'deploy', vm_, __opts__, default=False)
 
-    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
+    if deploy_config:
+        log.info('Provisioning existing machine {0}'.format(vm_['name']))
+        ret = __utils__['cloud.bootstrap'](vm_, __opts__)
+    else:
+        ret = _verify(vm_)
 
     return ret
 
@@ -74,3 +79,45 @@ def get_configured_provider():
         __active_provider_name__ or 'saltify',
         ()
     )
+
+
+def _verify(vm_):
+    '''
+    Verify credentials for an exsiting system
+    '''
+    log.info('Testing logon credentials for {0}'.format(vm_['name']))
+
+    win_installer = config.get_cloud_config_value(
+        'win_installer', vm_, __opts__
+    )
+
+    if win_installer:
+
+        # No support for Windows at this time
+        return None
+
+    else:
+        # Test SSH connection
+        kwargs = {
+            'host': vm_['ssh_host'],
+            'port': config.get_cloud_config_value(
+                'ssh_port', vm_, __opts__, default=22
+            ),
+            'username': config.get_cloud_config_value(
+                'ssh_username', vm_, __opts__, default='root'
+            ),
+            'password': config.get_cloud_config_value(
+                'password', vm_, __opts__, search_global=False
+            ),
+            'key_filename': config.get_cloud_config_value(
+                'key_filename', vm_, __opts__, search_global=False,
+                default=config.get_cloud_config_value(
+                    'ssh_keyfile', vm_, __opts__, search_global=False,
+                    default=None
+                )
+            ),
+            'gateway': vm_.get('gateway', None),
+            'maxtries': 1
+        }
+
+        return __utils__['cloud.wait_for_passwd'](**kwargs)
