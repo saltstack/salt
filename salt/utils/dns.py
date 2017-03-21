@@ -791,6 +791,70 @@ def tlsa_data(pub, usage, selector, matching):
     return _rec2data(usage, selector, matching, cert_fp)
 
 
+def services(services_file='/etc/services'):
+    '''
+    Parse through system-known services
+    :return: {
+        'svc': [
+          {  'port': port
+             'proto': proto,
+             'desc': comment
+          },
+        ],
+    }
+    '''
+    res = {}
+    with salt.utils.fopen(services_file, 'r') as svc_defs:
+        for svc_def in svc_defs.readlines():
+            svc_def = svc_def.strip()
+            if not len(svc_def) or svc_def.startswith('#'):
+                continue
+            elif '#' in svc_def:
+                svc_def, comment = svc_def.split('#', 1)
+                comment = comment.strip()
+            else:
+                comment = None
+            svc_def = svc_def.split()
+
+            port, proto = svc_def.pop(1).split('/')
+            port = int(port)
+
+            for name in svc_def:
+                svc_res = res.get(name, {})
+                pp_res = svc_res.get(port, False)
+                if not pp_res:
+                    svc = {
+                        'port':  port,
+                        'proto': proto,
+                    }
+                    if comment:
+                        svc['desc'] = comment
+                    svc_res[port] = svc
+                else:
+                    curr_proto = pp_res['proto']
+                    if isinstance(curr_proto, (list, tuple)):
+                        curr_proto.append(proto)
+                    else:
+                        pp_res['proto'] = [curr_proto, proto]
+
+                    curr_desc = pp_res.get('desc', False)
+                    if comment:
+                        if not curr_desc:
+                            pp_res['desc'] = comment
+                        elif comment != curr_desc:
+                            pp_res['desc'] = '{0}, {1}'.format(curr_desc, comment)
+                res[name] = svc_res
+
+    for svc, data in res.items():
+        if len(data) == 1:
+            res[svc] = data.values().pop()
+            continue
+        else:
+            res[svc] = list(data.values())
+
+    return res
+
+
 def parse_resolv(src='/etc/resolv.conf'):
     '''
     Parse a resolver configuration file (traditionally /etc/resolv.conf)
