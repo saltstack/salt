@@ -13,6 +13,7 @@ from __future__ import absolute_import
 import salt.modules.win_snmp as win_snmp
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -21,21 +22,16 @@ from tests.support.mock import (
     NO_MOCK_REASON,
 )
 
-# Globals
-win_snmp.__salt__ = {}
-
-# Make sure this module runs on Windows system
-HAS_SNMP = win_snmp.__virtual__()
-
 COMMUNITY_NAMES = {'TestCommunity': 'Read Create'}
 
 
-@skipIf(not HAS_SNMP, 'This test case runs only on Windows systems')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinSnmpTestCase(TestCase):
+class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_snmp
     '''
+    def setup_loader_modules(self):
+        return {win_snmp: {}}
 
     def test_get_agent_service_types(self):
         '''

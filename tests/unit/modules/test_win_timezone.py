@@ -7,7 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch
@@ -16,18 +17,14 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.win_timezone as win_timezone
 
-# Globals
-win_timezone.__salt__ = {}
 
-# Make sure this module runs on Windows system
-IS_WIN = win_timezone.__virtual__()
-
-
-@skipIf(not IS_WIN, "This test case runs only on Windows system")
-class WinTimezoneTestCase(TestCase):
+class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_timezone
     '''
+    def setup_loader_modules(self):
+        return {win_timezone: {}}
+
     # 'get_zone' function tests: 1
 
     def test_get_zone(self):

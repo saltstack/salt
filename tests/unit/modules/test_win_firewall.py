@@ -7,7 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
@@ -16,17 +17,15 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.win_firewall as win_firewall
-import salt.utils
-
-# Globals
-win_firewall.__salt__ = {}
 
 
-@skipIf(not salt.utils.is_windows(), 'This test case runs only on Windows system')
-class WinFirewallTestCase(TestCase):
+class WinFirewallTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_firewall
     '''
+    def setup_loader_modules(self):
+        return {win_firewall: {}}
+
     # 'get_config' function tests: 1
 
     def test_get_config(self):
