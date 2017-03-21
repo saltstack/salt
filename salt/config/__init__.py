@@ -1789,6 +1789,25 @@ def _absolute_path(path, relative_to=None):
     return path
 
 
+__config_refs__ = {}
+
+
+def _skip_known(conf_loader):
+    '''
+    Skip configs that are already has been read.
+
+    :param conf_loader:
+    :return: config or its cached ref
+    '''
+    def load_config_distinct(*args, **kwargs):
+        ptr = '-'.join(args) + '-'.join(['{0}:{1}'.format(x, y) for x, y in kwargs.items()])
+        if ptr not in __config_refs__:
+            __config_refs__[ptr] = conf_loader(*args, **kwargs)
+        return __config_refs__[ptr]
+    return load_config_distinct
+
+
+@_skip_known
 def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
     '''
     Returns configuration dict from parsing either the file described by
