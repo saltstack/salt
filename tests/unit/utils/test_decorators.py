@@ -222,3 +222,17 @@ class DecoratorsTest(TestCase):
                           'an alias "old_function" is configured as its deprecated version. '
                           'The lifetime of the function "old_function" expired. '
                           'Please use its successor "new_function" instead.'])
+
+    def test_with_deprecated_opt_in_default(self):
+        '''
+        Test with_deprecated using opt-in policy,
+        where newer function is not used, unless configured.
+
+        :return:
+        '''
+        depr = decorators.with_deprecated(self.globs, "Beryllium", policy=decorators._DeprecationDecorator.OPT_IN)
+        depr._curr_version = self._mk_version("Helium")[1]
+        assert depr(self.new_function)() == self.old_function()
+        assert self.messages == ['The function "test.new_function" is using its '
+                                 'deprecated version and will expire in version "Beryllium".']
+
