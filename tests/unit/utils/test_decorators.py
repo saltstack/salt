@@ -236,3 +236,16 @@ class DecoratorsTest(TestCase):
         assert self.messages == ['The function "test.new_function" is using its '
                                  'deprecated version and will expire in version "Beryllium".']
 
+    def test_with_deprecated_opt_in_use_superseded(self):
+        '''
+        Test with_deprecated using opt-in policy,
+        where newer function is used as per configuration.
+
+        :return:
+        '''
+        self.globs['__opts__']['use_superseded'] = ['test.new_function']
+        depr = decorators.with_deprecated(self.globs, "Beryllium", policy=decorators._DeprecationDecorator.OPT_IN)
+        depr._curr_version = self._mk_version("Helium")[1]
+        assert depr(self.new_function)() == self.new_function()
+        assert not self.messages
+
