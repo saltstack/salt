@@ -563,6 +563,12 @@ VALID_OPTS = {
     # False in 2016.3.0
     'add_proxymodule_to_opts': bool,
 
+    # In some particular cases, always alive proxies are not beneficial.
+    # This option can be used in those less dynamic environments:
+    # the user can request the connection
+    # always alive, or init-shutdown per command.
+    'proxy_always_alive': bool,
+
     # Poll the connection state with the proxy minion
     # If enabled, this option requires the function `alive`
     # to be implemented in the proxy module
@@ -1564,6 +1570,13 @@ DEFAULT_PROXY_MINION_OPTS = {
     'proxy_merge_grains_in_module': True,
     'append_minionid_config_dirs': ['cachedir', 'pidfile'],
     'default_include': 'proxy.d/*.conf',
+
+    # By default, proxies will preserve the connection.
+    # If this option is set to False,
+    # the connection with the remote dumb device
+    # is closed after each command request.
+    'proxy_always_alive': True,
+
     'proxy_keep_alive': True,  # by default will try to keep alive the connection
     'proxy_keep_alive_interval': 1  # frequency of the proxy keepalive in minutes
 }
