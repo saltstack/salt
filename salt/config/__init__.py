@@ -10,7 +10,6 @@ import os
 import re
 import sys
 import glob
-import getpass
 import time
 import codecs
 import logging
