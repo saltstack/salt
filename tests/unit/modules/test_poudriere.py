@@ -5,10 +5,10 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-
 import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -21,15 +21,13 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.poudriere as poudriere
 
-# Globals
-poudriere.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PoudriereTestCase(TestCase):
+class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.poudriere
     '''
+    loader_module = poudriere
     # 'is_jail' function tests: 1
 
     @patch('salt.modules.poudriere._check_config_exists',

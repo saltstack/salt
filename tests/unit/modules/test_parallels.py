@@ -9,20 +9,21 @@ import salt.modules.parallels as parallels
 from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import third party libs
 import salt.ext.six as six
 
-parallels.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ParallelsTestCase(TestCase):
+class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test parallels desktop execution module functions
     '''
+    loader_module = parallels
+
     def test___virtual__(self):
         '''
         Test parallels.__virtual__

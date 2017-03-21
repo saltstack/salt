@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from salt.exceptions import CommandExecutionError
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -20,10 +20,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.systemd as systemd
 import salt.utils.systemd
-
-# Globals
-systemd.__salt__ = {}
-systemd.__context__ = {}
+from salt.exceptions import CommandExecutionError
 
 _SYSTEMCTL_STATUS = {
     'sshd.service': {
@@ -67,10 +64,12 @@ timer3.timer                               static'''
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SystemdTestCase(TestCase):
+class SystemdTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.modules.systemd
     '''
+    loader_module = systemd
+
     def test_systemctl_reload(self):
         '''
             Test to Reloads systemctl
@@ -262,11 +261,13 @@ class SystemdTestCase(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SystemdScopeTestCase(TestCase):
+class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test case for salt.modules.systemd, for functions which use systemd
         scopes
     '''
+    loader_module = systemd
+
     unit_name = 'foo'
     mock_none = MagicMock(return_value=None)
     mock_success = MagicMock(return_value=0)

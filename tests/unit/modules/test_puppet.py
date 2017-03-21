@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
@@ -22,15 +23,14 @@ import salt.utils
 import salt.modules.puppet as puppet
 from salt.exceptions import CommandExecutionError
 
-# Globals
-puppet.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PuppetTestCase(TestCase):
+class PuppetTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.puppet
     '''
+    loader_module = puppet
+
     def test_run(self):
         '''
             Test to execute a puppet run

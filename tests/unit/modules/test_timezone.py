@@ -6,7 +6,7 @@ from tempfile import NamedTemporaryFile
 import os
 
 # Import Salt Testing Libs
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -15,22 +15,22 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.modules.timezone as timezone
 import salt.ext.six as six
 import salt.utils
-
-# Globals
-timezone.__salt__ = {}
-timezone.__opts__ = {}
-timezone.__grains__ = {}
 
 GET_ZONE_FILE = 'salt.modules.timezone._get_zone_file'
 GET_ETC_LOCALTIME_PATH = 'salt.modules.timezone._get_etc_localtime_path'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch.dict(timezone.__grains__, {'os_family': 'Ubuntu'})
-class TimezoneTestCase(TestCase):
+class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
+
+    loader_module = timezone
+
+    def loader_module_globals(self):
+        return {'__grains__': {'os_family': 'Ubuntu'}}
 
     def setUp(self):
         self.tempfiles = []

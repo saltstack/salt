@@ -8,6 +8,7 @@ import os
 import shutil
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -20,16 +21,13 @@ from tests.support.mock import (
 import salt.utils.odict
 import salt.modules.seed as seed
 
-# Globals
-seed.__salt__ = {}
-seed.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SeedTestCase(TestCase):
+class SeedTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.seed
     '''
+    loader_module = seed
 
     def test_mkconfig_odict(self):
         with patch.dict(seed.__opts__,

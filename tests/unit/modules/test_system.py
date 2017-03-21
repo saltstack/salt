@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,15 +17,14 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.system as system
 
-# Globals
-system.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SystemTestCase(TestCase):
+class SystemTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.system
     '''
+    loader_module = system
+
     def test_halt(self):
         '''
         Test to halt a running system
@@ -49,23 +49,23 @@ class SystemTestCase(TestCase):
                         {'cmd.run': MagicMock(return_value='A')}):
             self.assertEqual(system.poweroff(), 'A')
 
-    @patch.dict(system.__salt__, {'cmd.run': MagicMock(return_value='A')})
     def test_reboot(self):
         '''
         Test to reboot the system with shutdown -r
         '''
-        self.assertEqual(system.reboot(), 'A')
-        system.__salt__['cmd.run'].assert_called_with(
-            ['shutdown', '-r', 'now'], python_shell=False)
+        cmd_mock = MagicMock(return_value='A')
+        with patch.dict(system.__salt__, {'cmd.run': cmd_mock}):
+            self.assertEqual(system.reboot(), 'A')
+        cmd_mock.assert_called_with(['shutdown', '-r', 'now'], python_shell=False)
 
-    @patch.dict(system.__salt__, {'cmd.run': MagicMock(return_value='A')})
     def test_reboot_with_delay(self):
         '''
         Test to reboot the system using shutdown -r with a delay
         '''
-        self.assertEqual(system.reboot(at_time=5), 'A')
-        system.__salt__['cmd.run'].assert_called_with(
-            ['shutdown', '-r', '5'], python_shell=False)
+        cmd_mock = MagicMock(return_value='A')
+        with patch.dict(system.__salt__, {'cmd.run': cmd_mock}):
+            self.assertEqual(system.reboot(at_time=5), 'A')
+        cmd_mock.assert_called_with(['shutdown', '-r', '5'], python_shell=False)
 
     def test_shutdown(self):
         '''

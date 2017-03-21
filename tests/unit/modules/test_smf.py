@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,15 +17,14 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.smf as smf
 
-# Globals
-smf.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SmfTestCase(TestCase):
+class SmfTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.smf
     '''
+    loader_module = smf
+
     def test_get_running(self):
         '''
         Test to return the running services

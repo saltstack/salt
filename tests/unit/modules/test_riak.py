@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,15 +16,14 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.riak as riak
 
-# Globals
-riak.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RiakTestCase(TestCase):
+class RiakTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.riak
     '''
+    loader_module = riak
+
     def test_start(self):
         '''
         Test for start Riak

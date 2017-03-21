@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,15 +19,13 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.rpm as rpm
 
-# Globals
-rpm.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RpmTestCase(TestCase):
+class RpmTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rpm
     '''
+    loader_module = rpm
     # 'list_pkgs' function tests: 1
 
     def test_list_pkgs(self):

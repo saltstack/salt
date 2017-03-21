@@ -11,6 +11,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
@@ -23,14 +24,12 @@ try:
 except Exception:
     NO_MYSQL = True
 
-mysql.__salt__ = {}
-
-DEBUG = True
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(NO_MYSQL, 'Install MySQL bindings before running MySQL unit tests.')
-class MySQLTestCase(TestCase):
+class MySQLTestCase(TestCase, LoaderModuleMockMixin):
+
+    loader_module = mysql
 
     def test_user_exists(self):
         '''

@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -21,16 +22,13 @@ import salt.modules.nftables as nftables
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
-# Globals
-nftables.__grains__ = {}
-nftables.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NftablesTestCase(TestCase):
+class NftablesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.nftables
     '''
+    loader_module = nftables
     # 'version' function tests: 1
 
     def test_version(self):
