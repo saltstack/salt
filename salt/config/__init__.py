@@ -1932,7 +1932,6 @@ def minion_config(path,
     overrides = load_config(path, env_var, DEFAULT_MINION_OPTS['conf_file'])
     default_include = overrides.get('default_include',
                                     defaults['default_include'])
-
     include = overrides.get('include', [])
 
     overrides.update(include_config(default_include, path, verbose=False,
@@ -3164,9 +3163,6 @@ def apply_minion_config(overrides=None,
         if directory in ['pki_dir', 'cachedir', 'extension_modules']:
             newdirectory = os.path.join(opts[directory], opts['id'])
             opts[directory] = newdirectory
-
-    if 'default_include' in overrides and '{id}' in overrides['default_include']:
-        opts['default_include'] = overrides['default_include'].replace('{id}', opts['id'])
 
     # pidfile can be in the list of append_minionid_config_dirs, but pidfile
     # is the actual path with the filename, not a directory.
