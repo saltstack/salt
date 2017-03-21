@@ -36,6 +36,7 @@ def _docker_py_version():
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(dockerng_mod.HAS_DOCKER_PY is False, 'docker-py must be installed to run these tests. Skipping.')
 class DockerTestCase(TestCase):
     '''
     Validate docker module
@@ -67,7 +68,6 @@ class DockerTestCase(TestCase):
                 all=True,
                 filters={'label': 'KEY'})
 
-    @skipIf(docker_mod.HAS_DOCKER_PY is False, 'docker-py needs to be installed for this test to run')
     @patch.object(docker_mod, '_get_exec_driver')
     def test_check_mine_cache_is_refreshed_on_container_change_event(self, _):
         '''
