@@ -1822,17 +1822,17 @@ class Minion(MinionBase):
         elif func == 'add':
             self.schedule.add_job(schedule, persist)
         elif func == 'modify':
-            self.schedule.modify_job(name, schedule, persist, where)
+            self.schedule.modify_job(name, schedule, persist)
         elif func == 'enable':
             self.schedule.enable_schedule()
         elif func == 'disable':
             self.schedule.disable_schedule()
         elif func == 'enable_job':
-            self.schedule.enable_job(name, persist, where)
+            self.schedule.enable_job(name, persist)
         elif func == 'run_job':
             self.schedule.run_job(name)
         elif func == 'disable_job':
-            self.schedule.disable_job(name, persist, where)
+            self.schedule.disable_job(name, persist)
         elif func == 'reload':
             self.schedule.reload(schedule)
         elif func == 'list':
