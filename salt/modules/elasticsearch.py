@@ -45,6 +45,8 @@ Module to provide Elasticsearch compatibility to Salt
 
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
+
+    Some functionality might be limited by elasticsearch-py and Elasticsearch server versions.
 '''
 
 from __future__ import absolute_import
@@ -140,11 +142,28 @@ def _get_instance(hosts=None, profile=None):
                 ca_certs=ca_certs,
                 verify_certs=verify_certs,
             )
+
         if not es.ping():
             raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}, is it unhealthy?'.format(hosts))
-    except elasticsearch.exceptions.ConnectionError:
-        raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}'.format(hosts))
+    except elasticsearch.exceptions.ConnectionError as e:
+        raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0} due to {1}'.format(hosts, str(e)))
     return es
+
+
+def ping(allow_failure=False, hosts=None, profile=None):
+    '''
+    Test connection to Elasticsearch instance. This method does not fail if not explicitly specified.
+
+    CLI example::
+        salt myminion elasticsearch.ping allow_failure=True
+    '''
+    try:
+        _get_instance(hosts, profile)
+    except CommandExecutionError as e:
+        if allow_failure:
+            raise e
+        return False
+    return True
 
 
 def alias_create(indices, alias, hosts=None, body=None, profile=None):
@@ -156,12 +175,12 @@ def alias_create(indices, alias, hosts=None, body=None, profile=None):
         salt myminion elasticsearch.alias_create testindex_v1 testindex
     '''
     es = _get_instance(hosts, profile)
+
     try:
-        result = es.indices.put_alias(index=indices, name=alias, body=body)  # TODO error handling
-        return True
-    except elasticsearch.exceptions.NotFoundError:
-        return None
-    return None
+        result = es.indices.put_alias(index=indices, name=alias, body=body)
+        return result.get("acknowledged", False)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot create alias {0} in index {1}, server returned code {2} with message {3}".format(alias, indices, e.status_code, e.error))
 
 
 def alias_delete(indices, aliases, hosts=None, body=None, profile=None):
@@ -173,14 +192,15 @@ def alias_delete(indices, aliases, hosts=None, body=None, profile=None):
         salt myminion elasticsearch.alias_delete testindex_v1 testindex
     '''
     es = _get_instance(hosts, profile)
+
     try:
         result = es.indices.delete_alias(index=indices, name=aliases)
 
-        if result.get('acknowledged', False):  # TODO error handling
-            return True
+        return result.get('acknowledged', False)
     except elasticsearch.exceptions.NotFoundError:
-        return None
-    return None
+        return True
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot delete alias {0} in index {1}, server returned code {2} with message {3}".format(aliases, indices, e.status_code, e.error))
 
 
 def alias_exists(aliases, indices=None, hosts=None, profile=None):
@@ -189,20 +209,15 @@ def alias_exists(aliases, indices=None, hosts=None, profile=None):
 
     CLI example::
 
-        salt myminion elasticsearch.alias_exists testindex
+        salt myminion elasticsearch.alias_exists None testindex
     '''
     es = _get_instance(hosts, profile)
     try:
-        if es.indices.exists_alias(name=aliases, index=indices):
-            return True
-        else:
-            return False
+        return es.indices.exists_alias(name=aliases, index=indices)
     except elasticsearch.exceptions.NotFoundError:
-        return None
-    except elasticsearch.exceptions.ConnectionError:
-        # TODO log error
-        return None
-    return None
+        return False
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot get alias {0} in index {1}, server returned code {2} with message {3}".format(aliases, indices, e.status_code, e.error))
 
 
 def alias_get(indices=None, aliases=None, hosts=None, profile=None):
@@ -216,11 +231,11 @@ def alias_get(indices=None, aliases=None, hosts=None, profile=None):
     es = _get_instance(hosts, profile)
 
     try:
-        ret = es.indices.get_alias(index=indices, name=aliases)  # TODO error handling
-        return ret
+        return es.indices.get_alias(index=indices, name=aliases)
     except elasticsearch.exceptions.NotFoundError:
         return None
-    return None
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot get alias {0} in index {1}, server returned code {2} with message {3}".format(aliases, indices, e.status_code, e.error))
 
 
 def document_create(index, doc_type, body=None, id=None, hosts=None, profile=None):
@@ -232,12 +247,11 @@ def document_create(index, doc_type, body=None, id=None, hosts=None, profile=Non
         salt myminion elasticsearch.document_create testindex doctype1 '{}'
     '''
     es = _get_instance(hosts, profile)
+
     try:
-        result = es.index(index=index, doc_type=doc_type, body=body, id=id)  # TODO error handling
-        return True
-    except elasticsearch.exceptions.NotFoundError:
-        return None
-    return None
+        return es.index(index=index, doc_type=doc_type, body=body, id=id)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot create document in index {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
 def document_delete(index, doc_type, id, hosts=None, profile=None):
@@ -249,17 +263,13 @@ def document_delete(index, doc_type, id, hosts=None, profile=None):
         salt myminion elasticsearch.document_delete testindex doctype1 AUx-384m0Bug_8U80wQZ
     '''
     es = _get_instance(hosts, profile)
-    try:
-        if not index_exists(index=index):
-            return True
-        else:
-            result = es.delete(index=index, doc_type=doc_type, id=id)
 
-            if result.get('found', False):  # TODO error handling
-                return True
+    try:
+        return es.delete(index=index, doc_type=doc_type, id=id)
     except elasticsearch.exceptions.NotFoundError:
-        return None
-    return None
+        return True
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot delete document {0} in index {1}, server returned code {2} with message {3}".format(id, index, e.status_code, e.error))
 
 
 def document_exists(index, id, doc_type='_all', hosts=None, profile=None):
@@ -271,17 +281,13 @@ def document_exists(index, id, doc_type='_all', hosts=None, profile=None):
         salt myminion elasticsearch.document_exists testindex AUx-384m0Bug_8U80wQZ
     '''
     es = _get_instance(hosts, profile)
+
     try:
-        if es.exists(index=index, id=id, doc_type=doc_type):
-            return True
-        else:
-            return False
+        return es.exists(index=index, id=id, doc_type=doc_type)
     except elasticsearch.exceptions.NotFoundError:
-        return None
-    except elasticsearch.exceptions.ConnectionError:
-        # TODO log error
-        return None
-    return None
+        return False
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve document {0} from index {1}, server returned code {2} with message {3}".format(id, index, e.status_code, e.error))
 
 
 def document_get(index, id, doc_type='_all', hosts=None, profile=None):
@@ -295,11 +301,11 @@ def document_get(index, id, doc_type='_all', hosts=None, profile=None):
     es = _get_instance(hosts, profile)
 
     try:
-        ret = es.get(index=index, id=id, doc_type=doc_type)  # TODO error handling
-        return ret
+        return es.get(index=index, id=id, doc_type=doc_type)
     except elasticsearch.exceptions.NotFoundError:
         return None
-    return None
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve document {0} from index {1}, server returned code {2} with message {3}".format(id, index, e.status_code, e.error))
 
 
 def index_create(index, body=None, hosts=None, profile=None):
@@ -311,15 +317,15 @@ def index_create(index, body=None, hosts=None, profile=None):
         salt myminion elasticsearch.index_create testindex
     '''
     es = _get_instance(hosts, profile)
+
     try:
-        if index_exists(index):
+        result = es.indices.create(index=index, body=body)
+        return result.get("acknowledged", False) and result.get("shards_acknowledged", True)
+    except elasticsearch.TransportError as e:
+        if "index_already_exists_exception" == e.error:
             return True
-        else:
-            result = es.indices.create(index=index, body=body)  # TODO error handling
-            return True
-    except elasticsearch.exceptions.NotFoundError:
-        return None
-    return None
+
+        raise CommandExecutionError("Cannot create index {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
 def index_delete(index, hosts=None, profile=None):
@@ -331,17 +337,15 @@ def index_delete(index, hosts=None, profile=None):
         salt myminion elasticsearch.index_delete testindex
     '''
     es = _get_instance(hosts, profile)
-    try:
-        if not index_exists(index=index):
-            return True
-        else:
-            result = es.indices.delete(index=index)
 
-            if result.get('acknowledged', False):  # TODO error handling
-                return True
+    try:
+        result = es.indices.delete(index=index)
+
+        return result.get('acknowledged', False)
     except elasticsearch.exceptions.NotFoundError:
-        return None
-    return None
+        return True
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot delete index {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
 def index_exists(index, hosts=None, profile=None):
@@ -353,19 +357,13 @@ def index_exists(index, hosts=None, profile=None):
         salt myminion elasticsearch.index_exists testindex
     '''
     es = _get_instance(hosts, profile)
+
     try:
-        if not isinstance(index, list):
-            index = [index]
-        if es.indices.exists(index=index):
-            return True
-        else:
-            return False
+        return es.indices.exists(index=index)
     except elasticsearch.exceptions.NotFoundError:
-        return None
-    except elasticsearch.exceptions.ConnectionError:
-        # TODO log error
-        return None
-    return None
+        return False
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve index {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
 def index_get(index, hosts=None, profile=None):
@@ -379,12 +377,11 @@ def index_get(index, hosts=None, profile=None):
     es = _get_instance(hosts, profile)
 
     try:
-        if index_exists(index):
-            ret = es.indices.get(index=index)  # TODO error handling
-            return ret
+        return es.indices.get(index=index)
     except elasticsearch.exceptions.NotFoundError:
         return None
-    return None
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve index {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
 def mapping_create(index, doc_type, body, hosts=None, profile=None):
@@ -397,16 +394,16 @@ def mapping_create(index, doc_type, body, hosts=None, profile=None):
     '''
     es = _get_instance(hosts, profile)
     try:
-        result = es.indices.put_mapping(index=index, doc_type=doc_type, body=body)  # TODO error handling
-        return mapping_get(index, doc_type)
-    except elasticsearch.exceptions.NotFoundError:
-        return None
-    return None
+        result = es.indices.put_mapping(index=index, doc_type=doc_type, body=body)
+
+        return result.get("acknowledged", False)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot create mapping {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
 def mapping_delete(index, doc_type, hosts=None, profile=None):
     '''
-    Delete a mapping (type) along with its data
+    Delete a mapping (type) along with its data. As of Elasticsearch 5.0 this is no longer available.
 
     CLI example::
 
@@ -414,14 +411,13 @@ def mapping_delete(index, doc_type, hosts=None, profile=None):
     '''
     es = _get_instance(hosts, profile)
     try:
-        # TODO check if mapping exists, add method mapping_exists()
         result = es.indices.delete_mapping(index=index, doc_type=doc_type)
 
-        if result.get('acknowledged', False):  # TODO error handling
-            return True
+        return result.get('acknowledged', False)
     except elasticsearch.exceptions.NotFoundError:
-        return None
-    return None
+        return True
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot delete mapping {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
 def mapping_get(index, doc_type, hosts=None, profile=None):
@@ -435,11 +431,11 @@ def mapping_get(index, doc_type, hosts=None, profile=None):
     es = _get_instance(hosts, profile)
 
     try:
-        ret = es.indices.get_mapping(index=index, doc_type=doc_type)  # TODO error handling
-        return ret
+        return es.indices.get_mapping(index=index, doc_type=doc_type)
     except elasticsearch.exceptions.NotFoundError:
         return None
-    return None
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve mapping {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
 def index_template_create(name, body, hosts=None, profile=None):
@@ -452,11 +448,11 @@ def index_template_create(name, body, hosts=None, profile=None):
     '''
     es = _get_instance(hosts, profile)
     try:
-        result = es.indices.put_template(name=name, body=body)  # TODO error handling
-        return True
-    except elasticsearch.exceptions.NotFoundError:
-        return None
-    return None
+        result = es.indices.put_template(name=name, body=body)
+
+        return result.get('acknowledged', False)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot create template {0}, server returned code {1} with message {2}".format(name, e.status_code, e.error))
 
 
 def index_template_delete(name, hosts=None, profile=None):
@@ -469,14 +465,13 @@ def index_template_delete(name, hosts=None, profile=None):
     '''
     es = _get_instance(hosts, profile)
     try:
-        # TODO check if template exists, add method template_exists() ?
         result = es.indices.delete_template(name=name)
 
-        if result.get('acknowledged', False):  # TODO error handling
-            return True
+        return result.get('acknowledged', False)
     except elasticsearch.exceptions.NotFoundError:
-        return None
-    return None
+        return True
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot delete template {0}, server returned code {1} with message {2}".format(name, e.status_code, e.error))
 
 
 def index_template_exists(name, hosts=None, profile=None):
@@ -489,13 +484,9 @@ def index_template_exists(name, hosts=None, profile=None):
     '''
     es = _get_instance(hosts, profile)
     try:
-        if es.indices.exists_template(name=name):
-            return True
-        else:
-            return False
-    except elasticsearch.exceptions.NotFoundError:
-        return None
-    return None
+        return es.indices.exists_template(name=name)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve template {0}, server returned code {1} with message {2}".format(name, e.status_code, e.error))
 
 
 def index_template_get(name, hosts=None, profile=None):
@@ -504,21 +495,21 @@ def index_template_get(name, hosts=None, profile=None):
 
     CLI example::
 
-        salt myminion elasticsearch.index_template_get testindex_templ user
+        salt myminion elasticsearch.index_template_get testindex_templ
     '''
     es = _get_instance(hosts, profile)
 
     try:
-        ret = es.indices.get_template(name=name)  # TODO error handling
-        return ret
+        return es.indices.get_template(name=name)
     except elasticsearch.exceptions.NotFoundError:
         return None
-    return None
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve template {0}, server returned code {1} with message {2}".format(name, e.status_code, e.error))
 
 
 def pipeline_get(id, hosts=None, profile=None):
     '''
-    Retrieve Ingest pipeline definition.
+    Retrieve Ingest pipeline definition. Available since Elasticsearch 5.0.
 
     CLI example::
 
@@ -538,7 +529,7 @@ def pipeline_get(id, hosts=None, profile=None):
 
 def pipeline_delete(id, hosts=None, profile=None):
     '''
-    Delete Ingest pipeline.
+    Delete Ingest pipeline. Available since Elasticsearch 5.0.
 
     CLI example::
 
@@ -557,7 +548,7 @@ def pipeline_delete(id, hosts=None, profile=None):
 
 def pipeline_create(id, body, hosts=None, profile=None):
     '''
-    Create Ingest pipeline by supplied definition.
+    Create Ingest pipeline by supplied definition. Available since Elasticsearch 5.0.
 
     CLI example::
 
@@ -573,11 +564,11 @@ def pipeline_create(id, body, hosts=None, profile=None):
 
 def pipeline_simulate(id, body, verbose=False, hosts=None, profile=None):
     '''
-    Simulate existing Ingest pipeline on provided data
+    Simulate existing Ingest pipeline on provided data. Available since Elasticsearch 5.0.
 
     CLI example::
 
-        salt myminion elasticsearch.pipeline_simulate mypipeline '{"docs":[{"_index":"index","_type":"type","_id":"id","_source":{"foo":"bar"}},{"_index":"index","_type":"type","_id":"id","_source":{"foo":"rab"}+}]}' verbose=True
+        salt myminion elasticsearch.pipeline_simulate mypipeline '{"docs":[{"_index":"index","_type":"type","_id":"id","_source":{"foo":"bar"}},{"_index":"index","_type":"type","_id":"id","_source":{"foo":"rab"}}]}' verbose=True
     '''
     es = _get_instance(hosts, profile)
     try:
