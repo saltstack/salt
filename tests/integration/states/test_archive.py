@@ -31,6 +31,7 @@ else:
 
 UNTAR_FILE = os.path.join(ARCHIVE_DIR, 'custom/README')
 ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
+STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
 
 class ArchiveTest(integration.ModuleCase,

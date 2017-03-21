@@ -36,7 +36,7 @@ def _docker_py_version():
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(dockerng_mod.HAS_DOCKER_PY is False, 'docker-py must be installed to run these tests. Skipping.')
+@skipIf(docker_mod.HAS_DOCKER_PY is False, 'docker-py must be installed to run these tests. Skipping.')
 class DockerTestCase(TestCase):
     '''
     Validate docker module
