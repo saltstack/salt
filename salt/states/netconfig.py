@@ -52,21 +52,6 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def _default_ret(name):
-    '''
-    Return the default dict of the state output.
-    '''
-    ret = {
-        'name': name,
-        'changes': {},
-        'already_configured': False,
-        'loaded_config': '',
-        'result': False,
-        'comment': ''
-    }
-    return ret
-
-
 def _update_config(template_name,
                    template_source=None,
                    template_path=None,
@@ -334,7 +319,7 @@ def managed(name,
         }
     '''
 
-    ret = _default_ret(name)
+    ret = salt.utils.napalm.default_ret(name)
 
     # the user can override the flags the equivalent CLI args
     # which have higher precedence
@@ -362,24 +347,4 @@ def managed(name,
                                        replace=replace,
                                        **template_vars)
 
-    _apply_res = config_update_ret.get('result', False)
-    result = (_apply_res if not _apply_res else None) if test else _apply_res
-    _comment = config_update_ret.get('comment', '')
-    comment = _comment if not test else 'Testing mode: {tail}'.format(tail=_comment)
-
-    if result is True and not comment:
-        comment = 'Configuration changed!'
-
-    ret.update({
-        'changes': {
-            'diff': config_update_ret.get('diff', '')
-        },
-        'already_configured': config_update_ret.get('already_configured', False),
-        'result': result,
-        'comment': comment
-    })
-
-    if debug:
-        ret['changes']['loaded'] = config_update_ret.get('loaded_config', '')
-
-    return ret
+    return salt.utils.napalm.loaded_ret(ret, config_update_ret, test, debug)

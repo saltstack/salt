@@ -49,6 +49,8 @@ try:
 except ImportError:
     HAS_NAPALM = False
 
+import salt.utils.napalm
+
 # ------------------------------------------------------------------------------
 # state properties
 # ------------------------------------------------------------------------------
@@ -77,49 +79,6 @@ def __virtual__():
 # ------------------------------------------------------------------------------
 # helper functions -- will not be exported
 # ------------------------------------------------------------------------------
-
-
-def _default_ret(name):
-    '''
-    Return the default dict of the state output.
-    '''
-    ret = {
-        'name': name,
-        'changes': {},
-        'already_configured': False,
-        'result': False,
-        'comment': ''
-    }
-    return ret
-
-
-def _loaded_ret(ret, loaded, test, debug):
-    '''
-    Return the final state output.
-
-    ret
-        The initial state output structure.
-
-    loaded
-        The loaded dictionary.
-    '''
-    applied = loaded.get('result', False)
-    result = (applied if not applied else None) if test else applied
-    _comment = loaded.get('comment', '')
-    comment = _comment if not test else 'Testing mode: {tail}'.format(tail=_comment)
-    if result is True and not comment:
-        comment = 'Configuration changed!'
-    ret.update({
-        'changes': {
-            'diff': loaded.get('diff', '')
-        },
-        'already_configured': loaded.get('already_configured', False),
-        'result': result,
-        'comment': comment,
-    })
-    if debug:
-        ret['changes']['loaded'] = loaded.get('loaded_config', '')
-    return ret
 
 # ------------------------------------------------------------------------------
 # callable functions
@@ -433,7 +392,7 @@ def term(name,
     recommended to use the json serializer explicitly (`` | json``),
     instead of relying on the default Python serializer.
     '''
-    ret = _default_ret(name)
+    ret = salt.utils.napalm.default_ret(name)
     test = __opts__['test'] or test
     if not filter_options:
         filter_options = []
@@ -454,7 +413,7 @@ def term(name,
                                                  commit=commit,
                                                  debug=debug,
                                                  **term_fields)
-    return _loaded_ret(ret, loaded, test, debug)
+    return salt.utils.napalm.loaded_ret(ret, loaded, test, debug)
 
 
 def filter(name,  # pylint: disable=redefined-builtin
@@ -625,7 +584,7 @@ def filter(name,  # pylint: disable=redefined-builtin
     recommended to use the json serializer explicitly (`` | json``),
     instead of relying on the default Python serializer.
     '''
-    ret = _default_ret(name)
+    ret = salt.utils.napalm.default_ret(name)
     test = __opts__['test'] or test
     if not filter_options:
         filter_options = []
@@ -646,7 +605,7 @@ def filter(name,  # pylint: disable=redefined-builtin
                                                    test=test,
                                                    commit=commit,
                                                    debug=debug)
-    return _loaded_ret(ret, loaded, test, debug)
+    return salt.utils.napalm.loaded_ret(ret, loaded, test, debug)
 
 
 def managed(name,
@@ -886,7 +845,7 @@ def managed(name,
     recommended to use the json serializer explicitly (`` | json``),
     instead of relying on the default Python serializer.
     '''
-    ret = _default_ret(name)
+    ret = salt.utils.napalm.default_ret(name)
     test = __opts__['test'] or test
     if not filters:
         filters = {}
@@ -903,4 +862,4 @@ def managed(name,
                                                    test=test,
                                                    commit=commit,
                                                    debug=debug)
-    return _loaded_ret(ret, loaded, test, debug)
+    return salt.utils.napalm.loaded_ret(ret, loaded, test, debug)

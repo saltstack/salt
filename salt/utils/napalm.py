@@ -332,3 +332,66 @@ def proxy_napalm_wrap(func):
             wrapped_global_namespace['napalm_device']['__opts__'] = opts
         return func(*args, **kwargs)
     return func_wrapper
+
+def default_ret(name):
+    '''
+    Return the default dict of the state output.
+    '''
+    ret = {
+        'name': name,
+        'pchanges': {},
+        'changes': {},
+        'result': False,
+        'comment': ''
+    }
+    return ret
+
+def loaded_ret(ret, loaded, test, debug):
+    '''
+    Return the final state output.
+
+    ret
+        The initial state output structure.
+
+    loaded
+        The loaded dictionary.
+    '''
+    if not loaded.get('result', False):
+        # Failure of some sort
+        ret.update({
+            'comment': loaded.get('comment', '')
+        })
+        return ret
+    if not loaded.get('already_configured', True):
+        # We're making changes
+        ret.update({
+            'pchanges': {
+                'diff': loaded.get('diff', '')
+            }
+        })
+        if test:
+            comment = "To be changed: {}\n{}".format(ret.get('pchanges', '').get('diff', ''),
+                                                     loaded.get('comment', ''))
+            ret.update({
+                'result': None,
+                'comment': comment
+            })
+            return ret
+        # Not test, changes were applied
+        ret.update({
+            'result': True,
+            'changes': {
+                'diff': loaded.get('diff', '')
+            },
+            'comment': loaded.get('comment', "Configuration changed!")
+        })
+        if debug:
+            ret['changes']['loaded'] = loaded.get('loaded_config', '')
+        return ret
+
+    # No changes
+    ret.update({
+        'result': True,
+        'comment': loaded.get('comment', '')
+    })
+    return ret
