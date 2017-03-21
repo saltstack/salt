@@ -911,6 +911,20 @@ def installed(
 
         .. versionadded:: 2015.8.9
 
+    :param bool downloadonly:
+        Ensures package is only downloaded without actually installing it.
+
+        Example:
+
+        .. code-block:: yaml
+
+            vim-enhanced:
+              pkg.installed:
+                - fromrepo: mycustomrepo
+                - skip_verify: True
+                - refresh: True
+                - downloadonly: True
+
     |
 
     **MULTIPLE PACKAGE INSTALLATION OPTIONS: (not supported in pkgng)**
@@ -991,6 +1005,19 @@ def installed(
                   - bar: http://somesite.org/bar.rpm
                   - baz: ftp://someothersite.org/baz.rpm
                   - qux: /minion/path/to/qux.rpm
+
+    :param list patches:
+        A list of patches/erratas to install.
+        CLI commands.
+
+        .. code-block:: yaml
+
+            my-suse-patches:
+              pkg.installed:
+                - patches:
+                  - SUSE-SLE-SERVER-12-SP1-2016-942
+                  - SUSE-SLE-SERVER-12-SP1-2016-1048
+                  - SUSE-SLE-SERVER-12-SP1-2016-1853
 
     **PLATFORM-SPECIFIC ARGUMENTS**
 
@@ -1534,8 +1561,9 @@ def installed(
 def downloaded(**kwargs):
     '''
     Ensure that the package is downloaded.
-    Functionally identical to :mod:`installed <salt.states.pkg.installed>`
-    but only downloads the packages without actually installing them.
+
+    Functionally identical to :mod:`installed <salt.states.pkg.installed>` but
+    forcing `downloadonly=True`.
 
     CLI Example:
 
@@ -1545,6 +1573,8 @@ def downloaded(**kwargs):
           pkg.downloaded:
             - fromrepo: "myrepository"
     '''
+    # It doesn't make sense here to received 'downloadonly' as kwargs
+    # as we're explicitely using 'downloadonly=True'
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
     return installed(downloadonly=True, **kwargs)
