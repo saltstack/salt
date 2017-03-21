@@ -153,7 +153,7 @@ class Client(object):
         try:
             os.makedirs(destdir)
         except OSError as exc:
-            if exc.errno != errno.EEXIST: # ignore if it was there already
+            if exc.errno != errno.EEXIST:  # ignore if it was there already
                 raise
 
         yield dest
