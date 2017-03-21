@@ -430,8 +430,8 @@ def term(name,
             - {{ my_term_cfg | json }}
 
     When passing retrieved pillar data into the state file, it is strongly
-    recommended to use the json serializer explicitly, instead of relying
-    on the default Python serializer.
+    recommended to use the json serializer explicitly (`` | json``),
+    instead of relying on the default Python serializer.
     '''
     ret = _default_ret(name)
     test = __opts__['test'] or test
@@ -622,8 +622,8 @@ def filter(name,  # pylint: disable=redefined-builtin
     IPv4 only (from ``source_address`` field).
 
     When passing retrieved pillar data into the state file, it is strongly
-    recommended to use the json serializer explicitly, instead of relying
-    on the default Python serializer.
+    recommended to use the json serializer explicitly (`` | json``),
+    instead of relying on the default Python serializer.
     '''
     ret = _default_ret(name)
     test = __opts__['test'] or test
@@ -883,8 +883,8 @@ def managed(name,
             - debug: true
 
     When passing retrieved pillar data into the state file, it is strongly
-    recommended to use the json serializer explicitly, instead of relying
-    on the default Python serializer.
+    recommended to use the json serializer explicitly (`` | json``),
+    instead of relying on the default Python serializer.
     '''
     ret = _default_ret(name)
     test = __opts__['test'] or test
