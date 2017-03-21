@@ -21,7 +21,7 @@ from tests.support.mock import (
 import salt.ext.six as six
 import salt.loader
 from salt.utils.versions import LooseVersion
-from salt.modules import boto_elasticsearch_domain
+import salt.modules.boto_elasticsearch_domain as boto_elasticsearch_domain
 
 # Import 3rd-party libs
 

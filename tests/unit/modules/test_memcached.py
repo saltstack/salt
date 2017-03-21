@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import memcached
+import salt.modules.memcached as memcached
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six import integer_types
 

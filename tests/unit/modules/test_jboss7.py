@@ -9,7 +9,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
 
 # Import salt libs
 from salt.utils.odict import OrderedDict
-from salt.modules import jboss7
+import salt.modules.jboss7 as jboss7
 
 try:
     # will pass if executed along with other tests

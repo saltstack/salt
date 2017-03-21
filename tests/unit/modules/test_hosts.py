@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch,
 )
 # Import Salt Libs
-from salt.modules import hosts
+import salt.modules.hosts as hosts
 from salt.ext.six.moves import StringIO
 
 

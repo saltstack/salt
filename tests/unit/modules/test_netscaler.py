@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import netscaler
+import salt.modules.netscaler as netscaler
 
 netscaler.__salt__ = {}
 

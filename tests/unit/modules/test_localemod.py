@@ -18,7 +18,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import localemod
+import salt.modules.localemod as localemod
 from salt.exceptions import CommandExecutionError
 
 

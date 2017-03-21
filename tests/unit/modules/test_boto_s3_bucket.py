@@ -19,7 +19,7 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.loader
-from salt.modules import boto_s3_bucket
+import salt.modules.boto_s3_bucket as boto_s3_bucket
 from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs

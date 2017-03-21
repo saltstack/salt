@@ -18,8 +18,8 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.utils
-from salt.modules import grains as grainsmod
-from salt.states import grains as grains
+import salt.modules.grains as grainsmod
+import salt.states.grains as grains
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

@@ -14,7 +14,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
 import salt.loader
-from salt.modules import boto_apigateway
+import salt.modules.boto_apigateway as boto_apigateway
 from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs

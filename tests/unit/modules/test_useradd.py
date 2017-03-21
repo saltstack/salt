@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import useradd
+import salt.modules.useradd as useradd
 from salt.exceptions import CommandExecutionError
 import pwd
 

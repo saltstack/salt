@@ -15,7 +15,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import ipset
+import salt.states.ipset as ipset
 
 ipset.__salt__ = {}
 ipset.__opts__ = {}

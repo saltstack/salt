@@ -14,8 +14,8 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 import salt.utils
-from salt.states import syslog_ng
-from salt.modules import syslog_ng as syslog_ng_module
+import salt.states.syslog_ng as syslog_ng
+import salt.modules.syslog_ng as syslog_ng_module
 
 syslog_ng.__salt__ = {}
 syslog_ng_module.__salt__ = {}

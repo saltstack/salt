@@ -19,7 +19,7 @@ from tests.support.mock import (
 # Import Salt libs
 import salt.config
 import salt.loader
-from salt.modules import boto_iot
+import salt.modules.boto_iot as boto_iot
 from salt.utils.versions import LooseVersion
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 

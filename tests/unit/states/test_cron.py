@@ -12,8 +12,8 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 from salt.ext.six.moves import StringIO
-from salt.modules import cron as cronmod
-from salt.states import cron as cron
+import salt.modules.cron as cronmod
+import salt.states.cron as cron
 
 STUB_USER = 'root'
 STUB_PATH = '/tmp'

@@ -10,7 +10,7 @@ from tests.support.unit import TestCase
 
 # Import Salt libs
 import salt.utils
-from salt.modules import ini_manage as ini
+import salt.modules.ini_manage as ini
 
 
 class IniManageTestCase(TestCase):

@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import openstack_config
+import salt.modules.openstack_config as openstack_config
 from salt.exceptions import CommandExecutionError
 
 # Globals

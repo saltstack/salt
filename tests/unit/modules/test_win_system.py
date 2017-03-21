@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import win_system
+import salt.modules.win_system as win_system
 
 # Import 3rd Party Libs
 try:
