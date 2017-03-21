@@ -3,6 +3,8 @@ r'''
 Display Pony output data structure
 ==================================
 
+:depends:   - ponysay CLI program
+
 Display output from a pony. Ponies are better than cows
 because everybody wants a pony.
 
