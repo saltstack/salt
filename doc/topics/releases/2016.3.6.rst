@@ -10,16 +10,68 @@ Changes for v2016.3.5..v2016.3.6
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2017-03-15T22:31:23Z*
+*Generated at: 2017-03-20T21:43:28Z*
 
 Statistics:
 
-- Total Merges: **101**
-- Total Issue references: **49**
-- Total PR references: **145**
+- Total Merges: **108**
+- Total Issue references: **51**
+- Total PR references: **155**
 
 Changes:
 
+
+- **PR** `#40159`_: (*cro*) Turn on sign_pub_messages by default.
+  @ *2017-03-20T21:00:49Z*
+
+  * 60e1d4e Merge pull request `#40159`_ from cro/sign_pub
+  * e663b76 Fix small syntax error
+
+  * 0a0f46f Turn on sign_pub_messages by default.  Make sure messages with no 'sig' are dropped with error when sign_pub_messages is True.
+
+- **PR** `#40123`_: (*twangboy*) Adds support for inet_pton in Windows to network util
+  @ *2017-03-20T16:25:47Z*
+
+  * 28e4fc1 Merge pull request `#40123`_ from twangboy/win_fix_network
+  * 06dfd55 Adds support for inet_pton in Windows to network util
+
+- **PR** `#40141`_: (*bobrik*) Use the first address if cannot connect to any
+  @ *2017-03-20T15:06:57Z*
+
+  - **ISSUE** `#39995`_: (*frogunder*) Head of Develop -  Multimaster error
+    | refs: `#40141`_
+  - **ISSUE** `#39118`_: (*bobrik*) Minion ipv6 option is not documented
+    | refs: `#39289`_
+  - **PR** `#39289`_: (*bobrik*) Autodetect IPv6 connectivity from minion to master
+    | refs: `#39766`_ `#40141`_
+  * 35ddb79 Merge pull request `#40141`_ from bobrik/fallback-resolve
+  * af1545d Use the first address if cannot connect to any
+
+- **PR** `#40059`_: (*terminalmage*) Fix traceback when virtualenv.managed is invoked with nonexistant user
+  @ *2017-03-16T20:46:43Z*
+
+  * 116201f Merge pull request `#40059`_ from terminalmage/fix-virtualenv-traceback
+  * e3cfd29 Fix traceback when virtualenv.managed is invoked with nonexistant user
+
+- **PR** `#40090`_: (*rallytime*) Back-port `#40056`_ to 2016.3
+  @ *2017-03-16T19:42:58Z*
+
+  - **PR** `#40056`_: (*thatch45*) update mention bot blacklist
+    | refs: `#40090`_
+  * a01b52b Merge pull request `#40090`_ from rallytime/`bp-40056`_
+  * ae012db update mention bot blacklist
+
+- **PR** `#40057`_: (*cachedout*) More mentionbot blacklists
+  @ *2017-03-16T18:10:11Z*
+
+  * d1570bb Merge pull request `#40057`_ from cachedout/ollie_blacklist
+  * 0ac2e83 Merge branch '2016.3' into ollie_blacklist
+
+- **PR** `#40070`_: (*Ch3LL*) update 2016.3.6 release notes with additional PR's
+  @ *2017-03-16T15:43:22Z*
+
+  * d36bdb1 Merge pull request `#40070`_ from Ch3LL/2016.3.6_release
+  * a1f8b49 update 2016.3.6 release notes with additional PR's
 
 - **PR** `#40018`_: (*meaksh*) Allows overriding 'timeout' and 'gather_job_timeout' to 'manage.up' runner call
   @ *2017-03-15T19:43:01Z*
@@ -97,6 +149,8 @@ Changes:
 
   * 282c607 Merge pull request `#39962`_ from cachedout/disable_mentionbot_delay_3
   * 7a638f2 Disable mention bot delay on 2016.3
+
+    * 5592c68 More mentionbot blacklists
 
 - **PR** `#39937`_: (*cachedout*) Fix --non-gpg-checks in zypper module
   @ *2017-03-10T18:02:51Z*
@@ -202,7 +256,7 @@ Changes:
   - **ISSUE** `#39118`_: (*bobrik*) Minion ipv6 option is not documented
     | refs: `#39289`_
   - **PR** `#39289`_: (*bobrik*) Autodetect IPv6 connectivity from minion to master
-    | refs: `#39766`_
+    | refs: `#39766`_ `#40141`_
   - **PR** `#25021`_: (*GideonRed*) Introduce ip:port minion config
     | refs: `#39766`_
   * 4ee59be Merge pull request `#39766`_ from rallytime/fix-ipv6-connection
@@ -301,7 +355,7 @@ Changes:
   * 6d645ca Add __virtual__ function
 
 - **PR** `#39289`_: (*bobrik*) Autodetect IPv6 connectivity from minion to master
-  | refs: `#39766`_
+  | refs: `#39766`_ `#40141`_
   @ *2017-02-22T19:05:32Z*
 
   - **ISSUE** `#39118`_: (*bobrik*) Minion ipv6 option is not documented
@@ -1107,6 +1161,7 @@ Changes:
 .. _`#39980`: https://github.com/saltstack/salt/pull/39980
 .. _`#39988`: https://github.com/saltstack/salt/pull/39988
 .. _`#39994`: https://github.com/saltstack/salt/pull/39994
+.. _`#39995`: https://github.com/saltstack/salt/issues/39995
 .. _`#40011`: https://github.com/saltstack/salt/issues/40011
 .. _`#40016`: https://github.com/saltstack/salt/pull/40016
 .. _`#40018`: https://github.com/saltstack/salt/pull/40018
@@ -1115,8 +1170,17 @@ Changes:
 .. _`#40038`: https://github.com/saltstack/salt/pull/40038
 .. _`#40041`: https://github.com/saltstack/salt/pull/40041
 .. _`#40053`: https://github.com/saltstack/salt/pull/40053
+.. _`#40056`: https://github.com/saltstack/salt/pull/40056
+.. _`#40057`: https://github.com/saltstack/salt/pull/40057
+.. _`#40059`: https://github.com/saltstack/salt/pull/40059
+.. _`#40070`: https://github.com/saltstack/salt/pull/40070
+.. _`#40090`: https://github.com/saltstack/salt/pull/40090
+.. _`#40123`: https://github.com/saltstack/salt/pull/40123
+.. _`#40141`: https://github.com/saltstack/salt/pull/40141
+.. _`#40159`: https://github.com/saltstack/salt/pull/40159
 .. _`bp-37632`: https://github.com/saltstack/salt/pull/37632
 .. _`bp-39170`: https://github.com/saltstack/salt/pull/39170
+.. _`bp-40056`: https://github.com/saltstack/salt/pull/40056
 .. _`fix-2016`: https://github.com/saltstack/salt/issues/2016
 .. _`fix-34780`: https://github.com/saltstack/salt/issues/34780
 .. _`fix-38762`: https://github.com/saltstack/salt/issues/38762

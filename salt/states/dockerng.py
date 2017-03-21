@@ -2494,6 +2494,9 @@ def mod_watch(name, sfun=None, **kwargs):
             watch_kwargs['force'] = False
         return running(name, **watch_kwargs)
 
+    if sfun == 'stopped':
+        return stopped(name, **salt.utils.clean_kwargs(**kwargs))
+
     if sfun == 'image_present':
         # Force image to be updated
         kwargs['force'] = True
