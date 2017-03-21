@@ -41,15 +41,20 @@ Example output:
 
 # Import Python libs
 from __future__ import absolute_import
-import os
 import subprocess
 
 # Import Salt libs
+import salt.utils
 import salt.utils.locales
 
 
+__virtualname__ = 'pony'
+
+
 def __virtual__():
-    return os.path.isfile('/usr/bin/ponysay')
+    if salt.utils.which('ponysay'):
+        return __virtualname__
+    return False
 
 
 def output(data, **kwargs):  # pylint: disable=unused-argument
