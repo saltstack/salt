@@ -60,7 +60,7 @@ def _base_url():
     Return the base_url
     '''
     return __opts__.get('venafi', {}).get(
-        'base_url', 'http://vpc-51255c36.qa.projectc.venafi.com/v1'
+        'base_url', 'https://api.venafi.io/v1'
     )
 
 
