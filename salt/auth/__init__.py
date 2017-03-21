@@ -358,11 +358,17 @@ class LoadAuth(object):
         if auth_list is not None:
             return auth_list
 
+        if load['eauth'] not in self.opts['external_auth']:
+            # No matching module is allowed in config
+            log.warning('Authorization failure occurred.')
+            return None
+
         name = self.load_name(load)  # The username we are attempting to auth with
         groups = self.get_groups(load)  # The groups this user belongs to
+        eauth_config = self.opts['external_auth'][load['eauth']]
         if groups is None or groups is False:
             groups = []
-        group_perm_keys = [item for item in self.opts['external_auth'][load['eauth']] if item.endswith('%')]  # The configured auth groups
+        group_perm_keys = [item for item in eauth_config if item.endswith('%')]  # The configured auth groups
 
         # First we need to know if the user is allowed to proceed via any of their group memberships.
         group_auth_match = False
@@ -376,7 +382,7 @@ class LoadAuth(object):
         # in the configuration file.
 
         external_auth_in_db = False
-        for entry in self.opts['external_auth'][load['eauth']]:
+        for entry in eauth_config:
             if entry.startswith('^'):
                 external_auth_in_db = True
                 break
@@ -384,23 +390,23 @@ class LoadAuth(object):
         # If neither a catchall, a named membership or a group
         # membership is found, there is no need to continue. Simply
         # deny the user access.
-        if not ((name in self.opts['external_auth'][load['eauth']]) |
-                ('*' in self.opts['external_auth'][load['eauth']]) |
+        if not ((name in eauth_config) |
+                ('*' in eauth_config) |
                 group_auth_match | external_auth_in_db):
             # Auth successful, but no matching user found in config
-            log.warning('Authentication failure of type "eauth" occurred.')
+            log.warning('Authorization failure occurred.')
             return None
 
         # We now have an authenticated session and it is time to determine
         # what the user has access to.
         auth_list = []
-        if name in self.opts['external_auth'][load['eauth']]:
-            auth_list = self.opts['external_auth'][load['eauth']][name]
-        elif '*' in self.opts['external_auth'][load['eauth']]:
-            auth_list = self.opts['external_auth'][load['eauth']]['*']
+        if name in eauth_config:
+            auth_list = eauth_config[name]
+        elif '*' in eauth_config:
+            auth_list = eauth_config['*']
         if group_auth_match:
             auth_list = self.ckminions.fill_auth_list_from_groups(
-                    self.opts['external_auth'][load['eauth']],
+                    eauth_config,
                     groups,
                     auth_list)
 
