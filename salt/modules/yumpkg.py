@@ -916,6 +916,7 @@ def install(name=None,
             downloadonly=False,
             reinstall=False,
             normalize=True,
+            patches=None,
             **kwargs):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -1054,7 +1055,7 @@ def install(name=None,
 
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
-            name, pkgs, sources, normalize=normalize, **kwargs
+            name, pkgs, sources, patches, normalize=normalize, **kwargs
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -1210,6 +1211,8 @@ def install(name=None,
     errors = []
 
     if targets:
+        if patches:
+            targets = ["--advisory={0}".format(t) for t in targets]
         cmd = []
         if salt.utils.systemd.has_scope(__context__) \
                 and __salt__['config.get']('systemd.scope', True):
@@ -1218,7 +1221,10 @@ def install(name=None,
         if _yum() == 'dnf':
             cmd.extend(['--best', '--allowerasing'])
         _add_common_args(cmd)
-        cmd.append('install')
+        if patches:
+            cmd.append('update')
+        else:
+            cmd.append('install')
         cmd.extend(targets)
         out = __salt__['cmd.run_all'](
             cmd,
