@@ -13,13 +13,14 @@ Open up ``/etc/salt/master`` and add:
 
 .. code-block:: yaml
 
-    api_key: None
+    venafi:
+      api_key: None
 
 Then register your email address with Venafi using the following command:
 
 .. code-block:: bash
 
-    salt-run venefi.register <youremail@yourdomain.com>
+    salt-run venafi.register <youremail@yourdomain.com>
 
 This command will not return an ``api_key`` to you; that will be send to you
 via email from Venafi. Once you have received that key, open up your ``master``
@@ -27,31 +28,8 @@ file and set the ``api_key`` to it:
 
 .. code-block:: yaml
 
-    api_key: abcdef01-2345-6789-abcd-ef0123456789
-Before using these modules you need to register an account with Venafi, and
-configure it in your ``master`` configuration file.
-
-First, you need to add a placeholder to the ``master`` file. This is because
-the module will not load unless it finds an ``api_key`` setting, valid or not.
-Open up ``/etc/salt/master`` and add:
-
-.. code-block:: yaml
-
-    api_key: None
-
-Then register your email address with Venagi using the following command:
-
-.. code-block:: bash
-
-    salt-run venefi.register <youremail@yourdomain.com>
-
-This command will not return an ``api_key`` to you; that will be send to you
-via email from Venafi. Once you have received that key, open up your ``master``
-file and set the ``api_key`` to it:
-
-.. code-block:: yaml
-
-    api_key: abcdef01-2345-6789-abcd-ef0123456789
+    venafi:
+      api_key: abcdef01-2345-6789-abcd-ef0123456789
 
 Example Usage
 ~~~~~~~~~~~~~~~~

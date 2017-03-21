@@ -17,9 +17,9 @@ Then register your email address with Venagi using the following command:
 
 .. code-block:: bash
 
-    salt-run venefi.register <youremail@yourdomain.com>
+    salt-run venafi.register <youremail@yourdomain.com>
 
-This command will not return an ``api_key`` to you; that will be send to you
+This command will not return an ``api_key`` to you; that will be sent to you
 via email from Venafi. Once you have received that key, open up your ``master``
 file and set the ``api_key`` to it:
 
@@ -67,6 +67,12 @@ def gen_key(minion_id, dns_name=None, zone='default', password=None):
     private_key will be cached under that name. The type of key and the
     parameters used to generate the key are based on the default certificate
     use policy associated with the specified zone.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run venafi.gen_key <minion_id> [dns_name] [zone] [password]
     '''
     # Get the default certificate use policy associated with the zone
     # so we can generate keys that conform with policy
@@ -150,6 +156,12 @@ def gen_csr(
 
         VCert gencsr -cn [CN Value] -o "Beta Organization" -ou "Beta Group" \
             -l "Palo Alto" -st "California" -c US
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run venafi.gen_csr <minion_id> <dns_name>
     '''
     tmpdir = tempfile.mkdtemp()
     os.chmod(tmpdir, 0o700)
@@ -236,6 +248,12 @@ def request(
     .. code-block:: bash
 
         VCert enroll -z <zone> -k <api key> -cn <domain name>
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run venafi.request <minion_id> <dns_name>
     '''
     if password is not None:
         if password.startswith('sdb://'):
@@ -331,6 +349,12 @@ def _id_map(minion_id, dns_name):
 def register(email):
     '''
     Register a new user account
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run venafi.register email@example.com
     '''
     data = salt.utils.http.query(
         '{0}/useraccounts'.format(base_url),
@@ -357,6 +381,12 @@ def register(email):
 def show_company(domain):
     '''
     Show company information, especially the company id
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run venafi.show_company example.com
     '''
     data = salt.utils.http.query(
         '{0}/companies/domain/{1}'.format(base_url, domain),
@@ -378,6 +408,12 @@ def show_company(domain):
 def show_csrs():
     '''
     Show certificate requests for this API key
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run venafi.show_csrs
     '''
     data = salt.utils.http.query(
         '{0}/certificaterequests'.format(base_url),
@@ -398,6 +434,12 @@ def show_csrs():
 def get_zone_id(zone_name):
     '''
     Get the zone ID for the given zone name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run venafi.get_zone_id default
     '''
     data = salt.utils.http.query(
         '{0}/zones/tag/{1}'.format(base_url,zone_name),
@@ -420,6 +462,12 @@ def get_zone_id(zone_name):
 def show_zones():
     '''
     Show zone details for the API key owner's company
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run venafi.show_zones
     '''
     data = salt.utils.http.query(
         '{0}/zones'.format(base_url),
@@ -441,6 +489,12 @@ def show_zones():
 def show_cert(id_):
     '''
     Show certificate requests for this API key
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run venafi.show_cert 01234567-89ab-cdef-0123-456789abcdef
     '''
     data = salt.utils.http.query(
         '{0}/certificaterequests/{1}/certificate'.format(base_url, id_),
@@ -496,6 +550,12 @@ pickup = show_cert
 def show_rsa(minion_id, dns_name):
     '''
     Show a private RSA key
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run venafi.show_rsa myminion domain.example.com
     '''
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     bank = 'venafi/domains'
@@ -508,6 +568,12 @@ def show_rsa(minion_id, dns_name):
 def list_domain_cache():
     '''
     List domains that have been cached
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run venafi.list_domain_cache
     '''
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     return cache.list('venafi/domains')
@@ -515,7 +581,13 @@ def list_domain_cache():
 
 def del_cached_domain(domains):
     '''
-    List domains that have been cached
+    Delete cached domains from the master
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run venafi.del_cached_domain domain1.example.com,domain2.example.com
     '''
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     if isinstance(domains, six.string_types):
