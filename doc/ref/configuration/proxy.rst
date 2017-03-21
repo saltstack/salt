@@ -97,3 +97,24 @@ The frequency of keepalive checks, in minutes. It requires the
 .. code-block:: yaml
 
     proxy_keep_alive_interval: 5
+
+
+.. conf_proxy:: proxy_always_alive
+
+``proxy_always_alive``
+----------------------
+
+.. versionadded:: Nitrogen
+
+Default: ``True``
+
+Wheter the proxy should maintain the connection with the remote
+device. Similarly to :conf_minion:`proxy_keep_alive`, this option
+is very specific to the design of the proxy module.
+When :conf_minion:`proxy_always_alive` is set to ``False``,
+the connection with the remote device is not maintained and
+has to be closed after every command.
+
+.. code-block:: yaml
+
+    proxy_always_alive: False
