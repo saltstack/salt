@@ -152,6 +152,8 @@ def _get_instance(hosts=None, profile=None):
 
 def ping(allow_failure=False, hosts=None, profile=None):
     '''
+    .. versionadded:: 2017.3.0
+
     Test connection to Elasticsearch instance. This method does not fail if not explicitly specified.
 
     CLI example::
@@ -164,6 +166,89 @@ def ping(allow_failure=False, hosts=None, profile=None):
             raise e
         return False
     return True
+
+
+def info(hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Return Elasticsearch information.
+
+    CLI example::
+        salt myminion elasticsearch.info
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.info()
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve server information, server returned code {0} with message {1}".format(e.status_code, e.error))
+
+
+def node_info(nodes=None, flat_settings=False, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Return Elasticsearch node information.
+
+    nodes
+        List of cluster nodes (id or name) to display stats for. Use _local for connected node, empty for all
+    flat_settings
+        Flatten settings keys
+
+    CLI example::
+        salt myminion elasticsearch.node_info
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.nodes.info(node_id=nodes, flat_settings=flat_settings)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve node information, server returned code {0} with message {1}".format(e.status_code, e.error))
+
+
+def cluster_health(index=None, level='cluster', local=False, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Return Elasticsearch cluster health.
+
+    index
+        Limit the information returned to a specific index
+    level
+        Specify the level of detail for returned information, default 'cluster', valid choices are: 'cluster', 'indices', 'shards'
+    local
+        Return local information, do not retrieve the state from master node
+
+    CLI example::
+        salt myminion elasticsearch.health
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.cluster.health(index=index, level=level, local=local)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve health information, server returned code {0} with message {1}".format(e.status_code, e.error))
+
+
+def cluster_stats(nodes=None, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Return Elasticsearch cluster stats.
+
+    nodes
+        List of cluster nodes (id or name) to display stats for. Use _local for connected node, empty for all
+
+    CLI example::
+        salt myminion elasticsearch.stats
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.cluster.stats(node_id=nodes)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve cluster stats, server returned code {0} with message {1}".format(e.status_code, e.error))
 
 
 def alias_create(indices, alias, hosts=None, body=None, profile=None):
