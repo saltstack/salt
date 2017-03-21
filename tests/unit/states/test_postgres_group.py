@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import postgres_group
+import salt.states.postgres_group as postgres_group
 
 postgres_group.__opts__ = {}
 postgres_group.__salt__ = {}

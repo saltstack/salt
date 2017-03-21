@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import varnish
+import salt.modules.varnish as varnish
 
 # Globals
 varnish.__salt__ = {}

@@ -8,7 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
-from salt.modules import logrotate
+import salt.modules.logrotate as logrotate
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin

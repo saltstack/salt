@@ -6,7 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import host
+import salt.states.host as host
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase

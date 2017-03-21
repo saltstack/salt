@@ -31,7 +31,7 @@ from tests.support.mock import (
 from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
-from salt.modules import tls
+import salt.modules.tls as tls
 from salt.utils.versions import LooseVersion
 
 

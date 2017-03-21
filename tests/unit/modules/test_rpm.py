@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import rpm
+import salt.modules.rpm as rpm
 
 # Globals
 rpm.__salt__ = {}

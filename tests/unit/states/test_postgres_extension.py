@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import postgres_extension
+import salt.states.postgres_extension as postgres_extension
 
 postgres_extension.__opts__ = {}
 postgres_extension.__salt__ = {}

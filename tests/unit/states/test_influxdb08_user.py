@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import influxdb08_user
+import salt.states.influxdb08_user as influxdb08_user
 
 influxdb08_user.__salt__ = {}
 influxdb08_user.__opts__ = {}

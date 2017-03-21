@@ -12,7 +12,7 @@ import json
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
-from salt.modules import win_iis
+import salt.modules.win_iis as win_iis
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf

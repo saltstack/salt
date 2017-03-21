@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import postgres_user
+import salt.states.postgres_user as postgres_user
 
 postgres_user.__opts__ = {}
 postgres_user.__salt__ = {}

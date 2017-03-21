@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import debian_ip
+import salt.modules.debian_ip as debian_ip
 
 # Import third party libs
 import jinja2.exceptions

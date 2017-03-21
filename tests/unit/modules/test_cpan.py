@@ -15,7 +15,7 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 # Import Salt Libs
-from salt.modules import cpan
+import salt.modules.cpan as cpan
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

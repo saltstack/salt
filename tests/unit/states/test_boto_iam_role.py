@@ -15,7 +15,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import boto_iam_role
+import salt.states.boto_iam_role as boto_iam_role
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

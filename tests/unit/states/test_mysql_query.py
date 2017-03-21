@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import mysql_query
+import salt.states.mysql_query as mysql_query
 import os
 
 mysql_query.__salt__ = {}

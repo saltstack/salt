@@ -16,7 +16,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import glusterfs
+import salt.states.glusterfs as glusterfs
 import salt.utils.cloud
 import salt.modules.glusterfs as mod_glusterfs
 

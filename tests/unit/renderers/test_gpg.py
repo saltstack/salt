@@ -13,7 +13,7 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-from salt.renderers import gpg
+import salt.renderers.gpg as gpg
 from salt.exceptions import SaltRenderError
 
 gpg.__salt__ = {}

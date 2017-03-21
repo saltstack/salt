@@ -21,7 +21,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 from salt.utils.versions import LooseVersion
-from salt.modules import git as git_mod  # Don't potentially shadow GitPython
+import salt.modules.git as git_mod  # Don't potentially shadow GitPython
 
 # Globals
 git_mod.__salt__ = {}

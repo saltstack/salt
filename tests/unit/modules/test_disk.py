@@ -12,7 +12,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
-from salt.modules import disk
+import salt.modules.disk as disk
 import salt.utils
 
 STUB_DISK_USAGE = {

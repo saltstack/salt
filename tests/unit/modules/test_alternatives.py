@@ -17,7 +17,7 @@ from tests.support.helpers import TestsLoggingHandler
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-from salt.modules import alternatives
+import salt.modules.alternatives as alternatives
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

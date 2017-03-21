@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import ssh_known_hosts
+import salt.states.ssh_known_hosts as ssh_known_hosts
 
 ssh_known_hosts.__salt__ = {}
 ssh_known_hosts.__opts__ = {}

@@ -12,7 +12,7 @@ from tests.support.unit import TestCase
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
-from salt.modules import mac_group
+import salt.modules.mac_group as mac_group
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 

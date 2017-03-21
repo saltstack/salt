@@ -10,7 +10,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import win_snmp
+import salt.modules.win_snmp as win_snmp
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf

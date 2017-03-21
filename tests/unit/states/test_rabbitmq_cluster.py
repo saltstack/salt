@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import rabbitmq_cluster
+import salt.states.rabbitmq_cluster as rabbitmq_cluster
 
 # Globals
 rabbitmq_cluster.__salt__ = {}

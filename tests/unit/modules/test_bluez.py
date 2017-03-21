@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import bluez
+import salt.modules.bluez as bluez
 from salt.exceptions import CommandExecutionError
 import salt.utils.validate.net
 

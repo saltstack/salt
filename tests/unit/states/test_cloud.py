@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import cloud
+import salt.states.cloud as cloud
 import salt.utils.cloud
 
 cloud.__salt__ = {}

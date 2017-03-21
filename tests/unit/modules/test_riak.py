@@ -13,7 +13,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import riak
+import salt.modules.riak as riak
 
 # Globals
 riak.__salt__ = {}

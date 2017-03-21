@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import rsync
+import salt.modules.rsync as rsync
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Globals

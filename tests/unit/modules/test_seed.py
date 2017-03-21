@@ -18,7 +18,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils.odict
-from salt.modules import seed
+import salt.modules.seed as seed
 
 # Globals
 seed.__salt__ = {}

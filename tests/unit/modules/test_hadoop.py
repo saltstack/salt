@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import hadoop
+import salt.modules.hadoop as hadoop
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

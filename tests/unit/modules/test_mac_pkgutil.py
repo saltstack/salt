@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import salt module
-from salt.modules import mac_pkgutil
+import salt.modules.mac_pkgutil as mac_pkgutil
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf

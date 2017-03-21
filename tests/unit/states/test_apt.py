@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import aptpkg
+import salt.states.aptpkg as aptpkg
 
 aptpkg.__opts__ = {}
 aptpkg.__salt__ = {}

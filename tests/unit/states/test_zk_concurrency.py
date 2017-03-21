@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import zk_concurrency
+import salt.states.zk_concurrency as zk_concurrency
 
 # Globals
 zk_concurrency.__salt__ = {}

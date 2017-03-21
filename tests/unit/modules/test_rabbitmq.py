@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import rabbitmq
+import salt.modules.rabbitmq as rabbitmq
 from salt.exceptions import CommandExecutionError
 
 

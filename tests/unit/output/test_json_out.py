@@ -11,7 +11,7 @@ import json
 from tests.support.unit import TestCase
 
 # Import Salt Libs
-from salt.output import json_out
+import salt.output.json_out as json_out
 
 # Import 3rd-party libs
 import salt.ext.six as six

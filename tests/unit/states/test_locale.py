@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import locale
+import salt.states.locale as locale
 
 # Globals
 locale.__salt__ = {}

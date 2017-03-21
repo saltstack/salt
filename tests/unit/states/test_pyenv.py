@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import pyenv
+import salt.states.pyenv as pyenv
 
 pyenv.__opts__ = {}
 pyenv.__salt__ = {}

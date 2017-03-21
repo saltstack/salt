@@ -14,7 +14,7 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salt.modules import servicenow
+import salt.modules.servicenow as servicenow
 
 SERVICE_NAME = 'servicenow'
 servicenow.__salt__ = {}

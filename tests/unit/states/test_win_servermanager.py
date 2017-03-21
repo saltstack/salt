@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import win_servermanager
+import salt.states.win_servermanager as win_servermanager
 
 # Globals
 win_servermanager.__salt__ = {}

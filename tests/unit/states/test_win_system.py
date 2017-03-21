@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import win_system
+import salt.states.win_system as win_system
 
 # Globals
 win_system.__salt__ = {}

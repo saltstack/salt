@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import mac_keychain as keychain
+import salt.states.mac_keychain as keychain
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase

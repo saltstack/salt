@@ -16,7 +16,7 @@ from tests.support.mock import (
 from salt.exceptions import SaltException
 
 # Import Salt Libs
-from salt.states import composer
+import salt.states.composer as composer
 
 composer.__salt__ = {}
 composer.__opts__ = {}

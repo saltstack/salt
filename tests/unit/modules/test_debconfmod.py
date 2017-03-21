@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import debconfmod
+import salt.modules.debconfmod as debconfmod
 import os
 
 

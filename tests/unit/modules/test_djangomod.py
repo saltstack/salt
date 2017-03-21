@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import djangomod
+import salt.modules.djangomod as djangomod
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

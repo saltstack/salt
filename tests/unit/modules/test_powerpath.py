@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import powerpath
+import salt.modules.powerpath as powerpath
 
 # Globals
 powerpath.__salt__ = {}

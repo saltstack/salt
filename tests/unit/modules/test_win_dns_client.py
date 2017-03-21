@@ -32,7 +32,7 @@ if NO_MOCK is False:
     pythoncom.CoUninitialize = Mock()
 
 # Import Salt Libs
-from salt.modules import win_dns_client
+import salt.modules.win_dns_client as win_dns_client
 
 # Globals
 win_dns_client.__salt__ = {}

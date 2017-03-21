@@ -12,7 +12,7 @@ import ssl
 from tests.support.unit import TestCase, skipIf
 
 # Import salt libs
-from salt.modules import cassandra_cql
+import salt.modules.cassandra_cql as cassandra_cql
 from salt.exceptions import CommandExecutionError
 
 cassandra_cql.__salt__ = {}

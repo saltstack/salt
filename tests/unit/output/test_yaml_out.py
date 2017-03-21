@@ -12,7 +12,7 @@ from tests.support.unit import TestCase
 from tests.support.mock import patch
 
 # Import Salt Libs
-from salt.output import yaml_out as yaml
+import salt.output.yaml_out as yaml
 
 
 class YamlTestCase(TestCase, LoaderModuleMockMixin):

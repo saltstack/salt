@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import alternatives
+import salt.states.alternatives as alternatives
 
 alternatives.__opts__ = {}
 alternatives.__salt__ = {}

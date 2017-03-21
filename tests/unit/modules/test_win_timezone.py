@@ -14,7 +14,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import win_timezone
+import salt.modules.win_timezone as win_timezone
 
 # Globals
 win_timezone.__salt__ = {}

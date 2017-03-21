@@ -19,7 +19,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.ext.six as six
 import salt.utils
-from salt.modules import launchctl
+import salt.modules.launchctl as launchctl
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

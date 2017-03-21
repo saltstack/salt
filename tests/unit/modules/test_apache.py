@@ -18,7 +18,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import apache
+import salt.modules.apache as apache
 from salt.ext.six.moves.urllib.error import URLError  # pylint: disable=import-error,no-name-in-module
 
 

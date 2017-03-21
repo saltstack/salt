@@ -17,7 +17,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.ext.six as six
-from salt.modules import cassandra
+import salt.modules.cassandra as cassandra
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

@@ -15,7 +15,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import postfix
+import salt.modules.postfix as postfix
 
 # Globals
 postfix.__salt__ = {}

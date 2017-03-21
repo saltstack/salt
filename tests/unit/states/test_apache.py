@@ -15,7 +15,7 @@ from tests.support.mock import (
     mock_open)
 
 # Import Salt Libs
-from salt.states import apache
+import salt.states.apache as apache
 import salt.utils
 
 apache.__opts__ = {}

@@ -10,7 +10,7 @@ from tests.support.unit import skipIf, TestCase
 import salt.state
 from salt.config import minion_config
 from salt.template import compile_template_str
-from salt.serializers import yamlex
+import salt.serializers.yamlex as yamlex
 
 basic_template = '''#!yamlex
 foo: bar

@@ -44,7 +44,7 @@ def get_test_data(filename):
 
 
 # Import Salt Libs
-from salt.modules import zypper
+import salt.modules.zypper as zypper
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

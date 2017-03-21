@@ -18,7 +18,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import glusterfs
+import salt.modules.glusterfs as glusterfs
 from salt.exceptions import SaltInvocationError
 
 

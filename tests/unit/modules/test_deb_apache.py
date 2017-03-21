@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import deb_apache
+import salt.modules.deb_apache as deb_apache
 # Globals
 deb_apache.__grains__ = {}
 deb_apache.__salt__ = {}

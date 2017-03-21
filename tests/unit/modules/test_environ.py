@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import environ
+import salt.modules.environ as environ
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import pkgng
+import salt.states.pkgng as pkgng
 
 pkgng.__salt__ = {}
 

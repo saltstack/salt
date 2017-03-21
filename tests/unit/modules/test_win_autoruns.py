@@ -14,7 +14,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import win_autoruns
+import salt.modules.win_autoruns as win_autoruns
 
 # Globals
 win_autoruns.__salt__ = {}

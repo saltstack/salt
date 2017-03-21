@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import pecl
+import salt.states.pecl as pecl
 
 pecl.__salt__ = {}
 pecl.__opts__ = {}

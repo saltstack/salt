@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import ilo
+import salt.modules.ilo as ilo
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

@@ -11,8 +11,8 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-from salt.modules import virt
-from salt.modules import config
+import salt.modules.virt as virt
+import salt.modules.config as config
 from salt._compat import ElementTree as ET
 import salt.utils
 

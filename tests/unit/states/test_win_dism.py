@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import win_dism as dism
+import salt.states.win_dism as dism
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase

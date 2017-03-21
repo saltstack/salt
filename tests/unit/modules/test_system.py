@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import system
+import salt.modules.system as system
 
 # Globals
 system.__salt__ = {}

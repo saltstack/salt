@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import group
+import salt.states.group as group
 from salt.utils.odict import OrderedDict
 
 

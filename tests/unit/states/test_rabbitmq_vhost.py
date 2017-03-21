@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import rabbitmq_vhost
+import salt.states.rabbitmq_vhost as rabbitmq_vhost
 
 rabbitmq_vhost.__opts__ = {}
 rabbitmq_vhost.__salt__ = {}

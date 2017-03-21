@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import win_network
+import salt.states.win_network as win_network
 
 # Globals
 win_network.__salt__ = {}

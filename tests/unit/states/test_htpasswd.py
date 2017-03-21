@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import htpasswd
+import salt.states.htpasswd as htpasswd
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

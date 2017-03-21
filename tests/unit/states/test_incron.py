@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import incron
+import salt.states.incron as incron
 
 incron.__salt__ = {}
 incron.__opts__ = {}

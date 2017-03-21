@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import ntp
+import salt.states.ntp as ntp
 
 ntp.__salt__ = {}
 ntp.__opts__ = {}

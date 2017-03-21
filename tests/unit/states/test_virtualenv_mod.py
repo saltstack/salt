@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import virtualenv_mod
+import salt.states.virtualenv_mod as virtualenv_mod
 
 # Globals
 virtualenv_mod.__salt__ = {}

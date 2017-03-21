@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import chef
+import salt.states.chef as chef
 
 chef.__salt__ = {}
 chef.__opts__ = {}

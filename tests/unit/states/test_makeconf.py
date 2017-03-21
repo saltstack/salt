@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import makeconf
+import salt.states.makeconf as makeconf
 
 makeconf.__salt__ = {}
 

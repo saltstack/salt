@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import win_service
+import salt.modules.win_service as win_service
 
 # Import 3rd Party Libs
 try:

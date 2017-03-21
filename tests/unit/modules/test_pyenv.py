@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import pyenv
+import salt.modules.pyenv as pyenv
 
 # Globals
 pyenv.__grains__ = {}

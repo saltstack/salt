@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import xmpp
+import salt.states.xmpp as xmpp
 
 # Globals
 xmpp.__salt__ = {}

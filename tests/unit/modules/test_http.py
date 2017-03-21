@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import http
+import salt.modules.http as http
 import salt.utils.http
 
 

@@ -18,7 +18,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
-from salt.modules import at
+import salt.modules.at as at
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

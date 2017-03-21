@@ -14,7 +14,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import win_disk
+import salt.modules.win_disk as win_disk
 
 
 class MockKernel32(object):

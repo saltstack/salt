@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import mongodb_user
+import salt.states.mongodb_user as mongodb_user
 
 mongodb_user.__salt__ = {}
 mongodb_user.__opts__ = {'test': True}

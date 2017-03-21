@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import nagios
+import salt.modules.nagios as nagios
 import os
 
 

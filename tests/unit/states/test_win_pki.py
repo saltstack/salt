@@ -10,7 +10,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import win_pki
+import salt.states.win_pki as win_pki
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf

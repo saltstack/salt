@@ -10,7 +10,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import win_snmp
+import salt.states.win_snmp as win_snmp
 import salt.ext.six as six
 
 # Import Salt Testing Libs

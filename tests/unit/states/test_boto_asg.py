@@ -11,7 +11,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt Libs
-from salt.states import boto_asg
+import salt.states.boto_asg as boto_asg
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

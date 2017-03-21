@@ -9,7 +9,7 @@ from tests.support.unit import TestCase
 from tests.support.mock import patch, MagicMock
 
 # Import Salt Libs
-from salt.pillar import nodegroups
+import salt.pillar.nodegroups as nodegroups
 
 fake_minion_id = 'fake_id'
 fake_pillar = {}

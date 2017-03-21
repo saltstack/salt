@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import win_path
+import salt.states.win_path as win_path
 
 # Globals
 win_path.__salt__ = {}

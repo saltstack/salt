@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import rabbitmq_policy
+import salt.states.rabbitmq_policy as rabbitmq_policy
 
 rabbitmq_policy.__opts__ = {}
 rabbitmq_policy.__salt__ = {}

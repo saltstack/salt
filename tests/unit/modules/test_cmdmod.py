@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import cmdmod
+import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.log import LOG_LEVELS
 import salt.utils

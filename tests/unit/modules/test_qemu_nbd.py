@@ -19,7 +19,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import qemu_nbd
+import salt.modules.qemu_nbd as qemu_nbd
 
 qemu_nbd.__salt__ = {}
 

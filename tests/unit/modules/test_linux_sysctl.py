@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import linux_sysctl
-from salt.modules import systemd
+import salt.modules.linux_sysctl as linux_sysctl
+import salt.modules.systemd as systemd
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs

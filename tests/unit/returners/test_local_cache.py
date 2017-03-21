@@ -24,7 +24,7 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.utils
-from salt.returners import local_cache
+import salt.returners.local_cache as local_cache
 
 TMP_CACHE_DIR = '/tmp/salt_test_job_cache/'
 TMP_JID_DIR = '/tmp/salt_test_job_cache/jobs/'

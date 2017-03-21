@@ -15,7 +15,7 @@ from tests.support.mock import (
 # Import Salt libs
 import salt.ext.six as six
 from salt.utils.odict import OrderedDict
-from salt.modules import pillar as pillarmod
+import salt.modules.pillar as pillarmod
 
 
 pillar_value_1 = dict(a=1, b='very secret')

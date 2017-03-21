@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import composer
+import salt.modules.composer as composer
 from salt.exceptions import CommandExecutionError, CommandNotFoundError, SaltInvocationError
 
 

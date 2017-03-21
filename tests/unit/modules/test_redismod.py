@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import redismod
+import salt.modules.redismod as redismod
 from datetime import datetime
 
 

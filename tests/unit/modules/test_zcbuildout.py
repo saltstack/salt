@@ -22,8 +22,8 @@ from tests.support.helpers import requires_network, skip_if_binaries_missing
 
 # Import Salt libs
 import salt.utils
-from salt.modules import zcbuildout as buildout
-from salt.modules import cmdmod as cmd
+import salt.modules.zcbuildout as buildout
+import salt.modules.cmdmod as cmd
 
 ROOT = os.path.join(FILES, 'file', 'base', 'buildout')
 

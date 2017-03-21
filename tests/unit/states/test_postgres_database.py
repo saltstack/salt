@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import postgres_database
+import salt.states.postgres_database as postgres_database
 
 postgres_database.__opts__ = {}
 postgres_database.__salt__ = {}

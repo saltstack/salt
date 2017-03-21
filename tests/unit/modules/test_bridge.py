@@ -12,7 +12,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
-from salt.modules import bridge
+import salt.modules.bridge as bridge
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

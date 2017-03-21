@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import rdp
+import salt.states.rdp as rdp
 
 rdp.__opts__ = {}
 rdp.__salt__ = {}

@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import aws_sqs
+import salt.states.aws_sqs as aws_sqs
 
 aws_sqs.__salt__ = {}
 aws_sqs.__opts__ = {}

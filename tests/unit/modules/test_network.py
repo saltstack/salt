@@ -21,7 +21,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.ext.six as six
 import salt.utils
-from salt.modules import network
+import salt.modules.network as network
 from salt.exceptions import CommandExecutionError
 if six.PY2:
     import salt.ext.ipaddress

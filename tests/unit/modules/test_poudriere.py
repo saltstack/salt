@@ -19,7 +19,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import poudriere
+import salt.modules.poudriere as poudriere
 
 # Globals
 poudriere.__salt__ = {}

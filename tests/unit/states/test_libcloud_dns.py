@@ -13,7 +13,7 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salt.states import libcloud_dns
+import salt.states.libcloud_dns as libcloud_dns
 
 SERVICE_NAME = 'libcloud_dns'
 libcloud_dns.__utils__ = {}

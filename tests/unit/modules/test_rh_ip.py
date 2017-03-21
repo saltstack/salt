@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import rh_ip
+import salt.modules.rh_ip as rh_ip
 import jinja2.exceptions
 import os
 

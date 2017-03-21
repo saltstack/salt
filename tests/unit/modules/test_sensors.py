@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import sensors
+import salt.modules.sensors as sensors
 
 # Globals
 sensors.__salt__ = {}

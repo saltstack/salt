@@ -11,7 +11,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import openvswitch_port
+import salt.states.openvswitch_port as openvswitch_port
 
 openvswitch_port.__salt__ = {}
 openvswitch_port.__opts__ = {'test': False}

@@ -18,7 +18,7 @@ from tests.support.mock import (
 import os
 
 # Import Salt Libs
-from salt.modules import daemontools
+import salt.modules.daemontools as daemontools
 from salt.exceptions import CommandExecutionError
 
 

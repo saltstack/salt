@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import ipset
+import salt.modules.ipset as ipset
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

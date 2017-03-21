@@ -16,7 +16,7 @@ from tests.support.mock import (
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Libs
-from salt.states import openstack_config
+import salt.states.openstack_config as openstack_config
 
 openstack_config.__salt__ = {}
 openstack_config.__opts__ = {'test': False}

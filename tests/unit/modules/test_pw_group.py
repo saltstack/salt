@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import pw_group
+import salt.modules.pw_group as pw_group
 
 # Globals
 pw_group.__grains__ = {}

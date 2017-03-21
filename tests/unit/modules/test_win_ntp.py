@@ -14,7 +14,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import win_ntp
+import salt.modules.win_ntp as win_ntp
 
 # Globals
 win_ntp.__salt__ = {}

@@ -14,7 +14,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import gentoo_service
+import salt.modules.gentoo_service as gentoo_service
 
 
 # Globals

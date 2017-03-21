@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import proxy as proxy
+import salt.modules.proxy as proxy
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin

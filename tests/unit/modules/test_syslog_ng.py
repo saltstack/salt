@@ -13,7 +13,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
 import salt
-from salt.modules import syslog_ng
+import salt.modules.syslog_ng as syslog_ng
 
 syslog_ng.__salt__ = {}
 syslog_ng.__opts__ = {}

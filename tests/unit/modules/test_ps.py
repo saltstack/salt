@@ -11,7 +11,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, call, Mock
 
 # Import Salt libs
-from salt.modules import ps
+import salt.modules.ps as ps
 import salt.ext.six as six
 
 ps_virtual = ps.__virtual__()

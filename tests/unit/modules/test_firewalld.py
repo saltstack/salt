@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import firewalld
+import salt.modules.firewalld as firewalld
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

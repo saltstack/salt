@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import service
+import salt.states.service as service
 
 
 def func(name):

@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import apache_module
+import salt.states.apache_module as apache_module
 
 apache_module.__opts__ = {}
 apache_module.__salt__ = {}

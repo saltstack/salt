@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import rh_service
+import salt.modules.rh_service as rh_service
 
 # Globals
 rh_service.__salt__ = {}

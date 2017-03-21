@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import mdadm
+import salt.states.mdadm as mdadm
 
 # Globals
 mdadm.__salt__ = {}

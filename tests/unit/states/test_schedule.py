@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import schedule
+import salt.states.schedule as schedule
 
 schedule.__opts__ = {}
 schedule.__salt__ = {}

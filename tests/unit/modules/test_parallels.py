@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import textwrap
 
 # Import Salt Libs
-from salt.modules import parallels
+import salt.modules.parallels as parallels
 from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing Libs

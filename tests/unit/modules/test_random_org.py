@@ -11,7 +11,7 @@ from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
 import salt.utils.http
-from salt.modules import random_org
+import salt.modules.random_org as random_org
 
 random_org.__opts__ = {}
 

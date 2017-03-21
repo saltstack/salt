@@ -15,7 +15,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import boto_cloudwatch_alarm
+import salt.states.boto_cloudwatch_alarm as boto_cloudwatch_alarm
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

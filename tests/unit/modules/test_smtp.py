@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import smtp
+import salt.modules.smtp as smtp
 
 smtp.__salt__ = {}
 

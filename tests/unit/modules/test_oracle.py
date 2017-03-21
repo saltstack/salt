@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import oracle
+import salt.modules.oracle as oracle
 import os
 
 # Globals

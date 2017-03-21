@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import mount
+import salt.states.mount as mount
 import os
 
 mount.__salt__ = {}

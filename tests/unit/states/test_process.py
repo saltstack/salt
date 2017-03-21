@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import process
+import salt.states.process as process
 
 process.__opts__ = {}
 process.__salt__ = {}

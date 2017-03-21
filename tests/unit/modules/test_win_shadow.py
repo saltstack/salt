@@ -14,7 +14,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import win_shadow
+import salt.modules.win_shadow as win_shadow
 import salt.utils
 
 # Globals

@@ -26,7 +26,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import ddns
+import salt.modules.ddns as ddns
 
 
 @skipIf(HAS_DNS is False, 'dnspython libs not installed')

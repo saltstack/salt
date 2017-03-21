@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import ssh_auth
+import salt.states.ssh_auth as ssh_auth
 
 ssh_auth.__salt__ = {}
 ssh_auth.__opts__ = {}

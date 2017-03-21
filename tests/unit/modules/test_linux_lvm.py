@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import linux_lvm
+import salt.modules.linux_lvm as linux_lvm
 from salt.exceptions import CommandExecutionError
 
 # Globals

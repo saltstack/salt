@@ -12,7 +12,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
-from salt.modules import kmod
+import salt.modules.kmod as kmod
 
 
 class KmodTestCase(TestCase):

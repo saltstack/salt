@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import rbenv
+import salt.states.rbenv as rbenv
 
 rbenv.__opts__ = {}
 rbenv.__salt__ = {}

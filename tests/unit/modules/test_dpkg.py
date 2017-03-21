@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import dpkg
+import salt.modules.dpkg as dpkg
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

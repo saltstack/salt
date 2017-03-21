@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import xapi
+import salt.modules.xapi as xapi
 
 xapi.__grains__ = {}
 xapi.__salt__ = {}

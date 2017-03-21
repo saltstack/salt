@@ -12,7 +12,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
-from salt.modules import bower
+import salt.modules.bower as bower
 from salt.exceptions import CommandExecutionError
 
 

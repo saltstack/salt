@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import win_powercfg as powercfg
+import salt.states.win_powercfg as powercfg
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase

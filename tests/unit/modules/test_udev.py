@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import udev
+import salt.modules.udev as udev
 
 # Globals
 udev.__salt__ = {}

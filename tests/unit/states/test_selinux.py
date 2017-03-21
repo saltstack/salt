@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import selinux
+import salt.states.selinux as selinux
 
 selinux.__opts__ = {}
 selinux.__salt__ = {}

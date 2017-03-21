@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import lxc
+import salt.states.lxc as lxc
 import salt.utils
 
 lxc.__salt__ = {}

@@ -10,7 +10,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, call
 
 # Import salt libs
-from salt.modules import postgres
+import salt.modules.postgres as postgres
 from salt.exceptions import SaltInvocationError
 
 test_list_db_csv = (

@@ -14,7 +14,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import rdp
+import salt.modules.rdp as rdp
 
 # Globals
 rdp.__salt__ = {}

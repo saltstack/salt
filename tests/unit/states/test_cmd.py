@@ -17,7 +17,7 @@ from tests.support.mock import (
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Libs
-from salt.states import cmd
+import salt.states.cmd as cmd
 
 cmd.__salt__ = {}
 cmd.__opts__ = {}

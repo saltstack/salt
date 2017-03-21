@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import twilio_notify
+import salt.modules.twilio_notify as twilio_notify
 
 
 class MockTwilioRestException(Exception):

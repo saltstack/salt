@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import service
+import salt.modules.service as service
 import os
 
 # Globals

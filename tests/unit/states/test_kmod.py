@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import kmod
+import salt.states.kmod as kmod
 
 kmod.__salt__ = {}
 kmod.__opts__ = {}

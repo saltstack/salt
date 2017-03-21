@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import redismod
+import salt.states.redismod as redismod
 
 redismod.__salt__ = {}
 

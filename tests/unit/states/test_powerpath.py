@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import powerpath
+import salt.states.powerpath as powerpath
 
 powerpath.__opts__ = {}
 powerpath.__salt__ = {}

@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import grafana
+import salt.states.grafana as grafana
 from salt.exceptions import SaltInvocationError
 
 grafana.__opts__ = {}

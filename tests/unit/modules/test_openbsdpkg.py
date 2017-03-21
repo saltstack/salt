@@ -18,7 +18,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import openbsdpkg
+import salt.modules.openbsdpkg as openbsdpkg
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

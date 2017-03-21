@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import modjk_worker
+import salt.states.modjk_worker as modjk_worker
 
 modjk_worker.__salt__ = {}
 

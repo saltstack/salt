@@ -13,9 +13,9 @@ from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 import salt.utils
-from salt.modules import file as filemod
-from salt.modules import config as configmod
-from salt.modules import cmdmod
+import salt.modules.file as filemod
+import salt.modules.config as configmod
+import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
 
 SED_CONTENT = """test

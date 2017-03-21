@@ -18,7 +18,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import devmap
+import salt.modules.devmap as devmap
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

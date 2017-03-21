@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import introspect
+import salt.modules.introspect as introspect
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

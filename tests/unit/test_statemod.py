@@ -14,7 +14,7 @@ from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
 import tests.integration as integration
-from salt.states import saltmod
+import salt.states.saltmod as saltmod
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

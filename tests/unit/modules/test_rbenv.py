@@ -15,7 +15,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import rbenv
+import salt.modules.rbenv as rbenv
 import os
 
 

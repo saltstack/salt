@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import serverdensity_device
+import salt.modules.serverdensity_device as serverdensity_device
 from salt.exceptions import CommandExecutionError
 
 serverdensity_device.__salt__ = {}

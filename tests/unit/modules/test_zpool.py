@@ -21,7 +21,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Execution module to test
-from salt.modules import zpool
+import salt.modules.zpool as zpool
 
 # Import Salt Utils
 from salt.utils.odict import OrderedDict

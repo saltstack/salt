@@ -28,7 +28,7 @@ if NO_MOCK is False:
     wmi.WMI = Mock(return_value=WMI)
 
 # Import Salt Libs
-from salt.modules import win_network
+import salt.modules.win_network as win_network
 
 win_network.__salt__ = {}
 

@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from inspect import ArgSpec
 
 # Import Salt Libs
-from salt.states import module
+import salt.states.module as module
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin

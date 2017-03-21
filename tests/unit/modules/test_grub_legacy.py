@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import grub_legacy
+import salt.modules.grub_legacy as grub_legacy
 from salt.exceptions import CommandExecutionError
 
 # Globals

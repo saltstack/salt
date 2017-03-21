@@ -16,7 +16,7 @@ import time
 from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import destructiveTest
 # Import Salt Libs
-from salt.modules import reg as win_mod_reg
+import salt.modules.reg as win_mod_reg
 from salt.ext import six
 try:
     from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module

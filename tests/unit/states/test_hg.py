@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Libs
-from salt.states import hg
+import salt.states.hg as hg
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase

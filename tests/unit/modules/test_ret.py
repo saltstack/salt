@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import ret
+import salt.modules.ret as ret
 import salt.loader
 
 # Globals

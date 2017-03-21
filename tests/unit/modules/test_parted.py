@@ -16,7 +16,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-from salt.modules import parted
+import salt.modules.parted as parted
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

@@ -15,7 +15,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import boto_route53
+import salt.states.boto_route53 as boto_route53
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

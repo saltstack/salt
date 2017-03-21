@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import lvm
+import salt.states.lvm as lvm
 
 lvm.__opts__ = {}
 lvm.__salt__ = {}

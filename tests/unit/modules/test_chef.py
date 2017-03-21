@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import chef
+import salt.modules.chef as chef
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

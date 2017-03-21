@@ -6,7 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import event
+import salt.states.event as event
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase

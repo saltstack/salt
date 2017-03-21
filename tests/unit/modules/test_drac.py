@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import drac
+import salt.modules.drac as drac
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

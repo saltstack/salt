@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import mac_desktop
+import salt.modules.mac_desktop as mac_desktop
 from salt.exceptions import CommandExecutionError
 
 # Globals

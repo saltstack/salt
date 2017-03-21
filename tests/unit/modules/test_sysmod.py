@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import sysmod
+import salt.modules.sysmod as sysmod
 
 
 class MockDocstringable(object):

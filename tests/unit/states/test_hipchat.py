@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import hipchat
+import salt.states.hipchat as hipchat
 
 hipchat.__salt__ = {}
 hipchat.__opts__ = {}

@@ -13,7 +13,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
 
 # Import salt libs
-from salt.modules import portage_config
+import salt.modules.portage_config as portage_config
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

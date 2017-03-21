@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import at
+import salt.states.at as at
 
 at.__salt__ = {}
 at.__opts__ = {}

@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import mac_package as macpackage
+import salt.states.mac_package as macpackage
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase

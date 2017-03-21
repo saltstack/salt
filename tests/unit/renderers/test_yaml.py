@@ -7,7 +7,7 @@ from __future__ import absolute_import
 from tests.support.unit import TestCase
 
 # Import Salt libs
-from salt.renderers import yaml
+import salt.renderers.yaml as yaml
 
 yaml.__salt__ = {}
 yaml.__opts__ = {}

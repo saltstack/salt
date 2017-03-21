@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import postgres_cluster
+import salt.states.postgres_cluster as postgres_cluster
 
 postgres_cluster.__opts__ = {}
 postgres_cluster.__salt__ = {}

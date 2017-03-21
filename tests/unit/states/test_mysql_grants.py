@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import mysql_grants
+import salt.states.mysql_grants as mysql_grants
 
 mysql_grants.__salt__ = {}
 mysql_grants.__opts__ = {}

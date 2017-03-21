@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import keystone
+import salt.states.keystone as keystone
 
 keystone.__opts__ = {}
 keystone.__salt__ = {}

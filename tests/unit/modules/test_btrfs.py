@@ -19,7 +19,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt
 import salt.utils.fsutils
-from salt.modules import btrfs
+import salt.modules.btrfs as btrfs
 from salt.exceptions import CommandExecutionError
 
 

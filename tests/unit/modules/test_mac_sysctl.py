@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import mac_sysctl
+import salt.modules.mac_sysctl as mac_sysctl
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs

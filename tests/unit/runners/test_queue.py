@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.runners import queue as queue_mod
+import salt.runners.queue as queue_mod
 
 queue_mod.__opts__ = {'sock_dir': '/var/run/salt/master', 'transport': 'zeromq'}
 queue_mod.__salt__ = {}

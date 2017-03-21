@@ -10,7 +10,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
-from salt.states import jboss7
+import salt.states.jboss7 as jboss7
 from salt.exceptions import CommandExecutionError
 
 

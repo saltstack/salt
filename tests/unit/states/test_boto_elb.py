@@ -16,7 +16,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import boto_elb
+import salt.states.boto_elb as boto_elb
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

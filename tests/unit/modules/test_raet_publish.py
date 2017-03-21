@@ -15,7 +15,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import raet_publish
+import salt.modules.raet_publish as raet_publish
 import salt.transport
 from salt.exceptions import SaltReqTimeoutError
 

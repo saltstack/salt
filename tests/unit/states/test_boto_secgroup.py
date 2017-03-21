@@ -8,7 +8,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.case import TestCase
 
 # Import Salt Libs
-from salt.states import boto_secgroup
+import salt.states.boto_secgroup as boto_secgroup
 from salt.utils.odict import OrderedDict
 
 

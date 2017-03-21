@@ -16,7 +16,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import virt
+import salt.states.virt as virt
 import salt.utils
 
 virt.__salt__ = {}

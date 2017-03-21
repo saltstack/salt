@@ -18,7 +18,7 @@ from tests.support.mock import (
 
 # Import Salt libs
 from salt.exceptions import SaltException
-from salt.modules import grains as grainsmod
+import salt.modules.grains as grainsmod
 from salt.utils import dictupdate
 
 # Import 3rd-party libs

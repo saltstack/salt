@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import win_powercfg as powercfg
+import salt.modules.win_powercfg as powercfg
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin

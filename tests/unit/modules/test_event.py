@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import event
+import salt.modules.event as event
 import salt.utils.event
 
 

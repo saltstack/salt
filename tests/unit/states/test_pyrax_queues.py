@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import pyrax_queues
+import salt.states.pyrax_queues as pyrax_queues
 
 pyrax_queues.__opts__ = {}
 pyrax_queues.__salt__ = {}

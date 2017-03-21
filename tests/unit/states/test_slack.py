@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import slack
+import salt.states.slack as slack
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

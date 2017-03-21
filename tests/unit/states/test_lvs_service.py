@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import lvs_service
+import salt.states.lvs_service as lvs_service
 
 lvs_service.__salt__ = {}
 lvs_service.__opts__ = {}

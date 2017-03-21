@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import reg
+import salt.states.reg as reg
 
 reg.__opts__ = {}
 reg.__salt__ = {}

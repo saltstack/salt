@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import etcd_mod
+import salt.modules.etcd_mod as etcd_mod
 from salt.utils import etcd_util
 
 # Globals

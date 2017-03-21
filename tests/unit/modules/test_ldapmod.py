@@ -18,7 +18,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import ldapmod
+import salt.modules.ldapmod as ldapmod
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

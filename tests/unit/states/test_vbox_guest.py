@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import vbox_guest
+import salt.states.vbox_guest as vbox_guest
 
 # Globals
 vbox_guest.__salt__ = {}

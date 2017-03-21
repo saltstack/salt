@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import timezone
+import salt.modules.timezone as timezone
 import salt.ext.six as six
 import salt.utils
 

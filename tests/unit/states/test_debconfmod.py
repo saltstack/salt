@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import debconfmod
+import salt.states.debconfmod as debconfmod
 
 debconfmod.__salt__ = {}
 debconfmod.__opts__ = {}

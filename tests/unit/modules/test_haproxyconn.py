@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import haproxyconn
+import salt.modules.haproxyconn as haproxyconn
 
 
 class Mockcmds(object):

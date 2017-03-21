@@ -11,7 +11,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt Libs
-from salt.states import boto_lc
+import salt.states.boto_lc as boto_lc
 from salt.exceptions import SaltInvocationError
 
 

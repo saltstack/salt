@@ -12,9 +12,9 @@ from tests.support.helpers import requires_network
 # Import Salt libs
 import salt.utils
 from tests.unit.modules.test_zcbuildout import Base, KNOWN_VIRTUALENV_BINARY_NAMES
-from salt.modules import zcbuildout as modbuildout
-from salt.states import zcbuildout as buildout
-from salt.modules import cmdmod as cmd
+import salt.modules.zcbuildout as modbuildout
+import salt.states.zcbuildout as buildout
+import salt.modules.cmdmod as cmd
 
 ROOT = os.path.join(FILES, 'file/base/buildout')
 

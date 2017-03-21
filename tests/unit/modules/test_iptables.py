@@ -18,7 +18,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import iptables
+import salt.modules.iptables as iptables
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

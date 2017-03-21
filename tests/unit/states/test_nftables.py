@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import nftables
+import salt.states.nftables as nftables
 
 # Globals
 nftables.__salt__ = {}

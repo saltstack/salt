@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import drac
+import salt.states.drac as drac
 
 drac.__salt__ = {}
 drac.__opts__ = {}

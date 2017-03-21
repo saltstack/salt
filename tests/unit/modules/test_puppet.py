@@ -19,7 +19,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
-from salt.modules import puppet
+import salt.modules.puppet as puppet
 from salt.exceptions import CommandExecutionError
 
 # Globals

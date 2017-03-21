@@ -15,7 +15,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import linux_acl
+import salt.states.linux_acl as linux_acl
 
 linux_acl.__salt__ = {}
 linux_acl.__opts__ = {}

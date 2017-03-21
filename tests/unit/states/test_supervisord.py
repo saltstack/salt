@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import supervisord
+import salt.states.supervisord as supervisord
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

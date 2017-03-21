@@ -18,7 +18,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import systemd
+import salt.modules.systemd as systemd
 import salt.utils.systemd
 
 # Globals

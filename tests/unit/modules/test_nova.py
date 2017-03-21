@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import nova
+import salt.modules.nova as nova
 
 # Globals
 nova.__grains__ = {}

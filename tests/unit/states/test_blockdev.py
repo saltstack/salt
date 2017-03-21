@@ -15,7 +15,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import blockdev
+import salt.states.blockdev as blockdev
 import salt.utils
 
 blockdev.__salt__ = {}

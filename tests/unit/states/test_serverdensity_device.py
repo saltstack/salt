@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import serverdensity_device
+import salt.states.serverdensity_device as serverdensity_device
 
 serverdensity_device.__salt__ = {}
 

@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import postgres_schema
+import salt.states.postgres_schema as postgres_schema
 
 postgres_schema.__opts__ = {}
 postgres_schema.__salt__ = {}

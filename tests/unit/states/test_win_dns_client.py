@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import win_dns_client
+import salt.states.win_dns_client as win_dns_client
 
 # Globals
 win_dns_client.__salt__ = {}

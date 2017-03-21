@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import ddns
+import salt.states.ddns as ddns
 
 ddns.__salt__ = {}
 ddns.__opts__ = {}

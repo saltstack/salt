@@ -17,7 +17,7 @@ from tests.support.mock import (
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Libs
-from salt.states import npm
+import salt.states.npm as npm
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

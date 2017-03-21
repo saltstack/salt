@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import pw_user
+import salt.modules.pw_user as pw_user
 from salt.exceptions import CommandExecutionError
 try:
     import pwd

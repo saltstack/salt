@@ -9,7 +9,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 # Import Salt libs
-from salt.modules import config
+import salt.modules.config as config
 
 DEFAULTS = {
     'test.option.all': 'value of test.option.all in DEFAULTS',

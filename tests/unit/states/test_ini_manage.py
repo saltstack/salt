@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import ini_manage
+import salt.states.ini_manage as ini_manage
 
 ini_manage.__salt__ = {}
 ini_manage.__opts__ = {}

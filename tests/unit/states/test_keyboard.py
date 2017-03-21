@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import keyboard
+import salt.states.keyboard as keyboard
 
 keyboard.__salt__ = {}
 keyboard.__opts__ = {}

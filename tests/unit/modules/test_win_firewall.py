@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import win_firewall
+import salt.modules.win_firewall as win_firewall
 import salt.utils
 
 # Globals

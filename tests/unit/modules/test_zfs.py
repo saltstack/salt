@@ -21,7 +21,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Execution module to test
-from salt.modules import zfs
+import salt.modules.zfs as zfs
 from salt.utils.odict import OrderedDict
 
 # Globals

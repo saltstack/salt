@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import znc
+import salt.modules.znc as znc
 
 znc.__salt__ = {}
 

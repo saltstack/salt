@@ -16,7 +16,7 @@ from tests.support.mock import (
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Libs
-from salt.states import memcached
+import salt.states.memcached as memcached
 
 memcached.__salt__ = {}
 memcached.__opts__ = {}

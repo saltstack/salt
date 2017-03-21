@@ -11,7 +11,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
-from salt.modules import extfs
+import salt.modules.extfs as extfs
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

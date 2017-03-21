@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import mac_brew
+import salt.modules.mac_brew as mac_brew
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs

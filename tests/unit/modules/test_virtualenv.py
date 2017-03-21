@@ -17,7 +17,7 @@ from tests.support.helpers import TestsLoggingHandler, ForceImportErrorOn
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-from salt.modules import virtualenv_mod
+import salt.modules.virtualenv_mod as virtualenv_mod
 from salt.exceptions import CommandExecutionError
 
 virtualenv_mod.__salt__ = {}

@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import json
 
 # Import Salt libs
-from salt.modules import kapacitor
+import salt.modules.kapacitor as kapacitor
 
 # Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin

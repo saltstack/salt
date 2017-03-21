@@ -21,7 +21,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.utils.jid
 import salt.utils.event
-from salt.states import saltmod
+import salt.states.saltmod as saltmod
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

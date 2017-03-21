@@ -13,7 +13,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
-from salt.modules import mac_user
+import salt.modules.mac_user as mac_user
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 

@@ -12,7 +12,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import apache_conf
+import salt.states.apache_conf as apache_conf
 
 apache_conf.__opts__ = {}
 apache_conf.__salt__ = {}

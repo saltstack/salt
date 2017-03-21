@@ -9,7 +9,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 
 # Import salt libs
 import salt.ext.six as six
-from salt.modules import deb_postgres
+import salt.modules.deb_postgres as deb_postgres
 
 deb_postgres.__grains__ = None  # in order to stub it w/patch below
 deb_postgres.__salt__ = None  # in order to stub it w/patch below

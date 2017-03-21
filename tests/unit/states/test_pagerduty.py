@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import pagerduty
+import salt.states.pagerduty as pagerduty
 
 pagerduty.__salt__ = {}
 pagerduty.__opts__ = {}

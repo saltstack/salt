@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import layman
+import salt.states.layman as layman
 
 layman.__salt__ = {}
 layman.__opts__ = {}

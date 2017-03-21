@@ -25,7 +25,7 @@ FILE_DATA = {
              }
 
 # Import Salt Libs
-from salt.pillar import hg_pillar
+import salt.pillar.hg_pillar as hg_pillar
 HGLIB = hg_pillar.hglib
 
 

@@ -10,7 +10,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-from salt.modules import uptime
+import salt.modules.uptime as uptime
 
 
 class RequestMock(Mock):

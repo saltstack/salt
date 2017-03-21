@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import alias
+import salt.states.alias as alias
 
 alias.__opts__ = {}
 alias.__salt__ = {}

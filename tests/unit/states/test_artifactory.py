@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import artifactory
+import salt.states.artifactory as artifactory
 
 artifactory.__salt__ = {}
 

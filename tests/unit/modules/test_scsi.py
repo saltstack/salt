@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import scsi
+import salt.modules.scsi as scsi
 import os
 import salt.utils
 import copy

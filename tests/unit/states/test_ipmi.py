@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import ipmi
+import salt.states.ipmi as ipmi
 
 ipmi.__salt__ = {}
 ipmi.__opts__ = {}

@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import svn
+import salt.modules.svn as svn
 
 svn.__salt__ = {}
 

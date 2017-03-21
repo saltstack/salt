@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.runners import jobs
+import salt.runners.jobs as jobs
 import salt.minion
 
 

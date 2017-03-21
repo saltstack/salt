@@ -19,7 +19,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import winrepo
+import salt.states.winrepo as winrepo
 
 # Globals
 winrepo.__salt__ = {}

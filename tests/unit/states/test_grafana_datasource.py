@@ -13,7 +13,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import grafana_datasource
+import salt.states.grafana_datasource as grafana_datasource
 
 grafana_datasource.__opts__ = {}
 grafana_datasource.__salt__ = {}

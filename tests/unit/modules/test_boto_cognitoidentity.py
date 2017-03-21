@@ -15,7 +15,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 import salt.config
 import salt.loader
 from salt.utils.versions import LooseVersion
-from salt.modules import boto_cognitoidentity
+import salt.modules.boto_cognitoidentity as boto_cognitoidentity
 
 # Import 3rd-party libs
 

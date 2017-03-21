@@ -14,7 +14,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import sdb
+import salt.modules.sdb as sdb
 
 # Globals
 sdb.__opts__ = {}

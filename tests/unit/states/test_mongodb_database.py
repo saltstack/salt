@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import mongodb_database
+import salt.states.mongodb_database as mongodb_database
 
 mongodb_database.__salt__ = {}
 mongodb_database.__opts__ = {}

@@ -19,7 +19,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import cp
+import salt.modules.cp as cp
 from salt.utils import templates
 from salt.exceptions import CommandExecutionError
 import salt.utils

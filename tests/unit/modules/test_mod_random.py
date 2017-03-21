@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import mod_random
+import salt.modules.mod_random as mod_random
 import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError
 

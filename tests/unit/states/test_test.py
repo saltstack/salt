@@ -18,7 +18,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
-from salt.states import test
+import salt.states.test as test
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

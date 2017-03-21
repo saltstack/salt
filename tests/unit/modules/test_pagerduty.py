@@ -19,7 +19,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
-from salt.modules import pagerduty
+import salt.modules.pagerduty as pagerduty
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

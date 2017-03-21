@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import portage_config
+import salt.states.portage_config as portage_config
 
 portage_config.__salt__ = {}
 portage_config.__opts__ = {'test': True}

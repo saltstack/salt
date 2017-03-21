@@ -9,7 +9,7 @@ from tests.support.unit import TestCase
 from tests.support.mock import Mock, patch, mock_open
 
 # Import Salt libs
-from salt.states import kapacitor
+import salt.states.kapacitor as kapacitor
 
 
 def _present(name='testname',

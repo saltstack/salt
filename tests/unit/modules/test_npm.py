@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import npm
+import salt.modules.npm as npm
 from salt.exceptions import CommandExecutionError
 import json
 

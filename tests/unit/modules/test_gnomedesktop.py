@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import gnomedesktop
+import salt.modules.gnomedesktop as gnomedesktop
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

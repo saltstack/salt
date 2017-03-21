@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import bower
+import salt.states.bower as bower
 from salt.exceptions import CommandExecutionError
 
 

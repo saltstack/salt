@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import salt.config
 import salt.loader
 from salt.beacons import status
-from salt.modules import status as status_module
+import salt.modules.status as status_module
 
 # Salt testing libs
 from tests.support.unit import TestCase

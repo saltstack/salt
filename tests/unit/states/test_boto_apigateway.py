@@ -35,7 +35,7 @@ except ImportError:
 from salt.ext.six.moves import range
 
 # Import Salt Libs
-from salt.states import boto_apigateway
+import salt.states.boto_apigateway as boto_apigateway
 
 boto_apigateway.__salt__ = {}
 boto_apigateway.__opts__ = {}

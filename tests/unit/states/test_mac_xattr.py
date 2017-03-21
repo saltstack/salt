@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import mac_xattr as xattr
+import salt.states.mac_xattr as xattr
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase

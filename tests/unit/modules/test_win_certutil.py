@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import win_certutil as certutil
+import salt.modules.win_certutil as certutil
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase

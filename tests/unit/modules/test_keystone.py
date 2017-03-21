@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import keystone
+import salt.modules.keystone as keystone
 
 
 class MockEC2(object):

@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import nfs3
+import salt.modules.nfs3 as nfs3
 
 # Globals
 nfs3.__grains__ = {}

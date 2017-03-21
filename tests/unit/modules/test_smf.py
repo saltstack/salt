@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import smf
+import salt.modules.smf as smf
 
 # Globals
 smf.__salt__ = {}

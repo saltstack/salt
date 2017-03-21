@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import pkgutil
+import salt.modules.pkgutil as pkgutil
 from salt.exceptions import CommandExecutionError, MinionError
 
 # Globals

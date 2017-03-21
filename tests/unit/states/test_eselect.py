@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import eselect
+import salt.states.eselect as eselect
 
 eselect.__salt__ = {}
 

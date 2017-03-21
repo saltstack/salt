@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import sysbench
+import salt.modules.sysbench as sysbench
 
 # Globals
 sysbench.__salt__ = {}

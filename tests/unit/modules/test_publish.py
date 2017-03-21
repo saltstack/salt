@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import publish
+import salt.modules.publish as publish
 import salt.crypt
 import salt.transport
 from salt.exceptions import SaltReqTimeoutError

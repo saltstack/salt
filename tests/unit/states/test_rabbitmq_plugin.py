@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import rabbitmq_plugin
+import salt.states.rabbitmq_plugin as rabbitmq_plugin
 
 rabbitmq_plugin.__opts__ = {}
 rabbitmq_plugin.__salt__ = {}

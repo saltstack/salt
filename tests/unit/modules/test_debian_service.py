@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import debian_service
+import salt.modules.debian_service as debian_service
 
 
 # Globals

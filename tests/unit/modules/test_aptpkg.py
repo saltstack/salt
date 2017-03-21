@@ -17,7 +17,7 @@ from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.modules import aptpkg
+import salt.modules.aptpkg as aptpkg
 
 
 APT_KEY_LIST = r'''

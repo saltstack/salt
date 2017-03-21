@@ -18,7 +18,7 @@ from tests.support.mock import (
 import salt.ext.six as six
 
 # Import Salt Libs
-from salt.states import proxy as proxy
+import salt.states.proxy as proxy
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

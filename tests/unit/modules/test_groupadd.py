@@ -11,7 +11,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
-from salt.modules import groupadd
+import salt.modules.groupadd as groupadd
 
 # Import python Libs
 import grp

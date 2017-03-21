@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import qemu_img
+import salt.modules.qemu_img as qemu_img
 import os
 
 # Globals

@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import iptables
+import salt.states.iptables as iptables
 
 # Globals
 iptables.__salt__ = {}

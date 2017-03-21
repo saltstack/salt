@@ -18,7 +18,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
-from salt.modules import pkg_resource
+import salt.modules.pkg_resource as pkg_resource
 import salt.ext.six as six
 
 # Globals

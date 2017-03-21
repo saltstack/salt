@@ -18,7 +18,7 @@ from tests.support.mock import (
 
 # Import salt libs
 import salt.ext.six as six
-from salt.runners import vault
+import salt.runners.vault as vault
 
 log = logging.getLogger(__name__)
 

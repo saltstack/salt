@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import splunk_search
+import salt.states.splunk_search as splunk_search
 
 splunk_search.__salt__ = {}
 splunk_search.__opts__ = {}

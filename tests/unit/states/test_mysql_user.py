@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import mysql_user
+import salt.states.mysql_user as mysql_user
 import salt
 
 mysql_user.__salt__ = {}

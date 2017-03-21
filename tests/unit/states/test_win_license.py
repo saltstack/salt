@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import win_license as license
+import salt.states.win_license as license
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase

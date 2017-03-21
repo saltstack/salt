@@ -16,7 +16,7 @@ from tests.support.mock import (
 from salt.exceptions import SaltInvocationError
 
 # Import Salt Libs
-from salt.states import ports
+import salt.states.ports as ports
 import os
 
 ports.__salt__ = {}

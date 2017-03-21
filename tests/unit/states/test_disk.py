@@ -14,7 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import disk
+import salt.states.disk as disk
 
 disk.__salt__ = {}
 

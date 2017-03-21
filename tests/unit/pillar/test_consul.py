@@ -8,7 +8,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt Libs
-from salt.pillar import consul_pillar
+import salt.pillar.consul_pillar as consul_pillar
 
 OPTS = {'consul_config': {'consul.port': 8500, 'consul.host': '172.17.0.15'}}
 

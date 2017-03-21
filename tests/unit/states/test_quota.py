@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import quota
+import salt.states.quota as quota
 
 quota.__opts__ = {}
 quota.__salt__ = {}

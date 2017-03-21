@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import nftables
+import salt.modules.nftables as nftables
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
