@@ -250,9 +250,11 @@ def delfacl(acl_type, acl_name='', *args, **kwargs):
 
     _raise_on_no_files(*args)
 
-    cmd = 'setfacl -x'
+    cmd = 'setfacl'
     if recursive:
         cmd += ' -R'
+
+    cmd += ' -x'
 
     cmd = '{0} {1}:{2}'.format(cmd, _acl_prefix(acl_type), acl_name)
 
