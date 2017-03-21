@@ -418,6 +418,8 @@ def mapping_delete(index, doc_type, hosts=None, profile=None):
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot delete mapping {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
+    except AttributeError:
+        raise CommandExecutionError("Method is not applicable for Elasticsearch 5.0+")
 
 
 def mapping_get(index, doc_type, hosts=None, profile=None):
@@ -518,13 +520,14 @@ def pipeline_get(id, hosts=None, profile=None):
     es = _get_instance(hosts, profile)
 
     try:
-        # TODO check for ingest existence (not available in EPEL version)
         ret = es.ingest.get_pipeline(id=id)
         return ret
     except elasticsearch.NotFoundError:
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot create pipeline {0}, server returned code {1} with message {2}".format(id, e.status_code, e.error))
+    except AttributeError:
+        raise CommandExecutionError("Method is applicable only for Elasticsearch 5.0+")
 
 
 def pipeline_delete(id, hosts=None, profile=None):
@@ -544,6 +547,8 @@ def pipeline_delete(id, hosts=None, profile=None):
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot delete pipeline {0}, server returned code {1} with message {2}".format(id, e.status_code, e.error))
+    except AttributeError:
+        raise CommandExecutionError("Method is applicable only for Elasticsearch 5.0+")
 
 
 def pipeline_create(id, body, hosts=None, profile=None):
@@ -560,6 +565,8 @@ def pipeline_create(id, body, hosts=None, profile=None):
         return out.get("acknowledged", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot create pipeline {0}, server returned code {1} with message {2}".format(id, e.status_code, e.error))
+    except AttributeError:
+        raise CommandExecutionError("Method is applicable only for Elasticsearch 5.0+")
 
 
 def pipeline_simulate(id, body, verbose=False, hosts=None, profile=None):
@@ -575,3 +582,5 @@ def pipeline_simulate(id, body, verbose=False, hosts=None, profile=None):
         return es.ingest.simulate(id=id, body=body, verbose=verbose)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot simulate pipeline {0}, server returned code {1} with message {2}".format(id, e.status_code, e.error))
+    except AttributeError:
+        raise CommandExecutionError("Method is applicable only for Elasticsearch 5.0+")
