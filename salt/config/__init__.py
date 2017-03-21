@@ -1735,6 +1735,10 @@ def _read_conf_file(path):
     '''
     Read in a config file from a given path and process it into a dictionary
     '''
+    if (not salt.utils.validate.path.exists(path, quiet=os.path.basename(path) == '.saltrc')
+            or not salt.utils.validate.path.is_readable(path)):
+        return {}
+
     log.debug('Reading configuration from {0}'.format(path))
     with salt.utils.fopen(path, 'r') as conf_file:
         try:
