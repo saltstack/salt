@@ -205,7 +205,7 @@ def _get_sysv_services():
     try:
         sysv_services = os.listdir(INITSCRIPT_PATH)
     except OSError as exc:
-        if exc.errno == errno.EEXIST:
+        if exc.errno == errno.ENOENT:
             pass
         elif exc.errno == errno.EACCES:
             log.error(
