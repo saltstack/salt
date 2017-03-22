@@ -20,6 +20,7 @@ usually located at /etc/salt/cloud. For example, add the following:
 
 # Import python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt libs
 import salt.loader
@@ -37,7 +38,9 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     '''
     ret = {}
 
-    cloud_opts = salt.config.cloud_config('/etc/salt/cloud')
+    cloud_opts = salt.config.cloud_config(
+        os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
+    )
 
     minions = __runner__['cache.cloud'](tgt)
     for minion_id, full_info in minions.items():
