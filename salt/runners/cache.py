@@ -388,7 +388,7 @@ def cloud(tgt, provider=None):
     '''
     if not isinstance(tgt, six.string_types):
         return {}
-    ret = {}
+
     opts = salt.config.cloud_config(
         os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
     )
@@ -398,6 +398,8 @@ def cloud(tgt, provider=None):
     cloud_cache = __utils__['cloud.list_cache_nodes_full'](opts=opts, provider=provider)
     if cloud_cache is None:
         return {}
+
+    ret = {}
     for driver, providers in cloud_cache.items():
         for provider, servers in providers.items():
             for name, data in servers.items():
