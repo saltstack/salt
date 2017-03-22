@@ -108,6 +108,9 @@ from __future__ import absolute_import
 import logging
 import json
 
+# Import salt libs
+import salt.utils.dictdiffer
+
 # Import 3rd party libs
 import salt.ext.six as six
 
@@ -298,10 +301,11 @@ def set_(name,
                                         adml_language=adml_language)
             if _ret:
                 ret['result'] = _ret
-                ret['changes']['old'] = current_policy
-                ret['changes']['new'] = __salt__['lgpo.get'](policy_class=policy_class,
-                                                             adml_language=adml_language,
-                                                             hierarchical_return=False)
+                ret['changes'] = salt.utils.dictdiffer.deep_diff(
+                    current_policy,
+                    __salt__['lgpo.get'](policy_class=policy_class,
+                                         adml_language=adml_language,
+                                         hierarchical_return=False))
             else:
                 ret['result'] = False
                 ret['comment'] = 'Errors occurred while attempting to configure policies: {0}'.format(_ret)
