@@ -316,7 +316,7 @@ def _clean_term_opts(term_opts):
         # firstly we'll process special fields like source_service or destination_services
         # which will inject values directly in the source or destination port and protocol
         if field == 'source_service' and value:
-            if isinstance(value, basestring):
+            if isinstance(value, six.string_types):
                 value = _make_it_list(clean_opts, field, value)
             log.debug('Processing special source services:')
             log.debug(value)
@@ -335,7 +335,7 @@ def _clean_term_opts(term_opts):
             log.debug('Built protocol field, after processing special source services:')
             log.debug(clean_opts.get('protocol'))
         elif field == 'destination_service' and value:
-            if isinstance(value, basestring):
+            if isinstance(value, six.string_types):
                 value = _make_it_list(clean_opts, field, value)
             log.debug('Processing special destination services:')
             log.debug(value)
