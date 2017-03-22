@@ -977,7 +977,6 @@ def get_filter_config(platform,
             # merge the passed variable with the pillar data
             # any filter term not defined here, will be appended from the pillar
             # new terms won't be removed
-    return terms
     filters = []
     filters.append({
         filter_name: {
