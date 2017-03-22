@@ -316,6 +316,10 @@ def _clean_term_opts(term_opts):
         # firstly we'll process special fields like source_service or destination_services
         # which will inject values directly in the source or destination port and protocol
         if field == 'source_service' and value:
+            if isinstance(value, str):
+                value = _make_it_list(clean_opts, field, value)
+            log.debug('Processing special source services:')
+            log.debug(value)
             for service in value:
                 if service and service in _services:
                     # if valid source_service
@@ -326,7 +330,15 @@ def _clean_term_opts(term_opts):
                     clean_opts['protocol'] = _make_it_list(clean_opts,
                                                            'protocol',
                                                            _services[service]['protocol'])
+            log.debug('Built source_port field, after processing special source services:')
+            log.debug(clean_opts['source_port'])
+            log.debug('Built protocol field, after processing special source services:')
+            log.debug(clean_opts['protocol'])
         elif field == 'destination_service' and value:
+            if isinstance(value, str):
+                value = _make_it_list(clean_opts, field, value)
+            log.debug('Processing special destination services:')
+            log.debug(value)
             for service in value:
                 if service and service in _services:
                     # if valid destination_service
@@ -337,6 +349,10 @@ def _clean_term_opts(term_opts):
                     clean_opts['protocol'] = _make_it_list(clean_opts,
                                                            'protocol',
                                                            _services[service]['protocol'])
+            log.debug('Built source_port field, after processing special destination services:')
+            log.debug(clean_opts['destination_service'])
+            log.debug('Built protocol field, after processing special destination services:')
+            log.debug(clean_opts['protocol'])
         # not a special field, but it has to be a valid one
         elif field in _TERM_FIELDS and value and value != _TERM_FIELDS[field]:
             # if not a special field type
