@@ -617,7 +617,7 @@ def load_filter_config(filter_name,
     if not filter_options:
         filter_options = []
     if not terms:
-        terms = {}
+        terms = []
     platform = _get_capirca_platform()
     filter_config = __salt__['capirca.get_filter_config'](platform,
                                                           filter_name,
@@ -787,7 +787,7 @@ def load_policy_config(filters=None,
                     action: reject
     '''
     if not filters:
-        filters = {}
+        filters = []
     platform = _get_capirca_platform()
     policy_config = __salt__['capirca.get_policy_config'](platform,
                                                           filters=filters,
