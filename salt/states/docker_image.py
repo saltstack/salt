@@ -16,6 +16,14 @@ Management of Docker images
 
         salt myminion pip.install docker
 
+    To upgrade from docker-py_ to docker_, you must first uninstall docker-py_,
+    and then install docker_:
+
+    .. code-block:: bash
+
+        salt myminion pip.uninstall docker-py
+        salt myminion pip.install docker
+
 .. _docker: https://pypi.python.org/pypi/docker
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 
