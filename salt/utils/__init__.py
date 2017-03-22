@@ -86,7 +86,7 @@ except ImportError:
 
 try:
     import salt.utils.win_functions
-    HAS_WIN32 = salt.utils.win_functions.HAS_WIN32
+    HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
 
