@@ -21,12 +21,12 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.ssh
     '''
-    loader_module = ssh
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__salt__': {
-                'user.info': lambda u: getattr(self, 'user_info_mock', None),
+            ssh: {
+                '__salt__': {
+                    'user.info': lambda u: getattr(self, 'user_info_mock', None),
+                }
             }
         }
 

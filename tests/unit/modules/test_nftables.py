@@ -28,7 +28,9 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.nftables
     '''
-    loader_module = nftables
+    def setup_loader_modules(self):
+        return {nftables: {}}
+
     # 'version' function tests: 1
 
     def test_version(self):

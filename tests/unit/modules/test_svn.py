@@ -23,7 +23,8 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.svn
     '''
-    loader_module = svn
+    def setup_loader_modules(self):
+        return {svn: {}}
 
     def test_info(self):
         '''

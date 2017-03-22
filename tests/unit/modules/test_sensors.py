@@ -23,7 +23,8 @@ class SensorTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.sensors
     '''
-    loader_module = sensors
+    def setup_loader_modules(self):
+        return {sensors: {}}
 
     def test_sense(self):
         '''

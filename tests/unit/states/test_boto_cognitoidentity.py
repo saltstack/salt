@@ -128,7 +128,22 @@ def _has_required_boto():
 class BotoCognitoIdentityStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    loader_module = boto_cognitoidentity
+    def setup_loader_modules(self):
+        ctx = {}
+        utils = salt.loader.utils(self.opts, whitelist=['boto', 'boto3'], context=ctx)
+        serializers = salt.loader.serializers(self.opts)
+        self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_cognitoidentity'])
+        self.salt_states = salt.loader.states(opts=self.opts, functions=funcs, utils=utils, whitelist=['boto_cognitoidentity'],
+                                              serializers=serializers)
+        return {
+            boto_cognitoidentity: {
+                '__opts__': self.opts,
+                '__salt__': funcs,
+                '__utils__': utils,
+                '__states__': self.salt_states,
+                '__serializers__': serializers,
+            }
+        }
 
     @classmethod
     def setUpClass(cls):
@@ -138,21 +153,6 @@ class BotoCognitoIdentityStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     @classmethod
     def tearDownClass(cls):
         del cls.opts
-
-    def loader_module_globals(self):
-        ctx = {}
-        utils = salt.loader.utils(self.opts, whitelist=['boto', 'boto3'], context=ctx)
-        serializers = salt.loader.serializers(self.opts)
-        self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_cognitoidentity'])
-        self.salt_states = salt.loader.states(opts=self.opts, functions=funcs, utils=utils, whitelist=['boto_cognitoidentity'],
-                                              serializers=serializers)
-        return {
-            '__opts__': self.opts,
-            '__salt__': funcs,
-            '__utils__': utils,
-            '__states__': self.salt_states,
-            '__serializers__': serializers,
-        }
 
     def setUp(self):
         self.addCleanup(delattr, self, 'funcs')

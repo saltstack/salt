@@ -19,7 +19,8 @@ class BotoEc2TestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_ec2
     '''
-    loader_module = boto_ec2
+    def setup_loader_modules(self):
+        return {boto_ec2: {}}
 
     # 'key_present' function tests: 1
 

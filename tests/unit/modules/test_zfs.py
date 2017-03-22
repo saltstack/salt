@@ -30,7 +30,8 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     This class contains a set of functions that test salt.modules.zfs module
     '''
-    loader_module = zfs
+    def setup_loader_modules(self):
+        return {zfs: {}}
 
     @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_exists_success(self):

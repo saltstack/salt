@@ -25,7 +25,9 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.znc
     '''
-    loader_module = znc
+    def setup_loader_modules(self):
+        return {znc: {}}
+
     # 'buildmod' function tests: 1
 
     @patch('os.path.exists', MagicMock(return_value=False))

@@ -26,7 +26,8 @@ class LdapmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.ldapmod
     '''
-    loader_module = ldapmod
+    def setup_loader_modules(self):
+        return {ldapmod: {}}
 
     # 'search' function tests: 1
 

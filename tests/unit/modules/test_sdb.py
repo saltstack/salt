@@ -23,7 +23,9 @@ class SdbTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.sdb
     '''
-    loader_module = sdb
+    def setup_loader_modules(self):
+        return {sdb: {}}
+
     # 'get' function tests: 1
 
     def test_get(self):

@@ -15,14 +15,14 @@ from tests.support.mock import Mock, patch
 
 class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = kapacitor
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__env__': 'test',
-            '__salt__': {
-                'pkg.version': Mock(return_value='9999'),
-                'config.option': Mock(side_effect=lambda key, default: default)
+            kapacitor: {
+                '__env__': 'test',
+                '__salt__': {
+                    'pkg.version': Mock(return_value='9999'),
+                    'config.option': Mock(side_effect=lambda key, default: default)
+                }
             }
         }
 

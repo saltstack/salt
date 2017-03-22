@@ -53,7 +53,8 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.disk module
     '''
-    loader_module = disk
+    def setup_loader_modules(self):
+        return {disk: {}}
 
     @patch('salt.modules.disk.usage', MagicMock(return_value=STUB_DISK_USAGE))
     def test_usage_dict(self):

@@ -18,32 +18,33 @@ import salt.modules.config as configmod
 import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
 
-SED_CONTENT = """test
+SED_CONTENT = '''test
 some
 content
 /var/lib/foo/app/test
 here
-"""
+'''
 
 
 class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
-    loader_module = filemod
 
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__salt__': {
-                'config.manage_mode': configmod.manage_mode,
-                'cmd.run': cmdmod.run,
-                'cmd.run_all': cmdmod.run_all
-            },
-            '__opts__': {
-                'test': False,
-                'file_roots': {'base': 'tmp'},
-                'pillar_roots': {'base': 'tmp'},
-                'cachedir': 'tmp',
-                'grains': {},
-            },
-            '__grains__': {'kernel': 'Linux'}
+            filemod: {
+                '__salt__': {
+                    'config.manage_mode': configmod.manage_mode,
+                    'cmd.run': cmdmod.run,
+                    'cmd.run_all': cmdmod.run_all
+                },
+                '__opts__': {
+                    'test': False,
+                    'file_roots': {'base': 'tmp'},
+                    'pillar_roots': {'base': 'tmp'},
+                    'cachedir': 'tmp',
+                    'grains': {},
+                },
+                '__grains__': {'kernel': 'Linux'}
+            }
         }
 
     MULTILINE_STRING = textwrap.dedent('''\
@@ -185,23 +186,23 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
 
 class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
-    loader_module = filemod
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__salt__': {
-                'config.manage_mode': MagicMock(),
-                'cmd.run': cmdmod.run,
-                'cmd.run_all': cmdmod.run_all
-            },
-            '__opts__': {
-                'test': False,
-                'file_roots': {'base': 'tmp'},
-                'pillar_roots': {'base': 'tmp'},
-                'cachedir': 'tmp',
-                'grains': {},
-            },
-            '__grains__': {'kernel': 'Linux'}
+            filemod: {
+                '__salt__': {
+                    'config.manage_mode': MagicMock(),
+                    'cmd.run': cmdmod.run,
+                    'cmd.run_all': cmdmod.run_all
+                },
+                '__opts__': {
+                    'test': False,
+                    'file_roots': {'base': 'tmp'},
+                    'pillar_roots': {'base': 'tmp'},
+                    'cachedir': 'tmp',
+                    'grains': {},
+                },
+                '__grains__': {'kernel': 'Linux'}
+            }
         }
 
     MULTILINE_STRING = textwrap.dedent('''\
@@ -455,23 +456,23 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
 
 class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
-    loader_module = filemod
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__salt__': {
-                'config.manage_mode': configmod.manage_mode,
-                'cmd.run': cmdmod.run,
-                'cmd.run_all': cmdmod.run_all
-            },
-            '__opts__': {
-                'test': False,
-                'file_roots': {'base': 'tmp'},
-                'pillar_roots': {'base': 'tmp'},
-                'cachedir': 'tmp',
-                'grains': {},
-            },
-            '__grains__': {'kernel': 'Linux'}
+            filemod: {
+                '__salt__': {
+                    'config.manage_mode': configmod.manage_mode,
+                    'cmd.run': cmdmod.run,
+                    'cmd.run_all': cmdmod.run_all
+                },
+                '__opts__': {
+                    'test': False,
+                    'file_roots': {'base': 'tmp'},
+                    'pillar_roots': {'base': 'tmp'},
+                    'cachedir': 'tmp',
+                    'grains': {},
+                },
+                '__grains__': {'kernel': 'Linux'}
+            }
         }
 
     def test_sed_limit_escaped(self):
@@ -737,23 +738,23 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
 
 class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
-    loader_module = filemod
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__salt__': {
-                'config.manage_mode': configmod.manage_mode,
-                'cmd.run': cmdmod.run,
-                'cmd.run_all': cmdmod.run_all
-            },
-            '__opts__': {
-                'test': False,
-                'file_roots': {'base': 'tmp'},
-                'pillar_roots': {'base': 'tmp'},
-                'cachedir': 'tmp',
-                'grains': {},
-            },
-            '__grains__': {'kernel': 'Linux'}
+            filemod: {
+                '__salt__': {
+                    'config.manage_mode': configmod.manage_mode,
+                    'cmd.run': cmdmod.run,
+                    'cmd.run_all': cmdmod.run_all
+                },
+                '__opts__': {
+                    'test': False,
+                    'file_roots': {'base': 'tmp'},
+                    'pillar_roots': {'base': 'tmp'},
+                    'cachedir': 'tmp',
+                    'grains': {},
+                },
+                '__grains__': {'kernel': 'Linux'}
+            }
         }
 
     def setUp(self):

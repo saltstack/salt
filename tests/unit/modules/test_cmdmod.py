@@ -35,11 +35,18 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
     Unit tests for the salt.modules.cmdmod module
     '''
 
-    loader_module = cmdmod
+    def setup_loader_modules(self):
+        return {cmdmod: {}}
 
-    mock_loglevels = {'info': 'foo', 'all': 'bar', 'critical': 'bar',
-                      'trace': 'bar', 'garbage': 'bar', 'error': 'bar',
-                      'debug': 'bar', 'warning': 'bar', 'quiet': 'bar'}
+    @classmethod
+    def setUpClass(cls):
+        cls.mock_loglevels = {'info': 'foo', 'all': 'bar', 'critical': 'bar',
+                              'trace': 'bar', 'garbage': 'bar', 'error': 'bar',
+                              'debug': 'bar', 'warning': 'bar', 'quiet': 'bar'}
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.mock_loglevels
 
     def test_render_cmd_no_template(self):
         '''

@@ -26,7 +26,8 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the timezone state
     '''
-    loader_module = timezone
+    def setup_loader_modules(self):
+        return {timezone: {}}
 
     def test_system(self):
         '''

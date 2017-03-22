@@ -69,7 +69,8 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.xapi
     '''
-    loader_module = xapi
+    def setup_loader_modules(self):
+        return {xapi: {}}
 
     def test_list_domains(self):
         '''

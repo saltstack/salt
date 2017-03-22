@@ -68,7 +68,8 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.modules.systemd
     '''
-    loader_module = systemd
+    def setup_loader_modules(self):
+        return {systemd: {}}
 
     def test_systemctl_reload(self):
         '''
@@ -266,7 +267,8 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
         Test case for salt.modules.systemd, for functions which use systemd
         scopes
     '''
-    loader_module = systemd
+    def setup_loader_modules(self):
+        return {systemd: {}}
 
     unit_name = 'foo'
     mock_none = MagicMock(return_value=None)

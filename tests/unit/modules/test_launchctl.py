@@ -27,7 +27,8 @@ class LaunchctlTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.launchctl
     '''
-    loader_module = launchctl
+    def setup_loader_modules(self):
+        return {launchctl: {}}
 
     def test_get_all(self):
         '''

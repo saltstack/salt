@@ -24,7 +24,8 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.djangomod
     '''
-    loader_module = djangomod
+    def setup_loader_modules(self):
+        return {djangomod: {}}
 
     # 'command' function tests: 1
 

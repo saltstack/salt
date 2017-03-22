@@ -105,10 +105,8 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.haproxyconn
     '''
-    loader_module = haproxyconn
-
-    def loader_module_globals(self):
-        return {'haproxy': Mockhaproxy()}
+    def setup_loader_modules(self):
+        return {haproxyconn: {'haproxy': Mockhaproxy()}}
 
     # 'list_servers' function tests: 1
 

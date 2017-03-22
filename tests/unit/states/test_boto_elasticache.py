@@ -19,7 +19,8 @@ class BotoElasticacheTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_elasticache
     '''
-    loader_module = boto_elasticache
+    def setup_loader_modules(self):
+        return {boto_elasticache: {}}
 
     # 'present' function tests: 1
 

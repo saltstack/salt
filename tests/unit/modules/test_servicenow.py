@@ -32,10 +32,8 @@ class MockServiceNowClient(object):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('servicenow_rest.api.Client', MockServiceNowClient)
 class ServiceNowModuleTestCase(ModuleTestCase, LoaderModuleMockMixin):
-    loader_module = servicenow
-
-    def loader_module_globals(self):
-        return {'Client': MockServiceNowClient}
+    def setup_loader_modules(self):
+        return {servicenow: {'Client': MockServiceNowClient}}
 
     def setUp(self):
         hasDependency('servicenow_rest')

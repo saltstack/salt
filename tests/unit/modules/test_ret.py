@@ -26,7 +26,8 @@ class RetTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.ret
     '''
-    loader_module = ret
+    def setup_loader_modules(self):
+        return {ret: {}}
 
     # 'get_jid' function tests: 1
 

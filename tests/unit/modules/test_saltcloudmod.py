@@ -45,8 +45,8 @@ class SaltcloudmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.saltcloudmod
     '''
-    loader_module = saltcloudmod
-    loader_module_globals = {'json': MockJson}
+    def setup_loader_modules(self):
+        return {saltcloudmod: {'json': MockJson}}
 
     def test_create(self):
         '''

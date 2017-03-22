@@ -26,8 +26,8 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.npm
     '''
-    loader_module = npm
-    loader_module_globals = {'__opts__': {'test': False}}
+    def setup_loader_modules(self):
+        return {npm: {'__opts__': {'test': False}}}
 
     # 'installed' function tests: 1
 

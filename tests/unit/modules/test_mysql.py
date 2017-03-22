@@ -29,7 +29,8 @@ except Exception:
 @skipIf(NO_MYSQL, 'Install MySQL bindings before running MySQL unit tests.')
 class MySQLTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = mysql
+    def setup_loader_modules(self):
+        return {mysql: {}}
 
     def test_user_exists(self):
         '''

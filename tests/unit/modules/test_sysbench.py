@@ -23,7 +23,8 @@ class SysbenchTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases to salt.modules.sysbench
     '''
-    loader_module = sysbench
+    def setup_loader_modules(self):
+        return {sysbench: {}}
 
     def test_cpu(self):
         '''

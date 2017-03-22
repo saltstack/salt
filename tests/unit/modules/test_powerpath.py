@@ -23,7 +23,8 @@ class PowerpathTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.powerpath
     '''
-    loader_module = powerpath
+    def setup_loader_modules(self):
+        return {powerpath: {}}
 
     @patch('os.path.exists')
     def test_has_powerpath(self, mock_exists):

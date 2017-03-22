@@ -23,7 +23,8 @@ class VarnishTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.varnish
     '''
-    loader_module = varnish
+    def setup_loader_modules(self):
+        return {varnish: {}}
 
     def test_version(self):
         '''

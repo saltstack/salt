@@ -23,7 +23,9 @@ class BotoIAMRoleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_iam_role
     '''
-    loader_module = boto_iam_role
+    def setup_loader_modules(self):
+        return {boto_iam_role: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

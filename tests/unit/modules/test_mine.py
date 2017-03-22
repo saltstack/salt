@@ -24,7 +24,8 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.mine
     '''
-    loader_module = mine
+    def setup_loader_modules(self):
+        return {mine: {}}
 
     def test_get_docker(self):
         '''

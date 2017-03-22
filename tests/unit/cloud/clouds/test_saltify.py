@@ -24,15 +24,15 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     # 'create' function tests: 1
 
-    loader_module = saltify
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__active_provider_name__': '',
-            '__utils__': {
-                'cloud.bootstrap': MagicMock()
-            },
-            '__opts__': {'providers': {}}
+            saltify: {
+                '__active_provider_name__': '',
+                '__utils__': {
+                    'cloud.bootstrap': MagicMock()
+                },
+                '__opts__': {'providers': {}}
+            }
         }
 
     @patch('salt.cloud.clouds.saltify._verify', MagicMock(return_value=True))

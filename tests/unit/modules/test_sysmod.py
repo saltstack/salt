@@ -85,10 +85,8 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.sysmod
     '''
-    loader_module = sysmod
-
-    def loader_module_globals(self):
-        return {'__salt__': self.salt_dunder}
+    def setup_loader_modules(self):
+        return {sysmod: {'__salt__': self.salt_dunder}}
 
     @classmethod
     def setUpClass(cls):

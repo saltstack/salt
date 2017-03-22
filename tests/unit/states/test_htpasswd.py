@@ -25,8 +25,8 @@ class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.htpasswd
     '''
-    loader_module = htpasswd
-    loader_module_globals = {'__opts__': {'test': False}}
+    def setup_loader_modules(self):
+        return {htpasswd: {'__opts__': {'test': False}}}
 
     def test_user_exists_already(self):
         '''

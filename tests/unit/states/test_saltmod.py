@@ -29,20 +29,21 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.saltmod
     '''
-    loader_module = saltmod
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__env__': 'base',
-            '__opts__': {
-                '__role': 'master',
-                'file_client': 'remote',
-                'sock_dir': tempfile.mkdtemp(dir=TMP),
-                'transport': 'tcp'
-            },
-            '__salt__': {'saltutil.cmd': MagicMock()},
-            '__orchestration_jid__': salt.utils.jid.gen_jid()
+            saltmod: {
+                '__env__': 'base',
+                '__opts__': {
+                    '__role': 'master',
+                    'file_client': 'remote',
+                    'sock_dir': tempfile.mkdtemp(dir=TMP),
+                    'transport': 'tcp'
+                },
+                '__salt__': {'saltutil.cmd': MagicMock()},
+                '__orchestration_jid__': salt.utils.jid.gen_jid()
+            }
         }
+
     # 'state' function tests: 1
 
     def test_state(self):

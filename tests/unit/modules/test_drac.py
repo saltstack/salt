@@ -25,7 +25,8 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.drac
     '''
-    loader_module = drac
+    def setup_loader_modules(self):
+        return {drac: {}}
 
     def test_system_info(self):
         '''

@@ -15,13 +15,13 @@ import salt.modules.rvm as rvm
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestRvmModule(TestCase, LoaderModuleMockMixin):
 
-    loader_module = rvm
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__salt__': {
-                'cmd.has_exec': MagicMock(return_value=True),
-                'config.option': MagicMock(return_value=None)
+            rvm: {
+                '__salt__': {
+                    'cmd.has_exec': MagicMock(return_value=True),
+                    'config.option': MagicMock(return_value=None)
+                }
             }
         }
 

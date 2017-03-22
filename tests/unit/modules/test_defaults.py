@@ -25,7 +25,8 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.defaults
     '''
-    loader_module = defaults
+    def setup_loader_modules(self):
+        return {defaults: {}}
 
     @patch('salt.modules.defaults.get',
            MagicMock(return_value={'users': {'root': [0]}}))

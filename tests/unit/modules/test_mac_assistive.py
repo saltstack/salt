@@ -18,7 +18,8 @@ import salt.modules.mac_assistive as assistive
 
 class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = assistive
+    def setup_loader_modules(self):
+        return {assistive: {}}
 
     def test_install_assistive_bundle(self):
         '''

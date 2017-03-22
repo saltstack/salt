@@ -30,7 +30,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.mount
     '''
-    loader_module = mount
+    def setup_loader_modules(self):
+        return {mount: {}}
 
     def test_active(self):
         '''

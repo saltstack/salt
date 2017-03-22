@@ -25,7 +25,9 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rpm
     '''
-    loader_module = rpm
+    def setup_loader_modules(self):
+        return {rpm: {}}
+
     # 'list_pkgs' function tests: 1
 
     def test_list_pkgs(self):

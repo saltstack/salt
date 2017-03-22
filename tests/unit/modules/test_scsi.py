@@ -27,7 +27,8 @@ class ScsiTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.scsi
     '''
-    loader_module = scsi
+    def setup_loader_modules(self):
+        return {scsi: {}}
 
     def test_ls_(self):
         '''

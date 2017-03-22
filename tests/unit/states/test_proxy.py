@@ -26,7 +26,8 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the proxy state
     '''
-    loader_module = proxy
+    def setup_loader_modules(self):
+        return {proxy: {}}
 
     def test_set_proxy_macos(self):
         '''

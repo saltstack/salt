@@ -25,7 +25,8 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
     '''
     # 'install' function tests: 2
 
-    loader_module = cpan
+    def setup_loader_modules(self):
+        return {cpan: {}}
 
     def test_install(self):
         '''

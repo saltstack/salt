@@ -16,7 +16,8 @@ class Boto_SecgroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.states.boto_secgroup module
     '''
-    loader_module = boto_secgroup
+    def setup_loader_modules(self):
+        return {boto_secgroup: {}}
 
     def test__get_rule_changes_no_rules_no_change(self):
         '''

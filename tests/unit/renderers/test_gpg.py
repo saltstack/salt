@@ -23,7 +23,8 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
     '''
     unit test GPG renderer
     '''
-    loader_module = gpg
+    def setup_loader_modules(self):
+        return {gpg: {}}
 
     def test__get_gpg_exec(self):
         '''

@@ -30,7 +30,8 @@ class SMTPReturnerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test SMTP returner
     '''
-    loader_module = smtp
+    def setup_loader_modules(self):
+        return {smtp: {}}
 
     def _test_returner(self, mocked_smtplib, *args):  # pylint: disable=unused-argument
         '''

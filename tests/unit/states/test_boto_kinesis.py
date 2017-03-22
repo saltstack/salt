@@ -23,7 +23,9 @@ class BotoKinesisTestCase(TestCase, LoaderModuleMockMixin):
     # 'present' function tests: 1
 
     maxDiff = None
-    loader_module = boto_kinesis
+
+    def setup_loader_modules(self):
+        return {boto_kinesis: {}}
 
     def test_stream_present(self):
         '''

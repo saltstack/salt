@@ -429,12 +429,12 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.keystone
     '''
 
-    loader_module = keystone
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            'client': MockClient(),
-            'keystoneclient': MockKeystoneClient()
+            keystone: {
+                'client': MockClient(),
+                'keystoneclient': MockKeystoneClient()
+            }
         }
 
     # 'ec2_credentials_create' function tests: 1

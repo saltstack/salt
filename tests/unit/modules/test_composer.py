@@ -26,7 +26,8 @@ class ComposerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.composer
     '''
-    loader_module = composer
+    def setup_loader_modules(self):
+        return {composer: {}}
 
     def test_install(self):
         '''

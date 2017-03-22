@@ -44,13 +44,13 @@ def _isfile_side_effect(path):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = archive
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__grains__': {'os': 'FooOS!'},
-            '__opts__': {"cachedir": TMP, "test": False},
-            '__env__': 'test'
+            archive: {
+                '__grains__': {'os': 'FooOS!'},
+                '__opts__': {"cachedir": TMP, "test": False},
+                '__env__': 'test'
+            }
         }
 
     def test_extracted_tar(self):

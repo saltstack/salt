@@ -25,7 +25,8 @@ class LogadmTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.logadm
     '''
-    loader_module = logadm
+    def setup_loader_modules(self):
+        return {logadm: {}}
 
     def test_show_conf(self):
         '''

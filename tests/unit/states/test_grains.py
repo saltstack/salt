@@ -25,13 +25,11 @@ import salt.states.grains as grains
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GrainsTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = grains, grainsmod
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         grains_test_dir = '__salt_test_state_grains'
         if not os.path.exists(os.path.join(TMP, grains_test_dir)):
             os.makedirs(os.path.join(TMP, grains_test_dir))
-        return {
+        loader_globals = {
             '__opts__': {
                 'test': False,
                 'conf_file': os.path.join(TMP, grains_test_dir, 'minion'),
@@ -53,6 +51,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 'saltutil.sync_grains': MagicMock()
             }
         }
+        return {grains: loader_globals, grainsmod: loader_globals}
 
     def assertGrainFileContent(self, grains_string):
         if os.path.isdir(grains.__opts__['conf_file']):

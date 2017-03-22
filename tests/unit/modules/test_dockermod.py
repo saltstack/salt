@@ -38,12 +38,8 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Validate docker module
     '''
-    loader_module = docker_mod
-
-    def loader_module_globals(self):
-        return {
-            '__context__': {'docker.docker_version': ''}
-        }
+    def setup_loader_modules(self):
+        return {docker_mod: {'__context__': {'docker.docker_version': ''}}}
 
     def test_ps_with_host_true(self):
         '''

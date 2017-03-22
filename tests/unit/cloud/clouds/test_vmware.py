@@ -55,10 +55,8 @@ class ExtendedTestCase(TestCase, LoaderModuleMockMixin):
     Extended TestCase class containing additional helper methods.
     '''
 
-    loader_module = vmware
-
-    def loader_module_globals(self):
-        return {'__active_provider_name__': ''}
+    def setup_loader_modules(self):
+        return {vmware: {'__active_provider_name__': ''}}
 
     def assertRaisesWithMessage(self, exc_type, exc_msg, func, *args, **kwargs):
         try:

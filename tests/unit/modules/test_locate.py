@@ -25,7 +25,9 @@ class LocateTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.locate
     '''
-    loader_module = locate
+    def setup_loader_modules(self):
+        return {locate: {}}
+
     # 'version' function tests: 1
 
     def test_version(self):

@@ -26,8 +26,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rabbitmq
     '''
-    loader_module = rabbitmq
-    loader_module_globals = {'__context__': {'rabbitmqctl': None, 'rabbitmq-plugins': None}}
+    def setup_loader_modules(self):
+        return {rabbitmq: {'__context__': {'rabbitmqctl': None, 'rabbitmq-plugins': None}}}
 
     # 'list_users_rabbitmq2' function tests: 1
 

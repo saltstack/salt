@@ -32,7 +32,8 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the service state
     '''
-    loader_module = service
+    def setup_loader_modules(self):
+        return {service: {}}
 
     def test_running(self):
         '''

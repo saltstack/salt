@@ -13,16 +13,17 @@ import salt.renderers.yaml as yaml
 
 class YAMLRendererTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = yaml
+    def setup_loader_modules(self):
+        return {yaml: {}}
 
     def test_yaml_render_string(self):
-        data = "string"
+        data = 'string'
         result = yaml.render(data)
 
         self.assertEqual(result, data)
 
     def test_yaml_render_unicode(self):
-        data = "!!python/unicode python unicode string"
+        data = '!!python/unicode python unicode string'
         result = yaml.render(data)
 
-        self.assertEqual(result, u"python unicode string")
+        self.assertEqual(result, u'python unicode string')

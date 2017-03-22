@@ -32,13 +32,13 @@ except ImportError:
         'The \'pip\' library is not importable(installed system-wide)')
 class PipStateTest(TestCase, SaltReturnAssertsMixIn, LoaderModuleMockMixin):
 
-    loader_module = pip_state
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__env__': 'base',
-            '__opts__': {'test': False},
-            '__salt__': {'cmd.which_bin': lambda _: 'pip'}
+            pip_state: {
+                '__env__': 'base',
+                '__opts__': {'test': False},
+                '__salt__': {'cmd.which_bin': lambda _: 'pip'}
+            }
         }
 
     def test_install_requirements_parsing(self):

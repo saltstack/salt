@@ -25,7 +25,9 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.data
     '''
-    loader_module = data
+    def setup_loader_modules(self):
+        return {data: {}}
+
     # 'clear' function tests: 1
 
     @patch('os.remove', MagicMock(return_value=''))

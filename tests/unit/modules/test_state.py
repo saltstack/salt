@@ -338,10 +338,8 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         Test case for salt.modules.state
     '''
 
-    loader_module = state
-    loader_module_globals = {
-        '__opts__': {'cachedir': '/D'}
-    }
+    def setup_loader_modules(self):
+        return {state: {'__opts__': {'cachedir': '/D'}}}
 
     def test_running(self):
         '''

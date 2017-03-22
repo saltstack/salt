@@ -33,7 +33,8 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.schedule
     '''
-    loader_module = schedule
+    def setup_loader_modules(self):
+        return {schedule: {}}
 
     # 'purge' function tests: 1
 

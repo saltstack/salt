@@ -25,7 +25,8 @@ class NfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.nfs3
     '''
-    loader_module = nfs3
+    def setup_loader_modules(self):
+        return {nfs3: {}}
 
     def test_list_exports(self):
         '''

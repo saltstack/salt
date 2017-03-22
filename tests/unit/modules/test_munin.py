@@ -25,7 +25,9 @@ class MuninTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.munin
     '''
-    loader_module = munin
+    def setup_loader_modules(self):
+        return {munin: {}}
+
     # 'run' function tests: 1
 
     @patch('salt.modules.munin.list_plugins',

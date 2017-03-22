@@ -16,7 +16,8 @@ import salt.utils.mac_utils
 
 class XAttrTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = xattr
+    def setup_loader_modules(self):
+        return {xattr: {}}
 
     @patch('salt.utils.mac_utils.execute_return_result',
            MagicMock(return_value='spongebob\nsquidward'))

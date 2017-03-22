@@ -27,9 +27,11 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.apache
     '''
-    loader_module = apache
-    # 'version' function tests: 1
 
+    def setup_loader_modules(self):
+        return {apache: {}}
+
+    # 'version' function tests: 1
     @patch('salt.modules.apache._detect_os',
            MagicMock(return_value='apachectl'))
     def test_version(self):

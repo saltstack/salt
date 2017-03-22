@@ -27,7 +27,8 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for the salt.modules.at module
     '''
-    loader_module = dnsmasq
+    def setup_loader_modules(self):
+        return {dnsmasq: {}}
 
     def test_version(self):
         '''

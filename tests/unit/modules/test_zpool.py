@@ -32,7 +32,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
     '''
     This class contains a set of functions that test salt.modules.zpool module
     '''
-    loader_module = zpool
+    def setup_loader_modules(self):
+        return {zpool: {}}
 
     @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
     def test_exists_success(self):

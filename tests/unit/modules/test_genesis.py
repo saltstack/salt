@@ -25,7 +25,8 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.genesis
     '''
-    loader_module = genesis
+    def setup_loader_modules(self):
+        return {genesis: {}}
 
     def test_bootstrap(self):
         '''

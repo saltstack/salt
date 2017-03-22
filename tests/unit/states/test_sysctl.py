@@ -26,7 +26,9 @@ class SysctlTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.sysctl
     '''
-    loader_module = sysctl
+    def setup_loader_modules(self):
+        return {sysctl: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

@@ -21,7 +21,8 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.bower
     '''
-    loader_module = bower
+    def setup_loader_modules(self):
+        return {bower: {}}
 
     @patch('salt.modules.bower._check_valid_version',
            MagicMock(return_value=True))

@@ -20,7 +20,8 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.bridge
     '''
-    loader_module = bridge
+    def setup_loader_modules(self):
+        return {bridge: {}}
 
     def test_show(self):
         '''

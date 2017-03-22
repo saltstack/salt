@@ -26,12 +26,13 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.glusterfs
     '''
-    loader_module = glusterfs
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__salt__': {'glusterfs.peer': mod_glusterfs.peer}
+            glusterfs: {
+                '__salt__': {'glusterfs.peer': mod_glusterfs.peer}
+            }
         }
+
     # 'peered' function tests: 1
 
     def test_peered(self):

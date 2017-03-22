@@ -25,7 +25,8 @@ class HadoopTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.hadoop
     '''
-    loader_module = hadoop
+    def setup_loader_modules(self):
+        return {hadoop: {}}
 
     def test_version(self):
         '''

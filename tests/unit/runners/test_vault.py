@@ -29,7 +29,8 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
     Tests for the runner module of the Vault integration
     '''
 
-    loader_module = vault
+    def setup_loader_modules(self):
+        return {vault: {}}
 
     def setUp(self):
         self.grains = {

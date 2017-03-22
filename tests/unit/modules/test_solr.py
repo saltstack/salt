@@ -24,7 +24,8 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.solr
     '''
-    loader_module = solr
+    def setup_loader_modules(self):
+        return {solr: {}}
 
     def test_lucene_version(self):
         '''

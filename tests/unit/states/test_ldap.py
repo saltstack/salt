@@ -166,15 +166,15 @@ def _dump_db(d=None):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LDAPTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = salt.states.ldap
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         salt_dunder = {}
         for fname in ('connect', 'search', 'add', 'delete', 'change', 'modify'):
             salt_dunder['ldap3.{}'.format(fname)] = globals()['_dummy_' + fname]
         return {
-            '__opts__': {'test': False},
-            '__salt__': salt_dunder
+            salt.states.ldap: {
+                '__opts__': {'test': False},
+                '__salt__': salt_dunder
+            }
         }
 
     def _test_helper(self, init_db, expected_ret, replace,

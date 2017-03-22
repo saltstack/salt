@@ -105,7 +105,22 @@ if _has_required_boto():
 class BotoCloudTrailStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    loader_module = boto_cloudtrail
+    def setup_loader_modules(self):
+        ctx = {}
+        utils = salt.loader.utils(self.opts, whitelist=['boto', 'boto3'], context=ctx)
+        serializers = salt.loader.serializers(self.opts)
+        self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_cloudtrail'])
+        self.salt_states = salt.loader.states(opts=self.opts, functions=funcs, utils=utils, whitelist=['boto_cloudtrail'],
+                                              serializers=serializers)
+        return {
+            boto_cloudtrail: {
+                '__opts__': self.opts,
+                '__salt__': funcs,
+                '__utils__': utils,
+                '__states__': self.salt_states,
+                '__serializers__': serializers,
+            }
+        }
 
     @classmethod
     def setUpClass(cls):
@@ -115,21 +130,6 @@ class BotoCloudTrailStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     @classmethod
     def tearDownClass(cls):
         del cls.opts
-
-    def loader_module_globals(self):
-        ctx = {}
-        utils = salt.loader.utils(self.opts, whitelist=['boto', 'boto3'], context=ctx)
-        serializers = salt.loader.serializers(self.opts)
-        self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_cloudtrail'])
-        self.salt_states = salt.loader.states(opts=self.opts, functions=funcs, utils=utils, whitelist=['boto_cloudtrail'],
-                                              serializers=serializers)
-        return {
-            '__opts__': self.opts,
-            '__salt__': funcs,
-            '__utils__': utils,
-            '__states__': self.salt_states,
-            '__serializers__': serializers,
-        }
 
     # Set up MagicMock to replace the boto3 session
     def setUp(self):

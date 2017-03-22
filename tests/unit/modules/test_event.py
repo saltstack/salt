@@ -26,14 +26,16 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.event
     '''
-    loader_module = event
-    loader_module_globals = {
-        '__opts__': {
-            'id': 'id',
-            'sock_dir': TMP,
-            'transport': 'zeromq'
+    def setup_loader_modules(self):
+        return {
+            event: {
+                '__opts__': {
+                    'id': 'id',
+                    'sock_dir': TMP,
+                    'transport': 'zeromq'
+                }
+            }
         }
-    }
 
     @patch('salt.crypt.SAuth')
     @patch('salt.transport.Channel.factory')

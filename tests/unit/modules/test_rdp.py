@@ -22,7 +22,8 @@ class RdpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rdp
     '''
-    loader_module = rdp
+    def setup_loader_modules(self):
+        return {rdp: {}}
 
     # 'enable' function tests: 1
 

@@ -23,10 +23,8 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.proxy
     '''
-    loader_module = proxy
-
-    def loader_module_globals(self):
-        return {'__grains__': {'os': 'Darwin'}}
+    def setup_loader_modules(self):
+        return {proxy: {'__grains__': {'os': 'Darwin'}}}
 
     def test_get_http_proxy_macos(self):
         '''

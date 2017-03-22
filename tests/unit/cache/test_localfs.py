@@ -35,7 +35,8 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
     Validate the functions in the localfs cache
     '''
 
-    loader_module = localfs
+    def setup_loader_modules(self):
+        return {localfs: {}}
 
     def _create_tmp_cache_file(self, tmp_dir, serializer):
         '''

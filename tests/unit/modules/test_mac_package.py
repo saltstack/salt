@@ -18,7 +18,8 @@ from tests.support.mock import (
 
 class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = macpackage
+    def setup_loader_modules(self):
+        return {macpackage: {}}
 
     def test_install(self):
         '''

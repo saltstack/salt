@@ -22,7 +22,8 @@ class RiakTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.riak
     '''
-    loader_module = riak
+    def setup_loader_modules(self):
+        return {riak: {}}
 
     def test_start(self):
         '''

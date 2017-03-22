@@ -28,9 +28,10 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.btrfs
     '''
-    loader_module = btrfs
-    # 'version' function tests: 1
+    def setup_loader_modules(self):
+        return {btrfs: {}}
 
+    # 'version' function tests: 1
     def test_version(self):
         '''
         Test if it return BTRFS version.

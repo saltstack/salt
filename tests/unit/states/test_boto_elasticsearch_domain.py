@@ -85,7 +85,22 @@ if _has_required_boto():
 class BotoElasticsearchDomainStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    loader_module = boto_elasticsearch_domain
+    def setup_loader_modules(self):
+        ctx = {}
+        utils = salt.loader.utils(self.opts, whitelist=['boto3'], context=ctx)
+        serializers = salt.loader.serializers(self.opts)
+        self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_elasticsearch_domain'])
+        self.salt_states = salt.loader.states(opts=self.opts, functions=funcs, utils=utils, whitelist=['boto_elasticsearch_domain'],
+                                              serializers=serializers)
+        return {
+            boto_elasticsearch_domain: {
+                '__opts__': self.opts,
+                '__salt__': funcs,
+                '__utils__': utils,
+                '__states__': self.salt_states,
+                '__serializers__': serializers,
+            }
+        }
 
     @classmethod
     def setUpClass(cls):
@@ -95,21 +110,6 @@ class BotoElasticsearchDomainStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     @classmethod
     def tearDownClass(cls):
         del cls.opts
-
-    def loader_module_globals(self):
-        ctx = {}
-        utils = salt.loader.utils(self.opts, whitelist=['boto3'], context=ctx)
-        serializers = salt.loader.serializers(self.opts)
-        self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_elasticsearch_domain'])
-        self.salt_states = salt.loader.states(opts=self.opts, functions=funcs, utils=utils, whitelist=['boto_elasticsearch_domain'],
-                                              serializers=serializers)
-        return {
-            '__opts__': self.opts,
-            '__salt__': funcs,
-            '__utils__': utils,
-            '__states__': self.salt_states,
-            '__serializers__': serializers,
-        }
 
     # Set up MagicMock to replace the boto3 session
     def setUp(self):

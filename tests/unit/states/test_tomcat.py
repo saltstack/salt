@@ -25,10 +25,8 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Validate the tomcat state
     '''
-    loader_module = tomcat
-
-    def loader_module_globals(self):
-        return {'__env__': 'base'}
+    def setup_loader_modules(self):
+        return {tomcat: {'__env__': 'base'}}
 
     def test_war_deployed(self):
         '''

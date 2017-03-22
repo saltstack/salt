@@ -29,7 +29,8 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
     TestCase for salt.modules.linux_sysctl module
     '''
 
-    loader_module = linux_sysctl, systemd
+    def setup_loader_modules(self):
+        return {linux_sysctl: {}, systemd: {}}
 
     def test_get(self):
         '''

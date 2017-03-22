@@ -25,7 +25,8 @@ class SysrcTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the sysrc state
     '''
-    loader_module = sysrc
+    def setup_loader_modules(self):
+        return {sysrc: {}}
 
     def test_managed(self):
         '''

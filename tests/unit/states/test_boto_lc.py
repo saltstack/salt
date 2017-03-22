@@ -20,7 +20,9 @@ class BotoLcTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_lc
     '''
-    loader_module = boto_lc
+    def setup_loader_modules(self):
+        return {boto_lc: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

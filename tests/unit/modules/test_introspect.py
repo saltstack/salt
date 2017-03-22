@@ -25,7 +25,9 @@ class IntrospectTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.introspect
     '''
-    loader_module = introspect
+    def setup_loader_modules(self):
+        return {introspect: {}}
+
     # 'running_service_owners' function tests: 1
 
     def test_running_service_owners(self):

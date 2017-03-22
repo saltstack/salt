@@ -64,12 +64,12 @@ def _task(script='testscript', enabled=True, task_type='stream', db='testdb', rp
 
 
 class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
-    loader_module = kapacitor
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__opts__': {'test': False},
-            '__env__': 'test'
+            kapacitor: {
+                '__opts__': {'test': False},
+                '__env__': 'test'
+            }
         }
 
     def test_task_present_new_task(self):

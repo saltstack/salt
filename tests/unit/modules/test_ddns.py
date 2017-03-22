@@ -36,7 +36,8 @@ class DDNSTestCase(TestCase, LoaderModuleMockMixin):
     TestCase for the salt.modules.ddns module
     '''
 
-    loader_module = ddns
+    def setup_loader_modules(self):
+        return {ddns: {}}
 
     @patch('salt.modules.ddns.update')
     def test_add_host(self, ddns_update):

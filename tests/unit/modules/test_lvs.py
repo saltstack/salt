@@ -25,7 +25,8 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.lvs
     '''
-    loader_module = lvs
+    def setup_loader_modules(self):
+        return {lvs: {}}
 
     def test_add_service(self):
         '''

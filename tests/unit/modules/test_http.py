@@ -25,7 +25,8 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.http
     '''
-    loader_module = http
+    def setup_loader_modules(self):
+        return {http: {}}
 
     def test_query(self):
         '''

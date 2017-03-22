@@ -19,7 +19,8 @@ class YamlTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.output.json_out
     '''
-    loader_module = yaml
+    def setup_loader_modules(self):
+        return {yaml: {}}
 
     def setUp(self):
         self.data = {'test': 'two', 'example': 'one'}

@@ -27,7 +27,9 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.npm
     '''
-    loader_module = npm
+    def setup_loader_modules(self):
+        return {npm: {}}
+
     # 'install' function tests: 1
 
     @patch('salt.modules.npm._check_valid_version',

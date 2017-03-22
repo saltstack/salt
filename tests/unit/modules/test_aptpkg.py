@@ -137,7 +137,9 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.aptpkg
     '''
-    loader_module = aptpkg
+
+    def setup_loader_modules(self):
+        return {aptpkg: {}}
 
     def test_version(self):
         '''

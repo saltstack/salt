@@ -53,12 +53,8 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.zypper
     '''
 
-    loader_module = zypper
-
-    def loader_module_globals(self):
-        return {
-            'rpm': None
-        }
+    def setup_loader_modules(self):
+        return {zypper: {'rpm': None}}
 
     def setUp(self):
         self.new_repo_config = dict(

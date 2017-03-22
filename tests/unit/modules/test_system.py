@@ -23,7 +23,8 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.system
     '''
-    loader_module = system
+    def setup_loader_modules(self):
+        return {system: {}}
 
     def test_halt(self):
         '''

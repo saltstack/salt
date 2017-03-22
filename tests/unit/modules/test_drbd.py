@@ -25,7 +25,9 @@ class DrbdTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.drbd
     '''
-    loader_module = drbd
+    def setup_loader_modules(self):
+        return {drbd: {}}
+
     # 'overview' function tests: 1
 
     def test_overview(self):

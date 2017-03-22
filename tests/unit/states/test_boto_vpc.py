@@ -69,8 +69,6 @@ dhcp_options_parameters = {'domain_name': 'example.com', 'domain_name_servers': 
 network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
 dhcp_options_parameters.update(conn_parameters)
 
-salt.utils.boto.__salt__ = {}
-
 
 def _has_required_boto():
     '''
@@ -86,7 +84,23 @@ def _has_required_boto():
 
 
 class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
-    loader_module = boto_vpc
+    def setup_loader_modules(self):
+        ctx = {}
+        utils = salt.loader.utils(self.opts, whitelist=['boto', 'boto3'], context=ctx)
+        serializers = salt.loader.serializers(self.opts)
+        self.funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_vpc', 'config'])
+        self.salt_states = salt.loader.states(opts=self.opts, functions=self.funcs, utils=utils, whitelist=['boto_vpc'],
+                                              serializers=serializers)
+        return {
+            boto_vpc: {
+                '__opts__': self.opts,
+                '__salt__': self.funcs,
+                '__utils__': utils,
+                '__states__': self.salt_states,
+                '__serializers__': serializers,
+            },
+            salt.utils.boto: {}
+        }
 
     @classmethod
     def setUpClass(cls):
@@ -96,21 +110,6 @@ class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     @classmethod
     def tearDownClass(cls):
         del cls.opts
-
-    def loader_module_globals(self):
-        ctx = {}
-        utils = salt.loader.utils(self.opts, whitelist=['boto', 'boto3'], context=ctx)
-        serializers = salt.loader.serializers(self.opts)
-        self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_vpc', 'config'])
-        self.salt_states = salt.loader.states(opts=self.opts, functions=funcs, utils=utils, whitelist=['boto_vpc'],
-                                              serializers=serializers)
-        return {
-            '__opts__': self.opts,
-            '__salt__': funcs,
-            '__utils__': utils,
-            '__states__': self.salt_states,
-            '__serializers__': serializers,
-        }
 
     def setUp(self):
         self.addCleanup(delattr, self, 'funcs')

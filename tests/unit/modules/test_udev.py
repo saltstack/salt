@@ -25,7 +25,9 @@ class UdevTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.udev
     '''
-    loader_module = udev
+    def setup_loader_modules(self):
+        return {udev: {}}
+
     # 'info' function tests: 1
 
     def test_info(self):

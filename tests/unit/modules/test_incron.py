@@ -25,7 +25,9 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.incron
     '''
-    loader_module = incron
+    def setup_loader_modules(self):
+        return {incron: {}}
+
     # 'write_incron_file' function tests: 1
 
     @patch('salt.modules.incron._get_incron_cmdstr',

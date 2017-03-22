@@ -28,19 +28,19 @@ from salt.utils.odict import OrderedDict
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = grainsmod
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         conf_file = os.path.join(TMP, '__salt_test_grains')
         cachedir = os.path.join(TMP, '__salt_test_grains_cache_dir')
         if not os.path.isdir(cachedir):
             os.makedirs(cachedir)
         return {
-            '__opts__': {
-              'conf_file': conf_file,
-              'cachedir':  cachedir
-            },
-            '__salt__': {'saltutil.refresh_grains': MagicMock()}
+            grainsmod: {
+                '__opts__': {
+                  'conf_file': conf_file,
+                  'cachedir':  cachedir
+                },
+                '__salt__': {'saltutil.refresh_grains': MagicMock()}
+            }
         }
 
     def test_filter_by(self):

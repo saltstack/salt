@@ -24,7 +24,9 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.alternatives
     '''
-    loader_module = alternatives
+    def setup_loader_modules(self):
+        return {alternatives: {}}
+
     # 'install' function tests: 1
 
     def test_install(self):

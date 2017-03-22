@@ -16,7 +16,9 @@ from tests.support.mock import (
 
 
 class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
-    loader_module = macdefaults
+
+    def setup_loader_modules(self):
+        return {macdefaults: {}}
 
     def test_write_default(self):
         '''

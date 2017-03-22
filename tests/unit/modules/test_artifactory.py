@@ -14,7 +14,9 @@ import salt.modules.artifactory as artifactory
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
-    loader_module = artifactory
+
+    def setup_loader_modules(self):
+        return {artifactory: {}}
 
     def test_artifact_get_metadata(self):
         with patch('salt.modules.artifactory._get_artifact_metadata_xml', MagicMock(return_value='''<?xml version="1.0" encoding="UTF-8"?>

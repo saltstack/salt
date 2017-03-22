@@ -17,7 +17,8 @@ from tests.support.mock import (
 
 class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = certutil
+    def setup_loader_modules(self):
+        return {certutil: {}}
 
     def test_add_serial(self):
         '''

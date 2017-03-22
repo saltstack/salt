@@ -48,23 +48,25 @@ class GCETestCase(TestCase, LoaderModuleMockMixin):
     Unit TestCase for salt.cloud.clouds.gce module.
     '''
 
-    loader_module = gce
-    loader_module_globals = {
-        '__active_provider_name__': '',
-        '__opts__': {
-            'providers': {
-                'my-google-cloud': {
-                    'gce': {
-                        'project': 'daenerys-cloud',
-                        'service_account_email_address': 'dany@targaryen.westeros.cloud',
-                        'service_account_private_key': '/home/dany/PRIVKEY.pem',
-                        'driver': 'gce',
-                        'ssh_interface': 'public_ips'
+    def setup_loader_modules(self):
+        return {
+            gce: {
+                '__active_provider_name__': '',
+                '__opts__': {
+                    'providers': {
+                        'my-google-cloud': {
+                            'gce': {
+                                'project': 'daenerys-cloud',
+                                'service_account_email_address': 'dany@targaryen.westeros.cloud',
+                                'service_account_private_key': '/home/dany/PRIVKEY.pem',
+                                'driver': 'gce',
+                                'ssh_interface': 'public_ips'
+                            }
+                        }
                     }
                 }
             }
         }
-    }
 
     def test_destroy_call(self):
         '''

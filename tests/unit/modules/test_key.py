@@ -27,7 +27,8 @@ class KeyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.key
     '''
-    loader_module = key
+    def setup_loader_modules(self):
+        return {key: {}}
 
     def test_finger(self):
         '''

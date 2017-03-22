@@ -24,7 +24,9 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.slack
     '''
-    loader_module = slack
+    def setup_loader_modules(self):
+        return {slack: {}}
+
     # 'post_message' function tests: 1
 
     def test_post_message(self):

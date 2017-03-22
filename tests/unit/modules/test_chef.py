@@ -24,7 +24,9 @@ class ChefTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.chef
     '''
-    loader_module = chef
+    def setup_loader_modules(self):
+        return {chef: {}}
+
     # 'client' function tests: 1
 
     @patch('salt.modules.chef._exec_cmd', MagicMock(return_value={}))

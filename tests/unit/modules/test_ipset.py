@@ -25,7 +25,8 @@ class IpsetTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.aptpkg
     '''
-    loader_module = ipset
+    def setup_loader_modules(self):
+        return {ipset: {}}
 
     def test_version(self):
         '''

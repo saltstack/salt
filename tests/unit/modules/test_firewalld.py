@@ -24,7 +24,8 @@ class FirewalldTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.firewalld
     '''
-    loader_module = firewalld
+    def setup_loader_modules(self):
+        return {firewalld: {}}
 
     def test_version(self):
         '''

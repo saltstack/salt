@@ -45,20 +45,20 @@ from salt.exceptions import CommandExecutionError
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestFileState(TestCase, LoaderModuleMockMixin):
 
-    loader_module = filestate
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__env__': 'base',
-            '__salt__': {'file.manage_file': False},
-            '__serializers__': {
-                'yaml.serialize': yamlserializer.serialize,
-                'python.serialize': pythonserializer.serialize,
-                'json.serialize': jsonserializer.serialize
-            },
-            '__opts__': {'test': False, 'cachedir': ''},
-            '__instance_id__': '',
-            '__low__': {}
+            filestate: {
+                '__env__': 'base',
+                '__salt__': {'file.manage_file': False},
+                '__serializers__': {
+                    'yaml.serialize': yamlserializer.serialize,
+                    'python.serialize': pythonserializer.serialize,
+                    'json.serialize': jsonserializer.serialize
+                },
+                '__opts__': {'test': False, 'cachedir': ''},
+                '__instance_id__': '',
+                '__low__': {}
+            }
         }
 
     def test_serialize(self):

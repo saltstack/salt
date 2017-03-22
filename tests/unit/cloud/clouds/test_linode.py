@@ -20,7 +20,8 @@ class LinodeTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for the salt.cloud.clouds.linode module.
     '''
-    loader_module = linode
+    def setup_loader_modules(self):
+        return {linode: {}}
 
     # _validate_name tests
 

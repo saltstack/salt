@@ -26,8 +26,8 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the test state
     '''
-    loader_module = test
-    loader_module_globals = {'__low__': {'__reqs__': {'watch': ''}}}
+    def setup_loader_modules(self):
+        return {test: {'__low__': {'__reqs__': {'watch': ''}}}}
 
     def test_succeed_without_changes(self):
         '''

@@ -27,7 +27,8 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.seed
     '''
-    loader_module = seed
+    def setup_loader_modules(self):
+        return {seed: {}}
 
     def test_mkconfig_odict(self):
         with patch.dict(seed.__opts__,

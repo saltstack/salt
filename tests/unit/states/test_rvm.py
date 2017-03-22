@@ -18,14 +18,14 @@ import salt.ext.six as six
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestRvmState(TestCase, LoaderModuleMockMixin):
 
-    loader_module = rvm
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__opts__': {'test': False},
-            '__salt__': {
-                'cmd.has_exec': MagicMock(return_value=True),
-                'config.option': MagicMock(return_value=None)
+            rvm: {
+                '__opts__': {'test': False},
+                '__salt__': {
+                    'cmd.has_exec': MagicMock(return_value=True),
+                    'config.option': MagicMock(return_value=None)
+                }
             }
         }
 

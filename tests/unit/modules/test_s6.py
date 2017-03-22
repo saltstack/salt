@@ -26,8 +26,8 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.s6
     '''
-    loader_module = s6
-    loader_module_globals = {'SERVICE_DIR': '/etc/service'}
+    def setup_loader_modules(self):
+        return {s6: {'SERVICE_DIR': '/etc/service'}}
 
     # 'start' function tests: 1
 

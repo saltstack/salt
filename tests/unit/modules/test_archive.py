@@ -38,8 +38,9 @@ class ZipFileMock(MagicMock):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
-    loader_module = archive
-    loader_module_globals = {'__grains__': {'id': 0}}
+
+    def setup_loader_modules(self):
+        return {archive: {'__grains__': {'id': 0}}}
 
     @patch('salt.utils.which', lambda exe: exe)
     @patch('glob.glob', lambda pathname: [pathname])

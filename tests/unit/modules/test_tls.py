@@ -120,7 +120,8 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.tls
     '''
-    loader_module = tls
+    def setup_loader_modules(self):
+        return {tls: {}}
 
     def test_cert_base_path(self):
         '''

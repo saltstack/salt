@@ -20,17 +20,17 @@ DEFAULTS = {
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestModulesConfig(TestCase, LoaderModuleMockMixin):
 
-    loader_module = config
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__opts__': {
-                'test.option.all': 'value of test.option.all in __opts__'
-            },
-            '__pillar__': {
-                'test.option.all': 'value of test.option.all in __pillar__',
-                'master': {
-                    'test.option.all': 'value of test.option.all in master'
+            config: {
+                '__opts__': {
+                    'test.option.all': 'value of test.option.all in __opts__'
+                },
+                '__pillar__': {
+                    'test.option.all': 'value of test.option.all in __pillar__',
+                    'master': {
+                        'test.option.all': 'value of test.option.all in master'
+                    }
                 }
             }
         }

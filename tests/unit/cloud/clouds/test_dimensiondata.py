@@ -57,19 +57,19 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
     Unit TestCase for salt.cloud.clouds.dimensiondata module.
     '''
 
-    loader_module = dimensiondata
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__active_provider_name__': '',
-            '__opts__': {
-                'providers': {
-                    'my-dimensiondata-cloud': {
-                        'dimensiondata': {
-                            'driver': 'dimensiondata',
-                            'region': 'dd-au',
-                            'user_id': 'jon_snow',
-                            'key': 'IKnowNothing'
+            dimensiondata: {
+                '__active_provider_name__': '',
+                '__opts__': {
+                    'providers': {
+                        'my-dimensiondata-cloud': {
+                            'dimensiondata': {
+                                'driver': 'dimensiondata',
+                                'region': 'dd-au',
+                                'user_id': 'jon_snow',
+                                'key': 'IKnowNothing'
+                            }
                         }
                     }
                 }

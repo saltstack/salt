@@ -226,13 +226,14 @@ class SmtpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.smtp
     '''
-    loader_module = smtp
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            'socket': MockSocket(),
-            'smtplib': MockSmtplib()
+            smtp: {
+                'socket': MockSocket(),
+                'smtplib': MockSmtplib()
+            }
         }
+
     # 'send_msg' function tests: 1
 
     def test_send_msg(self):

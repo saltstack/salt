@@ -21,7 +21,8 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
     '''
     test modules.status functions
     '''
-    loader_module = status
+    def setup_loader_modules(self):
+        return {status: {}}
 
     def _set_up_test_uptime(self):
         '''

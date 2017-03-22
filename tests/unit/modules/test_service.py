@@ -24,7 +24,8 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.service
     '''
-    loader_module = service
+    def setup_loader_modules(self):
+        return {service: {}}
 
     def test_start(self):
         '''

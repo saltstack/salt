@@ -121,14 +121,10 @@ def _has_required_boto():
 class BotoLambdaTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    loader_module = boto_lambda
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS
         utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
-        return {
-            '__utils__': utils,
-        }
+        return {boto_lambda: {'__utils__': utils}}
 
     def setUp(self):
         super(BotoLambdaTestCaseBase, self).setUp()

@@ -17,7 +17,8 @@ from tests.support.mock import (
 
 class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = dism
+    def setup_loader_modules(self):
+        return {dism: {}}
 
     def test_add_capability(self):
         '''

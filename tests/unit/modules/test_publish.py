@@ -68,7 +68,8 @@ class PublishTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.publish
     '''
-    loader_module = publish
+    def setup_loader_modules(self):
+        return {publish: {}}
 
     @classmethod
     def setUpClass(cls):

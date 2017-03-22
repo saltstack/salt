@@ -32,7 +32,8 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
     TestCase for salt.modules.cp module
     '''
 
-    loader_module = cp
+    def setup_loader_modules(self):
+        return {cp: {}}
 
     def test__render_filenames_undefined_template(self):
         '''

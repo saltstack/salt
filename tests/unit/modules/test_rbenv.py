@@ -25,7 +25,8 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rbenv
     '''
-    loader_module = rbenv
+    def setup_loader_modules(self):
+        return {rbenv: {}}
 
     def test_install(self):
         '''

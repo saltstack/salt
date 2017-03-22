@@ -203,14 +203,10 @@ if _has_required_boto():
 class BotoS3BucketTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    loader_module = boto_s3_bucket
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS
         utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
-        return {
-            '__utils__': utils,
-        }
+        return {boto_s3_bucket: {'__utils__': utils}}
 
     def setUp(self):
         super(BotoS3BucketTestCaseBase, self).setUp()

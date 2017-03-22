@@ -36,7 +36,8 @@ class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.logrotate
     '''
-    loader_module = logrotate
+    def setup_loader_modules(self):
+        return {logrotate: {}}
 
     # 'show_conf' function tests: 1
 

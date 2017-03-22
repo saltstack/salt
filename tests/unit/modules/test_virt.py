@@ -24,15 +24,14 @@ import salt.ext.six as six
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = virt, config
-
-    def loader_module_globals(self):
-        return {
+    def setup_loader_modules(self):
+        loader_globals = {
             '__salt__': {
                 'config.get': config.get,
                 'config.option': config.option,
             }
         }
+        return {virt: loader_globals, config: loader_globals}
 
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')

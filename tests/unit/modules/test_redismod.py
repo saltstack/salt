@@ -273,12 +273,8 @@ class RedismodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.redismod
     '''
-    loader_module = redismod
-
-    def loader_module_globals(self):
-        return {
-            'redis': Mockredis
-        }
+    def setup_loader_modules(self):
+        return {redismod: {'redis': Mockredis}}
 
     def test_bgrewriteaof(self):
         '''

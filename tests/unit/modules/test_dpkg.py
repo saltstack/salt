@@ -25,7 +25,9 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.dpkg
     '''
-    loader_module = dpkg
+    def setup_loader_modules(self):
+        return {dpkg: {}}
+
     # 'unpurge' function tests: 2
 
     def test_unpurge(self):

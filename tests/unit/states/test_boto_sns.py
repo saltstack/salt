@@ -19,7 +19,9 @@ class BotoSnsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_sns
     '''
-    loader_module = boto_sns
+    def setup_loader_modules(self):
+        return {boto_sns: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

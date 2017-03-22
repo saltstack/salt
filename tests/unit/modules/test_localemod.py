@@ -27,7 +27,8 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.localemod
     '''
-    loader_module = localemod
+    def setup_loader_modules(self):
+        return {localemod: {}}
 
     def test_list_avail(self):
         '''

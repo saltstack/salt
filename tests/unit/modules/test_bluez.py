@@ -42,8 +42,9 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.bluez
     '''
-    loader_module = bluez
-    loader_module_globals = {'bluetooth': MockBluetooth()}
+
+    def setup_loader_modules(self):
+        return {bluez: {'bluetooth': MockBluetooth()}}
 
     def test_version(self):
         '''

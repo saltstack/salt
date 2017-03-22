@@ -23,7 +23,8 @@ class BotoCloudwatchAlarmTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_cloudwatch_alarm
     '''
-    loader_module = boto_cloudwatch_alarm
+    def setup_loader_modules(self):
+        return {boto_cloudwatch_alarm: {}}
 
     # 'present' function tests: 1
 

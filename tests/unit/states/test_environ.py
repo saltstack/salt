@@ -18,14 +18,13 @@ import salt.modules.environ as envmodule
 
 class TestEnvironState(TestCase, LoaderModuleMockMixin):
 
-    loader_module = envstate, envmodule
-
-    def loader_module_globals(self):
-        return {
+    def setup_loader_modules(self):
+        loader_globals = {
             '__env__': 'base',
             '__opts__': {'test': False},
             '__salt__': {'environ.setenv': envmodule.setenv}
         }
+        return {envstate: loader_globals, envmodule: loader_globals}
 
     def setUp(self):
         original_environ = os.environ.copy()

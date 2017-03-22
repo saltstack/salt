@@ -25,8 +25,8 @@ class JobsTest(TestCase, LoaderModuleMockMixin):
     '''
     Validate the jobs runner
     '''
-    loader_module = jobs
-    loader_module_globals = {'__opts__': {'ext_job_cache': None, 'master_job_cache': 'local_cache'}}
+    def setup_loader_modules(self):
+        return {jobs: {'__opts__': {'ext_job_cache': None, 'master_job_cache': 'local_cache'}}}
 
     def test_list_jobs_with_search_target(self):
         '''

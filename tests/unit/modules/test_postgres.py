@@ -53,16 +53,16 @@ test_privileges_list_group_csv = (
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
 class PostgresTestCase(TestCase, LoaderModuleMockMixin):
-    loader_module = postgres
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__grains__': {'os_family': 'Linux'},
-            '__salt__': {
-                'config.option': Mock(),
-                'cmd.run_all': Mock(),
-                'file.chown': Mock(),
-                'file.remove': Mock(),
+            postgres: {
+                '__grains__': {'os_family': 'Linux'},
+                '__salt__': {
+                    'config.option': Mock(),
+                    'cmd.run_all': Mock(),
+                    'file.chown': Mock(),
+                    'file.remove': Mock(),
+                }
             }
         }
 

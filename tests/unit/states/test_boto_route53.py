@@ -23,7 +23,9 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_route53
     '''
-    loader_module = boto_route53
+    def setup_loader_modules(self):
+        return {boto_route53: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

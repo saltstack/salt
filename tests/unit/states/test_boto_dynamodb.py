@@ -23,7 +23,8 @@ class BotoDynamodbTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_dynamodb
     '''
-    loader_module = boto_dynamodb
+    def setup_loader_modules(self):
+        return {boto_dynamodb: {}}
 
     # 'present' function tests: 1
 

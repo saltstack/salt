@@ -40,7 +40,8 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.network
     '''
-    loader_module = network
+    def setup_loader_modules(self):
+        return {network: {}}
 
     def test_wol_bad_mac(self):
         '''

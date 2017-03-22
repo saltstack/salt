@@ -17,10 +17,8 @@ from salt.exceptions import CommandExecutionError
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PipTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = pip
-
-    def loader_module_globals(self):
-        return {'__salt__': {'cmd.which_bin': lambda _: 'pip'}}
+    def setup_loader_modules(self):
+        return {pip: {'__salt__': {'cmd.which_bin': lambda _: 'pip'}}}
 
     def test_fix4361(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})

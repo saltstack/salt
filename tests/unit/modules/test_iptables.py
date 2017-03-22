@@ -26,7 +26,9 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.iptables
     '''
-    loader_module = iptables
+    def setup_loader_modules(self):
+        return {iptables: {}}
+
     # 'version' function tests: 1
 
     def test_version(self):

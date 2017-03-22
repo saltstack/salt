@@ -24,7 +24,8 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.status
     '''
-    loader_module = status
+    def setup_loader_modules(self):
+        return {status: {}}
 
     # 'loadavg' function tests: 1
     def test_loadavg(self):

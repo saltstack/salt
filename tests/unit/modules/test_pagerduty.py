@@ -27,12 +27,8 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pagerduty
     '''
-    loader_module = pagerduty
-
-    def loader_module_globals(self):
-        return {
-            '__salt__': {'config.option': MagicMock(return_value=None)}
-        }
+    def setup_loader_modules(self):
+        return {pagerduty: {'__salt__': {'config.option': MagicMock(return_value=None)}}}
 
     def test_list_services(self):
         '''

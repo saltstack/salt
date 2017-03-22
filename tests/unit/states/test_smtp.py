@@ -24,7 +24,9 @@ class SmtpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.smtp
     '''
-    loader_module = smtp
+    def setup_loader_modules(self):
+        return {smtp: {}}
+
     # 'send_msg' function tests: 1
 
     def test_send_msg(self):

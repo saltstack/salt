@@ -25,7 +25,8 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.environ
     '''
-    loader_module = environ
+    def setup_loader_modules(self):
+        return {environ: {}}
 
     def test_setval(self):
         '''

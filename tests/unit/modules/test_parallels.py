@@ -22,7 +22,8 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test parallels desktop execution module functions
     '''
-    loader_module = parallels
+    def setup_loader_modules(self):
+        return {parallels: {}}
 
     def test___virtual__(self):
         '''

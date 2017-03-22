@@ -21,7 +21,9 @@ class ApacheConfTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.apache_conf
     '''
-    loader_module = apache_conf
+    def setup_loader_modules(self):
+        return {apache_conf: {}}
+
     # 'enabled' function tests: 1
 
     def test_enabled(self):

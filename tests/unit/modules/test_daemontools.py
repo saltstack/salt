@@ -28,7 +28,8 @@ class DaemontoolsTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.daemontools
     '''
 
-    loader_module = daemontools
+    def setup_loader_modules(self):
+        return {daemontools: {}}
 
     def test_start(self):
         '''

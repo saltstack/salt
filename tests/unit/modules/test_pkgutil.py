@@ -26,7 +26,8 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pkgutil
     '''
-    loader_module = pkgutil
+    def setup_loader_modules(self):
+        return {pkgutil: {}}
 
     # 'refresh_db' function tests: 1
 

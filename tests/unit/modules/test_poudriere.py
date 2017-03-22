@@ -27,7 +27,9 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.poudriere
     '''
-    loader_module = poudriere
+    def setup_loader_modules(self):
+        return {poudriere: {}}
+
     # 'is_jail' function tests: 1
 
     @patch('salt.modules.poudriere._check_config_exists',

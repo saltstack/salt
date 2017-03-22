@@ -144,16 +144,14 @@ MODULE_RET = {
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SnapperTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = snapper
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
 
         class DBusException(BaseException):
             get_dbus_name = 'foo'
 
         dbus_mock = MagicMock()
         dbus_mock.configure_mock(DBusException=DBusException)
-        return {'dbus': dbus_mock, 'snapper': MagicMock()}
+        return {snapper: {'dbus': dbus_mock, 'snapper': MagicMock()}}
 
     def test__snapshot_to_data(self):
         data = snapper._snapshot_to_data(DBUS_RET['ListSnapshots'][0])  # pylint: disable=protected-access

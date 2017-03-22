@@ -31,14 +31,14 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.opennebula module.
     '''
-    loader_module = opennebula
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__utils__': {
-                'cloud.cache_node': MagicMock()
-            },
-            '__active_provider_name__': ''
+            opennebula: {
+                '__utils__': {
+                    'cloud.cache_node': MagicMock()
+                },
+                '__active_provider_name__': ''
+            }
         }
 
     def test_avail_images_action(self):

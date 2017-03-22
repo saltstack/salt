@@ -20,10 +20,12 @@ from tests.support.mock import (
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
-    loader_module = powercfg
+    '''
+        Validate the powercfg state
+    '''
 
-    def loader_module_globals(self):
-        return {'__grains__': {'osrelease': 8}}
+    def setup_loader_modules(self):
+        return {powercfg: {'__grains__': {'osrelease': 8}}}
 
     query_ouput = '''Subgroup GUID: 238c9fa8-0aad-41ed-83f4-97be242c8f20  (Hibernate)
                 GUID Alias: SUB_SLEEP
@@ -36,9 +38,6 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                 Current AC Power Setting Index: 0x00000708
                 Current DC Power Setting Index: 0x00000384'''
 
-    '''
-        Validate the powercfg state
-    '''
     def test_set_monitor_timeout(self):
         '''
             Test to make sure we can set the monitor timeout value

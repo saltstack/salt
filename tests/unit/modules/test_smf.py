@@ -23,7 +23,8 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.smf
     '''
-    loader_module = smf
+    def setup_loader_modules(self):
+        return {smf: {}}
 
     def test_get_running(self):
         '''

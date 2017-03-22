@@ -58,18 +58,24 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
     '''
     Tests module state (salt/states/module.py)
     '''
-    loader_module = module
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__opts__': {'test': False},
-            '__salt__': {CMD: MagicMock()}
+            module: {
+                '__opts__': {'test': False},
+                '__salt__': {CMD: MagicMock()}
+            }
         }
 
-    aspec = ArgSpec(args=['hello', 'world'],
-                    varargs=None,
-                    keywords=None,
-                    defaults=False)
+    @classmethod
+    def setUpClass(cls):
+        cls.aspec = ArgSpec(args=['hello', 'world'],
+                            varargs=None,
+                            keywords=None,
+                            defaults=False)
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.aspec
 
     def test_run_module_not_available(self):
         '''
@@ -182,13 +188,13 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             comment = 'Module function {0} is set to execute'.format(CMD)
             self.assertEqual(ret['comment'], comment)
 
-    @patch('salt.utils.args.get_function_argspec', MagicMock(return_value=aspec))
     def test_module_run_missing_arg(self):
         '''
         Tests the return of module.run state when arguments are missing
         '''
-        ret = module._run(CMD)
-        comment = 'The following arguments are missing:'
-        self.assertIn(comment, ret['comment'])
-        self.assertIn('world', ret['comment'])
-        self.assertIn('hello', ret['comment'])
+        with patch('salt.utils.args.get_function_argspec', MagicMock(return_value=self.aspec)):
+            ret = module._run(CMD)
+            comment = 'The following arguments are missing:'
+            self.assertIn(comment, ret['comment'])
+            self.assertIn('world', ret['comment'])
+            self.assertIn('hello', ret['comment'])

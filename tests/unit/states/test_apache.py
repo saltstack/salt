@@ -25,7 +25,9 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.apache
     '''
-    loader_module = apache
+    def setup_loader_modules(self):
+        return {apache: {}}
+
     # 'configfile' function tests: 1
 
     @patch('os.path.exists', MagicMock(return_value=True))

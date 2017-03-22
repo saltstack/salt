@@ -25,7 +25,8 @@ class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.htpasswd
     '''
-    loader_module = htpasswd
+    def setup_loader_modules(self):
+        return {htpasswd: {}}
 
     # 'useradd' function tests: 1
 

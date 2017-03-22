@@ -371,7 +371,8 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.glusterfs
     '''
-    loader_module = glusterfs
+    def setup_loader_modules(self):
+        return {glusterfs: {}}
 
     maxDiff = None
 

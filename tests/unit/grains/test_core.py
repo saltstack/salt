@@ -31,7 +31,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for core grains
     '''
-    loader_module = core
+    def setup_loader_modules(self):
+        return {core: {}}
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_gnu_slash_linux_in_os_name(self):

@@ -136,7 +136,22 @@ if _has_required_boto():
 class BotoIoTStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    loader_module = boto_iot
+    def setup_loader_modules(self):
+        ctx = {}
+        utils = salt.loader.utils(self.opts, whitelist=['boto3'], context=ctx)
+        serializers = salt.loader.serializers(self.opts)
+        self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_iot'])
+        self.salt_states = salt.loader.states(opts=self.opts, functions=funcs, utils=utils, whitelist=['boto_iot'],
+                                              serializers=serializers)
+        return {
+            boto_iot: {
+                '__opts__': self.opts,
+                '__salt__': funcs,
+                '__utils__': utils,
+                '__states__': self.salt_states,
+                '__serializers__': serializers,
+            }
+        }
 
     @classmethod
     def setUpClass(cls):
@@ -146,21 +161,6 @@ class BotoIoTStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     @classmethod
     def tearDownClass(cls):
         del cls.opts
-
-    def loader_module_globals(self):
-        ctx = {}
-        utils = salt.loader.utils(self.opts, whitelist=['boto3'], context=ctx)
-        serializers = salt.loader.serializers(self.opts)
-        self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_iot'])
-        self.salt_states = salt.loader.states(opts=self.opts, functions=funcs, utils=utils, whitelist=['boto_iot'],
-                                              serializers=serializers)
-        return {
-            '__opts__': self.opts,
-            '__salt__': funcs,
-            '__utils__': utils,
-            '__states__': self.salt_states,
-            '__serializers__': serializers,
-        }
 
     def setUp(self):
         self.addCleanup(delattr, self, 'funcs')

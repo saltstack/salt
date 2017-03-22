@@ -26,10 +26,8 @@ class OracleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.oracle
     '''
-    loader_module = oracle
-
-    def loader_module_globals(self):
-        return {'cx_Oracle': object()}
+    def setup_loader_modules(self):
+        return {oracle: {'cx_Oracle': object()}}
 
     def test_run_query(self):
         '''

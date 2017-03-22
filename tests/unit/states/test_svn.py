@@ -25,7 +25,8 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the svn state
     '''
-    loader_module = svn
+    def setup_loader_modules(self):
+        return {svn: {}}
 
     def test_latest(self):
         '''

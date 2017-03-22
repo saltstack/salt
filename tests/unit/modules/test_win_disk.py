@@ -54,10 +54,9 @@ class WinDiskTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_disk
     '''
-    loader_module = win_disk
+    def setup_loader_modules(self):
+        return {win_disk: {'ctypes': MockCtypes()}}
 
-    def loader_module_globals(self):
-        return {'ctypes': MockCtypes()}
     # 'usage' function tests: 1
 
     def test_usage(self):

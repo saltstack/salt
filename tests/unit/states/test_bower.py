@@ -26,8 +26,8 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.bower
     '''
-    loader_module = bower
-    loader_module_globals = {'__opts__': {'test': False}}
+    def setup_loader_modules(self):
+        return {bower: {'__opts__': {'test': False}}}
 
     def test_removed_not_installed(self):
         '''

@@ -39,31 +39,35 @@ class JoyentTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for the salt.cloud.clouds.joyent module
     '''
-    loader_module = joyent
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__utils__': {
-                'cloud.fire_event': MagicMock(),
-                'cloud.bootstrap': MagicMock()
-            },
-            '__opts__': {
-                'sock_dir': True,
-                'transport': True,
-                'providers': {'my_joyent': {}},
-                'profiles': {'my_joyent': {}}
-            },
-            '__active_provider_name__': 'my_joyent:joyent'
+            joyent: {
+                '__utils__': {
+                    'cloud.fire_event': MagicMock(),
+                    'cloud.bootstrap': MagicMock()
+                },
+                '__opts__': {
+                    'sock_dir': True,
+                    'transport': True,
+                    'providers': {'my_joyent': {}},
+                    'profiles': {'my_joyent': {}}
+                },
+                '__active_provider_name__': 'my_joyent:joyent'
+            }
         }
 
-    vm_ = {
-        'profile': 'my_joyent',
-        'name': 'vm3',
-        'driver': 'joyent',
-        'size': 'k4-highcpu-kvm-750M',
-        'image': 'freebsd10',
-        'location': 'us-east-1'
-    }
+    def setUp(self):
+        self.vm_ = {
+            'profile': 'my_joyent',
+            'name': 'vm3',
+            'driver': 'joyent',
+            'size': 'k4-highcpu-kvm-750M',
+            'image': 'freebsd10',
+            'location': 'us-east-1'
+        }
+
+    def tearDown(self):
+        del self.vm_
 
     @patch('salt.utils.cloud.wait_for_ip', fake_wait_for_ip)
     def test_query_instance_init(self):

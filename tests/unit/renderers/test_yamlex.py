@@ -42,7 +42,8 @@ class RendererMixin(object):
 
 class RendererTests(TestCase, RendererMixin, LoaderModuleMockMixin):
 
-    loader_module = yamlex
+    def setup_loader_modules(self):
+        return {yamlex: {}}
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'yamlex')
     def test_basic(self):

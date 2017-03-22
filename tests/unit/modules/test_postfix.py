@@ -24,7 +24,8 @@ class PostfixTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.postfix
     '''
-    loader_module = postfix
+    def setup_loader_modules(self):
+        return {postfix: {}}
 
     def test_show_master(self):
         '''

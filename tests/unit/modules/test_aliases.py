@@ -21,11 +21,13 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.aliases module
     '''
-    loader_module = aliases
 
     mock_alias = [('foo', 'bar@example.com', '')]
     mock_alias_mult = [('foo', 'bar@example.com', ''),
                        ('hello', 'world@earth.com, earth@world.com', '')]
+
+    def setup_loader_modules(self):
+        return {aliases: {}}
 
     @patch('salt.modules.aliases.__parse_aliases',
            MagicMock(return_value=mock_alias))

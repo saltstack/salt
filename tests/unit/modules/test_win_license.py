@@ -16,7 +16,9 @@ from tests.support.mock import (
 
 
 class LicenseTestCase(TestCase, LoaderModuleMockMixin):
-    loader_module = win_license
+
+    def setup_loader_modules(self):
+        return {win_license: {}}
 
     def test_installed(self):
         '''

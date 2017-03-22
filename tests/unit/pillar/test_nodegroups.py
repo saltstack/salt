@@ -35,10 +35,8 @@ class NodegroupsPillarTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.pillar.nodegroups
     '''
-    loader_module = nodegroups
-
-    def loader_module_globals(self):
-        return {'__opts__': fake_opts}
+    def setup_loader_modules(self):
+        return {nodegroups: {'__opts__': fake_opts}}
 
     @patch('salt.utils.minions.CkMinions.check_minions',
            MagicMock(side_effect=side_effect))

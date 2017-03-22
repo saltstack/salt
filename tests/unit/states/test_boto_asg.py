@@ -21,7 +21,8 @@ class BotoAsgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     # 'present' function tests: 1
 
-    loader_module = boto_asg
+    def setup_loader_modules(self):
+        return {boto_asg: {}}
 
     maxSize = None
 

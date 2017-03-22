@@ -18,11 +18,13 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
     Test case for salt.beacons.adb
     '''
 
-    loader_module = adb
-    loader_module_globals = {
-        'last_state': {},
-        'last_state_extra': {'no_devices': False}
-    }
+    def setup_loader_modules(self):
+        return {
+            adb: {
+                'last_state': {},
+                'last_state_extra': {'no_devices': False}
+            }
+        }
 
     def test_no_adb_command(self):
         with patch('salt.utils.which') as mock:

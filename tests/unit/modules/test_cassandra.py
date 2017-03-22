@@ -25,7 +25,8 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.cassandra
     '''
-    loader_module = cassandra
+    def setup_loader_modules(self):
+        return {cassandra: {}}
 
     def test_compactionstats(self):
         '''

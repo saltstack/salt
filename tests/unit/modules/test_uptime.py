@@ -51,15 +51,15 @@ REQUEST_MOCK = RequestMock()
 class UptimeTestCase(TestCase, LoaderModuleMockMixin):
     ''' UptimeTestCase'''
 
-    loader_module = uptime
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__salt__': {
-                'pillar.get': Mock(return_value='http://localhost:5000'),
-                'requests.put': Mock(),
-            },
-            'requests': REQUEST_MOCK
+            uptime: {
+                '__salt__': {
+                    'pillar.get': Mock(return_value='http://localhost:5000'),
+                    'requests.put': Mock(),
+                },
+                'requests': REQUEST_MOCK
+            }
         }
 
     def test_checks_list(self):

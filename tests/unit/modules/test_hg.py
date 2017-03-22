@@ -25,7 +25,8 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.hg
     '''
-    loader_module = hg
+    def setup_loader_modules(self):
+        return {hg: {}}
 
     def test_revision(self):
         '''

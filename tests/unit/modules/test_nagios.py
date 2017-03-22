@@ -25,7 +25,8 @@ class NagiosTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.nagios
     '''
-    loader_module = nagios
+    def setup_loader_modules(self):
+        return {nagios: {}}
 
     def test_run(self):
         '''

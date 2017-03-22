@@ -22,7 +22,9 @@ import salt.modules.alternatives as alternatives
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
-    loader_module = alternatives
+
+    def setup_loader_modules(self):
+        return {alternatives: {}}
 
     def test_display(self):
         with patch.dict(alternatives.__grains__, {'os_family': 'RedHat'}):

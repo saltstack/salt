@@ -56,10 +56,8 @@ def write_crontab(*args, **kw):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class CronTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = cron, cronmod
-
-    def loader_module_globals(self):
-        return {
+    def setup_loader_modules(self):
+        loader_gloabals = {
             '__low__': {'__id__': 'noo'},
             '__grains__': {
                 'os': 'Debian',
@@ -77,6 +75,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 'cron.set_job': cronmod.set_job,
             }
         }
+        return {cron: loader_gloabals, cronmod: loader_gloabals}
 
     def setUp(self):
         super(CronTestCase, self).setUp()

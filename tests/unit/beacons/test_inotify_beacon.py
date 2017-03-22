@@ -26,7 +26,8 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
     Test case for salt.beacons.inotify
     '''
 
-    loader_module = inotify
+    def setup_loader_modules(self):
+        return {inotify: {}}
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()

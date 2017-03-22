@@ -15,7 +15,8 @@ import salt.modules.gem as gem
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestGemModule(TestCase, LoaderModuleMockMixin):
 
-    loader_module = gem
+    def setup_loader_modules(self):
+        return {gem: {}}
 
     def test_gem(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})

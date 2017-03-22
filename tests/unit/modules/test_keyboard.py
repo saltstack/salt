@@ -25,7 +25,9 @@ class KeyboardTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.keyboard
     '''
-    loader_module = keyboard
+    def setup_loader_modules(self):
+        return {keyboard: {}}
+
     # 'get_sys' function tests: 1
 
     def test_get_sys(self):

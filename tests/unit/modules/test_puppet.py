@@ -29,7 +29,8 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.puppet
     '''
-    loader_module = puppet
+    def setup_loader_modules(self):
+        return {puppet: {}}
 
     def test_run(self):
         '''

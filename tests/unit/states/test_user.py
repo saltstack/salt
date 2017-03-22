@@ -25,7 +25,8 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the user state
     '''
-    loader_module = user
+    def setup_loader_modules(self):
+        return {user: {}}
 
     def test_present(self):
         '''

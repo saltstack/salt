@@ -26,7 +26,8 @@ class EngineSqsEventTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.engine.sqs_events
     '''
 
-    loader_module = sqs_events
+    def setup_loader_modules(self):
+        return {sqs_events: {}}
 
     def sample_msg(self):
         fake_msg = MagicMock()

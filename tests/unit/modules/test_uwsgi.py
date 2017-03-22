@@ -16,7 +16,8 @@ import salt.modules.uwsgi as uwsgi
 @patch('salt.utils.which', Mock(return_value='/usr/bin/uwsgi'))
 class UwsgiTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = uwsgi
+    def setup_loader_modules(self):
+        return {uwsgi: {}}
 
     def test_uwsgi_stats(self):
         socket = "127.0.0.1:5050"

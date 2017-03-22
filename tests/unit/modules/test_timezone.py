@@ -27,10 +27,8 @@ GET_ETC_LOCALTIME_PATH = 'salt.modules.timezone._get_etc_localtime_path'
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = timezone
-
-    def loader_module_globals(self):
-        return {'__grains__': {'os_family': 'Ubuntu'}}
+    def setup_loader_modules(self):
+        return {timezone: {'__grains__': {'os_family': 'Ubuntu'}}}
 
     def setUp(self):
         self.tempfiles = []

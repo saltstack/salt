@@ -133,12 +133,11 @@ def _has_required_moto():
 
 class BotoUtilsTestCaseBase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = salt.utils.boto, salt.utils.boto3
-
-    def loader_module_globals(self):
-        return {
+    def setup_loader_modules(self):
+        module_globals = {
             '__salt__': {'config.option': MagicMock(return_value='dummy_opt')}
         }
+        return {salt.utils.boto: module_globals, salt.utils.boto3: module_globals}
 
 
 class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):

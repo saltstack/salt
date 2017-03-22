@@ -26,7 +26,8 @@ class DevMapTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.devmap
     '''
-    loader_module = devmap
+    def setup_loader_modules(self):
+        return {devmap: {}}
 
     def test_multipath_list(self):
         '''

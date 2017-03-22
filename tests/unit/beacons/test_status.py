@@ -28,15 +28,18 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.status
     '''
-    loader_module = (status, status_module)
 
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         opts = salt.config.DEFAULT_MINION_OPTS
-        return {
+        module_globals = {
             '__opts__': opts,
             '__salt__': 'autoload',
             '__context__': {},
             '__grains__': {'kernel': 'Linux'}
+        }
+        return {
+            status: module_globals,
+            status_module: module_globals
         }
 
     def test_empty_config(self, *args, **kwargs):

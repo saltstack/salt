@@ -23,7 +23,8 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.gnomedesktop
     '''
-    loader_module = gnomedesktop
+    def setup_loader_modules(self):
+        return {gnomedesktop: {}}
 
     def test_ping(self):
         '''

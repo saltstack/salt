@@ -25,7 +25,8 @@ import salt.ext.six as six
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class MdadmTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = mdadm
+    def setup_loader_modules(self):
+        return {mdadm: {}}
 
     @patch('salt.utils.which', lambda exe: exe)
     def test_create(self):

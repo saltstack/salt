@@ -25,7 +25,9 @@ class HipchatTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.hipchat
     '''
-    loader_module = hipchat
+    def setup_loader_modules(self):
+        return {hipchat: {}}
+
     # 'list_rooms' function tests: 1
 
     @patch('salt.modules.hipchat._query', MagicMock(return_value=True))

@@ -25,7 +25,8 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.DebconfmodTestCase
     '''
-    loader_module = debconfmod
+    def setup_loader_modules(self):
+        return {debconfmod: {}}
 
     def test_get_selections(self):
         '''

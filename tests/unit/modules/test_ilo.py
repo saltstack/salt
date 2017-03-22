@@ -25,7 +25,8 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.ilo
     '''
-    loader_module = ilo
+    def setup_loader_modules(self):
+        return {ilo: {}}
 
     # 'global_settings' function tests: 1
 

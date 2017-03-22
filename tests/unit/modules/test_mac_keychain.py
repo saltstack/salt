@@ -17,7 +17,8 @@ from tests.support.mock import (
 
 class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = keychain
+    def setup_loader_modules(self):
+        return {keychain: {}}
 
     def test_install_cert(self):
         '''

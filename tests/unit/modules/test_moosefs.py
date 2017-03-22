@@ -25,8 +25,11 @@ class MoosefsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.moosefs
     '''
+
+    def setup_loader_modules(self):
+        return {moosefs: {}}
+
     # 'dirinfo' function tests: 1i
-    loader_module = moosefs
 
     def test_dirinfo(self):
         '''

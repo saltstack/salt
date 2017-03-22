@@ -19,7 +19,9 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_sqs
     '''
-    loader_module = boto_sqs
+    def setup_loader_modules(self):
+        return {boto_sqs: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

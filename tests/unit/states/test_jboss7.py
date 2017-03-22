@@ -17,18 +17,18 @@ from salt.exceptions import CommandExecutionError
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = jboss7
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__salt__': {
-                'jboss7.read_datasource': MagicMock(),
-                'jboss7.create_datasource': MagicMock(),
-                'jboss7.update_datasource': MagicMock(),
-                'jboss7.remove_datasource': MagicMock(),
-                'jboss7.read_simple_binding': MagicMock(),
-                'jboss7.create_simple_binding': MagicMock(),
-                'jboss7.update_simple_binding': MagicMock(),
+            jboss7: {
+                '__salt__': {
+                    'jboss7.read_datasource': MagicMock(),
+                    'jboss7.create_datasource': MagicMock(),
+                    'jboss7.update_datasource': MagicMock(),
+                    'jboss7.remove_datasource': MagicMock(),
+                    'jboss7.read_simple_binding': MagicMock(),
+                    'jboss7.create_simple_binding': MagicMock(),
+                    'jboss7.update_simple_binding': MagicMock(),
+                }
             }
         }
 

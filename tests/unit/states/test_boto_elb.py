@@ -24,7 +24,9 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_elb
     '''
-    loader_module = boto_elb
+    def setup_loader_modules(self):
+        return {boto_elb: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

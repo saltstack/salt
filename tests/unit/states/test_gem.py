@@ -15,8 +15,8 @@ import salt.states.gem as gem
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestGemState(TestCase, LoaderModuleMockMixin):
 
-    loader_module = gem
-    loader_module_globals = {'__opts__': {'test': False}}
+    def setup_loader_modules(self):
+        return {gem: {'__opts__': {'test': False}}}
 
     def test_installed(self):
         gems = {'foo': ['1.0'], 'bar': ['2.0']}

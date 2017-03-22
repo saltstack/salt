@@ -25,7 +25,8 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.guestfs
     '''
-    loader_module = guestfs
+    def setup_loader_modules(self):
+        return {guestfs: {}}
 
     # 'mount' function tests: 1
 

@@ -26,7 +26,8 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.openbsdpkg
     '''
-    loader_module = openbsdpkg
+    def setup_loader_modules(self):
+        return {openbsdpkg: {}}
 
     def test_list_pkgs(self):
         '''

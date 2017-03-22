@@ -23,10 +23,8 @@ ROOT = os.path.join(FILES, 'file/base/buildout')
         'The \'virtualenv\' packaged needs to be installed')
 class BuildoutTestCase(Base):
 
-    loader_module = buildout, modbuildout
-
-    def loader_module_globals(self):
-        return {
+    def setup_loader_modules(self):
+        module_globals = {
             '__env__': 'base',
             '__opts__': {'test': False},
             '__salt__': {
@@ -36,6 +34,7 @@ class BuildoutTestCase(Base):
                 'buildout.buildout': modbuildout.buildout,
             }
         }
+        return {buildout: module_globals, modbuildout: module_globals}
 
     @requires_network()
     def test_quiet(self):

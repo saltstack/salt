@@ -26,10 +26,16 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for the salt.modules.at module
     '''
-    loader_module = at
+
+    def setup_loader_modules(self):
+        return {at: {}}
 
     atq_output = {'jobs': [{'date': '2014-12-11', 'job': 101, 'queue': 'A',
                             'tag': '', 'time': '19:48:47', 'user': 'B'}]}
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.atq_output
 
     @patch('salt.modules.at._cmd', MagicMock(return_value=None))
     def test_atq_not_available(self):

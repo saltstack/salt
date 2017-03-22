@@ -25,7 +25,8 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
     '''
     Validate the alias state
     '''
-    loader_module = alias
+    def setup_loader_modules(self):
+        return {alias: {}}
 
     def test_present_has_target(self):
         '''

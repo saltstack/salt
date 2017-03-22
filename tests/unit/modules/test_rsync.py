@@ -24,7 +24,8 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rsync
     '''
-    loader_module = rsync
+    def setup_loader_modules(self):
+        return {rsync: {}}
 
     def test_rsync(self):
         '''

@@ -25,7 +25,8 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.aptpkg
     '''
-    loader_module = monit
+    def setup_loader_modules(self):
+        return {monit: {}}
 
     def test_start(self):
         '''

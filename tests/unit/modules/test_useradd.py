@@ -31,19 +31,26 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.useradd
     '''
-    loader_module = useradd
+    def setup_loader_modules(self):
+        return {useradd: {}}
 
-    mock_pwall = {'gid': 0,
-                  'groups': ['root'],
-                  'home': '/root',
-                  'name': 'root',
-                  'passwd': 'x',
-                  'shell': '/bin/bash',
-                  'uid': 0,
-                  'fullname': 'root',
-                  'roomnumber': '',
-                  'workphone': '',
-                  'homephone': ''}
+    @classmethod
+    def setUpClass(cls):
+        cls.mock_pwall = {'gid': 0,
+                          'groups': ['root'],
+                          'home': '/root',
+                          'name': 'root',
+                          'passwd': 'x',
+                          'shell': '/bin/bash',
+                          'uid': 0,
+                          'fullname': 'root',
+                          'roomnumber': '',
+                          'workphone': '',
+                          'homephone': ''}
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.mock_pwall
 
     # 'add' function tests: 1
 
@@ -73,8 +80,6 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(useradd.getent())
 
     @skipIf(HAS_PWD is False, 'The pwd module is not available')
-    @patch('salt.modules.useradd._format_info',
-           MagicMock(return_value=mock_pwall))
     @patch('pwd.getpwall', MagicMock(return_value=['']))
     def test_getent_user(self):
         '''
@@ -91,7 +96,8 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
                 'roomnumber': '',
                 'workphone': '',
                 'homephone': ''}]
-        self.assertEqual(useradd.getent(), ret)
+        with patch('salt.modules.useradd._format_info', MagicMock(return_value=self.mock_pwall)):
+            self.assertEqual(useradd.getent(), ret)
 
     # 'chuid' function tests: 1
 

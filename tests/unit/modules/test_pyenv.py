@@ -25,7 +25,9 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pyenv
     '''
-    loader_module = pyenv
+    def setup_loader_modules(self):
+        return {pyenv: {}}
+
     # 'install' function tests: 1
 
     def test_install(self):
