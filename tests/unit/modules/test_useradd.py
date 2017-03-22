@@ -5,8 +5,14 @@
 
 # Import Python libs
 from __future__ import absolute_import
+try:
+    import pwd
+    HAS_PWD = True
+except ImportError:
+    HAS_PWD = False
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,19 +24,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.useradd as useradd
 from salt.exceptions import CommandExecutionError
-import pwd
-
-# Globals
-useradd.__grains__ = {}
-useradd.__salt__ = {}
-useradd.__context__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class UserAddTestCase(TestCase):
+class UserAddTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.useradd
     '''
+    loader_module = useradd
+
     mock_pwall = {'gid': 0,
                   'groups': ['root'],
                   'home': '/root',
@@ -70,6 +72,7 @@ class UserAddTestCase(TestCase):
         '''
         self.assertTrue(useradd.getent())
 
+    @skipIf(HAS_PWD is False, 'The pwd module is not available')
     @patch('salt.modules.useradd._format_info',
            MagicMock(return_value=mock_pwall))
     @patch('pwd.getpwall', MagicMock(return_value=['']))
@@ -78,16 +81,16 @@ class UserAddTestCase(TestCase):
         Tests the return information on all users
         '''
         ret = [{'gid': 0,
-                  'groups': ['root'],
-                  'home': '/root',
-                  'name': 'root',
-                  'passwd': 'x',
-                  'shell': '/bin/bash',
-                  'uid': 0,
-                  'fullname': 'root',
-                  'roomnumber': '',
-                  'workphone': '',
-                  'homephone': ''}]
+                'groups': ['root'],
+                'home': '/root',
+                'name': 'root',
+                'passwd': 'x',
+                'shell': '/bin/bash',
+                'uid': 0,
+                'fullname': 'root',
+                'roomnumber': '',
+                'workphone': '',
+                'homephone': ''}]
         self.assertEqual(useradd.getent(), ret)
 
     # 'chuid' function tests: 1
@@ -322,6 +325,7 @@ class UserAddTestCase(TestCase):
 
     # 'info' function tests: 1
 
+    @skipIf(HAS_PWD is False, 'The pwd module is not available')
     def test_info(self):
         '''
         Test the user information
