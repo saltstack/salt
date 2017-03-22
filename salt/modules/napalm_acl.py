@@ -452,11 +452,11 @@ def load_term_config(filter_name,
 def load_filter_config(filter_name,
                        filter_options=None,
                        terms=None,
+                       prepend=True,
                        pillar_key='acl',
                        pillarenv=None,
                        saltenv=None,
                        merge_pillar=True,
-                       prepend=True,
                        only_lower_merge=False,
                        revision_id=None,
                        revision_no=None,
@@ -468,6 +468,15 @@ def load_filter_config(filter_name,
                        **kwargs):  # pylint: disable=unused-argument
     '''
     Generate and load the configuration of a policy filter.
+
+    .. note::
+
+        The order of the terms is very important. The configuration loaded
+        on the device respects the order defined in the ``terms`` and/or
+        inside the pillar.
+
+        When merging the ``terms`` with the pillar data, consider the
+        ``prepend`` argument to make sure the order is correct!
 
     filter_name
         The name of the policy filter.
@@ -501,7 +510,10 @@ def load_filter_config(filter_name,
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
     merge_pillar: ``True``
-        Merge the CLI variables with the pillar. Default: ``True``
+        Merge the CLI variables with the pillar. Default: ``True``.
+
+        The merge logic depends on the ``prepend`` argument and
+        the CLI has higher priority than the pillar.
 
     only_lower_merge: ``False``
         Specify if it should merge only the terms fields. Otherwise it will try
@@ -629,12 +641,12 @@ def load_filter_config(filter_name,
     filter_config = __salt__['capirca.get_filter_config'](platform,
                                                           filter_name,
                                                           terms=terms,
+                                                          prepend=prepend,
                                                           filter_options=filter_options,
                                                           pillar_key=pillar_key,
                                                           pillarenv=pillarenv,
                                                           saltenv=saltenv,
                                                           merge_pillar=merge_pillar,
-                                                          prepend=prepend,
                                                           only_lower_merge=only_lower_merge,
                                                           revision_id=revision_id,
                                                           revision_no=revision_no,
@@ -649,11 +661,11 @@ def load_filter_config(filter_name,
 
 @proxy_napalm_wrap
 def load_policy_config(filters=None,
+                       prepend=True,
                        pillar_key='acl',
                        pillarenv=None,
                        saltenv=None,
                        merge_pillar=True,
-                       prepend=True,
                        only_lower_merge=False,
                        revision_id=None,
                        revision_no=None,
@@ -665,6 +677,15 @@ def load_policy_config(filters=None,
                        **kwargs):  # pylint: disable=unused-argument
     '''
     Generate and load the configuration of the whole policy.
+
+    .. note::
+
+        The order of the filters and their terms is very important.
+        The configuration loaded on the device respects the order
+        defined in the ``filters`` and/or inside the pillar.
+
+        When merging the ``filters`` with the pillar data, consider the
+        ``prepend`` argument to make sure the order is correct!
 
     filters
         List of filters for this policy.
@@ -690,6 +711,9 @@ def load_policy_config(filters=None,
 
     merge_pillar: ``True``
         Merge the CLI variables with the pillar. Default: ``True``.
+
+        The merge logic depends on the ``prepend`` argument and
+        the CLI has higher priority than the pillar.
 
     only_lower_merge: ``False``
         Specify if it should merge only the filters and terms fields. Otherwise it will try
@@ -806,11 +830,11 @@ def load_policy_config(filters=None,
     platform = _get_capirca_platform()
     policy_config = __salt__['capirca.get_policy_config'](platform,
                                                           filters=filters,
+                                                          prepend=prepend,
                                                           pillar_key=pillar_key,
                                                           pillarenv=pillarenv,
                                                           saltenv=saltenv,
                                                           merge_pillar=merge_pillar,
-                                                          prepend=prepend,
                                                           only_lower_merge=only_lower_merge,
                                                           revision_id=revision_id,
                                                           revision_no=revision_no,
