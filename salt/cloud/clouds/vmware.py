@@ -2022,10 +2022,10 @@ def stop(name, soft=False, call=None):
             try:
                 log.info('Stopping VM {0}'.format(name))
                 if soft:
-                    task = vm["object"].ShutdownGuest()
+                    vm["object"].ShutdownGuest()
                 else:
                     task = vm["object"].PowerOff()
-                salt.utils.vmware.wait_for_task(task, name, 'power off')
+                    salt.utils.vmware.wait_for_task(task, name, 'power off')
             except Exception as exc:
                 log.error(
                     'Error while powering off VM {0}: {1}'.format(
@@ -2130,10 +2130,10 @@ def reset(name, soft=False, call=None):
             try:
                 log.info('Resetting VM {0}'.format(name))
                 if soft:
-                    task = vm["object"].RebootGuest()
+                    vm["object"].RebootGuest()
                 else:
                     task = vm["object"].ResetVM_Task()
-                salt.utils.vmware.wait_for_task(task, name, 'reset')
+                    salt.utils.vmware.wait_for_task(task, name, 'reset')
             except Exception as exc:
                 log.error(
                     'Error while resetting VM {0}: {1}'.format(
