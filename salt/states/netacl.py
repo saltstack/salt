@@ -422,7 +422,7 @@ def term(name,
 
         {%- set filter_name = 'block-icmp' -%}
         {%- set term_name = 'first-term' -%}
-        {%- set my_term_cfg = salt.netacl.get_term_pillar('acl', filter_name, term_name) -%}
+        {%- set my_term_cfg = salt.netacl.get_term_pillar(filter_name, term_name) -%}
 
         update_icmp_first_term:
           netacl.term:
@@ -646,11 +646,13 @@ def filter(name,  # pylint: disable=redefined-builtin
 
     .. code-block:: jinja
 
-        {% set my_filter_cfg = salt.netacl.get_filter_pillar('firewall', 'my-filter') -%}
-        my-filter_state:
+        {%- set filter_name = 'my-filter' -%}
+        {%- set my_filter_cfg = salt.netacl.get_filter_pillar(filter_name, pillar_key='firewall') -%}
+        my_first_filter_state:
           netacl.filter:
-            - filter_name: my-filter
-            - terms: {{ my_filter_cfg | json }}
+            - filter_name: {{ filter_name }}
+            - options: {{ my_filter_cfg['options'] | json }}
+            - terms: {{ my_filter_cfg['terms'] | json }}
             - revision_date: false
             - revision_no: 5
             - debug: true
@@ -659,7 +661,7 @@ def filter(name,  # pylint: disable=redefined-builtin
 
     .. code-block:: yaml
 
-        my-filter_state:
+        my_first_filter_state:
           netacl.filter:
             - filter_name: my-filter
             - merge_pillar: true
