@@ -65,7 +65,7 @@ def exists(path, quiet=False):
 
     _exists = os.access(path, os.F_OK)
     if not _exists and not quiet:
-        log.error('Failed to read configuration from {0} - file does not exists'.format(path))
+        log.error('Failed to read configuration from {0} - file does not exist'.format(path))
 
     return _exists
 
