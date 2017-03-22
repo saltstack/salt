@@ -306,7 +306,11 @@ class SaltTestingParser(optparse.OptionParser):
             with open(self.options.names_file, 'rb') as fp_:
                 lines = []
                 for line in fp_.readlines():
-                    lines.append(line.strip().decode())
+                    if six.PY3:
+                        lines.append(
+                            line.decode(__salt_system_encoding__).split())
+                    else:
+                        lines.append(line.strip())
             if self.options.name:
                 self.options.name.extend(lines)
             else:
