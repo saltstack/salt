@@ -130,7 +130,7 @@ def gen_key(minion_id, dns_name=None, zone='default', password=None):
             keygen_type = keyTypes[0]['keyType']
             key_len = keyTypes[0]['keyLengths'][0]
 
-    if key_len < 2048:
+    if int(key_len) < 2048:
         key_len = 2048
 
     if keygen_type == "RSA":
