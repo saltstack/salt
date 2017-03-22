@@ -1404,7 +1404,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
 
             # Get the uninstaller
             uninstaller = pkginfo[target].get('uninstaller', '')
-            cache_dir = pkginfo[version_num].get('cache_dir', False)
+            cache_dir = pkginfo[target].get('cache_dir', False)
 
             # If no uninstaller found, use the installer
             if not uninstaller:
