@@ -110,7 +110,6 @@ def store_job(opts, load, event=None, mminion=None):
         mminion.returners[updateetfstr](load['jid'], endtime)
 
 
-
 def store_minions(opts, jid, minions, mminion=None, syndic_id=None):
     '''
     Store additional minions matched on lower-level masters using the configured
