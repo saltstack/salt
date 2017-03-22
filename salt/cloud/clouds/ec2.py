@@ -2567,7 +2567,11 @@ def create(vm_=None, call=None):
         transport=__opts__['transport']
     )
 
-    set_tags(
+    # Sometimes it takes a little longer than expected to set the tags, so
+    # let's give it a few tries
+    salt.utils.cloud.wait_for_fun(
+        set_tags,
+        timeout=30,
         vm_['name'],
         tags,
         instance_id=vm_['instance_id'],
