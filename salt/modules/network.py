@@ -1511,7 +1511,7 @@ def ifacestartswith(cidr):
 
 def iphexval(ip):
     '''
-    Retrieve the interface name from a specific CIDR
+    Retrieve the hexadecimal representation of an IP address
 
     .. versionadded:: 2016.11.0
 
@@ -1522,7 +1522,5 @@ def iphexval(ip):
         salt '*' network.iphexval 10.0.0.1
     '''
     a = ip.split('.')
-    hexval = ""
-    for val in a:
-        hexval = ''.join([hexval, hex(int(val))[2:].zfill(2)])
-    return hexval.upper()
+    hexval = ['%02X' % int(x) for x in a]  # pylint: disable=E1321
+    return ''.join(hexval)
