@@ -266,8 +266,10 @@ The :py:func:`docker_container.running <salt.states.docker_container.running>`
 state has undergone a significant change in how it determines whether or not a
 container needs to be replaced. Rather than comparing individual arguments to
 their corresponding values in the named container, a temporary container is
-created using the passed arguments. The two containers are then compared to
-each other to determine whether or not there are changes.
+created (but not started) using the passed arguments. The two containers are
+then compared to each other to determine whether or not there are changes, and
+if so, the old container is stopped and destroyed, and the temporary container
+is renamed and started.
 
 Salt still needs to translate arguments into the format which docker-py
 expects, but if it does not properly do so, the :ref:`skip_translate
@@ -278,6 +280,18 @@ to work around any changes in Docker's API or issues with the input
 translation, and continue to manage your Docker containers using Salt. Read the
 documentation for :ref:`skip_translate
 <docker-container-running-skip-translate>` for more information.
+
+.. note::
+    When running the :py:func:`docker_container.running
+    <salt.states.docker_container.running>` state for the first time after
+    upgrading to Nitrogen, your container(s) may be replaced. The changes may
+    show diffs for certain parameters which say that the old value was an empty
+    string, and the new value is ``None``. This is due to the fact that in
+    prior releases Salt was passing empty strings for these values when
+    creating the container if they were undefined in the SLS file, where now
+    Salt simply does not pass any arguments not explicitly defined in the SLS
+    file. Subsequent runs of the state should not replace the container if the
+    configuration remains unchanged.
 
 .. _salt-contrib: https://github.com/saltstack/salt-contrib
 

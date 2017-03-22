@@ -28,7 +28,17 @@ Management of Docker containers
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 
 These states were moved from the :mod:`docker <salt.states.docker>` state
-module (formerly called **dockerng**) in the Nitrogen release.
+module (formerly called **dockerng**) in the Nitrogen release. When running the
+:py:func:`docker_container.running <salt.states.docker_container.running>`
+state for the first time after upgrading to Nitrogen, your container(s) may be
+replaced. The changes may show diffs for certain parameters which say that the
+old value was an empty string, and the new value is ``None``. This is due to
+the fact that in prior releases Salt was passing empty strings for these values
+when creating the container if they were undefined in the SLS file, where now
+Salt simply does not pass any arguments not explicitly defined in the SLS file.
+Subsequent runs of the state should not replace the container if the
+configuration remains unchanged.
+
 
 .. note::
     To pull from a Docker registry, authentication must be configured. See
