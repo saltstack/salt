@@ -175,6 +175,8 @@ def load_term_config(filter_name,
     merge_pillar: ``True``
         Merge the CLI variables with the pillar. Default: ``True``.
 
+        The properties specified through the CLI have higher priority than the pillar.
+
     revision_id
         Add a comment in the term config having the description for the changes applied.
 
@@ -224,7 +226,7 @@ def load_term_config(filter_name,
             .. _optional: https://github.com/google/capirca/wiki/Policy-format#optionally-supported-keywords
 
     .. note::
-        The following fields are accepted:
+        The following fields are accepted (some being platform-specific):
 
         - action
         - address
