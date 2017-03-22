@@ -400,9 +400,9 @@ def cloud(tgt, provider=None):
         return {}
 
     ret = {}
-    for driver, providers in cloud_cache.items():
-        for provider, servers in providers.items():
-            for name, data in servers.items():
+    for driver, providers in six.iteritems(cloud_cache):
+        for provider, servers in six.iteritems(providers):
+            for name, data in six.iteritems(servers):
                 if fnmatch.fnmatch(name, tgt):
                     ret[name] = data
                     ret['name']['provider'] = provider
