@@ -528,6 +528,7 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
+    @skipIf(True, 'Skipping until we can devote more resources to debugging this test.')
     def test_post(self):
         self._future_resolved = threading.Event()
         try:
