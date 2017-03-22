@@ -1993,6 +1993,8 @@ def stop(name, soft=False, call=None):
         asking it to perform a clean shutdown of all services.
         Default is soft=False
 
+        For ``soft=True`` vmtools should be installed on guest system.
+
     CLI Example:
 
     .. code-block:: bash
@@ -2100,6 +2102,8 @@ def reset(name, soft=False, call=None):
         If ``soft=True`` then issues a command to the guest operating system
         asking it to perform a reboot. Otherwise hypervisor will terminate VM and start it again.
         Default is soft=False
+
+        For ``soft=True`` vmtools should be installed on guest system.
 
     CLI Example:
 
