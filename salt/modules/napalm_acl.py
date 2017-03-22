@@ -154,8 +154,9 @@ def load_term_config(filter_name,
         .. code-block:: yaml
 
             firewall:
-                my-filter:
-                    my-term:
+              - my-filter:
+                  terms:
+                    - my-term:
                         source_port: 1234
                         source_address:
                             - 1.2.3.4/32
@@ -217,7 +218,7 @@ def load_term_config(filter_name,
     **term_fields
         Term attributes.
         To see what fields are supported, please consult the list of supported keywords_.
-            Some platforms have few other optional_ keyworkds.
+        Some platforms have few other optional_ keywords.
 
             .. _keywords: https://github.com/google/capirca/wiki/Policy-format#keywords
             .. _optional: https://github.com/google/capirca/wiki/Policy-format#optionally-supported-keywords
@@ -377,9 +378,7 @@ def load_term_config(filter_name,
                 [edit firewall]
                 +    family inet {
                 +        /*
-                +         ** $Id:$
-                +         ** $Date:$
-                +         ** $Revision:$
+                +         ** $Date: 2017/03/22 $
                 +         **
                 +         */
                 +        filter filter-name {
@@ -402,9 +401,7 @@ def load_term_config(filter_name,
                     family inet {
                         replace:
                         /*
-                        ** $Id:$
-                        ** $Date:$
-                        ** $Revision:$
+                        ** $Date: 2017/03/22 $
                         **
                         */
                         filter filter-name {
@@ -528,6 +525,7 @@ def load_filter_config(filter_name,
         as ``loaded_config`` contaning the raw configuration loaded on the device.
 
     The output is a dictionary having the same form as :mod:`net.load_config <salt.modules.napalm_network.load_config>`.
+
     CLI Example:
 
     .. code-block:: bash
@@ -547,9 +545,7 @@ def load_filter_config(filter_name,
                 [edit firewall]
                 +    family inet {
                 +        /*
-                +         ** $Id:$
-                +         ** $Date:$
-                +         ** $Revision:$
+                +         ** $Date: 2017/03/22 $
                 +         **
                 +         */
                 +        filter my-filter {
@@ -576,9 +572,7 @@ def load_filter_config(filter_name,
                     family inet {
                         replace:
                         /*
-                        ** $Id:$
-                        ** $Date:$
-                        ** $Revision:$
+                        ** $Date: 2017/03/22 $
                         **
                         */
                         filter my-filter {
@@ -609,15 +603,16 @@ def load_filter_config(filter_name,
     .. code-block:: yaml
 
         netacl:
-          my-filter:
-            my-term:
-              source_port: [1234, 1235]
-              action: reject
-            my-other-term:
-              source_port:
-                - [5678, 5680]
-              protocol: tcp
-              action: accept
+          - my-filter:
+              terms:
+                - my-term:
+                    source_port: [1234, 1235]
+                    action: reject
+                - my-other-term:
+                    source_port:
+                      - [5678, 5680]
+                    protocol: tcp
+                    action: accept
     '''
     if not filter_options:
         filter_options = []
@@ -732,34 +727,23 @@ def load_policy_config(filters=None,
                 @@ -1228,9 +1228,24 @@
                  !
                 +ipv4 access-list my-filter
-                + 10 remark $Id:$
-                + 20 remark my-term
-                + 30 deny tcp host 1.2.3.4 eq 1234 any
-                + 40 deny udp host 1.2.3.4 eq 1234 any
-                + 50 deny tcp host 1.2.3.4 eq 1235 any
-                + 60 deny udp host 1.2.3.4 eq 1235 any
-                + 70 remark my-other-term
-                + 80 permit tcp any range 5678 5680 any
+                + 10 remark my-term
+                + 20 deny tcp host 1.2.3.4 eq 1234 any
+                + 30 deny udp host 1.2.3.4 eq 1234 any
+                + 40 deny tcp host 1.2.3.4 eq 1235 any
+                + 50 deny udp host 1.2.3.4 eq 1235 any
+                + 60 remark my-other-term
+                + 70 permit tcp any range 5678 5680 any
                 +!
                 +!
                 +ipv4 access-list block-icmp
-                + 10 remark $Id:$
-                + 20 remark first-term
-                + 30 deny icmp any any
+                + 10 remark first-term
+                + 20 deny icmp any any
                  !
             loaded_config:
-                ! $Id:$
-                ! $Date:$
-                ! $Revision:$
-                no ipv4 access-list block-icmp
-                ipv4 access-list block-icmp
-                 remark $Id:$
-                 remark first-term
-                 deny icmp any any
-                exit
+                ! $Date: 2017/03/22 $
                 no ipv4 access-list my-filter
                 ipv4 access-list my-filter
-                 remark $Id:$
                  remark my-term
                  deny tcp host 1.2.3.4 eq 1234 any
                  deny udp host 1.2.3.4 eq 1234 any
@@ -767,6 +751,11 @@ def load_policy_config(filters=None,
                  deny udp host 1.2.3.4 eq 1235 any
                  remark my-other-term
                  permit tcp any range 5678 5680 any
+                exit
+                no ipv4 access-list block-icmp
+                ipv4 access-list block-icmp
+                 remark first-term
+                 deny icmp any any
                 exit
             result:
                 True
@@ -776,24 +765,26 @@ def load_policy_config(filters=None,
     .. code-block:: yaml
 
         acl:
-          my-filter:
-            my-term:
-              source_port: [1234, 1235]
-              protocol:
-                - tcp
-                - udp
-              source_address: 1.2.3.4
-              action: reject
-            my-other-term:
-              source_port:
-                - [5678, 5680]
-              protocol: tcp
-              action: accept
-          block-icmp:
-            first-term:
-              protocol:
-                - icmp
-              action: reject
+          - my-filter:
+              terms:
+                - my-term:
+                    source_port: [1234, 1235]
+                    protocol:
+                      - tcp
+                      - udp
+                    source_address: 1.2.3.4
+                    action: reject
+                - my-other-term:
+                    source_port:
+                      - [5678, 5680]
+                    protocol: tcp
+                    action: accept
+          - block-icmp:
+              terms:
+                - first-term:
+                    protocol:
+                      - icmp
+                    action: reject
     '''
     if not filters:
         filters = {}
