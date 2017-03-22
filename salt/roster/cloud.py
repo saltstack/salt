@@ -66,7 +66,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         ret[minion_id] = __opts__.get('roster_defaults', {})
         ret[minion_id].update({'host': preferred_ip})
 
-        ssh_username = salt.utils.cloud.ssh_usernames({}, cloud_opts)
+        ssh_username = salt.utils.cloud.ssh_usernames(vm_, cloud_opts)
         if isinstance(ssh_username, string_types):
             ret[minion_id]['user'] = ssh_username
         elif isinstance(ssh_username, list):
