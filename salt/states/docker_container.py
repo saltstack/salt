@@ -85,6 +85,29 @@ def _format_comments(ret, comments):
     return ret
 
 
+def _check_diff(changes):
+    '''
+    Check the diff for signs of incorrect argument handling in previous
+    releases, as discovered here:
+
+    https://github.com/saltstack/salt/pull/39996#issuecomment-288025200
+    '''
+    for conf_dict in changes:
+        for item in changes[conf_dict]:
+            if changes[conf_dict][item]['new'] is None:
+                old = changes[conf_dict][item]['old']
+                if old == '':
+                    return True
+                else:
+                    try:
+                        if all(x == '' for x in old):
+                            return True
+                    except TypeError:
+                        # Old value is not an iterable type
+                        pass
+    return False
+
+
 def running(name,
             image=None,
             skip_translate=None,
@@ -1668,7 +1691,19 @@ def running(name,
 
             if changes:
                 ret['changes']['container'] = changes
+                if _check_diff(changes):
+                    ret.setdefault('warnings', []).append(
+                        'The detected changes may be due to incorrect '
+                        'handling of arguments in earlier Salt releases. If '
+                        'this warning persists after running the state '
+                        'again{0}, and no changes were made to the SLS file, '
+                        'then please report this.'.format(
+                            ' without test=True' if __opts__['test'] else ''
+                        )
+                    )
+
                 if __opts__['test']:
+                    ret['result'] = None
                     comments.append(
                         'Container \'{0}\' would be {1}'.format(
                             name,
