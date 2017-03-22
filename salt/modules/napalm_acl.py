@@ -847,3 +847,65 @@ def load_policy_config(filters=None,
                                        commit=commit,
                                        debug=debug,
                                        inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
+
+
+def get_filter_pillar(filter_name,
+                      pillar_key='acl',
+                      pillarenv=None,
+                      saltenv=None):
+    '''
+    Helper that can be used inside a state SLS,
+    in order to get the filter configuration given its name.
+
+    filter_name
+        The name of the filter.
+
+    pillar_key
+        The root key of the whole policy config.
+
+    pillarenv
+        Query the master to generate fresh pillar data on the fly,
+        specifically from the requested pillar environment.
+
+    saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
+    '''
+    return  __salt__['capirca.get_filter_pillar'](filter_name,
+                                                  pillar_key=pillar_key,
+                                                  pillarenv=pillarenv,
+                                                  saltenv=saltenv)
+
+
+def get_term_pillar(filter_name,
+                    term_name,
+                    pillar_key='acl',
+                    pillarenv=None,
+                    saltenv=None):
+    '''
+    Helper that can be used inside a state SLS,
+    in order to get the term configuration given its name,
+    under a certain filter uniquely identified by its name.
+
+    filter_name
+        The name of the filter.
+
+    term_name
+        The name of the term.
+
+    pillar_key: ``acl``
+        The root key of the whole policy config. Default: ``acl``.
+
+    pillarenv
+        Query the master to generate fresh pillar data on the fly,
+        specifically from the requested pillar environment.
+
+    saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
+    '''
+    return __salt__['capirca.get_term_pillar'](filter_name,
+                                               term_name,
+                                               pillar_key=pillar_key,
+                                               pillarenv=pillarenv,
+                                               saltenv=saltenv)

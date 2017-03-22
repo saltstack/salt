@@ -368,7 +368,7 @@ def _clean_term_opts(term_opts):
     return clean_opts
 
 
-def lookup_element(lst, key):
+def _lookup_element(lst, key):
     '''
     Find an dictionary in a list of dictionaries, given its main key.
     '''
@@ -428,7 +428,7 @@ def _merge_list_of_dict(first, second, prepend=True):
     merged = []
     appended = []
     for ele in first:
-        if lookup_element(second, ele.keys()[0]):
+        if _lookup_element(second, ele.keys()[0]):
             overlaps.append(ele)
         elif prepend:
             merged.append(ele)
@@ -436,10 +436,10 @@ def _merge_list_of_dict(first, second, prepend=True):
             appended.append(ele)
     for ele in second:
         ele_key = ele.keys()[0]
-        if lookup_element(overlaps, ele_key):
+        if _lookup_element(overlaps, ele_key):
             # If theres an overlap, get the value from the first
             # But inserted into the right position
-            ele_val_first = lookup_element(first, ele_key)
+            ele_val_first = _lookup_element(first, ele_key)
             merged.append({ele_key: ele_val_first})
         else:
             merged.append(ele)
@@ -466,12 +466,11 @@ def _get_term_object(filter_name,
     term.name = term_name
     term_opts = {}
     if merge_pillar:
-        acl_pillar_cfg = _get_pillar_cfg(pillar_key,
-                                         saltenv=saltenv,
-                                         pillarenv=pillarenv)
-        filter_pillar_cfg = lookup_element(acl_pillar_cfg, filter_name)
-        term_pillar_cfg = filter_pillar_cfg.get('terms', [])
-        term_opts = lookup_element(term_pillar_cfg, term_name)
+        term_opts = get_term_pillar(filter_name,
+                                    term_name,
+                                    pillar_key=pillar_key,
+                                    saltenv=saltenv,
+                                    pillarenv=pillarenv)
         log.debug('Merging with pillar data:')
         log.debug(term_opts)
         term_opts = _clean_term_opts(term_opts)
@@ -984,7 +983,7 @@ def get_filter_config(platform,
         acl_pillar_cfg = _get_pillar_cfg(pillar_key,
                                          saltenv=saltenv,
                                          pillarenv=pillarenv)
-        filter_pillar_cfg = lookup_element(acl_pillar_cfg, filter_name)
+        filter_pillar_cfg = _lookup_element(acl_pillar_cfg, filter_name)
         filter_options = filter_options or filter_pillar_cfg.pop('options', None)
         if filter_pillar_cfg:
             # Only when it was able to find the filter in the ACL config
@@ -1182,3 +1181,67 @@ def get_policy_config(platform,
                          revision_no=revision_no,
                          revision_date=revision_date,
                          revision_date_format=revision_date_format)
+
+
+def get_filter_pillar(filter_name,
+                      pillar_key='acl',
+                      pillarenv=None,
+                      saltenv=None):
+    '''
+    Helper that can be used inside a state SLS,
+    in order to get the filter configuration given its name.
+
+    filter_name
+        The name of the filter.
+
+    pillar_key
+        The root key of the whole policy config.
+
+    pillarenv
+        Query the master to generate fresh pillar data on the fly,
+        specifically from the requested pillar environment.
+
+    saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
+    '''
+    pillar_cfg = _get_pillar_cfg(pillar_key,
+                                 pillarenv=pillarenv,
+                                 saltenv=saltenv)
+    return _lookup_element(pillar_cfg, filter_name)
+
+
+def get_term_pillar(filter_name,
+                    term_name,
+                    pillar_key='acl',
+                    pillarenv=None,
+                    saltenv=None):
+    '''
+    Helper that can be used inside a state SLS,
+    in order to get the term configuration given its name,
+    under a certain filter uniquely identified by its name.
+
+    filter_name
+        The name of the filter.
+
+    term_name
+        The name of the term.
+
+    pillar_key: ``acl``
+        The root key of the whole policy config. Default: ``acl``.
+
+    pillarenv
+        Query the master to generate fresh pillar data on the fly,
+        specifically from the requested pillar environment.
+
+    saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
+    '''
+    filter_pillar_cfg = get_filter_pillar(filter_name,
+                                          pillar_key=pillar_key,
+                                          pillarenv=pillarenv,
+                                          saltenv=saltenv)
+    term_pillar_cfg = filter_pillar_cfg.get('terms', [])
+    term_opts = _lookup_element(term_pillar_cfg, term_name)
+    return term_opts
