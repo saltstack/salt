@@ -871,7 +871,7 @@ def get_filter_pillar(filter_name,
         Included only for compatibility with
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
     '''
-    return  __salt__['capirca.get_filter_pillar'](filter_name,
+    return __salt__['capirca.get_filter_pillar'](filter_name,
                                                   pillar_key=pillar_key,
                                                   pillarenv=pillarenv,
                                                   saltenv=saltenv)
