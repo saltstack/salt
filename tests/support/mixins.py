@@ -13,7 +13,7 @@
 # Import python libs
 from __future__ import absolute_import
 import os
-import copy
+import types
 import pprint
 import logging
 import warnings
@@ -412,124 +412,13 @@ class _FixLoaderModuleMockMixinMroOrder(type):
         for idx, base in enumerate(bases):
             if base.__name__ == 'LoaderModuleMockMixin':
                 bases.insert(0, bases.pop(idx))
-                if 'loader_module' not in cls_dict:
-                    raise RuntimeError(
-                        'You need to provide the \'loader_module\' attribute to {} '
-                        'in order for the \'LoaderModuleMockMixin\' to do it\'s magic'.format(cls_name)
-                    )
                 break
 
         # Create the class instance
         instance = super(_FixLoaderModuleMockMixinMroOrder, mcs).__new__(mcs, cls_name, tuple(bases), cls_dict)
 
-        # Define our setUp function decorator
-        def set_up_loader_mocks(setup_func):
-
-            @functools.wraps(setup_func)
-            def wrapper(self):
-                if NO_MOCK:
-                    self.skipTest(NO_MOCK_REASON)
-
-                loader_modules = self.loader_module
-
-                if not isinstance(loader_modules, (list, tuple)):
-                    loader_modules = [loader_modules]
-
-                loader_module_globals = getattr(self, 'loader_module_globals', None)
-                loader_module_blacklisted_dunders = getattr(self, 'loader_module_blacklisted_dunders', ())
-                if loader_module_globals is None:
-                    loader_module_globals = {}
-                elif callable(loader_module_globals):
-                    loader_module_globals = loader_module_globals()
-                else:
-                    loader_module_globals = copy.deepcopy(loader_module_globals)
-
-                if isinstance(loader_module_globals, (list, tuple)):
-                    if len(loader_modules) != len(loader_module_globals):
-                        raise RuntimeError(
-                            'Multiple loader_modules or multiple loader_module_globals '
-                            'were passed, however, the number of items on '
-                            'each must be the same. {} != {}'.format(len(loader_modules),
-                                                                     len(loader_module_globals))
-                        )
-                if not isinstance(loader_module_globals, (list, tuple)):
-                    loader_module_globals = [loader_module_globals]
-                    while len(loader_module_globals) < len(loader_modules):
-                        loader_module_globals.append(loader_module_globals[0])
-
-                minion_funcs = []
-                for loader_module_globals_instance in loader_module_globals:
-                    if '__salt__' in loader_module_globals_instance and \
-                            loader_module_globals_instance['__salt__'] == 'autoload':
-                        if '__opts__' not in loader_module_globals_instance:
-                            raise RuntimeError(
-                                'You must provide __opts__ in the loader_module_globals to auto load the minion functions'
-                            )
-                        import salt.loader
-                        ctx = {}
-                        if '__utils__' not in loader_module_globals_instance:
-                            utils = salt.loader.utils(loader_module_globals_instance['__opts__'],
-                                                      context=loader_module_globals_instance.get('__context__') or ctx)
-                            loader_module_globals_instance['__utils__'] = utils
-                        minion_funcs.append((
-                            loader_module_globals_instance,
-                            salt.loader.minion_mods(
-                                loader_module_globals_instance['__opts__'],
-                                context=loader_module_globals_instance.get('__context__') or ctx,
-                                utils=loader_module_globals_instance.get('__utils__'),
-                            )
-                        ))
-                        loader_module_globals_instance['__salt__'] = minion_funcs[-1][1]
-
-                salt_dunders = (
-                    '__opts__', '__salt__', '__runner__', '__context__', '__utils__',
-                    '__ext_pillar__', '__thorium__', '__states__', '__serializers__', '__ret__',
-                    '__grains__', '__pillar__', '__sdb__',
-                    # Proxy is commented out on purpose since some code in salt expects a NameError
-                    # and is most of the time not a required dunder
-                    # '__proxy__'
-                )
-                for dunder_name in salt_dunders:
-                    for loader_module_globals_instance in loader_module_globals:
-                        if dunder_name not in loader_module_globals_instance:
-                            if dunder_name in loader_module_blacklisted_dunders:
-                                continue
-                            loader_module_globals_instance[dunder_name] = {}
-
-                for idx, loader_module in enumerate(loader_modules):
-                    for key in loader_module_globals[idx]:
-                        if not hasattr(loader_module, key):
-                            if key in salt_dunders:
-                                setattr(loader_module, key, {})
-                            else:
-                                setattr(loader_module, key, None)
-
-                    if loader_module_globals[idx]:
-                        patcher = patch.multiple(loader_module, **loader_module_globals[idx])
-                        patcher.start()
-
-                        def cleanup(patcher, loader_module_globals):
-                            patcher.stop()
-                            del loader_module_globals
-
-                        self.addCleanup(cleanup, patcher, loader_module_globals[idx])
-                if minion_funcs:
-                    for loader_module_globals_instance, minion_funcs_instance in minion_funcs:
-                        # Since we autoloaded the minion_funcs, let's namespace the functions with the globals
-                        # used to patch above
-                        import salt.utils
-                        for func in minion_funcs_instance:
-                            minion_funcs_instance[func] = salt.utils.namespaced_function(
-                                minion_funcs_instance[func],
-                                loader_module_globals_instance,
-                                preserve_context=True
-                            )
-
-                return setup_func(self)
-            return wrapper
-
         # Apply our setUp function decorator
-        instance.setUp = set_up_loader_mocks(instance.setUp)
+        instance.setUp = LoaderModuleMockMixin.__setup_loader_modules_mocks__(instance.setUp)
         return instance
 
 
@@ -539,3 +428,111 @@ class LoaderModuleMockMixin(six.with_metaclass(_FixLoaderModuleMockMixinMroOrder
 
     Please check `set_up_loader_mocks` above
     '''
+
+    # Define our setUp function decorator
+    @staticmethod
+    def __setup_loader_modules_mocks__(setup_func):
+
+        @functools.wraps(setup_func)
+        def wrapper(self):
+            if NO_MOCK:
+                self.skipTest(NO_MOCK_REASON)
+
+            loader_modules_configs = self.setup_loader_modules()
+            if not isinstance(loader_modules_configs, dict):
+                raise RuntimeError(
+                    '{}.setup_loader_modules() must return a dictionary where the keys are the '
+                    'modules that require loader mocking setup and the values, the global module '
+                    'variables for each of the module being mocked. For example \'__salt__\', '
+                    '\'__opts__\', etc.'.format(self.__class__.__name__)
+                )
+
+            salt_dunders = (
+                '__opts__', '__salt__', '__runner__', '__context__', '__utils__',
+                '__ext_pillar__', '__thorium__', '__states__', '__serializers__', '__ret__',
+                '__grains__', '__pillar__', '__sdb__',
+                # Proxy is commented out on purpose since some code in salt expects a NameError
+                # and is most of the time not a required dunder
+                # '__proxy__'
+            )
+
+            for module, module_globals in six.iteritems(loader_modules_configs):
+                if not isinstance(module, types.ModuleType):
+                    raise RuntimeError(
+                        'The dictionary keys returned by {}.setup_loader_modules() '
+                        'must be an imported module, not {}'.format(
+                            self.__class__.__name__,
+                            type(module)
+                        )
+                    )
+                if not isinstance(module_globals, dict):
+                    raise RuntimeError(
+                        'The dictionary values returned by {}.setup_loader_modules() '
+                        'must be a dictionary, not {}'.format(
+                            self.__class__.__name__,
+                            type(module_globals)
+                        )
+                    )
+
+                module_blacklisted_dunders = module_globals.pop('blacklisted_dunders', ())
+
+                minion_funcs = {}
+                if '__salt__' in module_globals and module_globals['__salt__'] == 'autoload':
+                    if '__opts__' not in module_globals:
+                        raise RuntimeError(
+                            'You must provide \'__opts__\' on the {} module globals dictionary '
+                            'to auto load the minion functions'.format(module.__name__)
+                        )
+                    import salt.loader
+                    ctx = {}
+                    if '__utils__' not in module_globals:
+                        utils = salt.loader.utils(module_globals['__opts__'],
+                                                  context=module_globals.get('__context__') or ctx)
+                        module_globals['__utils__'] = utils
+                    minion_funcs = salt.loader.minion_mods(
+                        module_globals['__opts__'],
+                        context=module_globals.get('__context__') or ctx,
+                        utils=module_globals.get('__utils__'),
+                    )
+                    module_globals['__salt__'] = minion_funcs
+
+                for dunder_name in salt_dunders:
+                    if dunder_name not in module_globals:
+                        if dunder_name in module_blacklisted_dunders:
+                            continue
+                        module_globals[dunder_name] = {}
+
+                for key in module_globals:
+                    if not hasattr(module, key):
+                        if key in salt_dunders:
+                            setattr(module, key, {})
+                        else:
+                            setattr(module, key, None)
+
+                if module_globals:
+                    patcher = patch.multiple(module, **module_globals)
+                    patcher.start()
+
+                    def cleanup(patcher, module_globals):
+                        patcher.stop()
+                        del module_globals
+
+                    self.addCleanup(cleanup, patcher, module_globals)
+
+                if minion_funcs:
+                    # Since we autoloaded the minion_funcs, let's namespace the functions with the globals
+                    # used to patch above
+                    import salt.utils
+                    for func in minion_funcs:
+                        minion_funcs[func] = salt.utils.namespaced_function(
+                            minion_funcs[func],
+                            module_globals,
+                            preserve_context=True
+                        )
+            return setup_func(self)
+        return wrapper
+
+    def setup_loader_modules(self):
+        raise NotImplementedError(
+            '\'{}.setup_loader_modules()\' must be implemented'.format(self.__class__.__name__)
+        )
