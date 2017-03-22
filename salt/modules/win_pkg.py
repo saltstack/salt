@@ -1404,6 +1404,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
 
             # Get the uninstaller
             uninstaller = pkginfo[target].get('uninstaller', '')
+            cache_dir = pkginfo[version_num].get('cache_dir', False)
 
             # If no uninstaller found, use the installer
             if not uninstaller:
@@ -1421,19 +1422,49 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             # Where is the uninstaller
             if uninstaller.startswith(('salt:', 'http:', 'https:', 'ftp:')):
 
+                # Check for the 'cache_dir' parameter in the .sls file
+                # If true, the entire directory will be cached instead of the
+                # individual file. This is useful for installations that are not
+                # single files
+                if cache_dir and uninstaller.startswith('salt:'):
+                    path, _ = os.path.split(uninstaller)
+                    __salt__['cp.cache_dir'](path,
+                                             saltenv,
+                                             False,
+                                             None,
+                                             'E@init.sls$')
+
                 # Check to see if the uninstaller is cached
-                cached_pkg = __salt__['cp.is_cached'](uninstaller)
+                cached_pkg = __salt__['cp.is_cached'](uninstaller, saltenv)
                 if not cached_pkg:
                     # It's not cached. Cache it, mate.
-                    cached_pkg = __salt__['cp.cache_file'](uninstaller)
+                    cached_pkg = __salt__['cp.cache_file'](uninstaller, saltenv)
 
                     # Check if the uninstaller was cached successfully
                     if not cached_pkg:
                         log.error('Unable to cache %s', uninstaller)
                         ret[pkgname] = {'unable to cache': uninstaller}
                         continue
+
+                # Compare the hash of the cached installer to the source only if
+                # the file is hosted on salt:
+                if uninstaller.startswith('salt:'):
+                    if __salt__['cp.hash_file'](uninstaller, saltenv) != \
+                            __salt__['cp.hash_file'](cached_pkg):
+                        try:
+                            cached_pkg = __salt__['cp.cache_file'](
+                                uninstaller, saltenv)
+                        except MinionError as exc:
+                            return '{0}: {1}'.format(exc, uninstaller)
+
+                        # Check if the installer was cached successfully
+                        if not cached_pkg:
+                            log.error('Unable to cache {0}'.format(uninstaller))
+                            ret[pkgname] = {'unable to cache': uninstaller}
+                            continue
             else:
-                # Run the uninstaller directly (not hosted on salt:, https:, etc.)
+                # Run the uninstaller directly
+                # (not hosted on salt:, https:, etc.)
                 cached_pkg = uninstaller
 
             # Fix non-windows slashes
