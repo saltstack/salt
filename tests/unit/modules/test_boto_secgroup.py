@@ -90,16 +90,16 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
     TestCase for salt.modules.boto_secgroup module
     '''
 
-    loader_module = boto_secgroup
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         opts = salt.config.DEFAULT_MASTER_OPTS
         utils = salt.loader.utils(opts, whitelist=['boto'])
         funcs = salt.loader.minion_mods(opts, utils=utils)
         return {
-            '__opts__': opts,
-            '__utils__': utils,
-            '__salt__': funcs
+            boto_secgroup: {
+                '__opts__': opts,
+                '__utils__': utils,
+                '__salt__': funcs
+            }
         }
 
     def setUp(self):

@@ -57,7 +57,8 @@ def write_crontab(*args, **kw):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class CronTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = cron
+    def setup_loader_modules(self):
+        return {cron: {}}
 
     @patch('salt.modules.cron.raw_cron',
            new=MagicMock(side_effect=get_crontab))
@@ -861,7 +862,8 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PsTestCase(TestCase, LoaderModuleMockMixin):
 
-    loader_module = cron
+    def setup_loader_modules(self):
+        return {cron: {}}
 
     def test__needs_change(self):
         self.assertTrue(cron._needs_change(True, False))

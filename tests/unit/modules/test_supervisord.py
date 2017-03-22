@@ -26,7 +26,8 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.supervisord
     '''
-    loader_module = supervisord
+    def setup_loader_modules(self):
+        return {supervisord: {}}
 
     @staticmethod
     def _m_all(stdout=True):

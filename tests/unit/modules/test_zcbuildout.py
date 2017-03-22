@@ -54,14 +54,14 @@ def download_to(url, dest):
 @skipIf(True, 'These tests are not running reliably')
 class Base(TestCase, LoaderModuleMockMixin):
 
-    loader_module = buildout
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            '__salt__': {
-                'cmd.run_all': cmd.run_all,
-                'cmd.run': cmd.run,
-                'cmd.retcode': cmd.retcode,
+            buildout: {
+                '__salt__': {
+                    'cmd.run_all': cmd.run_all,
+                    'cmd.run': cmd.run,
+                    'cmd.retcode': cmd.retcode,
+                }
             }
         }
 

@@ -64,8 +64,8 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.sqlite3
     '''
-    loader_module = sqlite3
-    loader_module_globals = {'sqlite3': MockSqlite3()}
+    def setup_loader_modules(self):
+        return {sqlite3: {'sqlite3': MockSqlite3()}}
 
     # 'version' function tests: 1
 

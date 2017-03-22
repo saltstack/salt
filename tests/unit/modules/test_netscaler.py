@@ -560,20 +560,20 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.netscaler
     '''
-    loader_module = netscaler
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         return {
-            'NSNitro': MockNSNitro,
-            'NSServiceGroup': MockNSServiceGroup,
-            'NSServiceGroupServerBinding': MockNSServiceGroupServerBinding,
-            'NSLBVServerServiceGroupBinding': MockNSLBVServerServiceGroupBinding,
-            'NSService': MockNSService,
-            'NSServer': MockNSServer,
-            'NSLBVServer': MockNSLBVServer,
-            'NSNitroError': MockNSNitroError,
-            'NSSSLVServerSSLCertKeyBinding': MockNSSSLVServerSSLCertKeyBinding,
+            netscaler: {
+                'NSNitro': MockNSNitro,
+                'NSServiceGroup': MockNSServiceGroup,
+                'NSServiceGroupServerBinding': MockNSServiceGroupServerBinding,
+                'NSLBVServerServiceGroupBinding': MockNSLBVServerServiceGroupBinding,
+                'NSService': MockNSService,
+                'NSServer': MockNSServer,
+                'NSLBVServer': MockNSLBVServer,
+                'NSNitroError': MockNSNitroError,
+                'NSSSLVServerSSLCertKeyBinding': MockNSSSLVServerSSLCertKeyBinding,
             }
+        }
     # 'servicegroup_exists' function tests: 1
 
     def test_servicegroup_exists(self):

@@ -87,14 +87,10 @@ log = logging.getLogger(__name__)
 class BotoElasticsearchDomainTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    loader_module = boto_elasticsearch_domain
-
-    def loader_module_globals(self):
-        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
-        return {
-            '__utils__': utils,
-        }
+    def setup_loader_modules(self):
+        self.opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(self.opts, whitelist=['boto3'], context={})
+        return {boto_elasticsearch_domain: {'__utils__': utils}}
 
     def setUp(self):
         super(BotoElasticsearchDomainTestCaseBase, self).setUp()

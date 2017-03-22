@@ -25,7 +25,8 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.nova
     '''
-    loader_module = nova
+    def setup_loader_modules(self):
+        return {nova: {}}
 
     @patch('salt.modules.nova._auth')
     def test_boot(self, mock_auth):

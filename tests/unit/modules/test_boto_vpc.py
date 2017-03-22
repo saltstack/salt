@@ -134,12 +134,10 @@ def _has_required_moto():
 class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn3 = None
 
-    loader_module = boto_vpc
-
-    def loader_module_globals(self):
+    def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS
         utils = salt.loader.utils(opts, whitelist=['boto', 'boto3'])
-        return {'__utils__': utils}
+        return {boto_vpc: {'__utils__': utils}}
 
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
