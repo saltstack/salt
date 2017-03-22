@@ -4,6 +4,9 @@
 from __future__ import absolute_import
 import json
 
+# Import salt libs
+import salt.utils
+
 # Import test support libs
 import tests.support.cherrypy_testclasses as cptc
 
@@ -190,7 +193,7 @@ class TestArgKwarg(cptc.BaseRestCherryPyTest):
                 'Accept': 'application/json',
             }
         )
-        resp = json.loads(response.body[0])
+        resp = json.loads(salt.utils.to_str(response.body[0]))
         self.assertEqual(resp['return'][0]['args'], [1234])
         self.assertEqual(resp['return'][0]['kwargs'],
                          {'ext_source': 'redis'})
