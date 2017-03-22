@@ -85,6 +85,12 @@ except ImportError:
     HAS_WIN32API = False
 
 try:
+    import salt.utils.win_functions
+    HAS_WIN32 = salt.utils.win_functions.HAS_WIN32
+except ImportError:
+    HAS_WIN32 = False
+
+try:
     import grp
     HAS_GRP = True
 except ImportError:
@@ -284,12 +290,10 @@ def get_user():
     '''
     if HAS_PWD:
         return pwd.getpwuid(os.geteuid()).pw_name
+    elif HAS_WIN32:
+        return salt.utils.win_functions.get_current_user()
     else:
-        user_name = win32api.GetUserNameEx(win32api.NameSamCompatible)
-        if user_name[-1] == '$' and win32api.GetUserName() == 'SYSTEM':
-            # Make the system account easier to identify.
-            user_name = 'SYSTEM'
-        return user_name
+        raise CommandExecutionError("Required external libraries not found. Need 'pwd' or 'win32api")
 
 
 def get_uid(user=None):
