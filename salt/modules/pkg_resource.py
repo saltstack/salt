@@ -117,7 +117,7 @@ def parse_targets(name=None,
     if __grains__['os'] == 'MacOS' and sources:
         log.warning('Parameter "sources" ignored on MacOS hosts.')
 
-    if len(filter(lambda x: bool(x), [pkgs, sources, patches])) > 1:
+    if len([True for x in [pkgs, sources, patches] if x]) > 1:
         log.error('Only one of "pkgs", "sources" or "patches" can be used.')
         return None, None
 

@@ -292,7 +292,7 @@ def _find_install_targets(name=None,
     Inspect the arguments to pkg.installed and discover what packages need to
     be installed. Return a dict of desired packages
     '''
-    if len(filter(lambda x: bool(x), [pkgs, sources, patches])) > 1:
+    if len([True for x in [pkgs, sources, patches] if x]) > 1:
         return {'name': name,
                 'changes': {},
                 'result': False,
