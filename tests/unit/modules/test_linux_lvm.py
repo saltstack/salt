@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os.path
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -20,15 +21,14 @@ from tests.support.mock import (
 import salt.modules.linux_lvm as linux_lvm
 from salt.exceptions import CommandExecutionError
 
-# Globals
-linux_lvm.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LinuxLVMTestCase(TestCase):
+class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for the salt.modules.linux_lvm module
     '''
+    def setup_loader_modules(self):
+        return {linux_lvm: {}}
 
     def test_version(self):
         '''

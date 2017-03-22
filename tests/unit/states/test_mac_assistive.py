@@ -7,16 +7,17 @@ from __future__ import absolute_import
 import salt.states.mac_assistive as assistive
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch
 )
 
-assistive.__salt__ = {}
 
-
-class AssistiveTestCase(TestCase):
+class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {assistive: {}}
 
     def test_installed(self):
         '''

@@ -9,6 +9,7 @@ from __future__ import absolute_import
 import salt.states.event as event
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -17,15 +18,15 @@ from tests.support.mock import (
     patch
 )
 
-event.__opts__ = {}
-event.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class EventTestCase(TestCase):
+class EventTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the event state
     '''
+    def setup_loader_modules(self):
+        return {event: {}}
+
     def test_send(self):
         '''
             Test to send an event to the Salt Master

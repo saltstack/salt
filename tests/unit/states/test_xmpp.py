@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,16 +19,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.xmpp as xmpp
 
-# Globals
-xmpp.__salt__ = {}
-xmpp.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class XmppTestCase(TestCase):
+class XmppTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the xmpp state
     '''
+    def setup_loader_modules(self):
+        return {xmpp: {}}
+
     def test_send_msg(self):
         '''
             Test to send a message to an XMPP user

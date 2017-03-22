@@ -7,6 +7,7 @@ Unit Tests for the mac_desktop execution module.
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -19,15 +20,15 @@ from tests.support.mock import (
 import salt.modules.mac_desktop as mac_desktop
 from salt.exceptions import CommandExecutionError
 
-# Globals
-mac_desktop.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MacDesktopTestCase(TestCase):
+class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.mac_desktop
     '''
+    def setup_loader_modules(self):
+        return {mac_desktop: {}}
+
     # 'get_output_volume' function tests: 2
 
     def test_get_output_volume(self):

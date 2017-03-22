@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,16 +19,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.win_dns_client as win_dns_client
 
-# Globals
-win_dns_client.__salt__ = {}
-win_dns_client.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinDnsClientTestCase(TestCase):
+class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the win_dns_client state
     '''
+    def setup_loader_modules(self):
+        return {win_dns_client: {}}
+
     def test_dns_exists(self):
         '''
             Test to configure the DNS server list in the specified interface

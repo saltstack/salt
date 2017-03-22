@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,15 +17,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.portage_config as portage_config
 
-portage_config.__salt__ = {}
-portage_config.__opts__ = {'test': True}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PortageConfigTestCase(TestCase):
+class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.portage_config
     '''
+    def setup_loader_modules(self):
+        return {portage_config: {'__opts__': {'test': True}}}
+
     # 'mod_init' function tests: 1
 
     def test_mod_init(self):

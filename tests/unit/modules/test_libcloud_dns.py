@@ -7,8 +7,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from tests.support.unit import skipIf
 from tests.unit import ModuleTestCase, hasDependency
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf
 from tests.support.mock import (
     patch,
     MagicMock,
@@ -18,8 +19,6 @@ from tests.support.mock import (
 import salt.modules.libcloud_dns as libcloud_dns
 
 SERVICE_NAME = 'libcloud_dns'
-libcloud_dns.__salt__ = {}
-libcloud_dns.__utils__ = {}
 
 
 class MockDNSDriver(object):
@@ -34,7 +33,11 @@ def get_mock_driver():
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.libcloud_dns._get_driver',
        MagicMock(return_value=MockDNSDriver()))
-class LibcloudDnsModuleTestCase(ModuleTestCase):
+class LibcloudDnsModuleTestCase(ModuleTestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {libcloud_dns: {}}
+
     def setUp(self):
         hasDependency('libcloud', fake_module=False)
 

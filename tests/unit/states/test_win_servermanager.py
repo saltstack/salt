@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,16 +19,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.win_servermanager as win_servermanager
 
-# Globals
-win_servermanager.__salt__ = {}
-win_servermanager.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinServermanagerTestCase(TestCase):
+class WinServermanagerTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the win_servermanager state
     '''
+    def setup_loader_modules(self):
+        return {win_servermanager: {}}
+
     def test_installed(self):
         '''
             Test to install the windows feature

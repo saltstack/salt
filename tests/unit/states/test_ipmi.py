@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,15 +17,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.ipmi as ipmi
 
-ipmi.__salt__ = {}
-ipmi.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IpmiTestCase(TestCase):
+class IpmiTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ipmi
     '''
+    def setup_loader_modules(self):
+        return {ipmi: {}}
+
     # 'boot_device' function tests: 1
 
     def test_boot_device(self):

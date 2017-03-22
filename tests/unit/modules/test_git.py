@@ -11,6 +11,7 @@ import os
 import subprocess
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -23,9 +24,6 @@ from tests.support.mock import (
 from salt.utils.versions import LooseVersion
 import salt.modules.git as git_mod  # Don't potentially shadow GitPython
 
-# Globals
-git_mod.__salt__ = {}
-git_mod.__context__ = {}
 log = logging.getLogger(__name__)
 
 WORKTREE_ROOT = '/tmp/salt-tests-tmpdir/main'
@@ -74,10 +72,13 @@ def _git_version():
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GitTestCase(TestCase):
+class GitTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.git
     '''
+    def setup_loader_modules(self):
+        return {git_mod: {}}
+
     def test_list_worktrees(self):
         '''
         This tests git.list_worktrees

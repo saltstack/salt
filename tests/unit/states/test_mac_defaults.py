@@ -7,16 +7,17 @@ from __future__ import absolute_import
 import salt.states.mac_defaults as macdefaults
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch
 )
 
-macdefaults.__salt__ = {}
 
-
-class MacDefaultsTestCase(TestCase):
+class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {macdefaults: {}}
 
     def test_write(self):
         '''

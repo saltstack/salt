@@ -8,15 +8,13 @@ from __future__ import absolute_import
 from textwrap import dedent
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
 import salt
 import salt.modules.syslog_ng as syslog_ng
-
-syslog_ng.__salt__ = {}
-syslog_ng.__opts__ = {}
 
 _VERSION = "3.6.0alpha0"
 _MODULES = ("syslogformat,json-plugin,basicfuncs,afstomp,afsocket,cryptofuncs,"
@@ -58,7 +56,10 @@ _SYSLOG_NG_CTL_NOT_INSTALLED_RETURN_VALUE = {
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SyslogNGTestCase(TestCase):
+class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {syslog_ng: {}}
 
     def test_statement_without_options(self):
         s = syslog_ng.Statement("source", "s_local", options=[])

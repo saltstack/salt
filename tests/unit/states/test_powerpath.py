@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -17,15 +18,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.powerpath as powerpath
 
-powerpath.__opts__ = {}
-powerpath.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PowerpathTestCase(TestCase):
+class PowerpathTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.powerpath
     '''
+    def setup_loader_modules(self):
+        return {powerpath: {}}
+
     # 'license_present' function tests: 1
 
     def test_license_present(self):

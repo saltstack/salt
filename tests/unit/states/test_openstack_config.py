@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -18,15 +19,15 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Libs
 import salt.states.openstack_config as openstack_config
 
-openstack_config.__salt__ = {}
-openstack_config.__opts__ = {'test': False}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class OpenstackConfigTestCase(TestCase):
+class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.openstack_config
     '''
+    def setup_loader_modules(self):
+        return {openstack_config: {'__opts__': {'test': False}}}
+
     # 'present' function tests: 1
 
     def test_present(self):

@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import salt.states.mac_keychain as keychain
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
@@ -14,10 +15,10 @@ from tests.support.mock import (
     call
 )
 
-keychain.__salt__ = {}
 
-
-class KeychainTestCase(TestCase):
+class KeychainTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {keychain: {}}
 
     def test_install_cert(self):
         '''

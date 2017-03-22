@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,16 +19,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.win_system as win_system
 
-# Globals
-win_system.__salt__ = {}
-win_system.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinSystemTestCase(TestCase):
+class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the win_system state
     '''
+    def setup_loader_modules(self):
+        return {win_system: {}}
+
     def test_computer_desc(self):
         '''
             Test to manage the computer's description field

@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import sys
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,11 +19,6 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.network as network
-
-# Globals
-network.__salt__ = {}
-network.__grains__ = {}
-network.__opts__ = {}
 
 
 class MockNetwork(object):
@@ -57,10 +53,13 @@ class MockGrains(object):
 
 @skipIf(sys.version_info < (2, 7), 'This needs to be refactored to work with Python 2.6')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NetworkTestCase(TestCase):
+class NetworkTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the network state
     '''
+    def setup_loader_modules(self):
+        return {network: {}}
+
     @patch('salt.states.network.salt.utils.network', MockNetwork())
     @patch('salt.states.network.salt.loader', MockGrains())
     def test_managed(self):

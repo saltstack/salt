@@ -6,6 +6,7 @@ Tests for disk state
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,18 +17,13 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.disk as disk
 
-disk.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DiskTestCase(TestCase):
+class DiskTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test disk state
     '''
-    def setUp(self):
-        '''
-        setup common test info
-        '''
+    def setup_loader_modules(self):
         self.mock_data = {
             '/': {
                 '1K-blocks': '41147472',
@@ -54,9 +50,8 @@ class DiskTestCase(TestCase):
                 'filesystem': 'tmpfs',
                 'used': '0'}
         }
-        self.__salt__ = {
-            'disk.usage': MagicMock(return_value=self.mock_data),
-        }
+        self.addCleanup(delattr, self, 'mock_data')
+        return {disk: {'__salt__': {'disk.usage': MagicMock(return_value=self.mock_data)}}}
 
     def test_status_missing(self):
         '''
@@ -69,9 +64,8 @@ class DiskTestCase(TestCase):
                     'changes': {},
                     'data': {}}
 
-        with patch.dict(disk.__salt__, self.__salt__):
-            ret = disk.status(mock_fs)
-            self.assertEqual(ret, mock_ret)
+        ret = disk.status(mock_fs)
+        self.assertEqual(ret, mock_ret)
 
     def test_status_type_error(self):
         '''
@@ -84,15 +78,13 @@ class DiskTestCase(TestCase):
                     'changes': {},
                     'data': {}}
 
-        with patch.dict(disk.__salt__, self.__salt__):
-            mock_ret['comment'] = 'maximum must be an integer '
-            ret = disk.status(mock_fs, maximum=r'e^{i\pi}')
-            self.assertEqual(ret, mock_ret)
+        mock_ret['comment'] = 'maximum must be an integer '
+        ret = disk.status(mock_fs, maximum=r'e^{i\pi}')
+        self.assertEqual(ret, mock_ret)
 
-        with patch.dict(disk.__salt__, self.__salt__):
-            mock_ret['comment'] = 'minimum must be an integer '
-            ret = disk.status(mock_fs, minimum=r'\cos\pi + i\sin\pi')
-            self.assertEqual(ret, mock_ret)
+        mock_ret['comment'] = 'minimum must be an integer '
+        ret = disk.status(mock_fs, minimum=r'\cos\pi + i\sin\pi')
+        self.assertEqual(ret, mock_ret)
 
     def test_status_range_error(self):
         '''
@@ -105,15 +97,13 @@ class DiskTestCase(TestCase):
                     'changes': {},
                     'data': {}}
 
-        with patch.dict(disk.__salt__, self.__salt__):
-            mock_ret['comment'] = 'maximum must be in the range [0, 100] '
-            ret = disk.status(mock_fs, maximum='-1')
-            self.assertEqual(ret, mock_ret)
+        mock_ret['comment'] = 'maximum must be in the range [0, 100] '
+        ret = disk.status(mock_fs, maximum='-1')
+        self.assertEqual(ret, mock_ret)
 
-        with patch.dict(disk.__salt__, self.__salt__):
-            mock_ret['comment'] = 'minimum must be in the range [0, 100] '
-            ret = disk.status(mock_fs, minimum='101')
-            self.assertEqual(ret, mock_ret)
+        mock_ret['comment'] = 'minimum must be in the range [0, 100] '
+        ret = disk.status(mock_fs, minimum='101')
+        self.assertEqual(ret, mock_ret)
 
     def test_status_inverted_range(self):
         '''
@@ -126,9 +116,8 @@ class DiskTestCase(TestCase):
                     'changes': {},
                     'data': {}}
 
-        with patch.dict(disk.__salt__, self.__salt__):
-            ret = disk.status(mock_fs, maximum='0', minimum='1')
-            self.assertEqual(ret, mock_ret)
+        ret = disk.status(mock_fs, maximum='0', minimum='1')
+        self.assertEqual(ret, mock_ret)
 
     def test_status_threshold(self):
         '''
@@ -144,21 +133,19 @@ class DiskTestCase(TestCase):
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
 
-        with patch.dict(disk.__salt__, self.__salt__):
-            mock_ret['comment'] = 'Disk used space is below minimum of {0} % at {1} %'.format(
-                                       mock_min,
-                                       mock_used
-                                   )
-            ret = disk.status(mock_fs, minimum=mock_min)
-            self.assertEqual(ret, mock_ret)
+        mock_ret['comment'] = 'Disk used space is below minimum of {0} % at {1} %'.format(
+                                   mock_min,
+                                   mock_used
+                               )
+        ret = disk.status(mock_fs, minimum=mock_min)
+        self.assertEqual(ret, mock_ret)
 
-        with patch.dict(disk.__salt__, self.__salt__):
-            mock_ret['comment'] = 'Disk used space is above maximum of {0} % at {1} %'.format(
-                                       mock_max,
-                                       mock_used
-                                   )
-            ret = disk.status(mock_fs, maximum=mock_max)
-            self.assertEqual(ret, mock_ret)
+        mock_ret['comment'] = 'Disk used space is above maximum of {0} % at {1} %'.format(
+                                   mock_max,
+                                   mock_used
+                               )
+        ret = disk.status(mock_fs, maximum=mock_max)
+        self.assertEqual(ret, mock_ret)
 
     def test_status_strip(self):
         '''
@@ -171,24 +158,23 @@ class DiskTestCase(TestCase):
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
 
-        with patch.dict(disk.__salt__, self.__salt__):
-            ret = disk.status(mock_fs, minimum='0%')
-            self.assertEqual(ret, mock_ret)
+        ret = disk.status(mock_fs, minimum='0%')
+        self.assertEqual(ret, mock_ret)
 
-            ret = disk.status(mock_fs, minimum='0 %')
-            self.assertEqual(ret, mock_ret)
+        ret = disk.status(mock_fs, minimum='0 %')
+        self.assertEqual(ret, mock_ret)
 
-            ret = disk.status(mock_fs, maximum='100%')
-            self.assertEqual(ret, mock_ret)
+        ret = disk.status(mock_fs, maximum='100%')
+        self.assertEqual(ret, mock_ret)
 
-            ret = disk.status(mock_fs, minimum='1024K', absolute=True)
-            self.assertEqual(ret, mock_ret)
+        ret = disk.status(mock_fs, minimum='1024K', absolute=True)
+        self.assertEqual(ret, mock_ret)
 
-            ret = disk.status(mock_fs, minimum='1024KB', absolute=True)
-            self.assertEqual(ret, mock_ret)
+        ret = disk.status(mock_fs, minimum='1024KB', absolute=True)
+        self.assertEqual(ret, mock_ret)
 
-            ret = disk.status(mock_fs, maximum='4194304 KB', absolute=True)
-            self.assertEqual(ret, mock_ret)
+        ret = disk.status(mock_fs, maximum='4194304 KB', absolute=True)
+        self.assertEqual(ret, mock_ret)
 
     def test_status(self):
         '''
@@ -203,13 +189,11 @@ class DiskTestCase(TestCase):
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
 
-        with patch.dict(disk.__salt__, self.__salt__):
-            ret = disk.status(mock_fs, minimum=mock_min)
-            self.assertEqual(ret, mock_ret)
+        ret = disk.status(mock_fs, minimum=mock_min)
+        self.assertEqual(ret, mock_ret)
 
-        with patch.dict(disk.__salt__, self.__salt__):
-            ret = disk.status(mock_fs, maximum=mock_max)
-            self.assertEqual(ret, mock_ret)
+        ret = disk.status(mock_fs, maximum=mock_max)
+        self.assertEqual(ret, mock_ret)
 
         # Reset mock because it's an iterator to run the tests with the
         # absolute flag

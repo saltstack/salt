@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -17,18 +18,18 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.ipset as ipset
 
-ipset.__salt__ = {}
-ipset.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IpsetSetPresentTestCase(TestCase):
+class IpsetSetPresentTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ipset.present
     '''
 
     fake_name = 'fake_ipset'
     fake_set_type = {'bitmap': '192.168.0.3'}
+
+    def setup_loader_modules(self):
+        return {ipset: {}}
 
     def _runner(self, expected_ret, test=False, check_set=False, new_set=None,
                 new_set_assertion=True):
@@ -82,13 +83,16 @@ class IpsetSetPresentTestCase(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IpsetSetAbsentTestCase(TestCase):
+class IpsetSetAbsentTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ipset.present
     '''
 
     fake_name = 'fake_ipset'
     fake_set_type = {'bitmap': '192.168.0.3'}
+
+    def setup_loader_modules(self):
+        return {ipset: {}}
 
     def _runner(self, expected_ret, test=False, check_set=True, delete_set='',
                 flush_assertion=False, delete_set_assertion=False):
@@ -141,13 +145,16 @@ class IpsetSetAbsentTestCase(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IpsetPresentTestCase(TestCase):
+class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ipset.present
     '''
 
     fake_name = 'fake_ipset'
     fake_entries = ['192.168.0.3', '192.168.1.3']
+
+    def setup_loader_modules(self):
+        return {ipset: {}}
 
     def _runner(self, expected_ret, test=False, check=False, add=False,
                 add_assertion=False):
@@ -215,13 +222,16 @@ class IpsetPresentTestCase(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IpsetAbsentTestCase(TestCase):
+class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ipset.present
     '''
 
     fake_name = 'fake_ipset'
     fake_entries = ['192.168.0.3', '192.168.1.3']
+
+    def setup_loader_modules(self):
+        return {ipset: {}}
 
     def _runner(self, expected_ret, test=False, check=False, delete=False,
                 delete_assertion=False):
@@ -287,12 +297,15 @@ class IpsetAbsentTestCase(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IpsetFlushTestCase(TestCase):
+class IpsetFlushTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ipset.present
     '''
 
     fake_name = 'fake_ipset'
+
+    def setup_loader_modules(self):
+        return {ipset: {}}
 
     def _runner(self, expected_ret, test=False, check_set=True, flush=True,
                 flush_assertion=True):

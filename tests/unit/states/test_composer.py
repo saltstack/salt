@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -18,15 +19,15 @@ from salt.exceptions import SaltException
 # Import Salt Libs
 import salt.states.composer as composer
 
-composer.__salt__ = {}
-composer.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ComposerTestCase(TestCase):
+class ComposerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.composer
     '''
+    def setup_loader_modules(self):
+        return {composer: {}}
+
     # 'installed' function tests: 1
 
     def test_installed(self):

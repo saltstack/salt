@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,16 +19,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.rabbitmq_cluster as rabbitmq_cluster
 
-# Globals
-rabbitmq_cluster.__salt__ = {}
-rabbitmq_cluster.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RabbitmqClusterTestCase(TestCase):
+class RabbitmqClusterTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the rabbitmq_cluster state
     '''
+    def setup_loader_modules(self):
+        return {rabbitmq_cluster: {}}
+
     def test_joined(self):
         '''
             Test to ensure the current node joined

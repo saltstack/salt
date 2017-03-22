@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -17,17 +18,16 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.deb_apache as deb_apache
-# Globals
-deb_apache.__grains__ = {}
-deb_apache.__salt__ = {}
-deb_apache.__context__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DebApacheTestCase(TestCase):
+class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.deb_apache
     '''
+    def setup_loader_modules(self):
+        return {deb_apache: {}}
+
     # 'check_site_enabled' function tests: 3
 
     @patch('os.path.islink', MagicMock(return_value=True))

@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import os.path
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -19,17 +20,15 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Libs
 import salt.states.cmd as cmd
 
-cmd.__salt__ = {}
-cmd.__opts__ = {}
-cmd.__grains__ = {}
-cmd.__env__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class CmdTestCase(TestCase):
+class CmdTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.cmd
     '''
+    def setup_loader_modules(self):
+        return {cmd: {'__env__': 'base'}}
+
     # 'mod_run_check' function tests: 1
 
     def test_mod_run_check(self):

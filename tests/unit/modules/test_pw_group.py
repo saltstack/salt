@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,18 +19,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.pw_group as pw_group
 
-# Globals
-pw_group.__grains__ = {}
-pw_group.__salt__ = {}
-pw_group.__context__ = {}
-pw_group.grinfo = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PwGroupTestCase(TestCase):
+class PwGroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test for salt.module.pw_group
     '''
+    def setup_loader_modules(self):
+        return {pw_group: {'grinfo': {}}}
+
     def test_add(self):
         '''
         Tests to add the specified group

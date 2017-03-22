@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,14 +17,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.makeconf as makeconf
 
-makeconf.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MakeconfTestCase(TestCase):
+class MakeconfTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.makeconf
     '''
+    def setup_loader_modules(self):
+        return {makeconf: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

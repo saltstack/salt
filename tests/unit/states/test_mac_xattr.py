@@ -7,16 +7,18 @@ from __future__ import absolute_import
 import salt.states.mac_xattr as xattr
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch
 )
 
-xattr.__salt__ = {}
 
+class XAttrTestCase(TestCase, LoaderModuleMockMixin):
 
-class XAttrTestCase(TestCase):
+    def setup_loader_modules(self):
+        return {xattr: {}}
 
     @patch('os.path.exists')
     def test_exists_not(self, exists_mock):

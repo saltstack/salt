@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -16,15 +17,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.ini_manage as ini_manage
 
-ini_manage.__salt__ = {}
-ini_manage.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IniManageTestCase(TestCase):
+class IniManageTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ini_manage
     '''
+    def setup_loader_modules(self):
+        return {ini_manage: {}}
+
     # 'options_present' function tests: 1
 
     def test_options_present(self):

@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,16 +19,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.iptables as iptables
 
-# Globals
-iptables.__salt__ = {}
-iptables.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IptablesTestCase(TestCase):
+class IptablesTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the iptables state
     '''
+    def setup_loader_modules(self):
+        return {iptables: {}}
+
     def test_chain_present(self):
         '''
             Test to verify the chain is exist.

@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -19,15 +20,15 @@ import salt.modules.raet_publish as raet_publish
 import salt.transport
 from salt.exceptions import SaltReqTimeoutError
 
-# Globals
-raet_publish.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RaetPublishTestCase(TestCase):
+class RaetPublishTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.raet_publish
     '''
+    def setup_loader_modules(self):
+        return {raet_publish: {}}
+
     def test_publish(self):
         '''
         Test for publish a command from the minion out to other minions.

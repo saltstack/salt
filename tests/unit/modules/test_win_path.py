@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -17,9 +18,6 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.win_path as win_path
-
-# Globals
-win_path.__salt__ = {}
 
 
 class MockWin32Gui(object):
@@ -47,15 +45,15 @@ class MockWin32Con(object):
     def __init__(self):
         pass
 
-win_path.win32gui = MockWin32Gui
-win_path.win32con = MockWin32Con
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinPathTestCase(TestCase):
+class WinPathTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.win_path
     '''
+    def setup_loader_modules(self):
+        return {win_path: {'win32gui': MockWin32Gui, 'win32con': MockWin32Con}}
+
     def test_rehash(self):
         '''
             Test to rehash the Environment variables

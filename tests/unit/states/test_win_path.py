@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,16 +19,15 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.win_path as win_path
 
-# Globals
-win_path.__salt__ = {}
-win_path.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinPathTestCase(TestCase):
+class WinPathTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the win_path state
     '''
+    def setup_loader_modules(self):
+        return {win_path: {}}
+
     def test_absent(self):
         '''
             Test to remove the directory from the SYSTEM path

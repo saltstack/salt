@@ -9,6 +9,7 @@ from __future__ import absolute_import
 import salt.states.http as http
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -17,15 +18,15 @@ from tests.support.mock import (
     patch
 )
 
-http.__salt__ = {}
-http.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class HttpTestCase(TestCase):
+class HttpTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the HTTP state
     '''
+    def setup_loader_modules(self):
+        return {http: {}}
+
     def test_query(self):
         '''
             Test to perform an HTTP query and statefully return the result

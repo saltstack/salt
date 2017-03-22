@@ -7,17 +7,17 @@ from __future__ import absolute_import
 import salt.states.mac_package as macpackage
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch
 )
 
-macpackage.__salt__ = {}
-macpackage.__grains__ = {}
 
-
-class MacPackageTestCase(TestCase):
+class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {macpackage: {}}
 
     @patch('salt.states.mac_package._mod_run_check')
     def test_installed_pkg(self, _mod_run_check_mock):
