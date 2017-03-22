@@ -64,9 +64,8 @@ def exists(path, quiet=False):
     '''
 
     _exists = os.access(path, os.F_OK)
-    if not _exists:
-        if not quiet:
-            log.error('Failed to read configuration from {0} - file does not exists'.format(path))
+    if not _exists and not quiet:
+        log.error('Failed to read configuration from {0} - file does not exists'.format(path))
 
     return _exists
 
@@ -81,8 +80,7 @@ def is_readable(path, quiet=False):
     '''
 
     _readable = os.access(path, os.R_OK)
-    if not _readable:
-        if not quiet:
-            log.error('Failed to read configuration from {0} - access denied'.format(path))
+    if not _readable and not quiet:
+        log.error('Failed to read configuration from {0} - access denied'.format(path))
 
     return _readable
