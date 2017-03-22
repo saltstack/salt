@@ -81,28 +81,34 @@ def store_job(opts, load, event=None, mminion=None):
     savefstr = '{0}.save_load'.format(job_cache)
     getfstr = '{0}.get_load'.format(job_cache)
     fstr = '{0}.returner'.format(job_cache)
+    updateetfstr = '{0}.update_endtime'.format(job_cache)
     if 'fun' not in load and load.get('return', {}):
         ret_ = load.get('return', {})
         if 'fun' in ret_:
             load.update({'fun': ret_['fun']})
         if 'user' in ret_:
             load.update({'user': ret_['user']})
+
+    # Try to reach returner methods
     try:
-        if 'jid' in load \
-                and 'get_load' in mminion.returners \
-                and not mminion.returners[getfstr](load.get('jid', '')):
-            mminion.returners[savefstr](load['jid'], load)
-        mminion.returners[fstr](load)
-
-        updateetfstr = '{0}.update_endtime'.format(job_cache)
-        if (opts.get('job_cache_store_endtime')
-                and updateetfstr in mminion.returners):
-            mminion.returners[updateetfstr](load['jid'], endtime)
-
-    except KeyError:
-        emsg = "Returner '{0}' does not support function returner".format(job_cache)
+        savefstr_func = mminion.returners[savefstr]
+        getfstr_func = mminion.returners[getfstr]
+        fstr_func = mminion.returners[fstr]
+    except KeyError as error:
+        emsg = "Returner '{0}' does not support function {1}".format(job_cache, error)
         log.error(emsg)
         raise KeyError(emsg)
+
+    if 'jid' in load \
+            and 'get_load' in mminion.returners \
+            and not mminion.returners[getfstr](load.get('jid', '')):
+        mminion.returners[savefstr](load['jid'], load)
+    mminion.returners[fstr](load)
+
+    if (opts.get('job_cache_store_endtime')
+            and updateetfstr in mminion.returners):
+        mminion.returners[updateetfstr](load['jid'], endtime)
+
 
 
 def store_minions(opts, jid, minions, mminion=None, syndic_id=None):
