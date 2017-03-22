@@ -1989,7 +1989,7 @@ def stop(name, soft=False, call=None):
 
     .. note::
 
-        If ``soft=True`` issues a command to the guest operating system
+        If ``soft=True`` then issues a command to the guest operating system
         asking it to perform a clean shutdown of all services.
         Default is soft=False
 
@@ -2097,7 +2097,7 @@ def reset(name, soft=False, call=None):
 
     .. note::
 
-        If ``soft=True`` Issues a command to the guest operating system
+        If ``soft=True`` then issues a command to the guest operating system
         asking it to perform a reboot. Otherwise hypervisor will terminate VM and start it again.
         Default is soft=False
 
