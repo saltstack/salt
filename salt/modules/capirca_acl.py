@@ -352,6 +352,20 @@ def _clean_term_opts(term_opts):
     return clean_opts
 
 
+def lookup_element(lst, key):
+    '''
+    Find an dictionary in a list of dictionaries, given its main key.
+    '''
+    if not lst:
+        return {}
+    for ele in lst:
+        if not ele or not isinstance(ele, dict):
+            continue
+        if ele.keys()[0] == key:
+            return ele.values()[0]
+    return {}
+
+
 def _get_pillar_cfg(pillar_key,
                     pillarenv=None,
                     saltenv=None):
@@ -361,24 +375,30 @@ def _get_pillar_cfg(pillar_key,
     pillar_cfg = __salt__['pillar.get'](pillar_key,
                                         pillarenv=pillarenv,
                                         saltenv=saltenv)
-    if not isinstance(pillar_cfg, dict):
-        return {}
     return pillar_cfg
 
 
-def _merge_dict(source, dest):
+def _merge_list_of_dict(first, second):
     '''
-    Merge dictionaries.
+    Merge lists of dictionaries.
+    Each element of the list is a dictionary having one single key.
+    That key is then used as unique lookup.
+    The first element list has higher priority than the second
     '''
-    if not source:
-        source = dest
-    elif source.keys() != dest.keys():
-        source_keys = set(source.keys())
-        dest_keys = set(dest.keys())
-        merge_keys = dest_keys - source_keys
-        for key in merge_keys:
-            source[key] = dest[key]
-    return source
+    if not first and not second:
+        return []
+    if not first and second:
+        return second
+    if first and not second:
+        return first
+    merged = first[:]
+    for ele in second:
+        if not ele or not isinstance(ele, dict):
+            continue # Ignore empty elements
+        if not lookup_element(first, ele.keys()[0]):
+            # element not found in the first list
+            merged.append(ele)
+    return merged
 
 
 def _get_term_object(filter_name,
@@ -399,10 +419,12 @@ def _get_term_object(filter_name,
     term.name = term_name
     term_opts = {}
     if merge_pillar:
-        term_pillar_key = ':'.join((pillar_key, filter_name, term_name))
-        term_opts = _get_pillar_cfg(term_pillar_key,
-                                    saltenv=saltenv,
-                                    pillarenv=pillarenv)
+        acl_pillar_cfg = _get_pillar_cfg(pillar_key,
+                                         saltenv=saltenv,
+                                         pillarenv=pillarenv)
+        filter_pillar_cfg = lookup_element(acl_pillar_cfg, filter_name)
+        term_pillar_cfg = filter_pillar_cfg.get('terms', [])
+        term_opts = lookup_element(term_pillar_cfg, term_name)
         log.debug('Merging with pillar data:')
         log.debug(term_opts)
         term_opts = _clean_term_opts(term_opts)
@@ -436,8 +458,12 @@ def _get_policy_object(platform,
     policy = _Policy()
     policy_filters = []
     if not filters:
-        filters = {}
-    for filter_name, filter_config in six.iteritems(filters):
+        filters = []
+    for filter_ in filters:
+        if not filter_ or not isinstance(filter_, dict):
+            continue  # go to the next filter
+        filter_name = filter_.keys()[0]
+        filter_config = filter_.values()[0]
         header = aclgen.policy.Header()  # same header everywhere
         target_opts = [
             platform,
@@ -451,14 +477,17 @@ def _get_policy_object(platform,
         target = aclgen.policy.Target(target_opts)
         header.AddObject(target)
         filter_terms = []
-        for term_name, term_fields in six.iteritems(filter_config):
-            term = _get_term_object(filter_name,
-                                    term_name,
-                                    pillar_key=pillar_key,
-                                    pillarenv=pillarenv,
-                                    saltenv=saltenv,
-                                    merge_pillar=merge_pillar,
-                                    **term_fields)
+        for term_ in filter_config.get('terms', []):
+            if term_ and isinstance(term_, dict):
+                term_name = term_.keys()[0]
+                term_fields = term_.values()[0]
+                term = _get_term_object(filter_name,
+                                        term_name,
+                                        pillar_key=pillar_key,
+                                        pillarenv=pillarenv,
+                                        saltenv=saltenv,
+                                        merge_pillar=merge_pillar,
+                                        **term_fields)
             filter_terms.append(term)
         policy_filters.append(
             (header, filter_terms)
@@ -555,8 +584,9 @@ def get_term_config(platform,
         .. code-block:: yaml
 
             firewall:
-                my-filter:
-                    my-term:
+              - my-filter:
+                  terms:
+                    - my-term:
                         source_port: 1234
                         source_address:
                             - 1.2.3.4/32
@@ -755,25 +785,24 @@ def get_term_config(platform,
 
     .. code-block:: text
 
-        ! $Id:$
-        ! $Date:$
-        ! $Revision:$
+        ! $Date: 2017/03/22 $
         no ip access-list filter-name
         ip access-list filter-name
-         remark $Id:$
          remark term-name
          permit ip host 1.2.3.4 host 5.6.7.8
         exit
     '''
-    terms = {
+    terms = []
+    term = {
         term_name: {
         }
     }
-    terms[term_name].update(term_fields)
-    terms[term_name].update({
+    term[term_name].update(term_fields)
+    term[term_name].update({
         'source_service': _make_it_list({}, 'source_service', source_service),
         'destination_service': _make_it_list({}, 'destination_service', destination_service),
     })
+    terms.append(term)
     if not filter_options:
         filter_options = []
     return get_filter_config(platform,
@@ -820,7 +849,7 @@ def get_filter_config(platform,
         .. _options: https://github.com/google/capirca/wiki/Policy-format#header-section
 
     terms
-        Dictionary of terms for this policy filter.
+        List of terms for this policy filter.
         If not specified or empty, will try to load the configuration from the pillar,
         unless ``merge_pillar`` is set as ``False``.
 
@@ -836,7 +865,12 @@ def get_filter_config(platform,
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
     merge_pillar: ``True``
-        Merge the CLI variables with the pillar. Default: ``True``
+        Merge the CLI variables with the pillar. Default: ``True``.
+
+        .. note::
+
+            When this argument is specified as ``True``, the terms sent through the CLI
+            have higher priority so they will be prepended to the terms defined in the pillar.
 
     only_lower_merge: ``False``
         Specify if it should merge only the terms fields. Otherwise it will try
@@ -882,34 +916,41 @@ def get_filter_config(platform,
     .. code-block:: yaml
 
         netacl:
-          my-filter:
-            my-term:
-              source_port: [1234, 1235]
-              action: reject
-            my-other-term:
-              source_port:
-                - [5678, 5680]
-              protocol: tcp
-              action: accept
+          - my-filter:
+              terms:
+                - my-term:
+                    source_port: [1234, 1235]
+                    action: reject
+                - my-other-term:
+                    source_port:
+                      - [5678, 5680]
+                    protocol: tcp
+                    action: accept
     '''
     if not filter_options:
         filter_options = []
     if not terms:
-        terms = {}
+        terms = []
     if merge_pillar and not only_lower_merge:
-        filter_pillar_key = ':'.join((pillar_key, filter_name))
-        filter_pillar_cfg = _get_pillar_cfg(filter_pillar_key)
+        acl_pillar_cfg = _get_pillar_cfg(pillar_key,
+                                         saltenv=saltenv,
+                                         pillarenv=pillarenv)
+        filter_pillar_cfg = lookup_element(acl_pillar_cfg, filter_name)
         filter_options = filter_options or filter_pillar_cfg.pop('options', None)
-        terms = _merge_dict(terms, filter_pillar_cfg)
-        # merge the passed variable with the pillar data
-        # any filter term not defined here, will be appended from the pillar
-        # new terms won't be removed
-    filters = {
+        if filter_pillar_cfg:
+            # Only when it was able to find the filter in the ACL config
+            pillar_terms = filter_pillar_cfg.get('terms', [])  # No problem if empty in the pillar
+            terms = _merge_list_of_dict(terms, pillar_terms)
+            # merge the passed variable with the pillar data
+            # any filter term not defined here, will be appended from the pillar
+            # new terms won't be removed
+    filters = []
+    filters.append({
         filter_name: {
-            'options': _make_it_list({}, filter_name, filter_options)
+            'options': _make_it_list({}, filter_name, filter_options),
+            'terms': terms
         }
-    }
-    filters[filter_name].update(terms)
+    })
     return get_policy_config(platform,
                              filters=filters,
                              pillar_key=pillar_key,
@@ -941,7 +982,7 @@ def get_policy_config(platform,
         The name of the Capirca platform.
 
     filters
-        Dictionary of filters for this policy.
+        List of filters for this policy.
         If not specified or empty, will try to load the configuration from the pillar,
         unless ``merge_pillar`` is set as ``False``.
 
@@ -994,30 +1035,7 @@ def get_policy_config(platform,
                 ** $Revision:$
                 **
                 */
-                filter my-other-filter {
-                    interface-specific;
-                    term dummy-term {
-                        from {
-                            protocol [ tcp udp ];
-                        }
-                        then {
-                            reject;
-                        }
-                    }
-                }
-            }
-        }
-        firewall {
-            family inet {
-                replace:
-                /*
-                ** $Id:$
-                ** $Date:$
-                ** $Revision:$
-                **
-                */
                 filter my-filter {
-                    interface-specific;
                     term my-term {
                         from {
                             source-port [ 1234 1235 ];
@@ -1036,38 +1054,66 @@ def get_policy_config(platform,
                 }
             }
         }
+        firewall {
+            family inet {
+                replace:
+                /*
+                ** $Id:$
+                ** $Date:$
+                ** $Revision:$
+                **
+                */
+                filter my-other-filter {
+                    interface-specific;
+                    term dummy-term {
+                        from {
+                            protocol [ tcp udp ];
+                        }
+                        then {
+                            reject;
+                        }
+                    }
+                }
+            }
+        }
 
     The policy configuration has been loaded from the pillar, having the following structure:
 
     .. code-block:: yaml
 
         netacl:
-          my-filter:
-            my-term:
-              source_port: [1234, 1235]
-              action: reject
-            my-other-term:
-              source_port:
-                - [5678, 5680]
-              protocol: tcp
-              action: accept
-          my-other-filter:
-            dummy-term:
-              protocol:
-                - tcp
-                - udp
-              action: reject
+          - my-filter:
+              options:
+                - not-interface-specific
+              terms:
+                - my-term:
+                    source_port: [1234, 1235]
+                    action: reject
+                - my-other-term:
+                    source_port:
+                      - [5678, 5680]
+                    protocol: tcp
+                    action: accept
+          - my-other-filter:
+              terms:
+                - dummy-term:
+                    protocol:
+                      - tcp
+                      - udp
+                    action: reject
     '''
     if not filters:
-        filters = {}
+        filters = []
     if merge_pillar and not only_lower_merge:
         # the pillar key for the policy config is the `pillar_key` itself
-        policy_pillar_cfg = _get_pillar_cfg(pillar_key)
+        policy_pillar_cfg = _get_pillar_cfg(pillar_key,
+                                            saltenv=saltenv,
+                                            pillarenv=pillarenv)
         # now, let's merge everything witht the pillar data
         # again, this will not remove any extra filters/terms
         # but it will merge with the pillar data
         # if this behaviour is not wanted, the user can set `merge_pillar` as `False`
-        filters = _merge_dict(filters, policy_pillar_cfg)
+        filters = _merge_list_of_dict(filters, policy_pillar_cfg)
     policy_object = _get_policy_object(platform,
                                        filters=filters,
                                        pillar_key=pillar_key,
