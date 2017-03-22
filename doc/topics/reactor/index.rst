@@ -624,7 +624,7 @@ And in the master config file, add the following reactor configuration:
 .. code-block:: yaml
 
     reactor:
-      - 'minion_start':
+      - 'salt/minion/*/start':
         - /srv/reactor/sync_grains.sls
 
 This will cause the master to instruct each minion to sync its custom grains
@@ -634,3 +634,8 @@ when it starts, making these grains available when the initial :ref:`highstate
 Other types can be synced by replacing ``local.saltutil.sync_grains`` with
 ``local.saltutil.sync_modules``, ``local.saltutil.sync_all``, or whatever else
 suits the intended use case.
+
+Also, if it is not desirable that *every* minion syncs on startup, the ``*``
+can be replaced with a different glob to narrow down the set of minions which
+will match that reactor (e.g. ``salt/minion/appsrv*/start``, which would only
+match minion IDs beginning with ``appsrv``).
