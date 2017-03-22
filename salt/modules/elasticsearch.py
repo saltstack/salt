@@ -469,6 +469,64 @@ def index_get(index, hosts=None, profile=None):
         raise CommandExecutionError("Cannot retrieve index {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
+def index_open(index, allow_no_indices=True, expand_wildcards='closed', ignore_unavailable=True, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Open specified index.
+
+    index
+        Index to be opened
+    allow_no_indices
+        Whether to ignore if a wildcard indices expression resolves into no concrete indices. (This includes _all string or when no indices have been specified)
+    expand_wildcards
+        Whether to expand wildcard expression to concrete indices that are open, closed or both., default ‘closed’, valid choices are: ‘open’, ‘closed’, ‘none’, ‘all’
+    ignore_unavailable
+        Whether specified concrete indices should be ignored when unavailable (missing or closed)
+
+    CLI example::
+
+        salt myminion elasticsearch.index_open testindex
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        result = es.indices.open(index=index, allow_no_indices=allow_no_indices, expand_wildcards=expand_wildcards, ignore_unavailable=ignore_unavailable)
+
+        return result.get('acknowledged', False)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot open index {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
+
+
+def index_close(index, allow_no_indices=True, expand_wildcards='open', ignore_unavailable=True, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Close specified index.
+
+    index
+        Index to be closed
+    allow_no_indices
+        Whether to ignore if a wildcard indices expression resolves into no concrete indices. (This includes _all string or when no indices have been specified)
+    expand_wildcards
+        Whether to expand wildcard expression to concrete indices that are open, closed or both., default ‘open’, valid choices are: ‘open’, ‘closed’, ‘none’, ‘all’
+    ignore_unavailable
+        Whether specified concrete indices should be ignored when unavailable (missing or closed)
+
+    CLI example::
+
+        salt myminion elasticsearch.index_close testindex
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        result = es.indices.close(index=index, allow_no_indices=allow_no_indices, expand_wildcards=expand_wildcards, ignore_unavailable=ignore_unavailable)
+
+        return result.get('acknowledged', False)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot close index {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
+
+
 def mapping_create(index, doc_type, body, hosts=None, profile=None):
     '''
     Create a mapping in a given index
@@ -596,6 +654,8 @@ def index_template_get(name, hosts=None, profile=None):
 
 def pipeline_get(id, hosts=None, profile=None):
     '''
+    .. versionadded:: 2017.3.0
+
     Retrieve Ingest pipeline definition. Available since Elasticsearch 5.0.
 
     CLI example::
@@ -616,6 +676,8 @@ def pipeline_get(id, hosts=None, profile=None):
 
 def pipeline_delete(id, hosts=None, profile=None):
     '''
+    .. versionadded:: 2017.3.0
+
     Delete Ingest pipeline. Available since Elasticsearch 5.0.
 
     CLI example::
@@ -637,6 +699,8 @@ def pipeline_delete(id, hosts=None, profile=None):
 
 def pipeline_create(id, body, hosts=None, profile=None):
     '''
+    .. versionadded:: 2017.3.0
+
     Create Ingest pipeline by supplied definition. Available since Elasticsearch 5.0.
 
     CLI example::
@@ -655,6 +719,8 @@ def pipeline_create(id, body, hosts=None, profile=None):
 
 def pipeline_simulate(id, body, verbose=False, hosts=None, profile=None):
     '''
+    .. versionadded:: 2017.3.0
+
     Simulate existing Ingest pipeline on provided data. Available since Elasticsearch 5.0.
 
     CLI example::
@@ -668,3 +734,305 @@ def pipeline_simulate(id, body, verbose=False, hosts=None, profile=None):
         raise CommandExecutionError("Cannot simulate pipeline {0}, server returned code {1} with message {2}".format(id, e.status_code, e.error))
     except AttributeError:
         raise CommandExecutionError("Method is applicable only for Elasticsearch 5.0+")
+
+
+def search_template_get(id, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Obtain existing search template definition.
+
+    id
+        Template ID
+
+    CLI example::
+
+        salt myminion elasticsearch.search_template_get mytemplate
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.get_template(id=id)
+    except elasticsearch.NotFoundError:
+        return None
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot obtain search template {0}, server returned code {1} with message {2}".format(id, e.status_code, e.error))
+
+
+def search_template_create(id, body, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Create search template by supplied definition
+
+    id
+        Template ID
+    body
+        Search template definition
+
+    CLI example::
+
+        salt myminion elasticsearch.search_template_create mytemplate '{"template":{"query":{"match":{"title":"{{query_string}}"}}}}'
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        result = es.put_template(id=id, body=body)
+
+        return result.get('acknowledged', False)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot create search template {0}, server returned code {1} with message {2}".format(id, e.status_code, e.error))
+
+
+def search_template_delete(id, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Delete existing search template definition.
+
+    id
+        Template ID
+
+    CLI example::
+
+        salt myminion elasticsearch.search_template_delete mytemplate
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        result = es.delete_template(id=id)
+
+        return result.get('acknowledged', False)
+    except elasticsearch.NotFoundError:
+        return True
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot delete search template {0}, server returned code {1} with message {2}".format(id, e.status_code, e.error))
+
+
+def repository_get(name, local=False, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Get existing repository details.
+
+    name
+        Repository name
+    local
+        Retrieve only local information, default is false
+
+    CLI example::
+
+        salt myminion elasticsearch.repository_get testrepo
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.snapshot.get_repository(repository=name, local=local)
+    except elasticsearch.NotFoundError:
+        return None
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot obtain repository {0}, server returned code {1} with message {2}".format(name, e.status_code, e.error))
+
+
+def repository_create(name, body, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Create repository for storing snapshots. Note that shared repository paths have to be specified in path.repo Elasticsearch configuration option.
+
+    name
+        Repository name
+    body
+        Repository definition
+
+    CLI example::
+
+        salt myminion elasticsearch.repository_create testrepo '{"type":"fs","settings":{"location":"/tmp/test","compress":true}}'
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        result = es.snapshot.create_repository(repository=name, body=body)
+
+        return result.get('acknowledged', False)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot create repository {0}, server returned code {1} with message {2}".format(name, e.status_code, e.error))
+
+
+def repository_delete(name, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Delete existing repository.
+
+    name
+        Repository name
+
+    CLI example::
+
+        salt myminion elasticsearch.repository_delete testrepo
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        result = es.snapshot.delete_repository(repository=name)
+
+        return result.get('acknowledged', False)
+    except elasticsearch.NotFoundError:
+        return True
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot delete repository {0}, server returned code {1} with message {2}".format(name, e.status_code, e.error))
+
+
+def repository_verify(name, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Obtain list of cluster nodes which successfully verified this repository.
+
+    name
+        Repository name
+
+    CLI example::
+
+        salt myminion elasticsearch.repository_verify testrepo
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.snapshot.verify_repository(repository=name)
+    except elasticsearch.NotFoundError:
+        return None
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot verify repository {0}, server returned code {1} with message {2}".format(name, e.status_code, e.error))
+
+
+def snapshot_status(repository=None, snapshot=None, ignore_unavailable=False, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Obtain status of all currently running snapshots.
+
+    repository
+        Particular repository to look for snapshots
+    snapshot
+        Snapshot name
+    ignore_unavailable
+        Ignore unavailable snapshots
+
+    CLI example::
+
+        salt myminion elasticsearch.snapshot_status ignore_unavailable=True
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.snapshot.status(repository=repository, snapshot=snapshot, ignore_unavailable=ignore_unavailable)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot obtain snapshot status, server returned code {0} with message {1}".format(e.status_code, e.error))
+
+
+def snapshot_get(repository, snapshot, ignore_unavailable=False, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Obtain snapshot residing in specified repository.
+
+    repository
+        Repository name
+    snapshot
+        Snapshot name, use _all to obtain all snapshots in specified repository
+    ignore_unavailable
+        Ignore unavailable snapshots
+
+    CLI example::
+
+        salt myminion elasticsearch.snapshot_get testrepo testsnapshot
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.snapshot.get(repository=repository, snapshot=snapshot, ignore_unavailable=ignore_unavailable)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot obtain details of snapshot {0} in repository {1}, server returned code {2} with message {3}".format(snapshot, repository, e.status_code, e.error))
+
+
+def snapshot_create(repository, snapshot, body=None, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Create snapshot in specified repository by supplied definition.
+
+    repository
+        Repository name
+    snapshot
+        Snapshot name
+    body
+        Snapshot definition
+
+    CLI example::
+
+        salt myminion elasticsearch.snapshot_create testrepo testsnapshot '{"indices":"index_1,index_2","ignore_unavailable":true,"include_global_state":false}'
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        response = es.snapshot.create(repository=repository, snapshot=snapshot, body=body)
+
+        return response.get('accepted', False)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot create snapshot {0} in repository {1}, server returned code {2} with message {3}".format(snapshot, repository, e.status_code, e.error))
+
+
+def snapshot_restore(repository, snapshot, body=None, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Restore existing snapshot in specified repository by supplied definition.
+
+    repository
+        Repository name
+    snapshot
+        Snapshot name
+    body
+        Restore definition
+
+    CLI example::
+
+        salt myminion elasticsearch.snapshot_restore testrepo testsnapshot '{"indices":"index_1,index_2","ignore_unavailable":true,"include_global_state":true}'
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        response = es.snapshot.restore(repository=repository, snapshot=snapshot, body=body)
+
+        return response.get('accepted', False)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot restore snapshot {0} in repository {1}, server returned code {2} with message {3}".format(snapshot, repository, e.status_code, e.error))
+
+
+def snapshot_delete(repository, snapshot, hosts=None, profile=None):
+    '''
+    .. versionadded:: 2017.3.0
+
+    Delete snapshot from specified repository.
+
+    repository
+        Repository name
+    snapshot
+        Snapshot name
+
+    CLI example::
+
+        salt myminion elasticsearch.snapshot_delete testrepo testsnapshot
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        result = es.snapshot.delete(repository=repository, snapshot=snapshot)
+
+        return result.get('acknowledged', False)
+    except elasticsearch.NotFoundError:
+        return True
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot delete snapshot {0} from repository {1}, server returned code {2} with message {3}".format(snapshot, repository, e.status_code, e.error))
