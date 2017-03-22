@@ -30,5 +30,6 @@ find /opt/local/lib/ -maxdepth 1 -type l -regextype sed -regex '.*/libzmq.so.[0-
 find /opt/local/lib/ -maxdepth 1 -type l -regextype sed -regex '.*/libsodium.so.[0-9]\+$' -exec cp {} ${PYZMQ}/ \;
 find ${PYZMQ}/ -maxdepth 1 -type f -name '*.so.*' -exec patchelf --set-rpath '$ORIGIN:$ORIGIN/../../:$ORIGIN/../lib' {} \;
 find ${PYZMQ}/ -maxdepth 1 -type f -name '*.so.*' -exec cp {} ${PYZMQ}/../../ \;
+find ${PYZMQ}/ -maxdepth 3 -type f -name '*.so' -exec patchelf --set-rpath '$ORIGIN:$ORIGIN/../../:$ORIGIN/../lib:$ORIGIN/../../../../' {} \;
 gtar -C $BUILD_DIR/.. -czvf dist/salt-$(awk '/^Version:/{print $2}' < PKG-INFO)-esky-smartos.tar.gz salt
 echo "tarball built"
