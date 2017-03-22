@@ -61,6 +61,50 @@ State Module Changes
   start/stop the service using the ``--no-block`` flag in the ``systemctl``
   command. On non-systemd minions, a warning will be issued.
 
+- The :py:func:`module.run <salt.states.module.run>` state has dropped its previous
+  syntax with ``m_`` prefix for reserved keywords. Additionally, it allows
+  running several functions in a batch.
+
+.. note::
+    It is nesessary to explicitly turn on the new behaviour (see below)
+
+  Before and after:
+
+.. code-block:: yaml
+
+    # Before
+    run_something:
+      module.run:
+        - name: mymodule.something
+        - m_name: 'some name'
+        - kwargs: {
+          first_arg: 'one',
+          second_arg: 'two',
+          do_stuff: 'True'
+        }
+
+    # After
+    run_something:
+      module.run:
+        mymodule.something:
+          - name: some name
+          - first_arg: one
+          - second_arg: two
+          - do_stuff: True
+
+- Previous behaviour of the function :py:func:`module.run <salt.states.module.run>` is
+  still kept by default and can be bypassed in case you want to use behaviour above.
+  Please keep in mind that the old syntax will no longer be supported in the ``Oxygen``
+  release of Salt. To enable the new behavior, add the following to the minion config file:
+
+
+.. code-block:: yaml
+
+    use_superseded:
+      - module.run
+
+
+
 Execution Module Changes
 ========================
 

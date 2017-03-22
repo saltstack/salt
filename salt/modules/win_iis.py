@@ -1809,10 +1809,10 @@ def get_webapp_settings(name, site, settings):
     for setting in settings:
         if setting in availableSettings:
             if setting == "userName" or setting == "password":
-                pscmd.append(r" $Property = Get-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
-                pscmd.append(r" -Name \"{0}\" -ErrorAction Stop | select Value;".format(setting))
-                pscmd.append(r" $Property = $Property | Select-Object -ExpandProperty Value;")
-                pscmd.append(r" $Settings['{0}'] = [String] $Property;".format(setting))
+                pscmd.append(" $Property = Get-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
+                pscmd.append(" -Name \"{0}\" -ErrorAction Stop | select Value;".format(setting))
+                pscmd.append(" $Property = $Property | Select-Object -ExpandProperty Value;")
+                pscmd.append(" $Settings['{0}'] = [String] $Property;".format(setting))
                 pscmd.append(r' $Property = $Null;')
 
             if setting == "physicalPath" or setting == "applicationPool":
