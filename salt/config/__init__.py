@@ -1025,6 +1025,7 @@ DEFAULT_MINION_OPTS = {
     'master_failback': False,
     'master_failback_interval': 0,
     'verify_master_pubkey_sign': False,
+    'sign_pub_messages': True,
     'always_verify_signature': False,
     'master_sign_key_name': 'master_sign',
     'syndic_finger': '',
@@ -1495,7 +1496,7 @@ DEFAULT_MASTER_OPTS = {
     'tcp_keepalive_idle': 300,
     'tcp_keepalive_cnt': -1,
     'tcp_keepalive_intvl': -1,
-    'sign_pub_messages': False,
+    'sign_pub_messages': True,
     'keysize': 2048,
     'transport': 'zeromq',
     'gather_job_timeout': 10,
@@ -1566,6 +1567,7 @@ DEFAULT_MASTER_OPTS = {
 DEFAULT_PROXY_MINION_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
+    'sign_pub_messages': True,
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': True,
     'append_minionid_config_dirs': ['cachedir', 'pidfile'],
@@ -2064,7 +2066,6 @@ def minion_config(path,
     overrides = load_config(path, env_var, DEFAULT_MINION_OPTS['conf_file'])
     default_include = overrides.get('default_include',
                                     defaults['default_include'])
-
     include = overrides.get('include', [])
 
     overrides.update(include_config(default_include, path, verbose=False,
@@ -3246,9 +3247,6 @@ def apply_minion_config(overrides=None,
         if directory in ['pki_dir', 'cachedir', 'extension_modules']:
             newdirectory = os.path.join(opts[directory], opts['id'])
             opts[directory] = newdirectory
-
-    if 'default_include' in overrides and '{id}' in overrides['default_include']:
-        opts['default_include'] = overrides['default_include'].replace('{id}', opts['id'])
 
     # pidfile can be in the list of append_minionid_config_dirs, but pidfile
     # is the actual path with the filename, not a directory.

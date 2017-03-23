@@ -2287,17 +2287,6 @@ file.
     files are prefixed with an underscore. A common example of this is the
     ``_schedule.conf`` file.
 
-.. note::
-
-    The configuration system supports adding the special token ``{id}`` to this
-    option.  At startup ``{id}`` will be replaced by the minion's ID, and the
-    default_include directory will be set here.  For example, if the minion's
-    ID is 'webserver' and ``default_include`` is set to ``minion.d/{id}/*.conf``
-    then the default_include directive will be set to ``minion.d/webserver/*.conf``.
-    This is for situations when there are multiple minions or proxy minions
-    running on a single machine that need different configurations, specifically for
-    their schedulers.
-
 
 ``include``
 -----------
