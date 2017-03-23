@@ -40,39 +40,6 @@ with a state, for example, the following will work:
        - cwd: 'C:\salt\bin\scripts'
        - bin_env: 'C:\salt\bin\scripts\pip.exe'
        - upgrade: True
-
-Upgrading Salt using Pip
-------------------------
-
-You can now update salt using pip to any version from the 2014.7 branch
-forward. Previous version require recompiling some of the dependencies which is
-painful in windows.
-
-To do this you just use pip with git to update to the version you want and then
-restart the service. Here is a sample state file that upgrades salt to the head
-of the 2015.5 branch:
-
-.. code-block:: yaml
-
-   install_salt:
-     pip.installed:
-       - cwd: 'C:\salt\bin\scripts'
-       - bin_env: 'C:\salt\bin\scripts\pip.exe'
-       - editable: git+https://github.com/saltstack/salt@2015.5#egg=salt
-       - upgrade: True
-
-   restart_service:
-     service.running:
-       - name: salt-minion
-       - enable: True
-       - watch:
-         - pip: install_salt
-
-.. note::
-   If you're having problems, you might try doubling the back slashes. For
-   example, cwd: 'C:\\salt\\bin\\scripts'. Sometimes python thinks the single
-   back slash is an escape character.
-
 '''
 from __future__ import absolute_import
 
