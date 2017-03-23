@@ -310,7 +310,7 @@ class SaltTestingParser(optparse.OptionParser):
                         lines.append(line.strip())
                     else:
                         lines.append(
-                            line.decode(__salt_system_encoding__).split())
+                            line.decode(__salt_system_encoding__).strip())
             if self.options.name:
                 self.options.name.extend(lines)
             else:
