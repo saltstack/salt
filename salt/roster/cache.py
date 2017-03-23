@@ -12,6 +12,7 @@ to access regular minions over ``salt-ssh``.
     - default order changed to industry-wide best practices
     - CIDR range selection
 
+
 Targeting
 ---------
 
@@ -19,23 +20,12 @@ This roster supports all matching and targeting of the Salt Master.
 The matching will be done using only the Salt Master's cache.
 
 
-Roster defaults
-----------------
-
-By default each host will only contain ``host``.
-This can be overriden by configuring ``roster_defaults``:
-
-.. code-block:: yaml
-
-roster_defaults:
-    user: toor          # change the default user to toor
-
-
 The Roster Order
 ----------------
 
 The roster's composition can be configured using ``roster_order``.
-In the ``roster_order`` you can define *any* roster key and fill it with a parameter:
+In the ``roster_order`` you can define *any* roster key and fill it with a parameter
+overriding the one in ``roster_defaults``:
 
 .. code-block:: yaml
 
@@ -44,6 +34,7 @@ roster_order:
 
 
 You can define lists of parameters as well, the first result from the list will become the value.
+
 
 Selecting a host
 ================
@@ -79,7 +70,7 @@ Using cached data
 
 Several cached libraries can be selected using the ``library: `` prefix, followed by the library key.
 This can be referenced using the same ``:`` syntax as e.g. ``pillar.get()``.
-Lists of references are also supported during the lookup.
+Lists of references are also supported during the lookup, as are Salt SDB URLs.
 
 This should be especially useful for the other roster keys:
 
@@ -89,6 +80,8 @@ roster_order:
   host:
     - grain: fqdn_ip4                # Lookup this grain
     - mine: network.ip_addrs         # Mine data lookup works the same
+
+  password: sdb://vault/ssh_pass     # Salt SDB URLs are also supported
 
   user:
     - pillar: ssh:auth:user          # Lookup this pillar key
@@ -220,9 +213,13 @@ def _data_lookup(ref, lookup):
 
 def _minion_lookup(minion_id, key, minion):
     grains, pillar, addrs, mine = minion
+
     if key == 'id':
         # Just paste in the minion ID
         return minion_id
+    elif key.startswith('sdb://'):
+        # It's a Salt SDB url
+        return salt['sdb.get'](key)
     elif isinstance(key, dict):
         # Lookup the key in the dict
         for data_id, lookup in key.items():

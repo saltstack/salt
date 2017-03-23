@@ -299,10 +299,12 @@ New SSH Cache Roster
 ====================
 
 The :mod:`SSH cache Roster <salt.roster.cache>` has been rewritten from scratch to increase its usefulness.
-The new roster supports all minion matchers, so it is now possible to target minions identically through `salt` and `salt-ssh`.
-The new configuration syntax allows for flexible combinations of arbitrary grains, pillar and mine data.
-This applies not just for the `host` of a minion, but also for other configuration data.
-The new release is also fully IPv4 and IPv6 enabled and even allows for the selection of certain CIDR ranges for connecting.
+The new roster supports all minion matchers,
+so it is now possible to target minions identically through `salt` and `salt-ssh`.
+
+Using the new ``roster_order`` configuration syntax it's now possible to compose a roster out of any combination
+of grains, pillar and mine data and even Salt SDB URLs.
+The new release is also fully IPv4 and IPv6 enabled and even has support for CIDR ranges.
 
 Deprecations
 ============
