@@ -91,7 +91,7 @@ otherwise the connection is considered alive.
 Default: ``1``
 
 The frequency of keepalive checks, in minutes. It requires the
-:conf_minion:`proxy_keep_alive` option to be enabled
+:conf_proxy:`proxy_keep_alive` option to be enabled
 (and the proxy module to implement the ``alive`` function).
 
 .. code-block:: yaml
@@ -109,9 +109,9 @@ The frequency of keepalive checks, in minutes. It requires the
 Default: ``True``
 
 Wheter the proxy should maintain the connection with the remote
-device. Similarly to :conf_minion:`proxy_keep_alive`, this option
+device. Similarly to :conf_proxy:`proxy_keep_alive`, this option
 is very specific to the design of the proxy module.
-When :conf_minion:`proxy_always_alive` is set to ``False``,
+When :conf_proxy:`proxy_always_alive` is set to ``False``,
 the connection with the remote device is not maintained and
 has to be closed after every command.
 
