@@ -660,10 +660,39 @@ def _get_iface_info(iface):
         return None, error_msg
 
 
+def _hw_addr_aix(iface):
+    '''
+    Return the hardware address (a.k.a. MAC address) for a given interface on AIX
+    MAC address not available in through interfaces
+    '''
+    cmd = subprocess.Popen(
+        'entstat -d {0} | grep \'Hardware Address\''.format(iface),
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT).communicate()[0]
+
+    if cmd:
+        comps = cmd.split(' ')
+        if len(comps) == 3:
+            mac_addr = comps[2].strip('\'').strip()
+            return mac_addr
+
+    error_msg = ('Interface "{0}" either not available or does not contain a hardware address'.format(iface))
+    log.error(error_msg)
+    return error_msg
+
+
 def hw_addr(iface):
     '''
     Return the hardware address (a.k.a. MAC address) for a given interface
+
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     '''
+    if salt.utils.is_aix():
+        return _hw_addr_aix
+
     iface_info, error = _get_iface_info(iface)
 
     if error is False:
@@ -714,8 +743,10 @@ def _subnets(proto='inet', interfaces_=None):
 
     if proto == 'inet':
         subnet = 'netmask'
+        dflt_cidr = 32
     elif proto == 'inet6':
         subnet = 'prefixlen'
+        dflt_cidr = 128
     else:
         log.error('Invalid proto {0} calling subnets()'.format(proto))
         return
@@ -725,7 +756,10 @@ def _subnets(proto='inet', interfaces_=None):
         addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
 
         for intf in addrs:
-            intf = ipaddress.ip_interface('{0}/{1}'.format(intf['address'], intf[subnet]))
+            if subnet in intf:
+                intf = ipaddress.ip_interface('{0}/{1}'.format(intf['address'], intf[subnet]))
+            else:
+                intf = ipaddress.ip_interface('{0}/{1}'.format(intf['address'], dflt_cidr))
             if not intf.is_loopback:
                 ret.add(intf.network)
     return [str(net) for net in sorted(ret)]
