@@ -1579,7 +1579,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'sign_pub_messages': True,
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': True,
-    'append_minionid_config_dirs': ['cachedir', 'pidfile'],
+    'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include', 'include'],
     'default_include': 'proxy.d/*.conf',
 
     # By default, proxies will preserve the connection.
@@ -3253,9 +3253,15 @@ def apply_minion_config(overrides=None,
         opts['id'] = _append_domain(opts)
 
     for directory in opts.get('append_minionid_config_dirs', []):
-        if directory in ['pki_dir', 'cachedir', 'extension_modules']:
+        if directory in ('pki_dir', 'cachedir', 'extension_modules'):
             newdirectory = os.path.join(opts[directory], opts['id'])
             opts[directory] = newdirectory
+        elif directory in ('default_include', 'include') and directory in opts:
+            include_dir = os.path.dirname(opts[directory])
+            new_include_dir = os.path.join(include_dir,
+                                           opts['id'],
+                                           os.path.basename(opts[directory]))
+            opts[directory] = new_include_dir
 
     # pidfile can be in the list of append_minionid_config_dirs, but pidfile
     # is the actual path with the filename, not a directory.
