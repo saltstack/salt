@@ -97,10 +97,6 @@ class TestModuleDockereng(integration.ModuleCase,
                       - VAR3: value3
                         '''))
         ret = self.run_function('state.sls', [self.state_name])
-        self.assertEqual(ret['dockerng_|-foo_|-foo_|-running']['comment'],
-                         'Container \'foo\' was replaced')
-        self.assertEqual(ret['dockerng_|-foo_|-foo_|-running']['changes']['diff']
-                         ['environment']['old']['VAR2'], 'value2')
         ret = self.run_function('cmd.run', ['docker inspect foo'])
         container_json_data = json.loads(ret)
         container_data = container_json_data[0]
