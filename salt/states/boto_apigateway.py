@@ -436,7 +436,7 @@ def _gen_md5_filehash(fname, *args):
             _hash.update(chunk)
 
     for extra_arg in args:
-        _hash.update(str(extra_arg))
+        _hash.update(six.b(str(extra_arg)))
     return _hash.hexdigest()
 
 
