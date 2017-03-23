@@ -44,37 +44,36 @@ def get_mock_driver():
     return MockDNSDriver()
 
 
-class MockDnsModule(object):
-    test_records = {
-        "zone1": [TestRecord(0, "www", "A", "127.0.0.1")]
-    }
+test_records = {
+    "zone1": [TestRecord(0, "www", "A", "127.0.0.1")]
+}
 
-    def list_zones(profile):
-        return [TestZone("zone1", "test.com")]
+def list_zones(profile):
+    return [TestZone("zone1", "test.com")]
 
-    def list_records(zone_id, profile):
-        return MockDnsModule.test_records[zone_id]
+def list_records(zone_id, profile):
+    return test_records[zone_id]
 
-    def create_record(*args):
-        return True
+def create_record(*args):
+    return True
 
-    def delete_record(*args):
-        return True
+def delete_record(*args):
+    return True
 
-    def create_zone(*args):
-        return True
+def create_zone(*args):
+    return True
 
-    def delete_zone(*args):
-        return True
+def delete_zone(*args):
+    return True
 
 
 libcloud_dns.__salt__ = {
-    'libcloud_dns.list_zones': MockDnsModule.list_zones,
-    'libcloud_dns.list_records': MockDnsModule.list_records,
-    'libcloud_dns.create_record': MockDnsModule.create_record,
-    'libcloud_dns.delete_record': MockDnsModule.delete_record,
-    'libcloud_dns.create_zone': MockDnsModule.create_zone,
-    'libcloud_dns.delete_zone': MockDnsModule.delete_zone
+    'libcloud_dns.list_zones': list_zones,
+    'libcloud_dns.list_records': list_records,
+    'libcloud_dns.create_record': create_record,
+    'libcloud_dns.delete_record': delete_record,
+    'libcloud_dns.create_zone': create_zone,
+    'libcloud_dns.delete_zone': delete_zone
 }
 
 
@@ -106,7 +105,7 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         """
         Try and create a record that already exists
         """
-        with patch.object(MockDnsModule, 'create_record', MagicMock(return_value=True)) as create_patch:
+        with patch('create_record', MagicMock(return_value=True)) as create_patch:
             result = libcloud_dns.record_present("www", "test.com", "A", "127.0.0.1", "test")
             self.assertTrue(result)
 
@@ -114,7 +113,7 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         """
         Try and create a record that already exists
         """
-        with patch.object(MockDnsModule, 'create_record') as create_patch:
+        with patch('create_record') as create_patch:
             result = libcloud_dns.record_present("mail", "test.com", "A", "127.0.0.1", "test")
             self.assertTrue(result)
 
@@ -122,7 +121,7 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         """
         Try and deny a record that already exists
         """
-        with patch.object(MockDnsModule, 'delete_record', MagicMock(return_value=True)) as create_patch:
+        with patch('delete_record', MagicMock(return_value=True)) as create_patch:
             result = libcloud_dns.record_absent("www", "test.com", "A", "127.0.0.1", "test")
             self.assertTrue(result)
 
@@ -130,7 +129,7 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         """
         Try and deny a record that already exists
         """
-        with patch.object(MockDnsModule, 'delete_record') as create_patch:
+        with patch('delete_record') as create_patch:
             result = libcloud_dns.record_absent("mail", "test.com", "A", "127.0.0.1", "test")
             self.assertTrue(result)
 
@@ -154,7 +153,7 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         """
         Assert that a zone is present (that did not exist)
         """
-        with patch.object(MockDnsModule, 'create_zone') as create_patch:
+        with patch('create_zone') as create_patch:
             result = libcloud_dns.zone_present('testing.com', 'master', 'test1')
             self.assertTrue(result)
 
@@ -162,7 +161,7 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         """
         Assert that a zone is present (that did exist)
         """
-        with patch.object(MockDnsModule, 'create_zone') as create_patch:
+        with patch('create_zone') as create_patch:
             result = libcloud_dns.zone_present('test.com', 'master', 'test1')
             self.assertTrue(result)
 
@@ -170,7 +169,7 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         """
         Assert that a zone that did exist is absent
         """
-        with patch.object(MockDnsModule, 'delete_zone') as create_patch:
+        with patch('delete_zone') as create_patch:
             result = libcloud_dns.zone_absent('test.com', 'test1')
             self.assertTrue(result)
 
@@ -178,6 +177,6 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         """
         Assert that a zone that did not exist is absent
         """
-        with patch.object(MockDnsModule, 'delete_zone') as create_patch:
+        with patch('delete_zone') as create_patch:
             result = libcloud_dns.zone_absent('testing.com', 'test1')
             self.assertTrue(result)
