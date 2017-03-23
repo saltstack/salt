@@ -3820,7 +3820,9 @@ def _checkAllAdmxPolicies(policy_class,
     if policy_vals and return_full_policy_names and not hierarchical_return:
         unpathed_dict = {}
         pathed_dict = {}
-        for policy_item in policy_vals:
+        # keys needs to be called here b/c we are changing the policy_vals 
+        # dict during the for loop
+        for policy_item in policy_vals.keys():
             if full_names[policy_item] in policy_vals:
                 # add this item with the path'd full name
                 full_path_list = hierarchy[policy_item]
