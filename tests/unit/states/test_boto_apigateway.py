@@ -9,6 +9,7 @@ import random
 import string
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
@@ -17,13 +18,12 @@ import salt.config
 import salt.loader
 from salt.utils.versions import LooseVersion
 
-# Import 3rd-party libs
-import yaml
-
 # pylint: disable=import-error,no-name-in-module
 from tests.unit.modules.test_boto_apigateway import BotoApiGatewayTestCaseMixin
 
 # Import 3rd-party libs
+import yaml
+from salt.ext.six.moves import range
 try:
     import boto3
     import botocore
@@ -32,14 +32,9 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext.six.moves import range
 
 # Import Salt Libs
 import salt.states.boto_apigateway as boto_apigateway
-
-boto_apigateway.__salt__ = {}
-boto_apigateway.__opts__ = {}
-
 
 # pylint: enable=import-error,no-name-in-module
 
@@ -310,13 +305,6 @@ association_stage_2 = {'apiId': 'apiId1', 'stage': 'stage2'}
 
 log = logging.getLogger(__name__)
 
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-serializers = salt.loader.serializers(opts)
-funcs = salt.loader.minion_mods(opts, context=context, utils=utils, whitelist=['boto_apigateway'])
-salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_apigateway'], serializers=serializers)
-
 
 def _has_required_boto():
     '''
@@ -403,23 +391,50 @@ class TempSwaggerFile(object):
             self.swaggerdict = TempSwaggerFile._tmp_swagger_dict
 
 
-class BotoApiGatewayStateTestCaseBase(TestCase):
+class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
+
+    def setup_loader_modules(self):
+        context = {}
+        utils = salt.loader.utils(self.opts, whitelist=['boto', 'boto3'], context=context)
+        serializers = salt.loader.serializers(self.opts)
+        self.funcs = salt.loader.minion_mods(self.opts, context=context, utils=utils, whitelist=['boto_apigateway'])
+        self.salt_states = salt.loader.states(opts=self.opts, functions=self.funcs, utils=utils, whitelist=['boto_apigateway'], serializers=serializers)
+        return {
+            boto_apigateway: {
+                '__opts__': self.opts,
+                '__utils__': utils,
+                '__salt__': self.funcs,
+                '__states__': self.salt_states,
+                '__serializers__': serializers,
+            }
+        }
 
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
-        context.clear()
+        self.addCleanup(delattr, self, 'funcs')
+        self.addCleanup(delattr, self, 'salt_states')
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
         conn_parameters['key'] = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(50))
 
-        self.patcher = patch('boto3.session.Session')
-        self.addCleanup(self.patcher.stop)
-        mock_session = self.patcher.start()
+        patcher = patch('boto3.session.Session')
+        self.addCleanup(patcher.stop)
+        mock_session = patcher.start()
 
         session_instance = mock_session.return_value
         self.conn = MagicMock()
+        self.addCleanup(delattr, self, 'conn')
         session_instance.client.return_value = self.conn
 
 
@@ -439,7 +454,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         '''
         result = {}
         with TempSwaggerFile(create_invalid_file=True) as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -461,7 +476,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.update_stage.side_effect = ClientError(error_content, 'update_stage should not be called')
         result = {}
         with TempSwaggerFile() as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -485,7 +500,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.update_stage.return_value = stage1_deployment1_vars_ret
         result = {}
         with TempSwaggerFile() as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -516,7 +531,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
 
         result = {}
         with TempSwaggerFile() as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -557,9 +572,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.put_intgration_response.return_value = method_integration_response_200_ret
 
         result = {}
-        with patch.dict(funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
+        with patch.dict(self.funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
             with TempSwaggerFile() as swagger_file:
-                result = salt_states['boto_apigateway.present'](
+                result = self.salt_states['boto_apigateway.present'](
                             'api present',
                             'unit test api',
                             swagger_file,
@@ -583,7 +598,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
 
         result = {}
         with TempSwaggerFile() as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -612,7 +627,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
 
         result = {}
         with TempSwaggerFile() as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -645,7 +660,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.create_resource.side_effect = ClientError(error_content, 'create_resource')
         result = {}
         with TempSwaggerFile() as swagger_file:
-            result = salt_states['boto_apigateway.present'](
+            result = self.salt_states['boto_apigateway.present'](
                         'api present',
                         'unit test api',
                         swagger_file,
@@ -680,9 +695,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.put_method.side_effect = ClientError(error_content, 'put_method')
 
         result = {}
-        with patch.dict(funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
+        with patch.dict(self.funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
             with TempSwaggerFile() as swagger_file:
-                result = salt_states['boto_apigateway.present'](
+                result = self.salt_states['boto_apigateway.present'](
                             'api present',
                             'unit test api',
                             swagger_file,
@@ -719,9 +734,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.put_integration.side_effect = ClientError(error_content, 'put_integration should not be invoked')
 
         result = {}
-        with patch.dict(funcs, {'boto_lambda.describe_function': MagicMock(return_value={'error': 'no such lambda'})}):
+        with patch.dict(self.funcs, {'boto_lambda.describe_function': MagicMock(return_value={'error': 'no such lambda'})}):
             with TempSwaggerFile() as swagger_file:
-                result = salt_states['boto_apigateway.present'](
+                result = self.salt_states['boto_apigateway.present'](
                             'api present',
                             'unit test api',
                             swagger_file,
@@ -759,9 +774,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.put_integration.side_effect = ClientError(error_content, 'put_integration')
 
         result = {}
-        with patch.dict(funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
+        with patch.dict(self.funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
             with TempSwaggerFile() as swagger_file:
-                result = salt_states['boto_apigateway.present'](
+                result = self.salt_states['boto_apigateway.present'](
                             'api present',
                             'unit test api',
                             swagger_file,
@@ -801,9 +816,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.put_method_response.side_effect = ClientError(error_content, 'put_method_response')
 
         result = {}
-        with patch.dict(funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
+        with patch.dict(self.funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
             with TempSwaggerFile() as swagger_file:
-                result = salt_states['boto_apigateway.present'](
+                result = self.salt_states['boto_apigateway.present'](
                             'api present',
                             'unit test api',
                             swagger_file,
@@ -845,9 +860,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.put_integration_response.side_effect = ClientError(error_content, 'put_integration_response')
 
         result = {}
-        with patch.dict(funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
+        with patch.dict(self.funcs, {'boto_lambda.describe_function': MagicMock(return_value={'function': function_ret})}):
             with TempSwaggerFile() as swagger_file:
-                result = salt_states['boto_apigateway.present'](
+                result = self.salt_states['boto_apigateway.present'](
                             'api present',
                             'unit test api',
                             swagger_file,
@@ -868,7 +883,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.get_rest_apis.return_value = apis_ret
         self.conn.get_stage.side_effect = ClientError(error_content, 'get_stage should not be called')
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'no_such_rest_api',
                     'no_such_stage',
@@ -887,7 +902,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.get_stage.return_value = stage1_deployment1_ret
         self.conn.delete_stage.side_effect = ClientError(error_content, 'delete_stage')
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'unit test api',
                     'no_such_stage',
@@ -906,7 +921,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.get_stages.return_value = no_stages_ret
         self.conn.delete_deployment.return_value = {'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'unit test api',
                     'test',
@@ -924,7 +939,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.delete_stage.return_value = {'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
         self.conn.get_stages.return_value = stages_stage2_ret
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'unit test api',
                     'test',
@@ -944,7 +959,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.get_stages.return_value = no_stages_ret
         self.conn.delete_deployment.side_effect = ClientError(error_content, 'delete_deployment')
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'unit test api',
                     'test',
@@ -965,7 +980,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.get_deployments.return_value = deployments_ret
         self.conn.delete_rest_api.return_value = {'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'unit test api',
                     'test',
@@ -988,7 +1003,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.conn.get_deployments.return_value = deployments_ret
         self.conn.delete_rest_api.side_effect = ClientError(error_content, 'unexpected_api_delete')
 
-        result = salt_states['boto_apigateway.absent'](
+        result = self.salt_states['boto_apigateway.absent'](
                     'api present',
                     'unit test api',
                     'test',
@@ -1012,298 +1027,269 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
     TestCase for salt.modules.boto_apigateway state.module, usage_plans portion
     '''
 
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'error': 'error'})})
     def test_usage_plan_present_if_describe_fails(self, *args):
         '''
         Tests correct error processing for describe_usage_plan failure
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'error': 'error'})}):
+            result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
 
-        result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'Failed to describe existing usage plans')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Failed to describe existing usage plans')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': []})})
-    @patch.dict(boto_apigateway.__opts__, {'test': True})
     def test_usage_plan_present_if_there_is_no_such_plan_and_test_option_is_set(self, *args):
         '''
         TestCse for salt.modules.boto_apigateway state.module, checking that if __opts__['test'] is set
         and usage plan does not exist, correct diagnostic will be returned
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__opts__, {'test': True}):
+            with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': []})}):
+                result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
+                self.assertIn('comment', result)
+                self.assertEqual(result['comment'], 'a new usage plan plan_name would be created')
+                self.assertIn('result', result)
+                self.assertEqual(result['result'], None)
 
-        result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'a new usage plan plan_name would be created')
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], None)
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': []})})
-    @patch.dict(boto_apigateway.__opts__, {'test': False})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.create_usage_plan': MagicMock(return_value={'error': 'error'})})
     def test_usage_plan_present_if_create_usage_plan_fails(self, *args):
         '''
         Tests behavior for the case when creating a new usage plan fails
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__opts__, {'test': False}):
+            with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': []}),
+                                                       'boto_apigateway.create_usage_plan': MagicMock(return_value={'error': 'error'})}):
+                result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
 
-        result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
+                self.assertIn('result', result)
+                self.assertEqual(result['result'], False)
+                self.assertIn('comment', result)
+                self.assertEqual(result['comment'], 'Failed to create a usage plan plan_name, error')
+                self.assertIn('changes', result)
+                self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Failed to create a usage plan plan_name, error')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{
-                                                                                                                'id': 'planid',
-                                                                                                                'name': 'planname'
-                                                                                                            }]})})
-    @patch.dict(boto_apigateway.__opts__, {'test': False})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.update_usage_plan': MagicMock()})
     def test_usage_plan_present_if_plan_is_there_and_needs_no_updates(self, *args):
         '''
         Tests behavior for the case when plan is present and needs no updates
         '''
-        result = {}
-
-        result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
-
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], True)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'usage plan plan_name is already in a correct state')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-        self.assertTrue(boto_apigateway.__salt__['boto_apigateway.update_usage_plan'].call_count == 0)
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{
+        with patch.dict(boto_apigateway.__opts__, {'test': False}):
+            with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{
                                                                                                                 'id': 'planid',
-                                                                                                                'name': 'planname',
-                                                                                                                'throttle': {'rateLimit': 10.0}
-                                                                                                            }]})})
-    @patch.dict(boto_apigateway.__opts__, {'test': True})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.update_usage_plan': MagicMock()})
+                                                                                                                'name': 'planname'
+                                                                                                            }]}),
+                                                       'boto_apigateway.update_usage_plan': MagicMock()}):
+                result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
+
+                self.assertIn('result', result)
+                self.assertEqual(result['result'], True)
+                self.assertIn('comment', result)
+                self.assertEqual(result['comment'], 'usage plan plan_name is already in a correct state')
+                self.assertIn('changes', result)
+                self.assertEqual(result['changes'], {})
+
+                self.assertTrue(boto_apigateway.__salt__['boto_apigateway.update_usage_plan'].call_count == 0)
+
     def test_usage_plan_present_if_plan_is_there_and_needs_updates_but_test_is_set(self, *args):
         '''
         Tests behavior when usage plan needs to be updated by tests option is set
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__opts__, {'test': True}):
+            with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{
+                                                                                                                       'id': 'planid',
+                                                                                                                       'name': 'planname',
+                                                                                                                       'throttle': {'rateLimit': 10.0}
+                                                                                                                   }]}),
+                                                       'boto_apigateway.update_usage_plan': MagicMock()}):
+                result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
 
-        result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
+                self.assertIn('comment', result)
+                self.assertEqual(result['comment'], 'a new usage plan plan_name would be updated')
+                self.assertIn('result', result)
+                self.assertEqual(result['result'], None)
+                self.assertTrue(boto_apigateway.__salt__['boto_apigateway.update_usage_plan'].call_count == 0)
 
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'a new usage plan plan_name would be updated')
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], None)
-        self.assertTrue(boto_apigateway.__salt__['boto_apigateway.update_usage_plan'].call_count == 0)
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{
-                                                                                                                'id': 'planid',
-                                                                                                                'name': 'planname',
-                                                                                                                'throttle': {'rateLimit': 10.0}
-                                                                                                            }]})})
-    @patch.dict(boto_apigateway.__opts__, {'test': False})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.update_usage_plan': MagicMock(return_value={'error': 'error'})})
     def test_usage_plan_present_if_plan_is_there_and_needs_updates_but_update_fails(self, *args):
         '''
         Tests error processing for the case when updating an existing usage plan fails
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__opts__, {'test': False}):
+            with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{
+                                                                                                                       'id': 'planid',
+                                                                                                                       'name': 'planname',
+                                                                                                                       'throttle': {'rateLimit': 10.0}
+                                                                                                                   }]}),
+                                                       'boto_apigateway.update_usage_plan': MagicMock(return_value={'error': 'error'})}):
+                result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
 
-        result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
+                self.assertIn('result', result)
+                self.assertEqual(result['result'], False)
+                self.assertIn('comment', result)
+                self.assertEqual(result['comment'], 'Failed to update a usage plan plan_name, error')
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Failed to update a usage plan plan_name, error')
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=[{'plans': []}, {'plans': [{'id': 'id'}]}])})
-    @patch.dict(boto_apigateway.__opts__, {'test': False})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.create_usage_plan': MagicMock(return_value={'created': True})})
-    # @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.update_usage_plan': MagicMock(return_value={'error': 'error'})})
     def test_usage_plan_present_if_plan_has_been_created(self, *args):
         '''
         Tests successful case for creating a new usage plan
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__opts__, {'test': False}):
+            with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=[{'plans': []}, {'plans': [{'id': 'id'}]}]),
+                                                       'boto_apigateway.create_usage_plan': MagicMock(return_value={'created': True})}):
+                result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
 
-        result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
+                self.assertIn('result', result)
+                self.assertEqual(result['result'], True)
+                self.assertIn('comment', result)
+                self.assertEqual(result['comment'], 'A new usage plan plan_name has been created')
+                self.assertEqual(result['changes']['old'], {'plan': None})
+                self.assertEqual(result['changes']['new'], {'plan': {'id': 'id'}})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], True)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'A new usage plan plan_name has been created')
-        self.assertEqual(result['changes']['old'], {'plan': None})
-        self.assertEqual(result['changes']['new'], {'plan': {'id': 'id'}})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=[{'plans': [{'id': 'id'}]},
-                                                                                                          {'plans': [{'id': 'id',
-                                                                                                                      'throttle': {'rateLimit': throttle_rateLimit}}]}])})
-    @patch.dict(boto_apigateway.__opts__, {'test': False})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.update_usage_plan': MagicMock(return_value={'updated': True})})
     def test_usage_plan_present_if_plan_has_been_updated(self, *args):
         '''
         Tests successful case for updating a usage plan
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__opts__, {'test': False}):
+            with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=[{'plans': [{'id': 'id'}]},
+                                                                                                                      {'plans': [{'id': 'id',
+                                                                                                                                  'throttle': {'rateLimit': throttle_rateLimit}}]}]),
+                                                       'boto_apigateway.update_usage_plan': MagicMock(return_value={'updated': True})}):
+                result = boto_apigateway.usage_plan_present('name', 'plan_name', throttle={'rateLimit': throttle_rateLimit}, **conn_parameters)
 
-        result = boto_apigateway.usage_plan_present('name', 'plan_name', throttle={'rateLimit': throttle_rateLimit}, **conn_parameters)
+                self.assertIn('result', result)
+                self.assertEqual(result['result'], True)
+                self.assertIn('comment', result)
+                self.assertEqual(result['comment'], 'usage plan plan_name has been updated')
+                self.assertEqual(result['changes']['old'], {'plan': {'id': 'id'}})
+                self.assertEqual(result['changes']['new'], {'plan': {'id': 'id', 'throttle': {'rateLimit': throttle_rateLimit}}})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], True)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'usage plan plan_name has been updated')
-        self.assertEqual(result['changes']['old'], {'plan': {'id': 'id'}})
-        self.assertEqual(result['changes']['new'], {'plan': {'id': 'id', 'throttle': {'rateLimit': throttle_rateLimit}}})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=ValueError('error'))})
     def test_usage_plan_present_if_ValueError_is_raised(self, *args):
         '''
         Tests error processing for the case when ValueError is raised when creating a usage plan
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=ValueError('error'))}):
+            result = boto_apigateway.usage_plan_present('name', 'plan_name', throttle={'rateLimit': throttle_rateLimit}, **conn_parameters)
 
-        result = boto_apigateway.usage_plan_present('name', 'plan_name', throttle={'rateLimit': throttle_rateLimit}, **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], "('error',)")
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], "('error',)")
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=IOError('error'))})
     def test_usage_plan_present_if_IOError_is_raised(self, *args):
         '''
         Tests error processing for the case when IOError is raised when creating a usage plan
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=IOError('error'))}):
+            result = boto_apigateway.usage_plan_present('name', 'plan_name', throttle={'rateLimit': throttle_rateLimit}, **conn_parameters)
 
-        result = boto_apigateway.usage_plan_present('name', 'plan_name', throttle={'rateLimit': throttle_rateLimit}, **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], "('error',)")
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], "('error',)")
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'error': 'error'})})
     def test_usage_plan_absent_if_describe_fails(self, *args):
         '''
         Tests correct error processing for describe_usage_plan failure
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'error': 'error'})}):
+            result = {}
 
-        result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
+            result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Failed to describe existing usage plans')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'Failed to describe existing usage plans')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': []})})
     def test_usage_plan_absent_if_plan_is_not_present(self, *args):
         '''
         Tests behavior for the case when the plan that needs to be absent does not exist
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': []})}):
+            result = {}
 
-        result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
+            result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], True)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Usage plan plan_name does not exist already')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], True)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'Usage plan plan_name does not exist already')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-    @patch.dict(boto_apigateway.__opts__, {'test': True})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id'}]})})
     def test_usage_plan_absent_if_plan_is_present_but_test_option_is_set(self, *args):
         '''
         Tests behavior for the case when usage plan needs to be deleted by tests option is set
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__opts__, {'test': True}):
+            with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id'}]})}):
+                result = {}
 
-        result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
+                result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], None)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Usage plan plan_name exists and would be deleted')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
+                self.assertIn('result', result)
+                self.assertEqual(result['result'], None)
+                self.assertIn('comment', result)
+                self.assertEqual(result['comment'], 'Usage plan plan_name exists and would be deleted')
+                self.assertIn('changes', result)
+                self.assertEqual(result['changes'], {})
 
-    @patch.dict(boto_apigateway.__opts__, {'test': False})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id'}]})})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.delete_usage_plan': MagicMock(return_value={'error': 'error'})})
     def test_usage_plan_absent_if_plan_is_present_but_delete_fails(self, *args):
         '''
         Tests correct error processing when deleting a usage plan fails
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__opts__, {'test': False}):
+            with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id'}]}),
+                                                       'boto_apigateway.delete_usage_plan': MagicMock(return_value={'error': 'error'})}):
+                result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
 
-        result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
+                self.assertIn('result', result)
+                self.assertEqual(result['result'], False)
+                self.assertIn('comment', result)
+                self.assertEqual(result['comment'], 'Failed to delete usage plan plan_name, {\'error\': \'error\'}')
+                self.assertIn('changes', result)
+                self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Failed to delete usage plan plan_name, {\'error\': \'error\'}')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__opts__, {'test': False})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id'}]})})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.delete_usage_plan': MagicMock(return_value={'deleted': True})})
     def test_usage_plan_absent_if_plan_has_been_deleted(self, *args):
         '''
         Tests successful case for deleting a usage plan
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__opts__, {'test': False}):
+            with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id'}]}),
+                                                       'boto_apigateway.delete_usage_plan': MagicMock(return_value={'deleted': True})}):
+                result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
 
-        result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
+                self.assertIn('result', result)
+                self.assertEqual(result['result'], True)
+                self.assertIn('comment', result)
+                self.assertEqual(result['comment'], 'Usage plan plan_name has been deleted')
+                self.assertIn('changes', result)
+                self.assertEqual(result['changes'], {'new': {'plan': None}, 'old': {'plan': {'id': 'id'}}})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], True)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Usage plan plan_name has been deleted')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {'new': {'plan': None}, 'old': {'plan': {'id': 'id'}}})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=ValueError('error'))})
     def test_usage_plan_absent_if_ValueError_is_raised(self, *args):
         '''
         Tests correct error processing for the case when ValueError is raised when deleting a usage plan
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=ValueError('error'))}):
+            result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
 
-        result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], "('error',)")
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], "('error',)")
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=IOError('error'))})
     def test_usage_plan_absent_if_IOError_is_raised(self, *args):
         '''
         Tests correct error processing for the case when IOError is raised when deleting a usage plan
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=IOError('error'))}):
+            result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
 
-        result = boto_apigateway.usage_plan_absent('name', 'plan_name', **conn_parameters)
-
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], "('error',)")
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], "('error',)")
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -1319,289 +1305,254 @@ class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase
     TestCase for salt.modules.boto_apigateway state.module, usage_plans_association portion
     '''
 
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'error': 'error'})})
     def test_usage_plan_association_present_if_describe_fails(self, *args):
         '''
         Tests correct error processing for describe_usage_plan failure
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'error': 'error'})}):
+            result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [association_stage_1], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [association_stage_1], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'Failed to describe existing usage plans')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Failed to describe existing usage plans')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': []})})
     def test_usage_plan_association_present_if_plan_is_not_present(self, *args):
         '''
         Tests correct error processing if a plan for which association has been requested is not present
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': []})}):
+            result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [association_stage_1], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [association_stage_1], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'Usage plan plan_name does not exist')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Usage plan plan_name does not exist')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1'},
-                                                                                                                     {'id': 'id2'}]})})
     def test_usage_plan_association_present_if_multiple_plans_with_the_same_name_exist(self, *args):
         '''
         Tests correct error processing for the case when multiple plans with the same name exist
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1'},
+                                                                                                                  {'id': 'id2'}]})}):
+            result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [association_stage_1], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [association_stage_1], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'There are multiple usage plans with the same name - it is not supported')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'There are multiple usage plans with the same name - it is not supported')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1',
-                                                                                                                      'apiStages':
-                                                                                                                        [association_stage_1]}]})})
     def test_usage_plan_association_present_if_association_already_exists(self, *args):
         '''
         Tests the behavior for the case when requested association is already present
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1',
+                                                                                                                              'apiStages':
+                                                                                                                              [association_stage_1]}]})}):
+            result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [association_stage_1], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [association_stage_1], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], True)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'Usage plan is already asssociated to all api stages')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], True)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Usage plan is already asssociated to all api stages')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1',
-                                                                                                                      'apiStages':
-                                                                                                                        [association_stage_1]}]})})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.attach_usage_plan_to_apis': MagicMock(return_value={'error': 'error'})})
     def test_usage_plan_association_present_if_update_fails(self, *args):
         '''
         Tests correct error processing for the case when adding associations fails
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1',
+                                                                                                                              'apiStages':
+                                                                                                                                [association_stage_1]}]}),
+                                                   'boto_apigateway.attach_usage_plan_to_apis': MagicMock(return_value={'error': 'error'})}):
+            result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [association_stage_2], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [association_stage_2], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertTrue(result['comment'].startswith('Failed to associate a usage plan'))
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertTrue(result['comment'].startswith('Failed to associate a usage plan'))
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1',
-                                                                                                                      'apiStages':
-                                                                                                                        [association_stage_1]}]})})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.attach_usage_plan_to_apis': MagicMock(return_value={'result': {'apiStages': [association_stage_1,
-                                                                                                                                         association_stage_2]}})})
     def test_usage_plan_association_present_success(self, *args):
         '''
         Tests successful case for adding usage plan associations to a given api stage
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1',
+                                                                                                                              'apiStages':
+                                                                                                                                [association_stage_1]}]}),
+                                                   'boto_apigateway.attach_usage_plan_to_apis': MagicMock(return_value={'result': {'apiStages': [association_stage_1,
+                                                                                                                                                 association_stage_2]}})}):
+            result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [association_stage_2], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [association_stage_2], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], True)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'successfully associated usage plan to apis')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {'new': [association_stage_1, association_stage_2], 'old': [association_stage_1]})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], True)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'successfully associated usage plan to apis')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {'new': [association_stage_1, association_stage_2], 'old': [association_stage_1]})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=ValueError('error'))})
     def test_usage_plan_association_present_if_value_error_is_thrown(self, *args):
         '''
         Tests correct error processing for the case when IOError is raised while trying to set usage plan associations
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=ValueError('error'))}):
+            result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], "('error',)")
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], "('error',)")
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=IOError('error'))})
     def test_usage_plan_association_present_if_io_error_is_thrown(self, *args):
         '''
         Tests correct error processing for the case when IOError is raised while trying to set usage plan associations
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=IOError('error'))}):
+            result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_present('name', 'plan_name', [], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], "('error',)")
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], "('error',)")
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'error': 'error'})})
     def test_usage_plan_association_absent_if_describe_fails(self, *args):
         '''
         Tests correct error processing for describe_usage_plan failure
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'error': 'error'})}):
+            result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_1], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'Failed to describe existing usage plans')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_1], **conn_parameters)
-
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Failed to describe existing usage plans')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': []})})
     def test_usage_plan_association_absent_if_plan_is_not_present(self, *args):
         '''
         Tests error processing for the case when plan for which associations need to be modified is not present
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': []})}):
+            result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_1], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_1], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'Usage plan plan_name does not exist')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Usage plan plan_name does not exist')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1'},
-                                                                                                                     {'id': 'id2'}]})})
     def test_usage_plan_association_absent_if_multiple_plans_with_the_same_name_exist(self, *args):
         '''
         Tests the case when there are multiple plans with the same name but different Ids
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1'},
+                                                                                                                             {'id': 'id2'}]})}):
+            result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_1], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_1], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'There are multiple usage plans with the same name - it is not supported')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'There are multiple usage plans with the same name - it is not supported')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1', 'apiStages': []}]})})
     def test_usage_plan_association_absent_if_plan_has_no_associations(self, *args):
         '''
         Tests the case when the plan has no associations at all
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1', 'apiStages': []}]})}):
+            result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_1], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_1], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], True)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'Usage plan plan_name has no associated stages already')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], True)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Usage plan plan_name has no associated stages already')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1', 'apiStages': [association_stage_1]}]})})
     def test_usage_plan_association_absent_if_plan_has_no_specific_association(self, *args):
         '''
         Tests the case when requested association is not present already
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1', 'apiStages': [association_stage_1]}]})}):
+            result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_2], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_2], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], True)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'Usage plan is already not asssociated to any api stages')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], True)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'Usage plan is already not asssociated to any api stages')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1', 'apiStages': [association_stage_1,
-                                                                                                                                                 association_stage_2]}]})})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.detach_usage_plan_from_apis': MagicMock(return_value={'error': 'error'})})
     def test_usage_plan_association_absent_if_detaching_association_fails(self, *args):
         '''
         Tests correct error processing when detaching the usage plan from the api function is called
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1', 'apiStages': [association_stage_1,
+                                                                                                                                                         association_stage_2]}]}),
+                                                   'boto_apigateway.detach_usage_plan_from_apis': MagicMock(return_value={'error': 'error'})}):
+            result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_2], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_2], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertTrue(result['comment'].startswith('Failed to disassociate a usage plan plan_name from the apis'))
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertTrue(result['comment'].startswith('Failed to disassociate a usage plan plan_name from the apis'))
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1', 'apiStages': [association_stage_1,
-                                                                                                                                                 association_stage_2]}]})})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.detach_usage_plan_from_apis': MagicMock(return_value={'result': {'apiStages': [association_stage_1]}})})
     def test_usage_plan_association_absent_success(self, *args):
         '''
         Tests successful case of disaccosiation the usage plan from api stages
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1', 'apiStages': [association_stage_1,
+                                                                                                                                                         association_stage_2]}]}),
+                                                   'boto_apigateway.detach_usage_plan_from_apis': MagicMock(return_value={'result': {'apiStages': [association_stage_1]}})}):
+            result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_2], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_2], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], True)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], 'successfully disassociated usage plan from apis')
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {'new': [association_stage_1], 'old': [association_stage_1, association_stage_2]})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], True)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], 'successfully disassociated usage plan from apis')
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {'new': [association_stage_1], 'old': [association_stage_1, association_stage_2]})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=ValueError('error'))})
     def test_usage_plan_association_absent_if_ValueError_is_raised(self, *args):
         '''
         Tests correct error processing for the case where ValueError is raised while trying to remove plan associations
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=ValueError('error'))}):
+            result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_1], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_1], **conn_parameters)
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], "('error',)")
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
 
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], "('error',)")
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
-
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=IOError('error'))})
     def test_usage_plan_association_absent_if_IOError_is_raised(self, *args):
         '''
         Tests correct error processing for the case where IOError exception is raised while trying to remove plan associations
         '''
-        result = {}
+        with patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=IOError('error'))}):
+            result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_1], **conn_parameters)
 
-        result = boto_apigateway.usage_plan_association_absent('name', 'plan_name', [association_stage_1], **conn_parameters)
-
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], False)
-        self.assertIn('comment', result)
-        self.assertEqual(result['comment'], "('error',)")
-        self.assertIn('changes', result)
-        self.assertEqual(result['changes'], {})
+            self.assertIn('result', result)
+            self.assertEqual(result['result'], False)
+            self.assertIn('comment', result)
+            self.assertEqual(result['comment'], "('error',)")
+            self.assertIn('changes', result)
+            self.assertEqual(result['changes'], {})
