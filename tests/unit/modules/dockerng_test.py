@@ -97,7 +97,7 @@ class DockerngTestCase(TestCase):
             mine_send.assert_called_with('dockerng.ps', verbose=True, all=True,
                                          host=True)
 
-    @skipIf(docker_version() < (1, 4, 0),
+    @skipIf(docker_version < (1, 4, 0),
             'docker module must be installed to run this test or is too old. >=1.4.0')
     @patch.object(dockerng_mod, 'images', MagicMock())
     @patch.object(dockerng_mod, 'inspect_image')
@@ -350,6 +350,8 @@ class DockerngTestCase(TestCase):
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_remove_network(self, *args):
         '''
         test remove network.
@@ -415,6 +417,8 @@ class DockerngTestCase(TestCase):
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_disconnect_container_from_network(self, *args):
         '''
         test inspect network.
