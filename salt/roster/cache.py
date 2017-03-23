@@ -218,9 +218,6 @@ def _minion_lookup(minion_id, key, minion):
     if key == 'id':
         # Just paste in the minion ID
         return minion_id
-    elif key.startswith('sdb://'):
-        # It's a Salt SDB url
-        return salt['sdb.get'](key)
     elif isinstance(key, dict):
         # Lookup the key in the dict
         for data_id, lookup in key.items():
@@ -236,6 +233,9 @@ def _minion_lookup(minion_id, key, minion):
                     return k
 
             return None
+    elif key.startswith('sdb://'):
+        # It's a Salt SDB url
+        return salt['sdb.get'](key)
     elif re.match(r'^[0-9a-fA-F:./]+$', key):
         # It smells like a CIDR block
         try:
