@@ -356,9 +356,9 @@ def present(
             ret['comment'] = ('Failed to add the ssh key. Is the home '
                               'directory available, and/or does the key file '
                               'exist?')
-    elif data == 'invalid':
+    elif data == 'invalid' or data == 'Invalid public key':
         ret['result'] = False
-        ret['comment'] = 'Invalid public ssh key, most likely has spaces'
+        ret['comment'] = 'Invalid public ssh key, most likely has spaces or invalid syntax'
 
     return ret
 

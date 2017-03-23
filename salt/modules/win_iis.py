@@ -511,7 +511,7 @@ def list_bindings(site):
 
 
 def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
-                   sslflags=0):
+                   sslflags=None):
     '''
     Create an IIS Web Binding.
 
@@ -541,7 +541,6 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
         salt '*' win_iis.create_binding site='site0' hostheader='example.com' ipaddress='*' port='80'
     '''
     protocol = str(protocol).lower()
-    sslflags = int(sslflags)
     name = _get_binding_info(hostheader, ipaddress, port)
 
     if protocol not in _VALID_PROTOCOLS:
@@ -549,10 +548,12 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
                    ' {1}').format(protocol, _VALID_PROTOCOLS)
         raise SaltInvocationError(message)
 
-    if sslflags not in _VALID_SSL_FLAGS:
-        message = ("Invalid sslflags '{0}' specified. Valid sslflags range:"
-                   ' {1}..{2}').format(sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1])
-        raise SaltInvocationError(message)
+    if sslflags:
+        sslflags = int(sslflags)
+        if sslflags not in _VALID_SSL_FLAGS:
+            message = ("Invalid sslflags '{0}' specified. Valid sslflags range:"
+                       ' {1}..{2}').format(sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1])
+            raise SaltInvocationError(message)
 
     current_bindings = list_bindings(site)
 
@@ -560,13 +561,21 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
         log.debug('Binding already present: {0}'.format(name))
         return True
 
-    ps_cmd = ['New-WebBinding',
-              '-Name', "'{0}'".format(site),
-              '-HostHeader', "'{0}'".format(hostheader),
-              '-IpAddress', "'{0}'".format(ipaddress),
-              '-Port', "'{0}'".format(str(port)),
-              '-Protocol', "'{0}'".format(protocol),
-              '-SslFlags', '{0}'.format(sslflags)]
+    if sslflags:
+        ps_cmd = ['New-WebBinding',
+                  '-Name', "'{0}'".format(site),
+                  '-HostHeader', "'{0}'".format(hostheader),
+                  '-IpAddress', "'{0}'".format(ipaddress),
+                  '-Port', "'{0}'".format(str(port)),
+                  '-Protocol', "'{0}'".format(protocol),
+                  '-SslFlags', '{0}'.format(sslflags)]
+    else:
+        ps_cmd = ['New-WebBinding',
+                  '-Name', "'{0}'".format(site),
+                  '-HostHeader', "'{0}'".format(hostheader),
+                  '-IpAddress', "'{0}'".format(ipaddress),
+                  '-Port', "'{0}'".format(str(port)),
+                  '-Protocol', "'{0}'".format(protocol)]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1809,10 +1818,10 @@ def get_webapp_settings(name, site, settings):
     for setting in settings:
         if setting in availableSettings:
             if setting == "userName" or setting == "password":
-                pscmd.append(r" $Property = Get-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
-                pscmd.append(r" -Name \"{0}\" -ErrorAction Stop | select Value;".format(setting))
-                pscmd.append(r" $Property = $Property | Select-Object -ExpandProperty Value;")
-                pscmd.append(r" $Settings['{0}'] = [String] $Property;".format(setting))
+                pscmd.append(" $Property = Get-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
+                pscmd.append(" -Name \"{0}\" -ErrorAction Stop | select Value;".format(setting))
+                pscmd.append(" $Property = $Property | Select-Object -ExpandProperty Value;")
+                pscmd.append(" $Settings['{0}'] = [String] $Property;".format(setting))
                 pscmd.append(r' $Property = $Null;')
 
             if setting == "physicalPath" or setting == "applicationPool":

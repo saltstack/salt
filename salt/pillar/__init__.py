@@ -40,10 +40,13 @@ def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
     '''
     Return the correct pillar driver based on the file_client option
     '''
+    file_client = opts['file_client']
+    if opts.get('master_type') == 'disable' and file_client == 'remote':
+        file_client = 'local'
     ptype = {
         'remote': RemotePillar,
         'local': Pillar
-    }.get(opts['file_client'], Pillar)
+    }.get(file_client, Pillar)
     # If local pillar and we're caching, run through the cache system first
     log.debug('Determining pillar cache')
     if opts['pillar_cache']:
@@ -61,10 +64,13 @@ def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None
     '''
     Return the correct pillar driver based on the file_client option
     '''
+    file_client = opts['file_client']
+    if opts.get('master_type') == 'disable' and file_client == 'remote':
+        file_client = 'local'
     ptype = {
         'remote': AsyncRemotePillar,
         'local': AsyncPillar,
-    }.get(opts['file_client'], AsyncPillar)
+    }.get(file_client, AsyncPillar)
     return ptype(opts, grains, minion_id, saltenv, ext, functions=funcs,
                  pillar=pillar, pillarenv=pillarenv)
 

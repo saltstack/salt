@@ -300,7 +300,7 @@ def _merge_flags(new_flags, old_flags=None, conf='any'):
 
     # Next sort is just aesthetic, can be commented for a small performance
     # boost
-    tmp.sort(cmp=lambda x, y: cmp(x.lstrip('-'), y.lstrip('-')))
+    tmp.sort(key=lambda x: x.lstrip('-'))
     return tmp
 
 
@@ -349,7 +349,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
 
         # Next sort is just aesthetic, can be commented for a small performance
         # boost
-        new_flags.sort(cmp=lambda x, y: cmp(x.lstrip('-'), y.lstrip('-')))
+        new_flags.sort(key=lambda x: x.lstrip('-'))
 
         complete_file_path = _get_config_file(conf, atom)
         pdir = os.path.dirname(complete_file_path)

@@ -219,7 +219,7 @@ def load_term_config(filter_name,
         To see what fields are supported, please consult the list of supported keywords_.
             Some platforms have few other optional_ keyworkds.
 
-            .. _keywords:https://github.com/google/capirca/wiki/Policy-format#keywords
+            .. _keywords: https://github.com/google/capirca/wiki/Policy-format#keywords
             .. _optional: https://github.com/google/capirca/wiki/Policy-format#optionally-supported-keywords
 
     .. note::
@@ -466,7 +466,8 @@ def load_filter_config(filter_name,
                        revision_date_format='%Y/%m/%d',
                        test=False,
                        commit=True,
-                       debug=False):
+                       debug=False,
+                       **kwargs):  # pylint: disable=unused-argument
     '''
     Generate and load the configuration of a policy filter.
 
@@ -656,7 +657,8 @@ def load_policy_config(filters=None,
                        revision_date_format='%Y/%m/%d',
                        test=False,
                        commit=True,
-                       debug=False):
+                       debug=False,
+                       **kwargs):  # pylint: disable=unused-argument
     '''
     Generate and load the configuration of the whole policy.
 

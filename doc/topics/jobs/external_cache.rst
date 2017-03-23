@@ -15,9 +15,10 @@ and others):
 * External Job Cache
 * Master Job Cache
 
-The major difference between these two
-mechanism is from where results are returned (from the Salt Master or Salt
-Minion).
+The major difference between these two mechanism is from where results are
+returned (from the Salt Master or Salt Minion). Configuring either of these
+options will also make the :py:mod:`Jobs Runner functions <salt.runners.jobs>`
+to automatically query the remote stores for infomation.
 
 External Job Cache - Minion-Side Returner
 -----------------------------------------

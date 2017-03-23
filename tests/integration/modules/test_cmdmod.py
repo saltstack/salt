@@ -204,7 +204,7 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.which_bin
         '''
-        cmds = ['pip2', 'pip', 'pip-python']
+        cmds = ['pip3', 'pip2', 'pip', 'pip-python']
         ret = self.run_function('cmd.which_bin', [cmds])
         self.assertTrue(os.path.split(ret)[1] in cmds)
 

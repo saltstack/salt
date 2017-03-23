@@ -403,16 +403,28 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
 
 
 @proxy_napalm_wrap
-def traceroute(destination, source=None, ttl=None, timeout=None, **kwargs):  # pylint: disable=unused-argument
+def traceroute(destination, source=None, ttl=None, timeout=None, vrf=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
     Calls the method traceroute from the NAPALM driver object and returns a dictionary with the result of the traceroute
     command executed on the device.
 
-    :param destination: Hostname or address of remote host
-    :param source: Source address to use in outgoing traceroute packets
-    :param ttl: IP maximum time-to-live value (or IPv6 maximum hop-limit value)
-    :param timeout: Number of seconds to wait for response (seconds)
+    destination
+        Hostname or address of remote host
+
+    source
+        Source address to use in outgoing traceroute packets
+
+    ttl
+        IP maximum time-to-live value (or IPv6 maximum hop-limit value)
+
+    timeout
+        Number of seconds to wait for response (seconds)
+
+    vrf
+        VRF (routing instance) for traceroute attempt
+
+        .. versionadded:: 2016.11.4
 
     CLI Example:
 
@@ -429,23 +441,40 @@ def traceroute(destination, source=None, ttl=None, timeout=None, **kwargs):  # p
             'destination': destination,
             'source': source,
             'ttl': ttl,
-            'timeout': timeout
+            'timeout': timeout,
+            'vrf': vrf
         }
     )
 
 
 @proxy_napalm_wrap
-def ping(destination, source=None, ttl=None, timeout=None, size=None, count=None, **kwargs):  # pylint: disable=unused-argument
+def ping(destination, source=None, ttl=None, timeout=None, size=None, count=None, vrf=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
     Executes a ping on the network device and returns a dictionary as a result.
 
-    :param destination: Hostname or IP address of remote host
-    :param source: Source address of echo request
-    :param ttl: IP time-to-live value (IPv6 hop-limit value) (1..255 hops)
-    :param timeout: Maximum wait time after sending final packet (seconds)
-    :param size: Size of request packets (0..65468 bytes)
-    :param count: Number of ping requests to send (1..2000000000 packets)
+    destination
+        Hostname or IP address of remote host
+
+    source
+        Source address of echo request
+
+    ttl
+        IP time-to-live value (IPv6 hop-limit value) (1..255 hops)
+
+    timeout
+        Maximum wait time after sending final packet (seconds)
+
+    size
+        Size of request packets (0..65468 bytes)
+
+    count
+        Number of ping requests to send (1..2000000000 packets)
+
+    vrf
+        VRF (routing instance) for ping attempt
+
+        .. versionadded:: 2016.11.4
 
     CLI Example:
 
@@ -465,7 +494,8 @@ def ping(destination, source=None, ttl=None, timeout=None, size=None, count=None
             'ttl': ttl,
             'timeout': timeout,
             'size': size,
-            'count': count
+            'count': count,
+            'vrf': vrf
         }
     )
 
