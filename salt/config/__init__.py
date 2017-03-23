@@ -2126,13 +2126,8 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     overrides = defaults
 
     # Load cloud configuration from any default or provided includes
-    overrides.update(
-        salt.config.include_config(overrides['default_include'], path, verbose=False)
-    )
-    include = overrides.get('include', [])
-    overrides.update(
-        salt.config.include_config(include, path, verbose=True)
-    )
+    overrides.update(include_config(overrides['default_include'], path, verbose=False))
+    overrides.update(include_config(overrides.get('include', []), path, verbose=True))
 
     # The includes have been evaluated, let's see if master, providers and
     # profiles configuration settings have been included and if not, set the
