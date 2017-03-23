@@ -358,15 +358,19 @@ def loaded_ret(ret, loaded, test, debug):
     loaded
         The loaded dictionary.
     '''
+    # Always get the comment
+    ret.update({
+        'comment': loaded.get('comment', '')
+    })
     if not loaded.get('result', False):
         # Failure of some sort
-        ret.update({
-            'comment': loaded.get('comment', '')
-        })
         return ret
     if debug:
         # Always check for debug
-        ret['changes']['loaded'] = loaded.get('loaded_config', '')
+        ret.update({
+            "comment": "Debug loaded_config:\n{}\n{}".format(loaded.get('loaded_config', ''),
+                                                ret.get('comment', ''))
+        })
     if not loaded.get('already_configured', True):
         # We're making changes
         ret.update({
@@ -376,7 +380,7 @@ def loaded_ret(ret, loaded, test, debug):
         })
         if test:
             comment = "To be changed:\n{}\n{}".format(ret.get('pchanges', '').get('diff', ''),
-                                                     loaded.get('comment', ''))
+                                                     ret.get('comment', ''))
             ret.update({
                 'result': None,
                 'comment': comment
@@ -388,12 +392,11 @@ def loaded_ret(ret, loaded, test, debug):
             'changes': {
                 'diff': loaded.get('diff', '')
             },
-            'comment': loaded.get('comment', "Configuration changed!")
+            'comment': "Configuration changed!\n{}".format(ret.get('comment', ''))
         })
         return ret
     # No changes
     ret.update({
-        'result': True,
-        'comment': loaded.get('comment', '')
+        'result': True
     })
     return ret
