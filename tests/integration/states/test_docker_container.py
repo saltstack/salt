@@ -538,7 +538,7 @@ class DockerContainerTestCase(integration.ModuleCase,
                 'docker_container.running',
                 name=name,
                 image=self.image,
-                env='VAR1=value1,VAR2=value2,VAR3=value3'              
+                env='VAR1=value1,VAR2=value2,VAR3=value3',          
                 )
             self.assertSaltTrueReturn(ret)
             ret = self.run_function('docker.inspect_container', [name])
@@ -549,7 +549,7 @@ class DockerContainerTestCase(integration.ModuleCase,
                 'docker_container.running',
                 name=name,
                 image=self.image,
-                env='VAR1=value1,VAR2=value2'               
+                env='VAR1=value1,VAR2=value2',              
                 )
             self.assertSaltTrueReturn(ret)
             ret = self.run_function('docker.inspect_container', [name])
@@ -559,3 +559,4 @@ class DockerContainerTestCase(integration.ModuleCase,
         finally:
             if name in self.run_function('docker.list_containers', all=True):
                 self.run_function('docker.rm', [name], force=True)
+
