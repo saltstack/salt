@@ -39,6 +39,9 @@ with easy configuration and management of ``salt-proxy`` processes.
 New in Nitrogen
 ---------------
 
+The :conf_proxy:`proxy_merge_grains_in_module` configuration variable
+introduced in 2016.3, has been changed, defaulting to ``True``.
+
 The connection with the remote device is kept alive by default, when the
 module implements the ``alive`` function and :conf_proxy:`proxy_keep_alive`
 is set to ``True``. The polling interval is set using the
