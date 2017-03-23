@@ -7,6 +7,7 @@ to access regular minions over ``salt-ssh``.
 
     - grains, pillar, mine data matching
     - environment variables
+    - SDB URLs
     - IPv6 support
     - roster_order per config key
     - default order changed to industry-wide best practices
