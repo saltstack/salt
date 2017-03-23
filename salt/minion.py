@@ -3090,13 +3090,13 @@ class ProxyMinion(Minion):
         # we can then sync any proxymodules down from the master
         # we do a sync_all here in case proxy code was installed by
         # SPM or was manually placed in /srv/salt/_modules etc.
-        self.functions['saltutil.sync_all'](saltenv='base')
+        self.functions['saltutil.sync_all'](saltenv=self.opts['environment'])
 
         # Pull in the utils
         self.utils = salt.loader.utils(self.opts)
 
         # Then load the proxy module
-        self.proxy = salt.loader.proxy(self.opts)
+        self.proxy = salt.loader.proxy(self.opts, utils=self.utils)
 
         # And re-load the modules so the __proxy__ variable gets injected
         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
