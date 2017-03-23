@@ -50,7 +50,6 @@ from __future__ import absolute_import
 # Import salt libs
 import salt.modules.libcloud_dns as libcloud_dns_module
 import salt.utils
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import salt libs
 import salt.utils
