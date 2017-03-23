@@ -22,14 +22,14 @@ import tempfile
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import (
-    destructiveTest,
-    skip_if_binaries_missing
-)
+from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
 import salt.utils
 from salt.utils.versions import LooseVersion
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -47,8 +47,11 @@ def _git_version():
     if not git_version:
         log.debug('Git not installed')
         return False
-    log.debug('Detected git version %s', git_version)
-    return LooseVersion(str(git_version.split()[-1]).encode())
+    git_version = git_version.strip().split()[-1]
+    if six.PY3:
+        git_version = git_version.decode(__salt_system_encoding__)
+    log.debug('Detected git version: %s', git_version)
+    return LooseVersion(git_version)
 
 
 def _worktrees_supported():
@@ -56,7 +59,7 @@ def _worktrees_supported():
     Check if the git version is 2.5.0 or later
     '''
     try:
-        return _git_version() >= LooseVersion('2.5.0'.encode())
+        return _git_version() >= LooseVersion('2.5.0')
     except AttributeError:
         return False
 
@@ -70,7 +73,6 @@ def _makedirs(path):
             raise
 
 
-@destructiveTest
 @skip_if_binaries_missing('git')
 class GitModuleTest(integration.ModuleCase):
 
@@ -972,14 +974,10 @@ class GitModuleTest(integration.ModuleCase):
         )
         # Test dry run output. It should match the same output we get when we
         # actually prune the worktrees.
-        self.assertEqual(
-            self.run_function(
-                'git.worktree_prune',
-                [self.repo],
-                dry_run=True
-            ),
-            prune_message
-        )
+        result = self.run_function('git.worktree_prune',
+                                   [self.repo],
+                                   dry_run=True)
+        self.assertEqual(result, prune_message)
         # Test pruning for real, and make sure the output is the same
         self.assertEqual(
             self.run_function('git.worktree_prune', [self.repo]),
