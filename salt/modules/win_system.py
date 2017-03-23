@@ -12,6 +12,7 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import time
+import ctypes
 from datetime import datetime
 
 # Import 3rd Party Libs
@@ -22,7 +23,6 @@ try:
     import win32api
     import win32con
     import pywintypes
-    import ctypes
     from ctypes import windll
     HAS_WIN32NET_MODS = True
 except ImportError:
