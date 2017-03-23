@@ -13,6 +13,7 @@ import os
 import shutil
 import time
 import bisect
+import errno
 
 # Import salt libs
 import salt.payload
@@ -24,6 +25,7 @@ import salt.exceptions
 # Import 3rd-party libs
 import msgpack
 import salt.ext.six as six
+from salt.ext.six.moves import range
 
 
 log = logging.getLogger(__name__)
@@ -51,6 +53,12 @@ def _job_dir():
     return os.path.join(__opts__['cachedir'], 'jobs')
 
 
+def _jid_dir(jid):
+    '''
+    Return jid directory for given `jid`
+    '''
+    return salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
+
 def _walk_through(job_dir):
     '''
     Walk though the jid dir and look for jobs
@@ -75,8 +83,25 @@ def _walk_through(job_dir):
                 yield jid, job, t_path, final
 
 
-#TODO: add to returner docs-- this is a new one
-def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
+def _prep_jid_dir(jid):
+    '''
+    Create directory for given `jid`. Pass if dir exists
+    Return jid directoory path
+    '''
+    jid_dir = _jid_dir(jid)
+
+    try:
+        os.makedirs(jid_dir)
+    except OSError as exception:
+        # Catch only 'file exists' error and let other ones be raised.
+        if exception.errno != errno.EEXIST:
+            log.critical('Could not access to {0}.'.format(jid_dir))
+            raise
+
+    return jid_dir
+
+
+def prep_jid(nocache=False, passed_jid=None):
     '''
     Return a job id and prepare the job id directory.
 
@@ -84,27 +109,15 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
     it is passed a jid).
     So do what you have to do to make sure that stays the case
     '''
-    if recurse_count >= 5:
-        err = 'prep_jid could not store a jid after {0} tries.'.format(recurse_count)
-        log.error(err)
-        raise salt.exceptions.SaltCacheError(err)
-    if passed_jid is None:  # this can be a None or an empty string.
+     # Generate new jid for each try if no passed jid as parameter.
+    if passed_jid is None:
         jid = salt.utils.jid.gen_jid()
     else:
         jid = passed_jid
 
-    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
+    jid_dir = _prep_jid_dir(jid)
 
-    # Make sure we create the jid dir, otherwise someone else is using it,
-    # meaning we need a new jid.
-    if not os.path.isdir(jid_dir):
-        try:
-            os.makedirs(jid_dir)
-        except OSError:
-            time.sleep(0.1)
-            if passed_jid is None:
-                return prep_jid(nocache=nocache, recurse_count=recurse_count+1)
-
+    # Try to write in jid path
     try:
         with salt.utils.fopen(os.path.join(jid_dir, 'jid'), 'wb+') as fn_:
             if six.PY2:
@@ -114,11 +127,11 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
         if nocache:
             with salt.utils.fopen(os.path.join(jid_dir, 'nocache'), 'wb+') as fn_:
                 fn_.write(b'')
+
+    # If write failed
     except IOError:
-        log.warning('Could not write out jid file for job {0}. Retrying.'.format(jid))
-        time.sleep(0.1)
-        return prep_jid(passed_jid=jid, nocache=nocache,
-                        recurse_count=recurse_count+1)
+        log.warning('Could not write out jid file for job {0} (nocache={1}). Retrying.'.format(jid, nocache))
+        raise
 
     return jid
 
@@ -133,7 +146,7 @@ def returner(load):
     if load['jid'] == 'req':
         load['jid'] = prep_jid(nocache=load.get('nocache', False))
 
-    jid_dir = salt.utils.jid.jid_dir(load['jid'], _job_dir(), __opts__['hash_type'])
+    jid_dir = _jid_dir(load['jid'])
     if os.path.exists(os.path.join(jid_dir, 'nocache')):
         return
 
@@ -179,7 +192,7 @@ def returner(load):
         )
 
 
-def save_load(jid, clear_load, minions=None, recurse_count=0):
+def save_load(jid, clear_load, minions=None):
     '''
     Save the load to the specified jid
 
@@ -187,37 +200,13 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
     the job, for cases when this function can't compute that list itself (such
     as for salt-ssh)
     '''
-    if recurse_count >= 5:
-        err = ('save_load could not write job cache file after {0} retries.'
-               .format(recurse_count))
-        log.error(err)
-        raise salt.exceptions.SaltCacheError(err)
-
-    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
-
+    jid_dir = _prep_jid_dir(jid)
     serial = salt.payload.Serial(__opts__)
 
-    # Save the invocation information
-    try:
-        if not os.path.exists(jid_dir):
-            os.makedirs(jid_dir)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST:
-            # rarely, the directory can be already concurrently created between
-            # the os.path.exists and the os.makedirs lines above
-            pass
-        else:
-            raise
-    try:
-        with salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b') as wfh:
-            serial.dump(clear_load, wfh)
-    except IOError as exc:
-        log.warning(
-            'Could not write job invocation cache file: %s', exc
+    serial.dump(
+        clear_load,
+        salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
         )
-        time.sleep(0.1)
-        return save_load(jid=jid, clear_load=clear_load,
-                         recurse_count=recurse_count+1)
 
     # if you have a tgt, save that for the UI etc
     if 'tgt' in clear_load and clear_load['tgt'] != '':
@@ -247,18 +236,7 @@ def save_minions(jid, minions, syndic_id=None):
     )
     serial = salt.payload.Serial(__opts__)
 
-    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
-
-    try:
-        if not os.path.exists(jid_dir):
-            os.makedirs(jid_dir)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST:
-            # rarely, the directory can be already concurrently created between
-            # the os.path.exists and the os.makedirs lines above
-            pass
-        else:
-            raise
+    jid_dir = _prep_jid_dir(jid)
 
     if syndic_id is not None:
         minions_path = os.path.join(
@@ -269,13 +247,7 @@ def save_minions(jid, minions, syndic_id=None):
         minions_path = os.path.join(jid_dir, MINIONS_P)
 
     try:
-        if not os.path.exists(jid_dir):
-            try:
-                os.makedirs(jid_dir)
-            except OSError:
-                pass
-        with salt.utils.fopen(minions_path, 'w+b') as wfh:
-            serial.dump(minions, wfh)
+        serial.dump(minions, salt.utils.fopen(minions_path, 'w+b'))
     except IOError as exc:
         log.error(
             'Failed to write minion list {0} to job cache file {1}: {2}'
@@ -287,7 +259,7 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
+    jid_dir = _jid_dir(jid)
     load_fn = os.path.join(jid_dir, LOAD_P)
     if not os.path.exists(jid_dir) or not os.path.exists(load_fn):
         return {}
@@ -318,7 +290,7 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
+    jid_dir = _jid_dir(jid)
     serial = salt.payload.Serial(__opts__)
 
     ret = {}
@@ -451,7 +423,7 @@ def update_endtime(jid, time):
 
     Endtime is stored as a plain text string
     '''
-    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
+    jid_dir = _jid_dir(jid)
     try:
         if not os.path.exists(jid_dir):
             os.makedirs(jid_dir)
@@ -467,7 +439,7 @@ def get_endtime(jid):
 
     Returns False if no endtime is present
     '''
-    jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
+    jid_dir = _jid_dir(jid)
     etpath = os.path.join(jid_dir, ENDTIME)
     if not os.path.exists(etpath):
         return False
