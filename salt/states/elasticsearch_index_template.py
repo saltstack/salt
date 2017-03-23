@@ -3,6 +3,7 @@
 State module to manage Elasticsearch index templates
 
 .. versionadded:: 2015.8.0
+.. deprecated:: 2017.3.0 Use elasticsearch state instead
 '''
 
 # Import python libs

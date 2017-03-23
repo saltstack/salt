@@ -1,0 +1,358 @@
+# -*- coding: utf-8 -*-
+'''
+State module to manage Elasticsearch.
+
+.. versionadded:: 2017.3.0
+'''
+
+# Import python libs
+from __future__ import absolute_import
+import logging
+import json
+
+# Import salt libs
+log = logging.getLogger(__name__)
+
+
+def index_absent(name):
+    '''
+    Ensure that the named index is absent.
+
+    name
+        Name of the index to remove
+    '''
+
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    index = __salt__['elasticsearch.index_get'](index=name)
+    if not index or name not in index:
+        if __opts__['test']:
+            ret['comment'] = 'Index {0} will be removed'.format(name)
+            ret['changes']['old'] = index[name]
+            ret['result'] = None
+        else:
+            try:
+                ret['result'] = __salt__['elasticsearch.index_delete'](index=name)
+                if ret['result']:
+                    ret['comment'] = 'Successfully removed index {0}'.format(name)
+                    ret['changes']['old'] = index[name]
+                else:
+                    ret['comment'] = 'Failed to remove index {0} for unknown reasons'.format(name)
+            except Exception as e:
+                ret['result'] = False
+                ret['comment'] = str(e)
+    else:
+        ret['comment'] = 'Index {0} is already absent'.format(name)
+
+    return ret
+
+
+def index_present(name, definition=None):
+    '''
+    Ensure that the named index is present.
+
+    name
+        Name of the index to add
+
+    definition
+        Optional dict for creation parameters as per https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-create-index.html
+
+    **Example:**
+
+    .. code-block:: yaml
+        # Default settings
+        mytestindex:
+          elasticsearch_index.present
+
+        # Extra settings
+        mytestindex2:
+          elasticsearch_index.present:
+            - definition:
+                settings:
+                  index:
+                    number_of_shards: 10
+    '''
+
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    index_exists = __salt__['elasticsearch.index_exists'](index=name)
+    if not index_exists:
+        if __opts__['test']:
+            ret['comment'] = 'Index {0} does not exist and will be created'.format(name)
+            ret['result'] = None
+        else:
+            try:
+                output = __salt__['elasticsearch.index_create'](index=name, body=definition)
+                if output:
+                    ret['comment'] = 'Successfully created index {0}'.format(name)
+                    ret['changes'] = {'new': __salt__['elasticsearch.index_get'](index=name)[name]}
+                else:
+                    ret['comment'] = 'Cannot create index {0}, {1}'.format(name, output)
+            except Exception as e:
+                ret['result'] = False
+                ret['comment'] = str(e)
+    else:
+        ret['comment'] = 'Index {0} is already present'.format(name)
+
+    return ret
+
+
+def index_template_absent(name):
+    '''
+    Ensure that the named index template is absent.
+
+    name
+        Name of the index to remove
+    '''
+
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    index_template = __salt__['elasticsearch.index_template_get'](name=name)
+    if not index_template or name not in index_template:
+        if __opts__['test']:
+            ret['comment'] = 'Index template {0} will be removed'.format(name)
+            ret['changes']['old'] = index_template[name]
+            ret['result'] = None
+        else:
+            try:
+                ret['result'] = __salt__['elasticsearch.index_template_delete'](name=name)
+                if ret['result']:
+                    ret['comment'] = 'Successfully removed index template {0}'.format(name)
+                    ret['changes']['old'] = index_template[name]
+                else:
+                    ret['comment'] = 'Failed to remove index template {0} for unknown reasons'.format(name)
+            except Exception as e:
+                ret['result'] = False
+                ret['comment'] = str(e)
+    else:
+        ret['comment'] = 'Index template {0} is already absent'.format(name)
+
+    return ret
+
+
+def index_template_present(name, definition):
+    '''
+    Ensure that the named index templat eis present.
+
+    name
+        Name of the index to add
+
+    definition
+        Required dict for creation parameters as per https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
+
+    **Example:**
+
+    .. code-block:: yaml
+        mytestindex2_template:
+          elasticsearch_index_template.present:
+            - definition:
+                template: logstash-*
+                order: 1
+                settings:
+                  number_of_shards: 1
+    '''
+
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    index_template_exists = __salt__['elasticsearch.index_template_exists'](name=name)
+    if not index_template_exists:
+        if __opts__['test']:
+            ret['comment'] = 'Index template {0} does not exist and will be created'.format(name)
+            ret['result'] = None
+        else:
+            try:
+                output = __salt__['elasticsearch.index_template_create'](name=name, body=definition)
+                if output:
+                    ret['comment'] = 'Successfully created index template {0}'.format(name)
+                    ret['changes'] = {'new': __salt__['elasticsearch.index_template_get'](name=name)[name]}
+                else:
+                    ret['comment'] = 'Cannot create index template {0}, {1}'.format(name, output)
+            except Exception as e:
+                ret['result'] = False
+                ret['comment'] = str(e)
+    else:
+        ret['comment'] = 'Index {0} is already present'.format(name)
+
+    return ret
+
+
+def pipeline_absent(name):
+    '''
+    Ensure that the named pipeline is absent
+
+    name
+        Name of the pipeline to remove
+    '''
+
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    pipeline = __salt__['elasticsearch.pipeline_get'](id=name)
+    if pipeline and name in pipeline:
+        if __opts__['test']:
+            ret['comment'] = 'Pipeline {0} will be removed'.format(name)
+            ret['changes']['old'] = pipeline[name]
+            ret['result'] = None
+        else:
+            try:
+                ret['result'] = __salt__['elasticsearch.pipeline_delete'](id=name)
+                if ret['result']:
+                    ret['comment'] = 'Successfully removed pipeline {0}'.format(name)
+                    ret['changes']['old'] = pipeline[name]
+                else:
+                    ret['comment'] = 'Failed to remove pipeline {0} for unknown reasons'.format(name)
+            except Exception as e:
+                ret['result'] = False
+                ret['comment'] = str(e)
+    else:
+        ret['comment'] = 'Pipeline {0} is already absent'.format(name)
+
+    return ret
+
+
+def pipeline_present(name, definition):
+    '''
+    Ensure that the named pipeline is present.
+
+    name
+        Name of the index to add
+
+    definition
+        Required dict for creation parameters as per https://www.elastic.co/guide/en/elasticsearch/reference/master/pipeline.html
+
+    **Example:**
+
+    .. code-block:: yaml
+        test_pipeline:
+          elasticsearch_pipeline.present:
+            - definition:
+                description: example pipeline
+                processors:
+                  - set:
+                      field: collector_timestamp_millis
+                      value: '{{ '{{' }}_ingest.timestamp{{ '}}' }}'
+    '''
+
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    pipeline = __salt__['elasticsearch.pipeline_get'](id=name)
+    old = {}
+    if pipeline and name in pipeline:
+        old = pipeline[name]
+    ret['changes'] = __utils__['dictdiffer.deep_diff'](old, definition)
+
+    if ret['changes']:
+        if __opts__['test']:
+            if not pipeline:
+                ret['comment'] = 'Pipeline {0} does not exist and will be created'.format(name)
+            else:
+                ret['comment'] = 'Pipeline {0} exists with wrong configuration and will be overriden'.format(name)
+
+            ret['result'] = None
+        else:
+            try:
+                output = __salt__['elasticsearch.pipeline_create'](id=name, body=definition)
+                if output:
+                    if not pipeline:
+                        ret['comment'] = 'Successfully created pipeline {0}'.format(name)
+                    else:
+                        ret['comment'] = 'Successfully replaced pipeline {0}'.format(name)
+                else:
+                    ret['comment'] = 'Cannot create pipeline {0}, {1}'.format(name, output)
+            except Exception as e:
+                ret['result'] = False
+                ret['comment'] = str(e)
+    else:
+        ret['comment'] = 'Pipeline {0} is already present'.format(name)
+
+    return ret
+
+
+def search_template_absent(name):
+    '''
+    Ensure that the search template is absent
+
+    name
+        Name of the search template to remove
+    '''
+
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    template = __salt__['elasticsearch.search_template_get'](id=name)
+    if template:
+        if __opts__['test']:
+            ret['comment'] = 'Template {0} will be removed'.format(name)
+            ret['changes']['old'] = json.loads(template["template"])
+            ret['result'] = None
+        else:
+            try:
+                ret['result'] = __salt__['elasticsearch.search_template_delete'](id=name)
+                if ret['result']:
+                    ret['comment'] = 'Successfully removed search template {0}'.format(name)
+                    ret['changes']['old'] = json.loads(template["template"])
+                else:
+                    ret['comment'] = 'Failed to remove search template {0} for unknown reasons'.format(name)
+            except Exception as e:
+                ret['result'] = False
+                ret['comment'] = str(e)
+    else:
+        ret['comment'] = 'Search template {0} is already absent'.format(name)
+
+    return ret
+
+
+def search_template_present(name, definition):
+    '''
+    Ensure that the named search template is present.
+
+    name
+        Name of the search template to add
+
+    definition
+        Required dict for creation parameters as per http://www.elastic.co/guide/en/elasticsearch/reference/current/search-template.html
+
+    **Example:**
+
+    .. code-block:: yaml
+        test_pipeline:
+          elasticsearch.search_template_present:
+            - definition:
+                inline:
+                  size: 10
+    '''
+
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    template = __salt__['elasticsearch.search_template_get'](id=name)
+
+    old = {}
+    if template:
+        print(template)
+        old = json.loads(template["template"])
+
+    ret['changes'] = __utils__['dictdiffer.deep_diff'](old, definition)
+
+    if ret['changes']:
+        if __opts__['test']:
+            if not template:
+                ret['comment'] = 'Search template {0} does not exist and will be created'.format(name)
+            else:
+                ret['comment'] = 'Search template {0} already exists with proper configuration'.format(name)
+
+            ret['result'] = None
+        else:
+            try:
+                output = __salt__['elasticsearch.search_template_create'](id=name, body=definition)
+                if output:
+                    if not template:
+                        ret['comment'] = 'Successfully created search template {0}'.format(name)
+                    else:
+                        ret['comment'] = 'Successfully replaced search template {0}'.format(name)
+                else:
+                    ret['comment'] = 'Cannot create search template {0}, {1}'.format(name, output)
+            except Exception as e:
+                ret['result'] = False
+                ret['comment'] = str(e)
+    else:
+        ret['comment'] = 'Search template {0} is already present'.format(name)
+
+    return ret
