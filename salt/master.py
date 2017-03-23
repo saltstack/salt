@@ -17,7 +17,6 @@ import signal
 import stat
 import logging
 import multiprocessing
-import traceback
 
 # Import third party libs
 from Crypto.PublicKey import RSA
