@@ -632,10 +632,8 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
 
         start_time = time()
         while True:
-            if not __salt__['boto_rds.exists'](name=name, region=region,
-                                               key=key, keyid=keyid,
-                                               profile=profile):
-
+            res = __salt__['boto_rds.exists'](name=name, region=region, key=key, keyid=keyid, profile=profile)
+            if not res.get('exists'):
                 return {'deleted': bool(res), 'message':
                         'Deleted RDS instance {0} completely.'.format(name)}
 
