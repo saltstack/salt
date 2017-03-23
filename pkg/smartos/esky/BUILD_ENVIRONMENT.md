@@ -21,8 +21,8 @@ pkgin -y rm salt py27-zmq
 pip install --no-use-wheel --egg esky bbfreeze
 
 ## bzfreeze-loader
-COMPILE="gcc -fno-strict-aliasing -O2 -pipe -O2 -DHAVE_DB_185_H -I/usr/include -I/opt/local/include -I/opt/local/include/db4 -I/opt/local/include/gettext -I/opt/local/include/ncurses -DNDEBUG -O2 -pipe -O2 -DHAVE_DB_185_H -I/usr/include -I/opt/local/include -I/opt/local/include/db4 -I/opt/local/include/gettext -I/opt/local/include/ncurses -fPIC -I/opt/local/include/python2.7 -static-libgcc"
-LINK_OPTS="-L/opt/local/lib -L/opt/local/lib/python2.7/config -L/opt/local/lib -lsocket -lnsl -ldl -lrt -lm -static-libgcc"
+COMPILE="gcc -fno-strict-aliasing -O2 -pipe -DHAVE_DB_185_H -I/usr/include -I/opt/local/include -I/opt/local/include/db4 -I/opt/local/include/gettext -I/opt/local/include/ncurses -DNDEBUG -fPIC -I/opt/local/include/python2.7 -static-libgcc"
+LINK_OPTS="-L/opt/local/lib -L/opt/local/lib/python2.7/config -lsocket -lnsl -ldl -lrt -lm -lssp -static-libgcc"
 mkdir -p ${BLDPATH}
 cd ${BLDPATH}
 curl -kO 'https://pypi.python.org/packages/source/b/bbfreeze-loader/bbfreeze-loader-1.1.0.zip'
@@ -30,12 +30,11 @@ unzip bbfreeze-loader-1.1.0.zip
 ${COMPILE} -c bbfreeze-loader-1.1.0/_bbfreeze_loader/console.c -o ${BLDPATH}/console.o
 ${COMPILE} -c bbfreeze-loader-1.1.0/_bbfreeze_loader/getpath.c -o ${BLDPATH}/getpath.o
 gcc ${BLDPATH}/console.o ${BLDPATH}/getpath.o /opt/local/lib/python2.7/config/libpython2.7.a ${LINK_OPTS} -o ${BLDPATH}/console.exe
-patchelf --set-rpath '$ORIGIN:$ORIGIN/../lib' ${BLDPATH}/console.exe
 find /opt/local -name console.exe -exec cp ${BLDPATH}/console.exe {} \;
 
 ## clone saltstack repo
 cd ${SALTBASE}
-git clone git://github.com/saltstack/salt -b 2016.3
+git clone git://github.com/saltstack/salt -b 2016.11
 
 ## salt requirements
 cd ${SALTBASE}/salt
