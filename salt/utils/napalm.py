@@ -333,6 +333,7 @@ def proxy_napalm_wrap(func):
         return func(*args, **kwargs)
     return func_wrapper
 
+
 def default_ret(name):
     '''
     Return the default dict of the state output.
@@ -345,6 +346,7 @@ def default_ret(name):
         'comment': ''
     }
     return ret
+
 
 def loaded_ret(ret, loaded, test, debug):
     '''
