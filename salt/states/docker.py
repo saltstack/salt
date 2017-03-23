@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 '''
 States to manage Docker containers, images, volumes, and networks
+
 .. versionchanged:: Nitrogen
     The legacy Docker state and execution module have been removed, and the
     new modules (formerly called ``dockerng`` have taken their places).
+
 .. important::
     As of the Nitrogen release, the states in this module have been separated
     into the following four modules:
+
     - :mod:`docker_container <salt.states.docker_container>` - States to manage
       Docker containers
     - :mod:`docker_image <salt.states.docker_image>` - States to manage Docker
@@ -15,30 +18,40 @@ States to manage Docker containers, images, volumes, and networks
       Docker volumes
     - :mod:`docker_network <salt.states.docker_network>` - States to manage
       Docker networks
+
     The reason for this change was to make states and requisites more clear.
     For example, imagine this SLS:
+
     .. code-block:: yaml
+
         myuser/appimage:
           docker.image_present:
             - sls: docker.images.appimage
+
         myapp:
           docker.running:
             - image: myuser/appimage
             - require:
               - docker: myuser/appimage
+
     The new syntax would be:
+
     .. code-block:: yaml
+
         myuser/appimage:
           docker_image.present:
             - sls: docker.images.appimage
+
         myapp:
           docker_container.running:
             - image: myuser/appimage
             - require:
               - docker_image: myuser/appimage
+
     This is similar to how Salt handles MySQL, MongoDB, Zabbix, and other cases
     where the same execution module is used to manage several different kinds
     of objects (users, databases, roles, etc.).
+
     The old syntax will continue to work until the **Fluorine** release of
     Salt.
 '''
