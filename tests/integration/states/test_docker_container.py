@@ -527,3 +527,35 @@ class DockerContainerTestCase(integration.ModuleCase,
         finally:
             if name in self.run_function('docker.list_containers', all=True):
                 self.run_function('docker.rm', [name], force=True)
+
+    @with_random_name
+    def test_env_with_running_container(self, name):
+        '''
+        dockerng.running environnment part. Testing issue 39838.
+        '''
+        try:
+            ret = self.run_state(
+                'docker_container.running',
+                name=name,
+                image=self.image,
+                env='VAR1=value1,VAR2=value2,VAR3=value3',
+                )
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_function('docker.inspect_container', [name])
+            self.assertTrue('VAR1=value1' in ret['Config']['Env'])
+            self.assertTrue('VAR2=value2' in ret['Config']['Env'])
+            self.assertTrue('VAR3=value3' in ret['Config']['Env'])
+            ret = self.run_state(
+                'docker_container.running',
+                name=name,
+                image=self.image,
+                env='VAR1=value1,VAR2=value2',
+                )
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_function('docker.inspect_container', [name])
+            self.assertTrue('VAR1=value1' in ret['Config']['Env'])
+            self.assertTrue('VAR2=value2' in ret['Config']['Env'])
+            self.assertTrue('VAR3=value3' not in ret['Config']['Env'])
+        finally:
+            if name in self.run_function('docker.list_containers', all=True):
+                self.run_function('docker.rm', [name], force=True)
