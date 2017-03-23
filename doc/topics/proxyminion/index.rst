@@ -36,6 +36,18 @@ or more minions.
 See :ref:`Proxyminion Beacon <proxy-minion-beacon>` to help
 with easy configuration and management of ``salt-proxy`` processes.
 
+New in Nitrogen
+---------------
+
+The connection with the remote device is kept alive by default, when the
+module implements the ``alive`` function and :conf_proxy:`proxy_keep_alive`
+is set to ``True``. The polling interval is set using the
+:conf_proxy:`proxy_keep_alive_interval` option which defaults to 1 minute.
+
+The developers are also able to use the :conf_proxy:`proxy_always_alive`,
+when designing a proxy module flexible enough to open the
+connection with the remote device only when required.
+
 New in 2016.11.0
 ----------------
 
