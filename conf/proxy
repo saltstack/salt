@@ -45,7 +45,7 @@
 # proxy_keep_alive_interval: 1
 
 # By default, any proxy opens the connection with the remote device when
-# initialized. Some proxymodules allow throgh this option to open/close
+# initialized. Some proxymodules allow through this option to open/close
 # the session per command. This requires the proxymodule to have this
 # capability. Please consult the documentation to see if the proxy type
 # used can be that flexible. Added in Nitrogen.
