@@ -573,33 +573,6 @@ def set_hostname(hostname):
     return "successful" in ret
 
 
-def _lookup_error(number):
-    '''
-    Lookup the error based on the passed number
-    .. versionadded:: 2015.5.7
-    .. versionadded:: 2015.8.2
-
-    :param int number: Number code to lookup
-
-    :return: The text that corresponds to the error number
-    :rtype: str
-    '''
-    return_values = {
-        2:    'Invalid OU or specifying OU is not supported',
-        5:    'Access is denied',
-        53:   'The network path was not found',
-        87:   'The parameter is incorrect',
-        110:  'The system cannot open the specified object',
-        1323: 'Unable to update the password',
-        1326: 'Logon failure: unknown username or bad password',
-        1355: 'The specified domain either does not exist or could not be contacted',
-        2224: 'The account already exists',
-        2691: 'The machine is already joined to the domain',
-        2692: 'The machine is not currently joined to a domain',
-    }
-    return return_values[number]
-
-
 def join_domain(domain,
                 username=None,
                 password=None,
@@ -694,7 +667,7 @@ def join_domain(domain,
             ret['Restart'] = reboot()
         return ret
 
-    log.error(_lookup_error(err[0]))
+    log.error(win32api.FormatMessage(err[0]).rstrip())
     return False
 
 
@@ -783,11 +756,11 @@ def unjoin_domain(username=None,
 
             return ret
         else:
-            log.error(_lookup_error(err[0]))
+            log.error(win32api.FormatMessage(err[0]).rstrip())
             log.error('Failed to join the computer to {0}'.format(workgroup))
             return False
     else:
-        log.error(_lookup_error(err[0]))
+        log.error(win32api.FormatMessage(err[0]).rstrip())
         log.error('Failed to unjoin computer from {0}'.format(status['Domain']))
         return False
 
