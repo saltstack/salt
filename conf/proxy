@@ -31,6 +31,26 @@
 # Default to False for 2016.3 and 2016.11. Switch to True for Nitrogen.
 # proxy_merge_grains_in_module: True
 
+# If a proxymodule has a function called 'alive' returning a boolean
+# flag reflecting the state of the connection with the remove device,
+# when this option is set as True, a scheduled job on the proxy will
+# try restarting the connection. The polling frequency depends on the
+# next option, 'proxy_keep_alive_interval'. Added in Nitrogen.
+# proxy_keep_alive: True
+
+# The polling interval (in minutes) to check if the underlying connection
+# with the remote device is still alive. This option requires
+# 'proxy_keep_alive' to be configured as True and the proxymodule to
+# implement the 'alive' function. Added in Nitrogen.
+# proxy_keep_alive_interval: 1
+
+# By default, any proxy opens the connection with the remote device when
+# initialized. Some proxymodules allow throgh this option to open/close
+# the session per command. This requires the proxymodule to have this
+# capability. Please consult the documentation to see if the proxy type
+# used can be that flexible. Added in Nitrogen.
+# proxy_always_alive: True
+
 # If multiple masters are specified in the 'master' setting, the default behavior
 # is to always try to connect to them in the order they are listed. If random_master is
 # set to True, the order will be randomized instead. This can be helpful in distributing
