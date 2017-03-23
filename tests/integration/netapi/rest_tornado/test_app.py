@@ -8,6 +8,7 @@ import time
 import threading
 
 # Import Salt Libs
+import salt.utils
 from salt.netapi.rest_tornado import saltnado
 from salt.utils.versions import StrictVersion
 
@@ -555,7 +556,10 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
             event = future.result()
             self.assertEqual(event['tag'], 'salt/netapi/hook')
             self.assertIn('headers', event['data'])
-            self.assertEqual(event['data']['post'], {'foo': 'bar'})
+            self.assertEqual(
+                event['data']['post'],
+                {'foo': salt.utils.to_bytes('bar')}
+            )
         finally:
             self._future_resolved.clear()
             del self._future_resolved
