@@ -6,20 +6,100 @@ Version 2016.3.6 is a bugfix release for :ref:`2016.3.0 <release-2016-3-0>`.
 
 
 Changes for v2016.3.5..v2016.3.6
----------------------------------------------------------------
+--------------------------------
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2017-03-20T21:43:28Z*
+*Generated at: 2017-03-22T20:18:54Z*
 
 Statistics:
 
-- Total Merges: **108**
-- Total Issue references: **51**
-- Total PR references: **155**
+- Total Merges: **118**
+- Total Issue references: **53**
+- Total PR references: **168**
 
 Changes:
 
+
+- **PR** `#39855`_: (*Foxlik*) Use regular expression instead of split when replacing authorized_keys
+  @ *2017-03-22T18:28:32Z*
+
+  - **ISSUE** `#39854`_: (*Foxlik*) quoted space in authorized_keys confuses ssh.py
+    | refs: `#39855`_
+  * c59ae9a Merge pull request `#39855`_ from Foxlik/use_regex_to_compare_authorized_keys
+  * d46845a Add newline at end of file
+
+  * d4a3c8a Use regular expression instead of split when replacing authorized_keys
+
+- **PR** `#40221`_: (*rallytime*) Back-port `#39179`_ to 2016.3
+  @ *2017-03-22T17:40:34Z*
+
+  - **PR** `#39179`_: (*mcalmer*) fix error parsing
+    | refs: `#40221`_
+  * fd10430 Merge pull request `#40221`_ from rallytime/`bp-39179`_
+  * 07dc2de fix error parsing
+
+- **PR** `#40206`_: (*cro*) Leave sign_pub_messages off by default.
+  @ *2017-03-22T16:43:03Z*
+
+  - **ISSUE** `#40203`_: (*frogunder*) 2016.3.6. Minion don't connect to older master.
+    | refs: `#40206`_
+  * a27a2cc Merge pull request `#40206`_ from cro/sign_pub_take2
+  * 01048de leave sign_pub_messages off on minion by default.
+
+  * a82b005 Leave sign_pub_messages off by default.
+
+- **PR** `#40193`_: (*rallytime*) Back-port `#40117`_ to 2016.3
+  @ *2017-03-22T16:42:21Z*
+
+  - **PR** `#40117`_: (*narendraingale2*) Fix force remove
+    | refs: `#40193`_
+  * d1abb4c Merge pull request `#40193`_ from rallytime/`bp-40117`_
+  * cf18579 More optimization.
+
+  * 5a08266 Removed debug statemnt
+
+  * f557f7c Added fix for issue 39393
+
+  * bb62278 Reverting changes.
+
+  * a9107cd Added if condition for broken link.
+
+- **PR** `#40196`_: (*twangboy*) Update dependencies for PyOpenSSL
+  @ *2017-03-22T16:40:46Z*
+
+  * 0f1ff4d Merge pull request `#40196`_ from twangboy/win_fix_deps
+  * 6761527 Update dependencies for PyOpenSSL
+
+- **PR** `#40184`_: (*terminalmage*) Link to minion start reactor example from FAQ.
+  @ *2017-03-21T17:33:09Z*
+
+  * b050151 Merge pull request `#40184`_ from terminalmage/link-reactor-example
+  * a42be82 Link to minion start reactor example from FAQ.
+
+- **PR** `#40182`_: (*terminalmage*) Add support for "stopped" state to dockerng's mod_watch
+  @ *2017-03-21T15:40:29Z*
+
+  * d4e6c58 Merge pull request `#40182`_ from terminalmage/dockerng-mod_watch-stopped
+  * 4629a26 Add support for "stopped" state to dockerng's mod_watch
+
+- **PR** `#40171`_: (*Ch3LL*) additional PRs/issues for 2016.3.6 release notes
+  @ *2017-03-20T22:14:17Z*
+
+  * a0b4082 Merge pull request `#40171`_ from Ch3LL/2016.3.6_release
+  * 9c6d8d8 additional PRs/issues for 2016.3.6 release notes
+
+- **PR** `#40120`_: (*sergeizv*) gce: Exclude GCENodeDriver objects from _expand_node result
+  @ *2017-03-20T21:44:42Z*
+
+  * 33ba782 Merge pull request `#40120`_ from sergeizv/gce-expand-node-fix
+  * 9d0fbe7 gce: Exclude GCENodeDriver objects from _expand_node result
+
+- **PR** `#40122`_: (*meaksh*) Adding "pkg.install downloadonly=True" support to yum/dnf execution module
+  @ *2017-03-20T21:44:15Z*
+
+  * 4884397 Merge pull request `#40122`_ from meaksh/2016.3-yum-downloadonly-support
+  * 067f3f7 Adding downloadonly support to yum/dnf module
 
 - **PR** `#40159`_: (*cro*) Turn on sign_pub_messages by default.
   @ *2017-03-20T21:00:49Z*
@@ -229,7 +309,7 @@ Changes:
 - **PR** `#39791`_: (*gtmanfred*) load runners if role is master
   @ *2017-03-02T19:43:41Z*
 
-  - **ISSUE** `#39333`_: (*jagguli*) Not Available error - Scheduling custom runner functions 
+  - **ISSUE** `#39333`_: (*jagguli*) Not Available error - Scheduling custom runner functions
     | refs: `#39791`_
   - **ISSUE** `#38514`_: (*githubcdr*) Unable to schedule runners
     | refs: `#39791`_
@@ -554,7 +634,7 @@ Changes:
 
   - **ISSUE** `#38595`_: (*yue9944882*) Redis ext job cache occurred error
     | refs: `#38610`_ `#38610`_
-  - **PR** `#39299`_: (*rallytime*) Back-port `#38610`_ to 2016.3 
+  - **PR** `#39299`_: (*rallytime*) Back-port `#38610`_ to 2016.3
   - **PR** `#38610`_: (*yue9944882*) Fix `#38595`_ - Unexpected error log from redis retuner in master's log
     | refs: `#39299`_
 
@@ -1073,6 +1153,7 @@ Changes:
 .. _`#39169`: https://github.com/saltstack/salt/issues/39169
 .. _`#39170`: https://github.com/saltstack/salt/pull/39170
 .. _`#39173`: https://github.com/saltstack/salt/pull/39173
+.. _`#39179`: https://github.com/saltstack/salt/pull/39179
 .. _`#39197`: https://github.com/saltstack/salt/pull/39197
 .. _`#39199`: https://github.com/saltstack/salt/pull/39199
 .. _`#39202`: https://github.com/saltstack/salt/pull/39202
@@ -1150,6 +1231,8 @@ Changes:
 .. _`#39819`: https://github.com/saltstack/salt/pull/39819
 .. _`#39820`: https://github.com/saltstack/salt/pull/39820
 .. _`#39826`: https://github.com/saltstack/salt/pull/39826
+.. _`#39854`: https://github.com/saltstack/salt/issues/39854
+.. _`#39855`: https://github.com/saltstack/salt/pull/39855
 .. _`#39871`: https://github.com/saltstack/salt/pull/39871
 .. _`#39899`: https://github.com/saltstack/salt/pull/39899
 .. _`#39919`: https://github.com/saltstack/salt/pull/39919
@@ -1175,12 +1258,25 @@ Changes:
 .. _`#40059`: https://github.com/saltstack/salt/pull/40059
 .. _`#40070`: https://github.com/saltstack/salt/pull/40070
 .. _`#40090`: https://github.com/saltstack/salt/pull/40090
+.. _`#40117`: https://github.com/saltstack/salt/pull/40117
+.. _`#40120`: https://github.com/saltstack/salt/pull/40120
+.. _`#40122`: https://github.com/saltstack/salt/pull/40122
 .. _`#40123`: https://github.com/saltstack/salt/pull/40123
 .. _`#40141`: https://github.com/saltstack/salt/pull/40141
 .. _`#40159`: https://github.com/saltstack/salt/pull/40159
+.. _`#40171`: https://github.com/saltstack/salt/pull/40171
+.. _`#40182`: https://github.com/saltstack/salt/pull/40182
+.. _`#40184`: https://github.com/saltstack/salt/pull/40184
+.. _`#40193`: https://github.com/saltstack/salt/pull/40193
+.. _`#40196`: https://github.com/saltstack/salt/pull/40196
+.. _`#40203`: https://github.com/saltstack/salt/issues/40203
+.. _`#40206`: https://github.com/saltstack/salt/pull/40206
+.. _`#40221`: https://github.com/saltstack/salt/pull/40221
 .. _`bp-37632`: https://github.com/saltstack/salt/pull/37632
 .. _`bp-39170`: https://github.com/saltstack/salt/pull/39170
+.. _`bp-39179`: https://github.com/saltstack/salt/pull/39179
 .. _`bp-40056`: https://github.com/saltstack/salt/pull/40056
+.. _`bp-40117`: https://github.com/saltstack/salt/pull/40117
 .. _`fix-2016`: https://github.com/saltstack/salt/issues/2016
 .. _`fix-34780`: https://github.com/saltstack/salt/issues/34780
 .. _`fix-38762`: https://github.com/saltstack/salt/issues/38762
