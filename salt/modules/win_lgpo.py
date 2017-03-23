@@ -4597,7 +4597,7 @@ def _lookup_admin_template(policy_name,
             if len(adml_search_results) > 1:
                 multiple_adml_entries = True
                 for adml_search_result in adml_search_results:
-                    if not adml_search_result.attrib['text'].strip() == policy_name:
+                    if not getattr(adml_search_result, 'text', '').strip() == policy_name:
                         adml_search_results.remove(adml_search_result)
             for adml_search_result in adml_search_results:
                 dmsg = 'found an ADML entry matching the string! {0} -- {1}'
