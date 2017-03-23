@@ -129,16 +129,20 @@ def _tree(domain, tld=False):
     :param tld: Include TLD in list
     :return: [ 'dc2.ams2.example.com', 'ams2.example.com', 'example.com']
     '''
+    if '.' not in domain:
+        raise ValueError('Provide a decent domain')
+
     res = [domain]
-    idx = 0
-    while idx != -1:
-        idx = domain.find('.', idx)
+    while True:
+        idx = domain.find('.')
+        if idx < 0:
+            break
         domain = domain[idx + 1:]
         res.append(domain)
 
     # properly validating the tld is impractical
     if not tld:
-        res = res[:-2]
+        res = res[:-1]
 
     return res
 
@@ -199,7 +203,7 @@ def _rec2data(*rdata):
     return ' '.join(rdata)
 
 
-def _lookup_simple(name, rdtype, timeout=None):
+def _lookup_gai(name, rdtype, timeout=None):
     '''
     Use Python's socket interface to lookup addresses
     :param name: Name of record to search
@@ -474,7 +478,7 @@ def lookup(
     Lookup DNS record data
     :param name: name to lookup
     :param rdtype: DNS record type
-    :param method: simple, pydns, dig, drill, host, nslookup or auto (default)
+    :param method: gai (getaddrinfo()), pydns, dig, drill, host, nslookup or auto (default)
     :param servers: (list of) server(s) to try in-order
     :param timeout: query timeout or a valiant approximation of that
     :param walk: Find records in parents if they don't exist
@@ -493,7 +497,7 @@ def lookup(
 
     # pylint: disable=bad-whitespace,multiple-spaces-before-keyword
     query_methods = (
-        ('simple',   _lookup_simple,   not any((rdtype not in ('A', 'AAAA'), servers, secure))),
+        ('gai',      _lookup_gai,      not any((rdtype not in ('A', 'AAAA'), servers, secure))),
         ('pydns',    _lookup_pydns,    HAS_PYDNS),
         ('dig',      _lookup_dig,      HAS_DIG),
         ('drill',    _lookup_drill,    HAS_DRILL),
@@ -520,11 +524,6 @@ def lookup(
         'rdtype': rdtype,
     }
 
-    if timeout:
-        res_kwargs['timeout'] = timeout
-    if secure:
-        res_kwargs['secure'] = secure
-
     if servers:
         if not isinstance(servers, (list, tuple)):
             servers = [servers]
@@ -532,27 +531,34 @@ def lookup(
             res_kwargs['servers'] = servers
         else:
             if timeout:
-                res_kwargs['timeout'] = timeout / len(servers)
+                timeout /= len(servers)
 
             # Inject a wrapper for multi-server behaviour
-            def _msrvr_resolv(**res_kwargs):
+            def _multi_srvr(**res_kwargs):
                 for server in servers:
                     s_res = resolver(server=server, **res_kwargs)
                     if s_res:
                         return s_res
-            resolver = _msrvr_resolv
+            resolver = _multi_srvr
 
     if not walk:
         name = [name]
     else:
+        idx = 0
         if rdtype == 'SRV':
-            idx = name.find('.')
-        idx = name.find('.', idx or 0)
-        domain = name[idx + 1:]
+            idx = name.find('.') + 1
+        idx = name.find('.', idx) + 1
+        domain = name[idx:]
         name = name[0:idx]
-        name = [name + domain for domain in _tree(domain, tld=walk_tld)]
 
-    ppr(name)
+        name = [name + domain for domain in _tree(domain, walk_tld)]
+        if timeout:
+            timeout /= len(name)
+
+    if secure:
+        res_kwargs['secure'] = secure
+    if timeout:
+        res_kwargs['timeout'] = timeout
 
     for rname in name:
         res = resolver(name=rname, **res_kwargs)
@@ -574,7 +580,7 @@ def query(
     Query DNS for information
     :param name: name to lookup
     :param rdtype: DNS record type
-    :param method: simple, pydns, dig, drill, host, nslookup or auto (default)
+    :param method: gai (getaddrinfo()), pydns, dig, drill, host, nslookup or auto (default)
     :param servers: (list of) server(s) to try in-order
     :param timeout: query timeout or a valiant approximation of that
     :param secure: return only DNSSEC secured response
@@ -603,6 +609,7 @@ def query(
     rec_map = {
         'A':    a_rec,
         'AAAA': aaaa_rec,
+        'CAA':  caa_rec,
         'MX':   mx_rec,
         'SOA':  soa_rec,
         'SPF':  spf_rec,
@@ -793,31 +800,21 @@ def srv_data(target, port, prio=10, weight=10):
     return _rec2data(prio, weight, port, target)
 
 
-def srv_name(svc, name=None):
+def srv_name(svc, proto='tcp', domain=None):
     '''
     Generate SRV record name
-    :param svc: ldap/tcp, 389/tcp etc
-
-    :param name:
+    :param svc: ldap, 389 etc
+    :param proto: tcp, udp, sctp etc.
+    :param domain: name to append
     :return:
     '''
-    svc, proto = svc.split('/', 1)
-
     proto = RFC.validate(proto, RFC.SRV_PROTO)
     if svc.isdigit():
         svc = _to_port(svc)
 
-    if name:
-        name = '.' + name
-    return '_{0}._{1}{2}'.format(svc, proto, name)
-
-
-def srv_pick(srv_records):
-    res = []
-    for _, recs in srv_records.items():
-        res.append(_weighted_order(recs))
-
-    return res
+    if domain:
+        domain = '.' + domain
+    return '_{0}._{1}{2}'.format(svc, proto, domain)
 
 
 def srv_rec(rdatas):
@@ -878,6 +875,36 @@ def tlsa_data(pub, usage, selector, matching):
         cert_fp = hasher.hexdigest()
 
     return _rec2data(usage, selector, matching, cert_fp)
+
+
+def service(
+    svc,
+    proto='tcp',
+    domain=None,
+    walk=False,
+    secure=None
+):
+    '''
+    Find an SRV service in a domain or it's parents
+    :param svc: service to find (ldap, 389, etc)
+    :param proto: protocol the service talks (tcp, udp, etc)
+    :param domain: domain to start search in
+    :param walk: walk the parents if domain doesn't provide the service
+    :param secure: only return DNSSEC-validated results
+    :return: [
+        [ prio1server1, prio1server2 ],
+        [ prio2server1, prio2server2 ],
+    ] (the servers will already be weighted according to the SRV rules)
+    '''
+    qres = query(srv_name(svc, proto, domain), 'SRV', walk=walk, secure=secure)
+    if not qres:
+        return False
+
+    res = []
+    for _, recs in qres.items():
+        res.append(_weighted_order(recs))
+
+    return res
 
 
 def services(services_file='/etc/services'):
