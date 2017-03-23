@@ -2431,9 +2431,11 @@ def mod_aggregate(low, chunks, running):
                         pkgs.extend(chunk['pkgs'])
                         chunk['__agg__'] = True
                     elif 'name' in chunk:
-                        pkgs.append(chunk['name'])
+                        if 'version' in chunk:
+                            pkgs.append({chunk['name']: chunk['version']})
+                        else:
+                            pkgs.append(chunk['name'])
                         chunk['__agg__'] = True
-
     if pkg_type is not None and pkgs:
         if pkg_type in low:
             low[pkg_type].extend(pkgs)
