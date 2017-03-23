@@ -3,7 +3,7 @@
 Compendium of generic DNS utilities
 # Examples:
 dns.lookup(name, rdtype, ...)
-dns.records(name, rdtype, ...)
+dns.query(name, rdtype, ...)
 
 dns.srv_rec(data)
 dns.srv_data('my1.example.com', 389, prio=10, weight=100)
@@ -18,6 +18,7 @@ import hashlib
 import itertools
 import random
 import socket
+import shlex
 import ssl
 import string
 from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
@@ -54,6 +55,13 @@ class RFC(object):
     '''
     Simple holding class for all RFC/IANA registered lists & standards
     '''
+    # https://tools.ietf.org/html/rfc6844#section-3
+    COO_TAGS = (
+        'issue',
+        'issuewild',
+        'iodef'
+    )
+
     # http://www.iana.org/assignments/dns-sshfp-rr-parameters/dns-sshfp-rr-parameters.xhtml
     SSHFP_ALGO = OrderedDict((
         (1, 'rsa'),
@@ -114,6 +122,27 @@ def _to_port(port):
         raise ValueError('Invalid port {0}'.format(port))
 
 
+def _tree(domain, tld=False):
+    '''
+    Split out a domain in its parents
+    :param domain: dc2.ams2.example.com
+    :param tld: Include TLD in list
+    :return: [ 'dc2.ams2.example.com', 'ams2.example.com', 'example.com']
+    '''
+    res = [domain]
+    idx = 0
+    while idx != -1:
+        idx = domain.find('.', idx)
+        domain = domain[idx + 1:]
+        res.append(domain)
+
+    # properly validating the tld is impractical
+    if not tld:
+        res = res[:-2]
+
+    return res
+
+
 def _weighted_order(recs):
     res = []
     weights = [rec['weight'] for rec in recs]
@@ -170,7 +199,7 @@ def _rec2data(*rdata):
     return ' '.join(rdata)
 
 
-def _query_simple(name, rdtype, timeout=None):
+def _lookup_simple(name, rdtype, timeout=None):
     '''
     Use Python's socket interface to lookup addresses
     :param name: Name of record to search
@@ -193,7 +222,7 @@ def _query_simple(name, rdtype, timeout=None):
         return False
 
 
-def _query_dig(name, rdtype, timeout=None, servers=None, secure=None):
+def _lookup_dig(name, rdtype, timeout=None, servers=None, secure=None):
     '''
     Use dig to lookup addresses
     :param name: Name of record to search
@@ -240,7 +269,7 @@ def _query_dig(name, rdtype, timeout=None, servers=None, secure=None):
         return res
 
 
-def _query_drill(name, rdtype, timeout=None, servers=None, secure=None):
+def _lookup_drill(name, rdtype, timeout=None, servers=None, secure=None):
     '''
     Use drill to lookup addresses
     :param name: Name of record to search
@@ -296,7 +325,7 @@ def _query_drill(name, rdtype, timeout=None, servers=None, secure=None):
         return res
 
 
-def _query_host(name, rdtype, timeout=None, server=None):
+def _lookup_host(name, rdtype, timeout=None, server=None):
     '''
     Use host to lookup addresses
     :param name: Name of record to search
@@ -337,7 +366,7 @@ def _query_host(name, rdtype, timeout=None, server=None):
     return res
 
 
-def _query_pydns(name, rdtype, timeout=None, servers=None, secure=None):
+def _lookup_pydns(name, rdtype, timeout=None, servers=None, secure=None):
     '''
     Use dnspython to lookup addresses
     :param name: Name of record to search
@@ -366,7 +395,7 @@ def _query_pydns(name, rdtype, timeout=None, servers=None, secure=None):
         return False
 
 
-def _query_nslookup(name, rdtype, timeout=None, server=None):
+def _lookup_nslookup(name, rdtype, timeout=None, server=None):
     '''
     Use nslookup to lookup addresses
     :param name: Name of record to search
@@ -431,44 +460,54 @@ def _query_nslookup(name, rdtype, timeout=None, server=None):
         return res
 
 
-def query(
+def lookup(
     name,
     rdtype,
     method=None,
     servers=None,
     timeout=None,
+    walk=False,
+    walk_tld=False,
     secure=None
 ):
     '''
-    Lookup DNS records
+    Lookup DNS record data
     :param name: name to lookup
     :param rdtype: DNS record type
     :param method: simple, pydns, dig, drill, host, nslookup or auto (default)
     :param servers: (list of) server(s) to try in-order
     :param timeout: query timeout or a valiant approximation of that
+    :param walk: Find records in parents if they don't exist
+    :param walk_tld: Include the final domain in the walk
     :param secure: return only DNSSEC secured responses
     :return: [] of record data
     '''
     # opts = __opts__.get('dns', {})
     opts = {}
+    method = method or opts.get('method', 'auto')
+    secure = secure or opts.get('secure', None)
+    servers = servers or opts.get('servers', None)
+    timeout = timeout or opts.get('timeout', False)
+
     rdtype = rdtype.upper()
 
     # pylint: disable=bad-whitespace,multiple-spaces-before-keyword
     query_methods = (
-        ('simple',   _query_simple,   not any((rdtype not in ('A', 'AAAA'), servers, secure))),
-        ('pydns',    _query_pydns,    HAS_PYDNS),
-        ('dig',      _query_dig,      HAS_DIG),
-        ('drill',    _query_drill,    HAS_DRILL),
-        ('host',     _query_host,     HAS_HOST and not secure),
-        ('nslookup', _query_nslookup, HAS_NSLOOKUP and not secure),
+        ('simple',   _lookup_simple,   not any((rdtype not in ('A', 'AAAA'), servers, secure))),
+        ('pydns',    _lookup_pydns,    HAS_PYDNS),
+        ('dig',      _lookup_dig,      HAS_DIG),
+        ('drill',    _lookup_drill,    HAS_DRILL),
+        ('host',     _lookup_host,     HAS_HOST and not secure),
+        ('nslookup', _lookup_nslookup, HAS_NSLOOKUP and not secure),
     )
     # pylint: enable=bad-whitespace,multiple-spaces-before-keyword
 
-    method = method or opts.get('method', 'auto')
     try:
         if method == 'auto':
+            # The first one not to bork on the conditions becomes the function
             method, resolver = next(((rname, rcb) for rname, rcb, rtest in query_methods if rtest))
         else:
+            # The first one not to bork on the conditions becomes the function. And the name must match.
             resolver = next((rcb for rname, rcb, rtest in query_methods if rname == method and rtest))
     except StopIteration:
         log.error(
@@ -478,66 +517,88 @@ def query(
         return False
 
     res_kwargs = {
-        'name':   name,
-        'rdtype': rdtype
+        'rdtype': rdtype,
     }
+
     if timeout:
         res_kwargs['timeout'] = timeout
     if secure:
         res_kwargs['secure'] = secure
 
-    if not servers:
-        res = resolver(**res_kwargs)
-    else:
+    if servers:
         if not isinstance(servers, (list, tuple)):
             servers = [servers]
         if method in ('pydns', 'dig', 'drill'):
             res_kwargs['servers'] = servers
-            res = resolver(**res_kwargs)
         else:
             if timeout:
                 res_kwargs['timeout'] = timeout / len(servers)
-            for server in servers:
-                res = resolver(server=server, **res_kwargs)
-                if res:
-                    break
 
-    return res
+            # Inject a wrapper for multi-server behaviour
+            def _msrvr_resolv(**res_kwargs):
+                for server in servers:
+                    s_res = resolver(server=server, **res_kwargs)
+                    if s_res:
+                        return s_res
+            resolver = _msrvr_resolv
+
+    if not walk:
+        name = [name]
+    else:
+        if rdtype == 'SRV':
+            idx = name.find('.')
+        idx = name.find('.', idx or 0)
+        domain = name[idx + 1:]
+        name = name[0:idx]
+        name = [name + domain for domain in _tree(domain, tld=walk_tld)]
+
+    ppr(name)
+
+    for rname in name:
+        res = resolver(name=rname, **res_kwargs)
+        if res:
+            return res
 
 
-def records(
+def query(
     name,
     rdtype,
     method=None,
     servers=None,
     timeout=None,
+    walk=False,
+    walk_tld=False,
     secure=None
 ):
     '''
-    Parse DNS records
+    Query DNS for information
     :param name: name to lookup
     :param rdtype: DNS record type
     :param method: simple, pydns, dig, drill, host, nslookup or auto (default)
     :param servers: (list of) server(s) to try in-order
     :param timeout: query timeout or a valiant approximation of that
     :param secure: return only DNSSEC secured response
+    :param walk: Find records in parents if they don't exist
+    :param walk_tld: Include the final domain in the walk
     :return: [] of records
     '''
     rdtype = rdtype.upper()
     qargs = {
-        'method':  method,
-        'servers': servers,
-        'timeout': timeout,
-        'secure':  secure
+        'method':   method,
+        'servers':  servers,
+        'timeout':  timeout,
+        'walk':     walk,
+        'walk_tld': walk_tld,
+        'secure':   secure
     }
 
     if rdtype == 'PTR' and not name.endswith('arpa'):
         name = ptr_name(name)
 
-    qres = query(name, rdtype, **qargs)
+    qres = lookup(name, rdtype, **qargs)
     if rdtype == 'SPF' and not qres:
         # 'SPF' has become a regular 'TXT' again
-        qres = [answer for answer in query(name, 'TXT', **qargs) if answer.startswith('v=spf')]
+        qres = [answer for answer in lookup(name, 'TXT', **qargs) if answer.startswith('v=spf')]
 
     rec_map = {
         'A':    a_rec,
@@ -563,7 +624,7 @@ def a_rec(rdata):
     '''
     Validate and parse DNS record data for an A record
     :param rdata: DNS record data
-    :return: dict w/fields
+    :return: { 'address': ip }
     '''
     rschema = OrderedDict((
         ('address', ipaddress.IPv4Address),
@@ -575,12 +636,40 @@ def aaaa_rec(rdata):
     '''
     Validate and parse DNS record data for an AAAA record
     :param rdata: DNS record data
-    :return: dict w/fields
+    :return: { 'address': ip }
     '''
     rschema = OrderedDict((
         ('address', ipaddress.IPv6Address),
     ))
     return _data2rec(rschema, rdata)
+
+
+def caa_rec(rdatas):
+    '''
+    Validate and parse DNS record data for a CAA record
+    :param rdata: DNS record data
+    :return: dict w/fields
+    '''
+    rschema = OrderedDict((
+        ('flags', lambda flag: ['critical'] if int(flag) > 0 else []),
+        ('tag', lambda tag: RFC.validate(tag, RFC.COO_TAGS)),
+        ('value', lambda val: str(val).strip('"'))
+    ))
+
+    res = _data2rec_group(rschema, rdatas, 'tag')
+
+    for tag in ('issue', 'issuewild'):
+        tag_res = res.get(tag, False)
+        if not tag_res:
+            continue
+        for idx, val in enumerate(tag_res):
+            if ';' not in val:
+                continue
+            val, params = val.split(';', 1)
+            params = dict(param.split('=') for param in shlex.split(params))
+            tag_res[idx] = {val: params}
+
+    return res
 
 
 def mx_data(target, preference=10):
