@@ -163,6 +163,12 @@ Master Configuration Additions
   when connected to multiple masters to be able to send events to all connected
   masters.
 
+- :conf_master:`eauth_acl_module` - In case external auth is enabled master can
+  get authenticate and get the authorization list from different auth modules.
+
+- :conf_master:`keep_acl_in_token` - Option that allows master to build ACL once
+  for each user being authenticated and keep it in the token.
+
 Minion Configuration Additions
 ==============================
 
