@@ -362,36 +362,39 @@ def loaded_ret(ret, loaded, test, debug):
     ret.update({
         'comment': loaded.get('comment', '')
     })
+    pchanges = {}
     if not loaded.get('result', False):
         # Failure of some sort
         return ret
     if debug:
         # Always check for debug
+        pchanges.update({
+            'loaded_config': loaded.get('loaded_config', '')
+        })
         ret.update({
-            "comment": "Debug loaded_config:\n{}\n{}".format(loaded.get('loaded_config', ''),
-                                                ret.get('comment', ''))
+            "pchanges": pchanges
         })
     if not loaded.get('already_configured', True):
         # We're making changes
+        pchanges.update({
+            "diff": loaded.get('diff', '')
+        })
         ret.update({
-            'pchanges': {
-                'diff': loaded.get('diff', '')
-            }
+            'pchanges': pchanges
         })
         if test:
-            comment = "To be changed:\n{}\n{}".format(ret.get('pchanges', '').get('diff', ''),
-                                                     ret.get('comment', ''))
+            for k, v in pchanges.items():
+                ret.update({
+                    "comment": "{}:\n{}\n\n{}".format(k, v, ret.get("comment", ''))
+                })
             ret.update({
                 'result': None,
-                'comment': comment
             })
             return ret
         # Not test, changes were applied
         ret.update({
             'result': True,
-            'changes': {
-                'diff': loaded.get('diff', '')
-            },
+            'changes': pchanges,
             'comment': "Configuration changed!\n{}".format(ret.get('comment', ''))
         })
         return ret
