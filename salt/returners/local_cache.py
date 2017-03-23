@@ -25,7 +25,6 @@ import salt.exceptions
 # Import 3rd-party libs
 import msgpack
 import salt.ext.six as six
-from salt.ext.six.moves import range
 
 
 log = logging.getLogger(__name__)
@@ -58,6 +57,7 @@ def _jid_dir(jid):
     Return jid directory for given `jid`
     '''
     return salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
+
 
 def _walk_through(job_dir):
     '''
@@ -109,7 +109,7 @@ def prep_jid(nocache=False, passed_jid=None):
     it is passed a jid).
     So do what you have to do to make sure that stays the case
     '''
-     # Generate new jid for each try if no passed jid as parameter.
+    # Generate new jid for each try if no passed jid as parameter.
     if passed_jid is None:
         jid = salt.utils.jid.gen_jid()
     else:
