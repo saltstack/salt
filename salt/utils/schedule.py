@@ -514,7 +514,7 @@ class Schedule(object):
         for job in list(self.opts['schedule'].keys()):
             if job.startswith(name):
                 del self.opts['schedule'][job]
-        for job in self._get_schedule(include_opts=False).keys():
+        for job in self._get_schedule(include_opts=False):
             if job.startswith(name):
                 log.warning('Cannot delete job {0}, '
                             'it`s in the pillar!'.format(job))

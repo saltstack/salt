@@ -276,4 +276,3 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts.update({'schedule': {}, 'pillar': {'schedule': ''}})
         self.assertRaises(ValueError, Schedule.eval, self.schedule)
-
