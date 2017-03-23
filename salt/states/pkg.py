@@ -2431,8 +2431,9 @@ def mod_aggregate(low, chunks, running):
                         pkgs.extend(chunk['pkgs'])
                         chunk['__agg__'] = True
                     elif 'name' in chunk:
-                        if 'version' in chunk:
-                            pkgs.append({chunk['name']: chunk['version']})
+                        version = chunk.pop('version', None)
+                        if version is not None:
+                            pkgs.append({chunk['name']: version})
                         else:
                             pkgs.append(chunk['name'])
                         chunk['__agg__'] = True
