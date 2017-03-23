@@ -207,6 +207,13 @@ def _expand_node(node):
     zone = ret['extra']['zone']
     ret['extra']['zone'] = {}
     ret['extra']['zone'].update(zone.__dict__)
+
+    # Remove unserializable GCENodeDriver objects
+    if 'driver' in ret:
+        del ret['driver']
+    if 'driver' in ret['extra']['zone']:
+        del ret['extra']['zone']['driver']
+
     return ret
 
 
