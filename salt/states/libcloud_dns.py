@@ -87,7 +87,7 @@ def zone_present(domain, type, profile):
     if len(matching_zone) > 0:
         return state_result(True, "Zone already exists")
     else:
-        result = libcloud_dns_module.create_zone(domain, profile, type)
+        result = __salt__['libcloud_dns.create_zone'](domain, profile, type)
         return state_result(result, "Created new zone")
 
 
