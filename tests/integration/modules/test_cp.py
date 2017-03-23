@@ -60,7 +60,8 @@ class CPModuleTest(integration.ModuleCase):
         '''
         tgt = os.path.join(paths.TMP, 'file.big')
         src = os.path.join(paths.FILES, 'file', 'base', 'file.big')
-        with salt.utils.fopen(src, 'r') as fp_:
+        mode = 'rb' if salt.utils.is_windows() else 'r'
+        with salt.utils.fopen(src, mode) as fp_:
             data = fp_.read()
             if six.PY3:
                 data = salt.utils.to_bytes(data)
@@ -74,10 +75,10 @@ class CPModuleTest(integration.ModuleCase):
             ],
             gzip=5
         )
-        with salt.utils.fopen(tgt, 'r') as scene:
+        with salt.utils.fopen(tgt, mode) as scene:
             data = scene.read()
-            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
-            self.assertNotIn('bacon', data)
+            self.assertIn(b'KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn(b'bacon', data)
             if six.PY3:
                 data = salt.utils.to_bytes(data)
             self.assertEqual(hash_str, hashlib.md5(data).hexdigest())
