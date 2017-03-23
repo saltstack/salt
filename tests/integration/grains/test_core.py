@@ -15,7 +15,7 @@ import salt.utils
 if salt.utils.is_windows():
     try:
         import salt.modules.reg
-    except:
+    except ImportError:
         pass
 
 
