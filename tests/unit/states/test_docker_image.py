@@ -17,7 +17,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
-import salt.modules.docker as docker_mod
+import salt.modules.dockermod as docker_mod
 import salt.states.docker_image as docker_state
 
 docker_mod.__context__ = {'docker.docker_version': ''}

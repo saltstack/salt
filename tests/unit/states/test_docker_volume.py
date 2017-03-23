@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.modules.docker as docker_mod
+import salt.modules.dockermod as docker_mod
 import salt.states.docker_volume as docker_state
 
 docker_mod.__context__ = {'docker.docker_version': ''}
