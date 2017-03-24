@@ -125,8 +125,7 @@ def _clear_context():
     # raise a RuntimeError.
     for key in list(__context__):
         try:
-            if key.startswith('systemd._systemctl_status.') \
-                    or key in ('systemd.systemd_services',):
+            if key.startswith('systemd._systemctl_status.'):
                 __context__.pop(key)
         except AttributeError:
             continue
@@ -178,9 +177,6 @@ def _get_systemd_services():
     '''
     Use os.listdir() to get all the unit files
     '''
-    contextkey = 'systemd.systemd_services'
-    if contextkey in __context__:
-        return __context__[contextkey]
     ret = set()
     for path in SYSTEM_CONFIG_PATHS + (LOCAL_CONFIG_PATH,):
         # Make sure user has access to the path, and if the path is a link
@@ -194,7 +190,6 @@ def _get_systemd_services():
                     continue
                 if unit_type in VALID_UNIT_TYPES:
                     ret.add(unit_name if unit_type == 'service' else fullname)
-    __context__[contextkey] = copy.deepcopy(ret)
     return ret
 
 
