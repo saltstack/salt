@@ -100,18 +100,18 @@ Test functions are named ``test_<fcn>_<test-name>`` where ``<fcn>`` is the funct
 being tested and ``<test-name>`` describes the ``raise`` or ``return`` being tested.
 
 Unit tests for ``salt/.../<module>.py`` are contained in a file called
-``tests/unit/.../<module>_test.py``, e.g. the tests for ``salt/modules/fib.py``
-are in ``tests/unit/modules/fib_test.py``.
+``tests/unit/.../test_<module>.py``, e.g. the tests for ``salt/modules/fib.py``
+are in ``tests/unit/modules/test_fib.py``.
 
 In order for unit tests to get picked up during a run of the unit test suite, each
-unit test file must be appended with ``_test.py`` and each individual test must be
+unit test file must be prefixed with ``test_`` and each individual test must be
 prepended with the ``test_`` naming syntax, as described above.
 
 If a function does not start with ``test_``, then the function acts as a "normal"
 function and is not considered a testing function. It will not be included in the
 test run or testing output. The same principle applies to unit test files that
-do not have the ``_test.py`` naming syntax. This test file naming convention is
-how the test runner recognizes that a test file contains unit tests.
+do not have the ``test_*.py`` naming syntax. This test file naming convention 
+is how the test runner recognizes that a test file contains unit tests.
 
 
 Imports
@@ -196,23 +196,23 @@ additional imports for MagicMock:
     class DbTestCase(TestCase):
         def test_create_user(self):
             # First, we replace 'execute_query' with our own mock function
-            db.execute_query = MagicMock()
+            with patch.object(db, 'execute_query', MagicMock()) as db_exq:
 
-            # Now that the exits are blocked, we can run the function under test.
-            db.create_user('testuser')
+                # Now that the exits are blocked, we can run the function under test.
+                db.create_user('testuser')
 
-            # We could now query our mock object to see which calls were made
-            # to it.
-            ## print db.execute_query.mock_calls
+                # We could now query our mock object to see which calls were made
+                # to it.
+                ## print db_exq.mock_calls
 
-            # Construct a call object that simulates the way we expected
-            # execute_query to have been called.
-            expected_call = call('CREATE USER testuser')
+                # Construct a call object that simulates the way we expected
+                # execute_query to have been called.
+                expected_call = call('CREATE USER testuser')
 
-            # Compare the expected call with the list of actual calls.  The
-            # test will succeed or fail depending on the output of this
-            # assertion.
-            db.execute_query.assert_has_calls(expected_call)
+                # Compare the expected call with the list of actual calls.  The
+                # test will succeed or fail depending on the output of this
+                # assertion.
+                db_exq.assert_has_calls(expected_call)
 
 .. __: http://www.voidspace.org.uk/python/mock/index.html
 
@@ -246,9 +246,9 @@ execution module. Given a module called ``fib.py`` that has a function called
 sequential Fibonacci numbers of that length.
 
 A unit test to test this function might be commonly placed in a file called
-``tests/unit/modules/fib_test.py``. The convention is to place unit tests for
+``tests/unit/modules/test_fib.py``. The convention is to place unit tests for
 Salt execution modules in ``test/unit/modules/`` and to name the tests module
-suffixed with ``_test.py``.
+prefixed with ``test_*.py``.
 
 Tests are grouped around test cases, which are logically grouped sets of tests
 against a piece of functionality in the tested software. Test cases are created
@@ -261,7 +261,7 @@ we might write the skeleton for testing ``fib.py``:
     from tests.support.unit import TestCase
 
     # Import Salt execution module to test
-    from salt.modules import fib
+    import salt.modules.fib as fib
 
     # Create test case class and inherit from Salt's customized TestCase
     class FibTestCase(TestCase):
@@ -282,14 +282,14 @@ executed:
 
 .. code-block:: bash
 
-    tests/runtests.py -v -n unit.modules.fib_test
+    tests/runtests.py -v -n unit.modules.test_fib
 
 This will report the status of the test: success, failure, or error.  The
 ``-v`` flag increases output verbosity.
 
 .. code-block:: bash
 
-    tests/runtests.py -n unit.modules.fib_test -v
+    tests/runtests.py -n unit.modules.test_fib -v
 
 To review the results of a particular run, take a note of the log location
 given in the output for each test:
@@ -335,9 +335,10 @@ will also redefine the ``__salt__`` dictionary such that it only contains
 .. code-block:: python
 
     # Import Salt Libs
-    from salt.modules import linux_sysctl
+    import salt.modules.linux_sysictl as linux_sysctl
 
     # Import Salt Testing Libs
+    from tests.support.mixins import LoaderModuleMockMixin
     from tests.support.unit import skipIf, TestCase
     from tests.support.mock import (
         MagicMock,
@@ -346,12 +347,9 @@ will also redefine the ``__salt__`` dictionary such that it only contains
         NO_MOCK_REASON
     )
 
-    # Globals
-    linux_sysctl.__salt__ = {}
-
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    class LinuxSysctlTestCase(TestCase):
+    class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         TestCase for salt.modules.linux_sysctl module
         '''
@@ -427,7 +425,8 @@ This function contains two raise statements and one return statement, so we
 know that we will need (at least) three tests.  It has two function arguments
 and many references to non-builtin functions.  In the tests below you will see
 that MagicMock's ``patch()`` method may be used as a context manager or as a
-decorator.
+decorator. When patching the salt dunders however, please use the context 
+manager approach.
 
 There are three test functions, one for each raise and return statement in the
 source function.  Each function is self-contained and contains all and only the
@@ -437,10 +436,11 @@ with.
 .. code-block:: python
 
     # Import Salt Libs
-    from salt.modules import linux_sysctl
+    import salt.modules.linux_sysctl as linux_sysctl
     from salt.exceptions import CommandExecutionError
 
     # Import Salt Testing Libs
+    from tests.support.mixins import LoaderModuleMockMixin
     from tests.support.unit import skipIf, TestCase
     from tests.support.mock import (
         MagicMock,
@@ -449,12 +449,9 @@ with.
         NO_MOCK_REASON
     )
 
-    # Globals
-    linux_sysctl.__salt__ = {}
-
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    class LinuxSysctlTestCase(TestCase):
+    class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         TestCase for salt.modules.linux_sysctl module
         '''
