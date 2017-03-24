@@ -6,7 +6,6 @@ from __future__ import print_function
 __author__ = "Rajvi Dhimar"
 
 import unittest
-from nose.plugins.attrib import attr
 from tests.support.mock import patch, mock_open
 try:
     from lxml import etree
@@ -18,8 +17,6 @@ from jnpr.junos.utils.sw import SW
 from jnpr.junos.device import Device
 import salt.modules.junos as junos
 
-
-@attr('unit')
 class Test_Junos_Module(unittest.TestCase):
 
     def setUp(self):
