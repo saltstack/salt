@@ -15,7 +15,7 @@ Dependencies
 - :mod:`NAPALM proxy minion <salt.proxy.napalm>`
 - :mod:`Network-related basic features execution module <salt.modules.napalm_network>`
 
-.. versionadded: 2016.11.1
+.. versionadded:: Nitrogen
 '''
 
 from __future__ import absolute_import
