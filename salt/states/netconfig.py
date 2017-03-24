@@ -126,7 +126,7 @@ def managed(name,
     To avoid committing the configuration, set the argument ``test`` to ``True`` (or via the CLI argument ``test=True``)
     and will discard (dry run).
 
-    To preserve the chnages, set ``commit`` to ``False`` (either as CLI argument, either as state parameter).
+    To preserve the changes, set ``commit`` to ``False`` (either as CLI argument, either as state parameter).
     However, this is recommended to be used only in exceptional cases when there are applied few consecutive states
     and/or configuration changes. Otherwise the user might forget that the config DB is locked and the candidate config
     buffer is not cleared/merged in the running config.
