@@ -51,7 +51,9 @@ class Batch(object):
         else:
             args.append(self.opts.get('expr_form', 'glob'))
 
-        ping_gen = self.local.cmd_iter(*args, **self.eauth)
+        ping_gen = self.local.cmd_iter(*args,
+                                       gather_job_timeout=self.opts['gather_job_timeout'],
+                                       **self.eauth)
 
         # Broadcast to targets
         fret = set()
@@ -160,6 +162,7 @@ class Batch(object):
                                 ret=self.opts.get('return', ''),
                                 show_jid=show_jid,
                                 verbose=show_verbose,
+                                gather_job_timeout=self.opts['gather_job_timeout'],
                                 **self.eauth)
                 # add it to our iterators and to the minion_tracker
                 iters.append(new_iter)
