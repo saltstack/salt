@@ -1218,9 +1218,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # if process_virtual returned a non-True value then we are
             # supposed to not process this module
             if virtual_ret is not True:
-                # If a module has information about why it could not be loaded, record it
-                self.missing_modules[module_name] = virtual_err
-                self.missing_modules[name] = virtual_err
+                # If a module has information about why it could not be loaded,
+                # record it.  But do not overwrite any information from an
+                # inner call (via `process_virtual`).
+                if module_name not in self.missing_modules:
+                    self.missing_modules[module_name] = virtual_err
+                if name not in self.missing_modules:
+                    self.missing_modules[name] = virtual_err
                 return False
 
         # If this is a proxy minion then MOST modules cannot work. Therefore, require that
