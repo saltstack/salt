@@ -93,6 +93,13 @@ class DiskTestCase(TestCase):
             with patch.dict(disk.__salt__, {'cmd.run': mock}):
                 self.assertEqual('/', disk.percent('/'))
 
+    @patch('salt.modules.disk.percent', MagicMock(return_value={}))
+    def test_percent_args_nonexisting_partition(self):
+        with patch.dict(disk.__grains__, {'kernel': 'Linux'}):
+            mock = MagicMock()
+            with patch.dict(disk.__salt__, {'cmd.run': mock}):
+                self.assertDictEqual({}, disk.percent('/NonexistingPartition'))
+
     @patch('salt.modules.disk.blkid', MagicMock(return_value=STUB_DISK_BLKID))
     def test_blkid(self):
         with patch.dict(disk.__salt__, {'cmd.run_stdout': MagicMock(return_value=1)}):
