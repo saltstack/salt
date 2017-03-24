@@ -279,6 +279,27 @@ virtual machines.
 Now that the new VM is booted it should have contacted the Salt Master, a
 ``test.ping`` will reveal if the new VM is running.
 
+
+QEMU copy on write support
+==========================
+
+For super fast image cloning you can use the `qcow`_ disk image format.
+Pass the ``enable_qcow`` flag and a `.qcow2` image path to `virt.init`:
+
+.. code-block:: bash
+
+    salt 'hypervisor*' virt.init centos1 2 512 image=/var/lib/libvirt/images/centos.qcow2 enable_qcow=True start=False
+
+.. note::
+    Beware that attempting to boot a qcow image too quickly after cloning
+    can result in a race condition where libvirt may try to boot the machine
+    before image seeding has completed. For that reason it is recommended to
+    also pass ``start=False`` to ``virt.init``.
+
+    Also know that you **must not** modify the original base image without
+    first making a copy and then *rebasing* all overlay images onto it.
+    See the ``qemu-img rebase`` `usage docs <rebase>`_.
+
 Migrating Virtual Machines
 ==========================
 
@@ -371,3 +392,9 @@ Conclusion
 Now with Salt Virt running, new hypervisors can be seamlessly added just by
 running the above states on new bare metal machines, and these machines will be
 instantly available to Salt Virt.
+
+.. links
+.. _qcow:
+    https://en.wikipedia.org/wiki/Qcow
+.. _rebase:
+    https://docs.fedoraproject.org/en-US/Fedora/18/html/Virtualization_Administration_Guide/sect-Virtualization-Tips_and_tricks-Using_qemu_img.html
