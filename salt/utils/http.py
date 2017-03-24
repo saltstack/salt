@@ -301,9 +301,15 @@ def query(url,
                 log.error('The client-side certificate path that was passed is '
                           'not valid: {0}'.format(cert))
 
-        result = sess.request(
-            method, url, params=params, data=data, **req_kwargs
-        )
+        try:
+            result = sess.request(
+                method, url, params=params, data=data, **req_kwargs
+            )
+        except requests.RequestException as exc:
+            ret['status'] = exc.code
+            ret['error'] = str(exc)
+            return ret
+
         result.raise_for_status()
         if stream is True:
             # fake a HTTP response header
