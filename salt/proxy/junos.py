@@ -89,7 +89,7 @@ def init(opts):
                      'baud',
                      'attempts',
                      'auto_probe',
-                     'ssh_private_key',
+                     'ssh_private_key_file',
                      'ssh_config',
                      'normalize'
                      ]

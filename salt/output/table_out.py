@@ -3,6 +3,8 @@
 Display output in a table format
 =================================
 
+.. versionadded:: Nitrogen
+
 This outputter displays a sequence of rows as table.
 
 Example output::

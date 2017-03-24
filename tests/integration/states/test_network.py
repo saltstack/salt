@@ -49,5 +49,11 @@ class NetworkTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         state_key = 'network_|-system_|-system_|-system'
 
+        global_settings = self.run_function('ip.get_network_settings')
         ret = self.run_function('state.sls', mods='network.system', test=True)
-        self.assertIn('Global network settings are set to be updated:', ret[state_key]['comment'])
+        self.assertIn(
+            'Global network settings are set to be {0}'.format(
+                'added' if not global_settings else 'updated'
+            ),
+            ret[state_key]['comment']
+        )
