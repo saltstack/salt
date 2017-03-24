@@ -7,9 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from tests.unit import ModuleTestCase, hasDependency
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf
+from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
     MagicMock,
@@ -17,8 +16,6 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 import salt.modules.libcloud_dns as libcloud_dns
-
-SERVICE_NAME = 'libcloud_dns'
 
 
 class MockDNSDriver(object):
@@ -33,29 +30,25 @@ def get_mock_driver():
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.libcloud_dns._get_driver',
        MagicMock(return_value=MockDNSDriver()))
-class LibcloudDnsModuleTestCase(ModuleTestCase, LoaderModuleMockMixin):
+class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        return {libcloud_dns: {}}
-
-    def setUp(self):
-        hasDependency('libcloud', fake_module=False)
-
-        def get_config(service):
-            if service == SERVICE_NAME:
-                return {
+        module_globals = {
+            '__salt__': {
+                'config.option': MagicMock(return_value={
                     'test': {
                         'driver': 'test',
                         'key': '2orgk34kgk34g'
                     }
-                }
-            else:
-                raise KeyError("service name invalid")
+                })
+            }
+        }
+        if libcloud_dns.HAS_LIBCLOUD is False:
+            module_globals['sys.modules'] = {'libcloud': MagicMock()}
 
-        self.setup_loader()
-        self.loader.set_result(libcloud_dns, 'config.option', get_config)
+        return {libcloud_dns: module_globals}
 
-    def test_module_creation(self, *args):
+    def test_module_creation(self):
         client = libcloud_dns._get_driver('test')
         self.assertFalse(client is None)
 

@@ -7,17 +7,15 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from tests.unit import ModuleTestCase, hasDependency
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf
+from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
+    MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
 )
 import salt.modules.servicenow as servicenow
-
-SERVICE_NAME = 'servicenow'
 
 
 class MockServiceNowClient(object):
@@ -31,25 +29,21 @@ class MockServiceNowClient(object):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('servicenow_rest.api.Client', MockServiceNowClient)
-class ServiceNowModuleTestCase(ModuleTestCase, LoaderModuleMockMixin):
+class ServiceNowModuleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        return {servicenow: {'Client': MockServiceNowClient}}
-
-    def setUp(self):
-        hasDependency('servicenow_rest')
-
-        def get_config(service):
-            if service == SERVICE_NAME:
-                return {
+        module_globals = {
+            'Client': MockServiceNowClient,
+            '__salt__': {
+                'config.option': MagicMock(return_value={
                     'instance_name': 'test',
                     'username': 'mr_test',
                     'password': 'test123'
-                }
-            else:
-                raise KeyError("service name invalid")
-
-        self.setup_loader()
-        self.loader.set_result(servicenow, 'config.option', get_config)
+                })
+            }
+        }
+        if servicenow.HAS_LIBS is False:
+            module_globals['sys.modules'] = {'servicenow_rest': MagicMock()}
+        return {servicenow: module_globals}
 
     def test_module_creation(self):
         client = servicenow._get_client()
