@@ -94,6 +94,7 @@ def _verify(vm_):
     if win_installer:
 
         # No support for Windows at this time
+        log.warning('Credential verification is not available for Windows targets')
         return None
 
     else:

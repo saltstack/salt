@@ -119,3 +119,21 @@ Connectivity to the new "Salted" instances can now be verified with Salt:
 .. code-block:: bash
 
     salt 'my-instance-*' test.ping
+
+Credential Verification
+=======================
+
+Because the Saltify driver does not actually create VM's, unlike other
+salt-cloud drivers, it has special behaviour when the ``deploy`` option is set
+to ``False``. When the cloud configuration specifies ``deploy: False``, the
+Saltify driver will attept to authenticate to the target node(s) and return
+``True`` for each one that succeeds. This can be useful to verify ports,
+protocols, services and credentials are correctly configured before a live
+deployment.
+
+Return values:
+  - ``True``: Credential verification succeeded
+  - ``False``: Credential verification succeeded
+  - ``None``: Credential verification was not attempted.
+
+.. note:: This feature is not available for Windows targets.
