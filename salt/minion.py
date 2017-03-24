@@ -1065,7 +1065,7 @@ class Minion(MinionBase):
                 func = minion_instance.functions[data['fun']]
                 args, kwargs = load_args_and_kwargs(
                     func,
-                    data['arg'],
+                    salt.utils.args.parse_input(data['arg']),
                     data)
                 minion_instance.functions.pack['__context__']['retcode'] = 0
                 if opts.get('sudo_user', ''):
