@@ -355,7 +355,7 @@ def _get_private_key_obj(private_key, passphrase=None):
     Returns a private key object based on PEM text.
     '''
     private_key = _text_or_file(private_key)
-    private_key = get_pem_entry(private_key, pem_type='RSA PRIVATE KEY')
+    private_key = get_pem_entry(private_key, pem_type='(?:RSA )?PRIVATE KEY')
     rsaprivkey = M2Crypto.RSA.load_key_string(
         private_key, callback=_passphrase_callback(passphrase))
     evpprivkey = M2Crypto.EVP.PKey()
@@ -765,7 +765,7 @@ def write_pem(text, path, overwrite=True, pem_type=None):
         except salt.exceptions.SaltInvocationError:
             pass
         try:
-            _private_key = get_pem_entry(_filecontents, 'RSA PRIVATE KEY')
+            _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
         except salt.exceptions.SaltInvocationError:
             pass
     with salt.utils.fopen(path, 'w') as _fp:
@@ -842,7 +842,7 @@ def create_private_key(path=None,
         return write_pem(
             text=bio.read_all(),
             path=path,
-            pem_type='RSA PRIVATE KEY'
+            pem_type='(?:RSA )?PRIVATE KEY'
         )
     else:
         return bio.read_all()

@@ -913,7 +913,7 @@ def dacl(obj_name=None, obj_type='file'):
                             self.ace_perms[obj_type]['advanced'][perm])
 
             # If still nothing, it must be undefined
-            if not ace_perms[0]:
+            if not ace_perms:
                 ace_perms = ['Undefined Permission: {0}'.format(ace[1])]
 
             return principal, ace_type, ace_prop, ace_perms, inherited
@@ -1035,6 +1035,10 @@ def get_sid(principal):
         # Verify that the sid is valid
         salt.utils.win_dacl.get_sid('S-1-5-32-544')
     '''
+    # If None is passed, use the Universal Well-known SID "Null SID"
+    if principal is None:
+        principal = 'NULL SID'
+
     # Test if the user passed a sid or a name
     try:
         sid = salt.utils.win_functions.get_sid_from_name(principal)
@@ -1074,6 +1078,10 @@ def get_sid_string(principal):
         # Get the string version of the SID
         salt.utils.win_dacl.get_sid_string(py_sid)
     '''
+    # If None is passed, use the Universal Well-known SID "Null SID"
+    if principal is None:
+        principal = 'NULL SID'
+
     try:
         return win32security.ConvertSidToStringSid(principal)
     except TypeError:
@@ -1104,6 +1112,10 @@ def get_name(principal):
         salt.utils.win_dacl.get_name('S-1-5-32-544')
         salt.utils.win_dacl.get_name('adminisTrators')
     '''
+    # If None is passed, use the Universal Well-known SID for "Null SID"
+    if principal is None:
+        principal = 'S-1-0-0'
+
     # Assume PySID object
     sid_obj = principal
 

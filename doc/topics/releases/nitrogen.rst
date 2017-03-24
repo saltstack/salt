@@ -61,6 +61,50 @@ State Module Changes
   start/stop the service using the ``--no-block`` flag in the ``systemctl``
   command. On non-systemd minions, a warning will be issued.
 
+- The :py:func:`module.run <salt.states.module.run>` state has dropped its previous
+  syntax with ``m_`` prefix for reserved keywords. Additionally, it allows
+  running several functions in a batch.
+
+.. note::
+    It is nesessary to explicitly turn on the new behaviour (see below)
+
+  Before and after:
+
+.. code-block:: yaml
+
+    # Before
+    run_something:
+      module.run:
+        - name: mymodule.something
+        - m_name: 'some name'
+        - kwargs: {
+          first_arg: 'one',
+          second_arg: 'two',
+          do_stuff: 'True'
+        }
+
+    # After
+    run_something:
+      module.run:
+        mymodule.something:
+          - name: some name
+          - first_arg: one
+          - second_arg: two
+          - do_stuff: True
+
+- Previous behaviour of the function :py:func:`module.run <salt.states.module.run>` is
+  still kept by default and can be bypassed in case you want to use behaviour above.
+  Please keep in mind that the old syntax will no longer be supported in the ``Oxygen``
+  release of Salt. To enable the new behavior, add the following to the minion config file:
+
+
+.. code-block:: yaml
+
+    use_superseded:
+      - module.run
+
+
+
 Execution Module Changes
 ========================
 
@@ -119,6 +163,12 @@ Master Configuration Additions
   when connected to multiple masters to be able to send events to all connected
   masters.
 
+- :conf_master:`eauth_acl_module` - In case external auth is enabled master can
+  get authenticate and get the authorization list from different auth modules.
+
+- :conf_master:`keep_acl_in_token` - Option that allows master to build ACL once
+  for each user being authenticated and keep it in the token.
+
 Minion Configuration Additions
 ==============================
 
@@ -161,17 +211,93 @@ git_pillar "mountpoints" Feature Added
 
 See :ref:`here <git-pillar-mountpoints>` for detailed documentation.
 
-``dockerng`` State/Execution Module Renamed to ``docker``
-=========================================================
+Big Improvements to Docker Support
+==================================
 
 The old ``docker`` state and execution modules have been moved to
-salt-contrib_. The ``dockerng`` state and execution module have been renamed to
-``docker`` and now serve as the official Docker state and execution modules.
+salt-contrib_. The ``dockerng`` execution module has been renamed to
+:mod:`docker <salt.modules.docker>` and now serves as Salt's official Docker
+execution module.
 
-These state and execution modules can be used interchangeably both with
-``docker`` and ``dockerng`` to preserve backward-compatibility, but it is
-recommended to update your SLS files to use ``docker`` instead of ``dockerng``
-in event that the ``dockerng`` alias is dropped in a future release.
+The old ``dockerng`` state module has been split into 4 state modules:
+
+- :mod:`docker_container <salt.states.docker_container>` - States to manage
+  Docker containers
+- :mod:`docker_image <salt.states.docker_image>` - States to manage Docker
+  images
+- :mod:`docker_volume <salt.states.docker_volume>` - States to manage
+  Docker volumes
+- :mod:`docker_network <salt.states.docker_network>` - States to manage
+  Docker networks
+
+The reason for this change was to make states and requisites more clear. For
+example, imagine this SLS:
+
+.. code-block:: yaml
+
+    myuser/appimage:
+      docker.image_present:
+        - sls: docker.images.appimage
+
+    myapp:
+      docker.running:
+        - image: myuser/appimage
+        - require:
+          - docker: myuser/appimage
+
+The new syntax would be:
+
+.. code-block:: yaml
+
+    myuser/appimage:
+      docker_image.present:
+        - sls: docker.images.appimage
+
+    myapp:
+      docker_container.running:
+        - image: myuser/appimage
+        - require:
+          - docker_image: myuser/appimage
+
+This is similar to how Salt handles MySQL, MongoDB, Zabbix, and other cases
+where the same execution module is used to manage several different kinds
+of objects (users, databases, roles, etc.).
+
+The old syntax will continue to work until the **Fluorine** release of Salt.
+The old ``dockerng`` naming will also continue to work until that release, so
+no immediate changes need to be made to your SLS files (unless you were still
+using the old docker states that have been moved to salt-contrib_).
+
+The :py:func:`docker_container.running <salt.states.docker_container.running>`
+state has undergone a significant change in how it determines whether or not a
+container needs to be replaced. Rather than comparing individual arguments to
+their corresponding values in the named container, a temporary container is
+created (but not started) using the passed arguments. The two containers are
+then compared to each other to determine whether or not there are changes, and
+if so, the old container is stopped and destroyed, and the temporary container
+is renamed and started.
+
+Salt still needs to translate arguments into the format which docker-py
+expects, but if it does not properly do so, the :ref:`skip_translate
+<docker-container-running-skip-translate>` argument can be used to skip input
+translation on an argument-by-argument basis, and you can then format your SLS
+file to pass the data in the format that the docker-py expects. This allows you
+to work around any changes in Docker's API or issues with the input
+translation, and continue to manage your Docker containers using Salt. Read the
+documentation for :ref:`skip_translate
+<docker-container-running-skip-translate>` for more information.
+
+.. note::
+    When running the :py:func:`docker_container.running
+    <salt.states.docker_container.running>` state for the first time after
+    upgrading to Nitrogen, your container(s) may be replaced. The changes may
+    show diffs for certain parameters which say that the old value was an empty
+    string, and the new value is ``None``. This is due to the fact that in
+    prior releases Salt was passing empty strings for these values when
+    creating the container if they were undefined in the SLS file, where now
+    Salt simply does not pass any arguments not explicitly defined in the SLS
+    file. Subsequent runs of the state should not replace the container if the
+    configuration remains unchanged.
 
 .. _salt-contrib: https://github.com/saltstack/salt-contrib
 

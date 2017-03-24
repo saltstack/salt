@@ -10,7 +10,6 @@ import os
 import shutil
 import socket
 import string
-import subprocess
 import tempfile
 
 # Import Salt Testing libs
@@ -224,8 +223,8 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         try:
             # Mirror the repo
-            self.run_function('git.clone',
-                              [mirror_dir, repo_url, None, '--mirror'])
+            self.run_function(
+                'git.clone', [mirror_dir], url=repo_url, opts='--mirror')
 
             # Make sure the directory for the mirror now exists
             self.assertTrue(os.path.exists(mirror_dir))
@@ -242,7 +241,11 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             head_pre = _head(admin_dir)
             with open(os.path.join(admin_dir, 'LICENSE'), 'a') as fp_:
                 fp_.write('Hello world!')
-            self.run_function('git.commit', [admin_dir, 'Added a line', '-a'])
+            self.run_function(
+                'git.commit', [admin_dir, 'added a line'],
+                git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
+                opts='-a',
+            )
             # Make sure HEAD is pointing to a new SHA so we know we properly
             # committed our change.
             head_post = _head(admin_dir)
@@ -270,7 +273,6 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         is the rev used for the git.latest state.
         '''
         name = os.path.join(integration.TMP, 'salt_repo')
-        cwd = os.getcwd()
         try:
             # Clone repo
             ret = self.run_state(
@@ -283,17 +285,14 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
             # Check out a new branch in the clone and make a commit, to ensure
             # that when we re-run the state, it is not a fast-forward change
-            os.chdir(name)
-            with salt.utils.fopen(os.devnull, 'w') as devnull:
-                subprocess.check_call(['git', 'checkout', '-b', 'new_branch'],
-                                      stdout=devnull, stderr=devnull)
-                with salt.utils.fopen('foo', 'w'):
-                    pass
-                subprocess.check_call(['git', 'add', '.'],
-                                      stdout=devnull, stderr=devnull)
-                subprocess.check_call(['git', 'commit', '-m', 'add file'],
-                                      stdout=devnull, stderr=devnull)
-            os.chdir(cwd)
+            self.run_function('git.checkout', [name, 'new_branch'], opts='-b')
+            with salt.utils.fopen(os.path.join(name, 'foo'), 'w'):
+                pass
+            self.run_function('git.add', [name, '.'])
+            self.run_function(
+                'git.commit', [name, 'add file'],
+                git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
+            )
 
             # Re-run the state, this should fail with a specific hint in the
             # comment field.
@@ -308,9 +307,6 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             comment = ret[next(iter(ret))]['comment']
             self.assertTrue(hint in comment)
         finally:
-            # Make sure that we change back to the original cwd even if there
-            # was a traceback in the test.
-            os.chdir(cwd)
             shutil.rmtree(name, ignore_errors=True)
 
     def test_latest_changed_local_branch_rev_head(self):
@@ -342,33 +338,21 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         Ensure that we don't exit early when checking for a fast-forward
         '''
-        orig_cwd = os.getcwd()
         name = tempfile.mkdtemp(dir=integration.TMP)
         target = os.path.join(integration.TMP, 'test_latest_updated_remote_rev')
 
         # Initialize a new git repository
-        subprocess.check_call(['git', 'init', '--quiet', name])
+        self.run_function('git.init', [name])
 
         try:
-            os.chdir(name)
-            # Set user.name and user.email config attributes if not present
-            for key, value in (('user.name', 'Jenkins'),
-                               ('user.email', 'qa@saltstack.com')):
-                # Check if key is missing
-                keycheck = subprocess.Popen(
-                    ['git', 'config', '--get', key],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE)
-                if keycheck.wait() != 0:
-                    # Set the key if it is not present
-                    subprocess.check_call(
-                        ['git', 'config', key, value])
-
             # Add and commit a file
-            with salt.utils.fopen('foo.txt', 'w') as fp_:
+            with salt.utils.fopen(os.path.join(name, 'foo.txt'), 'w') as fp_:
                 fp_.write('Hello world\n')
-            subprocess.check_call(['git', 'add', '.'])
-            subprocess.check_call(['git', 'commit', '-qm', 'init'])
+            self.run_function('git.add', [name, '.'])
+            self.run_function(
+                'git.commit', [name, 'initial commit'],
+                git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
+            )
 
             # Run the state to clone the repo we just created
             ret = self.run_state(
@@ -381,7 +365,11 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # Add another commit
             with salt.utils.fopen('foo.txt', 'w') as fp_:
                 fp_.write('Added a line\n')
-            subprocess.check_call(['git', 'commit', '-aqm', 'added a line'])
+            self.run_function(
+                'git.commit', [name, 'added a line'],
+                git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
+                opts='-a',
+            )
 
             # Run the state again. It should pass, if it doesn't then there was
             # a problem checking whether or not the change is a fast-forward.
@@ -392,7 +380,6 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltTrueReturn(ret)
         finally:
-            os.chdir(orig_cwd)
             for path in (name, target):
                 try:
                     shutil.rmtree(path)
@@ -463,7 +450,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         name = tempfile.mkdtemp(dir=integration.TMP)
         self.addCleanup(shutil.rmtree, name, ignore_errors=True)
-        subprocess.check_call(['git', 'init', '--quiet', name])
+        self.run_function('git.init', [name])
 
         ret = self.run_state(
             'git.config_set',
@@ -484,35 +471,25 @@ class LocalRepoGitTest(integration.ModuleCase, integration.SaltReturnAssertsMixI
         Test the case where the remote branch has been removed
         https://github.com/saltstack/salt/issues/36242
         '''
-        cwd = os.getcwd()
         repo = tempfile.mkdtemp(dir=integration.TMP)
         admin = tempfile.mkdtemp(dir=integration.TMP)
         name = tempfile.mkdtemp(dir=integration.TMP)
         for dirname in (repo, admin, name):
             self.addCleanup(shutil.rmtree, dirname, ignore_errors=True)
-        self.addCleanup(os.chdir, cwd)
 
-        with salt.utils.fopen(os.devnull, 'w') as devnull:
-            # Create bare repo
-            subprocess.check_call(['git', 'init', '--bare', repo],
-                                  stdout=devnull, stderr=devnull)
-            # Clone bare repo
-            subprocess.check_call(['git', 'clone', repo, admin],
-                                  stdout=devnull, stderr=devnull)
-
-            # Create, add, commit, and push file
-            os.chdir(admin)
-            with salt.utils.fopen('foo', 'w'):
-                pass
-            subprocess.check_call(['git', 'add', '.'],
-                                  stdout=devnull, stderr=devnull)
-            subprocess.check_call(['git', 'commit', '-m', 'init'],
-                                  stdout=devnull, stderr=devnull)
-            subprocess.check_call(['git', 'push', 'origin', 'master'],
-                                  stdout=devnull, stderr=devnull)
-
-        # Change back to the original cwd
-        os.chdir(cwd)
+        # Create bare repo
+        self.run_function('git.init', [repo], bare=True)
+        # Clone bare repo
+        self.run_function('git.clone', [admin], url=repo)
+        # Create, add, commit, and push file
+        with salt.utils.fopen(os.path.join(admin, 'foo'), 'w'):
+            pass
+        self.run_function('git.add', [admin, '.'])
+        self.run_function(
+            'git.commit', [admin, 'initial commit'],
+            git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
+        )
+        self.run_function('git.push', [admin], remote='origin', ref='master')
 
         # Rename remote 'master' branch to 'develop'
         os.rename(

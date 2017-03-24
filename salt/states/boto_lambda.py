@@ -147,12 +147,24 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
         64 MB.
 
     VpcConfig
-        If your Lambda function accesses resources in a VPC, you provide this
-        parameter identifying the list of security group IDs and subnet IDs.
-        These must belong to the same VPC. You must provide at least one
-        security group and one subnet ID.
+        If your Lambda function accesses resources in a VPC, you must provide this parameter
+        identifying the list of security group IDs/Names and subnet IDs/Name.  These must all belong
+        to the same VPC.  This is a dict of the form:
 
-        .. versionadded:: 2016.11.0
+        .. code-block:: yaml
+            VpcConfig:
+                SecurityGroupNames:
+                - mysecgroup1
+                - mysecgroup2
+                SecurityGroupIds:
+                - sg-abcdef1234
+                SubnetNames:
+                - mysubnet1
+                SubnetIds:
+                - subnet-1234abcd
+                - subnet-abcd1234
+
+        If VpcConfig is provided at all, you MUST pass at least one security group and one subnet.
 
     Permissions
         A list of permission definitions to be added to the function's policy
@@ -305,6 +317,22 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
     return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
 
 
+def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
+    if isinstance(conf, six.string_types):
+        conf = json.loads(conf)
+    if not conf:
+        return None
+    if not isinstance(conf, dict):
+        raise SaltInvocationError('VpcConfig must be a dict.')
+    sns = [__salt__['boto_vpc.get_resource_id']('subnet', s, region=region, key=key,
+            keyid=keyid, profile=profile).get('id') for s in conf.pop('SubnetNames', [])]
+    sgs = [__salt__['boto_secgroup.get_group_id'](s, region=region, key=key, keyid=keyid,
+            profile=profile) for s in conf.pop('SecurityGroupNames', [])]
+    conf.setdefault('SubnetIds', []).extend(sns)
+    conf.setdefault('SecurityGroupIds', []).extend(sgs)
+    return conf
+
+
 def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
                              MemorySize, VpcConfig, Environment, region,
                              key, keyid, profile, RoleRetries):
@@ -329,7 +357,8 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
     oldval = func.get('VpcConfig')
     if oldval is not None:
         oldval.pop('VpcId', None)
-    if oldval != VpcConfig:
+    fixed_VpcConfig = _resolve_vpcconfig(VpcConfig, region, key, keyid, profile)
+    if __utils__['boto3.ordered'](oldval) != __utils__['boto3.ordered'](fixed_VpcConfig):
         need_update = True
         ret['changes'].setdefault('new', {})['VpcConfig'] = VpcConfig
         ret['changes'].setdefault(

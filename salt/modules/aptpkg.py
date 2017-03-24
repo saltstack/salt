@@ -2106,6 +2106,9 @@ def mod_repo(repo, saltenv='base', **kwargs):
         key_url
             URL to a GPG key to add to the APT GPG keyring
 
+        key_text
+            GPG key in string form to add to the APT GPG keyring
+
         consolidate
             if ``True``, will attempt to de-dup and consolidate sources
 
@@ -2303,6 +2306,16 @@ def mod_repo(repo, saltenv='base', **kwargs):
         if not out.upper().startswith('OK'):
             raise CommandExecutionError(
                 'Error: failed to add key from {0}'.format(key_url)
+            )
+
+    elif 'key_text' in kwargs:
+        key_text = kwargs['key_text']
+        cmd = ['apt-key', 'add', '-']
+        out = __salt__['cmd.run_stdout'](cmd, stdin=key_text,
+                                         python_shell=False, **kwargs)
+        if not out.upper().startswith('OK'):
+            raise CommandExecutionError(
+                'Error: failed to add key:\n{0}'.format(key_text)
             )
 
     if 'comps' in kwargs:

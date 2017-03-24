@@ -3,22 +3,31 @@
 Management of Docker Containers
 
 .. versionadded:: 2015.8.0
+.. versionchanged:: Nitrogen
+    This module has replaced the legacy docker execution module.
 
-:depends: docker-py_ Python module
+:depends: docker_ Python module
 
-Installation Prerequisites
---------------------------
+.. note::
+    Older releases of the Python bindings for Docker were called docker-py_ in
+    PyPI. All releases of docker_, and releases of docker-py_ >= 1.6.0 are
+    supported. These python bindings can easily be installed using
+    :py:func:`pip.install <salt.modules.pip.install>`:
 
-This execution module requires at least version 1.6.0 of docker-py_ and
-version 1.9.0 of Docker_. docker-py can easily be installed using
-:py:func:`pip.install <salt.modules.pip.install>`:
+    .. code-block:: bash
 
-.. code-block:: bash
+        salt myminion pip.install docker
 
-    salt myminion pip.install docker-py>=1.6.0
+    To upgrade from docker-py_ to docker_, you must first uninstall docker-py_,
+    and then install docker_:
 
+    .. code-block:: bash
+
+        salt myminion pip.uninstall docker-py
+        salt myminion pip.install docker
+
+.. _docker: https://pypi.python.org/pypi/docker
 .. _docker-py: https://pypi.python.org/pypi/docker-py
-.. _Docker: https://www.docker.com/
 
 .. _docker-authentication:
 
@@ -281,9 +290,9 @@ import subprocess
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.ext.six as six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
-from salt.utils.args import get_function_argspec as _argspec
 import salt.utils
 import salt.utils.decorators
+import salt.utils.docker
 import salt.utils.files
 import salt.utils.thin
 import salt.pillar
@@ -300,18 +309,6 @@ try:
     HAS_DOCKER_PY = True
 except ImportError:
     HAS_DOCKER_PY = False
-
-# These next two imports are only necessary to have access to the needed
-# functions so that we can get argspecs for the container config, host config,
-# and networking config (see the get_client_args() function).
-try:
-    import docker.types
-except ImportError:
-    pass
-try:
-    import docker.utils
-except ImportError:
-    pass
 
 try:
     if six.PY2:
@@ -343,250 +340,11 @@ MIN_DOCKER_PY = (1, 6, 0)
 
 VERSION_RE = r'([\d.]+)'
 
-# Default timeout as of docker-py 1.0.0
-CLIENT_TIMEOUT = 60
-
-# Timeout for stopping the container, before a kill is invoked
-STOP_TIMEOUT = 10
-
 NOTSET = object()
 
 # Define the module's virtual name and alias
 __virtualname__ = 'docker'
 __virtual_aliases__ = ('dockerng',)
-
-'''
-The below two dictionaries contain information on the kwargs which are
-acceptable in the docker.create and docker.start functions, respectively. The
-aim is to make adding new arguments easy, and to keep all of the various
-information needed to validate the input organized nicely.
-
-There are 6 different keys which may be present in the sub-dict for each
-argument name:
-
-1. api_name - Some parameter names used in docker-py are not clear enough in
-   their naming, so Salt uses a different name. For those where the Salt
-   function's parameter name differs from docker-py, include this key so that
-   Salt knows to pass the value to docker-py with the appropriate name.
-
-2. validator - The lack of this key means that a custom validation function
-   named in the format _valid_<keyname> must exist within _validate_input().
-   Otherwise, for simple type validation, the value should be a string, and
-   there should be a function named in the format _valid_<string> (e.g.
-   _valid_bool) within _validate_input().
-
-3. path - Refers to the nested path in the docker.inspect_container return
-   data where that value is stored. This will only be used by the _compare()
-   function in salt/states/docker.py.
-
-4. default - Many of the CLI options will default to None, but for booleans and
-   integer values (and some others) we want to ensure that someone isn't able
-   to pass ``None`` through to the docker-py function call. For these
-   instances, specify the default value for a parameter using this key.
-
-5. min_docker - As features get added to Docker, we want to be able to provide
-   useful feedback in the exception if someone passes an option which isn't
-   supported by the installed version of Docker. For options which are newer
-   than the oldest supported Docker version (currently 1.0.0 but this is
-   subject to change), this key should be set to a version_info-style tuple
-   which can be used to compare against the installed version of Docker.
-
-6. min_docker_py - Same as above for min_docker, but this refers to the version
-   of docker-py itself.
-'''
-
-VALID_CREATE_OPTS = {
-    'command': {
-        'path': 'Config:Cmd',
-        'image_path': 'Config:Cmd',
-    },
-    'hostname': {
-        'validator': 'string',
-        'path': 'Config:Hostname',
-        'get_default_from_container': True,
-    },
-    'domainname': {
-        'validator': 'string',
-        'path': 'Config:Domainname',
-        'get_default_from_container': True,
-    },
-    'interactive': {
-        'api_name': 'stdin_open',
-        'validator': 'bool',
-        'path': 'Config:OpenStdin',
-        'default': False,
-    },
-    'tty': {
-        'validator': 'bool',
-        'path': 'Config:Tty',
-        'default': False,
-    },
-    'user': {
-        'path': 'Config:User',
-        'default': '',
-    },
-    'detach': {
-        'validator': 'bool',
-        'path': ('Config:AttachStdout', 'Config:AttachStderr'),
-        'default': False,
-    },
-    'memory': {
-        'api_name': 'mem_limit',
-        'path': 'HostConfig:Memory',
-        'default': 0,
-    },
-    'memory_swap': {
-        'api_name': 'memswap_limit',
-        'path': 'HostConfig:MemorySwap',
-        'get_default_from_container': True,
-    },
-    'mac_address': {
-        'validator': 'string',
-        'path': 'NetworkSettings:MacAddress',
-        'get_default_from_container': True,
-    },
-    'network_disabled': {
-        'validator': 'bool',
-        'path': 'Config:NetworkDisabled',
-        'default': False,
-    },
-    'ports': {
-        'path': 'Config:ExposedPorts',
-        'image_path': 'Config:ExposedPorts',
-    },
-    'working_dir': {
-        'path': 'Config:WorkingDir',
-        'image_path': 'Config:WorkingDir',
-    },
-    'entrypoint': {
-        'path': 'Config:Entrypoint',
-        'image_path': 'Config:Entrypoint',
-    },
-    'environment': {
-        'path': 'Config:Env',
-        'default': [],
-    },
-    'volumes': {
-        'path': 'Config:Volumes',
-        'image_path': 'Config:Volumes',
-    },
-    'stop_signal': {
-        'validator': 'string',
-        'path': 'Config:StopSignal',
-        'min_docker': (1, 9, 0),
-        'default': '',
-    },
-    'cpu_shares': {
-        'validator': 'number',
-        'path': 'HostConfig:CpuShares',
-        'default': 0,
-    },
-    'cpuset': {
-        'path': 'HostConfig:CpusetCpus',
-        'default': '',
-    },
-    'labels': {
-        'path': 'Config:Labels',
-        'image_path': 'Config:Labels',
-        'default': {},
-    },
-    'binds': {
-        'path': 'HostConfig:Binds',
-        'default': None,
-    },
-    'port_bindings': {
-        'path': 'HostConfig:PortBindings',
-        'default': None,
-    },
-    'lxc_conf': {
-        'validator': 'dict',
-        'path': 'HostConfig:LxcConf',
-        'default': None,
-    },
-    'security_opt': {
-        'path': 'HostConfig:SecurityOpt',
-    },
-    'publish_all_ports': {
-        'validator': 'bool',
-        'path': 'HostConfig:PublishAllPorts',
-        'default': False,
-    },
-    'links': {
-        'path': 'HostConfig:Links',
-        'default': None,
-    },
-    'privileged': {
-        'validator': 'bool',
-        'path': 'HostConfig:Privileged',
-        'default': False,
-    },
-    'dns': {
-        'path': 'HostConfig:Dns',
-        'default': [],
-    },
-    'dns_search': {
-        'validator': 'stringlist',
-        'path': 'HostConfig:DnsSearch',
-        'default': [],
-    },
-    'volumes_from': {
-        'path': 'HostConfig:VolumesFrom',
-        'default': None,
-    },
-    'network_mode': {
-        'path': 'HostConfig:NetworkMode',
-        'default': 'default',
-    },
-    'restart_policy': {
-        'path': 'HostConfig:RestartPolicy',
-        'min_docker': (1, 2, 0),
-        'default': {'MaximumRetryCount': 0, 'Name': ''},
-    },
-    'cap_add': {
-        'validator': 'stringlist',
-        'path': 'HostConfig:CapAdd',
-        'min_docker': (1, 2, 0),
-        'default': None,
-    },
-    'cap_drop': {
-        'validator': 'stringlist',
-        'path': 'HostConfig:CapDrop',
-        'min_docker': (1, 2, 0),
-        'default': None,
-    },
-    'extra_hosts': {
-        'path': 'HostConfig:ExtraHosts',
-        'min_docker': (1, 3, 0),
-        'default': None,
-    },
-    'pid_mode': {
-        'path': 'HostConfig:PidMode',
-        'min_docker': (1, 5, 0),
-        'default': '',
-    },
-    'log_config': {
-        'path': 'HostConfig:LogConfig',
-        'min_docker': (1, 4, 0),
-        'default': {
-            'Type': None,
-            'Config': {},
-        }
-    },
-    'devices': {
-        'path': 'HostConfig:Devices',
-    },
-    'sysctls': {
-        'path': 'HostConfig:Sysctls',
-        'min_docker': (1, 12, 0),
-        'default': {},
-    },
-    'ulimits': {
-        'path': 'HostConfig:Ulimits',
-        'min_docker': (1, 6, 0),
-        'min_docker_py': (1, 2, 0),
-        'default': [],
-    },
-}
 
 
 def __virtual__():
@@ -712,7 +470,8 @@ def _docker_client(wrapped):
         '''
         Ensure that the client is present
         '''
-        client_timeout = __context__.get('docker.timeout', CLIENT_TIMEOUT)
+        client_timeout = __context__.get('docker.timeout',
+                                         salt.utils.docker.CLIENT_TIMEOUT)
         _get_client(timeout=client_timeout)
         return wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
     return wrapper
@@ -806,6 +565,8 @@ def _get_client(timeout=None):
         - docker.url: URL to the docker service
         - docker.version: API version to use (default: "auto")
     '''
+    # In some edge cases, the client instance is missing attributes. Don't use
+    # the cached client in those cases.
     if 'docker.client' not in __context__ \
             or not hasattr(__context__['docker.client'], 'timeout'):
         client_kwargs = {}
@@ -871,33 +632,6 @@ def _get_exec_driver():
     Get the method to be used in shell commands
     '''
     contextkey = 'docker.exec_driver'
-    '''
-    docker-exec won't be used by default until we reach a version where it
-    supports running commands as a user other than the effective user of the
-    container.
-
-    See: https://groups.google.com/forum/#!topic/salt-users/i6Eq4rf5ml0
-
-    if contextkey in __context__:
-        return __context__[contextkey]
-
-    from_config = __salt__['config.get'](contextkey, None)
-    if from_config is not None:
-        __context__[contextkey] = from_config
-    else:
-        _version = version()
-        if 'VersionInfo' in _version:
-            if _version['VersionInfo'] >= (1, 3, 0):
-                __context__[contextkey] = 'docker-exec'
-        elif salt.utils.versions.LooseVersion(version()['Version']) \
-                >= salt.utils.versions.LooseVersion('1.3.0'):
-            # LooseVersion is less preferable, but OK as a fallback.
-            __context__[contextkey] = 'docker-exec'
-
-    # If the version_info tuple revealed a version < 1.3.0, the key will yet to
-    # have been set in __context__, so we'll check if it's there yet and if
-    # not, proceed with detecting execution driver from the output of info().
-    '''  # pylint: disable=pointless-string-statement
     if contextkey not in __context__:
         from_config = __salt__['config.get'](contextkey, None)
         # This if block can be removed once we make docker-exec a default
@@ -929,25 +663,6 @@ def _get_exec_driver():
                 'command to attach to the container'.format(driver)
             )
     return __context__[contextkey]
-
-
-def _get_repo_tag(image, default_tag='latest'):
-    '''
-    Resolves the docker repo:tag notation and returns repo name and tag
-    '''
-    if ':' in image:
-        r_name, r_tag = image.rsplit(':', 1)
-        if not r_tag:
-            # Would happen if some wiseguy requests a tag ending in a colon
-            # (e.g. 'somerepo:')
-            log.warning(
-                'Assuming tag \'%s\' for repo \'%s\'', default_tag, image
-            )
-            r_tag = default_tag
-    else:
-        r_name = image
-        r_tag = default_tag
-    return r_name, r_tag
 
 
 def _get_top_level_images(imagedata, subset=None):
@@ -1248,861 +963,140 @@ def _error_detail(data, item):
     data.append(msg)
 
 
-def _validate_input(kwargs,
-                    validate_ip_addrs=True):
+# Functions to handle docker-py client args
+def get_client_args():
     '''
-    Perform validation on kwargs. Checks each key in kwargs against the
-    VALID_CONTAINER_OPTS dict and if the value is None, looks for a local
-    function named in the format _valid_<kwarg> and calls that.
+    .. versionadded:: 2016.3.6,2016.11.4,Nitrogen
+    .. versionchanged:: Nitrogen
+        Replaced the container config args with the ones from the API's
+        ``create_container`` function.
 
-    The validation functions don't need to return anything, they just need to
-    raise a SaltInvocationError if the validation fails.
+    Returns the args for docker-py's `low-level API`_, organized by args for
+    container creation, host config, and networking config.
 
-    Where needed, this function also performs translation on the input,
-    formatting it in a way that will allow it to be passed to either
-    docker.client.Client.create_container() or
-    docker.client.Client.start().
+    .. _`low-level API`: http://docker-py.readthedocs.io/en/stable/api.html
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion docker.get_client_args
     '''
-    # Import here so that these modules are available when _validate_input is
-    # imported into the state module.
-    import os  # pylint: disable=reimported,redefined-outer-name
-    import shlex
+    return salt.utils.docker.get_client_args()
 
-    # Simple type validation
-    def _valid_bool(key):  # pylint: disable=unused-variable
-        '''
-        Ensure that the passed value is a boolean
-        '''
-        if not isinstance(kwargs[key], bool):
-            raise SaltInvocationError(key + ' must be True or False')
 
-    def _valid_dict(key):  # pylint: disable=unused-variable
-        '''
-        Ensure that the passed value is a dictionary
-        '''
-        if not isinstance(kwargs[key], dict):
-            raise SaltInvocationError(key + ' must be a dictionary')
+def _get_create_kwargs(image,
+                       skip_translate=None,
+                       ignore_collisions=False,
+                       **kwargs):
+    '''
+    Take input kwargs and return a kwargs dict to pass to docker-py's
+    create_container() function.
+    '''
+    try:
+        kwargs, invalid, collisions = \
+            salt.utils.docker.translate_input(skip_translate=skip_translate,
+                                              **kwargs)
+    except Exception as translate_exc:
+        error_message = translate_exc.__str__()
+        log.error('docker.create: Error translating input: \'%s\'',
+                  error_message, exc_info=True)
+    else:
+        error_message = None
 
-    def _valid_number(key):  # pylint: disable=unused-variable
-        '''
-        Ensure that the passed value is an int or float
-        '''
-        if not isinstance(kwargs[key], (six.integer_types, float)):
-            raise SaltInvocationError(
-                key + ' must be a number (integer or floating-point)'
+    error_data = {}
+    if invalid:
+        error_data['invalid'] = invalid
+    if collisions and not ignore_collisions:
+        for item in collisions:
+            error_data.setdefault('collisions', []).append(
+                '\'{0}\' is an alias for \'{1}\', they cannot both be used'
+                .format(salt.utils.docker.ALIASES_REVMAP[item], item)
             )
+    if error_message is not None:
+        error_data['error_message'] = error_message
 
-    def _valid_string(key):  # pylint: disable=unused-variable
-        '''
-        Ensure that the passed value is a string
-        '''
-        if not isinstance(kwargs[key], six.string_types):
-            raise SaltInvocationError(key + ' must be a string')
+    if error_data:
+        raise CommandExecutionError('Failed to translate input', info=error_data)
 
-    def _valid_stringlist(key):  # pylint: disable=unused-variable
-        '''
-        Ensure that the passed value is a list of strings
-        '''
-        if isinstance(kwargs[key], six.string_types):
-            kwargs[key] = kwargs[key].split(',')
-        if not isinstance(kwargs[key], list) \
-                or not all([isinstance(x, six.string_types)
-                            for x in kwargs[key]]):
-            raise SaltInvocationError(key + ' must be a list of strings')
+    try:
+        client_args = get_client_args()
+    except CommandExecutionError as exc:
+        log.error('docker.create: Error getting client args: \'%s\'',
+                  exc.__str__(), exc_info=True)
+        raise CommandExecutionError('Failed to get client args: {0}'.format(exc))
 
-    def _valid_dictlist(key):  # pylint: disable=unused-variable
-        '''
-        Ensure the passed value is a list of dictionaries.
-        '''
-        if not salt.utils.is_dictlist(kwargs[key]):
-            raise SaltInvocationError(key + ' must be a list of dictionaries.')
-
-    # Custom validation functions for container creation options
-    def _valid_command():  # pylint: disable=unused-variable
-        '''
-        Must be either a string or a list of strings. Value will be translated
-        to a list of strings
-        '''
-        if kwargs.get('command') is None:
-            # No need to validate
-            return
-        if isinstance(kwargs['command'], six.string_types):
-            # Translate command into a list of strings
-            try:
-                kwargs['command'] = salt.utils.shlex_split(kwargs['command'])
-            except AttributeError:
-                pass
-        try:
-            _valid_stringlist('command')
-        except SaltInvocationError:
-            raise SaltInvocationError(
-                'command/cmd must be a string or list of strings'
-            )
-
-    def _valid_user():  # pylint: disable=unused-variable
-        '''
-        Can be either an integer >= 0 or a string
-        '''
-        if kwargs.get('user') is None:
-            # No need to validate
-            return
-        if isinstance(kwargs['user'], six.string_types) \
-                or isinstance(kwargs['user'], six.integer_types) \
-                and kwargs['user'] >= 0:
-            # Either an int or a string int will work when creating the
-            # container, so just force this to be a string.
-            kwargs['user'] = str(kwargs['user'])
-            return
-        raise SaltInvocationError('user must be a string or a uid')
-
-    def _valid_memory():  # pylint: disable=unused-variable
-        '''
-        must be a positive integer
-        '''
-        if __context__.pop('validation.docker.memory', False):
-            # Don't perform validation again, we already did this
-            return
-        try:
-            kwargs['memory'] = salt.utils.human_size_to_bytes(kwargs['memory'])
-        except ValueError:
-            raise SaltInvocationError(
-                'memory must be an integer, or an integer followed by '
-                'K, M, G, T, or P (example: 512M)'
-            )
-        if kwargs['memory'] < 0:
-            raise SaltInvocationError('memory must be a positive integer')
-        __context__['validation.docker.memory'] = True
-
-    def _valid_memory_swap():  # pylint: disable=unused-variable
-        '''
-        memory_swap can be -1 (swap disabled) or >= memory
-        '''
-        # Ensure that memory was validated first, because we need the munged
-        # version of it below.
-        _valid_memory()
-        try:
-            kwargs['memory_swap'] = \
-                salt.utils.human_size_to_bytes(kwargs['memory_swap'])
-        except ValueError:
-            if kwargs['memory_swap'] == -1:
-                # memory_swap of -1 means swap is disabled
-                return
-            raise SaltInvocationError(
-                'memory must be an integer, or an integer followed by '
-                'K, M, G, T, or P (example: 512M)'
-            )
-        if kwargs['memory_swap'] == 0:
-            # Swap of 0 means unlimited
-            return
-        if kwargs['memory_swap'] < kwargs['memory']:
-            raise SaltInvocationError(
-                'memory_swap cannot be less than memory'
-            )
-
-    def _valid_ports():  # pylint: disable=unused-variable
-        '''
-        Format ports in the documented way:
-        https://docker-py.readthedocs.io/en/stable/port-bindings/
-
-        It's possible to pass this as a dict, and indeed it is returned as such
-        in the inspect output. Passing port configurations as a dict will work
-        with docker-py, but since it is not documented, we will do it as
-        documented to prevent possible breakage in the future.
-        '''
-        if kwargs.get('ports') is None:
-            # no need to validate
-            return
-        if isinstance(kwargs['ports'], six.integer_types):
-            kwargs['ports'] = str(kwargs['ports'])
-        elif isinstance(kwargs['ports'], list):
-            new_ports = [str(x) for x in kwargs['ports']]
-            kwargs['ports'] = new_ports
-        else:
-            try:
-                _valid_stringlist('ports')
-            except SaltInvocationError:
-                raise SaltInvocationError(
-                    'ports must be a comma-separated list or Python list'
-                )
-        new_ports = []
-        for item in kwargs['ports']:
-            # Have to run str() here again in case the ports were passed in a
-            # Python list instead of a string.
-            port_num, _, protocol = str(item).partition('/')
-            if not port_num.isdigit():
-                raise SaltInvocationError(
-                    'Invalid port number \'{0}\' in \'ports\' argument'
-                    .format(port_num)
-                )
+    full_host_config = {}
+    host_kwargs = {}
+    create_kwargs = {}
+    # Using list() becausee we'll be altering kwargs during iteration
+    for arg in list(kwargs):
+        if arg in client_args['host_config']:
+            host_kwargs[arg] = kwargs.pop(arg)
+            continue
+        if arg in client_args['create_container']:
+            if arg == 'host_config':
+                full_host_config.update(kwargs.pop(arg))
             else:
-                port_num = int(port_num)
-            lc_protocol = protocol.lower()
-            if lc_protocol == 'tcp':
-                protocol = ''
-            elif lc_protocol == 'udp':
-                protocol = lc_protocol
-            elif lc_protocol != '':
-                raise SaltInvocationError(
-                    'Invalid protocol \'{0}\' for port {1} in \'ports\' '
-                    'argument'.format(protocol, port_num)
-                )
-            if protocol:
-                new_ports.append((port_num, protocol))
-            else:
-                new_ports.append(port_num)
-        kwargs['ports'] = new_ports
+                create_kwargs[arg] = kwargs.pop(arg)
+            continue
+    create_kwargs['host_config'] = \
+            _client_wrapper('create_host_config', **host_kwargs)
+    # In the event that a full host_config was passed, overlay it on top of the
+    # one we just created.
+    create_kwargs['host_config'].update(full_host_config)
+    # The "kwargs" dict at this point will only contain unused args
+    return create_kwargs, kwargs
 
-    def _valid_working_dir():  # pylint: disable=unused-variable
-        '''
-        Must be an absolute path
-        '''
-        if kwargs.get('working_dir') is None:
-            # No need to validate
-            return
-        _valid_string('working_dir')
-        if not os.path.isabs(kwargs['working_dir']):
-            raise SaltInvocationError('working_dir must be an absolute path')
 
-    def _valid_entrypoint():  # pylint: disable=unused-variable
-        '''
-        Must be a string or list of strings
-        '''
-        if kwargs.get('entrypoint') is None:
-            # No need to validate
-            return
-        if isinstance(kwargs['entrypoint'], six.string_types):
-            # Translate entrypoint into a list of strings
-            try:
-                kwargs['entrypoint'] = salt.utils.shlex_split(kwargs['entrypoint'])
-            except AttributeError:
-                pass
+def compare_container(first, second, ignore=None):
+    '''
+    .. versionadded:: Nitrogen
+
+    Compare two containers' Config and and HostConfig and return any
+    differences between the two.
+
+    first
+        Name or ID of first container
+
+    second
+        Name or ID of second container
+
+    ignore
+        A comma-separated list (or Python list) of keys to ignore when
+        comparing. This is useful when comparing two otherwise identical
+        containers which have different hostnames.
+    '''
+    if ignore is None:
+        ignore = []
+    if not isinstance(ignore, list):
         try:
-            _valid_stringlist('entrypoint')
-        except SaltInvocationError:
-            raise SaltInvocationError(
-                'entrypoint must be a string or list of strings'
-            )
-
-    def _valid_environment():  # pylint: disable=unused-variable
-        '''
-        Can be a list of VAR=value strings, a dictionary, or a single env var
-        represented as a string. Data will be munged into a dictionary.
-        '''
-        if kwargs.get('environment') is None:
-            # No need to validate
-            return
-        if isinstance(kwargs['environment'], list):
-            repacked_env = {}
-            for env_var in kwargs['environment']:
-                try:
-                    key, val = env_var.split('=')
-                except AttributeError:
-                    raise SaltInvocationError(
-                        'Invalid environment variable definition \'{0}\''
-                        .format(env_var)
-                    )
-                else:
-                    if key in repacked_env:
-                        raise SaltInvocationError(
-                            'Duplicate environment variable \'{0}\''
-                            .format(key)
-                        )
-                    if not isinstance(val, six.string_types):
-                        raise SaltInvocationError(
-                            'Environment values must be strings {key}=\'{val}\''
-                            .format(key=key, val=val))
-                    repacked_env[key] = val
-            kwargs['environment'] = repacked_env
-        elif isinstance(kwargs['environment'], dict):
-            for key, val in six.iteritems(kwargs['environment']):
-                if not isinstance(val, six.string_types):
-                    raise SaltInvocationError(
-                        'Environment values must be strings {key}=\'{val}\''
-                        .format(key=key, val=val))
-        elif not isinstance(kwargs['environment'], dict):
-            raise SaltInvocationError(
-                'Invalid environment configuration. See the documentation for '
-                'proper usage.'
-            )
-
-    def _valid_volumes():  # pylint: disable=unused-variable
-        '''
-        Must be a list of absolute paths
-        '''
-        if kwargs.get('volumes') is None:
-            # No need to validate
-            return
-        try:
-            _valid_stringlist('volumes')
-            if not all(os.path.isabs(x) for x in kwargs['volumes']):
-                raise SaltInvocationError()
-        except SaltInvocationError:
-            raise SaltInvocationError(
-                'volumes must be a list of absolute paths'
-            )
-
-    def _valid_cpuset():  # pylint: disable=unused-variable
-        '''
-        Must be a string. If a string integer is passed, convert it to a
-        string.
-        '''
-        if kwargs.get('cpuset') is None:
-            # No need to validate
-            return
-        if isinstance(kwargs['cpuset'], six.integer_types):
-            kwargs['cpuset'] = str(kwargs['cpuset'])
-        try:
-            _valid_string('cpuset')
-        except SaltInvocationError:
-            raise SaltInvocationError('cpuset must be a string or integer')
-
-    # Custom validation functions for runtime options
-    def _valid_binds():  # pylint: disable=unused-variable
-        '''
-        Must be a string or list of strings with bind mount information
-        '''
-        if kwargs.get('binds') is None:
-            # No need to validate
-            return
-        err = (
-            'Invalid binds configuration. See the documentation for proper '
-            'usage.'
-        )
-        if isinstance(kwargs['binds'], six.integer_types):
-            kwargs['binds'] = str(kwargs['binds'])
-        try:
-            _valid_stringlist('binds')
-        except SaltInvocationError:
-            raise SaltInvocationError(err)
-        new_binds = {}
-        for bind in kwargs['binds']:
-            bind_parts = bind.split(':')
-            num_bind_parts = len(bind_parts)
-            if num_bind_parts == 2:
-                host_path, container_path = bind_parts
-                read_only = False
-            elif num_bind_parts == 3:
-                host_path, container_path, read_only = bind_parts
-                if read_only == 'ro':
-                    read_only = True
-                elif read_only == 'rw':
-                    read_only = False
-                else:
-                    raise SaltInvocationError(
-                        'Invalid read-only configuration for bind {0}, must '
-                        'be either \'ro\' or \'rw\''
-                        .format(host_path + '/' + container_path)
-                    )
-            else:
-                raise SaltInvocationError(err)
-
-            if not os.path.isabs(host_path):
-                if os.path.sep in host_path:
-                    raise SaltInvocationError(
-                        'Host path {0} in bind {1} is not absolute'
-                        .format(container_path, bind)
-                    )
-                log.warning(
-                    'Host path %s in bind %s is not absolute, assuming it is '
-                    'a docker volume.', host_path, bind
-                )
-            if not os.path.isabs(container_path):
-                raise SaltInvocationError(
-                    'Container path {0} in bind {1} is not absolute'
-                    .format(container_path, bind)
-                )
-            new_binds[host_path] = {'bind': container_path, 'ro': read_only}
-        kwargs['binds'] = new_binds
-
-    def _valid_security_opt():  # pylint: disable=unused-variable
-        '''
-        Must be a single colon separated string or a list of colon separated
-        strings
-        '''
-        if kwargs.get('security_opt') is None:
-            # No need to validate
-            return
-
-        if (not isinstance(kwargs['security_opt'], six.string_types) and
-                not isinstance(kwargs['security_opt'], list)):
-            raise SaltInvocationError(
-                'security_opt must be a single value or a Python list')
-
-        if isinstance(kwargs['security_opt'], six.string_types):
-            kwargs['security_opt'] = [kwargs['security_opt']]
-
-    def _valid_links():  # pylint: disable=unused-variable
-        '''
-        Must be a list of colon-delimited mappings
-        '''
-        if kwargs.get('links') is None:
-            # No need to validate
-            return
-        err = 'Invalid format for links. See documentaion for proper usage.'
-        try:
-            _valid_stringlist('links')
-        except SaltInvocationError:
-            raise SaltInvocationError(
-                'links must be a comma-separated list or Python list'
-            )
-        new_links = []
-        for item in kwargs['links']:
-            try:
-                link_name, link_alias = item.split(':')
-            except ValueError:
-                raise SaltInvocationError(err)
-            else:
-                if not link_name.startswith('/'):
-                    # Normalize container name to make comparisons simpler
-                    link_name = '/' + link_name
-            new_links.append((link_name, link_alias))
-        kwargs['links'] = new_links
-
-    def _valid_dns():  # pylint: disable=unused-variable
-        '''
-        Must be a list of mappings or a dictionary
-        '''
-        if kwargs.get('dns') is None:
-            # No need to validate
-            return
-        if isinstance(kwargs['dns'], six.string_types):
-            kwargs['dns'] = kwargs['dns'].split(',')
-        if not isinstance(kwargs['dns'], list):
-            raise SaltInvocationError(
-                'dns must be a comma-separated list or Python list'
-            )
-        if validate_ip_addrs:
-            errors = []
-            for addr in kwargs['dns']:
-                try:
-                    if not salt.utils.network.is_ip(addr):
-                        errors.append(
-                            'dns nameserver \'{0}\' is not a valid IP address'
-                            .format(addr)
-                        )
-                except RuntimeError:
-                    pass
-            if errors:
-                raise SaltInvocationError('; '.join(errors))
-
-    def _valid_port_bindings():  # pylint: disable=unused-variable
-        '''
-        Must be a string or list of strings with port binding information
-        '''
-        if kwargs.get('port_bindings') is None:
-            # No need to validate
-            return
-        err = (
-            'Invalid port_bindings configuration. See the documentation for '
-            'proper usage.'
-        )
-        if isinstance(kwargs['port_bindings'], six.integer_types):
-            kwargs['port_bindings'] = str(kwargs['port_bindings'])
-        try:
-            _valid_stringlist('port_bindings')
-        except SaltInvocationError:
-            raise SaltInvocationError(err)
-        new_port_bindings = {}
-        for binding in kwargs['port_bindings']:
-            bind_parts = binding.split(':')
-            num_bind_parts = len(bind_parts)
-            if num_bind_parts == 1:
-                container_port = str(bind_parts[0])
-                if container_port == '':
-                    raise SaltInvocationError(err)
-                bind_val = None
-            elif num_bind_parts == 2:
-                if any(x == '' for x in bind_parts):
-                    raise SaltInvocationError(err)
-                host_port, container_port = bind_parts
-                if not host_port.isdigit():
-                    raise SaltInvocationError(
-                        'Invalid host port \'{0}\' for port {1} in '
-                        'port_bindings'.format(host_port, container_port)
-                    )
-                bind_val = int(host_port)
-            elif num_bind_parts == 3:
-                host_ip, host_port, container_port = bind_parts
-                if validate_ip_addrs:
-                    try:
-                        if not salt.utils.network.is_ip(host_ip):
-                            raise SaltInvocationError(
-                                'Host IP \'{0}\' in port_binding {1} is not a '
-                                'valid IP address'.format(host_ip, binding)
-                            )
-                    except RuntimeError:
-                        pass
-                if host_port == '':
-                    bind_val = (host_ip,)
-                elif not host_port.isdigit():
-                    raise SaltInvocationError(
-                        'Invalid host port \'{0}\' for port {1} in '
-                        'port_bindings'.format(host_port, container_port)
-                    )
-                else:
-                    bind_val = (host_ip, int(host_port))
-            else:
-                raise SaltInvocationError(err)
-            port_num, _, protocol = container_port.partition('/')
-            if not port_num.isdigit():
-                raise SaltInvocationError(
-                    'Invalid container port number \'{0}\' in '
-                    'port_bindings argument'.format(port_num)
-                )
-            lc_protocol = protocol.lower()
-            if lc_protocol in ('', 'tcp'):
-                container_port = int(port_num)
-            elif lc_protocol == 'udp':
-                container_port = port_num + '/' + lc_protocol
-            else:
-                raise SaltInvocationError(err)
-            new_port_bindings.setdefault(container_port, []).append(bind_val)
-        kwargs['port_bindings'] = new_port_bindings
-
-    def _valid_volumes_from():  # pylint: disable=unused-variable
-        '''
-        Must be a string or list of strings
-        '''
-        if isinstance(kwargs['volumes_from'], six.integer_types):
-            # Handle cases where a container's name is numeric
-            kwargs['volumes_from'] = str(kwargs['volumes_from'])
-        try:
-            _valid_stringlist('volumes_from')
-        except SaltInvocationError:
-            raise SaltInvocationError(
-                'volumes_from must be a string or list of strings'
-            )
-
-    def _valid_network_mode():  # pylint: disable=unused-variable
-        '''
-        Must be one of several possible string types
-        '''
-        if kwargs.get('network_mode') is None:
-            # No need to validate
-            return
-        try:
-            _valid_string('network_mode')
-            if kwargs['network_mode'] in ('bridge', 'host'):
-                return
-            elif kwargs['network_mode'].startswith('container:') \
-                    and kwargs['network_mode'] != 'container:':
-                # Ensure that the user didn't just pass 'container:', because
-                # that would be invalid.
-                return
-            else:
-                # just a name assume it is a network
-                log.info(
-                    'Assuming network_mode \'%s\' is a network.',
-                    kwargs['network_mode']
-                )
-        except SaltInvocationError:
-            raise SaltInvocationError(
-                'network_mode must be one of \'bridge\', \'host\', '
-                '\'container:<id or name>\' or a name of a network.'
-            )
-
-    def _valid_restart_policy():  # pylint: disable=unused-variable
-        '''
-        Must be one of several possible string types
-        '''
-        if kwargs['restart_policy'] is None:
-            # No need to validate
-            return
-        if isinstance(kwargs['restart_policy'], six.string_types):
-            try:
-                pol_name, count = kwargs['restart_policy'].split(':')
-            except ValueError:
-                pol_name = kwargs['restart_policy']
-                count = '0'
-            if not count.isdigit():
-                raise SaltInvocationError(
-                    'Invalid retry count \'{0}\' in restart_policy, '
-                    'must be an integer'.format(count)
-                )
-            count = int(count)
-            if pol_name == 'always' and count != 0:
-                log.warning(
-                    'Using \'always\' restart_policy. Retry count will '
-                    'be ignored.'
-                )
-                count = 0
-            kwargs['restart_policy'] = {'Name': pol_name,
-                                        'MaximumRetryCount': count}
-
-    def _valid_extra_hosts():  # pylint: disable=unused-variable
-        '''
-        Must be a list of host:ip mappings
-        '''
-        if kwargs.get('extra_hosts') is None:
-            # No need to validate
-            return
-        try:
-            _valid_stringlist('extra_hosts')
-        except SaltInvocationError:
-            raise SaltInvocationError(
-                'extra_hosts must be a comma-separated list or Python list'
-            )
-        err = (
-            'Invalid format for extra_hosts. See documentaion for proper '
-            'usage.'
-        )
-        errors = []
-        new_extra_hosts = {}
-        for item in kwargs['extra_hosts']:
-            try:
-                host_name, ip_addr = item.split(':')
-            except ValueError:
-                raise SaltInvocationError(err)
-
-            if validate_ip_addrs:
-                try:
-                    if not salt.utils.network.is_ip(ip_addr):
-                        errors.append(
-                            'Address \'{0}\' for extra_host \'{0}\' is not a '
-                            'valid IP address'
-                        )
-                except RuntimeError:
-                    pass
-            new_extra_hosts[host_name] = ip_addr
-        if errors:
-            raise SaltInvocationError('; '.join(errors))
-
-        kwargs['extra_hosts'] = new_extra_hosts
-
-    def _valid_pid_mode():  # pylint: disable=unused-variable
-        '''
-        Can either be None or 'host'
-        '''
-        if kwargs.get('pid_mode') not in (None, 'host'):
-            raise SaltInvocationError(
-                'pid_mode can only be \'host\', if set'
-            )
-
-    def _valid_log_config():  # pylint: disable=unused-variable
-        '''
-        Needs to be a dictionary that might contain keys Type and Config
-        '''
-        try:
-            _valid_dict('log_config')
-        except SaltInvocationError:
-            raise SaltInvocationError(
-                'log_config must be of type \'dict\', if set'
-            )
-
-        log_config = kwargs.get('log_config')
-        log_config_type = log_config.get('Type', None)
-        if log_config_type and not isinstance(log_config_type,
-                                              six.string_types):
-            raise SaltInvocationError(
-                'log_config[\'type\'] must be of type \'str\''
-            )
-
-        log_config_config = log_config.get('Config', {})
-        if log_config_config and not isinstance(log_config_config, dict):
-            raise SaltInvocationError(
-                'log_config[\'config\'] must be of type \'dict\''
-            )
-
-    def _valid_devices():  # pylint: disable=unused-variable
-        '''
-        Must be a list of devices
-        '''
-        if kwargs.get('devices') is None:
-            return
-
-        try:
-            _valid_stringlist('devices')
-        except SaltInvocationError:
-            raise SaltInvocationError(
-                'devices must be a comma-separated list or Python list'
-            )
-
-    def _valid_labels():  # pylint: disable=unused-variable
-        '''
-        Must be a dict or a list of strings
-        '''
-        if kwargs.get('labels') is None:
-            return
-        try:
-            _valid_stringlist('labels')
-        except SaltInvocationError:
-            try:
-                _valid_dictlist('labels')
-            except SaltInvocationError:
-                try:
-                    _valid_dict('labels')
-                except SaltInvocationError:
-                    raise SaltInvocationError(
-                        'labels can only be a list of strings/dict'
-                        ' or a dict containing strings')
-                else:
-                    new_labels = {}
-                    for k, v in six.iteritems(kwargs['labels']):
-                        new_labels[str(k)] = str(v)
-                    kwargs['labels'] = new_labels
-            else:
-                kwargs['labels'] = salt.utils.repack_dictlist(kwargs['labels'])
-
-    def _valid_sysctls():  # pylint: disable=unused-variable
-        '''
-        Can be a a dictionary
-        '''
-        if kwargs.get('sysctls') is None:
-            return
-        if isinstance(kwargs['sysctls'], list):
-            repacked_sysctl = {}
-            for sysctl_var in kwargs['sysctls']:
-                try:
-                    key, val = sysctl_var.split('=')
-                except AttributeError:
-                    raise SaltInvocationError(
-                        'Invalid sysctl variable definition \'{0}\''
-                        .format(sysctl_var)
-                    )
-                else:
-                    if key in repacked_sysctl:
-                        raise SaltInvocationError(
-                            'Duplicate sysctl variable \'{0}\''
-                            .format(key)
-                        )
-                    if not isinstance(val, six.string_types):
-                        raise SaltInvocationError(
-                            'sysctl values must be strings {key}=\'{val}\''
-                            .format(key=key, val=val))
-                    repacked_sysctl[key] = val
-            kwargs['sysctls'] = repacked_sysctl
-        elif isinstance(kwargs['sysctls'], dict):
-            for key, val in six.iteritems(kwargs['sysctls']):
-                if not isinstance(val, six.string_types):
-                    raise SaltInvocationError('sysctl values must be dicts')
-        elif not isinstance(kwargs['sysctls'], dict):
-            raise SaltInvocationError(
-                'Invalid sysctls configuration.'
-            )
-
-    def _valid_ulimits():  # pylint: disable=unused-variable
-        '''
-        Must be a string or list of strings with bind mount information
-        '''
-        if kwargs.get('ulimits') is None:
-            # No need to validate
-            return
-        err = (
-            'Invalid ulimits configuration. See the documentation for proper '
-            'usage.'
-        )
-        try:
-            _valid_dictlist('ulimits')
-            # If this was successful then assume the correct API value was
-            # passed on on the CLI and do not proceed with validation.
-            return
-        except SaltInvocationError:
-            pass
-        try:
-            _valid_stringlist('ulimits')
-        except SaltInvocationError:
-            raise SaltInvocationError(err)
-
-        new_ulimits = []
-        for ulimit in kwargs['ulimits']:
-            ulimit_name, comps = ulimit.strip().split('=', 1)
-            try:
-                comps = [int(x) for x in comps.split(':', 1)]
-            except ValueError:
-                raise SaltInvocationError(err)
-            if len(comps) == 1:
-                comps *= 2
-            soft_limit, hard_limit = comps
-            new_ulimits.append({'Name': ulimit_name,
-                                'Soft': soft_limit,
-                                'Hard': hard_limit})
-        kwargs['ulimits'] = new_ulimits
-
-    # And now, the actual logic to perform the validation
-    if 'docker.docker_version' not in __context__:
-        # Have to call this func using the __salt__ dunder (instead of just
-        # version()) because this _validate_input() will be imported into the
-        # state module, and the state module won't have a version() func.
-        _version = __salt__['docker.version']()
-        if 'VersionInfo' not in _version:
-            log.warning(
-                'Unable to determine docker version. Feature version checking '
-                'will be unavailable.'
-            )
-            docker_version = None
-        else:
-            docker_version = _version['VersionInfo']
-        __context__['docker.docker_version'] = docker_version
-
-    _locals = locals()
-    for kwarg in kwargs:
-        if kwarg not in VALID_CREATE_OPTS:
-            raise SaltInvocationError('Invalid argument \'{0}\''.format(kwarg))
-
-        # Check for Docker/docker-py compatibility
-        compat_errors = []
-        if 'min_docker' in VALID_CREATE_OPTS[kwarg]:
-            min_docker = VALID_CREATE_OPTS[kwarg]['min_docker']
-            if __context__['docker.docker_version'] is not None:
-                if __context__['docker.docker_version'] < min_docker:
-                    compat_errors.append(
-                        'The \'{0}\' parameter requires at least Docker {1} '
-                        '(detected version {2})'.format(
-                            kwarg,
-                            '.'.join(map(str, min_docker)),
-                            '.'.join(__context__['docker.docker_version'])
-                        )
-                    )
-        if 'min_docker_py' in VALID_CREATE_OPTS[kwarg]:
-            cur_docker_py = _get_docker_py_versioninfo()
-            if cur_docker_py is not None:
-                min_docker_py = VALID_CREATE_OPTS[kwarg]['min_docker_py']
-                if cur_docker_py < min_docker_py:
-                    compat_errors.append(
-                        'The \'{0}\' parameter requires at least docker-py '
-                        '{1} (detected version {2})'.format(
-                            kwarg,
-                            '.'.join(map(str, min_docker_py)),
-                            '.'.join(map(str, cur_docker_py))
-                        )
-                    )
-        if compat_errors:
-            raise SaltInvocationError('; '.join(compat_errors))
-
-        default_val = VALID_CREATE_OPTS[kwarg].get('default')
-        if kwargs[kwarg] is None:
-            if default_val is None:
-                # Passed as None and None is the default. Skip validation. This
-                # catches cases where user explicitly passes a value of None.
-                continue
-            else:
-                # User explicitly passed None for an option that cannot be
-                # None, don't let them do this.
-                raise SaltInvocationError(kwarg + ' cannot be None')
-
-        validator = VALID_CREATE_OPTS[kwarg].get('validator')
-        if validator is None:
-            # Look for custom validation function
-            validator = kwarg
-            validation_arg = ()
-        else:
-            validation_arg = (kwarg,)
-        key = '_valid_' + validator
-        if key not in _locals:
-            raise SaltInvocationError(
-                'Validator function missing for argument \'{0}\'. Please '
-                'report this.'.format(kwarg)
-            )
-        # Run validation function
-        _locals[key](*validation_arg)
-
-    # Clear any context variables created during validation process
-    for key in list(__context__):
-        try:
-            if key.startswith('validation.docker.'):
-                __context__.pop(key)
+            ignore = ignore.split(',')
         except AttributeError:
-            pass
+            ignore = str(ignore).split(',')
+    result1 = inspect_container(first)
+    result2 = inspect_container(second)
+    ret = {}
+    for conf_dict in ('Config', 'HostConfig'):
+        for item in result1[conf_dict]:
+            if item in ignore:
+                continue
+            val1 = result1[conf_dict][item]
+            val2 = result2[conf_dict].get(item)
+            if val1 != val2:
+                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+        # Check for optionally-present items that were in the second container
+        # and not the first.
+        for item in result2[conf_dict]:
+            if item in ignore or item in ret.get(conf_dict, {}):
+                # We're either ignoring this or we already processed this
+                # when iterating through result1. Either way, skip it.
+                continue
+            val1 = result1[conf_dict].get(item)
+            val2 = result2[conf_dict][item]
+            if val1 != val2:
+                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+    return ret
 
 
 # Functions for information gathering
@@ -2395,22 +1389,28 @@ def info():
 
 def inspect(name):
     '''
-    This is a generic container/image inspecton function. It will first attempt
-    to get container information for the passed name/ID using
-    :py:func:`docker.inspect_container
-    <salt.modules.docker.inspect_container>`, and then will try to get image
-    information for the passed name/ID using :py:func:`docker.inspect_image
-    <salt.modules.docker.inspect_image>`. If it is already known that the
-    name/ID is an image, it is slightly more efficient to use
-    :py:func:`docker.inspect_image <salt.modules.docker.inspect_image>`.
+    .. versionchanged:: Nitrogen
+        Volumes and networks are now checked, in addition to containers and
+        images.
+
+    This is a generic container/image/volume/network inspecton function. It
+    will run the following functions in order:
+
+    - :py:func:`docker.inspect_container
+      <salt.modules.docker.inspect_container>`
+    - :py:func:`docker.inspect_image <salt.modules.docker.inspect_image>`
+    - :py:func:`docker.inspect_volume <salt.modules.docker.inspect_volume>`
+    - :py:func:`docker.inspect_network <salt.modules.docker.inspect_network>`
+
+    The first of these to find a match will be returned.
 
     name
-        Container/image name or ID
+        Container/image/volume/network name or ID
 
 
     **RETURN DATA**
 
-    A dictionary of container/image information
+    A dictionary of container/image/volume/network information
 
 
     CLI Example:
@@ -2430,8 +1430,19 @@ def inspect(name):
     except CommandExecutionError as exc:
         if not exc.strerror.startswith('Error 404'):
             raise
+    try:
+        return inspect_volume(name)
+    except CommandExecutionError as exc:
+        if not exc.strerror.startswith('Error 404'):
+            raise
+    try:
+        return inspect_network(name)
+    except CommandExecutionError as exc:
+        if not exc.strerror.startswith('Error 404'):
+            raise
+
     raise CommandExecutionError(
-        'Error 404: No such image/container: {0}'.format(name)
+        'Error 404: No such image/container/volume/network: {0}'.format(name)
     )
 
 
@@ -2889,26 +1900,299 @@ def version():
 @_refresh_mine_cache
 def create(image,
            name=None,
+           skip_translate=None,
+           ignore_collisions=False,
            validate_ip_addrs=True,
-           client_timeout=CLIENT_TIMEOUT,
+           client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
            **kwargs):
     '''
     Create a new container
 
-    name
-        Name for the new container. If not provided, Docker will randomly
-        generate one for you.
-
     image
         Image from which to create the container
 
-    command or cmd
+    name
+        Name for the new container. If not provided, Docker will randomly
+        generate one for you (it will be included in the return data).
+
+    skip_translate
+        This function translates Salt CLI input into the format which
+        docker-py_ expects. However, in the event that Salt's translation logic
+        fails (due to potential changes in the Docker Remote API, or to bugs in
+        the translation code), this argument can be used to exert granular
+        control over which arguments are translated and which are not.
+
+        Pass this argument as a comma-separated list (or Python list) of
+        arguments, and translation for each passed argument name will be
+        skipped. Alternatively, pass ``True`` and *all* translation will be
+        skipped.
+
+        Skipping tranlsation allows for arguments to be formatted directly in
+        the format which docker-py_ expects. This allows for API changes and
+        other issues to be more easily worked around. An example of using this
+        option to skip translation would be:
+
+        .. code-block:: bash
+
+            salt myminion docker.create image=centos:7.3.1611 skip_translate=environment environment="{'FOO': 'bar'}"
+
+        See the following links for more information:
+
+        - `docker-py Low-level API`_
+        - `Docker Engine API`_
+
+    .. _docker-py: https://pypi.python.org/pypi/docker-py
+    .. _`docker-py Low-level API`: http://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_container
+    .. _`Docker Engine API`: https://docs.docker.com/engine/api/v1.26/#operation/ContainerCreate
+
+    ignore_collisions : False
+        Since many of docker-py_'s arguments differ in name from their CLI
+        counterparts (with which most Docker users are more familiar), Salt
+        detects usage of these and aliases them to the docker-py_ version of
+        that argument. However, if both the alias and the docker-py_ version of
+        the same argument (e.g. ``env`` and ``environment``) are used, an error
+        will be raised. Set this argument to ``True`` to suppress these errors
+        and keep the docker-py_ version of the argument.
+
+    validate_ip_addrs : True
+        For parameters which accept IP addresses as input, IP address
+        validation will be performed. To disable, set this to ``False``
+
+    client_timeout : 60
+        Timeout in seconds for the Docker client. This is not a timeout for
+        this function, but for receiving a response from the API.
+
+        .. note::
+
+            This is only used if Salt needs to pull the requested image.
+
+    **CONTAINER CONFIGURATION ARGUMENTS**
+
+    auto_remove (or *rm*) : False
+        Enable auto-removal of the container on daemon side when the
+        container’s process exits (analogous to running a docker container with
+        ``--rm`` on the CLI).
+
+        Examples:
+
+        - ``auto_remove=True``
+        - ``rm=True``
+
+    binds
+        Files/directories to bind mount. Each bind mount should be passed in
+        the format ``<host_path>:<container_path>:<read_only>``, where
+        ``<read_only>`` is one of ``rw`` (for read-write access) or ``ro`` (for
+        read-only access).  Optionally, the read-only information can be left
+        off the end and the bind mount will be assumed to be read-write.
+
+        Examples:
+
+        - ``binds=/srv/www:/var/www:ro``
+        - ``binds=/srv/www:/var/www:rw``
+        - ``binds=/srv/www:/var/www``
+
+        .. note::
+            The second and third examples above are equivalent.
+
+    blkio_weight
+        Block IO weight (relative weight), accepts a weight value between 10
+        and 1000.
+
+        Example: ``blkio_weight=100``
+
+    blkio_weight_device
+        Block IO weight (relative device weight), specified as a list of
+        expressions in the format ``PATH:WEIGHT``
+
+        Example: ``blkio_weight_device=/dev/sda:100``
+
+    cap_add
+        List of capabilities to add within the container. Can be passed as a
+        comma-separated list or a Python list. Requires Docker 1.2.0 or
+        newer.
+
+        Example: ``cap_add=SYS_ADMIN,MKNOD``, ``cap_add="[SYS_ADMIN, MKNOD]"``
+
+    cap_drop
+        List of capabilities to drop within the container. Can be passed as a
+        comma-separated string or a Python list. Requires Docker 1.2.0 or
+        newer.
+
+        Example: ``cap_drop=SYS_ADMIN,MKNOD``,
+        ``cap_drop="[SYS_ADMIN, MKNOD]"``
+
+    command (or *cmd*)
         Command to run in the container
 
         Example: ``command=bash`` or ``cmd=bash``
 
         .. versionchanged:: 2015.8.1
             ``cmd`` is now also accepted
+
+    cpuset_cpus (or *cpuset*)
+        CPUs on which which to allow execution, specified as a string
+        containing a range (e.g. ``0-3``) or a comma-separated list of CPUs
+        (e.g. ``0,1``).
+
+        Examples:
+
+        - ``cpuset_cpus="0-3"``
+        - ``cpuset="0,1"``
+
+    cpuset_mems
+        Memory nodes on which which to allow execution, specified as a string
+        containing a range (e.g. ``0-3``) or a comma-separated list of MEMs
+        (e.g. ``0,1``). Only effective on NUMA systems.
+
+        Examples:
+
+        - ``cpuset_mems="0-3"``
+        - ``cpuset_mems="0,1"``
+
+    cpu_group
+        The length of a CPU period in microseconds
+
+        Example: ``cpu_group=100000``
+
+    cpu_period
+        Microseconds of CPU time that the container can get in a CPU period
+
+        Example: ``cpu_period=50000``
+
+    cpu_shares
+        CPU shares (relative weight), specified as an integer between 2 and 1024.
+
+        Example: ``cpu_shares=512``
+
+    detach : False
+        If ``True``, run the container's command in the background (daemon
+        mode)
+
+        Example: ``detach=True``
+
+    devices
+        List of host devices to expose within the container
+
+        Examples:
+
+        - ``devices="/dev/net/tun,/dev/xvda1:/dev/xvda1,/dev/xvdb1:/dev/xvdb1:r"``
+        - ``devices="['/dev/net/tun', '/dev/xvda1:/dev/xvda1', '/dev/xvdb1:/dev/xvdb1:r']"``
+
+    device_read_bps
+        Limit read rate (bytes per second) from a device, specified as a list
+        of expressions in the format ``PATH:RATE``, where ``RATE`` is either an
+        integer number of bytes, or a string ending in ``kb``, ``mb``, or
+        ``gb``.
+
+        Examples:
+
+        - ``device_read_bps="/dev/sda:1mb,/dev/sdb:5mb"``
+        - ``device_read_bps="['/dev/sda:100mb', '/dev/sdb:5mb']"``
+
+    device_read_iops
+        Limit read rate (I/O per second) from a device, specified as a list
+        of expressions in the format ``PATH:RATE``, where ``RATE`` is a number
+        of I/O operations.
+
+        Examples:
+
+        - ``device_read_iops="/dev/sda:1000,/dev/sdb:500"``
+        - ``device_read_iops="['/dev/sda:1000', '/dev/sdb:500']"``
+
+    device_write_bps
+        Limit write rate (bytes per second) from a device, specified as a list
+        of expressions in the format ``PATH:RATE``, where ``RATE`` is either an
+        integer number of bytes, or a string ending in ``kb``, ``mb`` or
+        ``gb``.
+
+
+        Examples:
+
+        - ``device_write_bps="/dev/sda:100mb,/dev/sdb:50mb"``
+        - ``device_write_bps="['/dev/sda:100mb', '/dev/sdb:50mb']"``
+
+    device_read_iops
+        Limit write rate (I/O per second) from a device, specified as a list
+        of expressions in the format ``PATH:RATE``, where ``RATE`` is a number
+        of I/O operations.
+
+        Examples:
+
+        - ``device_read_iops="/dev/sda:1000,/dev/sdb:500"``
+        - ``device_read_iops="['/dev/sda:1000', '/dev/sdb:500']"``
+
+    dns
+        List of DNS nameservers. Can be passed as a comma-separated list or a
+        Python list.
+
+        Examples:
+
+        - ``dns=8.8.8.8,8.8.4.4``
+        - ``dns="['8.8.8.8', '8.8.4.4']"``
+
+        .. note::
+
+            To skip IP address validation, use ``validate_ip_addrs=False``
+
+    dns_opt
+        Additional options to be added to the container’s ``resolv.conf`` file
+
+        Example: ``dns_opt=ndots:9``
+
+    dns_search
+        List of DNS search domains. Can be passed as a comma-separated list
+        or a Python list.
+
+        Example: ``dns_search=foo1.domain.tld,foo2.domain.tld`` or
+        ``dns_search="[foo1.domain.tld, foo2.domain.tld]"``
+
+    domainname
+        Set custom DNS search domains
+
+        Example: ``domainname=domain.tld,domain2.tld``
+
+    entrypoint
+        Entrypoint for the container. Either a string (e.g. ``"mycmd --arg1
+        --arg2"``) or a Python list (e.g.  ``"['mycmd', '--arg1', '--arg2']"``)
+
+        Examples:
+
+        - ``entrypoint="cat access.log"``
+        - ``entrypoint="['cat', 'access.log']"``
+
+    environment (or *env*)
+        Either a dictionary of environment variable names and their values, or
+        a Python list of strings in the format ``VARNAME=value``.
+
+        Examples:
+
+        - ``environment='VAR1=value,VAR2=value'``
+        - ``environment="['VAR1=value', 'VAR2=value']"``
+        - ``environment="{'VAR1': 'value', 'VAR2': 'value'}"``
+
+    extra_hosts
+        Additional hosts to add to the container's /etc/hosts file. Can be
+        passed as a comma-separated list or a Python list. Requires Docker
+        1.3.0 or newer.
+
+        Examples:
+
+        - ``extra_hosts=web1:10.9.8.7,web2:10.9.8.8``
+        - ``extra_hosts="['web1:10.9.8.7', 'web2:10.9.8.8']"``
+        - ``extra_hosts="{'web1': '10.9.8.7', 'web2': '10.9.8.8'}"``
+
+        .. note::
+
+            To skip IP address validation, use ``validate_ip_addrs=False``
+
+    group_add
+        List of additional group names and/or IDs that the container process
+        will run as
+
+        Examples:
+
+        - ``group_add=web,network``
+        - ``group_add="['web', 'network']"``
 
     hostname
         Hostname of the container. If not provided, and if a ``name`` has been
@@ -2922,43 +2206,107 @@ def create(image,
             If the container is started with ``network_mode=host``, the
             hostname will be overridden by the hostname of the Minion.
 
-    domainname
-        Domain name of the container
+    interactive (or *stdin_open*): False
+        Leave stdin open, even if not attached
 
-        Example: ``domainname=domain.tld``
+        Examples:
 
-    interactive : False
-        Leave stdin open
+        - ``interactive=True``
+        - ``stdin_open=True``
 
-        Example: ``interactive=True``
+    ipc_mode (or *ipc*)
+        Set the IPC mode for the container. The default behavior is to create a
+        private IPC namespace for the container, but this option can be
+        used to change that behavior:
 
-    tty : False
-        Attach TTYs
+        - ``container:<container_name_or_id>`` reuses another container shared
+          memory, semaphores and message queues
+        - ``host``: use the host's shared memory, semaphores and message queues
 
-        Example: ``tty=True``
+        Examples:
 
-    detach : False
-        If ``True``, run ``command`` in the background (daemon mode)
+        - ``ipc_mode=container:foo``
+        - ``ipc=host``
 
-        Example: ``detach=True``
+        .. warning::
+            Using ``host`` gives the container full access to local shared
+            memory and is therefore considered insecure.
 
-    user
-        User under which to run docker
+    isolation
+        Specifies the type of isolation technology used by containers
 
-        Example: ``user=foo``
+        Example: ``isolation=hyperv``
 
-    memory : 0
-        Memory limit. Can be specified in bytes or using single-letter units
-        (i.e. ``512M``, ``2G``, etc.). A value of ``0`` (the default) means no
-        memory limit.
+        .. note::
+            The default value on Windows server is ``process``, while the
+            default value on Windows client is ``hyperv``. On Linux, only
+            ``default`` is supported.
 
-        Example: ``memory=512M``, ``memory=1073741824``
+    labels (or *label*)
+        Add metadata to the container. Labels can be set both with and without
+        values:
 
-    memory_swap : -1
-        Total memory limit (memory plus swap). Set to ``-1`` to disable swap. A
-        value of ``0`` means no swap limit.
+        Examples (*with* values):
 
-        Example: ``memory_swap=1G``, ``memory_swap=2147483648``
+        - ``labels="label1=value1,label2=value2"``
+        - ``labels="['label1=value1', 'label2=value2']"``
+        - ``labels="{'label1': 'value1', 'label2': 'value2'}"``
+
+        Examples (*without* values):
+
+        - ``labels=label1,label2``
+        - ``labels="['label1', 'label2']"``
+
+    links
+        Link this container to another. Links should be specified in the format
+        ``<container_name_or_id>:<link_alias>``. Multiple links can be passed,
+        ether as a comma separated list or a Python list.
+
+        Examples:
+
+        - ``links=web1:link1,web2:link2``,
+        - ``links="['web1:link1', 'web2:link2']"``
+        - ``links="{'web1': 'link1', 'web2': 'link2'}"``
+
+    log_driver
+        Set container's logging driver. Requires Docker 1.6 or newer.
+
+        Example:
+
+        - ``log_driver=syslog``
+
+        .. note::
+            The logging driver feature was improved in Docker 1.13 introducing
+            option name changes. Please see Docker's `Configure logging
+            drivers`_ documentation for more information.
+
+        .. _`Configure logging drivers`: https://docs.docker.com/engine/admin/logging/overview/
+
+    log_opt
+        Config options for the ``log_driver`` config option. Requires Docker
+        1.6 or newer.
+
+        Example:
+
+        - ``log_opt="syslog-address=tcp://192.168.0.42,syslog-facility=daemon"
+        - ``log_opt="['syslog-address=tcp://192.168.0.42', 'syslog-facility=daemon']"
+        - ``log_opt="{'syslog-address': 'tcp://192.168.0.42', 'syslog-facility: daemon
+
+    lxc_conf
+        Additional LXC configuration parameters to set before starting the
+        container.
+
+        Examples:
+
+        - ``lxc_conf="lxc.utsname=docker,lxc.arch=x86_64"``
+        - ``lxc_conf="['lxc.utsname=docker', 'lxc.arch=x86_64']"``
+        - ``lxc_conf="{'lxc.utsname': 'docker', 'lxc.arch': 'x86_64'}"``
+
+        .. note::
+
+            These LXC configuration parameters will only have the desired
+            effect if the container is using the LXC execution driver, which
+            has been deprecated for some time.
 
     mac_address
         MAC address to use for the container. If not specified, a random MAC
@@ -2966,89 +2314,79 @@ def create(image,
 
         Example: ``mac_address=01:23:45:67:89:0a``
 
+    mem_limit (or *memory*) : 0
+        Memory limit. Can be specified in bytes or using single-letter units
+        (i.e. ``512M``, ``2G``, etc.). A value of ``0`` (the default) means no
+        memory limit.
+
+        Examples:
+
+        - ``mem_limit=512M``
+        - ``memory=1073741824``
+
+    mem_swappiness
+        Tune a container's memory swappiness behavior. Accepts an integer
+        between 0 and 100.
+
+        Example: ``mem_swappiness=60``
+
+    memswap_limit (or *memory_swap*) : -1
+        Total memory limit (memory plus swap). Set to ``-1`` to disable swap. A
+        value of ``0`` means no swap limit.
+
+        Examples:
+
+        - ``memswap_limit=1G``
+        - ``memory_swap=2147483648``
+
     network_disabled : False
         If ``True``, networking will be disabled within the container
 
         Example: ``network_disabled=True``
 
-    working_dir
-        Working directory inside the container
+    network_mode : bridge
+        One of the following:
 
-        Example: ``working_dir=/var/log/nginx``
+        - ``bridge`` - Creates a new network stack for the container on the
+          docker bridge
+        - ``none`` - No networking (equivalent of the Docker CLI argument
+          ``--net=none``). Not to be confused with Python's ``None``.
+        - ``container:<name_or_id>`` - Reuses another container's network stack
+        - ``host`` - Use the host's network stack inside the container
 
-    entrypoint
-        Entrypoint for the container. Either a string (e.g. ``"mycmd --arg1
-        --arg2"``) or a Python list (e.g.  ``"['mycmd', '--arg1', '--arg2']"``)
+          .. warning::
+              Using ``host`` mode gives the container full access to the hosts
+              system's services (such as D-Bus), and is therefore considered
+              insecure.
 
-        Example: ``entrypoint="cat access.log"``
+        Examples:
 
-    environment
-        Either a dictionary of environment variable names and their values, or
-        a Python list of strings in the format ``VARNAME=value``.
+        - ``network_mode=null``
+        - ``network_mode=container:web1``
 
-        Example: ``"{'VAR1': 'value', 'VAR2': 'value'}"``,
-        ``"['VAR1=value', 'VAR2=value']"``
+    oom_kill_disable
+        Whether to disable OOM killer
 
-    ports
-        A list of ports to expose on the container. Can be passed as
-        comma-separated list or a Python list. If the protocol is omitted, the
-        port will be assumed to be a TCP port.
+        Example: ``oom_kill_disable=False``
 
-        Example: ``1111,2222/udp``, ``"['1111/tcp', '2222/udp']"``
+    oom_score_adj
+        An integer value containing the score given to the container in order
+        to tune OOM killer preferences
 
-    volumes : None
-        List of directories to expose as volumes. Can be passed as a
-        comma-separated list or a Python list.
+        Example: ``oom_score_adj=500``
 
-        Example: ``volumes=/mnt/vol1,/mnt/vol2``, ``volumes="[/mnt/vol1,
-        /mnt/vol2]"``
+    pid_mode
+        Set to ``host`` to use the host container's PID namespace within the
+        container. Requires Docker 1.5.0 or newer.
 
-    cpu_shares
-        CPU shares (relative weight)
+        Example: ``pid_mode=host``
 
-        Example: ``cpu_shares=0``, ``cpu_shares=256``
+    pids_limit
+        Set the container's PID limit. Set to ``-1`` for unlimited.
 
-    cpuset
-        CPUs on which which to allow execution, specified as a string
-        containing a range (e.g. ``0-3``) or a comma-separated list of CPUs
-        (e.g. ``0,1``).
+        Example: ``pids_limit=2000``
 
-        Example: ``cpuset="0-3"``, ``cpuset="0,1"``
-
-    client_timeout
-        Timeout in seconds for the Docker client. This is not a timeout for
-        this function, but for receiving a response from the API.
-
-        .. note::
-
-            This is only used if Salt needs to pull the requested image.
-
-    labels
-        Add Metadata to the container. Can be a list of strings/dictionaries
-        or a dictionary of strings (keys and values).
-
-        Example: ``labels=LABEL1,LABEL2``,
-        ``labels="{'LABEL1': 'value1', 'LABEL2': 'value2'}"``
-
-    validate_ip_addrs : True
-        For parameters which accept IP addresses as input, IP address
-        validation will be performed. To disable, set this to ``False``
-
-    binds
-        Files/directories to bind mount. Each bind mount should be passed in
-        the format ``<host_path>:<container_path>:<read_only>``, where
-        ``<read_only>`` is one of ``rw`` (for read-write access) or ``ro`` (for
-        read-only access).  Optionally, the read-only information can be left
-        off the end and the bind mount will be assumed to be read-write.
-        Examples 2 and 3 below are equivalent.
-
-        Example 1: ``binds=/srv/www:/var/www:ro``
-
-        Example 2: ``binds=/srv/www:/var/www:rw``
-
-        Example 3: ``binds=/srv/www:/var/www``
-
-    port_bindings
+    port_bindings (or *publish*)
         Bind exposed ports which were exposed using the ``ports`` argument to
         :py:func:`docker.create <salt.modules.docker.create>`. These
         should be passed in the same way as the ``--publish`` argument to the
@@ -3066,69 +2404,151 @@ def create(image,
         Multiple bindings can be separated by commas, or passed as a Python
         list. The below two examples are equivalent:
 
-        Example 1: ``port_bindings="5000:5000,2123:2123/udp,8080"``
+        - ``port_bindings="5000:5000,2123:2123/udp,8080"``
+        - ``port_bindings="['5000:5000', '2123:2123/udp', 8080]"``
 
-        Example 2: ``port_bindings="['5000:5000', '2123:2123/udp', '8080']"``
+        Port bindings can also include ranges:
 
-        .. note::
-
-            When configuring bindings for UDP ports, the protocol must be
-            passed in the ``containerPort`` value, as seen in the examples
-            above.
-
-    lxc_conf
-        Additional LXC configuration parameters to set before starting the
-        container.
-
-        Example: ``lxc_conf="{lxc.utsname: docker}"``
+        - ``port_bindings="14505-14506:4505-4506"``
 
         .. note::
+            When specifying a protocol, it must be passed in the
+            ``containerPort`` value, as seen in the examples above.
 
-            These LXC configuration parameters will only have the desired
-            effect if the container is using the LXC execution driver, which
-            has not been the default for some time.
+    ports
+        A list of ports to expose on the container. Can be passed as
+        comma-separated list or a Python list. If the protocol is omitted, the
+        port will be assumed to be a TCP port.
 
-    security_opt
-        Security configuration for MLS systems such as SELinux and AppArmor.
+        Examples:
 
-        Example 1: ``security_opt="apparmor:unconfined"``
+        - ``ports=1111,2222/udp``
+        - ``ports="[1111, '2222/udp']"``
 
-        Example 2: ``security_opt=["apparmor:unconfined"]``
-        ``security_opt=["apparmor:unconfined", "param2:value2"]``
+    privileged : False
+        If ``True``, runs the exec process with extended privileges
 
-    publish_all_ports : False
-        Allocates a random host port for each port exposed using the ``ports``
-        argument to :py:func:`docker.create <salt.modules.docker.create>`.
+        Example: ``privileged=True``
+
+    publish_all_ports (or *publish_all*): False
+        Publish all ports to the host
 
         Example: ``publish_all_ports=True``
 
-    links
-        Link this container to another. Links should be specified in the format
-        ``<container_name_or_id>:<link_alias>``. Multiple links can be passed,
-        ether as a comma separated list or a Python list.
+    read_only : False
+        If ``True``, mount the container’s root filesystem as read only
 
-        Example 1: ``links=mycontainer:myalias``,
-        ``links=web1:link1,web2:link2``
+        Example: ``read_only=True``
 
-        Example 2: ``links="['mycontainer:myalias']"``
-        ``links="['web1:link1', 'web2:link2']"``
+    restart_policy (or *restart*)
+        Set a restart policy for the container. Must be passed as a string in
+        the format ``policy[:retry_count]`` where ``policy`` is one of
+        ``always``, ``unless-stopped``, or ``on-failure``, and ``retry_count``
+        is an optional limit to the number of retries. The retry count is ignored
+        when using the ``always`` or ``unless-stopped`` restart policy.
 
-    dns
-        List of DNS nameservers. Can be passed as a comma-separated list or a
-        Python list.
+        Examples:
 
-        Example: ``dns=8.8.8.8,8.8.4.4`` or ``dns="[8.8.8.8, 8.8.4.4]"``
+        - ``restart_policy=on-failure:5``
+        - ``restart_policy=always``
+
+    security_opt
+        Security configuration for MLS systems such as SELinux and AppArmor.
+        Can be passed as a comma-separated list or a Python list.
+
+        Examples:
+
+        - ``security_opt=apparmor:unconfined,param2:value2``
+        - ``security_opt='["apparmor:unconfined", "param2:value2"]'``
+
+        .. important::
+            Some security options can contain commas. In these cases, this
+            argument *must* be passed as a Python list, as splitting by comma
+            will result in an invalid configuration.
 
         .. note::
+            See the documentation for security_opt at
+            https://docs.docker.com/engine/reference/run/#security-configuration
 
-            To skip IP address validation, use ``validate_ip_addrs=False``
+    shm_size
+        Size of /dev/shm
 
-    dns_search
-        List of DNS search domains. Can be passed as a comma-separated list
-        or a Python list.
+        Example: ``shm_size=128M``
 
-        Example: ``dns_search=foo1.domain.tld,foo2.domain.tld`` or
-        ``dns_search="[foo1.domain.tld, foo2.domain.tld]"``
+    stop_signal
+        The signal used to stop the container. The default is ``SIGTERM``.
+
+        Example: ``stop_signal=SIGRTMIN+3``
+
+    stop_timeout
+        Timeout to stop the container, in seconds
+
+        Example: ``stop_timeout=5``
+
+    storage_opt
+        Storage driver options for the container
+
+        Examples:
+
+        - ``storage_opt='dm.basesize=40G'``
+        - ``storage_opt="['dm.basesize=40G']"``
+        - ``storage_opt="{'dm.basesize': '40G'}"``
+
+    sysctls (or *sysctl*)
+        Set sysctl options for the container
+
+        Examples:
+
+        - ``sysctl='fs.nr_open=1048576,kernel.pid_max=32768'``
+        - ``sysctls="['fs.nr_open=1048576', 'kernel.pid_max=32768']"``
+        - ``sysctls="{'fs.nr_open': '1048576', 'kernel.pid_max': '32768'}"``
+
+    tmpfs
+        A map of container directories which should be replaced by tmpfs
+        mounts, and their corresponding mount options. Can be passed as Python
+        list of PATH:VALUE mappings, or a Python dictionary. However, since
+        commas usually appear in the values, this option *cannot* be passed as
+        a comma-separated list.
+
+        Examples:
+
+        - ``tmpfs="['/run:rw,noexec,nosuid,size=65536k', '/var/lib/mysql:rw,noexec,nosuid,size=600m']"``
+        - ``tmpfs="{'/run': 'rw,noexec,nosuid,size=65536k', '/var/lib/mysql': 'rw,noexec,nosuid,size=600m'}"``
+
+    tty : False
+        Attach TTYs
+
+        Example: ``tty=True``
+
+    ulimits (or *ulimit*)
+        List of ulimits. These limits should be passed in the format
+        ``<ulimit_name>:<soft_limit>:<hard_limit>``, with the hard limit being
+        optional. Can be passed as a comma-separated list or a Python list.
+
+        Examples:
+
+        - ``ulimits="nofile=1024:1024,nproc=60"``
+        - ``ulimits="['nofile=1024:1024', 'nproc=60']"``
+
+    user
+        User under which to run exec process
+
+        Example: ``user=foo``
+
+    userns_mode (or *user_ns_mode*)
+        Sets the user namsepace mode, when the user namespace remapping option
+        is enabled.
+
+        Example: ``userns_mode=host``
+
+    volumes (or *volume*)
+        List of directories to expose as volumes. Can be passed as a
+        comma-separated list or a Python list.
+
+        Examples:
+
+        - ``volumes=/mnt/vol1,/mnt/vol2``
+        - ``volume="['/mnt/vol1', '/mnt/vol2']"``
 
     volumes_from
         Container names or IDs from which the container will get volumes. Can
@@ -3137,96 +2557,18 @@ def create(image,
         Example: ``volumes_from=foo``, ``volumes_from=foo,bar``,
         ``volumes_from="[foo, bar]"``
 
-    network_mode : bridge
-        One of the following:
+    volume_driver
+        Sets the container's volume driver
 
-        - ``bridge`` - Creates a new network stack for the container on the
-          docker bridge
-        - ``null`` - No networking (equivalent of the Docker CLI argument
-          ``--net=none``)
-        - ``container:<name_or_id>`` - Reuses another container's network stack
-        - ``host`` - Use the host's network stack inside the container
+        Example: ``volume_driver=foobar``
 
-          .. warning::
+    working_dir (or *workdir*)
+        Working directory inside the container
 
-                Using ``host`` mode gives the container full access to the
-                hosts system's services (such as D-bus), and is therefore
-                considered insecure.
+        Examples:
 
-        Example: ``network_mode=null``, ``network_mode=container:web1``
-
-    restart_policy
-        Set a restart policy for the container. Must be passed as a string in
-        the format ``policy[:retry_count]`` where ``policy`` is one of
-        ``always`` or ``on-failure``, and ``retry_count`` is an optional limit
-        to the number of retries. The retry count is ignored when using the
-        ``always`` restart policy.
-
-        Example 1: ``restart_policy=on-failure:5``
-
-        Example 2: ``restart_policy=always``
-
-    cap_add
-        List of capabilities to add within the container. Can be passed as a
-        comma-separated list or a Python list. Requires Docker 1.2.0 or
-        newer.
-
-        Example: ``cap_add=SYS_ADMIN,MKNOD``, ``cap_add="[SYS_ADMIN, MKNOD]"``
-
-    cap_drop
-        List of capabilities to drop within the container. Can be passed as a
-        comma-separated string or a Python list. Requires Docker 1.2.0 or
-        newer.
-
-        Example: ``cap_drop=SYS_ADMIN,MKNOD``,
-        ``cap_drop="[SYS_ADMIN, MKNOD]"``
-
-    extra_hosts
-        Additional hosts to add to the container's /etc/hosts file. Can be
-        passed as a comma-separated list or a Python list. Requires Docker
-        1.3.0 or newer.
-
-        Example: ``extra_hosts=web1:10.9.8.7,web2:10.9.8.8``
-
-        .. note::
-
-            To skip IP address validation, use ``validate_ip_addrs=False``
-
-    pid_mode
-        Set to ``host`` to use the host container's PID namespace within the
-        container. Requires Docker 1.5.0 or newer.
-
-        Example: ``pid_mode=host``
-
-    log_config
-        Set container's logging driver and options to override the Docker
-        daemon default logging driver. Requires Docker 1.6 or newer.
-
-        Example:
-
-        .. code-block:: yaml
-
-            log_config:
-                Type: syslog
-                Config:
-                    syslog-address: tcp://192.168.0.42
-                    syslog-facility: daemon
-
-        .. note::
-
-            The logging driver feature was improved in Docker 1.13 introducing
-            option name changes. Please see Docker's
-            `Configure logging drivers`_ documentation for more information.
-
-        .. _`Configure logging drivers`: https://docs.docker.com/engine/admin/logging/overview/
-
-    devices
-        List of host devices to expose within the container
-
-        Example: ``devices:
-                     - /dev/net/tun
-                     - /dev/xvda1:/dev/xvda1
-                     - /dev/xvdb1:/dev/xvdb1:r``
+        - ``working_dir=/var/log/nginx``
+        - ``workdir=/var/www/myapp``
 
     **RETURN DATA**
 
@@ -3245,14 +2587,6 @@ def create(image,
         # Create a CentOS 7 container that will stay running once started
         salt myminion docker.create centos:7 name=mycent7 interactive=True tty=True command=bash
     '''
-    if 'cmd' in kwargs:
-        if 'command' in kwargs:
-            raise SaltInvocationError(
-                'Only one of \'command\' and \'cmd\' can be used. Both '
-                'arguments are equivalent.'
-            )
-        kwargs['command'] = kwargs.pop('cmd')
-
     try:
         # Try to inspect the image, if it fails then we know we need to pull it
         # first.
@@ -3260,42 +2594,29 @@ def create(image,
     except Exception:
         pull(image, client_timeout=client_timeout)
 
-    create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
-    if create_kwargs.get('hostname') is None \
-            and create_kwargs.get('name') is not None:
-        create_kwargs['hostname'] = create_kwargs['name']
+    if name is not None and kwargs.get('hostname') is None:
+        kwargs['hostname'] = name
 
-    if create_kwargs.pop('validate_input', False):
-        _validate_input(create_kwargs, validate_ip_addrs=validate_ip_addrs)
+    kwargs, unused_kwargs = _get_create_kwargs(
+        image=image,
+        skip_translate=skip_translate,
+        ignore_collisions=ignore_collisions,
+        **kwargs)
 
-    # Rename the kwargs whose names differ from their counterparts in the
-    # docker.client.Client class member functions. Can't use iterators here
-    # because we're going to be modifying the dict.
-    for key in list(six.iterkeys(VALID_CREATE_OPTS)):
-        if key in create_kwargs:
-            val = VALID_CREATE_OPTS[key]
-            if 'api_name' in val:
-                create_kwargs[val['api_name']] = create_kwargs.pop(key)
-
-    # API v1.15 introduced HostConfig parameter
-    # https://docs.docker.com/engine/reference/api/docker_remote_api_v1.15/#create-a-container
-    if salt.utils.version_cmp(version()['ApiVersion'], '1.15') > 0:
-        client = __context__['docker.client']
-        host_config_args = get_client_args()['host_config']
-        create_kwargs['host_config'] = client.create_host_config(
-            **dict((arg, create_kwargs.pop(arg, None)) for arg in host_config_args if arg != 'version')
+    if unused_kwargs:
+        log.warning(
+            'The following arguments were ignored because they are not '
+            'recognized by docker-py: %s', sorted(unused_kwargs)
         )
 
     log.debug(
-        'docker.create is using the following kwargs to create '
-        'container \'{0}\' from image \'{1}\': {2}'
-        .format(name, image, create_kwargs)
+        'docker.create: creating container %susing the following '
+        'arguments: %s',
+        'with name \'{0}\' '.format(name) if name is not None else '',
+        kwargs
     )
     time_started = time.time()
-    response = _client_wrapper('create_container',
-                               name=name,
-                               image=image,
-                               **create_kwargs)
+    response = _client_wrapper('create_container', image, name=name, **kwargs)
     response['Time_Elapsed'] = time.time() - time_started
     _clear_context()
 
@@ -3661,7 +2982,7 @@ def export(name,
 
 @_refresh_mine_cache
 @_ensure_exists
-def rm_(name, force=False, volumes=False):
+def rm_(name, force=False, volumes=False, **kwargs):
     '''
     Removes a container
 
@@ -3673,6 +2994,14 @@ def rm_(name, force=False, volumes=False):
         Docker API will not permit a running container to be removed. This
         option is set to ``False`` by default to prevent accidental removal of
         a running container.
+
+    stop : False
+        If ``True``, the container will be stopped first before removal, as the
+        Docker API will not permit a running container to be removed. This
+        option is set to ``False`` by default to prevent accidental removal of
+        a running container.
+
+        .. versionadded:: Nitrogen
 
     volumes : False
         Also remove volumes associated with container
@@ -3690,15 +3019,50 @@ def rm_(name, force=False, volumes=False):
         salt myminion docker.rm mycontainer
         salt myminion docker.rm mycontainer force=True
     '''
-    if state(name) == 'running' and not force:
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    stop_ = kwargs.pop('stop', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
+    if state(name) == 'running' and not (force or stop_):
         raise CommandExecutionError(
             'Container \'{0}\' is running, use force=True to forcibly '
             'remove this container'.format(name)
         )
+    if stop_ and not force:
+        stop(name)
     pre = ps_(all=True)
     _client_wrapper('remove_container', name, v=volumes, force=force)
     _clear_context()
     return [x for x in pre if x not in ps_(all=True)]
+
+
+def rename(name, new_name):
+    '''
+    .. versionadded:: Nitrogen
+
+    Renames a container. Returns ``True`` if successful, and raises an error if
+    the API returns one. If unsuccessful and the API returns no error (should
+    not happen), then ``False`` will be returned.
+
+    name
+        Name or ID of existing container
+
+    new_name
+        New name to assign to container
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion docker.rename foo bar
+    '''
+    id_ = inspect_container(name)['Id']
+    log.debug('Renaming container \'%s\' (ID: %s) to \'%s\'', name, id_, new_name)
+    _client_wrapper('rename', id_, new_name)
+    # Confirm that the ID of the container corresponding to the new name is the
+    # same as it was before.
+    return inspect_container(new_name)['Id'] == id_
 
 
 # Functions to manage images
@@ -3784,7 +3148,7 @@ def build(path=None,
     '''
     _prep_pull()
 
-    image = ':'.join(_get_repo_tag(image))
+    image = ':'.join(salt.utils.docker.get_repo_tag(image))
     time_started = time.time()
     response = _client_wrapper('build',
                                path=path,
@@ -3887,7 +3251,7 @@ def commit(name,
         salt myminion docker.commit mycontainer myuser/myimage
         salt myminion docker.commit mycontainer myuser/myimage:mytag
     '''
-    repo_name, repo_tag = _get_repo_tag(image)
+    repo_name, repo_tag = salt.utils.docker.get_repo_tag(image)
     time_started = time.time()
     response = _client_wrapper(
         'commit',
@@ -4010,7 +3374,7 @@ def import_(source,
         salt myminion docker.import /tmp/cent7-minimal.tar.xz myuser/centos:7
         salt myminion docker.import salt://dockerimages/cent7-minimal.tar.xz myuser/centos:7
     '''
-    repo_name, repo_tag = _get_repo_tag(image)
+    repo_name, repo_tag = salt.utils.docker.get_repo_tag(image)
     path = __salt__['container_resource.cache_file'](source)
 
     time_started = time.time()
@@ -4100,7 +3464,7 @@ def load(path, image=None):
         salt myminion docker.load salt://path/to/docker/saved/image.tar image=myuser/myimage:mytag
     '''
     if image is not None:
-        image = ':'.join(_get_repo_tag(image))
+        image = ':'.join(salt.utils.docker.get_repo_tag(image))
     local_path = __salt__['container_resource.cache_file'](path)
     if not os.path.isfile(local_path):
         raise CommandExecutionError(
@@ -4171,7 +3535,7 @@ def layers(name):
 def pull(image,
          insecure_registry=False,
          api_response=False,
-         client_timeout=CLIENT_TIMEOUT):
+         client_timeout=salt.utils.docker.CLIENT_TIMEOUT):
     '''
     Pulls an image from a Docker registry. See the documentation at the top of
     this page to configure authenticated access.
@@ -4220,7 +3584,7 @@ def pull(image,
     '''
     _prep_pull()
 
-    repo_name, repo_tag = _get_repo_tag(image)
+    repo_name, repo_tag = salt.utils.docker.get_repo_tag(image)
     kwargs = {'tag': repo_tag,
               'stream': True,
               'client_auth': True,
@@ -4270,7 +3634,7 @@ def pull(image,
 def push(image,
          insecure_registry=False,
          api_response=False,
-         client_timeout=CLIENT_TIMEOUT):
+         client_timeout=salt.utils.docker.CLIENT_TIMEOUT):
     '''
     .. versionchanged:: 2015.8.4
         The ``Id`` and ``Image`` keys are no longer present in the return data.
@@ -4319,7 +3683,7 @@ def push(image,
         salt myminion docker.push myuser/mycontainer:mytag
     '''
     if ':' in image:
-        repo_name, repo_tag = _get_repo_tag(image)
+        repo_name, repo_tag = salt.utils.docker.get_repo_tag(image)
     else:
         repo_name = image
         repo_tag = None
@@ -4658,7 +4022,7 @@ def tag_(name, image, force=False):
         salt myminion docker.tag 0123456789ab myrepo/mycontainer:mytag
     '''
     image_id = inspect_image(name)['Id']
-    repo_name, repo_tag = _get_repo_tag(image)
+    repo_name, repo_tag = salt.utils.docker.get_repo_tag(image)
     response = _client_wrapper('tag',
                                image_id,
                                repo_name,
@@ -5093,7 +4457,7 @@ def start(name):
 
 @_refresh_mine_cache
 @_ensure_exists
-def stop(name, timeout=STOP_TIMEOUT, **kwargs):
+def stop(name, timeout=None, **kwargs):
     '''
     Stops a running container
 
@@ -5104,10 +4468,15 @@ def stop(name, timeout=STOP_TIMEOUT, **kwargs):
         If ``True`` and the container is paused, it will be unpaused before
         attempting to stop the container.
 
-    timeout : 10
+    timeout
         Timeout in seconds after which the container will be killed (if it has
         not yet gracefully shut down)
 
+        .. versionchanged:: Nitrogen
+            If this argument is not passed, then the container's configuration
+            will be checked. If the container was created using the
+            ``stop_timeout`` argument, then the configured timeout will be
+            used, otherwise the timeout will be 10 seconds.
 
     **RETURN DATA**
 
@@ -5127,6 +4496,14 @@ def stop(name, timeout=STOP_TIMEOUT, **kwargs):
         salt myminion docker.stop mycontainer unpause=True
         salt myminion docker.stop mycontainer timeout=20
     '''
+    if timeout is None:
+        try:
+            # Get timeout from container config
+            timeout = inspect_container(name)['Config']['StopTimeout']
+        except KeyError:
+            # Fall back to a global default defined in salt.utils.docker
+            timeout = salt.utils.docker.SHUTDOWN_TIMEOUT
+
     orig_state = state(name)
     if orig_state == 'paused':
         if kwargs.get('unpause', False):
@@ -6112,76 +5489,3 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
         stop(id_)
         rm_(id_)
     return ret
-
-
-def get_client_args():
-    '''
-    .. versionadded:: 2016.3.6,2016.11.4,Nitrogen
-
-    Returns the args for docker-py's `low-level API`_, organized by container
-    config, host config, and networking config.
-
-    .. _`low-level API`: http://docker-py.readthedocs.io/en/stable/api.html
-        salt myminion docker.get_client_args
-    '''
-    try:
-        config_args = _argspec(docker.types.ContainerConfig.__init__).args
-    except AttributeError:
-        try:
-            config_args = _argspec(docker.utils.create_container_config).args
-        except AttributeError:
-            raise CommandExecutionError(
-                'Failed to get create_container_config argspec'
-            )
-
-    try:
-        host_config_args = \
-            _argspec(docker.types.HostConfig.__init__).args
-    except AttributeError:
-        try:
-            host_config_args = _argspec(docker.utils.create_host_config).args
-        except AttributeError:
-            raise CommandExecutionError(
-                'Failed to get create_host_config argspec'
-            )
-
-    try:
-        endpoint_config_args = \
-            _argspec(docker.types.EndpointConfig.__init__).args
-    except AttributeError:
-        try:
-            endpoint_config_args = \
-                _argspec(docker.utils.utils.create_endpoint_config).args
-        except AttributeError:
-            try:
-                endpoint_config_args = \
-                    _argspec(docker.utils.create_endpoint_config).args
-            except AttributeError:
-                raise CommandExecutionError(
-                    'Failed to get create_endpoint_config argspec'
-                )
-
-    for arglist in (config_args, host_config_args, endpoint_config_args):
-        try:
-            # The API version is passed automagically by the API code that
-            # imports these classes/functions and is not an arg that we will be
-            # passing, so remove it if present.
-            arglist.remove('version')
-        except ValueError:
-            pass
-
-    # Remove any args in host or networking config from the main config dict.
-    # This keeps us from accidentally allowing args that have been moved from
-    # the container config to the host config (but are still accepted by
-    # create_container_config so warnings can be issued).
-    for arglist in (host_config_args, endpoint_config_args):
-        for item in arglist:
-            try:
-                config_args.remove(item)
-            except ValueError:
-                # Arg is not in config_args
-                pass
-
-    return {'config': config_args,
-            'host_config': host_config_args,
-            'networking_config': endpoint_config_args}

@@ -18,7 +18,7 @@ are run.
 The most basic usage of Jinja in state files is using control structures to
 wrap conditional or redundant state elements:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if grains['os'] != 'FreeBSD' %}
     tcsh:
@@ -43,7 +43,7 @@ Writing **if-else** blocks can lead to very redundant state files however. In
 this case, using :ref:`pillars<pillar>`, or using a previously
 defined variable might be easier:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% set motd = ['/etc/motd'] %}
     {% if grains['os'] == 'Debian' %}
@@ -61,7 +61,7 @@ list of MOTD files to update, adding a state block for each file.
 
 The filter_by function can also be used to set variables based on grains:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
    {% set auditd = salt['grains.filter_by']({
    'RedHat': { 'package': 'audit' },
@@ -76,7 +76,7 @@ Include and Import
 Includes and imports_ can be used to share common, reusable state configuration
 between state files and between files.
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% from 'lib.sls' import test %}
 
@@ -85,7 +85,7 @@ state element, from the file ``lib.sls``. In the case that the included file
 performs checks against grains, or something else that requires context, passing
 the context into the included file is required:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% from 'lib.sls' import test with context %}
 
@@ -95,7 +95,7 @@ Including Context During Include/Import
 By adding ``with context`` to the include/import directive, the
 current context can be passed to an included/imported template.
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% import 'openssl/vars.sls' as ssl with context %}
 
@@ -110,7 +110,7 @@ mini-templates to repeat blocks of strings with a few parameterized variables.
 Be aware that stripping whitespace from the template block, as well as
 contained blocks, may be necessary to emulate a variable return from the macro.
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # init.sls
     {% from 'lib.sls' import pythonpkg with context %}
@@ -123,7 +123,7 @@ contained blocks, may be necessary to emulate a variable return from the macro.
       pkg.installed:
         - name: {{ pythonpkg('fabric') }}
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # lib.sls
     {% macro pythonpkg(pkg) -%}
@@ -161,13 +161,13 @@ strftime
   :ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in
   the official Python documentation.
 
-  .. code-block:: yaml
+  .. code-block:: jinja
 
       {% set curtime = None | strftime() %}
 
   Fuzzy dates require the `timelib`_ Python module is installed.
 
-  .. code-block:: yaml
+  .. code-block:: jinja
 
       {{ "2002/12/25"|strftime("%y") }}
       {{ "1040814000"|strftime("%Y-%m-%d") }}
@@ -184,7 +184,7 @@ yaml_encode
   unicode.  It will *not* work for multi-objects such as sequences or
   maps.
 
-  .. code-block:: yaml
+  .. code-block:: jinja
 
       {%- set bar = 7 %}
       {%- set baz = none %}
@@ -209,7 +209,7 @@ yaml_dquote
   resulting string will be emitted with opening and closing double
   quotes.
 
-  .. code-block:: yaml
+  .. code-block:: jinja
 
       {%- set bar = '"The quick brown fox . . ."' %}
       {%- set baz = 'The word of the day is "salty".' %}
@@ -1087,7 +1087,7 @@ Jinja_ can be used in the same way in managed files:
             - context:
                 bind: 127.0.0.1
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # lib.sls
     {% set port = 6379 %}
@@ -1165,7 +1165,7 @@ dictionary of :term:`execution function <Execution Function>`.
 
 .. versionadded:: 2014.7.0
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # The following two function calls are equivalent.
     {{ salt['cmd.run']('whoami') }}
@@ -1179,7 +1179,7 @@ in the current Jinja context.
 
 .. versionadded:: 2014.7.0
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     Context is: {{ show_full_context() }}
 
@@ -1212,7 +1212,7 @@ distribute to Salt minions.
 Functions in custom execution modules are available in the Salt execution
 module dictionary just like the built-in execution modules:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {{ salt['my_custom_module.my_custom_function']() }}
 

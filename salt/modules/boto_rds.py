@@ -276,10 +276,10 @@ def create(name, allocated_storage, db_instance_class, engine,
         kwargs = {}
         boto_params = set(boto3_param_map.keys())
         keys = set(locals().keys())
-        for key in keys.intersection(boto_params):
-            val = locals()[key]
+        for param_key in keys.intersection(boto_params):
+            val = locals()[param_key]
             if val is not None:
-                mapped = boto3_param_map[key]
+                mapped = boto3_param_map[param_key]
                 kwargs[mapped[0]] = mapped[1](val)
 
         taglist = _tag_doc(tags)
@@ -551,7 +551,7 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
                     'CopyTagsToSnapshot', 'MonitoringInterval',
                     'MonitoringRoleArn', 'PromotionTier',
                     'DomainMemberships')
-            return {'rds': dict([(k, rds.get('DBInstances', [{}])[0].get(k)) for k in keys])}
+            return {'rds': dict([(k, rds.get(k)) for k in keys])}
         else:
             return {'rds': None}
     except ClientError as e:

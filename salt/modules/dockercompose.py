@@ -124,7 +124,6 @@ except ImportError:
     USE_FILTERCLASS = False
 
 MIN_DOCKERCOMPOSE = (1, 5, 0)
-MAX_DOCKERCOMPOSE = (1, 9, 0)
 VERSION_RE = r'([\d.]+)'
 
 log = logging.getLogger(__name__)
@@ -139,7 +138,7 @@ def __virtual__():
         match = re.match(VERSION_RE, str(compose.__version__))
         if match:
             version = tuple([int(x) for x in match.group(1).split('.')])
-            if version >= MIN_DOCKERCOMPOSE and version <= MAX_DOCKERCOMPOSE:
+            if version >= MIN_DOCKERCOMPOSE:
                 return __virtualname__
     return (False, 'The dockercompose execution module not loaded: '
             'compose python library not available.')

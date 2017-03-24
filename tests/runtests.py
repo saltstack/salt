@@ -112,6 +112,9 @@ TEST_SUITES = {
     'client':
        {'display_name': 'Client',
         'path': 'integration/client'},
+    'grains':
+       {'display_name': 'Grains',
+        'path': 'integration/grains'},
     'shell':
        {'display_name': 'Shell',
         'path': 'integration/shell'},

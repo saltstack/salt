@@ -28,6 +28,10 @@ except ImportError:
 import salt.utils
 from salt._compat import subprocess, ipaddress
 
+# inet_pton does not exist in Windows, this is a workaround
+if salt.utils.is_windows():
+    from salt.ext import win_inet_pton  # pylint: disable=unused-import
+
 log = logging.getLogger(__name__)
 
 # pylint: disable=C0103
