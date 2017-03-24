@@ -129,6 +129,23 @@ Execution Module Changes
   :py:func:`Debian/Ubuntu <salt.modules.aptpkg.list_repo_pkgs>` and
   :py:func:`Arch Linux <salt.modules.pacman.list_repo_pkgs>`-based distros.
 
+
+Proxy Module Changes
+====================
+
+The :conf_proxy:`proxy_merge_grains_in_module` configuration variable
+introduced in 2016.3, has been changed, defaulting to ``True``.
+
+The connection with the remote device is kept alive by default, when the
+module implements the ``alive`` function and :conf_proxy:`proxy_keep_alive`
+is set to ``True``. The polling interval is set using the
+:conf_proxy:`proxy_keep_alive_interval` option which defaults to 1 minute.
+
+The developers are also able to use the :conf_proxy:`proxy_always_alive`,
+when designing a proxy module flexible enough to open the
+connection with the remote device only when required.
+
+
 Wildcard Versions in :py:func:`pkg.installed <salt.states.pkg.installed>` States
 ================================================================================
 
