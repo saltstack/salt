@@ -2717,6 +2717,8 @@ class GitFS(GitBase):
         '''
         Return a dict containing the file lists for files and dirs
         '''
+        # environment (git tag) may be numeric
+        load['saltenv'] = str(load['saltenv'])
         if 'env' in load:
             salt.utils.warn_until(
                 'Boron',
