@@ -92,6 +92,94 @@ globally available or passed in through function arguments, file data, etc.
   a function's logic.
 
 
+Mocking Loader Modules
+----------------------
+
+Salt loader modules use a series of globally available dunder variables, 
+``__salt__``, ``__opts__``, ``__pillar__``, etc. To facilitate testing these 
+modules a mixin class was created, ``LoaderModuleMockMixin`` which can be found 
+in ``tests/support/mixins.py``. The reason for the exitance of this class is 
+because, historycally, and because it was easier, one would add these dunder 
+variables directly on the imported module. This however, introduces unexpected 
+behavior when running the full test suite since those attributes would not be 
+removed once we were done testing the module and would therefor leak to other 
+modules being tested with unpredictable results. This is the kind of work that 
+should be defered to mock, and that's exactly what this mixin class does.
+
+As an example, if one needs to specify some options which should be available 
+to the module being tests one should do:
+
+.. code-block:: python
+
+   import salt.modules.somemodule as somemodule
+
+   class SomeModuleTest(TestCase, LoaderModuleMockMixin):
+
+       def setup_loader_modules(self):
+           return {
+               somemodule: {
+                   '__opts__': {'test': True}
+               }
+           }
+
+Consider this more extensive example from 
+``tests/unit/modules/test_libcloud_dns.py``::
+
+.. code-block:: python
+
+   # Import Python Libs
+   from __future__ import absolute_import
+
+   # Import Salt Testing Libs
+   from tests.support.mixins import LoaderModuleMockMixin
+   from tests.support.unit import TestCase, skipIf
+   from tests.support.mock import (
+       patch,
+       MagicMock,
+       NO_MOCK,
+       NO_MOCK_REASON
+   )
+   import salt.modules.libcloud_dns as libcloud_dns
+
+
+   class MockDNSDriver(object):
+       def __init__(self):
+           pass
+
+
+   def get_mock_driver():
+       return MockDNSDriver()
+
+
+   @skipIf(NO_MOCK, NO_MOCK_REASON)
+   @patch('salt.modules.libcloud_dns._get_driver',
+          MagicMock(return_value=MockDNSDriver()))
+   class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
+
+       def setup_loader_modules(self):
+           module_globals = {
+               '__salt__': {
+                   'config.option': MagicMock(return_value={
+                       'test': {
+                           'driver': 'test',
+                           'key': '2orgk34kgk34g'
+                       }
+                   })
+               }
+           }
+           if libcloud_dns.HAS_LIBCLOUD is False:
+               module_globals['sys.modules'] = {'libcloud': MagicMock()}
+
+           return {libcloud_dns: module_globals}
+
+
+What happens on the above example is that, we mock a call to 
+`__salt__['config.option']` to return the configuration needed for the 
+execution of the tests. Additionally, if the ``libcloud`` library is not 
+available, since that's not actually part of whats being tested, we mocked that 
+import by patching ``sys.modules`` when tests are running.
+
+
 Naming Conventions
 ------------------
 
