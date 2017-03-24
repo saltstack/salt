@@ -1579,7 +1579,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'sign_pub_messages': True,
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': True,
-    'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include', 'include'],
+    'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include'],
     'default_include': 'proxy.d/*.conf',
 
     # By default, proxies will preserve the connection.
@@ -3256,7 +3256,7 @@ def apply_minion_config(overrides=None,
         if directory in ('pki_dir', 'cachedir', 'extension_modules'):
             newdirectory = os.path.join(opts[directory], opts['id'])
             opts[directory] = newdirectory
-        elif directory in ('default_include', 'include') and directory in opts:
+        elif directory == 'default_include' and directory in opts:
             include_dir = os.path.dirname(opts[directory])
             new_include_dir = os.path.join(include_dir,
                                            opts['id'],
