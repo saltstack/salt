@@ -12,7 +12,6 @@ Provides the service module for systemd
 '''
 # Import python libs
 from __future__ import absolute_import
-import copy
 import errno
 import glob
 import logging
