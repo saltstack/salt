@@ -1195,6 +1195,7 @@ def load_template(template_name,
                     _loaded['comment'] = 'Error while rendering the template.'
                     return _loaded
                 _rendered = open(_temp_tpl_file).read()
+                __salt__['file.remove'](_temp_tpl_file)
             else:
                 return _loaded  # exit
 
