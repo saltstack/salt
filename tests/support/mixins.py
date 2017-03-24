@@ -13,6 +13,7 @@
 # Import python libs
 from __future__ import absolute_import
 import os
+import sys
 import types
 import pprint
 import logging
@@ -502,6 +503,24 @@ class LoaderModuleMockMixin(six.with_metaclass(_FixLoaderModuleMockMixinMroOrder
                             continue
                         module_globals[dunder_name] = {}
 
+                sys_modules = module_globals.pop('sys.modules', None)
+                if sys_modules is not None:
+                    if not isinstance(sys_modules, dict):
+                        raise RuntimeError(
+                            '\'sys.modules\' must be a dictionary not: {}'.format(
+                                type(sys_modules)
+                            )
+                        )
+                    patcher = patch.dict(sys.modules, sys_modules)
+                    patcher.start()
+
+                    def cleanup_sys_modules(patcher, sys_modules):
+                        patcher.stop()
+                        del patcher
+                        del sys_modules
+
+                    self.addCleanup(cleanup_sys_modules, patcher, sys_modules)
+
                 for key in module_globals:
                     if not hasattr(module, key):
                         if key in salt_dunders:
@@ -513,11 +532,12 @@ class LoaderModuleMockMixin(six.with_metaclass(_FixLoaderModuleMockMixinMroOrder
                     patcher = patch.multiple(module, **module_globals)
                     patcher.start()
 
-                    def cleanup(patcher, module_globals):
+                    def cleanup_module_globals(patcher, module_globals):
                         patcher.stop()
+                        del patcher
                         del module_globals
 
-                    self.addCleanup(cleanup, patcher, module_globals)
+                    self.addCleanup(cleanup_module_globals, patcher, module_globals)
 
                 if minion_funcs:
                     # Since we autoloaded the minion_funcs, let's namespace the functions with the globals
