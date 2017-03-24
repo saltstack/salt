@@ -53,13 +53,13 @@ def index_present(name, definition=None):
 
     name
         Name of the index to add
-
     definition
         Optional dict for creation parameters as per https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-create-index.html
 
     **Example:**
 
     .. code-block:: yaml
+
         # Default settings
         mytestindex:
           elasticsearch_index.present
@@ -93,6 +93,103 @@ def index_present(name, definition=None):
                 ret['comment'] = str(e)
     else:
         ret['comment'] = 'Index {0} is already present'.format(name)
+
+    return ret
+
+
+def alias_absent(name, index):
+    '''
+    Ensure that the index alias is absent.
+
+    name
+        Name of the index alias to remove
+    index
+        Name of the index for the alias
+    '''
+
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    alias = __salt__['elasticsearch.alias_get'](aliases=name, indices=index)
+    if alias and alias.get(index, {}).get("aliases", {}).get(name, None) is not None:
+        if __opts__['test']:
+            ret['comment'] = 'Alias {0} for index {1} will be removed'.format(name, index)
+            ret['changes']['old'] = alias.get(index, {}).get("aliases", {}).get(name, {})
+            ret['result'] = None
+        else:
+            try:
+                ret['result'] = __salt__['elasticsearch.alias_delete'](aliases=name, indices=index)
+                if ret['result']:
+                    ret['comment'] = 'Successfully removed alias {0} for index {1}'.format(name, index)
+                    ret['changes']['old'] = alias.get(index, {}).get("aliases", {}).get(name, {})
+                else:
+                    ret['comment'] = 'Failed to remove alias {0} for index {1} for unknown reasons'.format(name, index)
+            except Exception as e:
+                ret['result'] = False
+                ret['comment'] = str(e)
+    else:
+        ret['comment'] = 'Alias {0} for index {1} is already absent'.format(name, index)
+
+    return ret
+
+
+def alias_present(name, index, definition=None):
+    '''
+    Ensure that the named index alias is present.
+
+    name
+        Name of the alias
+    index
+        Name of the index
+    definition
+        Optional dict for filters as per https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-aliases.html
+
+    **Example:**
+
+    .. code-block:: yaml
+
+        mytestalias:
+          elasticsearch.alias_present:
+            - index: testindex
+            - definition:
+                filter:
+                  term:
+                    user: kimchy
+    '''
+
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    alias = __salt__['elasticsearch.alias_get'](aliases=name, indices=index)
+    old = {}
+    if alias:
+        old = alias.get(index, {}).get("aliases", {}).get(name, {})
+    if not definition:
+        definition = {}
+
+    ret['changes'] = __utils__['dictdiffer.deep_diff'](old, definition)
+
+    if ret['changes']:
+        if __opts__['test']:
+            if not old:
+                ret['comment'] = 'Alias {0} for index {1} does not exist and will be created'.format(name, index)
+            else:
+                ret['comment'] = 'Alias {0} for index {1} exists with wrong configuration and will be overriden'.format(name, index)
+
+            ret['result'] = None
+        else:
+            try:
+                output = __salt__['elasticsearch.alias_create'](alias=name, indices=index, body=definition)
+                if output:
+                    if not old:
+                        ret['comment'] = 'Successfully created alias {0} for index {1}'.format(name, index)
+                    else:
+                        ret['comment'] = 'Successfully replaced alias {0} for index {1}'.format(name, index)
+                else:
+                    ret['comment'] = 'Cannot create alias {0} for index {1}, {2}'.format(name, index, output)
+            except Exception as e:
+                ret['result'] = False
+                ret['comment'] = str(e)
+    else:
+        ret['comment'] = 'Alias {0} for index {1} is already present'.format(name, index)
 
     return ret
 
@@ -136,13 +233,13 @@ def index_template_present(name, definition):
 
     name
         Name of the index to add
-
     definition
         Required dict for creation parameters as per https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
 
     **Example:**
 
     .. code-block:: yaml
+
         mytestindex2_template:
           elasticsearch_index_template.present:
             - definition:
@@ -215,13 +312,13 @@ def pipeline_present(name, definition):
 
     name
         Name of the index to add
-
     definition
         Required dict for creation parameters as per https://www.elastic.co/guide/en/elasticsearch/reference/master/pipeline.html
 
     **Example:**
 
     .. code-block:: yaml
+
         test_pipeline:
           elasticsearch_pipeline.present:
             - definition:
@@ -306,13 +403,13 @@ def search_template_present(name, definition):
 
     name
         Name of the search template to add
-
     definition
         Required dict for creation parameters as per http://www.elastic.co/guide/en/elasticsearch/reference/current/search-template.html
 
     **Example:**
 
     .. code-block:: yaml
+
         test_pipeline:
           elasticsearch.search_template_present:
             - definition:
@@ -326,7 +423,6 @@ def search_template_present(name, definition):
 
     old = {}
     if template:
-        print(template)
         old = json.loads(template["template"])
 
     ret['changes'] = __utils__['dictdiffer.deep_diff'](old, definition)

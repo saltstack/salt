@@ -157,6 +157,7 @@ def ping(allow_failure=False, hosts=None, profile=None):
     Test connection to Elasticsearch instance. This method does not fail if not explicitly specified.
 
     CLI example::
+
         salt myminion elasticsearch.ping allow_failure=True
     '''
     try:
@@ -175,6 +176,7 @@ def info(hosts=None, profile=None):
     Return Elasticsearch information.
 
     CLI example::
+
         salt myminion elasticsearch.info
     '''
     es = _get_instance(hosts, profile)
@@ -197,6 +199,7 @@ def node_info(nodes=None, flat_settings=False, hosts=None, profile=None):
         Flatten settings keys
 
     CLI example::
+
         salt myminion elasticsearch.node_info
     '''
     es = _get_instance(hosts, profile)
@@ -221,6 +224,7 @@ def cluster_health(index=None, level='cluster', local=False, hosts=None, profile
         Return local information, do not retrieve the state from master node
 
     CLI example::
+
         salt myminion elasticsearch.health
     '''
     es = _get_instance(hosts, profile)
@@ -241,6 +245,7 @@ def cluster_stats(nodes=None, hosts=None, profile=None):
         List of cluster nodes (id or name) to display stats for. Use _local for connected node, empty for all
 
     CLI example::
+
         salt myminion elasticsearch.stats
     '''
     es = _get_instance(hosts, profile)
