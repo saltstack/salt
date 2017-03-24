@@ -21,7 +21,7 @@ could be set in the master config, these are the defaults:
     consul.token: None
     consul.scheme: http
     consul.consistency: default
-    consul.dc: None
+    consul.dc: dc1
     consul.verify: True
 
 Related docs could be found here:
