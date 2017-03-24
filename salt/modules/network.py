@@ -844,9 +844,7 @@ def arp():
                 continue
             ret[comps[1]] = comps[0]
         elif __grains__['kernel'] == 'AIX':
-            if comps[0] == 'bucket':
-                continue
-            if comps[0] == 'There':
+            if comps[0] in ('bucket', 'There'):
                 continue
             ret[comps[3]] = comps[1].strip('(').strip(')')
         else:
@@ -1479,7 +1477,7 @@ def default_route(family=None):
         default_route['inet'] = ['0.0.0.0', 'default']
         default_route['inet6'] = ['::/0', 'default']
     elif __grains__['os'] in ['FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS', 'Darwin'] or \
-        __grains__['kernel'] == 'SunOS' or __grains__['kernel'] == 'AIX':
+        __grains__['kernel'] in ('SunOS', 'AIX'):
         default_route['inet'] = ['default']
         default_route['inet6'] = ['default']
     else:
