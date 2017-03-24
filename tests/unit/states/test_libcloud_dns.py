@@ -48,20 +48,26 @@ test_records = {
     "zone1": [TestRecord(0, "www", "A", "127.0.0.1")]
 }
 
+
 def list_zones(profile):
     return [TestZone("zone1", "test.com")]
+
 
 def list_records(zone_id, profile):
     return test_records[zone_id]
 
+
 def create_record(*args):
     return True
+
 
 def delete_record(*args):
     return True
 
+
 def create_zone(*args):
     return True
+
 
 def delete_zone(*args):
     return True
