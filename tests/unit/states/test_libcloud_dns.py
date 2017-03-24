@@ -102,42 +102,33 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         self.setup_loader()
         self.loader.set_result(libcloud_dns, 'config.option', get_config)
 
-    def test_init(self):
-        with patch('salt.utils.compat.pack_dunder', return_value=False) as dunder:
-            libcloud_dns.__init__(None)
-            dunder.assert_called_with('salt.states.libcloud_dns')
-
     def test_present_record_exists(self):
         """
         Try and create a record that already exists
         """
-        with patch('create_record', MagicMock(return_value=True)) as create_patch:
-            result = libcloud_dns.record_present("www", "test.com", "A", "127.0.0.1", "test")
-            self.assertTrue(result)
+        result = libcloud_dns.record_present("www", "test.com", "A", "127.0.0.1", "test")
+        self.assertTrue(result)
 
     def test_present_record_does_not_exist(self):
         """
         Try and create a record that already exists
         """
-        with patch('create_record') as create_patch:
-            result = libcloud_dns.record_present("mail", "test.com", "A", "127.0.0.1", "test")
-            self.assertTrue(result)
+        result = libcloud_dns.record_present("mail", "test.com", "A", "127.0.0.1", "test")
+        self.assertTrue(result)
 
     def test_absent_record_exists(self):
         """
         Try and deny a record that already exists
         """
-        with patch('delete_record', MagicMock(return_value=True)) as create_patch:
-            result = libcloud_dns.record_absent("www", "test.com", "A", "127.0.0.1", "test")
-            self.assertTrue(result)
+        result = libcloud_dns.record_absent("www", "test.com", "A", "127.0.0.1", "test")
+        self.assertTrue(result)
 
     def test_absent_record_does_not_exist(self):
         """
         Try and deny a record that already exists
         """
-        with patch('delete_record') as create_patch:
-            result = libcloud_dns.record_absent("mail", "test.com", "A", "127.0.0.1", "test")
-            self.assertTrue(result)
+        result = libcloud_dns.record_absent("mail", "test.com", "A", "127.0.0.1", "test")
+        self.assertTrue(result)
 
     def test_present_zone_not_found(self):
         """
@@ -159,30 +150,26 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         """
         Assert that a zone is present (that did not exist)
         """
-        with patch('create_zone') as create_patch:
-            result = libcloud_dns.zone_present('testing.com', 'master', 'test1')
-            self.assertTrue(result)
+        result = libcloud_dns.zone_present('testing.com', 'master', 'test1')
+        self.assertTrue(result)
 
     def test_zone_already_present(self):
         """
         Assert that a zone is present (that did exist)
         """
-        with patch('create_zone') as create_patch:
-            result = libcloud_dns.zone_present('test.com', 'master', 'test1')
-            self.assertTrue(result)
+        result = libcloud_dns.zone_present('test.com', 'master', 'test1')
+        self.assertTrue(result)
 
     def test_zone_absent(self):
         """
         Assert that a zone that did exist is absent
         """
-        with patch('delete_zone') as create_patch:
-            result = libcloud_dns.zone_absent('test.com', 'test1')
-            self.assertTrue(result)
+        result = libcloud_dns.zone_absent('test.com', 'test1')
+        self.assertTrue(result)
 
     def test_zone_already_absent(self):
         """
         Assert that a zone that did not exist is absent
         """
-        with patch('delete_zone') as create_patch:
-            result = libcloud_dns.zone_absent('testing.com', 'test1')
-            self.assertTrue(result)
+        result = libcloud_dns.zone_absent('testing.com', 'test1')
+        self.assertTrue(result)
