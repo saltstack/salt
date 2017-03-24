@@ -3822,7 +3822,7 @@ def _checkAllAdmxPolicies(policy_class,
         pathed_dict = {}
         # keys needs to be called here b/c we are changing the policy_vals
         # dict during the for loop
-        for policy_item in policy_vals.keys(): # pylint: disable=C0201
+        for policy_item in policy_vals.keys():  # pylint: disable=C0201
             if full_names[policy_item] in policy_vals:
                 # add this item with the path'd full name
                 full_path_list = hierarchy[policy_item]
