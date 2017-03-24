@@ -166,6 +166,7 @@ class DockerngTestCase(TestCase):
         __salt__ = {
             'config.get': Mock(),
             'mine.send': Mock(),
+            'dockerng.version': MagicMock(return_value={}),
         }
         host_config = {}
         client = Mock()
