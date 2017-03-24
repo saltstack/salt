@@ -88,3 +88,4 @@ tests/integration/cloud/providers/logs
 
 # Private keys from the integration tests
 tests/integration/cloud/providers/pki/minions
+/helpers/
