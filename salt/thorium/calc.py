@@ -121,7 +121,7 @@ def add(name, num, minimum=0, maximum=0, ref=None):
             - name: myregentry
             - num: 5
     '''
-    return calc(name, num, 'add', ref)
+    return calc(name, num, 'add', minimum, maximum, ref)
 
 
 def mul(name, num, minimum=0, maximum=0, ref=None):
@@ -137,7 +137,7 @@ def mul(name, num, minimum=0, maximum=0, ref=None):
             - name: myregentry
             - num: 5
     '''
-    return calc(name, num, 'mul', ref)
+    return calc(name, num, 'mul', minimum, maximum, ref)
 
 
 def mean(name, num, minimum=0, maximum=0, ref=None):
@@ -153,7 +153,7 @@ def mean(name, num, minimum=0, maximum=0, ref=None):
             - name: myregentry
             - num: 5
     '''
-    return calc(name, num, 'mean', ref)
+    return calc(name, num, 'mean', minimum, maximum, ref)
 
 
 def median(name, num, minimum=0, maximum=0, ref=None):
@@ -169,7 +169,7 @@ def median(name, num, minimum=0, maximum=0, ref=None):
             - name: myregentry
             - num: 5
     '''
-    return calc(name, num, 'median', ref)
+    return calc(name, num, 'median', minimum, maximum, ref)
 
 
 def median_low(name, num, minimum=0, maximum=0, ref=None):
@@ -185,7 +185,7 @@ def median_low(name, num, minimum=0, maximum=0, ref=None):
             - name: myregentry
             - num: 5
     '''
-    return calc(name, num, 'median_low', ref)
+    return calc(name, num, 'median_low', minimum, maximum, ref)
 
 
 def median_high(name, num, minimum=0, maximum=0, ref=None):
@@ -201,7 +201,7 @@ def median_high(name, num, minimum=0, maximum=0, ref=None):
             - name: myregentry
             - num: 5
     '''
-    return calc(name, num, 'median_high', ref)
+    return calc(name, num, 'median_high', minimum, maximum, ref)
 
 
 def median_grouped(name, num, minimum=0, maximum=0, ref=None):
@@ -218,7 +218,7 @@ def median_grouped(name, num, minimum=0, maximum=0, ref=None):
             - name: myregentry
             - num: 5
     '''
-    return calc(name, num, 'median_grouped', ref)
+    return calc(name, num, 'median_grouped', minimum, maximum, ref)
 
 
 def mode(name, num, minimum=0, maximum=0, ref=None):
@@ -234,4 +234,4 @@ def mode(name, num, minimum=0, maximum=0, ref=None):
             - name: myregentry
             - num: 5
     '''
-    return calc(name, num, 'mode', ref)
+    return calc(name, num, 'mode', minimum, maximum, ref)
