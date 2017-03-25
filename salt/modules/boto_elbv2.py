@@ -41,7 +41,6 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import json
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ log = logging.getLogger(__name__)
 import salt.ext.six as six
 
 try:
-    import salt.utils.boto3
+    import salt.utils.boto3 # pylint: enable=unused-import
     # connection settings were added in ?
     # TODO Version check using salt.utils.versions
     from botocore.exceptions import ClientError
@@ -95,7 +94,6 @@ def target_group_exists(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-
 def describe_target_health(name, targets=None, region=None, key=None, keyid=None, profile=None):
     '''
     Get the curret health check status for targets in a target group.
@@ -114,16 +112,17 @@ def describe_target_health(name, targets=None, region=None, key=None, keyid=None
             for target in targets:
                 targetsdict.append({"Id": target})
             instances = conn.describe_target_health(TargetGroupArn=name, Targets=targetsdict)
-        else: 
+        else:
             instances = conn.describe_target_health(TargetGroupArn=name)
         ret = {}
         for instance in instances['TargetHealthDescriptions']:
-            ret.update({instance['Target']['Id'] : instance['TargetHealth']['State']})
+            ret.update({instance['Target']['Id']: instance['TargetHealth']['State']})
 
         return ret
     except ClientError as error:
         log.warning(error)
         return {}
+
 
 def register_targets(name, targets, region=None, key=None, keyid=None,
                        profile=None):
@@ -145,10 +144,10 @@ def register_targets(name, targets, region=None, key=None, keyid=None,
     '''
     targetsdict = []
     if isinstance(targets, str) or isinstance(targets, six.text_type):
-        targetsdict.append({"Id" : targets})
+        targetsdict.append({"Id": targets})
     else:
         for target in targets:
-            targetsdict.append({"Id" : target})
+            targetsdict.append({"Id": target})
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
@@ -160,6 +159,7 @@ def register_targets(name, targets, region=None, key=None, keyid=None,
     except ClientError as error:
         log.warning(error)
         return False
+
 
 def deregister_targets(name, targets, region=None, key=None, keyid=None,
                          profile=None):
@@ -181,10 +181,10 @@ def deregister_targets(name, targets, region=None, key=None, keyid=None,
     '''
     targetsdict = []
     if isinstance(targets, str) or isinstance(targets, six.text_type):
-        targetsdict.append({"Id" : targets})
+        targetsdict.append({"Id": targets})
     else:
         for target in targets:
-            targetsdict.append({"Id" : target})
+            targetsdict.append({"Id": target})
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
