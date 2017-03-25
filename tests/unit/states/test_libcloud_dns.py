@@ -10,8 +10,6 @@ from __future__ import absolute_import
 from tests.support.unit import skipIf
 from tests.unit import ModuleTestCase, hasDependency
 from tests.support.mock import (
-    patch,
-    MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
 )
