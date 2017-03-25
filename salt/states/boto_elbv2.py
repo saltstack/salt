@@ -34,6 +34,8 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         region: us-east-1
 '''
 
+from __future__ import absolute_import
+
 # Import Python Libs
 import logging
 import copy
