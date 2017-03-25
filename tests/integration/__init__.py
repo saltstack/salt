@@ -1355,6 +1355,20 @@ class AdaptedConfigurationTestCaseMixIn(object):
         '''
         return self.get_config('master')
 
+    @property
+    def minion_opts(self):
+        '''
+        Return the options used for the minion
+        '''
+        return self.get_config('minion')
+
+    @property
+    def sub_minion_opts(self):
+        '''
+        Return the options used for the sub_minion
+        '''
+        return self.get_config('sub_minion')
+
 
 class SaltMinionEventAssertsMixIn(object):
     '''
@@ -1487,20 +1501,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         ret = self.run_function('state.single', [function], **kwargs)
         return self._check_state_return(ret)
-
-    @property
-    def minion_opts(self):
-        '''
-        Return the options used for the minion
-        '''
-        return self.get_config('minion')
-
-    @property
-    def sub_minion_opts(self):
-        '''
-        Return the options used for the sub_minion
-        '''
-        return self.get_config('sub_minion')
 
     def _check_state_return(self, ret):
         if isinstance(ret, dict):
