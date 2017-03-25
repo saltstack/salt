@@ -10,8 +10,6 @@ from __future__ import absolute_import
 from salttesting import skipIf
 from tests.unit import ModuleTestCase, hasDependency
 from salttesting.mock import (
-    patch,
-    MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
 )
