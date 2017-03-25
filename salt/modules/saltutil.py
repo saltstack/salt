@@ -1283,6 +1283,7 @@ def runner(name, **kwargs):
     jid = kwargs.pop('__orchestration_jid__', None)
     saltenv = kwargs.pop('__env__', 'base')
     full_return = kwargs.pop('full_return', False)
+    fun_args = kwargs.pop('fun_args', [])
     kwargs = salt.utils.clean_kwargs(**kwargs)
 
     if 'master_job_cache' not in __opts__:
@@ -1307,6 +1308,7 @@ def runner(name, **kwargs):
         )
 
     return rclient.cmd(name,
+                       arg=fun_args,
                        kwarg=kwargs,
                        print_event=False,
                        full_return=full_return)
