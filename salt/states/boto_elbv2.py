@@ -85,13 +85,13 @@ def targets_registered(name, targets, region=None, key=None, keyid=None,
             targets = [targets]
 
         for target in targets:
-            if target in health and health.get(target) != "draining" :
+            if target in health and health.get(target) != "draining":
                 ret['comment'] = ret['comment'] + 'Target/s {0} already registered and is {1}.\n'.format(target, health[target])
                 ret['result'] = True
             else:
                 if __opts__['test']:
                     changes = True
-                    newhealth_mock.update({target : "initial"})
+                    newhealth_mock.update({target: "initial"})
                 else:
                     state = __salt__['boto_elbv2.register_targets'](name,
                                                                     targets,
@@ -121,6 +121,7 @@ def targets_registered(name, targets, region=None, key=None, keyid=None,
     else:
         ret['comment'] = 'Could not find target group {0}'.format(name)
     return ret
+
 
 def targets_deregistered(name, targets, region=None, key=None, keyid=None,
                        profile=None):
@@ -154,13 +155,13 @@ def targets_deregistered(name, targets, region=None, key=None, keyid=None,
         if isinstance(targets, str):
             targets = [targets]
         for target in targets:
-            if target not in health or health.get(target) == "draining" :
+            if target not in health or health.get(target) == "draining":
                 ret['comment'] = ret['comment'] + 'Target/s {0} already deregistered\n'.format(target)
                 ret['result'] = True
             else:
                 if __opts__['test']:
                     changes = True
-                    newhealth_mock.update({target : "draining"})
+                    newhealth_mock.update({target: "draining"})
                 else:
                     state = __salt__['boto_elbv2.deregister_targets'](name,
                                                                     targets,
