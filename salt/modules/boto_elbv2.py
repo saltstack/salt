@@ -50,8 +50,10 @@ log = logging.getLogger(__name__)
 import salt.ext.six as six
 
 try:
-    import salt.utils.boto3  # pylint: enable=unused-import
-    # connection settings were added in ?
+    # pylint: disable=unused-import
+    import salt.utils.boto3
+    # pylint: enable=unused-import
+
     # TODO Version check using salt.utils.versions
     from botocore.exceptions import ClientError
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
