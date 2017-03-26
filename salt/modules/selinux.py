@@ -275,6 +275,40 @@ def setsemod(module, state):
     return not __salt__['cmd.retcode'](cmd)
 
 
+def install_semod(module_path):
+    '''
+    Install custom SELinux module from file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.install_semod [salt://]path/to/module.pp
+
+    .. versionadded:: develop
+    '''
+    if module_path.find('salt://') == 0:
+        module_path = __salt__['cp.cache_file'](module_path)
+    cmd = 'semodule -i {0}'.format(module_path)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def remove_semod(module):
+    '''
+    Remove SELinux module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.remove_semod module_name
+
+    .. versionadded:: develop
+    '''
+    cmd = 'semodule -r {0}'.format(module)
+    return not __salt__['cmd.retcode'](cmd)
+
+
 def list_semod():
     '''
     Return a structure listing all of the selinux modules on the system and
