@@ -178,7 +178,7 @@ def boolean(name, value, persist=False):
     return ret
 
 
-def module(name, module_state='Enabled', version='any'):
+def module(name, module_state='Enabled', version='any', **opts):
     '''
     Enable/Disable and optionally force a specific version for an SELinux module
 
@@ -192,12 +192,32 @@ def module(name, module_state='Enabled', version='any'):
         Defaults to no preference, set to a specified value if required.
         Currently can only alert if the version is incorrect.
 
+    install
+        Setting to True installs module
+
+    source
+        Points to module source file, used only when install is True
+
+    remove
+        Setting to True removes module
+
     .. versionadded:: 2016.3.0
     '''
     ret = {'name': name,
            'result': True,
            'comment': '',
            'changes': {}}
+    if opts.get('install', False) and opts.get('remove', False):
+        ret['result'] = False
+        ret['comment'] = 'Cannot install and remove at the same time'
+        return ret
+    if opts.get('install', False):
+        module_path = opts.get('source', name)
+        ret = module_install(module_path)
+        if not ret['result']:
+            return ret
+    elif opts.get('remove', False):
+        return module_remove(name)
     modules = __salt__['selinux.list_semod']()
     if name not in modules:
         ret['comment'] = 'Module {0} is not available'.format(name)
@@ -232,6 +252,53 @@ def module(name, module_state='Enabled', version='any'):
         return ret
     ret['result'] = False
     ret['comment'] = 'Failed to set the Module {0} to {1}'.format(name, module_state)
+    return ret
+
+
+def module_install(name):
+    '''
+    Installs custom SELinux module from given file
+
+    name
+        Path to file with module to install
+
+    .. versionadded:: develop
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}}
+    if __salt__['selinux.install_semod'](name):
+        ret['comment'] = 'Module {0} has been installed'.format(name)
+        return ret
+    ret['result'] = False
+    ret['comment'] = 'Failed to install module {0}'.format(name)
+    return ret
+
+
+def module_remove(name):
+    '''
+    Removes SELinux module
+
+    name
+        The name of the module to remove
+
+    .. versionadded:: develop
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}}
+    modules = __salt__['selinux.list_semod']()
+    if name not in modules:
+        ret['comment'] = 'Module {0} is not available'.format(name)
+        ret['result'] = False
+        return ret
+    if __salt__['selinux.remove_semod'](name):
+        ret['comment'] = 'Module {0} has been removed'.format(name)
+        return ret
+    ret['result'] = False
+    ret['comment'] = 'Failed to remove module {0}'.format(name)
     return ret
 
 
