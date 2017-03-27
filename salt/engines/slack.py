@@ -6,6 +6,8 @@ In addition, when the parameter ``fire_all`` is set (defaults to False),
 all messages will be fired off to the salt event bus, with the tag prefixed
 by the string provided by the ``tag`` config option (defaults to ``salt/engines/slack``).
 
+fire_all is broken at the moment with json serialization errors
+
 .. versionadded: 2016.3.0
 
 :configuration: Example configuration using only the "default" group, which is special
@@ -190,7 +192,7 @@ def _can_user_run(user, command, groups):
     return False
 
 
-def _generate_triggered_messages(token, trigger_string, groups, control, ):
+def _generate_triggered_messages(token, trigger_string, groups, control):
     """
     slack_token = string
     trigger_string = string
