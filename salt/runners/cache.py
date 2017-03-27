@@ -25,6 +25,10 @@ from salt.runners.winrepo import PER_REMOTE_OVERRIDES as __WINREPO_OVERRIDES
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'list_': 'list',
+}
+
 
 def grains(tgt=None, tgt_type='glob', **kwargs):
     '''
@@ -409,9 +413,35 @@ def cloud(tgt, provider=None):
     return ret
 
 
+def list_(bank, cachedir=None):
+    '''
+    Lists entries stored in the specified bank.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.list cloud/active/ec2/myec2 cachedir=/var/cache/salt/
+    '''
+    if cachedir is None:
+        cachedir = __opts__['cachedir']
+
+    try:
+        cache = salt.cache.Cache(__opts__, cachedir)
+    except TypeError:
+        cache = salt.cache.Cache(__opts__)
+    return cache.list(bank)
+
+
 def fetch(bank, key, cachedir=None):
     '''
-    Fetch data from a salt.cache bank
+    Fetch data from a salt.cache bank.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.fetch cloud/active/ec2/myec2 myminion cachedir=/var/cache/salt/
     '''
     if cachedir is None:
         cachedir = __opts__['cachedir']
@@ -421,3 +451,25 @@ def fetch(bank, key, cachedir=None):
     except TypeError:
         cache = salt.cache.Cache(__opts__)
     return cache.fetch(bank, key)
+
+
+def flush(bank, key=None, cachedir=None):
+    '''
+    Remove the key from the cache bank with all the key content. If no key is
+    specified remove the entire bank with all keys and sub-banks inside.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-run cache.flush cloud/active/ec2/myec2 cachedir=/var/cache/salt/
+        salt-run cache.flush cloud/active/ec2/myec2 myminion cachedir=/var/cache/salt/
+    '''
+    if cachedir is None:
+        cachedir = __opts__['cachedir']
+
+    try:
+        cache = salt.cache.Cache(__opts__, cachedir)
+    except TypeError:
+        cache = salt.cache.Cache(__opts__)
+    return cache.flush(bank, key)
