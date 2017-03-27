@@ -688,9 +688,11 @@ class Pillar(object):
                                         )
                                 if nstate:
                                     if key:
-                                        nstate = {
-                                            key: nstate
-                                        }
+                                        # If key is x:y, convert it to {x: {y: nstate}}
+                                        for key_fragment in reversed(key.split(":")):
+                                            nstate = {
+                                                key_fragment: nstate
+                                            }
 
                                     state = merge(
                                         state,
