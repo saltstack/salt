@@ -121,6 +121,36 @@ class PillarTestCase(TestCase):
             ({'foo': 'bar2'}, [])
         )
 
+        # Test includes using empty key directive
+        compile_template.side_effect = [
+            {'foo': 'bar', 'include': [{'blah': {'key': ''}}]},
+            {'foo': 'bar2'}
+        ]
+        self.assertEqual(
+            pillar.render_pillar({'base': ['foo.sls']}),
+            ({'foo': 'bar2'}, [])
+        )
+
+        # Test includes using simple non-nested key
+        compile_template.side_effect = [
+            {'foo': 'bar', 'include': [{'blah': {'key': 'nested'}}]},
+            {'foo': 'bar2'}
+        ]
+        self.assertEqual(
+            pillar.render_pillar({'base': ['foo.sls']}),
+            ({'foo': 'bar', 'nested': {'foo': 'bar2'}}, [])
+        )
+
+        # Test includes using nested key
+        compile_template.side_effect = [
+            {'foo': 'bar', 'include': [{'blah': {'key': 'nested:level'}}]},
+            {'foo': 'bar2'}
+        ]
+        self.assertEqual(
+            pillar.render_pillar({'base': ['foo.sls']}),
+            ({'foo': 'bar', 'nested': {'level': {'foo': 'bar2'}}}, [])
+        )
+
     @patch('salt.pillar.salt.fileclient.get_file_client', autospec=True)
     @patch('salt.pillar.salt.minion.Matcher')  # autospec=True disabled due to py3 mock bug
     def test_topfile_order(self, Matcher, get_file_client):
