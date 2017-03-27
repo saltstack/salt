@@ -209,12 +209,12 @@ Normally when using these modules, the path to the map file is passed in using:
 
 .. code-block:: bash
 
-    salt-run cloud.run_map /path/to/cloud.map
+    salt-run cloud.map_run /path/to/cloud.map
 
 To pass in the actual map data, use the ``map_data`` argument:
 
 .. code-block:: bash
 
-    salt-run cloud.run_map map_data='{"centos7": [{"saltmaster": {"minion": \
+    salt-run cloud.map_run map_data='{"centos7": [{"saltmaster": {"minion": \
         {"transport": "tcp"}, "make_master": true, "master": {"transport": \
         "tcp"}}}, {"minion001": {"minion": {"transport": "tcp"}}}]}'
