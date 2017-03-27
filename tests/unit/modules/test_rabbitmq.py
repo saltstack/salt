@@ -21,11 +21,6 @@ from salt.exceptions import CommandExecutionError
 
 # Globals
 rabbitmq.__salt__ = {}
-rabbitmq.__context__ = {}
-
-# These are set by rabbitmq.__virtual__()
-rabbitmq.__context__['rabbitmqctl'] = None
-rabbitmq.__context__['rabbitmq-plugins'] = None
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
