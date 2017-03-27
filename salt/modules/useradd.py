@@ -115,9 +115,9 @@ def add(name,
         workphone='',
         homephone='',
         createhome=True,
-        nologinit=False,
         loginclass=None,
-        root=None):
+        root=None,
+        nologinit=False):
     '''
     Add a user to the minion
 

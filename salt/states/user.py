@@ -200,7 +200,6 @@ def present(name,
             remove_groups=True,
             home=None,
             createhome=True,
-            nologinit=False,
             password=None,
             hash_password=False,
             enforce_password=True,
@@ -222,7 +221,8 @@ def present(name,
             win_homedrive=None,
             win_profile=None,
             win_logonscript=None,
-            win_description=None):
+            win_description=None,
+            nologinit=False):
     '''
     Ensure that the named user is present with the specified properties
 
