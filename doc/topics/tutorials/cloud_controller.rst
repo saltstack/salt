@@ -283,7 +283,7 @@ Now that the new VM is booted it should have contacted the Salt Master, a
 QEMU copy on write support
 ==========================
 
-For super fast image cloning you can use the `qcow`_ disk image format.
+For fast image cloning you can use the `qcow`_ disk image format.
 Pass the ``enable_qcow`` flag and a `.qcow2` image path to `virt.init`:
 
 .. code-block:: bash
