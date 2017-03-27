@@ -290,7 +290,7 @@ def get_user():
     '''
     if HAS_PWD:
         return pwd.getpwuid(os.geteuid()).pw_name
-    elif HAS_WIN32:
+    elif HAS_WIN32 and salt.utils.win_functions.HAS_WIN32:
         return salt.utils.win_functions.get_current_user()
     else:
         raise CommandExecutionError("Required external libraries not found. Need 'pwd' or 'win32api")
