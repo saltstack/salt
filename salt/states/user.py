@@ -200,6 +200,7 @@ def present(name,
             remove_groups=True,
             home=None,
             createhome=True,
+            nologinit=False,
             password=None,
             hash_password=False,
             enforce_password=True,
@@ -273,6 +274,10 @@ def present(name,
 
             Additionally, parent directories will *not* be created. The parent
             directory for ``home`` must already exist.
+
+    nologinit : False
+        If set to ``True``, it will not add the user to lastlog and faillog
+        databases.
 
     password
         A password hash to set for the user. This field is only supported on
@@ -635,6 +640,7 @@ def present(name,
                       'workphone': workphone,
                       'homephone': homephone,
                       'createhome': createhome,
+                      'nologinit': nologinit,
                       'loginclass': loginclass}
         else:
             params = ({'name': name,

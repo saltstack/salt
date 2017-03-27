@@ -115,6 +115,7 @@ def add(name,
         workphone='',
         homephone='',
         createhome=True,
+        nologinit=False,
         loginclass=None,
         root=None):
     '''
@@ -177,6 +178,9 @@ def add(name,
     elif (__grains__['kernel'] != 'NetBSD'
             and __grains__['kernel'] != 'OpenBSD'):
         cmd.append('-M')
+
+    if nologinit:
+        cmd.append('-l')
 
     if home is not None:
         cmd.extend(['-d', home])
