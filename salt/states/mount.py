@@ -148,7 +148,7 @@ def mounted(name,
 
             password=badsecret
 
-    extra_ignore_fs_keys
+    extra_mount_ignore_fs_keys
         A dict of filesystem options which should not force a remount. This will update
         the internal dictionary. The dict should look like this::
 
