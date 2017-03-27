@@ -365,6 +365,9 @@ def mounted(name,
                     if fstype in ['cifs'] and opt.split('=')[0] == 'user':
                         opt = "username={0}".format(opt.split('=')[1])
 
+                    if opt.split('=')[0] in mount_ignore_fs_keys.get(fstype, []):
+                        opt = opt.split('=')[0]
+
                     # convert uid/gid to numeric value from user/group name
                     name_id_opts = {'uid': 'user.info',
                                     'gid': 'group.info'}
