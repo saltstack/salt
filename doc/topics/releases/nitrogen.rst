@@ -204,7 +204,7 @@ Network Automation
 NAPALM
 ------
 
-Introduced in 2016.11, the modules for cross vendor network automation
+Introduced in 2016.11, the modules for cross-vendor network automation
 have been improved, enhanced and widenened in scope:
 
 - Manage network devices like servers: the NAPALM modules have been transformed
