@@ -145,14 +145,14 @@ def _get_instance(hosts=None, profile=None):
 
         if not es.ping():
             raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}, is it unhealthy?'.format(hosts))
-    except elasticsearch.exceptions.ConnectionError as e:
+    except elasticsearch.exceptions.TransportError as e:
         raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0} due to {1}'.format(hosts, str(e)))
     return es
 
 
 def ping(allow_failure=False, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Test connection to Elasticsearch instance. This method does not fail if not explicitly specified.
 
@@ -171,7 +171,7 @@ def ping(allow_failure=False, hosts=None, profile=None):
 
 def info(hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Return Elasticsearch information.
 
@@ -189,7 +189,7 @@ def info(hosts=None, profile=None):
 
 def node_info(nodes=None, flat_settings=False, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Return Elasticsearch node information.
 
@@ -212,7 +212,7 @@ def node_info(nodes=None, flat_settings=False, hosts=None, profile=None):
 
 def cluster_health(index=None, level='cluster', local=False, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Return Elasticsearch cluster health.
 
@@ -237,7 +237,7 @@ def cluster_health(index=None, level='cluster', local=False, hosts=None, profile
 
 def cluster_stats(nodes=None, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Return Elasticsearch cluster stats.
 
@@ -476,7 +476,7 @@ def index_get(index, hosts=None, profile=None):
 
 def index_open(index, allow_no_indices=True, expand_wildcards='closed', ignore_unavailable=True, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Open specified index.
 
@@ -505,7 +505,7 @@ def index_open(index, allow_no_indices=True, expand_wildcards='closed', ignore_u
 
 def index_close(index, allow_no_indices=True, expand_wildcards='open', ignore_unavailable=True, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Close specified index.
 
@@ -659,7 +659,7 @@ def index_template_get(name, hosts=None, profile=None):
 
 def pipeline_get(id, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Retrieve Ingest pipeline definition. Available since Elasticsearch 5.0.
 
@@ -681,7 +681,7 @@ def pipeline_get(id, hosts=None, profile=None):
 
 def pipeline_delete(id, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Delete Ingest pipeline. Available since Elasticsearch 5.0.
 
@@ -704,7 +704,7 @@ def pipeline_delete(id, hosts=None, profile=None):
 
 def pipeline_create(id, body, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Create Ingest pipeline by supplied definition. Available since Elasticsearch 5.0.
 
@@ -724,7 +724,7 @@ def pipeline_create(id, body, hosts=None, profile=None):
 
 def pipeline_simulate(id, body, verbose=False, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Simulate existing Ingest pipeline on provided data. Available since Elasticsearch 5.0.
 
@@ -743,7 +743,7 @@ def pipeline_simulate(id, body, verbose=False, hosts=None, profile=None):
 
 def search_template_get(id, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Obtain existing search template definition.
 
@@ -766,7 +766,7 @@ def search_template_get(id, hosts=None, profile=None):
 
 def search_template_create(id, body, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Create search template by supplied definition
 
@@ -791,7 +791,7 @@ def search_template_create(id, body, hosts=None, profile=None):
 
 def search_template_delete(id, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Delete existing search template definition.
 
@@ -816,7 +816,7 @@ def search_template_delete(id, hosts=None, profile=None):
 
 def repository_get(name, local=False, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Get existing repository details.
 
@@ -841,7 +841,7 @@ def repository_get(name, local=False, hosts=None, profile=None):
 
 def repository_create(name, body, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Create repository for storing snapshots. Note that shared repository paths have to be specified in path.repo Elasticsearch configuration option.
 
@@ -866,7 +866,7 @@ def repository_create(name, body, hosts=None, profile=None):
 
 def repository_delete(name, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Delete existing repository.
 
@@ -891,7 +891,7 @@ def repository_delete(name, hosts=None, profile=None):
 
 def repository_verify(name, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Obtain list of cluster nodes which successfully verified this repository.
 
@@ -914,7 +914,7 @@ def repository_verify(name, hosts=None, profile=None):
 
 def snapshot_status(repository=None, snapshot=None, ignore_unavailable=False, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Obtain status of all currently running snapshots.
 
@@ -939,7 +939,7 @@ def snapshot_status(repository=None, snapshot=None, ignore_unavailable=False, ho
 
 def snapshot_get(repository, snapshot, ignore_unavailable=False, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Obtain snapshot residing in specified repository.
 
@@ -964,7 +964,7 @@ def snapshot_get(repository, snapshot, ignore_unavailable=False, hosts=None, pro
 
 def snapshot_create(repository, snapshot, body=None, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Create snapshot in specified repository by supplied definition.
 
@@ -991,7 +991,7 @@ def snapshot_create(repository, snapshot, body=None, hosts=None, profile=None):
 
 def snapshot_restore(repository, snapshot, body=None, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Restore existing snapshot in specified repository by supplied definition.
 
@@ -1018,7 +1018,7 @@ def snapshot_restore(repository, snapshot, body=None, hosts=None, profile=None):
 
 def snapshot_delete(repository, snapshot, hosts=None, profile=None):
     '''
-    .. versionadded:: 2017.3.0
+    .. versionadded:: Nitrogen
 
     Delete snapshot from specified repository.
 

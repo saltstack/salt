@@ -3,7 +3,7 @@
 State module to manage Elasticsearch indices
 
 .. versionadded:: 2015.8.0
-.. deprecated:: 2017.3.0 Use elasticsearch state instead
+.. deprecated:: Nitrogen Use elasticsearch state instead
 '''
 
 # Import python libs
@@ -25,25 +25,25 @@ def absent(name):
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    index = __salt__['elasticsearch.index_get'](index=name)
-    if not index or name not in index:
-        if __opts__['test']:
-            ret['comment'] = 'Index {0} will be removed'.format(name)
-            ret['changes']['old'] = index[name]
-            ret['result'] = None
-        else:
-            try:
+    try:
+        index = __salt__['elasticsearch.index_get'](index=name)
+        if index and name in index:
+            if __opts__['test']:
+                ret['comment'] = 'Index {0} will be removed'.format(name)
+                ret['changes']['old'] = index[name]
+                ret['result'] = None
+            else:
                 ret['result'] = __salt__['elasticsearch.index_delete'](index=name)
                 if ret['result']:
                     ret['comment'] = 'Successfully removed index {0}'.format(name)
                     ret['changes']['old'] = index[name]
                 else:
                     ret['comment'] = 'Failed to remove index {0} for unknown reasons'.format(name)
-            except Exception as e:
-                ret['result'] = False
-                ret['comment'] = str(e)
-    else:
-        ret['comment'] = 'Index {0} is already absent'.format(name)
+        else:
+            ret['comment'] = 'Index {0} is already absent'.format(name)
+    except Exception as e:
+        ret['result'] = False
+        ret['comment'] = str(e)
 
     return ret
 
@@ -80,23 +80,25 @@ def present(name, definition=None):
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    index_exists = __salt__['elasticsearch.index_exists'](index=name)
-    if not index_exists:
-        if __opts__['test']:
-            ret['comment'] = 'Index {0} does not exist and will be created'.format(name)
-            ret['result'] = None
-        else:
-            try:
+    try:
+        index_exists = __salt__['elasticsearch.index_exists'](index=name)
+        if not index_exists:
+            if __opts__['test']:
+                ret['comment'] = 'Index {0} does not exist and will be created'.format(name)
+                ret['changes'] = {'new': definition}
+                ret['result'] = None
+            else:
                 output = __salt__['elasticsearch.index_create'](index=name, body=definition)
                 if output:
                     ret['comment'] = 'Successfully created index {0}'.format(name)
                     ret['changes'] = {'new': __salt__['elasticsearch.index_get'](index=name)[name]}
                 else:
+                    ret['result'] = False
                     ret['comment'] = 'Cannot create index {0}, {1}'.format(name, output)
-            except Exception as e:
-                ret['result'] = False
-                ret['comment'] = str(e)
-    else:
-        ret['comment'] = 'Index {0} is already present'.format(name)
+        else:
+            ret['comment'] = 'Index {0} is already present'.format(name)
+    except Exception as e:
+        ret['result'] = False
+        ret['comment'] = str(e)
 
     return ret

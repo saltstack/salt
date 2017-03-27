@@ -3,7 +3,7 @@
 State module to manage Elasticsearch index templates
 
 .. versionadded:: 2015.8.0
-.. deprecated:: 2017.3.0 Use elasticsearch state instead
+.. deprecated:: Nitrogen Use elasticsearch state instead
 '''
 
 # Import python libs
@@ -25,25 +25,25 @@ def absent(name):
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    index_template = __salt__['elasticsearch.index_template_get'](name=name)
-    if not index_template or name not in index_template:
-        if __opts__['test']:
-            ret['comment'] = 'Index template {0} will be removed'.format(name)
-            ret['changes']['old'] = index_template[name]
-            ret['result'] = None
-        else:
-            try:
+    try:
+        index_template = __salt__['elasticsearch.index_template_get'](name=name)
+        if index_template and name in index_template:
+            if __opts__['test']:
+                ret['comment'] = 'Index template {0} will be removed'.format(name)
+                ret['changes']['old'] = index_template[name]
+                ret['result'] = None
+            else:
                 ret['result'] = __salt__['elasticsearch.index_template_delete'](name=name)
                 if ret['result']:
                     ret['comment'] = 'Successfully removed index template {0}'.format(name)
                     ret['changes']['old'] = index_template[name]
                 else:
                     ret['comment'] = 'Failed to remove index template {0} for unknown reasons'.format(name)
-            except Exception as e:
-                ret['result'] = False
-                ret['comment'] = str(e)
-    else:
-        ret['comment'] = 'Index template {0} is already absent'.format(name)
+        else:
+            ret['comment'] = 'Index template {0} is already absent'.format(name)
+    except Exception as e:
+        ret['result'] = False
+        ret['comment'] = str(e)
 
     return ret
 
@@ -76,23 +76,25 @@ def present(name, definition):
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    index_template_exists = __salt__['elasticsearch.index_template_exists'](name=name)
-    if not index_template_exists:
-        if __opts__['test']:
-            ret['comment'] = 'Index template {0} does not exist and will be created'.format(name)
-            ret['result'] = None
-        else:
-            try:
+    try:
+        index_template_exists = __salt__['elasticsearch.index_template_exists'](name=name)
+        if not index_template_exists:
+            if __opts__['test']:
+                ret['comment'] = 'Index template {0} does not exist and will be created'.format(name)
+                ret['changes'] = {'new': definition}
+                ret['result'] = None
+            else:
                 output = __salt__['elasticsearch.index_template_create'](name=name, body=definition)
                 if output:
                     ret['comment'] = 'Successfully created index template {0}'.format(name)
                     ret['changes'] = {'new': __salt__['elasticsearch.index_template_get'](name=name)[name]}
                 else:
+                    ret['result'] = False
                     ret['comment'] = 'Cannot create index template {0}, {1}'.format(name, output)
-            except Exception as e:
-                ret['result'] = False
-                ret['comment'] = str(e)
-    else:
-        ret['comment'] = 'Index {0} is already present'.format(name)
+        else:
+            ret['comment'] = 'Index template {0} is already present'.format(name)
+    except Exception as e:
+        ret['result'] = False
+        ret['comment'] = str(e)
 
     return ret
