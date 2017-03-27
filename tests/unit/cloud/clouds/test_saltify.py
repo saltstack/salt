@@ -8,7 +8,10 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
-from tests.support.mock import MagicMock
+from tests.support.mock import (
+    MagicMock,
+    patch
+)
 
 # Import Salt Libs
 from salt.cloud.clouds import saltify
@@ -26,12 +29,13 @@ class SaltifyTestCase(TestCase):
     '''
     # 'create' function tests: 1
 
+    @patch('salt.cloud.clouds.saltify._verify', MagicMock(return_value=True))
     def test_create_no_deploy(self):
         '''
         Test if deployment fails. This is the most basic test as saltify doesn't contain much logic
         '''
         vm = {'deploy':  False,
-              'provider': 'saltify',
+              'driver': 'saltify',
               'name': 'dummy'
              }
-        self.assertTrue(saltify.create(vm)['Error']['No Deploy'])
+        self.assertTrue(saltify.create(vm))
