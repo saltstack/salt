@@ -901,7 +901,8 @@ def create(name,
 
         exe_args (str): Any additional arguments required by the service binary.
 
-        display_name (str): the name to be displayed in the service manager
+        display_name (str): the name to be displayed in the service manager. If
+            not passed, the ``name`` will be used
 
         description (str): A description of the service
 
