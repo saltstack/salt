@@ -10,10 +10,11 @@ import os
 import shutil
 
 # Import Salt Testing libs
-import tests.integration as integration
-from tests.support.unit import skipIf
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.integration import AdaptedConfigurationTestCaseMixIn
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import salt libs
 import salt.utils
@@ -35,7 +36,6 @@ def _get_file_roots():
     )
 
 
-fileclient.__opts__ = {}
 MOCKED_OPTS = {
     'file_roots': _get_file_roots(),
     'fileserver_backend': ['roots'],
@@ -45,7 +45,10 @@ MOCKED_OPTS = {
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class FileClientTest(integration.ModuleCase):
+class FileClientTest(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {fileclient: {'__opts__': MOCKED_OPTS}}
 
     def setUp(self):
         self.file_client = fileclient.Client(self.master_opts)
@@ -75,12 +78,15 @@ class FileClientTest(integration.ModuleCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class FileclientCacheTest(integration.ModuleCase):
+class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMixin):
     '''
     Tests for the fileclient caching. The LocalClient is the only thing we can
     test as it is the only way we can mock the fileclient (the tests run from
     the minion process, so the master cannot be mocked from test code).
     '''
+
+    def setup_loader_modules(self):
+        return {fileclient: {'__opts__': MOCKED_OPTS}}
 
     def setUp(self):
         '''
@@ -182,7 +188,7 @@ class FileclientCacheTest(integration.ModuleCase):
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
         patched_opts.update(MOCKED_OPTS)
-        alt_cachedir = os.path.join(integration.TMP, 'abs_cachedir')
+        alt_cachedir = os.path.join(TMP, 'abs_cachedir')
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
@@ -291,7 +297,7 @@ class FileclientCacheTest(integration.ModuleCase):
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
         patched_opts.update(MOCKED_OPTS)
-        alt_cachedir = os.path.join(integration.TMP, 'abs_cachedir')
+        alt_cachedir = os.path.join(TMP, 'abs_cachedir')
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)

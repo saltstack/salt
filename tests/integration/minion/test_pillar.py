@@ -18,7 +18,6 @@ from subprocess import Popen, PIPE, STDOUT
 import tests.integration as integration
 from tests.support.unit import skipIf
 from tests.support.helpers import requires_system_grains
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -189,7 +188,6 @@ GPG_PILLAR_DECRYPTED = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.which('gpg'), 'GPG is not installed')
 class DecryptGPGPillarTest(integration.ModuleCase):
     '''

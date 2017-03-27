@@ -5,18 +5,22 @@
 
 # Import python libs
 from __future__ import absolute_import
+import os
+import sys
+import tempfile
 
 # Import Salt Libs
+import salt.utils
 import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.log import LOG_LEVELS
-import salt.utils
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
+    Mock,
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
@@ -258,3 +262,52 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
             self.assertFalse(cmdmod._is_valid_shell('foo'))
+
+    @patch('pwd.getpwnam')
+    @patch('subprocess.Popen')
+    def test_os_environment_remains_intact(self,
+                                           popen_mock,
+                                           getpwnam_mock):
+        '''
+        Make sure the OS environment is not tainted after running a command
+        that specifies runas.
+        '''
+        environment = os.environ.copy()
+
+        popen_mock.return_value = Mock(
+            communicate=lambda *args, **kwags: ['{}', None],
+            pid=lambda: 1,
+            retcode=0
+        )
+
+        with patch.dict(cmdmod.__grains__, {'os': 'Darwin', 'os_family': 'Solaris'}):
+            if sys.platform.startswith(('freebsd', 'openbsd')):
+                shell = '/bin/sh'
+            else:
+                shell = '/bin/bash'
+
+            cmdmod._run('ls',
+                        cwd=tempfile.gettempdir(),
+                        runas='foobar',
+                        shell=shell)
+
+            environment2 = os.environ.copy()
+
+            self.assertEqual(environment, environment2)
+
+            getpwnam_mock.assert_called_with('foobar')
+
+    def test_run_cwd_doesnt_exist_issue_7154(self):
+        '''
+        cmd.run should fail and raise
+        salt.exceptions.CommandExecutionError if the cwd dir does not
+        exist
+        '''
+        cmd = 'echo OHAI'
+        cwd = '/path/to/nowhere'
+        try:
+            cmdmod.run_all(cmd, cwd=cwd)
+        except CommandExecutionError:
+            pass
+        else:
+            raise RuntimeError
