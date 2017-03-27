@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-'''
-An engine that reads messages from Slack and sends them to the Salt
-event bus.  Alternatively Salt commands can be sent to the Salt master
-via Slack by setting the control parameter to ``True`` and using command
-prefaced with a ``!``.
+'''An engine that reads messages from Slack. When the control parameter is set to ``True`` and using command
+prefaced with the ``trigger`` (which defaults to ``!``).
+
+In addition, when the parameter ``fire_all`` is set (defaults to False),
+all messages will be fired off to the salt event bus, with the tag prefixed
+by the string provided by the ``tag`` config option (defaults to ``salt/engines/slack``).
 
 .. versionadded: 2016.3.0
 
@@ -15,6 +16,7 @@ prefaced with a ``!``.
             slack:
                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
                control: True
+               fire_all: False
                groups:
                  default:
                    users:
@@ -39,6 +41,8 @@ prefaced with a ``!``.
                groups_pillar: slack_engine_pillar
                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
                control: True
+               fire_all: True
+               tag: salt/engines/slack
                groups:
                  default:
                    valid_users:
@@ -57,6 +61,7 @@ prefaced with a ``!``.
                      - *
 
 :depends: slackclient
+
 '''
 
 # Import python libraries
@@ -173,18 +178,19 @@ def _can_user_run(user, command, groups):
     """
 
     for k, v in groups.items():
-        # XXX Add logging
         if user not in v['users']:
             if '*' not in v['users']:
-                continue # pass
+                continue # this doesn't grant permissions, pass
         if command not in v['commands']:
             if '*' not in v['commands']:
                 continue # again, pass
+        log.info("Slack user {} permitted to run {}".format(user, command))
         return True # matched
+    log.info("Slack user {} denied trying to run {}".format(user, command))
     return False
 
 
-def _generate_triggered_messages(token, trigger_string, groups, control):
+def _generate_triggered_messages(token, trigger_string, groups, control, ):
     """
     slack_token = string
     trigger_string = string
@@ -217,8 +223,9 @@ def _generate_triggered_messages(token, trigger_string, groups, control):
             # XXX  VERY IMPORTANT ADD DIAGNOSIS
             # e.g. if the error message is too many requests, try to respect the retry-after header
             # see https://api.slack.com/docs/rate-limits
-            time.sleep(1)
+            time.sleep(30) # respawning too fast makes the slack API unhappy about the next reconnection
             raise UserWarning, "Connection to slack is invalid" # Boom!
+
 
         msg = sc.rtm_read()
         for m_data in msg:
@@ -229,6 +236,7 @@ def _generate_triggered_messages(token, trigger_string, groups, control):
 
             # Edited messages have text in message
             _text = m_data.get('text', None) or m_data.get('message', {}).get('text', None)
+            log.info("Message is {}".format(_text))
 
             # Convert UTF to string
             _text = json.dumps(_text)
@@ -286,7 +294,7 @@ def _generate_triggered_messages(token, trigger_string, groups, control):
 
 
 
-def fire_msgs_to_event_bus(tag, message_generator):
+def fire_msgs_to_event_bus(tag, message_generator, fire_all):
     """
     :type tag: str
     :param tag: The prefix of the tag to be sent onto the event bus
@@ -296,12 +304,15 @@ def fire_msgs_to_event_bus(tag, message_generator):
         contain messages that will be sent to the salt event bus
         as returned by _generate_triggered_messages when control=False
     """
-    for _msg in message_generator:
-        _fire('{0}/{1}'.format(tag, _msg['type']), _msg)
-        time.sleep(1)
+    for _sg in message_generator:
+        if fire_all:
+            _fire('{0}/{1}'.format(tag, msg.get('type')), msg)
+            time.sleep(1)
+        else:
+            log.info("Not firing to the event bus, fire_all is not specified")
 
 
-def run_commands_from_slack(message_generator):
+def run_commands_from_slack(message_generator, fire_all, tag):
     """
     :type tag: str
     :param tag: The prefix of the tag to be sent onto the event bus
@@ -315,7 +326,13 @@ def run_commands_from_slack(message_generator):
     runner_functions = sorted(salt.runner.Runner(__opts__).functions)
 
     for msg in message_generator:
-        log.info("got message from message_generator: {}".format(msg))
+        log.debug("got message from message_generator: {}".format(msg))
+
+        if fire_all:
+            log.debug("Firing message to the bus with tag: {}".format(tag))
+            _fire('{0}/{1}'.format(tag, msg.get('type')), msg)
+
+
         # Parse args and kwargs
         cmdline = msg['cmdline']
         cmd = cmdline[0]
@@ -337,7 +354,7 @@ def run_commands_from_slack(message_generator):
         else:
             target = kwargs['target']
             del kwargs['target']
-        log.info("target is: {}".format(target))
+        log.debug("target is: {}".format(target))
 
         # Check for tgt_type. Otherwise assume glob
         if 'tgt_type' not in kwargs:
@@ -345,45 +362,34 @@ def run_commands_from_slack(message_generator):
         else:
             tgt_type = kwargs['tgt_type']
             del kwargs['tgt_type']
-        log.info("target_type is: {}".format(tgt_type))
+        log.debug("target_type is: {}".format(tgt_type))
 
         if cmd in runner_functions:
             runner = salt.runner.RunnerClient(__opts__)
-            log.info("Command {} will run via runner_functions".format(cmd))
+            log.debug("Command {} will run via runner_functions".format(cmd))
             ret = runner.cmd(cmd, arg=args, kwarg=kwargs)
 
         # Default to trying to run as a client module.
         else:
             local = salt.client.LocalClient()
-            log.info("Command {} will be run via local.cmd, targeting {}".format(cmd, target))
-            log.info("Running {}, {}, {}, {}, {}".format(str(target), cmd, args, kwargs, str(tgt_type)))
+            log.debug("Command {} will be run via local.cmd, targeting {}".format(cmd, target))
+            log.debug("Running {}, {}, {}, {}, {}".format(str(target), cmd, args, kwargs, str(tgt_type)))
             # according to https://github.com/saltstack/salt-api/issues/164, tgt_type should change to expr_form
             ret = local.cmd(str(target), cmd, args, kwargs, expr_form=str(tgt_type))
-            log.info("ret from local.cmd is {}".format(ret))
+            log.debug("ret from local.cmd is {}".format(ret))
 
         if ret:
-            log.info("ret to send back is {}".format(ret))
-            return_text = json.dumps(ret, sort_keys=True, indent=1)
-            ts = time.time()
-            st = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d%H%M%S%f')
-            filename = '/tmp/salt-results-{0}.yaml'.format(st)
-            with open(filename, 'w') as retfile:
-                log.info("Returning {} via the slack client".format(filename))
-                json.dump(ret, retfile, sort_keys=True)
-                # r = msg["slack_client"].api_call(
-                #     "files.upload", channels=msg['channel'], file=open(filename),
-                #     content=return_text
-                # )
-                log.info("the channel objects' dir looks like: {}".format(dir(msg['channel'])))
-                r = msg["slack_client"].api_call(
-                    "files.upload", channels=msg['channel'].id, files=filename,
-                    content=return_text
-                )
-                # Handle unicode return
-                log.info("Got back {} via the slack client".format(r))
-                result = yaml.safe_load(json.dumps(r))
-                if 'ok' in result and result['ok'] is False:
-                    msg['channel'].send_message('Error: {0}'.format(result['error']))
+            log.debug("ret to send back is {}".format(ret))
+            return_text = json.dumps(ret, sort_keys=True, indent=2)
+            r = msg["slack_client"].api_call(
+                "files.upload", channels=msg['channel'].id, files=None,
+                content=return_text
+            )
+            # Handle unicode return
+            log.debug("Got back {} via the slack client".format(r))
+            result = yaml.safe_load(json.dumps(r))
+            if 'ok' in result and result['ok'] is False:
+                msg['channel'].send_message('Error: {0}'.format(result['error']))
 
 
 def start(token,
@@ -391,6 +397,7 @@ def start(token,
           control=False,
           trigger="!",
           groups=None,
+          fire_all=False,
           tag='salt/engines/slack'):
     '''
     Listen to slack events and forward them to salt, new version
@@ -398,11 +405,12 @@ def start(token,
 
     if not token:
         time.sleep(2) # don't respawn too quickly
+        log.warn("Slack engine token not found, bailing...")
         raise UserWarning('Slack Engine token not found')
 
     message_generator = _generate_triggered_messages(token, trigger, groups, control)
 
     if control:
-        run_commands_from_slack(message_generator)
+        run_commands_from_slack(message_generator, fire_all, tag)
     else:
-        fire_msgs_to_event_bus(tag, message_generator)
+        fire_msgs_to_event_bus(tag, message_generator, fire_all)
