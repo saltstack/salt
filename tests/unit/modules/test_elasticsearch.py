@@ -1220,3 +1220,1047 @@ class ElasticsearchTestCase(TestCase):
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
             self.assertRaises(CommandExecutionError, elasticsearch.index_close, "foo", "bar")
+
+    # 'mapping_create' function tests: 3
+
+    def test_mapping_create(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def put_mapping(self, index=None, doc_type=None, body=None):
+                """
+                Mock of put_mapping method
+                """
+                return {"acknowledged": True}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertTrue(elasticsearch.mapping_create("foo", "bar", "baz"))
+
+    def test_mapping_create_not(self):
+        '''
+        Test if mapping creation didn't ack
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def put_mapping(self, index=None, doc_type=None, body=None):
+                """
+                Mock of put_mapping method
+                """
+                return {"acknowledged": False}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertFalse(elasticsearch.mapping_create("foo", "bar", "baz"))
+
+    def test_mapping_create_failure(self):
+        '''
+        Test if mapping creation fails
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def put_mapping(self, index=None, doc_type=None, body=None):
+                """
+                Mock of put_mapping method
+                """
+                raise TransportError("custom message", 123)
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.mapping_create, "foo", "bar", "baz")
+
+    # 'mapping_delete' function tests: 3
+
+    def test_mapping_delete(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def delete_mapping(self, index=None, doc_type=None):
+                """
+                Mock of put_mapping method
+                """
+                return {"acknowledged": True}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertTrue(elasticsearch.mapping_delete("foo", "bar", "baz"))
+
+    def test_mapping_delete_not(self):
+        '''
+        Test if mapping creation didn't ack
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def delete_mapping(self, index=None, doc_type=None):
+                """
+                Mock of put_mapping method
+                """
+                return {"acknowledged": False}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertFalse(elasticsearch.mapping_delete("foo", "bar", "baz"))
+
+    def test_mapping_delete_failure(self):
+        '''
+        Test if mapping creation fails
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def delete_mapping(self, index=None, doc_type=None):
+                """
+                Mock of put_mapping method
+                """
+                raise TransportError("custom message", 123)
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.mapping_delete, "foo", "bar", "baz")
+
+    # 'mapping_get' function tests: 3
+
+    def test_mapping_get(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def get_mapping(self, index=None, doc_type=None):
+                """
+                Mock of get_mapping method
+                """
+                return {"test": "key"}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertDictEqual(elasticsearch.mapping_get("foo", "bar", "baz"), {"test": "key"})
+
+    def test_mapping_get_not(self):
+        '''
+        Test if mapping creation didn't ack
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def get_mapping(self, index=None, doc_type=None):
+                """
+                Mock of get_mapping method
+                """
+                raise NotFoundError
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertIs(elasticsearch.mapping_get("foo", "bar", "baz"), None)
+
+    def test_mapping_get_failure(self):
+        '''
+        Test if mapping creation fails
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def get_mapping(self, index=None, doc_type=None):
+                """
+                Mock of get_mapping method
+                """
+                raise TransportError("custom message", 123)
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.mapping_get, "foo", "bar", "baz")
+
+    # 'index_template_create' function tests: 3
+
+    def test_index_template_create(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def put_template(self, name=None, body=None):
+                """
+                Mock of put_template method
+                """
+                return {"acknowledged": True}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertTrue(elasticsearch.index_template_create("foo", "bar"))
+
+    def test_index_template_create_not(self):
+        '''
+        Test if mapping creation didn't ack
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def put_template(self, name=None, body=None):
+                """
+                Mock of put_template method
+                """
+                return {"acknowledged": False}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertFalse(elasticsearch.index_template_create("foo", "bar"))
+
+    def test_index_template_create_failure(self):
+        '''
+        Test if mapping creation fails
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def put_template(self, name=None, body=None):
+                """
+                Mock of put_template method
+                """
+                raise TransportError("custom message", 123)
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.index_template_create, "foo", "bar")
+
+    # 'index_template_delete' function tests: 3
+
+    def test_index_template_delete(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def delete_template(self, name=None):
+                """
+                Mock of delete_template method
+                """
+                return {"acknowledged": True}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertTrue(elasticsearch.index_template_delete("foo"))
+
+    def test_index_template_delete_not(self):
+        '''
+        Test if mapping creation didn't ack
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def delete_template(self, name=None):
+                """
+                Mock of delete_template method
+                """
+                return {"acknowledged": False}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertFalse(elasticsearch.index_template_delete("foo"))
+
+    def test_index_template_delete_failure(self):
+        '''
+        Test if mapping creation fails
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def delete_template(self, name=None):
+                """
+                Mock of delete_template method
+                """
+                raise TransportError("custom message", 123)
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.index_template_delete, "foo")
+
+    # 'index_template_exists' function tests: 3
+
+    def test_index_template_exists(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def exists_template(self, name=None):
+                """
+                Mock of exists_template method
+                """
+                return True
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertTrue(elasticsearch.index_template_exists("foo"))
+
+    def test_index_template_exists_not(self):
+        '''
+        Test if mapping creation didn't ack
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def exists_template(self, name=None):
+                """
+                Mock of exists_template method
+                """
+                return False
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertFalse(elasticsearch.index_template_exists("foo"))
+
+    def test_index_template_exists_failure(self):
+        '''
+        Test if mapping creation fails
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def exists_template(self, name=None):
+                """
+                Mock of exists_template method
+                """
+                raise TransportError("custom message", 123)
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.index_template_exists, "foo")
+
+    # 'index_template_get' function tests: 3
+
+    def test_index_template_get(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def get_template(self, name=None):
+                """
+                Mock of get_template method
+                """
+                return {"test": "key"}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertDictEqual(elasticsearch.index_template_get("foo"), {"test": "key"})
+
+    def test_index_template_get_not(self):
+        '''
+        Test if mapping creation didn't ack
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def get_template(self, name=None):
+                """
+                Mock of get_template method
+                """
+                raise NotFoundError
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertIs(elasticsearch.index_template_get("foo"), None)
+
+    def test_index_template_get_failure(self):
+        '''
+        Test if mapping creation fails
+        '''
+        class MockElasticIndices(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def get_template(self, name=None):
+                """
+                Mock of get_template method
+                """
+                raise TransportError("custom message", 123)
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.index_template_get, "foo")
+
+    # 'pipeline_get' function tests: 4
+
+    def test_pipeline_get(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElasticIngest(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def get_pipeline(self, id=None):
+                """
+                Mock of get_pipeline method
+                """
+                return {"test": "key"}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertDictEqual(elasticsearch.pipeline_get("foo"), {"test": "key"})
+
+    def test_pipeline_get_not(self):
+        '''
+        Test if mapping creation didn't ack
+        '''
+        class MockElasticIngest(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def get_pipeline(self, id=None):
+                """
+                Mock of get_pipeline method
+                """
+                raise NotFoundError
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertIs(elasticsearch.pipeline_get("foo"), None)
+
+    def test_pipeline_get_failure(self):
+        '''
+        Test if mapping creation fails
+        '''
+        class MockElasticIngest(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def get_pipeline(self, id=None):
+                """
+                Mock of get_pipeline method
+                """
+                raise TransportError("custom message", 123)
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_get, "foo")
+
+    def test_pipeline_get_wrong_version(self):
+        '''
+        Test if mapping creation fails with CEE on invalid elasticsearch-py version
+        '''
+        class MockElasticIngest(object):
+            pass
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_get, "foo")
+
+    # 'pipeline_delete' function tests: 4
+
+    def test_pipeline_delete(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElasticIngest(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def delete_pipeline(self, id=None):
+                """
+                Mock of delete_pipeline method
+                """
+                return {"acknowledged": True}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertTrue(elasticsearch.pipeline_delete("foo"))
+
+    def test_pipeline_delete_not(self):
+        '''
+        Test if mapping creation didn't ack
+        '''
+        class MockElasticIngest(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def delete_pipeline(self, id=None):
+                """
+                Mock of delete_pipeline method
+                """
+                return {"acknowledged": False}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertFalse(elasticsearch.pipeline_delete("foo"))
+
+    def test_pipeline_delete_failure(self):
+        '''
+        Test if mapping creation fails
+        '''
+        class MockElasticIngest(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def delete_pipeline(self, id=None):
+                """
+                Mock of delete_pipeline method
+                """
+                raise TransportError("custom message", 123)
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_delete, "foo")
+
+    def test_pipeline_delete_wrong_version(self):
+        '''
+        Test if mapping creation fails with CEE on invalid elasticsearch-py version
+        '''
+        class MockElasticIngest(object):
+            pass
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_delete, "foo")
+
+    # 'pipeline_create' function tests: 4
+
+    def test_pipeline_create(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElasticIngest(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def put_pipeline(self, id=None, body=None):
+                """
+                Mock of put_pipeline method
+                """
+                return {"acknowledged": True}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertTrue(elasticsearch.pipeline_create("foo", "bar"))
+
+    def test_pipeline_create_not(self):
+        '''
+        Test if mapping creation didn't ack
+        '''
+        class MockElasticIngest(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def put_pipeline(self, id=None, body=None):
+                """
+                Mock of put_pipeline method
+                """
+                return {"acknowledged": False}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertFalse(elasticsearch.pipeline_create("foo", "bar"))
+
+    def test_pipeline_create_failure(self):
+        '''
+        Test if mapping creation fails
+        '''
+        class MockElasticIngest(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def put_pipeline(self, id=None, body=None):
+                """
+                Mock of put_pipeline method
+                """
+                raise TransportError("custom message", 123)
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_create, "foo", "bar")
+
+    def test_pipeline_create_wrong_version(self):
+        '''
+        Test if mapping creation fails with CEE on invalid elasticsearch-py version
+        '''
+        class MockElasticIngest(object):
+            pass
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_create, "foo", "bar")
+
+    # 'pipeline_simulate' function tests: 3
+
+    def test_pipeline_simulate(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElasticIngest(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def simulate(self, id=None, body=None, verbose=None):
+                """
+                Mock of simulate method
+                """
+                return {"test": "key"}
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertDictEqual(elasticsearch.pipeline_simulate("foo", "bar"), {"test": "key"})
+
+    def test_pipeline_simulate_failure(self):
+        '''
+        Test if mapping creation fails
+        '''
+        class MockElasticIngest(object):
+            """
+            Mock of Elasticsearch IndicesClient
+            """
+            def simulate(self, id=None, body=None, verbose=None):
+                """
+                Mock of simulate method
+                """
+                raise TransportError("custom message", 123)
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_simulate, "foo", "bar")
+
+    def test_pipeline_simulate_wrong_version(self):
+        '''
+        Test if mapping creation fails with CEE on invalid elasticsearch-py version
+        '''
+        class MockElasticIngest(object):
+            pass
+
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            ingest = MockElasticIngest()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_simulate, "foo", "bar")
+
+    # 'search_template_get' function tests: 3
+
+    def test_search_template_get(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            def get_template(self, id=None):
+                """
+                Mock of get_template method
+                """
+                return {"test": "key"}
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertDictEqual(elasticsearch.search_template_get("foo"), {"test": "key"})
+
+    def test_search_template_get_not(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            def get_template(self, id=None):
+                """
+                Mock of get_template method
+                """
+                raise NotFoundError
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertIs(elasticsearch.search_template_get("foo"), None)
+
+    def test_search_template_get_failure(self):
+        '''
+        Test if mapping creation fails
+        '''
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            def get_template(self, id=None):
+                """
+                Mock of get_template method
+                """
+                raise TransportError("custom message", 123)
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.search_template_get, "foo")
+
+    # 'search_template_create' function tests: 3
+
+    def test_search_template_create(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            def put_template(self, id=None, body=None):
+                """
+                Mock of put_template method
+                """
+                return {"acknowledged": True}
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertTrue(elasticsearch.search_template_create("foo", "bar"))
+
+    def test_search_template_create_not(self):
+        '''
+        Test if mapping can be created
+        '''
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            def put_template(self, id=None, body=None):
+                """
+                Mock of put_template method
+                """
+                return {"acknowledged": False}
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertFalse(elasticsearch.search_template_create("foo", "bar"))
+
+    def test_search_template_create_failure(self):
+        '''
+        Test if mapping creation fails
+        '''
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            def put_template(self, id=None, body=None):
+                """
+                Mock of put_template method
+                """
+                raise TransportError("custom message", 123)
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.search_template_create, "foo", "bar")
+
+    # 'search_template_delete' function tests: 4
+
+    def test_search_template_delete(self):
+        '''
+        Test if mapping can be deleted
+        '''
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            def delete_template(self, id=None):
+                """
+                Mock of delete_template method
+                """
+                return {"acknowledged": True}
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertTrue(elasticsearch.search_template_delete("foo"))
+
+    def test_search_template_delete_not(self):
+        '''
+        Test if mapping can be deleted but not acked
+        '''
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            def delete_template(self, id=None):
+                """
+                Mock of delete_template method
+                """
+                return {"acknowledged": False}
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertFalse(elasticsearch.search_template_delete("foo"))
+
+    def test_search_template_delete_not_exists(self):
+        '''
+        Test if deleting mapping doesn't exist
+        '''
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            def delete_template(self, id=None):
+                """
+                Mock of delete_template method
+                """
+                raise NotFoundError
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertTrue(elasticsearch.search_template_delete("foo"))
+
+    def test_search_template_delete_failure(self):
+        '''
+        Test if mapping deletion fails
+        '''
+        class MockElastic(object):
+            """
+            Mock of Elasticsearch client
+            """
+            def delete_template(self, id=None):
+                """
+                Mock of delete_template method
+                """
+                raise TransportError("custom message", 123)
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.search_template_delete, "foo")
