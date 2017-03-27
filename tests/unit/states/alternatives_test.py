@@ -199,7 +199,7 @@ class AlternativesTestCase(TestCase):
             ret.update({'comment': comt})
             self.assertDictEqual(alternatives.set_(name, path), ret)
 
-            comt = ('Alternative for {0} will be set to path False'
+            comt = ('Alternative for {0} will be set to path /usr/bin/less'
                    ).format(name)
             ret.update({'comment': comt, 'result': None})
             with patch.dict(alternatives.__opts__, {'test': True}):
