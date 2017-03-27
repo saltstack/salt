@@ -117,7 +117,7 @@ def profile(prof=None, instances=None, opts=None, **kwargs):
     return info
 
 
-def map_run(path, **kwargs):
+def map_run(path=None, **kwargs):
     '''
     Execute a salt cloud map file
     '''

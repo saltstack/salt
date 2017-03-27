@@ -345,11 +345,13 @@ class CloudClient(object):
             mapper.run_profile(profile, names, vm_overrides=vm_overrides)
         )
 
-    def map_run(self, path, **kwargs):
+    def map_run(self, path=None, **kwargs):
         '''
         Pass in a location for a map to execute
         '''
-        kwarg = {'map': path}
+        kwarg = {}
+        if path:
+            kwarg['map'] = path
         kwarg.update(kwargs)
         mapper = salt.cloud.Map(self._opts_defaults(**kwarg))
         dmap = mapper.map_data()
@@ -1747,40 +1749,45 @@ class Map(Cloud):
         '''
         Read in the specified map file and return the map structure
         '''
+        map_ = None
         if self.opts.get('map', None) is None:
-            return {}
+            if self.opts.get('map_data', None) is None:
+                return {}
+            else:
+                map_ = self.opts['map_data']
 
-        local_minion_opts = copy.deepcopy(self.opts)
-        local_minion_opts['file_client'] = 'local'
-        self.minion = salt.minion.MasterMinion(local_minion_opts)
+        if not map_:
+            local_minion_opts = copy.deepcopy(self.opts)
+            local_minion_opts['file_client'] = 'local'
+            self.minion = salt.minion.MasterMinion(local_minion_opts)
 
-        if not os.path.isfile(self.opts['map']):
-            if not (self.opts['map']).startswith('salt://'):
-                log.error(
-                    'The specified map file does not exist: \'{0}\''.format(
-                        self.opts['map'])
+            if not os.path.isfile(self.opts['map']):
+                if not (self.opts['map']).startswith('salt://'):
+                    log.error(
+                        'The specified map file does not exist: \'{0}\''.format(
+                            self.opts['map'])
+                    )
+                    raise SaltCloudNotFound()
+            if (self.opts['map']).startswith('salt://'):
+                cached_map = self.minion.functions['cp.cache_file'](self.opts['map'])
+            else:
+                cached_map = self.opts['map']
+            try:
+                renderer = self.opts.get('renderer', 'yaml_jinja')
+                rend = salt.loader.render(self.opts, {})
+                blacklist = self.opts.get('renderer_blacklist')
+                whitelist = self.opts.get('renderer_whitelist')
+                map_ = compile_template(
+                    cached_map, rend, renderer, blacklist, whitelist
                 )
-                raise SaltCloudNotFound()
-        if (self.opts['map']).startswith('salt://'):
-            cached_map = self.minion.functions['cp.cache_file'](self.opts['map'])
-        else:
-            cached_map = self.opts['map']
-        try:
-            renderer = self.opts.get('renderer', 'yaml_jinja')
-            rend = salt.loader.render(self.opts, {})
-            blacklist = self.opts.get('renderer_blacklist')
-            whitelist = self.opts.get('renderer_whitelist')
-            map_ = compile_template(
-                cached_map, rend, renderer, blacklist, whitelist
-            )
-        except Exception as exc:
-            log.error(
-                'Rendering map {0} failed, render error:\n{1}'.format(
-                    self.opts['map'], exc
-                ),
-                exc_info_on_loglevel=logging.DEBUG
-            )
-            return {}
+            except Exception as exc:
+                log.error(
+                    'Rendering map {0} failed, render error:\n{1}'.format(
+                        self.opts['map'], exc
+                    ),
+                    exc_info_on_loglevel=logging.DEBUG
+                )
+                return {}
 
         if 'include' in map_:
             map_ = salt.config.include_config(
