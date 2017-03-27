@@ -730,14 +730,37 @@ class StateModuleTest(integration.ModuleCase,
         result = self.normalize_ret(ret)
         self.assertEqual(expected_result, result)
 
-        # TODO: not done
-        #ret = self.run_function('state.sls', mods='requisites.fullsls_require_in')
-        #self.assertEqual(['sls command can only be used with require requisite'], ret)
-
         # issue #8233: traceback on prereq sls
         # TODO: not done
         #ret = self.run_function('state.sls', mods='requisites.fullsls_prereq')
         #self.assertEqual(['sls command can only be used with require requisite'], ret)
+
+    def test_requisites_full_sls_require_in(self):
+        '''
+        Test require_in when including an entire sls
+        '''
+        expected_result = {
+            'cmd_|-A_|-echo A_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo A" run',
+                'result': True,
+                'changes': True},
+            'cmd_|-B_|-echo B_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo B" run',
+                'result': True,
+                'changes': True},
+            'cmd_|-C_|-echo C_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo C" run',
+                'result': True,
+                'changes': True},
+        }
+        ret = self.run_function('state.sls',
+                                mods='requisites.fullsls_require_in')
+        self.assertReturnNonEmptySaltType(ret)
+        result = self.normalize_ret(ret)
+        self.assertEqual(expected_result, result)
 
     def test_requisites_full_sls_import(self):
         '''
