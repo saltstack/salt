@@ -41,7 +41,7 @@ def __virtual__():
 log = logging.getLogger(__name__)
 
 
-def start(host, port=5959, tag='salt/engine/logstash', proto='tcp'):
+def start(host, port=5959, tag='salt/engine/logstash', proto='udp'):
     '''
     Listen to salt events and forward them to logstash
     '''
