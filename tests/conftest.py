@@ -15,6 +15,7 @@ import sys
 import stat
 import socket
 import logging
+from collections import namedtuple
 
 # Let's allow `integration` and `unit` to be importable
 TESTS_DIR = os.path.dirname(
@@ -28,6 +29,9 @@ CODE_DIR = os.path.dirname(TESTS_DIR)
 # Import 3rd-party libs
 import pytest
 import salt.ext.six as six
+
+# Import test libs
+from tests.integration import TestDaemon
 
 # Import salt libs
 import salt.utils
@@ -137,6 +141,9 @@ def pytest_configure(config):
         'requires_network(only_local_network=False): Skip if no networking is set up. '
         'If \'only_local_network\' is \'True\', only the local network is checked.'
     )
+
+    # Transplant configuration
+    TestDaemon.transplant_configs(transport=config.getoption('--transport'))
 # <---- Register Markers ---------------------------------------------------------------------------------------------
 
 
@@ -541,9 +548,6 @@ def session_pillar_tree_root_dir(session_integration_files_dir):
 # ----- Custom Fixtures Definitions --------------------------------------------------------------------------------->
 @pytest.fixture(scope='session')
 def test_daemon(request):
-    from collections import namedtuple
-    from tests.integration import TestDaemon
-    from tests.support.parser import PNUM
     values = (('transport', request.config.getoption('--transport')),
               ('sysinfo', request.config.getoption('--sysinfo')),
               ('no_colors', request.config.getoption('--no-colors')),
@@ -552,11 +556,8 @@ def test_daemon(request):
     options = namedtuple('options', [n for n, v in values])(*[v for n, v in values])
     fake_parser = namedtuple('parser', 'options')(options)
 
-    # Transplant configuration
-    TestDaemon.transplant_configs(transport=fake_parser.options.transport)
-
-    tg = TestDaemon(fake_parser)
-    with tg:
+    test_daemon = TestDaemon(fake_parser)
+    with test_daemon:
         yield
     TestDaemon.clean()
 # <---- Custom Fixtures Definitions ----------------------------------------------------------------------------------
