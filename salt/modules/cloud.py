@@ -212,7 +212,7 @@ def map_run(path=None, **kwargs):
         salt minionname cloud.map_run map_data='<actual map data>'
     '''
     client = _get_client()
-    info = client.map_run(path, **_filter_kwargs(kwargs))
+    info = client.map_run(path, **kwargs)
     return info
 
 
