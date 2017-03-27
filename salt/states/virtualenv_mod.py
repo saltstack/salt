@@ -47,6 +47,7 @@ def managed(name,
             no_deps=False,
             pip_download=None,
             pip_download_cache=None,
+            pip_cache_dir=None,
             pip_exists_action=None,
             pip_ignore_installed=False,
             proxy=None,
@@ -54,7 +55,8 @@ def managed(name,
             env_vars=None,
             no_use_wheel=False,
             pip_upgrade=False,
-            pip_pkgs=None):
+            pip_pkgs=None,
+            pip_no_cache_dir=False):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -270,6 +272,7 @@ def managed(name,
             extra_index_url=extra_index_url,
             download=pip_download,
             download_cache=pip_download_cache,
+            cache_dir=pip_cache_dir,
             no_chown=no_chown,
             pre_releases=pre_releases,
             exists_action=pip_exists_action,
@@ -278,7 +281,8 @@ def managed(name,
             no_deps=no_deps,
             proxy=proxy,
             use_vt=use_vt,
-            env_vars=env_vars
+            env_vars=env_vars,
+            no_cache_dir=pip_no_cache_dir
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:
