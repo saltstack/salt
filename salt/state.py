@@ -2507,21 +2507,17 @@ class BaseHighState(object):
             envs.extend([x for x in list(self.opts['file_roots'])
                          if x not in envs])
         env_order = self.opts.get('env_order', [])
+        # Remove duplicates while preserving the order
+        members = set()
+        env_order = [env for env in env_order if not (env in members or members.add(env))]
         client_envs = self.client.envs()
         if env_order and client_envs:
-            env_intersection = set(env_order).intersection(client_envs)
-            final_list = []
-            for ord_env in env_order:
-                if ord_env in env_intersection and ord_env not in final_list:
-                    final_list.append(ord_env)
-            return final_list
+            return [env for env in env_order if env in client_envs]
 
         elif env_order:
             return env_order
         else:
-            for cenv in client_envs:
-                if cenv not in envs:
-                    envs.append(cenv)
+            envs.extend([env for env in client_envs if env not in envs])
             return envs
 
     def get_tops(self):
