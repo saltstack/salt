@@ -48,9 +48,6 @@ it must be specified in the URI:
 # import python libs
 from __future__ import absolute_import
 import salt.cache
-import logging
-
-log = logging.getLogger(__name__)
 
 __func_alias__ = {
     'set_': 'set'
@@ -102,16 +99,11 @@ def _parse_key(key, profile):
     '''
     Parse out a key and update the opts with any override data
     '''
-    log.debug('******** PARSING KEY')
-    log.debug('key is {0}'.format(key))
-
     comps = key.split('?')
-    log.debug('actual key is {0}'.format(comps[0]))
     if len(comps) > 1:
         for item in comps[1].split('&'):
             newkey, newval = item.split('=')
             profile[newkey] = newval
-    log.debug('bank is {0}'.format(profile['bank']))
     if 'cachedir' in profile:
         __opts__['cachedir'] = profile['cachedir']
     return comps[0], profile
