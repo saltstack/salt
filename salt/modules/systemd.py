@@ -12,7 +12,6 @@ Provides the service module for systemd
 '''
 # Import python libs
 from __future__ import absolute_import
-import copy
 import errno
 import glob
 import logging
@@ -193,7 +192,7 @@ def _get_systemd_services():
     return ret
 
 
-def _get_sysv_services():
+def _get_sysv_services(systemd_services=None):
     '''
     Use os.listdir() and os.access() to get all the initscripts
     '''
@@ -215,7 +214,9 @@ def _get_sysv_services():
             )
         return []
 
-    systemd_services = _get_systemd_services()
+    if systemd_services is None:
+        systemd_services = _get_systemd_services()
+
     ret = []
     for sysv_service in sysv_services:
         if os.access(os.path.join(INITSCRIPT_PATH, sysv_service), os.X_OK):
@@ -493,7 +494,7 @@ def get_all():
         salt '*' service.get_all
     '''
     ret = _get_systemd_services()
-    ret.update(set(_get_sysv_services()))
+    ret.update(set(_get_sysv_services(systemd_services=ret)))
     return sorted(ret)
 
 
