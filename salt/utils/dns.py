@@ -36,9 +36,9 @@ import pprint
 # Integrations
 try:
     import dns.resolver
-    HAS_PYDNS = True
+    HAS_DNSPYTHON = True
 except ImportError as e:
-    HAS_PYDNS = False
+    HAS_DNSPYTHON = False
 HAS_DIG = salt.utils.which('dig') is not None
 HAS_DRILL = salt.utils.which('drill') is not None
 HAS_HOST = salt.utils.which('host') is not None
@@ -162,41 +162,56 @@ def _weighted_order(recs):
     return res
 
 
-def _data2rec(rschema, rdata):
+def _data2rec(schema, rec_data):
     '''
-    OrderedDict({
+    schema = OrderedDict({
         'prio': int,
         'weight': int,
         'port': to_port,
         'name': str,
     })
-    '10 20 25 myawesome.nl'
+    rec_data = '10 20 25 myawesome.nl'
 
+    res = {'prio': 10, 'weight': 20, 'port': 25 'name': 'myawesome.nl'}
     '''
+    # ppr(schema)
     try:
-        rdata = rdata.split(' ', len(rschema))
-        rschema = rschema.items()
+        rec_fields = rec_data.split(' ')
+        assert len(rec_fields) == len(schema)
         return dict((
-            (fname, rcb(rdata)) for (fname, rcb), rdata in zip(rschema, rdata)
+            (field_name, rec_cast(rec_field))
+            for (field_name, rec_cast), rec_field in zip(schema.items(), rec_fields)
         ))
-    except (AttributeError, TypeError, ValueError):
-        log.error('Cant parse DNS record data: {0}'.format(rdata))
-        return False
+    except (AssertionError, AttributeError, TypeError, ValueError) as e:
+        raise ValueError('Unable to cast "{0}" as "{2}": {1}'.format(
+            rec_data,
+            e,
+            ' '.join(schema.keys())
+        ))
 
 
-def _data2rec_group(rschema, rdatas, groupon):
-    if not isinstance(rdatas, (list, tuple)):
-        rdatas = [rdatas]
+def _data2rec_group(schema, recs_data, group_key):
+    # ppr(schema)
+    if not isinstance(recs_data, (list, tuple)):
+        recs_data = [recs_data]
 
     res = OrderedDict()
-    for rdata in rdatas:
-        rdata = _data2rec(rschema, rdata)
-        assert rdata and groupon in rdata
-        idx = rdata.pop(groupon)
-        if idx not in res:
-            res[idx] = []
-        res[idx].append(rdata)
-    return res
+
+    try:
+        for rdata in recs_data:
+            rdata = _data2rec(schema, rdata)
+            assert rdata and group_key in rdata
+            idx = rdata.pop(group_key)
+            if idx not in res:
+                res[idx] = []
+            res[idx].append(rdata)
+        return res
+    except (AssertionError, ValueError) as e:
+        raise ValueError('Unable to cast "{0}" as a group of "{1}": {2}'.format(
+            ','.join(recs_data),
+            ' '.join(schema.keys()),
+            e
+        ))
 
 
 def _rec2data(*rdata):
@@ -217,7 +232,7 @@ def _lookup_gai(name, rdtype, timeout=None):
     }[rdtype]
 
     if timeout:
-        log.warning('Ignoring timeout on simple resolver; fix resolv.conf to do that')
+        log.warn('Ignoring timeout on gai resolver; fix resolv.conf to do that')
 
     try:
         addresses = [sock[4][0] for sock in socket.getaddrinfo(name, None, sock_t, 0, socket.SOCK_RAW)]
@@ -370,7 +385,7 @@ def _lookup_host(name, rdtype, timeout=None, server=None):
     return res
 
 
-def _lookup_pydns(name, rdtype, timeout=None, servers=None, secure=None):
+def _lookup_dnspython(name, rdtype, timeout=None, servers=None, secure=None):
     '''
     Use dnspython to lookup addresses
     :param name: Name of record to search
@@ -497,12 +512,12 @@ def lookup(
 
     # pylint: disable=bad-whitespace,multiple-spaces-before-keyword
     query_methods = (
-        ('gai',      _lookup_gai,      not any((rdtype not in ('A', 'AAAA'), servers, secure))),
-        ('pydns',    _lookup_pydns,    HAS_PYDNS),
-        ('dig',      _lookup_dig,      HAS_DIG),
-        ('drill',    _lookup_drill,    HAS_DRILL),
-        ('host',     _lookup_host,     HAS_HOST and not secure),
-        ('nslookup', _lookup_nslookup, HAS_NSLOOKUP and not secure),
+        ('gai',       _lookup_gai,       not any((rdtype not in ('A', 'AAAA'), servers, secure))),
+        ('dnspython', _lookup_dnspython, HAS_DNSPYTHON),
+        ('dig',       _lookup_dig,       HAS_DIG),
+        ('drill',     _lookup_drill,     HAS_DRILL),
+        ('host',      _lookup_host,      HAS_HOST and not secure),
+        ('nslookup',  _lookup_nslookup,  HAS_NSLOOKUP and not secure),
     )
     # pylint: enable=bad-whitespace,multiple-spaces-before-keyword
 
@@ -545,7 +560,7 @@ def lookup(
         name = [name]
     else:
         idx = 0
-        if rdtype == 'SRV':
+        if rdtype == 'SRV':  # The only rr I know that has 2 name components
             idx = name.find('.') + 1
         idx = name.find('.', idx) + 1
         domain = name[idx:]
@@ -615,14 +630,18 @@ def query(
         'SPF':  spf_rec,
         'SRV':  srv_rec,
     }
-    rdmap = rec_map.get(rdtype, None)
 
-    if not all((qres, rdmap)):
+    if rdtype not in rec_map:
         return qres
-    elif rdtype in ('MX', 'SRV'):
-        res = rdmap(qres)
+
+    caster = rec_map[rdtype]
+
+    if rdtype in ('MX', 'SRV'):
+        # Grouped returns
+        res = caster(qres)
     else:
-        res = [rdmap(answer) for answer in qres]
+        # List of results
+        res = map(caster, qres)
 
     return res
 
