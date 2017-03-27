@@ -237,7 +237,6 @@ def installed(name,
               target=None,
               download=None,
               download_cache=None,
-              cache_dir=None,
               source=None,
               upgrade=False,
               force_reinstall=False,
@@ -337,8 +336,8 @@ def installed(name,
     download
         Download packages into ``download`` instead of installing them
 
-    download_cache | cache_dir
-        Cache downloaded packages in ``download_cache`` or ``cache_dir`` dir
+    download_cache
+        Cache downloaded packages in ``download_cache`` dir
 
     source
         Check out ``editable`` packages into ``source`` dir
@@ -682,7 +681,6 @@ def installed(name,
         target=target,
         download=download,
         download_cache=download_cache,
-        cache_dir=cache_dir,
         source=source,
         upgrade=upgrade,
         force_reinstall=force_reinstall,
