@@ -1764,9 +1764,8 @@ class LocalClient(object):
             payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(
-                'Salt request timed out. The master is not responding. '
-                'If this error persists after verifying the master is up, '
-                'worker_threads may need to be increased.'
+                'Salt request timed out. The master is not responding. You '
+                'may need to run your command with `--async`.'
             )
 
         if not payload:
@@ -1869,9 +1868,8 @@ class LocalClient(object):
             payload = yield channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(
-                'Salt request timed out. The master is not responding. '
-                'If this error persists after verifying the master is up, '
-                'worker_threads may need to be increased.'
+                'Salt request timed out. The master is not responding. You '
+                'may need to run your command with `--async`.'
             )
 
         if not payload:
