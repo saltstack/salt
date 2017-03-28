@@ -616,8 +616,9 @@ def _get_mode_spec(device, mode, disk_spec):
     return disk_spec
 
 
-def _get_size_spec(device, size_gb):
-    size_kb = int(size_gb * 1024.0 * 1024.0)
+def _get_size_spec(device, size_gb=None, size_kb=None):
+    if size_kb is None and size_gb is not None:
+        size_kb = int(size_gb * 1024.0 * 1024.0)
     disk_spec = _edit_existing_hard_disk_helper(disk=device, size_kb=size_kb) if device.capacityInKB < size_kb else None
     return disk_spec
 
@@ -649,26 +650,33 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         disk_spec = None
                         if 'size' in devices['disk'][device.deviceInfo.label]:
                             size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
-                            disk_spec = _get_size_spec(device, size_gb)
-                            size_kb = size_gb * 1024 * 1024
+                            size_kb = int(size_gb * 1024.0 * 1024.0)
                         else:
-                            # User didn't specify disk size
-                            # in the cloud profile
-                            # so use the existing disk size
-                            log.info('Virtual disk size was not'
-                                     ' specified in the cloud profile.'
-                                     ' Using existing disk size.')
+                            # User didn't specify disk size in the cloud
+                            # profile so use the existing disk size
                             size_kb = device.capacityInKB
-
-                        if device.capacityInKB < size_kb:
-                            # expand the disk
-                            disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
-                        elif device.capacityInKB > size_kb:
-                            raise SaltCloudSystemExit(
-                                'The specified disk size is smaller than the '
-                                'size of the disk image. It must be equal to '
-                                'or greater than the disk image'
+                            size_gb = size_kb / (1024.0 * 1024.0)
+                            log.debug(
+                                'Virtual disk size for \'{0}\' was not '
+                                'specified in the cloud profile or map file. '
+                                'Using existing virtual disk size of \'{1}GB\''.format(
+                                    device.deviceInfo.label,
+                                    size_gb
+                                )
                             )
+
+                        if device.capacityInKB > size_kb:
+                            raise SaltCloudSystemExit(
+                                'The specified disk size \'{0}GB\' for \'{1}\' is '
+                                'smaller than the disk image size \'{2}GB\'. It must '
+                                'be equal to or greater than the disk image'.format(
+                                    float(devices['disk'][device.deviceInfo.label]['size']),
+                                    device.deviceInfo.label,
+                                    float(device.capacityInKB / (1024.0 * 1024.0))
+                                )
+                            )
+                        else:
+                            disk_spec = _get_size_spec(device=device, size_kb=size_kb)
 
                         if 'mode' in devices['disk'][device.deviceInfo.label]:
                             if devices['disk'][device.deviceInfo.label]['mode'] \
