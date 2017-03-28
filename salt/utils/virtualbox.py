@@ -1,24 +1,25 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Utilities to help make requests to virtualbox
 
 The virtualbox SDK reference can be found at http://download.virtualbox.org/virtualbox/SDKRef.pdf
 
 This code assumes vboxapi.py from VirtualBox distribution
 being in PYTHONPATH, or installed system-wide
-"""
-from __future__ import absolute_import
+'''
 # Import python libs
+from __future__ import absolute_import
 import logging
 import re
-
 import time
 
+# Import salt libs
 from salt.utils.timeout import wait_for
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
+# Import 3rd-party libs
+from salt.ext.six.moves import range
 # Import virtualbox libs
 HAS_LIBS = False
 try:
@@ -28,107 +29,107 @@ try:
 
 except ImportError:
     VirtualBoxManager = None
-    log.trace("Couldn't import VirtualBox API")
+    log.trace('Couldn\'t import VirtualBox API')
 
 _virtualboxManager = None
 
-"""
+'''
 Attributes we expect to have when converting an XPCOM object to a dict
-"""
+'''
 XPCOM_ATTRIBUTES = {
-    "IMachine": [
-        "id",
-        "name",
-        "accessible",
-        "description",
-        "groups",
-        "memorySize",
-        "OSTypeId",
-        "state",
+    'IMachine': [
+        'id',
+        'name',
+        'accessible',
+        'description',
+        'groups',
+        'memorySize',
+        'OSTypeId',
+        'state',
     ],
-    "INetworkAdapter": [
-        "adapterType",
-        "slot",
-        "enabled",
-        "MACAddress",
-        "bridgedInterface",
-        "hostOnlyInterface",
-        "internalNetwork",
-        "NATNetwork",
-        "genericDriver",
-        "cableConnected",
-        "lineSpeed",
-        "lineSpeed",
+    'INetworkAdapter': [
+        'adapterType',
+        'slot',
+        'enabled',
+        'MACAddress',
+        'bridgedInterface',
+        'hostOnlyInterface',
+        'internalNetwork',
+        'NATNetwork',
+        'genericDriver',
+        'cableConnected',
+        'lineSpeed',
+        'lineSpeed',
     ]
 }
 
-UNKNOWN_MACHINE_STATE = ("Unknown", "This state is unknown to us. Might be new?")
+UNKNOWN_MACHINE_STATE = ('Unknown', 'This state is unknown to us. Might be new?')
 MACHINE_STATE_LIST = [
-    ("Null", "Null value (never used by the API)"),
-    ("PoweredOff", "The machine is not running and has no saved execution state; "
-                   "it has either never been started or been shut down successfully."),
-    ("Saved", "The machine is not currently running, but the execution state of the machine has been "
-              "saved to an external file when it was running, from where it can be resumed."),
-    ("Teleported", "The machine was teleported to a different host (or process) and then powered off. "
-                   "Take care when powering it on again may corrupt resources it shares with the teleportation "
-                   "target (e.g. disk and network)."),
-    ("Aborted", "The process running the machine has terminated abnormally. This may indicate a "
-                "crash of the VM process in host execution context, or the VM process has been terminated "
-                "externally."),
-    ("Running", "The machine is currently being executed."),
-    ("Paused", "Execution of the machine has been paused."),
-    ("Stuck", "Execution of the machine has reached the \"Guru Meditation\" condition. This indicates a "
-              "severe error in the hypervisor itself."),
-    ("Teleporting", "The machine is about to be teleported to a different host or process. It is possible "
-                    "to pause a machine in this state, but it will go to the TeleportingPausedVM state and it "
-                    "will not be possible to resume it again unless the teleportation fails."),
-    ("LiveSnapshotting", "A live snapshot is being taken. The machine is running normally, but some "
-                         "of the runtime configuration options are inaccessible. "
-                         "Also, if paused while in this state it will transition to OnlineSnapshotting "
-                         "and it will not be resume the execution until the snapshot operation has completed."),
-    ("Starting", "Machine is being started after powering it on from a zero execution state."),
-    ("Stopping", "Machine is being normally stopped powering it off, or after the guest OS has initiated "
-                 "a shutdown sequence."),
-    ("Saving", "Machine is saving its execution state to a file."),
-    ("Restoring", "Execution state of the machine is being restored from a file after powering it on from "
-                  "the saved execution state."),
-    ("TeleportingPausedVM", "The machine is being teleported to another host or process, but it is not "
-                            "running. This is the paused variant of the Teleporting state."),
-    ("TeleportingIn", "Teleporting the machine state in from another host or process."),
-    ("FaultTolerantSyncing", "The machine is being synced with a fault tolerant VM running else-where."),
-    ("DeletingSnapshotOnline", "Like DeletingSnapshot , but the merging of media is ongoing in the "
-                               "background while the machine is running."),
-    ("DeletingSnapshotPaused", "Like DeletingSnapshotOnline , but the machine was paused when "
-                               "the merging of differencing media was started."),
-    ("OnlineSnapshotting", "Like LiveSnapshotting , but the machine was paused when the merging "
-                           "of differencing media was started."),
-    ("RestoringSnapshot", "A machine snapshot is being restored; this typically does not take long."),
-    ("DeletingSnapshot", "A machine snapshot is being deleted; this can take a long time since this may "
-                         "require merging differencing media. This value indicates that the machine is not running "
-                         "while the snapshot is being deleted."),
-    ("SettingUp", "Lengthy setup operation is in progress."),
-    ("Snapshotting", "Taking an (offline) snapshot."),
-    ("FirstOnline", "Pseudo-state: first online state (for use in relational expressions)."),
-    ("LastOnline", "Pseudo-state: last online state (for use in relational expressions)."),
-    ("FirstTransient", "Pseudo-state: first transient state (for use in relational expressions)."),
-    ("LastTransient", "Pseudo-state: last transient state (for use in relational expressions)."),
+    ('Null', 'Null value (never used by the API)'),
+    ('PoweredOff', 'The machine is not running and has no saved execution state; '
+                   'it has either never been started or been shut down successfully.'),
+    ('Saved', 'The machine is not currently running, but the execution state of the machine has been '
+              'saved to an external file when it was running, from where it can be resumed.'),
+    ('Teleported', 'The machine was teleported to a different host (or process) and then powered off. '
+                   'Take care when powering it on again may corrupt resources it shares with the teleportation '
+                   'target (e.g. disk and network).'),
+    ('Aborted', 'The process running the machine has terminated abnormally. This may indicate a '
+                'crash of the VM process in host execution context, or the VM process has been terminated '
+                'externally.'),
+    ('Running', 'The machine is currently being executed.'),
+    ('Paused', 'Execution of the machine has been paused.'),
+    ('Stuck', 'Execution of the machine has reached the \'Guru Meditation\' condition. This indicates a '
+              'severe error in the hypervisor itself.'),
+    ('Teleporting', 'The machine is about to be teleported to a different host or process. It is possible '
+                    'to pause a machine in this state, but it will go to the TeleportingPausedVM state and it '
+                    'will not be possible to resume it again unless the teleportation fails.'),
+    ('LiveSnapshotting', 'A live snapshot is being taken. The machine is running normally, but some '
+                         'of the runtime configuration options are inaccessible. '
+                         'Also, if paused while in this state it will transition to OnlineSnapshotting '
+                         'and it will not be resume the execution until the snapshot operation has completed.'),
+    ('Starting', 'Machine is being started after powering it on from a zero execution state.'),
+    ('Stopping', 'Machine is being normally stopped powering it off, or after the guest OS has initiated '
+                 'a shutdown sequence.'),
+    ('Saving', 'Machine is saving its execution state to a file.'),
+    ('Restoring', 'Execution state of the machine is being restored from a file after powering it on from '
+                  'the saved execution state.'),
+    ('TeleportingPausedVM', 'The machine is being teleported to another host or process, but it is not '
+                            'running. This is the paused variant of the Teleporting state.'),
+    ('TeleportingIn', 'Teleporting the machine state in from another host or process.'),
+    ('FaultTolerantSyncing', 'The machine is being synced with a fault tolerant VM running else-where.'),
+    ('DeletingSnapshotOnline', 'Like DeletingSnapshot , but the merging of media is ongoing in the '
+                               'background while the machine is running.'),
+    ('DeletingSnapshotPaused', 'Like DeletingSnapshotOnline , but the machine was paused when '
+                               'the merging of differencing media was started.'),
+    ('OnlineSnapshotting', 'Like LiveSnapshotting , but the machine was paused when the merging '
+                           'of differencing media was started.'),
+    ('RestoringSnapshot', 'A machine snapshot is being restored; this typically does not take long.'),
+    ('DeletingSnapshot', 'A machine snapshot is being deleted; this can take a long time since this may '
+                         'require merging differencing media. This value indicates that the machine is not running '
+                         'while the snapshot is being deleted.'),
+    ('SettingUp', 'Lengthy setup operation is in progress.'),
+    ('Snapshotting', 'Taking an (offline) snapshot.'),
+    ('FirstOnline', 'Pseudo-state: first online state (for use in relational expressions).'),
+    ('LastOnline', 'Pseudo-state: last online state (for use in relational expressions).'),
+    ('FirstTransient', 'Pseudo-state: first transient state (for use in relational expressions).'),
+    ('LastTransient', 'Pseudo-state: last transient state (for use in relational expressions).'),
 ]
 MACHINE_STATES = dict(MACHINE_STATE_LIST)
 
-"""
+'''
 Dict of states {
     <number>: ( <name>, <description> )
 }
-"""
+'''
 MACHINE_STATES_ENUM = dict(enumerate(MACHINE_STATE_LIST))
 
 
 def vb_get_manager():
-    """
-    Creates a "singleton" manager to communicate with a local virtualbox hypervisor.
+    '''
+    Creates a 'singleton' manager to communicate with a local virtualbox hypervisor.
     @return:
     @rtype: VirtualBoxManager
-    """
+    '''
     global _virtualboxManager
     if _virtualboxManager is None and HAS_LIBS:
         # Reloading the API extends sys.paths for subprocesses of multiprocessing, since they seem to share contexts
@@ -139,22 +140,22 @@ def vb_get_manager():
 
 
 def vb_get_box():
-    """
+    '''
     Needed for certain operations in the SDK e.g creating sessions
     @return:
     @rtype: IVirtualBox
-    """
+    '''
     vb_get_manager()
     vbox = _virtualboxManager.vbox
     return vbox
 
 
 def vb_get_max_network_slots():
-    """
+    '''
     Max number of slots any machine can have
     @return:
     @rtype: number
-    """
+    '''
     sysprops = vb_get_box().systemProperties
     totals = [
         sysprops.getMaxNetworkAdapters(adapter_type)
@@ -167,7 +168,7 @@ def vb_get_max_network_slots():
 
 
 def vb_get_network_adapters(machine_name=None, machine=None):
-    """
+    '''
     A valid machine_name or a machine is needed to make this work!
 
     @param machine_name:
@@ -176,7 +177,7 @@ def vb_get_network_adapters(machine_name=None, machine=None):
     @type machine: IMachine
     @return: INetorkAdapter's converted to dicts
     @rtype: [dict]
-    """
+    '''
 
     if machine_name:
         machine = vb_get_box().findMachine(machine_name)
@@ -186,9 +187,9 @@ def vb_get_network_adapters(machine_name=None, machine=None):
         try:
             inetwork_adapter = machine.getNetworkAdapter(i)
             network_adapter = vb_xpcom_to_attribute_dict(
-                inetwork_adapter, "INetworkAdapter"
+                inetwork_adapter, 'INetworkAdapter'
             )
-            network_adapter["properties"] = inetwork_adapter.getProperties("")
+            network_adapter['properties'] = inetwork_adapter.getProperties('')
             network_adapters.append(network_adapter)
         except Exception:
             pass
@@ -197,7 +198,7 @@ def vb_get_network_adapters(machine_name=None, machine=None):
 
 
 def vb_wait_for_network_address(timeout, step=None, machine_name=None, machine=None):
-    """
+    '''
     Wait until a machine has a network address to return or quit after the timeout
 
     @param timeout: in seconds
@@ -210,29 +211,29 @@ def vb_wait_for_network_address(timeout, step=None, machine_name=None, machine=N
     @type machine: IMachine
     @return:
     @rtype: list
-    """
+    '''
     kwargs = {
-        "machine_name": machine_name,
-        "machine": machine
+        'machine_name': machine_name,
+        'machine': machine
     }
     return wait_for(vb_get_network_addresses, timeout=timeout, step=step, default=[], func_kwargs=kwargs)
 
 
-def _check_session_state(xp_session, expected_state="Unlocked"):
-    """
+def _check_session_state(xp_session, expected_state='Unlocked'):
+    '''
     @param xp_session:
     @type xp_session: ISession from the Virtualbox API
     @param expected_state: The constant descriptor according to the docs
     @type expected_state: str
     @return:
     @rtype: bool
-    """
-    state_value = getattr(_virtualboxManager.constants, "SessionState_" + expected_state)
+    '''
+    state_value = getattr(_virtualboxManager.constants, 'SessionState_' + expected_state)
     return xp_session.state == state_value
 
 
-def vb_wait_for_session_state(xp_session, state="Unlocked", timeout=10, step=None):
-    """
+def vb_wait_for_session_state(xp_session, state='Unlocked', timeout=10, step=None):
+    '''
     Waits until a session state has been reached, checking at regular intervals.
 
     @param xp_session:
@@ -245,13 +246,13 @@ def vb_wait_for_session_state(xp_session, state="Unlocked", timeout=10, step=Non
     @type step: int | float
     @return: Did we reach the state?
     @rtype: bool
-    """
+    '''
     args = (xp_session, state)
     wait_for(_check_session_state, timeout=timeout, step=step, default=False, func_args=args)
 
 
 def vb_get_network_addresses(machine_name=None, machine=None):
-    """
+    '''
     TODO distinguish between private and public addresses
 
     A valid machine_name or a machine is needed to make this work!
@@ -270,7 +271,7 @@ def vb_get_network_addresses(machine_name=None, machine=None):
     @type machine: IMachine
     @return: All the IPv4 addresses we could get
     @rtype: str[]
-    """
+    '''
     if machine_name:
         machine = vb_get_box().findMachine(machine_name)
 
@@ -278,10 +279,10 @@ def vb_get_network_addresses(machine_name=None, machine=None):
     # We can't trust virtualbox to give us up to date guest properties if the machine isn't running
     # For some reason it may give us outdated (cached?) values
     if machine.state == _virtualboxManager.constants.MachineState_Running:
-        total_slots = int(machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/Count"))
+        total_slots = int(machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/Count'))
         for i in range(total_slots):
             try:
-                address = machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/{0}/V4/IP".format(i))
+                address = machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/{0}/V4/IP'.format(i))
                 if address:
                     ip_addresses.append(address)
             except Exception as e:
@@ -291,23 +292,23 @@ def vb_get_network_addresses(machine_name=None, machine=None):
 
 
 def vb_list_machines(**kwargs):
-    """
+    '''
     Which machines does the hypervisor have
     @param kwargs: Passed to vb_xpcom_to_attribute_dict to filter the attributes
     @type kwargs: dict
     @return: Untreated dicts of the machines known to the hypervisor
     @rtype: [{}]
-    """
+    '''
     manager = vb_get_manager()
-    machines = manager.getArray(vb_get_box(), "machines")
+    machines = manager.getArray(vb_get_box(), 'machines')
     return [
-        vb_xpcom_to_attribute_dict(machine, "IMachine", **kwargs)
+        vb_xpcom_to_attribute_dict(machine, 'IMachine', **kwargs)
         for machine in machines
         ]
 
 
 def vb_create_machine(name=None):
-    """
+    '''
     Creates a machine on the virtualbox hypervisor
 
     TODO pass more params to customize machine creation
@@ -315,11 +316,11 @@ def vb_create_machine(name=None):
     @type name: str
     @return: Representation of the created machine
     @rtype: dict
-    """
+    '''
     vbox = vb_get_box()
-    log.info("Create virtualbox machine %s ", name)
+    log.info('Create virtualbox machine %s ', name)
     groups = None
-    os_type_id = "Other"
+    os_type_id = 'Other'
     new_machine = vbox.createMachine(
         None,  # Settings file
         name,
@@ -328,8 +329,8 @@ def vb_create_machine(name=None):
         None  # flags
     )
     vbox.registerMachine(new_machine)
-    log.info("Finished creating %s", name)
-    return vb_xpcom_to_attribute_dict(new_machine, "IMachine")
+    log.info('Finished creating %s', name)
+    return vb_xpcom_to_attribute_dict(new_machine, 'IMachine')
 
 
 def vb_clone_vm(
@@ -338,7 +339,7 @@ def vb_clone_vm(
     timeout=10000,
     **kwargs
 ):
-    """
+    '''
     Tells virtualbox to create a VM by cloning from an existing one
 
     @param name: Name for the new VM
@@ -348,14 +349,14 @@ def vb_clone_vm(
     @param timeout: maximum time in milliseconds to wait or -1 to wait indefinitely
     @type timeout: int
     @return dict of resulting VM
-    """
+    '''
     vbox = vb_get_box()
-    log.info("Clone virtualbox machine %s from %s", name, clone_from)
+    log.info('Clone virtualbox machine %s from %s', name, clone_from)
 
     source_machine = vbox.findMachine(clone_from)
 
     groups = None
-    os_type_id = "Other"
+    os_type_id = 'Other'
     new_machine = vbox.createMachine(
         None,  # Settings file
         name,
@@ -371,15 +372,15 @@ def vb_clone_vm(
     )
 
     progress.waitForCompletion(timeout)
-    log.info("Finished cloning %s from %s", name, clone_from)
+    log.info('Finished cloning %s from %s', name, clone_from)
 
     vbox.registerMachine(new_machine)
 
-    return vb_xpcom_to_attribute_dict(new_machine, "IMachine")
+    return vb_xpcom_to_attribute_dict(new_machine, 'IMachine')
 
 
 def _start_machine(machine, session):
-    """
+    '''
     Helper to try and start machines
 
     @param machine:
@@ -388,16 +389,16 @@ def _start_machine(machine, session):
     @type session: ISession
     @return:
     @rtype: IProgress or None
-    """
+    '''
     try:
-        return machine.launchVMProcess(session, "", "")
+        return machine.launchVMProcess(session, '', '')
     except Exception as e:
         log.debug(e.message, exc_info=True)
         return None
 
 
 def vb_start_vm(name=None, timeout=10000, **kwargs):
-    """
+    '''
     Tells Virtualbox to start up a VM.
     Blocking function!
 
@@ -406,7 +407,7 @@ def vb_start_vm(name=None, timeout=10000, **kwargs):
     @param timeout: Maximum time in milliseconds to wait or -1 to wait indefinitely
     @type timeout: int
     @return untreated dict of started VM
-    """
+    '''
     # Time tracking
     start_time = time.time()
     timeout_in_seconds = timeout / 1000
@@ -416,13 +417,13 @@ def vb_start_vm(name=None, timeout=10000, **kwargs):
     machine = vbox.findMachine(name)
     session = _virtualboxManager.getSessionObject(vbox)
 
-    log.info("Starting machine %s in state %s", name, vb_machinestate_to_str(machine.state))
+    log.info('Starting machine %s in state %s', name, vb_machinestate_to_str(machine.state))
     try:
         # Keep trying to start a machine
         args = (machine, session)
         progress = wait_for(_start_machine, timeout=timeout_in_seconds, func_args=args)
         if not progress:
-            progress = machine.launchVMProcess(session, "", "")
+            progress = machine.launchVMProcess(session, '', '')
 
         # We already waited for stuff, don't push it
         time_left = max_time - time.time()
@@ -433,13 +434,13 @@ def vb_start_vm(name=None, timeout=10000, **kwargs):
     # The session state should best be unlocked otherwise subsequent calls might cause problems
     time_left = max_time - time.time()
     vb_wait_for_session_state(session, timeout=time_left)
-    log.info("Started machine %s", name)
+    log.info('Started machine %s', name)
 
-    return vb_xpcom_to_attribute_dict(machine, "IMachine")
+    return vb_xpcom_to_attribute_dict(machine, 'IMachine')
 
 
 def vb_stop_vm(name=None, timeout=10000, **kwargs):
-    """
+    '''
     Tells Virtualbox to stop a VM.
     This is a blocking function!
 
@@ -448,10 +449,10 @@ def vb_stop_vm(name=None, timeout=10000, **kwargs):
     @param timeout: Maximum time in milliseconds to wait or -1 to wait indefinitely
     @type timeout: int
     @return untreated dict of stopped VM
-    """
+    '''
     vbox = vb_get_box()
     machine = vbox.findMachine(name)
-    log.info("Stopping machine %s", name)
+    log.info('Stopping machine %s', name)
     session = _virtualboxManager.openMachineSession(machine)
     try:
         console = session.console
@@ -460,24 +461,24 @@ def vb_stop_vm(name=None, timeout=10000, **kwargs):
     finally:
         _virtualboxManager.closeMachineSession(session)
         vb_wait_for_session_state(session)
-    log.info("Stopped machine %s is now %s", name, vb_machinestate_to_str(machine.state))
-    return vb_xpcom_to_attribute_dict(machine, "IMachine")
+    log.info('Stopped machine %s is now %s', name, vb_machinestate_to_str(machine.state))
+    return vb_xpcom_to_attribute_dict(machine, 'IMachine')
 
 
 def vb_destroy_machine(name=None, timeout=10000):
-    """
+    '''
     Attempts to get rid of a machine and all its files from the hypervisor
     @param name:
     @type name: str
     @param timeout int timeout in milliseconds
-    """
+    '''
     vbox = vb_get_box()
-    log.info("Destroying machine %s", name)
+    log.info('Destroying machine %s', name)
     machine = vbox.findMachine(name)
     files = machine.unregister(2)
     progress = machine.deleteConfig(files)
     progress.waitForCompletion(timeout)
-    log.info("Finished destroying machine %s", name)
+    log.info('Finished destroying machine %s', name)
 
 
 def vb_xpcom_to_attribute_dict(xpcom,
@@ -486,13 +487,13 @@ def vb_xpcom_to_attribute_dict(xpcom,
                                excluded_attributes=None,
                                extra_attributes=None
                                ):
-    """
+    '''
     Attempts to build a dict from an XPCOM object.
     Attributes that don't exist in the object return an empty string.
 
     attribute_list = list of str or tuple(str,<a class>)
 
-    e.g attributes=[("bad_attribute", list)] --> { "bad_attribute": [] }
+    e.g attributes=[('bad_attribute', list)] --> { 'bad_attribute': [] }
 
     @param xpcom:
     @type xpcom:
@@ -508,13 +509,13 @@ def vb_xpcom_to_attribute_dict(xpcom,
     @type extra_attributes: attribute_list
     @return:
     @rtype: dict
-    """
+    '''
     # Check the interface
     if interface_name:
-        m = re.search(r"XPCOM.+implementing {0}".format(interface_name), str(xpcom))
+        m = re.search(r'XPCOM.+implementing {0}'.format(interface_name), str(xpcom))
         if not m:
             # TODO maybe raise error here?
-            log.warning("Interface %s is unknown and cannot be converted to dict", interface_name)
+            log.warning('Interface %s is unknown and cannot be converted to dict', interface_name)
             return dict()
 
     interface_attributes = set(attributes or XPCOM_ATTRIBUTES.get(interface_name, []))
@@ -530,14 +531,14 @@ def vb_xpcom_to_attribute_dict(xpcom,
             attribute_class = attribute[1]
             value = (attribute_name, getattr(xpcom, attribute_name, attribute_class()))
         else:
-            value = (attribute, getattr(xpcom, attribute, ""))
+            value = (attribute, getattr(xpcom, attribute, ''))
         attribute_tuples.append(value)
 
     return dict(attribute_tuples)
 
 
 def treat_machine_dict(machine):
-    """
+    '''
     Make machine presentable for outside world.
 
     !!!Modifies the input machine!!!
@@ -546,55 +547,55 @@ def treat_machine_dict(machine):
     @type machine: dict
     @return: the modified input machine
     @rtype: dict
-    """
+    '''
     machine.update({
-        "id": machine.get("id", ""),
-        "image": machine.get("image", ""),
-        "size": "{0} MB".format(machine.get("memorySize", 0)),
-        "state": machine_get_machinestate_str(machine),
-        "private_ips": [],
-        "public_ips": [],
+        'id': machine.get('id', ''),
+        'image': machine.get('image', ''),
+        'size': '{0} MB'.format(machine.get('memorySize', 0)),
+        'state': machine_get_machinestate_str(machine),
+        'private_ips': [],
+        'public_ips': [],
     })
 
     # Replaced keys
-    if "memorySize" in machine:
-        del machine["memorySize"]
+    if 'memorySize' in machine:
+        del machine['memorySize']
     return machine
 
 
 def vb_machinestate_to_str(machinestate):
-    """
+    '''
     Put a name to the state
 
     @param machinestate: from the machine state enum from XPCOM
     @type machinestate: int
     @return:
     @rtype: str
-    """
+    '''
 
     return vb_machinestate_to_tuple(machinestate)[0]
 
 
 def vb_machinestate_to_description(machinestate):
-    """
+    '''
     Describe the given state
 
     @param machinestate: from the machine state enum from XPCOM
     @type machinestate: int | str
     @return:
     @rtype: str
-    """
+    '''
     return vb_machinestate_to_tuple(machinestate)[1]
 
 
 def vb_machinestate_to_tuple(machinestate):
-    """
+    '''
 
     @param machinestate:
     @type machinestate: int | str
     @return:
     @rtype: tuple(<name>, <description>)
-    """
+    '''
     if isinstance(machinestate, int):
         return MACHINE_STATES_ENUM.get(machinestate, UNKNOWN_MACHINE_STATE)
     elif isinstance(machinestate, str):
@@ -604,21 +605,21 @@ def vb_machinestate_to_tuple(machinestate):
 
 
 def machine_get_machinestate_tuple(machinedict):
-    return vb_machinestate_to_tuple(machinedict.get("state"))
+    return vb_machinestate_to_tuple(machinedict.get('state'))
 
 
 def machine_get_machinestate_str(machinedict):
-    return vb_machinestate_to_str(machinedict.get("state"))
+    return vb_machinestate_to_str(machinedict.get('state'))
 
 
 def vb_machine_exists(name):
-    """
+    '''
     Checks in with the hypervisor to see if the machine with the given name is known
     @param name:
     @type name:
     @return:
     @rtype:
-    """
+    '''
     try:
         vbox = vb_get_box()
         vbox.findMachine(name)
@@ -626,18 +627,18 @@ def vb_machine_exists(name):
     except Exception as e:
         if isinstance(e.message, str):
             message = e.message
-        elif hasattr(e, "msg") and isinstance(getattr(e, "msg"), str):
-            message = getattr(e, "msg")
+        elif hasattr(e, 'msg') and isinstance(getattr(e, 'msg'), str):
+            message = getattr(e, 'msg')
         else:
-            message = ""
-        if 0 > message.find("Could not find a registered machine named"):
+            message = ''
+        if 0 > message.find('Could not find a registered machine named'):
             log.error(message)
 
         return False
 
 
 def vb_get_machine(name, **kwargs):
-    """
+    '''
     Attempts to fetch a machine from Virtualbox and convert it to a dict
 
     @param name: The unique name of the machine
@@ -646,7 +647,7 @@ def vb_get_machine(name, **kwargs):
     @type kwargs:
     @return:
     @rtype: dict
-    """
+    '''
     vbox = vb_get_box()
     machine = vbox.findMachine(name)
-    return vb_xpcom_to_attribute_dict(machine, "IMachine", **kwargs)
+    return vb_xpcom_to_attribute_dict(machine, 'IMachine', **kwargs)
