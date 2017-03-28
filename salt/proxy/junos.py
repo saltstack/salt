@@ -39,7 +39,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import copy
 
 # Import 3rd-party libs
 try:
@@ -124,17 +123,19 @@ def proxytype():
     return 'junos'
 
 
-def grains():
-    thisproxy['grains'] = copy.deepcopy(thisproxy['conn'].facts)
-    if thisproxy['grains']:
-        thisproxy['grains']['version_info'] = dict(
-            thisproxy['grains']['version_info'])
-    else:
-        log.debug(
-            'Grains will not be populated by junos facts \
-            as the device returned an empty facts dictionary.')
-
-    return thisproxy['grains']
+def get_serialized_facts():
+    facts = dict(thisproxy['conn'].facts)
+    if 'version_info' in facts:
+        facts['version_info'] = \
+            dict(facts['version_info'])
+    # For backward compatibility. 'junos_info' is present
+    # only of in newer versions of facts.
+    if 'junos_info' in facts:
+        facts['junos_info']['re0']['object'] = \
+            dict(facts['junos_info']['re0']['object'])
+        facts['junos_info']['re1']['object'] = \
+            dict(facts['junos_info']['re1']['object'])
+    return facts
 
 
 def ping():

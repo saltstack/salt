@@ -77,10 +77,10 @@ def facts_refresh():
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
-    new_facts = conn.facts
-    new_facts['version_info'] = dict(new_facts['version_info'])
-    # Earlier it was ret['message']
-    ret['facts'] = facts
+        return ret
+
+    ret['facts'] = __proxy__['junos.get_serialized_facts']()
+
     try:
         __salt__['saltutil.sync_grains']()
     except Exception as exception:
@@ -100,12 +100,9 @@ def facts():
         salt 'device_name' junos.facts
 
     '''
-    conn = __proxy__['junos.conn']()
     ret = dict()
     try:
-        facts = conn.facts
-        facts['version_info'] = dict(facts['version_info'])
-        ret['facts'] = facts
+        ret['facts'] = __proxy__['junos.get_serialized_facts']()
         ret['out'] = True
     except Exception as exception:
         ret['message'] = 'Could not display facts due to "{0}"'.format(
@@ -171,10 +168,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
-    if dest is None and format != 'xml':
-        log.warning(
-            'Format ignored as it is only used for \
-            output which is dumped in the file.')
+    op['dev_timeout'] = str(op.pop('timeout', conn.timeout))
 
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
@@ -194,21 +188,11 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
                 exception)
             ret['out'] = False
             return ret
-
-        if format == 'text':
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = reply.text
-        elif format == 'json':
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = reply
-        else:
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
     else:
+        op['dev_timeout'] = int(op['dev_timeout'])
         if 'filter' in op:
             log.warning(
                 'Filter ignored as it is only used with "get-config" rpc')
-
         try:
             reply = getattr(
                 conn.rpc,
@@ -221,15 +205,15 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
             ret['out'] = False
             return ret
 
-        if format == 'text':
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = reply.text
-        elif format == 'json':
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = reply
-        else:
-            # Earlier it was ret['message']
-            ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
+    if format == 'text':
+        # Earlier it was ret['message']
+        ret['rpc_reply'] = reply.text
+    elif format == 'json':
+        # Earlier it was ret['message']
+        ret['rpc_reply'] = reply
+    else:
+        # Earlier it was ret['message']
+        ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
 
     if dest:
         if format == 'text':
@@ -317,6 +301,7 @@ def set_hostname(hostname=None, **kwargs):
         ret['out'] = False
         ret[
             'message'] = 'Successfully loaded host-name but pre-commit check failed.'
+        conn.cu.rollback()
     return ret
 
 
@@ -365,7 +350,6 @@ def commit(**kwargs):
 
     conn = __proxy__['junos.conn']()
     ret = {}
-
     op = dict()
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
@@ -374,9 +358,7 @@ def commit(**kwargs):
     else:
         op.update(kwargs)
 
-    detail = False
-    if 'detail' in op and op['detail']:
-        detail = True
+    op['detail'] = op.get('detail', False)
 
     try:
         commit_ok = conn.cu.commit_check()
@@ -391,7 +373,7 @@ def commit(**kwargs):
             commit = conn.cu.commit(**op)
             ret['out'] = True
             if commit:
-                if detail:
+                if op['detail']:
                     ret['message'] = jxmlease.parse(etree.tostring(commit))
                 else:
                     ret['message'] = 'Commit Successful.'
@@ -400,9 +382,9 @@ def commit(**kwargs):
                 ret['out'] = False
         except Exception as exception:
             ret['out'] = False
-            ret['message'] = 'Pre-commit check succeeded but \
-            actual commit failed with "{0}"'.format(
-                exception)
+            ret['message'] = \
+                'Commit check succeeded but actual commit failed with "{0}"' \
+                .format(exception)
     else:
         ret['out'] = False
         ret['message'] = 'Pre-commit check failed.'
@@ -461,6 +443,7 @@ def rollback(id=0, **kwargs):
         ret['message'] = 'Rollback successful'
     else:
         ret['message'] = 'Rollback failed'
+        return ret
 
     if 'diffs_file' in op and op['diffs_file'] is not None:
         diff = conn.cu.diff()
@@ -486,12 +469,13 @@ def rollback(id=0, **kwargs):
             ret['out'] = True
         except Exception as exception:
             ret['out'] = False
-            ret['message'] = 'Rollback successful but commit \
-            failed with error "{0}"'.format(exception)
+            ret['message'] = \
+                'Rollback successful but commit failed with error "{0}"'\
+                    .format(exception)
             return ret
     else:
-        ret['out'] = False
         ret['message'] = 'Rollback succesfull but pre-commit check failed.'
+        ret['out'] = False
     return ret
 
 
@@ -518,9 +502,9 @@ def diff(id=0):
     try:
         ret['message'] = conn.cu.diff(rb_id=id)
     except Exception as exception:
-        ret['out'] = False
         ret['message'] = 'Could not get diff with error "{0}"'.format(
             exception)
+        ret['out'] = False
 
     return ret
 
@@ -577,10 +561,7 @@ def ping(dest_ip=None, **kwargs):
     else:
         op.update(kwargs)
 
-    if 'count' in op:
-        op['count'] = str(op['count'])
-    else:
-        op['count'] = '5'
+    op['count'] = str(op.pop('count', 5))
     if 'ttl' in op:
         op['ttl'] = str(op['ttl'])
 
@@ -698,7 +679,9 @@ def shutdown(**kwargs):
               Note that either one of the above arguments has to be specified
               (shutdown or reboot) for this function to work.
             * at:
-              Specify time for reboot. (To be used only if reboot=True)
+              Date and time the reboot should take place. The
+              string must match the junos cli reboot syntax
+              (To be used only if reboot=True)
             * in_min:
               Specify delay in minutes for shutdown
 
@@ -739,7 +722,8 @@ def shutdown(**kwargs):
         ret['message'] = 'Successfully powered off/rebooted.'
         ret['out'] = True
     except Exception as exception:
-        ret['message'] = 'Could not poweroff/reboot beacause "{0}"'.format(exception)
+        ret['message'] = \
+            'Could not poweroff/reboot beacause "{0}"'.format(exception)
         ret['out'] = False
     return ret
 
@@ -759,11 +743,12 @@ def install_config(path=None, **kwargs):
 
         salt 'device_name' junos.install_config 'salt://my_new_configuration.conf' dev_timeout=300 diffs_file='/salt/confs/old_config.conf' overwrite=True
 
+        salt 'device_name' junos.install_config 'salt://syslog_template.conf' template_vars='{"syslog_host": "10.180.222.7"}'
 
     Parameters:
       Required
         * path:
-          Path where the configuration file is present. If the file has a \
+          Path where the configuration/template file is present. If the file has a \
           '*.conf' extension,
           the content is treated as text format. If the file has a '*.xml' \
           extension,
@@ -790,10 +775,15 @@ def install_config(path=None, **kwargs):
               the given time unless the commit is confirmed.
             * diffs_file:
               Path to the file where the diff (difference in old configuration
-              and the commited configuration) will be stored.(default = None)
+              and the committed configuration) will be stored.(default = None)
               Note that the file will be stored on the proxy minion. To push the
               files to the master use the salt's following execution module: \
               :py:func:`cp.push <salt.modules.cp.push>`
+            * template_vars:
+              Variables to be passed into the template processing engine in addition
+              to those present in __pillar__, __opts__, __grains__, etc.
+              You may reference these variables in your template like so:
+              {{ template_vars["var_name"] }}
 
     '''
     conn = __proxy__['junos.conn']()
@@ -801,21 +791,8 @@ def install_config(path=None, **kwargs):
     ret['out'] = True
 
     if path is None:
-        ret['message'] = 'Please provide the salt path where the \
-            configuration is present'
-        ret['out'] = False
-        return ret
-
-    template_cached_path = files.mkstemp()
-    __salt__['cp.get_template'](path, template_cached_path)
-
-    if not os.path.isfile(template_cached_path):
-        ret['message'] = 'Invalid file path.'
-        ret['out'] = False
-        return ret
-
-    if os.path.getsize(template_cached_path) == 0:
-        ret['message'] = 'Template failed to render'
+        ret['message'] = \
+            'Please provide the salt path where the configuration is present'
         ret['out'] = False
         return ret
 
@@ -826,6 +803,26 @@ def install_config(path=None, **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
+
+    template_vars = dict()
+    if "template_vars" in op:
+        template_vars = op["template_vars"]
+
+    template_cached_path = files.mkstemp()
+    __salt__['cp.get_template'](
+        path,
+        template_cached_path,
+        template_vars=template_vars)
+
+    if not os.path.isfile(template_cached_path):
+        ret['message'] = 'Invalid file path.'
+        ret['out'] = False
+        return ret
+
+    if os.path.getsize(template_cached_path) == 0:
+        ret['message'] = 'Template failed to render'
+        ret['out'] = False
+        return ret
 
     write_diff = ''
     if 'diffs_file' in op and op['diffs_file'] is not None:
@@ -866,21 +863,10 @@ def install_config(path=None, **kwargs):
     finally:
         safe_rm(template_cached_path)
 
-    try:
-        config_diff = conn.cu.diff()
-        if config_diff is None:
-            ret['message'] = 'Configuration already applied!'
-            ret['out'] = True
-            return ret
-
-        if write_diff and config_diff is not None:
-            with fopen(write_diff, 'w') as fp:
-                fp.write(config_diff)
-
-    except Exception as exception:
-        ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
-            exception)
-        ret['out'] = False
+    config_diff = conn.cu.diff()
+    if config_diff is None:
+        ret['message'] = 'Configuration already applied!'
+        ret['out'] = True
         return ret
 
     commit_params = {}
@@ -892,7 +878,10 @@ def install_config(path=None, **kwargs):
     try:
         check = conn.cu.commit_check()
     except Exception as exception:
-        ret['message'] = 'Commit check failed with "{0}"'.format(exception)
+        ret['message'] = \
+            'Commit check threw the following exception: "{0}"'\
+            .format(exception)
+
         ret['out'] = False
         return ret
 
@@ -901,14 +890,25 @@ def install_config(path=None, **kwargs):
             conn.cu.commit(**commit_params)
             ret['message'] = 'Successfully loaded and committed!'
         except Exception as exception:
-            ret['message'] = 'Commit check successful but \
-            commit failed with "{0}"'.format(exception)
+            ret['message'] = \
+                'Commit check successful but commit failed with "{0}"'\
+                .format(exception)
             ret['out'] = False
             return ret
     else:
         ret['message'] = 'Loaded configuration but commit check failed.'
         ret['out'] = False
         conn.cu.rollback()
+
+    try:
+        if write_diff and config_diff is not None:
+            with fopen(write_diff, 'w') as fp:
+                fp.write(config_diff)
+    except Exception as exception:
+        ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
+            exception)
+        ret['out'] = False
+
     return ret
 
 
@@ -972,9 +972,8 @@ def install_os(path=None, **kwargs):
     ret['out'] = True
 
     if path is None:
-        ret[
-            'message'] = 'Please provide the salt path \
-            where the junos image is present.'
+        ret['message'] = \
+            'Please provide the salt path where the junos image is present.'
         ret['out'] = False
         return ret
 
@@ -1014,16 +1013,16 @@ def install_os(path=None, **kwargs):
         try:
             conn.sw.reboot()
         except Exception as exception:
-            ret['message'] = 'Installation successful but \
-            reboot failed due to : "{0}"'.format(
-                exception)
+            ret['message'] = \
+                'Installation successful but reboot failed due to : "{0}"' \
+                .format(exception)
             ret['out'] = False
             return ret
         ret['message'] = 'Successfully installed and rebooted!'
     return ret
 
 
-def file_copy(src=None, dest=None, **kwargs):
+def file_copy(src=None, dest=None):
     '''
     Copies the file from the local device to the junos device.
 
@@ -1047,9 +1046,8 @@ def file_copy(src=None, dest=None, **kwargs):
     ret['out'] = True
 
     if src is None:
-        ret[
-            'message'] = 'Please provide the absolute path \
-            of the file to be copied.'
+        ret['message'] = \
+            'Please provide the absolute path of the file to be copied.'
         ret['out'] = False
         return ret
     if not os.path.isfile(src):
@@ -1058,26 +1056,16 @@ def file_copy(src=None, dest=None, **kwargs):
         return ret
 
     if dest is None:
-        ret[
-            'message'] = 'Please provide the absolute path of\
-             the destination where the file is to be copied.'
+        ret['message'] = \
+            'Please provide the absolute path of the destination where the file is to be copied.'
         ret['out'] = False
         return ret
-
-    op = dict()
-    if '__pub_arg' in kwargs:
-        if kwargs['__pub_arg']:
-            if isinstance(kwargs['__pub_arg'][-1], dict):
-                op.update(kwargs['__pub_arg'][-1])
-    else:
-        op.update(kwargs)
 
     try:
         with SCP(conn, progress=True) as scp:
             scp.put(src, dest)
         ret['message'] = 'Successfully copied file from {0} to {1}'.format(
             src, dest)
-
     except Exception as exception:
         ret['message'] = 'Could not copy file : "{0}"'.format(exception)
         ret['out'] = False
