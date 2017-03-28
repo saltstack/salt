@@ -25,7 +25,7 @@ from salt.exceptions import CommandExecutionError
 import salt.modules.dockerng as dockerng_mod
 import salt.states.dockerng as dockerng_state
 
-dockerng_mod.__context__ = {'docker.docker_version': ''}
+dockerng_mod.__context__ = {}
 dockerng_mod.__salt__ = {}
 dockerng_state.__context__ = {}
 dockerng_state.__opts__ = {'test': False}
@@ -131,12 +131,13 @@ class DockerngTestCase(TestCase):
                     'dockerng.create': dockerng_create,
                     'dockerng.start': dockerng_start,
                     }
-        with patch.dict(dockerng_state.__dict__,
-                        {'__salt__': __salt__}):
-            dockerng_state.running(
-                'cont',
-                image='image:latest',
-                port_bindings=['9090:9797/tcp'])
+        with patch.dict(dockerng_state.__dict__, {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__salt__,
+                            {'dockerng.version': MagicMock(return_value={})}):
+                dockerng_state.running(
+                    'cont',
+                    image='image:latest',
+                    port_bindings=['9090:9797/tcp'])
         dockerng_create.assert_called_with(
             'image:latest',
             validate_input=False,
@@ -185,12 +186,13 @@ class DockerngTestCase(TestCase):
                     'dockerng.create': dockerng_create,
                     'dockerng.start': dockerng_start,
                     }
-        with patch.dict(dockerng_state.__dict__,
-                        {'__salt__': __salt__}):
-            dockerng_state.running(
-                'cont',
-                image='image:latest',
-                port_bindings=['9090:9797/tcp'])
+        with patch.dict(dockerng_state.__dict__, {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__salt__,
+                            {'dockerng.version': MagicMock(return_value={})}):
+                dockerng_state.running(
+                    'cont',
+                    image='image:latest',
+                    port_bindings=['9090:9797/tcp'])
         dockerng_create.assert_called_with(
             'image:latest',
             validate_input=False,
@@ -243,12 +245,13 @@ class DockerngTestCase(TestCase):
                     'dockerng.create': dockerng_create,
                     'dockerng.start': dockerng_start,
                     }
-        with patch.dict(dockerng_state.__dict__,
-                        {'__salt__': __salt__}):
-            dockerng_state.running(
-                'cont',
-                image='image:latest',
-                port_bindings=['9090:9797/udp'])
+        with patch.dict(dockerng_state.__dict__, {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__salt__,
+                            {'dockerng.version': MagicMock(return_value={})}):
+                dockerng_state.running(
+                    'cont',
+                    image='image:latest',
+                    port_bindings=['9090:9797/udp'])
         dockerng_create.assert_called_with(
             'image:latest',
             validate_input=False,
@@ -291,14 +294,15 @@ class DockerngTestCase(TestCase):
                     'dockerng.stop': dockerng_stop,
                     'dockerng.rm': dockerng_rm,
                     }
-        with patch.dict(dockerng_state.__dict__,
-                        {'__salt__': __salt__}):
-            ret = dockerng_state.running(
-                'cont',
-                image='image:latest',
-                )
-            dockerng_stop.assert_called_with('cont', timeout=10, unpause=True)
-            dockerng_rm.assert_called_with('cont')
+        with patch.dict(dockerng_state.__dict__, {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__salt__,
+                            {'dockerng.version': MagicMock(return_value={})}):
+                ret = dockerng_state.running(
+                    'cont',
+                    image='image:latest',
+                    )
+                dockerng_stop.assert_called_with('cont', timeout=10, unpause=True)
+                dockerng_rm.assert_called_with('cont')
         self.assertEqual(ret, {'name': 'cont',
                                'comment': "Container 'cont' was replaced",
                                'result': True,
@@ -465,13 +469,14 @@ class DockerngTestCase(TestCase):
                     'dockerng.create': dockerng_create,
                     'dockerng.start': dockerng_start,
                     }
-        with patch.dict(dockerng_state.__dict__,
-                        {'__salt__': __salt__}):
-            ret = dockerng_state.running(
-                'cont',
-                image='image:latest',
-                start=False,
-                )
+        with patch.dict(dockerng_state.__dict__, {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__salt__,
+                            {'dockerng.version': MagicMock(return_value={})}):
+                ret = dockerng_state.running(
+                    'cont',
+                    image='image:latest',
+                    start=False,
+                    )
         self.assertEqual(ret, {'name': 'cont',
                                'comment': "Container 'cont' is already "
                                "configured as specified",
@@ -599,19 +604,20 @@ class DockerngTestCase(TestCase):
                     'dockerng.create': MagicMock(),
                     'dockerng.start': MagicMock(),
                     }
-        with patch.dict(dockerng_state.__dict__,
-                        {'__salt__': __salt__}):
-            for wrong_value in (1, .2, (), [], {}):
-                ret = dockerng_state.running(
-                    'cont',
-                    image='image:latest',
-                    environment=[{'KEY': wrong_value}])
-                self.assertEqual(ret,
-                                 {'changes': {},
-                                  'comment': 'Environment values must'
-                                  ' be strings KEY=\'{0}\''.format(wrong_value),
-                                  'name': 'cont',
-                                  'result': False})
+        with patch.dict(dockerng_state.__dict__, {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__salt__,
+                            {'dockerng.version': MagicMock(return_value={})}):
+                for wrong_value in (1, .2, (), [], {}):
+                    ret = dockerng_state.running(
+                        'cont',
+                        image='image:latest',
+                        environment=[{'KEY': wrong_value}])
+                    self.assertEqual(ret,
+                                     {'changes': {},
+                                      'comment': 'Environment values must'
+                                      ' be strings KEY=\'{0}\''.format(wrong_value),
+                                      'name': 'cont',
+                                      'result': False})
 
     def test_running_with_labels(self):
         '''
@@ -625,13 +631,14 @@ class DockerngTestCase(TestCase):
                     'dockerng.inspect_image': MagicMock(),
                     'dockerng.create': dockerng_create,
                     }
-        with patch.dict(dockerng_state.__dict__,
-                        {'__salt__': __salt__}):
-            dockerng_state.running(
-                'cont',
-                image='image:latest',
-                labels=['LABEL1', 'LABEL2'],
-                )
+        with patch.dict(dockerng_state.__dict__, {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__salt__,
+                            {'dockerng.version': MagicMock(return_value={})}):
+                dockerng_state.running(
+                    'cont',
+                    image='image:latest',
+                    labels=['LABEL1', 'LABEL2'],
+                    )
         dockerng_create.assert_called_with(
             'image:latest',
             validate_input=False,
