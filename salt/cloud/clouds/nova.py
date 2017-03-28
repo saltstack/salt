@@ -38,8 +38,6 @@ examples could be set up in the cloud configuration at
 .. code-block:: yaml
 
     my-openstack-config:
-      # The ID of the minion that will execute the salt nova functions
-      auth_minion: myminion
       # The name of the configuration profile to use on said minion
       config_profile: my_openstack_profile
 
