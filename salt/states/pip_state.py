@@ -259,7 +259,8 @@ def installed(name,
               env_vars=None,
               use_vt=False,
               trusted_host=None,
-              no_cache_dir=False):
+              no_cache_dir=False,
+              cache_dir=None):
     '''
     Make sure the package is installed
 
