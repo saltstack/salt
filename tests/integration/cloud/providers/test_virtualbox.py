@@ -342,6 +342,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
             self.assertIsIpAddress(ip_address)
 
 
+@skipIf(HAS_LIBS is False, 'The \'vboxapi\' library is not available')
 class BaseVirtualboxTests(TestCase):
     def test_get_manager(self):
         self.assertIsNotNone(vb_get_box())
