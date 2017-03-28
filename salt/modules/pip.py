@@ -681,7 +681,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if download_cache or cache_dir:
         cmd.extend(['--cache-dir' if salt.utils.compare_versions(
-            ver1=version(bin_env), oper='>=', ver2='6.0.0'
+            ver1=version(bin_env), oper='>=', ver2='6.0'
         ) else '--download-cache', download_cache or cache_dir])
 
     if source:

@@ -469,19 +469,38 @@ class PipTestCase(TestCase):
                 python_shell=False,
             )
 
-    def test_install_download_cache_argument_in_resulting_command(self):
+    def test_install_download_cache_dir_arguments_in_resulting_command(self):
         pkg = 'pep8'
+        cache_dir_arg_mapping = {
+            '1.5.6': '--download-cache',
+            '6.0': '--cache-dir',
+        }
         download_cache = '/tmp/foo'
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(pkg, download_cache='/tmp/foo')
-            mock.assert_called_once_with(
-                ['pip', 'install', '--download-cache', download_cache, pkg],
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            for pip_version, cmd_arg in cache_dir_arg_mapping.items():
+                with patch('salt.modules.pip.version',
+                           MagicMock(return_value=pip_version)):
+                    # test `download_cache` kwarg
+                    pip.install(pkg, download_cache='/tmp/foo')
+                    mock.assert_called_with(
+                        ['pip', 'install', cmd_arg, download_cache, pkg],
+                        saltenv='base',
+                        runas=None,
+                        use_vt=False,
+                        python_shell=False,
+                    )
+
+                    # test `cache_dir` kwarg
+                    pip.install(pkg, cache_dir='/tmp/foo')
+                    mock.assert_called_with(
+                        ['pip', 'install', cmd_arg, download_cache, pkg],
+                        saltenv='base',
+                        runas=None,
+                        use_vt=False,
+                        python_shell=False,
+                    )
 
     def test_install_source_argument_in_resulting_command(self):
         pkg = 'pep8'
