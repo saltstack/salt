@@ -481,13 +481,18 @@ class CPModuleTest(integration.ModuleCase):
                 [
                     'salt://grail/scene33',
                 ])
-        mode = 'rb' if salt.utils.is_windows() else 'r'
-        with salt.utils.fopen(path, mode) as fn_:
-            data = fn_.read()
-            if six.PY3:
-                data = salt.utils.to_bytes(data)
-            self.assertEqual(
-                sha256_hash['hsum'], hashlib.sha256(data).hexdigest())
+
+
+        if six.PY2:
+            with salt.utils.fopen(path, 'r') as fn_:
+                data = fn_.read()
+        else:
+            with salt.utils.fopen(path, 'r', newline='') as fn_:
+                data = fn_.read()
+            data = salt.utils.to_bytes(data)
+
+        self.assertEqual(
+            sha256_hash['hsum'], hashlib.sha256(data).hexdigest())
 
     def test_get_file_from_env_predefined(self):
         '''
