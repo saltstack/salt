@@ -1309,7 +1309,10 @@ class AESFuncs(object):
         with salt.utils.fopen(cpath, mode) as fp_:
             if load['loc']:
                 fp_.seek(load['loc'])
-            fp_.write(load['data'])
+            if six.PY3:
+                fp_.write(load['data'].encode())
+            else:
+                fp_.write(load['data'])
         return True
 
     def _pillar(self, load):

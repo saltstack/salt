@@ -1333,7 +1333,11 @@ def fopen(*args, **kwargs):
         if not binary:
             kwargs['encoding'] = 'utf-8'
 
+    if six.PY3 and not binary and not kwargs.get('newline', None):
+        kwargs['newline'] = ''
+
     fhandle = open(*args, **kwargs)
+
     if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
         # unix and unix-like systems only
