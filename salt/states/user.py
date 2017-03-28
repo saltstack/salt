@@ -279,6 +279,9 @@ def present(name,
         If set to ``True``, it will not add the user to lastlog and faillog
         databases.
 
+        -- note::
+            Not supported on Windows or Mac OS.
+
     password
         A password hash to set for the user. This field is only supported on
         Linux, FreeBSD, NetBSD, OpenBSD, and Solaris. If the ``empty_password``
