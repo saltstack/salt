@@ -279,7 +279,7 @@ def present(name,
         If set to ``True``, it will not add the user to lastlog and faillog
         databases.
 
-        -- note::
+        .. note::
             Not supported on Windows or Mac OS.
 
     password
