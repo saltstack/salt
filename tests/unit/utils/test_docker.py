@@ -1086,17 +1086,17 @@ class TranslateInputTestCase(TestCase):
                 '3334/udp': ('10.4.5.6', 3334),
                 '5505/udp': ('10.7.8.9', 15505),
                 '5506/udp': ('10.7.8.9', 15506)},
-             'ports': [80, 3333, 4505, 4506,
-                       '3334/udp', '5505/udp', '5506/udp', '81/udp'],
+             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp'],
             },
             {}, []
         )
-        self.assertEqual(
-            docker_utils.translate_input(
-                port_bindings='10.1.2.3:8080:80,10.1.2.3:8888:80,10.4.5.6:3333:3333,10.7.8.9:14505-14506:4505-4506,10.1.2.3:8080:81/udp,10.1.2.3:8888:81/udp,10.4.5.6:3334:3334/udp,10.7.8.9:15505-15506:5505-5506/udp',
-            ),
-            expected
+        translated_input = docker_utils.translate_input(
+            port_bindings='10.1.2.3:8080:80,10.1.2.3:8888:80,10.4.5.6:3333:3333,'
+                          '10.7.8.9:14505-14506:4505-4506,10.1.2.3:8080:81/udp,'
+                          '10.1.2.3:8888:81/udp,10.4.5.6:3334:3334/udp,'
+                          '10.7.8.9:15505-15506:5505-5506/udp',
         )
+        self.assertEqual(translated_input, expected)
         self.assertEqual(
             docker_utils.translate_input(
                 port_bindings=[
@@ -1124,8 +1124,7 @@ class TranslateInputTestCase(TestCase):
                 '3334/udp': ('10.4.5.6',),
                 '5505/udp': ('10.7.8.9',),
                 '5506/udp': ('10.7.8.9',)},
-             'ports': [80, 3333, 4505, 4506,
-                       '3334/udp', '5505/udp', '5506/udp', '81/udp'],
+             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp'],
             },
             {}, []
         )
@@ -1161,8 +1160,7 @@ class TranslateInputTestCase(TestCase):
                                '3334/udp': 3334,
                                '5505/udp': 15505,
                                '5506/udp': 15506},
-             'ports': [80, 3333, 4505, 4506,
-                       '3334/udp', '5505/udp', '5506/udp', '81/udp'],
+             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp'],
             },
             {}, []
         )
@@ -1197,8 +1195,7 @@ class TranslateInputTestCase(TestCase):
                                '3334/udp': None,
                                '5505/udp': None,
                                '5506/udp': None},
-             'ports': [80, 3333, 4505, 4506,
-                       '3334/udp', '5505/udp', '5506/udp', '81/udp'],
+             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp'],
             },
             {}, []
         )
@@ -1232,9 +1229,8 @@ class TranslateInputTestCase(TestCase):
                                '19999/udp': None,
                                '20000/udp': None,
                                '20001/udp': None},
-             'ports': [80, 3333, 4505, 4506, 9999, 10000, 10001,
-                       '19999/udp', '20000/udp', '20001/udp',
-                       '3334/udp', '5505/udp', '5506/udp', '81/udp']
+             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp',
+                       9999, 10000, 10001, '19999/udp', '20000/udp', '20001/udp']
             },
             {}, []
         )
@@ -1421,7 +1417,7 @@ class TranslateInputTestCase(TestCase):
         the port numbers must end up as integers. None of the decorators will
         suffice so this one must be tested specially.
         '''
-        expected = ({'ports': [1111, 2222, 4505, 4506, (3333, 'udp')]}, {}, [])
+        expected = ({'ports': [1111, 2222, (3333, 'udp'), 4505, 4506]}, {}, [])
         # Comma-separated list
         self.assertEqual(
             docker_utils.translate_input(ports='1111,2222/tcp,3333/udp,4505-4506'),
