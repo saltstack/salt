@@ -91,7 +91,7 @@ class MasterPillarUtil(object):
         self.use_cached_pillar = use_cached_pillar
         self.grains_fallback = grains_fallback
         self.pillar_fallback = pillar_fallback
-        self.cache = salt.cache.Cache(opts)
+        self.cache = salt.cache.factory(opts)
         log.debug(
             'Init settings: tgt: \'{0}\', expr_form: \'{1}\', saltenv: \'{2}\', '
             'use_cached_grains: {3}, use_cached_pillar: {4}, '
@@ -110,7 +110,7 @@ class MasterPillarUtil(object):
                       'and enfore_mine_cache are both disabled.')
             return mine_data
         if not minion_ids:
-            minion_ids = self.cache.list('minions')
+            minion_ids = self.cache.ls('minions')
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
@@ -129,7 +129,7 @@ class MasterPillarUtil(object):
                       'enabled.')
             return grains, pillars
         if not minion_ids:
-            minion_ids = self.cache.list('minions')
+            minion_ids = self.cache.ls('minions')
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
@@ -352,7 +352,7 @@ class MasterPillarUtil(object):
             # in the same file, 'data.p'
             grains, pillars = self._get_cached_minion_data(*minion_ids)
         try:
-            c_minions = self.cache.list('minions')
+            c_minions = self.cache.ls('minions')
             for minion_id in minion_ids:
                 if not salt.utils.verify.valid_id(self.opts, minion_id):
                     continue

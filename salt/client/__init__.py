@@ -1442,7 +1442,7 @@ class LocalClient(object):
                     if connected_minions is None:
                         connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
                     if self.opts['minion_data_cache'] \
-                            and salt.cache.Cache(self.opts).contains('minions/{0}'.format(id_), 'data') \
+                            and salt.cache.factory(self.opts).contains('minions/{0}'.format(id_), 'data') \
                             and connected_minions \
                             and id_ not in connected_minions:
 
