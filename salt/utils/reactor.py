@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import fnmatch
 import glob
 import logging
-
-import yaml
 
 # Import salt libs
 import salt.runner
@@ -16,8 +14,11 @@ import salt.utils.cache
 import salt.utils.event
 import salt.utils.process
 import salt.defaults.exitcodes
-from salt.ext.six import string_types, iterkeys
-from salt._compat import string_types
+
+# Import 3rd-party libs
+import yaml
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 
 
@@ -86,7 +87,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         '''
         log.debug('Gathering reactors for tag {0}'.format(tag))
         reactors = []
-        if isinstance(self.opts['reactor'], string_types):
+        if isinstance(self.opts['reactor'], six.string_types):
             try:
                 with salt.utils.fopen(self.opts['reactor']) as fp_:
                     react_map = yaml.safe_load(fp_.read())
@@ -109,10 +110,10 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
                 continue
             if len(ropt) != 1:
                 continue
-            key = next(iterkeys(ropt))
+            key = next(six.iterkeys(ropt))
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
-                if isinstance(val, string_types):
+                if isinstance(val, six.string_types):
                     reactors.append(val)
                 elif isinstance(val, list):
                     reactors.extend(val)
@@ -122,7 +123,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         '''
         Return a list of the reactors
         '''
-        if isinstance(self.minion.opts['reactor'], string_types):
+        if isinstance(self.minion.opts['reactor'], six.string_types):
             log.debug('Reading reactors from yaml {0}'.format(self.opts['reactor']))
             try:
                 with salt.utils.fopen(self.opts['reactor']) as fp_:
@@ -150,7 +151,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         '''
         reactors = self.list_all()
         for reactor in reactors:
-            _tag = next(iterkeys(reactor))
+            _tag = next(six.iterkeys(reactor))
             if _tag == tag:
                 return {'status': False, 'comment': 'Reactor already exists.'}
 
@@ -163,7 +164,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         '''
         reactors = self.list_all()
         for reactor in reactors:
-            _tag = next(iterkeys(reactor))
+            _tag = next(six.iterkeys(reactor))
             if _tag == tag:
                 self.minion.opts['reactor'].remove(reactor)
                 return {'status': True, 'comment': 'Reactor deleted.'}
