@@ -367,7 +367,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             env_vars=None,
             use_vt=False,
             trusted_host=None,
-            no_cache_dir=False):
+            no_cache_dir=False,
+            cache_dir=None):
     '''
     Install packages with pip
 
@@ -440,8 +441,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     download
         Download packages into ``download`` instead of installing them
 
-    download_cache
-        Cache downloaded packages in ``download_cache`` dir
+    download_cache | cache_dir
+        Cache downloaded packages in ``download_cache`` or ``cache_dir`` dir
 
     source
         Check out ``editable`` packages into ``source`` dir
@@ -678,8 +679,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if download:
         cmd.extend(['--download', download])
 
-    if download_cache:
-        cmd.extend(['--download-cache', download_cache])
+    if download_cache or cache_dir:
+        cmd.extend(['--cache-dir' if salt.utils.compare_versions(
+            ver1=version(bin_env), oper='>=', ver2='6.0'
+        ) else '--download-cache', download_cache or cache_dir])
 
     if source:
         cmd.extend(['--source', source])
