@@ -125,7 +125,7 @@ class Parser(object):
         hostname = Word(alphas + nums + "_" + "-" + ".")
 
         # daemon
-        daemon = Word(alphas + "/" + "-" + "_" + ".") + Optional(
+        daemon = Word(alphas + nums + "/" + "-" + "_" + ".") + Optional(
             Suppress("[") + ints + Suppress("]")) + Suppress(":")
 
         # message
