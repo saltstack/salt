@@ -1310,7 +1310,7 @@ class AESFuncs(object):
             if load['loc']:
                 fp_.seek(load['loc'])
             if six.PY3:
-                fp_.write(load['data'].encode())
+                fp_.write(load['data'].encode(__salt_system_encoding__))
             else:
                 fp_.write(load['data'])
         return True

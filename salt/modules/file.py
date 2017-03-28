@@ -31,6 +31,7 @@ import glob
 import hashlib
 import mmap
 from collections import Iterable, Mapping
+from functools import reduce  # pylint: disable=redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
@@ -1418,7 +1419,6 @@ def _get_flags(flags):
 
             _flags_acc.append(_flag)
 
-        from functools import reduce  # pylint: disable=redefined-builtin
         return reduce(operator.__or__, _flags_acc)
     elif isinstance(flags, six.integer_types):
         return flags
