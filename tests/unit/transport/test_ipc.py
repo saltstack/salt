@@ -23,8 +23,8 @@ import salt.ext.six as six
 from salt.ext.six.moves import range
 
 # Import Salt Testing libs
-import tests.integration as integration
 from tests.support.mock import MagicMock
+from tests.support.paths import TMP
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
     def setUp(self):
         super(BaseIPCReqCase, self).setUp()
         self._start_handlers = dict(self.io_loop._handlers)
-        self.socket_path = os.path.join(integration.TMP, 'ipc_test.ipc')
+        self.socket_path = os.path.join(TMP, 'ipc_test.ipc')
 
         self.server_channel = salt.transport.ipc.IPCMessageServer(
             self.socket_path,
@@ -57,6 +57,9 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
                 failures.append((k, v))
         if len(failures) > 0:
             raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
+        del self.payloads
+        del self.server_channel
+        del self._start_handlers
 
     @tornado.gen.coroutine
     def _handle_payload(self, payload, reply_func):
