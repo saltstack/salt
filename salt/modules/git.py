@@ -4499,7 +4499,7 @@ def worktree_prune(cwd,
     _check_worktree_support()
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_opts(git_opts)
-    command.append(['worktree', 'prune'])
+    command.extend(['worktree', 'prune'])
     if dry_run:
         command.append('--dry-run')
     if verbose:

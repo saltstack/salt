@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     Mock,
@@ -18,25 +19,21 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import cp
+import salt.modules.cp as cp
 from salt.utils import templates
 from salt.exceptions import CommandExecutionError
 import salt.utils
 import salt.transport
 
-# Globals
-cp.__salt__ = {}
-cp.__opts__ = {}
-cp.__pillar__ = {}
-cp.__grains__ = {}
-cp.__context__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class CpTestCase(TestCase):
+class CpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.cp module
     '''
+
+    def setup_loader_modules(self):
+        return {cp: {}}
 
     def test__render_filenames_undefined_template(self):
         '''

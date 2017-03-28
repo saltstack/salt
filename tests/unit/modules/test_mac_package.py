@@ -4,9 +4,10 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import mac_package as macpackage
+import salt.modules.mac_package as macpackage
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
@@ -14,10 +15,11 @@ from tests.support.mock import (
     call
 )
 
-macpackage.__salt__ = {}
 
+class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
-class MacPackageTestCase(TestCase):
+    def setup_loader_modules(self):
+        return {macpackage: {}}
 
     def test_install(self):
         '''

@@ -7,9 +7,10 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Libs
-from salt.states import svn
+import salt.states.svn as svn
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -18,15 +19,15 @@ from tests.support.mock import (
     patch
 )
 
-svn.__opts__ = {}
-svn.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SvnTestCase(TestCase):
+class SvnTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the svn state
     '''
+    def setup_loader_modules(self):
+        return {svn: {}}
+
     def test_latest(self):
         '''
             Checkout or update the working directory to

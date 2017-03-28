@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,19 +17,18 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import pkgutil
+import salt.modules.pkgutil as pkgutil
 from salt.exceptions import CommandExecutionError, MinionError
-
-# Globals
-pkgutil.__salt__ = {}
-pkgutil.__context__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PkgutilTestCase(TestCase):
+class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pkgutil
     '''
+    def setup_loader_modules(self):
+        return {pkgutil: {}}
+
     # 'refresh_db' function tests: 1
 
     def test_refresh_db(self):

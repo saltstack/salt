@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,16 +15,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import svn
-
-svn.__salt__ = {}
+import salt.modules.svn as svn
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SvnTestCase(TestCase):
+class SvnTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.svn
     '''
+    def setup_loader_modules(self):
+        return {svn: {}}
+
     def test_info(self):
         '''
         Test to display the Subversion information from the checkout.

@@ -12,7 +12,12 @@ import jinja2
 import salt.ext.six as six
 
 # Import salt libs
-from salt.serializers import json, yamlex, yaml, msgpack, python, configparser
+import salt.serializers.configparser as configparser
+import salt.serializers.json as json
+import salt.serializers.yaml as yaml
+import salt.serializers.yamlex as yamlex
+import salt.serializers.msgpack as msgpack
+import salt.serializers.python as python
 from salt.serializers import SerializationError
 from salt.utils.odict import OrderedDict
 

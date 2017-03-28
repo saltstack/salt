@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
@@ -17,18 +18,18 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import grub_legacy
+import salt.modules.grub_legacy as grub_legacy
 from salt.exceptions import CommandExecutionError
-
-# Globals
-grub_legacy.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GrublegacyTestCase(TestCase):
+class GrublegacyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.grub_legacy
     '''
+    def setup_loader_modules(self):
+        return {grub_legacy: {}}
+
     def test_version(self):
         '''
         Test for Return server version from grub --version

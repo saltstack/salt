@@ -8,6 +8,7 @@ import random
 import string
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -20,7 +21,7 @@ from tests.support.mock import (
 import salt.ext.six as six
 import salt.loader
 from salt.utils.versions import LooseVersion
-from salt.modules import boto_elasticsearch_domain
+import salt.modules.boto_elasticsearch_domain as boto_elasticsearch_domain
 
 # Import 3rd-party libs
 
@@ -82,22 +83,21 @@ if _has_required_boto():
 
 log = logging.getLogger(__name__)
 
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
 
-boto_elasticsearch_domain.__utils__ = utils
-boto_elasticsearch_domain.__init__(opts)
-boto_elasticsearch_domain.__salt__ = {}
-
-
-class BotoElasticsearchDomainTestCaseBase(TestCase):
+class BotoElasticsearchDomainTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    # Set up MagicMock to replace the boto3 session
+    def setup_loader_modules(self):
+        self.opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(self.opts, whitelist=['boto3'], context={})
+        return {boto_elasticsearch_domain: {'__utils__': utils}}
+
     def setUp(self):
-        boto_elasticsearch_domain.__context__ = {}
-        context.clear()
+        super(BotoElasticsearchDomainTestCaseBase, self).setUp()
+        boto_elasticsearch_domain.__init__(self.opts)
+        del self.opts
+
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -105,10 +105,12 @@ class BotoElasticsearchDomainTestCaseBase(TestCase):
 
         self.patcher = patch('boto3.session.Session')
         self.addCleanup(self.patcher.stop)
+        self.addCleanup(delattr, self, 'patcher')
         mock_session = self.patcher.start()
 
         session_instance = mock_session.return_value
         self.conn = MagicMock()
+        self.addCleanup(delattr, self, 'conn')
         session_instance.client.return_value = self.conn
 
 

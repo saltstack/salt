@@ -5,11 +5,10 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import salt.utils
-import sys
 import types
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -19,18 +18,9 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-# wmi modules are platform specific...
-wmi = types.ModuleType('wmi')
-sys.modules['wmi'] = wmi
-
-if NO_MOCK is False:
-    WMI = Mock()
-    wmi.WMI = Mock(return_value=WMI)
-
 # Import Salt Libs
-from salt.modules import win_network
-
-win_network.__salt__ = {}
+import salt.utils
+import salt.modules.win_network as win_network
 
 
 class Mockwmi(object):
@@ -66,10 +56,18 @@ class Mockwinapi(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinNetworkTestCase(TestCase):
+class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_network
     '''
+    def setup_loader_modules(self):
+        # wmi modules are platform specific...
+        wmi = types.ModuleType('wmi')
+        self.WMI = Mock()
+        self.addCleanup(delattr, self, 'WMI')
+        wmi.WMI = Mock(return_value=self.WMI)
+        return {win_network: {'wmi': wmi}}
+
     # 'ping' function tests: 1
 
     def test_ping(self):
@@ -160,9 +158,9 @@ class WinNetworkTestCase(TestCase):
         '''
         Test if it return a list of all the interfaces names
         '''
-        WMI.Win32_NetworkAdapter = MagicMock(return_value=Mockwmi)
+        self.WMI.Win32_NetworkAdapter = MagicMock(return_value=Mockwmi)
         with patch('salt.utils.winapi.Com', MagicMock()):
-            with patch.object(WMI, 'Win32_NetworkAdapter',
+            with patch.object(self.WMI, 'Win32_NetworkAdapter',
                               return_value=[Mockwmi()]):
                 self.assertListEqual(win_network.interfaces_names(),
                                      ['Ethernet'])

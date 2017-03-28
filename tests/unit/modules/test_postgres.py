@@ -5,15 +5,13 @@ from __future__ import absolute_import, print_function
 import re
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, call
 
 # Import salt libs
-from salt.modules import postgres
+import salt.modules.postgres as postgres
 from salt.exceptions import SaltInvocationError
-
-postgres.__grains__ = None  # in order to stub it w/patch below
-postgres.__salt__ = None  # in order to stub it w/patch below
 
 test_list_db_csv = (
     'Name,Owner,Encoding,Collate,Ctype,Access privileges,Tablespace\n'
@@ -52,26 +50,25 @@ test_privileges_list_group_csv = (
 )
 
 
-if NO_MOCK is False:
-    SALT_STUB = {
-        'config.option': Mock(),
-        'cmd.run_all': Mock(),
-        'file.chown': Mock(),
-        'file.remove': Mock(),
-    }
-else:
-    SALT_STUB = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch.multiple(postgres,
-                __grains__={'os_family': 'Linux'},
-                __salt__=SALT_STUB)
 @patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
-class PostgresTestCase(TestCase):
+class PostgresTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            postgres: {
+                '__grains__': {'os_family': 'Linux'},
+                '__salt__': {
+                    'config.option': Mock(),
+                    'cmd.run_all': Mock(),
+                    'file.chown': Mock(),
+                    'file.remove': Mock(),
+                }
+            }
+        }
+
     def test_run_psql(self):
         postgres._run_psql('echo "hi"')
-        cmd = SALT_STUB['cmd.run_all']
+        cmd = postgres.__salt__['cmd.run_all']
 
         self.assertEqual('postgres', cmd.call_args[1]['runas'])
 

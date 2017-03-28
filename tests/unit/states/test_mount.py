@@ -4,8 +4,10 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,19 +16,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import mount
-import os
-
-mount.__salt__ = {}
-mount.__opts__ = {}
-mount.__grains__ = {}
+import salt.states.mount as mount
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MountTestCase(TestCase):
+class MountTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.mount
     '''
+    def setup_loader_modules(self):
+        return {mount: {}}
+
     # 'mounted' function tests: 1
 
     def test_mounted(self):

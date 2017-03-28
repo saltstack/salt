@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,18 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import nftables
-
-# Globals
-nftables.__salt__ = {}
-nftables.__opts__ = {}
+import salt.states.nftables as nftables
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NftablesTestCase(TestCase):
+class NftablesTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the nftables state
     '''
+    def setup_loader_modules(self):
+        return {nftables: {}}
+
     def test_chain_present(self):
         '''
             Test to verify the chain is exist.

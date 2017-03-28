@@ -7,27 +7,24 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch
 )
 
 # Import Salt Libs
-from salt.modules import rdp
-
-# Globals
-rdp.__salt__ = {}
-
-# Make sure this module runs on Windows system
-IS_RDP = rdp.__virtual__()
+import salt.modules.rdp as rdp
 
 
-@skipIf(not IS_RDP, "This test case runs only on Windows system")
-class RdpTestCase(TestCase):
+class RdpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rdp
     '''
+    def setup_loader_modules(self):
+        return {rdp: {}}
+
     # 'enable' function tests: 1
 
     @patch('salt.modules.rdp._parse_return_code_powershell',

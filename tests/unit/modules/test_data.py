@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,19 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import data
-
-# Globals
-data.__grains__ = {}
-data.__salt__ = {}
-data.__opts__ = {}
+import salt.modules.data as data
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DataTestCase(TestCase):
+class DataTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.data
     '''
+    def setup_loader_modules(self):
+        return {data: {}}
+
     # 'clear' function tests: 1
 
     @patch('os.remove', MagicMock(return_value=''))

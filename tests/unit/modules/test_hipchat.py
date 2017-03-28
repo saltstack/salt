@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,17 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import hipchat
-
-# Globals
-hipchat.__salt__ = {}
+import salt.modules.hipchat as hipchat
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class HipchatTestCase(TestCase):
+class HipchatTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.hipchat
     '''
+    def setup_loader_modules(self):
+        return {hipchat: {}}
+
     # 'list_rooms' function tests: 1
 
     @patch('salt.modules.hipchat._query', MagicMock(return_value=True))

@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,20 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import incron
-
-# Globals
-incron.__grains__ = {}
-incron.__salt__ = {}
-incron.__context__ = {}
-incron.__opts__ = {}
+import salt.modules.incron as incron
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IncronTestCase(TestCase):
+class IncronTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.incron
     '''
+    def setup_loader_modules(self):
+        return {incron: {}}
+
     # 'write_incron_file' function tests: 1
 
     @patch('salt.modules.incron._get_incron_cmdstr',

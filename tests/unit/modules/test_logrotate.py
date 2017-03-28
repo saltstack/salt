@@ -8,9 +8,10 @@ from __future__ import absolute_import
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
-from salt.modules import logrotate
+import salt.modules.logrotate as logrotate
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,9 +19,6 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-# Globals
-logrotate.__salt__ = {}
 
 PARSE_CONF = {
     'include files': {
@@ -34,10 +32,13 @@ PARSE_CONF = {
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LogrotateTestCase(TestCase):
+class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.logrotate
     '''
+    def setup_loader_modules(self):
+        return {logrotate: {}}
+
     # 'show_conf' function tests: 1
 
     @patch('salt.modules.logrotate._parse_conf',

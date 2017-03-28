@@ -6,6 +6,7 @@ unit tests for the sqs_events engine
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,18 +15,20 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.engines import sqs_events
-
-sqs_events.__salt__ = {}
-sqs_events.__opts__ = {}
+import salt.engines.sqs_events as sqs_events
 
 
+@skipIf(sqs_events.HAS_BOTO is False, 'The boto library is not installed')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.engines.sqs_events.boto.sqs')
-class EngineSqsEventTestCase(TestCase):
+class EngineSqsEventTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.engine.sqs_events
     '''
+
+    def setup_loader_modules(self):
+        return {sqs_events: {}}
+
     def sample_msg(self):
         fake_msg = MagicMock()
         fake_msg.get_body.return_value = "This is a test message"

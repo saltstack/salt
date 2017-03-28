@@ -20,6 +20,9 @@ class ClientACLTestCase(TestCase):
             'modules': ['cmd.run', 'test.fib', 'rm-rf.*'],
         }
 
+    def tearDown(self):
+        del self.blacklist
+
     def test_user_is_blacklisted(self):
         '''
         test user_is_blacklisted

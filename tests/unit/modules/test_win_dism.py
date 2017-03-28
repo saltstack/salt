@@ -4,20 +4,21 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import win_dism as dism
+import salt.modules.win_dism as dism
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch
 )
 
-dism.__salt__ = {}
-dism.__grains__ = {}
 
+class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
-class WinDismTestCase(TestCase):
+    def setup_loader_modules(self):
+        return {dism: {}}
 
     def test_add_capability(self):
         '''

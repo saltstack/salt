@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -13,10 +14,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import grafana_datasource
-
-grafana_datasource.__opts__ = {}
-grafana_datasource.__salt__ = {}
+import salt.states.grafana_datasource as grafana_datasource
 
 profile = {
     'grafana_url': 'http://grafana',
@@ -31,7 +29,10 @@ def mock_json_response(data):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GrafanaDatasourceTestCase(TestCase):
+class GrafanaDatasourceTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {grafana_datasource: {}}
+
     def test_present(self):
         with patch('requests.get', mock_json_response([])):
             with patch('requests.post') as rpost:

@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import yaml
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,19 +19,18 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
-from salt.modules import pkg_resource
+import salt.modules.pkg_resource as pkg_resource
 import salt.ext.six as six
-
-# Globals
-pkg_resource.__grains__ = {}
-pkg_resource.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PkgresTestCase(TestCase):
+class PkgresTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pkg_resource
     '''
+    def setup_loader_modules(self):
+        return {pkg_resource: {}}
+
     def test_pack_sources(self):
         '''
             Test to accepts list of dicts (or a string representing a

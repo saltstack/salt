@@ -18,8 +18,7 @@ except ImportError:
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-
-import tests.integration as integration
+from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils.gitfs
@@ -30,7 +29,7 @@ from salt.fileserver.gitfs import PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY
 class GitfsConfigTestCase(TestCase):
 
     def setUp(self):
-        self.tmp_cachedir = tempfile.mkdtemp(dir=integration.TMP)
+        self.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
         self.opts = {
             '__role': 'master',
             'cachedir': self.tmp_cachedir,
@@ -56,6 +55,7 @@ class GitfsConfigTestCase(TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tmp_cachedir)
+        del self.opts
 
     def test_per_saltenv_config(self):
         opts = textwrap.dedent('''

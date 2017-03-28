@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
 
@@ -21,20 +22,24 @@ try:
 except ImportError:
     HAS_XML_LIBS = False
 
-# Global Variables
-opennebula.__active_provider_name__ = ''
-opennebula.__opts__ = {}
-opennebula.__utils__ = {}
-opennebula.__utils__['cloud.cache_node'] = MagicMock()
 VM_NAME = 'my-vm'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.cloud.clouds.opennebula.__virtual__', MagicMock(return_value='opennebula'))
-class OpenNebulaTestCase(TestCase):
+class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.opennebula module.
     '''
+    def setup_loader_modules(self):
+        return {
+            opennebula: {
+                '__utils__': {
+                    'cloud.cache_node': MagicMock()
+                },
+                '__active_provider_name__': ''
+            }
+        }
 
     def test_avail_images_action(self):
         '''

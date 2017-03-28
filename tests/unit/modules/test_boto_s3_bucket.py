@@ -2,12 +2,13 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import logging
-from copy import deepcopy
 import random
 import string
+import logging
+from copy import deepcopy
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -18,12 +19,13 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.loader
-from salt.modules import boto_s3_bucket
+import salt.modules.boto_s3_bucket as boto_s3_bucket
 from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 # pylint: disable=import-error,no-name-in-module,unused-import
 try:
     import boto
@@ -41,14 +43,6 @@ except ImportError:
 required_boto3_version = '1.2.1'
 
 log = logging.getLogger(__name__)
-
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-
-boto_s3_bucket.__utils__ = utils
-boto_s3_bucket.__init__(opts)
-boto_s3_bucket.__salt__ = {}
 
 
 def _has_required_boto():
@@ -206,13 +200,19 @@ if _has_required_boto():
                                        ' or equal to version {0}'
         .format(required_boto3_version))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoS3BucketTestCaseBase(TestCase):
+class BotoS3BucketTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    # Set up MagicMock to replace the boto3 session
+    def setup_loader_modules(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        return {boto_s3_bucket: {'__utils__': utils}}
+
     def setUp(self):
-        boto_s3_bucket.__context__ = {}
-        context.clear()
+        super(BotoS3BucketTestCaseBase, self).setUp()
+        boto_s3_bucket.__init__(self.opts)
+        del self.opts
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -220,10 +220,12 @@ class BotoS3BucketTestCaseBase(TestCase):
 
         self.patcher = patch('boto3.session.Session')
         self.addCleanup(self.patcher.stop)
+        self.addCleanup(delattr, self, 'patcher')
         mock_session = self.patcher.start()
 
         session_instance = mock_session.return_value
         self.conn = MagicMock()
+        self.addCleanup(delattr, self, 'conn')
         session_instance.client.return_value = self.conn
 
 

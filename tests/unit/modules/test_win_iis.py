@@ -12,9 +12,10 @@ import json
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
-from salt.modules import win_iis
+import salt.modules.win_iis as win_iis
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -22,12 +23,6 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
 )
-
-# Globals
-win_iis.__salt__ = {}
-
-# Make sure this module runs on Windows system
-HAS_IIS = win_iis.__virtual__()
 
 APP_LIST = {
     'testApp': {
@@ -121,12 +116,14 @@ CONTAINER_SETTING = {
 CERT_BINDING_INFO = '*:443:mytestsite.local'
 
 
-@skipIf(not HAS_IIS, 'This test case runs only on Windows systems')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinIisTestCase(TestCase):
+class WinIisTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_iis
     '''
+
+    def setup_loader_modules(self):
+        return {win_iis: {}}
 
     @patch('salt.modules.win_iis._srvmgr',
            MagicMock(return_value={'retcode': 0}))

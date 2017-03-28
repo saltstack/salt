@@ -14,7 +14,7 @@ import tests.integration as integration
 
 # Import Salt libs
 try:
-    from salt.netapi import rest_tornado
+    import salt.netapi.rest_tornado as rest_tornado
     from salt.netapi.rest_tornado import saltnado
     HAS_TORNADO = True
 except ImportError:

@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import pam
+import salt.modules.pam as pam
 
 MOCK_FILE = 'ok ok ignore '
 

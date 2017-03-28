@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,16 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import znc
-
-znc.__salt__ = {}
+import salt.modules.znc as znc
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ZncTestCase(TestCase):
+class ZncTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.znc
     '''
+    def setup_loader_modules(self):
+        return {znc: {}}
+
     # 'buildmod' function tests: 1
 
     @patch('os.path.exists', MagicMock(return_value=False))

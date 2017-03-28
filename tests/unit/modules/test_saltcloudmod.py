@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import saltcloudmod
+import salt.modules.saltcloudmod as saltcloudmod
 
 
 class MockJson(object):
@@ -38,17 +39,15 @@ class MockJson(object):
         else:
             raise ValueError
 
-saltcloudmod.json = MockJson
-
-# Globals
-saltcloudmod.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltcloudmodTestCase(TestCase):
+class SaltcloudmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.saltcloudmod
     '''
+    def setup_loader_modules(self):
+        return {saltcloudmod: {'json': MockJson}}
+
     def test_create(self):
         '''
             Test if create the named vm

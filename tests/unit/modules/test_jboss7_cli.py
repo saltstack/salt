@@ -8,7 +8,7 @@ import re
 from tests.support.unit import TestCase
 
 # Import salt libs
-from salt.modules import jboss7_cli
+import salt.modules.jboss7_cli as jboss7_cli
 from salt.exceptions import CommandExecutionError
 
 

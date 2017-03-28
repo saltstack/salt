@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -14,19 +15,18 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 # Import Salt Libs
-from salt.modules import cpan
-# Globals
-cpan.__grains__ = {}
-cpan.__salt__ = {}
-cpan.__context__ = {}
+import salt.modules.cpan as cpan
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class CpanTestCase(TestCase):
+class CpanTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.cpan
     '''
     # 'install' function tests: 2
+
+    def setup_loader_modules(self):
+        return {cpan: {}}
 
     def test_install(self):
         '''

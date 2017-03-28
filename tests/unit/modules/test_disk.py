@@ -7,11 +7,12 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
-from salt.modules import disk
+import salt.modules.disk as disk
 import salt.utils
 
 STUB_DISK_USAGE = {
@@ -47,15 +48,13 @@ STUB_DISK_PERCENT = {
 
 STUB_DISK_BLKID = {'/dev/sda': {'TYPE': 'ext4', 'UUID': None}}
 
-disk.__grains__ = {}
 
-disk.__salt__ = {}  # {'cmd.run': salt.modules.cmdmod._run_quiet}
-
-
-class DiskTestCase(TestCase):
+class DiskTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.disk module
     '''
+    def setup_loader_modules(self):
+        return {disk: {}}
 
     @patch('salt.modules.disk.usage', MagicMock(return_value=STUB_DISK_USAGE))
     def test_usage_dict(self):

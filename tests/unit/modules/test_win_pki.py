@@ -10,9 +10,10 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import win_pki
+import salt.modules.win_pki as win_pki
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -20,9 +21,6 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
 )
-
-# Globals
-win_pki.__salt__ = {}
 
 CERT_PATH = r'C:\certs\testdomain.local.cer'
 THUMBPRINT = '9988776655443322111000AAABBBCCCDDDEEEFFF'
@@ -90,10 +88,12 @@ JSON_STORES = [{
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinPkiTestCase(TestCase):
+class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_pki
     '''
+    def setup_loader_modules(self):
+        return {win_pki: {}}
 
     @patch('salt.modules.win_pki._cmd_run',
            MagicMock(return_value=JSON_STORES))

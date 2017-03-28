@@ -11,11 +11,12 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-from salt.modules import archive
+import salt.modules.archive as archive
 from salt.exceptions import CommandNotFoundError
 from salt.utils import which_bin
 
@@ -34,15 +35,12 @@ class ZipFileMock(MagicMock):
     def namelist(self):
         return self._files
 
-# Globals
-archive.__salt__ = {}
-archive.__pillar__ = {}
-archive.__grains__ = {"id": "0"}
-archive.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ArchiveTestCase(TestCase):
+class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {archive: {'__grains__': {'id': 0}}}
 
     @patch('salt.utils.which', lambda exe: exe)
     @patch('glob.glob', lambda pathname: [pathname])

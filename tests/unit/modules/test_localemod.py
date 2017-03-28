@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -17,20 +18,18 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import localemod
+import salt.modules.localemod as localemod
 from salt.exceptions import CommandExecutionError
-
-# Globals
-localemod.__context__ = {}
-localemod.__grains__ = {}
-localemod.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LocalemodTestCase(TestCase):
+class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.localemod
     '''
+    def setup_loader_modules(self):
+        return {localemod: {}}
+
     def test_list_avail(self):
         '''
         Test for Lists available (compiled) locales

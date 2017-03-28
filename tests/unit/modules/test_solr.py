@@ -4,8 +4,10 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,19 +16,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import solr
-import os
-
-# Globals
-solr.__salt__ = {}
-solr.__opts__ = {}
+import salt.modules.solr as solr
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SolrTestCase(TestCase):
+class SolrTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.solr
     '''
+    def setup_loader_modules(self):
+        return {solr: {}}
+
     def test_lucene_version(self):
         '''
         Test to get the lucene version that solr is using.

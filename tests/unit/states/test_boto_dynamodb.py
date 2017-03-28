@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,17 +15,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import boto_dynamodb
-
-boto_dynamodb.__salt__ = {}
-boto_dynamodb.__opts__ = {}
+import salt.states.boto_dynamodb as boto_dynamodb
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoDynamodbTestCase(TestCase):
+class BotoDynamodbTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_dynamodb
     '''
+    def setup_loader_modules(self):
+        return {boto_dynamodb: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -11,17 +12,16 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import openvswitch_port
-
-openvswitch_port.__salt__ = {}
-openvswitch_port.__opts__ = {'test': False}
+import salt.states.openvswitch_port as openvswitch_port
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class OpenvswitchPortTestCase(TestCase):
+class OpenvswitchPortTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.openvswitch_port
     '''
+    def setup_loader_modules(self):
+        return {openvswitch_port: {'__opts__': {'test': False}}}
 
     # 'present' function tests: 1
 

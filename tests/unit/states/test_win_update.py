@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import win_update
+import salt.states.win_update as win_update
 
 
 class MockPyWinUpdater(object):

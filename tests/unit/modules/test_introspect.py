@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,17 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import introspect
-
-# Globals
-introspect.__salt__ = {}
+import salt.modules.introspect as introspect
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IntrospectTestCase(TestCase):
+class IntrospectTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.introspect
     '''
+    def setup_loader_modules(self):
+        return {introspect: {}}
+
     # 'running_service_owners' function tests: 1
 
     def test_running_service_owners(self):

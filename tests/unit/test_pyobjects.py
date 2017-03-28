@@ -264,6 +264,7 @@ class RendererMixin(object):
 
     def tearDown(self, *args, **kwargs):
         shutil.rmtree(self.root_dir)
+        del self.config
         super(RendererMixin, self).tearDown(*args, **kwargs)
 
     def write_template_file(self, filename, content):

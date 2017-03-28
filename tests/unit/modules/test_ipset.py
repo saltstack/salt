@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,17 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import ipset
-
-# Globals
-ipset.__salt__ = {}
+import salt.modules.ipset as ipset
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IpsetTestCase(TestCase):
+class IpsetTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.aptpkg
     '''
+    def setup_loader_modules(self):
+        return {ipset: {}}
+
     def test_version(self):
         '''
         Test for Return version from ipset --version

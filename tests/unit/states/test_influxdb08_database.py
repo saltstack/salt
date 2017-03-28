@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,17 +15,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import influxdb08_database
-
-influxdb08_database.__salt__ = {}
-influxdb08_database.__opts__ = {}
+import salt.states.influxdb08_database as influxdb08_database
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class InfluxdbDatabaseTestCase(TestCase):
+class InfluxdbDatabaseTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.influxdb08_database
     '''
+    def setup_loader_modules(self):
+        return {influxdb08_database: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

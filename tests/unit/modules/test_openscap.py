@@ -3,7 +3,7 @@ from __future__ import absolute_import
 
 from subprocess import PIPE
 
-from salt.modules import openscap
+import salt.modules.openscap as openscap
 
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (

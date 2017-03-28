@@ -14,6 +14,7 @@ import re
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
 from tests.support.case import ModuleCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 from tests.support.paths import TMP_CONF_DIR
 
 # Import salt libs
@@ -399,33 +400,31 @@ class TestGetTemplate(TestCase):
         )
 
     @skipIf(six.PY3, 'Not applicable to Python 3: skipping.')
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_render_with_unicode_syntax_error(self):
-        encoding = builtins.__salt_system_encoding__
-        builtins.__salt_system_encoding__ = 'utf-8'
-        template = u'hello\n\n{{ bad\n\nfoo\ud55c'
-        expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
-        self.assertRaisesRegexp(
-            SaltRenderError,
-            expected,
-            render_jinja_tmpl,
-            template,
-            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
-        )
-        builtins.__salt_system_encoding__ = encoding
+        with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
+            template = u'hello\n\n{{ bad\n\nfoo\ud55c'
+            expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
+            self.assertRaisesRegexp(
+                SaltRenderError,
+                expected,
+                render_jinja_tmpl,
+                template,
+                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
+            )
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_render_with_utf8_syntax_error(self):
-        encoding = builtins.__salt_system_encoding__
-        builtins.__salt_system_encoding__ = 'utf-8'
-        template = 'hello\n\n{{ bad\n\nfoo\xed\x95\x9c'
-        expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
-        self.assertRaisesRegexp(
-            SaltRenderError,
-            expected,
-            render_jinja_tmpl,
-            template,
-            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
-        )
-        builtins.__salt_system_encoding__ = encoding
+        with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
+            template = 'hello\n\n{{ bad\n\nfoo\xed\x95\x9c'
+            expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
+            self.assertRaisesRegexp(
+                SaltRenderError,
+                expected,
+                render_jinja_tmpl,
+                template,
+                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
+            )
 
     def test_render_with_undefined_variable(self):
         template = "hello\n\n{{ foo }}\n\nfoo"
@@ -888,12 +887,13 @@ class TestCustomExtensions(TestCase):
 
     def test_http_query(self):
         '''Test the `http_query` Jinja filter.'''
-        rendered = render_jinja_tmpl("{{ 'http://www.google.com' | http_query }}",
-                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertIsInstance(rendered, six.text_type)
-        dict_reply = ast.literal_eval(rendered)
-        self.assertIsInstance(dict_reply, dict)
-        self.assertIsInstance(dict_reply['body'], six.string_types)
+        for backend in ('requests', 'tornado', 'urllib2'):
+            rendered = render_jinja_tmpl("{{ 'http://www.google.com' | http_query(backend='" + backend + "') }}",
+                                         dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+            self.assertIsInstance(rendered, six.text_type, 'Failed with backend: {}'.format(backend))
+            dict_reply = ast.literal_eval(rendered)
+            self.assertIsInstance(dict_reply, dict, 'Failed with backend: {}'.format(backend))
+            self.assertIsInstance(dict_reply['body'], six.string_types, 'Failed with backend: {}'.format(backend))
 
     def test_to_bool(self):
         '''Test the `to_bool` Jinja filter.'''
@@ -1051,6 +1051,9 @@ class TestDotNotationLookup(ModuleCase):
         minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
         render = salt.loader.render(minion_opts, functions)
         self.jinja = render.get('jinja')
+
+    def tearDown(self):
+        del self.jinja
 
     def render(self, tmpl_str, context=None):
         return self.jinja(tmpl_str, context=context or {}, from_str=True).read()

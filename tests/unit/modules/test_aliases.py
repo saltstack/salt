@@ -7,16 +7,17 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import aliases
+import salt.modules.aliases as aliases
 from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class AliasesTestCase(TestCase):
+class AliasesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.aliases module
     '''
@@ -24,6 +25,9 @@ class AliasesTestCase(TestCase):
     mock_alias = [('foo', 'bar@example.com', '')]
     mock_alias_mult = [('foo', 'bar@example.com', ''),
                        ('hello', 'world@earth.com, earth@world.com', '')]
+
+    def setup_loader_modules(self):
+        return {aliases: {}}
 
     @patch('salt.modules.aliases.__parse_aliases',
            MagicMock(return_value=mock_alias))

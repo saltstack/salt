@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,18 +16,18 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import blockdev
+import salt.states.blockdev as blockdev
 import salt.utils
-
-blockdev.__salt__ = {}
-blockdev.__opts__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BlockdevTestCase(TestCase):
+class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.blockdev
     '''
+    def setup_loader_modules(self):
+        return {blockdev: {}}
+
     # 'tuned' function tests: 1
 
     def test_tuned(self):

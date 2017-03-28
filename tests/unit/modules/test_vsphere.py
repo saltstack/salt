@@ -10,10 +10,11 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import vsphere
+import salt.modules.vsphere as vsphere
 from salt.exceptions import CommandExecutionError, VMwareSaltError
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -29,17 +30,15 @@ PASSWORD = 'SuperSecret!'
 ERROR = 'Some Testing Error Message'
 mock_si = MagicMock()
 
-# Inject empty dunders do they can be patched
-vsphere.__pillar__ = {}
-vsphere.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
-class VsphereTestCase(TestCase):
+class VsphereTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for the salt.modules.vsphere module.
     '''
+    def setup_loader_modules(self):
+        return {vsphere: {}}
 
     # Tests for get_coredump_network_config function
 
@@ -557,8 +556,10 @@ class VsphereTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
-class GetProxyTypeTestCase(TestCase):
+class GetProxyTypeTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.modules.vsphere.get_proxy_type'''
+    def setup_loader_modules(self):
+        return {vsphere: {}}
 
     def test_output(self):
         with patch.dict(vsphere.__pillar__,
@@ -569,8 +570,10 @@ class GetProxyTypeTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
-class SupportsProxiesTestCase(TestCase):
+class SupportsProxiesTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.modules.vsphere.supports_proxies decorator'''
+    def setup_loader_modules(self):
+        return {vsphere: {}}
 
     def test_supported_proxy(self):
         @vsphere.supports_proxies('supported')
@@ -598,8 +601,10 @@ class SupportsProxiesTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.vsphere.__virtual__', MagicMock(return_value='vsphere'))
-class _GetProxyConnectionDetailsTestCase(TestCase):
+class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.modules.vsphere._get_proxy_connection_details'''
+    def setup_loader_modules(self):
+        return {vsphere: {}}
 
     def setUp(self):
         self.esxi_host_details = {'host': 'fake_host',
@@ -618,6 +623,13 @@ class _GetProxyConnectionDetailsTestCase(TestCase):
                                      'mechanism': 'fake_mechanism',
                                      'principal': 'fake_principal',
                                      'domain': 'fake_domain'}
+
+    def tearDown(self):
+        for attrname in ('esxi_host_details', 'esxi_vcenter_details'):
+            try:
+                delattr(self, attrname)
+            except AttributeError:
+                continue
 
     def test_esxi_proxy_host_details(self):
         with patch('salt.modules.vsphere.get_proxy_type',
@@ -656,16 +668,25 @@ class _GetProxyConnectionDetailsTestCase(TestCase):
 @patch('salt.modules.vsphere._get_proxy_connection_details', MagicMock())
 @patch('salt.utils.vmware.get_service_instance', MagicMock())
 @patch('salt.utils.vmware.disconnect', MagicMock())
-class GetsServiceInstanceViaProxyTestCase(TestCase):
+class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.gets_service_instance_via_proxy
     decorator
     '''
+    def setup_loader_modules(self):
+        return {vsphere: {}}
 
     def setUp(self):
         self.mock_si = MagicMock()
         self.mock_details1 = MagicMock()
         self.mock_details2 = MagicMock()
+
+    def tearDown(self):
+        for attrname in ('mock_si', 'mock_details1', 'mock_details2'):
+            try:
+                delattr(self, attrname)
+            except AttributeError:
+                continue
 
     def test_no_service_instance_or_kwargs_parameters(self):
         @vsphere.gets_service_instance_via_proxy
@@ -814,8 +835,10 @@ class GetsServiceInstanceViaProxyTestCase(TestCase):
 # Function mocks
 @patch('salt.modules.vsphere._get_proxy_connection_details', MagicMock())
 @patch('salt.utils.vmware.get_service_instance', MagicMock())
-class GetServiceInstanceViaProxyTestCase(TestCase):
+class GetServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.modules.vsphere.get_service_instance_via_proxy'''
+    def setup_loader_modules(self):
+        return {vsphere: {}}
 
     def test_supported_proxes(self):
         supported_proxies = ['esxi']
@@ -850,8 +873,10 @@ class GetServiceInstanceViaProxyTestCase(TestCase):
 # Function mocks
 @patch('salt.modules.vsphere._get_proxy_connection_details', MagicMock())
 @patch('salt.utils.vmware.disconnect', MagicMock())
-class DisconnectTestCase(TestCase):
+class DisconnectTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.modules.vsphere.disconnect'''
+    def setup_loader_modules(self):
+        return {vsphere: {}}
 
     def test_supported_proxes(self):
         supported_proxies = ['esxi']
@@ -881,8 +906,10 @@ class DisconnectTestCase(TestCase):
 @patch('salt.utils.vmware.disconnect', MagicMock())
 # Function mocks
 @patch('salt.utils.vmware.is_connection_to_a_vcenter', MagicMock())
-class TestVcenterConnectionTestCase(TestCase):
+class TestVcenterConnectionTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.modules.vsphere.test_vcenter_connection'''
+    def setup_loader_modules(self):
+        return {vsphere: {}}
 
     def test_supported_proxes(self):
         supported_proxies = ['esxi']

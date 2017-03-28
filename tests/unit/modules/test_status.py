@@ -4,10 +4,11 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import status
+import salt.modules.status as status
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
@@ -15,15 +16,14 @@ from tests.support.mock import (
     mock_open,
 )
 
-# Globals
-status.__salt__ = {}
-status.__grains__ = {}
 
-
-class StatusTestCase(TestCase):
+class StatusTestCase(TestCase, LoaderModuleMockMixin):
     '''
     test modules.status functions
     '''
+    def setup_loader_modules(self):
+        return {status: {}}
+
     def _set_up_test_uptime(self):
         '''
         Define common mock data for status.uptime tests

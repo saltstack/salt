@@ -12,7 +12,7 @@ from tests.support.mock import (
     patch
 )
 
-from salt.states import postgres_privileges
+import salt.states.postgres_privileges as postgres_privileges
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

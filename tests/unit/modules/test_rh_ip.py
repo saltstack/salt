@@ -4,8 +4,10 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,20 +16,20 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import rh_ip
-import jinja2.exceptions
-import os
+import salt.modules.rh_ip as rh_ip
 
-# Globals
-rh_ip.__grains__ = {}
-rh_ip.__salt__ = {}
+# Import 3rd-party libs
+import jinja2.exceptions
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RhipTestCase(TestCase):
+class RhipTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rh_ip
     '''
+    def setup_loader_modules(self):
+        return {rh_ip: {}}
+
     def test_build_bond(self):
         '''
         Test to create a bond script in /etc/modprobe.d with the passed

@@ -13,7 +13,7 @@ from tests.support.mock import (
     patch,
 )
 # Import Salt Libs
-from salt.modules import augeas_cfg
+import salt.modules.augeas_cfg as augeas_cfg
 from salt.exceptions import SaltInvocationError
 # Make sure augeas python interface is installed
 if augeas_cfg.HAS_AUGEAS:

@@ -4,18 +4,20 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, Mock, patch
 
 # Import salt libs
-from salt.modules import uwsgi
-
-uwsgi.__salt__ = {}
+import salt.modules.uwsgi as uwsgi
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.utils.which', Mock(return_value='/usr/bin/uwsgi'))
-class UwsgiTestCase(TestCase):
+class UwsgiTestCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {uwsgi: {}}
 
     def test_uwsgi_stats(self):
         socket = "127.0.0.1:5050"

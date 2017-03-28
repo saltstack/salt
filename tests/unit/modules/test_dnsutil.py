@@ -19,7 +19,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import dnsutil
+import salt.modules.dnsutil as dnsutil
 
 log = logging.getLogger(__name__)
 

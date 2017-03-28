@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,19 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import user
-
-# Globals
-user.__salt__ = {}
-user.__opts__ = {}
-user.__grains__ = {}
+import salt.states.user as user
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class UserTestCase(TestCase):
+class UserTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the user state
     '''
+    def setup_loader_modules(self):
+        return {user: {}}
+
     def test_present(self):
         '''
             Test to ensure that the named user is present with

@@ -4,9 +4,10 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import win_powercfg as powercfg
+import salt.states.win_powercfg as powercfg
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,14 +16,15 @@ from tests.support.mock import (
     patch
 )
 
-powercfg.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PowerCfgTestCase(TestCase):
+class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the powercfg state
     '''
+    def setup_loader_modules(self):
+        return {powercfg: {}}
+
     def test_set_monitor(self):
         '''
             Test to make sure we can set the monitor timeout value

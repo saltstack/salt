@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,11 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import service
-
-# Globals
-service.__salt__ = {}
-service.__opts__ = {}
+import salt.states.service as service
 
 
 def func(name):
@@ -31,10 +28,13 @@ def func(name):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ServiceTestCase(TestCase):
+class ServiceTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the service state
     '''
+    def setup_loader_modules(self):
+        return {service: {}}
+
     def test_running(self):
         '''
             Test to verify that the service is running

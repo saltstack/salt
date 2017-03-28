@@ -22,6 +22,13 @@ import salt.pillar
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PillarTestCase(TestCase):
 
+    def tearDown(self):
+        for attrname in ('generic_file', 'generic_minion_file', 'ssh_file', 'ssh_minion_file', 'top_file'):
+            try:
+                delattr(self, attrname)
+            except AttributeError:
+                continue
+
     @patch('salt.pillar.compile_template')
     def test_pillarenv_from_saltenv(self, compile_template):
         opts = {

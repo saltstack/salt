@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     NO_MOCK,
@@ -14,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import win_disk
+import salt.modules.win_disk as win_disk
 
 
 class MockKernel32(object):
@@ -47,14 +48,15 @@ class MockCtypes(object):
     def __init__(self):
         self.windll = MockWindll()
 
-win_disk.ctypes = MockCtypes()
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinDiskTestCase(TestCase):
+class WinDiskTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_disk
     '''
+    def setup_loader_modules(self):
+        return {win_disk: {'ctypes': MockCtypes()}}
+
     # 'usage' function tests: 1
 
     def test_usage(self):

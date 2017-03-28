@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import neutron
+import salt.modules.neutron as neutron
 
 
 class MockNeutron(object):

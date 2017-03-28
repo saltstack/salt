@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,18 +17,18 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import rabbitmq
+import salt.modules.rabbitmq as rabbitmq
 from salt.exceptions import CommandExecutionError
-
-# Globals
-rabbitmq.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RabbitmqTestCase(TestCase):
+class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rabbitmq
     '''
+    def setup_loader_modules(self):
+        return {rabbitmq: {'__context__': {'rabbitmqctl': None, 'rabbitmq-plugins': None}}}
+
     # 'list_users_rabbitmq2' function tests: 1
 
     def test_list_users_rabbitmq2(self):

@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from salt.exceptions import SaltInvocationError
 from tests.support.mock import (
     MagicMock,
     patch,
@@ -20,13 +20,8 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
-from salt.modules import state
-
-# Globals
-state.__salt__ = {}
-state.__context__ = {}
-state.__opts__ = {'cachedir': '/D'}
-state.__pillar__ = {}
+import salt.modules.state as state
+from salt.exceptions import SaltInvocationError
 
 
 class MockState(object):
@@ -338,10 +333,13 @@ class MockJson(object):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.state.salt.state', MockState())
-class StateTestCase(TestCase):
+class StateTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test case for salt.modules.state
     '''
+
+    def setup_loader_modules(self):
+        return {state: {'__opts__': {'cachedir': '/D'}}}
 
     def test_running(self):
         '''

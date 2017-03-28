@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,17 +16,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import postfix
-
-# Globals
-postfix.__salt__ = {}
+import salt.modules.postfix as postfix
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PostfixTestCase(TestCase):
+class PostfixTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.postfix
     '''
+    def setup_loader_modules(self):
+        return {postfix: {}}
+
     def test_show_master(self):
         '''
         Test for return a dict of active config values

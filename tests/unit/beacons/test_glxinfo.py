@@ -19,10 +19,9 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.glxinfo
     '''
-    loader_module = glxinfo
-    loader_module_globals = {
-        'last_state': {},
-    }
+
+    def setup_loader_modules(self):
+        return {glxinfo: {'last_state': {}}}
 
     def test_no_adb_command(self):
         with patch('salt.utils.which') as mock:

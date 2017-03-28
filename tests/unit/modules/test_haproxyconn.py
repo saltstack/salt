@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -15,10 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import haproxyconn
-
-# Globals
-haproxyconn.__opts__ = {}
+import salt.modules.haproxyconn as haproxyconn
 
 
 class Mockcmds(object):
@@ -84,8 +82,6 @@ class Mockhaproxy(object):
     def __init__(self):
         self.cmds = Mockcmds()
 
-haproxyconn.haproxy = Mockhaproxy()
-
 
 class MockHaConn(object):
     """
@@ -105,10 +101,13 @@ class MockHaConn(object):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.haproxyconn._get_conn', return_value=MockHaConn())
-class HaproxyConnTestCase(TestCase):
+class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.haproxyconn
     '''
+    def setup_loader_modules(self):
+        return {haproxyconn: {'haproxy': Mockhaproxy()}}
+
     # 'list_servers' function tests: 1
 
     def test_list_servers(self, mock):

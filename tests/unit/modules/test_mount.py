@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
@@ -19,23 +20,19 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
-
-
-from salt.modules import mount
-
-# Globals
-mount.__grains__ = {}
-mount.__salt__ = {}
-mount.__context__ = {}
+import salt.modules.mount as mount
 
 MOCK_SHELL_FILE = 'A B C D F G\n'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MountTestCase(TestCase):
+class MountTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.mount
     '''
+    def setup_loader_modules(self):
+        return {mount: {}}
+
     def test_active(self):
         '''
         List the active mounts.

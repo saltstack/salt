@@ -7,9 +7,10 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import tomcat
+import salt.states.tomcat as tomcat
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,17 +19,14 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-# Globals
-tomcat.__salt__ = {}
-tomcat.__opts__ = {}
-tomcat.__env__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TomcatTestCase(TestCase):
+class TomcatTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Validate the tomcat state
     '''
+    def setup_loader_modules(self):
+        return {tomcat: {'__env__': 'base'}}
 
     def test_war_deployed(self):
         '''

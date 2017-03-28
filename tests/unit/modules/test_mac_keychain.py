@@ -4,19 +4,21 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import mac_keychain as keychain
+import salt.modules.mac_keychain as keychain
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch
 )
 
-keychain.__salt__ = {}
 
+class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
-class KeychainTestCase(TestCase):
+    def setup_loader_modules(self):
+        return {keychain: {}}
 
     def test_install_cert(self):
         '''

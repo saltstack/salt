@@ -2,9 +2,11 @@
 '''
     :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
 '''
+# Import python libs
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
@@ -17,22 +19,19 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt
 import salt.utils.fsutils
-from salt.modules import btrfs
+import salt.modules.btrfs as btrfs
 from salt.exceptions import CommandExecutionError
-
-# Globals
-btrfs.__grains__ = {}
-btrfs.__salt__ = {}
-btrfs.__context__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BtrfsTestCase(TestCase):
+class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.btrfs
     '''
-    # 'version' function tests: 1
+    def setup_loader_modules(self):
+        return {btrfs: {}}
 
+    # 'version' function tests: 1
     def test_version(self):
         '''
         Test if it return BTRFS version.

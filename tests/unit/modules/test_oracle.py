@@ -5,8 +5,10 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,19 +18,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import oracle
-import os
-
-# Globals
-oracle.__salt__ = {}
-oracle.cx_Oracle = object()
+import salt.modules.oracle as oracle
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class OracleTestCase(TestCase):
+class OracleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.oracle
     '''
+    def setup_loader_modules(self):
+        return {oracle: {'cx_Oracle': object()}}
+
     def test_run_query(self):
         '''
         Test for Run SQL query and return result

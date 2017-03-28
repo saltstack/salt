@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,18 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import locale
-
-# Globals
-locale.__salt__ = {}
-locale.__opts__ = {}
+import salt.states.locale as locale
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LocaleTestCase(TestCase):
+class LocaleTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the locale state
     '''
+    def setup_loader_modules(self):
+        return {locale: {}}
+
     def test_system(self):
         '''
             Test to set the locale for the system

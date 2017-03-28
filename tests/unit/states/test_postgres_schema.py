@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,17 +16,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import postgres_schema
-
-postgres_schema.__opts__ = {}
-postgres_schema.__salt__ = {}
+import salt.states.postgres_schema as postgres_schema
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PostgresSchemaTestCase(TestCase):
+class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.postgres_schema
     '''
+    def setup_loader_modules(self):
+        return {postgres_schema: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

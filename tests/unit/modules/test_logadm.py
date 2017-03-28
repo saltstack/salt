@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,17 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import logadm
-
-# Globals
-logadm.__salt__ = {}
+import salt.modules.logadm as logadm
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LogadmTestCase(TestCase):
+class LogadmTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.logadm
     '''
+    def setup_loader_modules(self):
+        return {logadm: {}}
+
     def test_show_conf(self):
         '''
         Test for Show parsed configuration

@@ -9,14 +9,12 @@ from __future__ import absolute_import
 import ssl
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 
 # Import salt libs
-from salt.modules import cassandra_cql
+import salt.modules.cassandra_cql as cassandra_cql
 from salt.exceptions import CommandExecutionError
-
-cassandra_cql.__salt__ = {}
-cassandra_cql.__opts__ = {}
 
 try:
     import cassandra  # pylint: disable=unused-import,wrong-import-position
@@ -29,10 +27,13 @@ except ImportError:
     not HAS_CASSANDRA,
     'Please install the cassandra datastax driver to run cassandra_cql module unit tests.'
 )
-class CassandraCQLReturnerTestCase(TestCase):
+class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cassandra CQL module
     '''
+    def setup_loader_modules(self):
+        return {cassandra_cql: {}}
+
     def test_returns_opts_if_specified(self):
         '''
         If ssl options are present then check that they are parsed and returned

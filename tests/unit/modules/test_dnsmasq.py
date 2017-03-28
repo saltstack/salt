@@ -4,8 +4,10 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
@@ -17,20 +19,17 @@ from tests.support.mock import (
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
-from salt.modules import dnsmasq
-
-# Import python libs
-import os
-
-# Globals
-dnsmasq.__salt__ = {}
+import salt.modules.dnsmasq as dnsmasq
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DnsmasqTestCase(TestCase):
+class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for the salt.modules.at module
     '''
+    def setup_loader_modules(self):
+        return {dnsmasq: {}}
+
     def test_version(self):
         '''
         test to show installed version of dnsmasq.

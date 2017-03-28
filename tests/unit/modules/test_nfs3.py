@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
@@ -16,20 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import nfs3
-
-# Globals
-nfs3.__grains__ = {}
-nfs3.__salt__ = {}
-nfs3.__context__ = {}
-nfs3.__opts__ = {}
+import salt.modules.nfs3 as nfs3
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NfsTestCase(TestCase):
+class NfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.nfs3
     '''
+    def setup_loader_modules(self):
+        return {nfs3: {}}
+
     def test_list_exports(self):
         '''
         Test for List configured exports

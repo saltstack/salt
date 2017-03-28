@@ -4,16 +4,14 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt Libs
-from salt.pillar import consul_pillar
+import salt.pillar.consul_pillar as consul_pillar
 
 OPTS = {'consul_config': {'consul.port': 8500, 'consul.host': '172.17.0.15'}}
-
-consul_pillar.__opts__ = OPTS
-consul_pillar.__salt__ = {}
 
 PILLAR_DATA = [
     {'Value': '/path/to/certs/testsite1.crt', 'Key': u'test-shared/sites/testsite1/ssl/certs/SSLCertificateFile'},
@@ -38,10 +36,13 @@ SIMPLE_DICT = {'key1': {'key2': 'val1'}}
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not consul_pillar.HAS_CONSUL, 'no consul-python')
-class ConsulPillarTestCase(TestCase):
+class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.pillar.consul_pillar
     '''
+    def setup_loader_modules(self):
+        return {consul_pillar: {'__opts__': OPTS}}
+
     def get_pillar(self):
         consul_pillar.get_conn = MagicMock(return_value='consul_connection')
         pillar = consul_pillar
@@ -60,7 +61,7 @@ class ConsulPillarTestCase(TestCase):
             with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
                 pillar_data = pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
                 pillar.consul_fetch.assert_called_once_with('consul_connection', 'test-shared/')
-                assert pillar_data.keys() == [u'user', u'sites']
+                assert list(pillar_data) == [u'user', u'sites']
                 self.assertNotIn('blankvalue', pillar_data[u'user'])
 
     def test_value_parsing(self):

@@ -60,6 +60,8 @@ class CommonTestCaseBoilerplate(TestCase):
             self.HIGHSTATE.pop_active()
         except IndexError:
             pass
+        del self.config
+        del self.HIGHSTATE
 
     def state_highstate(self, state, dirpath):
         opts = copy.copy(self.config)

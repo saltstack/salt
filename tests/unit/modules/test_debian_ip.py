@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,21 +17,20 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import debian_ip
+import salt.modules.debian_ip as debian_ip
 
 # Import third party libs
 import jinja2.exceptions
 
-# Globals
-debian_ip.__grains__ = {}
-debian_ip.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DebianIpTestCase(TestCase):
+class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.debian_ip
     '''
+    def setup_loader_modules(self):
+        return {debian_ip: {}}
+
     # 'build_bond' function tests: 3
 
     @patch('salt.modules.debian_ip._parse_settings_bond',

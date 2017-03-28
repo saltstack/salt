@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -17,10 +18,6 @@ from tests.support.mock import (
 
 # Import Salt Libs
 from salt.cloud.clouds import joyent
-
-# Globals
-joyent.__utils__ = dict()
-joyent.__opts__ = dict()
 
 
 # Stubs
@@ -38,29 +35,39 @@ def fake_wait_for_ip(check_for_ip_fn,
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class JoyentTestCase(TestCase):
+class JoyentTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for the salt.cloud.clouds.joyent module
     '''
-    joyent.__utils__ = {
-        'cloud.fire_event': MagicMock(),
-        'cloud.bootstrap': MagicMock()
-    }
-    joyent.__opts__ = {
-        'sock_dir': True,
-        'transport': True,
-        'providers': {'my_joyent': {}},
-        'profiles': {'my_joyent': {}}
-    }
-    vm_ = {
-        'profile': 'my_joyent',
-        'name': 'vm3',
-        'driver': 'joyent',
-        'size': 'k4-highcpu-kvm-750M',
-        'image': 'freebsd10',
-        'location': 'us-east-1'
-    }
-    joyent.__active_provider_name__ = 'my_joyent:joyent'
+    def setup_loader_modules(self):
+        return {
+            joyent: {
+                '__utils__': {
+                    'cloud.fire_event': MagicMock(),
+                    'cloud.bootstrap': MagicMock()
+                },
+                '__opts__': {
+                    'sock_dir': True,
+                    'transport': True,
+                    'providers': {'my_joyent': {}},
+                    'profiles': {'my_joyent': {}}
+                },
+                '__active_provider_name__': 'my_joyent:joyent'
+            }
+        }
+
+    def setUp(self):
+        self.vm_ = {
+            'profile': 'my_joyent',
+            'name': 'vm3',
+            'driver': 'joyent',
+            'size': 'k4-highcpu-kvm-750M',
+            'image': 'freebsd10',
+            'location': 'us-east-1'
+        }
+
+    def tearDown(self):
+        del self.vm_
 
     @patch('salt.utils.cloud.wait_for_ip', fake_wait_for_ip)
     def test_query_instance_init(self):

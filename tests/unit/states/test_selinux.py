@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,17 +16,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import selinux
-
-selinux.__opts__ = {}
-selinux.__salt__ = {}
+import salt.states.selinux as selinux
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SelinuxTestCase(TestCase):
+class SelinuxTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.selinux
     '''
+    def setup_loader_modules(self):
+        return {selinux: {}}
+
     # 'mode' function tests: 1
 
     def test_mode(self):

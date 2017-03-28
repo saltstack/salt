@@ -4,8 +4,10 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -15,21 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import environ
-import os
-
-
-# Globals
-environ.__grains__ = {}
-environ.__salt__ = {}
-environ.__context__ = {}
+import salt.modules.environ as environ
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class EnvironTestCase(TestCase):
+class EnvironTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.environ
     '''
+    def setup_loader_modules(self):
+        return {environ: {}}
+
     def test_setval(self):
         '''
         Test for set a single salt process environment variable. Returns True
@@ -53,19 +51,19 @@ class EnvironTestCase(TestCase):
     @patch('salt.utils.is_windows', MagicMock(return_value=True))
     def test_set_val_permanent(self):
         with patch.dict(os.environ, {}):
-            environ.__salt__['reg.set_value'] = MagicMock()
-            environ.__salt__['reg.delete_value'] = MagicMock()
+            with patch.dict(environ.__salt__, {'reg.set_value': MagicMock(),
+                                               'reg.delete_value': MagicMock()}):
 
-            environ.setval('key', 'Test', permanent=True)
-            environ.__salt__['reg.set_value'].assert_called_with('HKCU', 'Environment', 'key', 'Test')
+                environ.setval('key', 'Test', permanent=True)
+                environ.__salt__['reg.set_value'].assert_called_with('HKCU', 'Environment', 'key', 'Test')
 
-            environ.setval('key', False, false_unsets=True, permanent=True)
-            environ.__salt__['reg.set_value'].asset_not_called()
-            environ.__salt__['reg.delete_value'].assert_called_with('HKCU', 'Environment', 'key')
+                environ.setval('key', False, false_unsets=True, permanent=True)
+                environ.__salt__['reg.set_value'].asset_not_called()
+                environ.__salt__['reg.delete_value'].assert_called_with('HKCU', 'Environment', 'key')
 
-            key = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
-            environ.setval('key', 'Test', permanent='HKLM')
-            environ.__salt__['reg.set_value'].assert_called_with('HKLM', key, 'key', 'Test')
+                key = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+                environ.setval('key', 'Test', permanent='HKLM')
+                environ.__salt__['reg.set_value'].assert_called_with('HKLM', key, 'key', 'Test')
 
     def test_setenv(self):
         '''

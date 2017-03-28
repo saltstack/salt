@@ -33,7 +33,8 @@ FILE_DATA = {
              }
 
 # Import Salt Libs
-from salt.pillar import Pillar, git_pillar
+from salt.pillar import Pillar
+import salt.pillar.git_pillar as git_pillar
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

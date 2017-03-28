@@ -8,7 +8,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
 
 # Import salt libs
-from salt.modules import linux_acl
+import salt.modules.linux_acl as linux_acl
 from salt.exceptions import CommandExecutionError
 
 

@@ -5,8 +5,10 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import json
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -17,21 +19,17 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
-from salt.modules import pagerduty
-import json
-
-# Globals
-pagerduty.__opts__ = {}
-pagerduty.__salt__ = {
-    'config.option': MagicMock(return_value=None)
-    }
+import salt.modules.pagerduty as pagerduty
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PagerdutyTestCase(TestCase):
+class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pagerduty
     '''
+    def setup_loader_modules(self):
+        return {pagerduty: {'__salt__': {'config.option': MagicMock(return_value=None)}}}
+
     def test_list_services(self):
         '''
         Test for List services belonging to this account

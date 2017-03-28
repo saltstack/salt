@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -15,22 +16,18 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import debconfmod
+import salt.modules.debconfmod as debconfmod
 import os
 
 
-# Globals
-debconfmod.__grains__ = {}
-debconfmod.__salt__ = {}
-debconfmod.__context__ = {}
-debconfmod.__opts__ = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DebconfmodTestCase(TestCase):
+class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.DebconfmodTestCase
     '''
+    def setup_loader_modules(self):
+        return {debconfmod: {}}
+
     def test_get_selections(self):
         '''
         Test for Answers to debconf questions for all packages

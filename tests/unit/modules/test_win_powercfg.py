@@ -4,9 +4,10 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import win_powercfg as powercfg
+import salt.modules.win_powercfg as powercfg
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,12 +17,16 @@ from tests.support.mock import (
     call
 )
 
-powercfg.__salt__ = {}
-powercfg.__grains__ = {'osrelease': 8}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PowerCfgTestCase(TestCase):
+class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
+    '''
+        Validate the powercfg state
+    '''
+
+    def setup_loader_modules(self):
+        return {powercfg: {'__grains__': {'osrelease': 8}}}
+
     query_ouput = '''Subgroup GUID: 238c9fa8-0aad-41ed-83f4-97be242c8f20  (Hibernate)
                 GUID Alias: SUB_SLEEP
                 Power Setting GUID: 29f6c1db-86da-48c5-9fdb-f2b67b1f44da  (Hibernate after)
@@ -33,9 +38,6 @@ class PowerCfgTestCase(TestCase):
                 Current AC Power Setting Index: 0x00000708
                 Current DC Power Setting Index: 0x00000384'''
 
-    '''
-        Validate the powercfg state
-    '''
     def test_set_monitor_timeout(self):
         '''
             Test to make sure we can set the monitor timeout value

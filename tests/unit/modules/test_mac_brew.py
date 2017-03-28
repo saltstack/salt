@@ -7,17 +7,13 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import mac_brew
+import salt.modules.mac_brew as mac_brew
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-
-# Global Variables
-mac_brew.__context__ = {}
-mac_brew.__salt__ = {}
-mac_brew.__opts__ = {'user': MagicMock(return_value='bar')}
 
 TAPS_STRING = 'homebrew/dupes\nhomebrew/science\nhomebrew/x11'
 TAPS_LIST = ['homebrew/dupes', 'homebrew/science', 'homebrew/x11']
@@ -25,10 +21,12 @@ HOMEBREW_BIN = '/usr/local/bin/brew'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BrewTestCase(TestCase):
+class BrewTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.mac_brew module
     '''
+    def setup_loader_modules(self):
+        return {mac_brew: {'__opts__': {'user': MagicMock(return_value='bar')}}}
 
     # '_list_taps' function tests: 1
 

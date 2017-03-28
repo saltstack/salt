@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import time
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -17,17 +18,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import ldapmod
-
-# Globals
-ldapmod.__salt__ = {}
+import salt.modules.ldapmod as ldapmod
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LdapmodTestCase(TestCase):
+class LdapmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.ldapmod
     '''
+    def setup_loader_modules(self):
+        return {ldapmod: {}}
+
     # 'search' function tests: 1
 
     def test_search(self):

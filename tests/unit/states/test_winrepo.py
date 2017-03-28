@@ -8,8 +8,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-import salt.config
-from salt.syspaths import BASE_FILE_ROOTS_DIR
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -19,11 +18,9 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import winrepo
-
-# Globals
-winrepo.__salt__ = {}
-winrepo.__opts__ = {}
+import salt.config
+from salt.syspaths import BASE_FILE_ROOTS_DIR
+import salt.states.winrepo as winrepo
 
 
 class MockRunnerClient(object):
@@ -53,10 +50,13 @@ class MockRunnerClient(object):
 
 @patch('salt.states.winrepo.salt.runner', MockRunnerClient)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinrepoTestCase(TestCase):
+class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Validate the winrepo state
     '''
+    def setup_loader_modules(self):
+        return {winrepo: {}}
+
     def test_genrepo(self):
         '''
         Test to refresh the winrepo.p file of the repository

@@ -13,8 +13,9 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import destructiveTest
 from tests.support.mock import (
     MagicMock,
     NO_MOCK,
@@ -24,21 +25,19 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.utils
-from salt.returners import local_cache
+import salt.returners.local_cache as local_cache
 
-TMP_CACHE_DIR = '/tmp/salt_test_job_cache/'
-TMP_JID_DIR = '/tmp/salt_test_job_cache/jobs/'
-
-local_cache.__opts__ = {'cachedir': TMP_CACHE_DIR,
-                        'keep_jobs': 1}
+TMP_CACHE_DIR = os.path.join(TMP, 'salt_test_job_cache')
+TMP_JID_DIR = os.path.join(TMP_CACHE_DIR, 'jobs')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@destructiveTest
-class LocalCacheCleanOldJobsTestCase(TestCase):
+class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for the local_cache.clean_old_jobs function.
     '''
+    def setup_loader_modules(self):
+        return {local_cache: {'__opts__': {'cachedir': TMP_CACHE_DIR, 'keep_jobs': 1}}}
 
     def tearDown(self):
         '''

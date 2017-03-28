@@ -14,22 +14,40 @@ import tempfile
 import shutil
 import os
 import collections
-
-log = logging.getLogger(__name__)
+import sys
+import imp
+import copy
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-import tests.integration as integration
+from tests.support.mock import patch
+from tests.support.paths import TMP
 
 # Import Salt libs
+import salt.config
 import salt.utils
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
-from salt.config import minion_config
 # pylint: enable=no-name-in-module,redefined-builtin
 
 from salt.loader import LazyLoader, _module_dirs, grains, utils, proxy, minion_mods
+
+log = logging.getLogger(__name__)
+
+
+def remove_bytecode(module_path):
+    paths = [module_path + 'c']
+    if hasattr(imp, 'get_tag'):
+        modname, ext = os.path.splitext(module_path.split(os.sep)[-1])
+        paths.append(
+            os.path.join(os.path.dirname(module_path),
+                         '__pycache__',
+                         '{}.{}.pyc'.format(modname, imp.get_tag())))
+    for path in paths:
+        if os.path.exists(path):
+            os.unlink(path)
+
 
 loader_template = '''
 import os
@@ -51,13 +69,16 @@ class LazyLoaderTest(TestCase):
     '''
     module_name = 'lazyloadertest'
 
-    def setUp(self):
-        self.opts = minion_config(None)
-        self.opts['disable_modules'] = ['pillar']
-        self.opts['grains'] = grains(self.opts)
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['grains'] = grains(cls.opts)
+        if not os.path.isdir(TMP):
+            os.makedirs(TMP)
 
+    def setUp(self):
         # Setup the module
-        self.module_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.module_dir = tempfile.mkdtemp(dir=TMP)
         self.module_file = os.path.join(self.module_dir,
                                         '{0}.py'.format(self.module_name))
         with open(self.module_file, 'w') as fh:
@@ -66,16 +87,19 @@ class LazyLoaderTest(TestCase):
             os.fsync(fh.fileno())
 
         # Invoke the loader
-        self.loader = LazyLoader([self.module_dir], self.opts, tag='module')
+        self.loader = LazyLoader([self.module_dir], copy.deepcopy(self.opts), tag='module')
 
     def tearDown(self):
         shutil.rmtree(self.module_dir)
-        del self.opts
         if os.path.isdir(self.module_dir):
             shutil.rmtree(self.module_dir)
         del self.module_dir
         del self.module_file
         del self.loader
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
 
     def test_depends(self):
         '''
@@ -96,18 +120,23 @@ class LazyLoaderVirtualEnabledTest(TestCase):
     '''
     Test the base loader of salt.
     '''
-    def setUp(self):
-        self.opts = minion_config(None)
-        self.opts['disable_modules'] = ['pillar']
-        self.opts['grains'] = grains(self.opts)
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['disable_modules'] = ['pillar']
+        cls.opts['grains'] = grains(cls.opts)
 
-        self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
-                                 self.opts,
+    def setUp(self):
+        self.loader = LazyLoader(_module_dirs(copy.deepcopy(self.opts), 'modules', 'module'),
+                                 copy.deepcopy(self.opts),
                                  tag='module')
 
     def tearDown(self):
-        del self.opts
         del self.loader
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
 
     def test_basic(self):
         '''
@@ -164,9 +193,9 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         self.assertEqual(self.loader._dict, {})
         # get something, and make sure its a func
         func = self.loader['test.ping']
-        func.__globals__['__context__']['foo'] = 'bar'
-        self.assertEqual(self.loader['test.echo'].__globals__['__context__']['foo'], 'bar')
-        self.assertEqual(self.loader['grains.get'].__globals__['__context__']['foo'], 'bar')
+        with patch.dict(func.__globals__['__context__'], {'foo': 'bar'}):
+            self.assertEqual(self.loader['test.echo'].__globals__['__context__']['foo'], 'bar')
+            self.assertEqual(self.loader['grains.get'].__globals__['__context__']['foo'], 'bar')
 
     def test_globals(self):
         func_globals = self.loader['test.ping'].__globals__
@@ -174,6 +203,14 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         self.assertEqual(func_globals['__pillar__'], self.opts.get('pillar', {}))
         # the opts passed into modules is at least a subset of the whole opts
         for key, val in six.iteritems(func_globals['__opts__']):
+            if key in salt.config.DEFAULT_MASTER_OPTS and key not in salt.config.DEFAULT_MINION_OPTS:
+                # We loaded the minion opts, but somewhere in the code, the master options got pulled in
+                # Let's just not check for equality since the option won't even exist in the loaded
+                # minion options
+                continue
+            if key not in salt.config.DEFAULT_MASTER_OPTS and key not in salt.config.DEFAULT_MINION_OPTS:
+                # This isn't even a default configuration setting, lets carry on
+                continue
             self.assertEqual(self.opts[key], val)
 
     def test_pack(self):
@@ -189,17 +226,23 @@ class LazyLoaderVirtualDisabledTest(TestCase):
     '''
     Test the loader of salt without __virtual__
     '''
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['grains'] = grains(cls.opts)
+
     def setUp(self):
-        self.opts = _config = minion_config(None)
-        self.opts['grains'] = grains(self.opts)
-        self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
-                                 self.opts,
+        self.loader = LazyLoader(_module_dirs(copy.deepcopy(self.opts), 'modules', 'module'),
+                                 copy.deepcopy(self.opts),
                                  tag='module',
                                  virtual_enable=False)
 
     def tearDown(self):
-        del self.opts
         del self.loader
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
 
     def test_virtual(self):
         self.assertTrue(inspect.isfunction(self.loader['test_virtual.ping']))
@@ -209,16 +252,23 @@ class LazyLoaderWhitelistTest(TestCase):
     '''
     Test the loader of salt with a whitelist
     '''
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['grains'] = grains(cls.opts)
+
     def setUp(self):
-        self.opts = _config = minion_config(None)
-        self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
-                                 self.opts,
+        self.loader = LazyLoader(_module_dirs(copy.deepcopy(self.opts), 'modules', 'module'),
+                                 copy.deepcopy(self.opts),
                                  tag='module',
                                  whitelist=['test', 'pillar'])
 
     def tearDown(self):
-        del self.opts
         del self.loader
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
 
     def test_whitelist(self):
         self.assertTrue(inspect.isfunction(self.loader['test.ping']))
@@ -258,20 +308,25 @@ class LazyLoaderReloadingTest(TestCase):
     module_name = 'loadertest'
     module_key = 'loadertest.test'
 
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['grains'] = grains(cls.opts)
+        if not os.path.isdir(TMP):
+            os.makedirs(TMP)
+
     def setUp(self):
-        self.opts = _config = minion_config(None)
-        self.opts['grains'] = grains(self.opts)
-        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=TMP)
 
         self.count = 0
-
-        dirs = _module_dirs(self.opts, 'modules', 'module')
+        opts = copy.deepcopy(self.opts)
+        dirs = _module_dirs(opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
-        self.utils = utils(self.opts)
-        self.proxy = proxy(self.opts)
-        self.minion_mods = minion_mods(self.opts)
+        self.utils = utils(opts)
+        self.proxy = proxy(opts)
+        self.minion_mods = minion_mods(opts)
         self.loader = LazyLoader(dirs,
-                                 self.opts,
+                                 opts,
                                  tag='module',
                                  pack={'__utils__': self.utils,
                                        '__proxy__': self.proxy,
@@ -279,11 +334,15 @@ class LazyLoaderReloadingTest(TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
-        for attrname in ('opts', 'tmp_dir', 'util', 'proxy', 'loader'):
+        for attrname in ('tmp_dir', 'utils', 'proxy', 'loader', 'minion_mods', 'utils'):
             try:
                 delattr(self, attrname)
             except AttributeError:
                 continue
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
 
     def update_module(self):
         self.count += 1
@@ -300,14 +359,11 @@ class LazyLoaderReloadingTest(TestCase):
         # since the header bytes only contain the timestamp (granularity of seconds)
         # TODO: don't write them? Is *much* slower on re-load (~3x)
         # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
-        try:
-            os.unlink(self.module_path + 'c')
-        except OSError:
-            pass
+        remove_bytecode(self.module_path)
 
     def rm_module(self):
         os.unlink(self.module_path)
-        os.unlink(self.module_path + 'c')
+        remove_bytecode(self.module_path)
 
     @property
     def module_path(self):
@@ -394,29 +450,38 @@ class LazyLoaderVirtualAliasTest(TestCase):
     '''
     module_name = 'loadertest'
 
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['grains'] = grains(cls.opts)
+        if not os.path.isdir(TMP):
+            os.makedirs(TMP)
+
     def setUp(self):
-        self.opts = _config = minion_config(None)
-        self.opts['grains'] = grains(self.opts)
-        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
-        dirs = _module_dirs(self.opts, 'modules', 'module')
+        self.tmp_dir = tempfile.mkdtemp(dir=TMP)
+        opts = copy.deepcopy(self.opts)
+        dirs = _module_dirs(opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
-        self.utils = utils(self.opts)
-        self.proxy = proxy(self.opts)
-        self.minion_mods = minion_mods(self.opts)
+        self.utils = utils(opts)
+        self.proxy = proxy(opts)
+        self.minion_mods = minion_mods(opts)
         self.loader = LazyLoader(dirs,
-                                 self.opts,
+                                 opts,
                                  tag='module',
                                  pack={'__utils__': self.utils,
                                        '__proxy__': self.proxy,
                                        '__salt__': self.minion_mods})
 
     def tearDown(self):
-        del self.opts
         del self.tmp_dir
         del self.utils
         del self.proxy
         del self.minion_mods
         del self.loader
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
 
     def update_module(self):
         with open(self.module_path, 'wb') as fh:
@@ -428,10 +493,7 @@ class LazyLoaderVirtualAliasTest(TestCase):
         # since the header bytes only contain the timestamp (granularity of seconds)
         # TODO: don't write them? Is *much* slower on re-load (~3x)
         # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
-        try:
-            os.unlink(self.module_path + 'c')
-        except OSError:
-            pass
+        remove_bytecode(self.module_path)
 
     @property
     def module_path(self):
@@ -453,10 +515,12 @@ class LazyLoaderVirtualAliasTest(TestCase):
 
 
 submodule_template = '''
-import lib
+from __future__ import absolute_import
+
+import {0}.lib
 
 def test():
-    return ({count}, lib.test())
+    return ({count}, {0}.lib.test())
 '''
 
 submodule_lib_template = '''
@@ -472,43 +536,52 @@ class LazyLoaderSubmodReloadingTest(TestCase):
     module_name = 'loadertestsubmod'
     module_key = 'loadertestsubmod.test'
 
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['grains'] = grains(cls.opts)
+        if not os.path.isdir(TMP):
+            os.makedirs(TMP)
+
     def setUp(self):
-        self.opts = _config = minion_config(None)
-        self.opts['grains'] = grains(self.opts)
-        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=TMP)
         os.makedirs(self.module_dir)
 
         self.count = 0
         self.lib_count = 0
 
-        dirs = _module_dirs(self.opts, 'modules', 'module')
+        opts = copy.deepcopy(self.opts)
+        dirs = _module_dirs(opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
-        self.utils = utils(self.opts)
-        self.proxy = proxy(self.opts)
-        self.minion_mods = minion_mods(self.opts)
+        self.utils = utils(opts)
+        self.proxy = proxy(opts)
+        self.minion_mods = minion_mods(opts)
         self.loader = LazyLoader(dirs,
-                                 self.opts,
+                                 opts,
                                  tag='module',
                                  pack={'__utils__': self.utils,
-                                     '__proxy__': self.proxy,
-                                     '__salt__': self.minion_mods}
+                                       '__proxy__': self.proxy,
+                                       '__salt__': self.minion_mods}
                                  )
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
-        del self.opts
         del self.tmp_dir
         del self.utils
         del self.proxy
         del self.minion_mods
         del self.loader
 
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
+
     def update_module(self):
         self.count += 1
         with open(self.module_path, 'wb') as fh:
             fh.write(
                 salt.utils.to_bytes(
-                    submodule_template.format(count=self.count)
+                    submodule_template.format(self.module_name, count=self.count)
                 )
             )
             fh.flush()
@@ -518,17 +591,17 @@ class LazyLoaderSubmodReloadingTest(TestCase):
         # since the header bytes only contain the timestamp (granularity of seconds)
         # TODO: don't write them? Is *much* slower on re-load (~3x)
         # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
-        try:
-            os.unlink(self.module_path + 'c')
-        except OSError:
-            pass
+        remove_bytecode(self.module_path)
 
     def rm_module(self):
         os.unlink(self.module_path)
-        os.unlink(self.module_path + 'c')
+        remove_bytecode(self.module_path)
 
     def update_lib(self):
         self.lib_count += 1
+        for modname in list(sys.modules):
+            if modname.startswith(self.module_name):
+                del sys.modules[modname]
         with open(self.lib_path, 'wb') as fh:
             fh.write(
                 salt.utils.to_bytes(
@@ -542,14 +615,14 @@ class LazyLoaderSubmodReloadingTest(TestCase):
         # since the header bytes only contain the timestamp (granularity of seconds)
         # TODO: don't write them? Is *much* slower on re-load (~3x)
         # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
-        try:
-            os.unlink(self.lib_path + 'c')
-        except OSError:
-            pass
+        remove_bytecode(self.lib_path)
 
     def rm_lib(self):
+        for modname in list(sys.modules):
+            if modname.startswith(self.module_name):
+                del sys.modules[modname]
         os.unlink(self.lib_path)
-        os.unlink(self.lib_path + 'c')
+        remove_bytecode(self.lib_path)
 
     @property
     def module_dir(self):
@@ -578,21 +651,27 @@ class LazyLoaderSubmodReloadingTest(TestCase):
 
         # update both the module and the lib
         for x in range(1, 3):
-            self.update_module()
             self.update_lib()
+            self.update_module()
             self.loader.clear()
+            self.assertNotIn(self.module_key, self.loader._dict)
+            self.assertIn(self.module_key, self.loader)
             self.assertEqual(self.loader[self.module_key](), (self.count, self.lib_count))
 
         # update just the module
         for x in range(1, 3):
             self.update_module()
             self.loader.clear()
+            self.assertNotIn(self.module_key, self.loader._dict)
+            self.assertIn(self.module_key, self.loader)
             self.assertEqual(self.loader[self.module_key](), (self.count, self.lib_count))
 
         # update just the lib
         for x in range(1, 3):
             self.update_lib()
             self.loader.clear()
+            self.assertNotIn(self.module_key, self.loader._dict)
+            self.assertIn(self.module_key, self.loader)
             self.assertEqual(self.loader[self.module_key](), (self.count, self.lib_count))
 
         self.rm_module()
@@ -630,22 +709,30 @@ class LazyLoaderModulePackageTest(TestCase):
     module_name = 'loadertestmodpkg'
     module_key = 'loadertestmodpkg.test'
 
-    def setUp(self):
-        self.opts = _config = minion_config(None)
-        self.opts['grains'] = grains(self.opts)
-        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['grains'] = grains(cls.opts)
+        if not os.path.isdir(TMP):
+            os.makedirs(TMP)
 
-        dirs = _module_dirs(self.opts, 'modules', 'module')
+    def setUp(self):
+        self.tmp_dir = tempfile.mkdtemp(dir=TMP)
+
+        dirs = _module_dirs(copy.deepcopy(self.opts), 'modules', 'module')
         dirs.append(self.tmp_dir)
         self.loader = LazyLoader(dirs,
-                                 self.opts,
+                                 copy.deepcopy(self.opts),
                                  tag='module')
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
-        del self.opts
         del self.tmp_dir
         del self.loader
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
 
     def update_pyfile(self, pyfile, contents):
         dirname = os.path.dirname(pyfile)
@@ -660,14 +747,11 @@ class LazyLoaderModulePackageTest(TestCase):
         # since the header bytes only contain the timestamp (granularity of seconds)
         # TODO: don't write them? Is *much* slower on re-load (~3x)
         # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
-        try:
-            os.unlink(pyfile + 'c')
-        except OSError:
-            pass
+        remove_bytecode(pyfile)
 
     def rm_pyfile(self, pyfile):
         os.unlink(pyfile)
-        os.unlink(pyfile + 'c')
+        remove_bytecode(pyfile)
 
     def update_module(self, relative_path, contents):
         self.update_pyfile(os.path.join(self.tmp_dir, relative_path), contents)
@@ -709,18 +793,19 @@ class LazyLoaderModulePackageTest(TestCase):
 
 
 deep_init_base = '''
-import top_lib
-import top_lib.mid_lib
-import top_lib.mid_lib.bot_lib
+from __future__ import absolute_import
+import {0}.top_lib
+import {0}.top_lib.mid_lib
+import {0}.top_lib.mid_lib.bot_lib
 
 def top():
-    return top_lib.test()
+    return {0}.top_lib.test()
 
 def mid():
-    return top_lib.mid_lib.test()
+    return {0}.top_lib.mid_lib.test()
 
 def bot():
-    return top_lib.mid_lib.bot_lib.test()
+    return {0}.top_lib.mid_lib.bot_lib.test()
 '''
 
 
@@ -728,9 +813,15 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
     module_name = 'loadertestsubmoddeep'
     libs = ('top_lib', 'mid_lib', 'bot_lib')
 
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['grains'] = grains(cls.opts)
+        if not os.path.isdir(TMP):
+            os.makedirs(TMP)
+
     def setUp(self):
-        self.opts = _config = minion_config(None)
-        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=TMP)
         os.makedirs(self.module_dir)
 
         self.lib_count = collections.defaultdict(int)  # mapping of path -> count
@@ -739,7 +830,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
         with open(os.path.join(self.module_dir, '__init__.py'), 'w') as fh:
             # No .decode() needed here as deep_init_base is defined as str and
             # not bytes.
-            fh.write(deep_init_base)
+            fh.write(deep_init_base.format(self.module_name))
             fh.flush()
             os.fsync(fh.fileno())  # flush to disk
 
@@ -751,34 +842,43 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
             os.makedirs(dir_path)
             self.update_lib(lib_name)
 
-        dirs = _module_dirs(self.opts, 'modules', 'module')
+        opts = copy.deepcopy(self.opts)
+        dirs = _module_dirs(opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
-        self.utils = utils(self.opts)
-        self.proxy = proxy(self.opts)
-        self.minion_mods = minion_mods(self.opts)
+        self.utils = utils(opts)
+        self.proxy = proxy(opts)
+        self.minion_mods = minion_mods(opts)
         self.loader = LazyLoader(dirs,
-                                 self.opts,
+                                 copy.deepcopy(opts),
                                  tag='module',
                                  pack={'__utils__': self.utils,
                                        '__proxy__': self.proxy,
                                        '__salt__': self.minion_mods}
                                  )
+        self.assertIn('{0}.top'.format(self.module_name), self.loader)
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
-        del self.opts
         del self.tmp_dir
         del self.lib_paths
         del self.utils
         del self.proxy
         del self.minion_mods
         del self.loader
+        del self.lib_count
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
 
     @property
     def module_dir(self):
         return os.path.join(self.tmp_dir, self.module_name)
 
     def update_lib(self, lib_name):
+        for modname in list(sys.modules):
+            if modname.startswith(self.module_name):
+                del sys.modules[modname]
         path = os.path.join(self.lib_paths[lib_name], '__init__.py')
         self.lib_count[lib_name] += 1
         with open(path, 'wb') as fh:
@@ -794,10 +894,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
         # since the header bytes only contain the timestamp (granularity of seconds)
         # TODO: don't write them? Is *much* slower on re-load (~3x)
         # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
-        try:
-            os.unlink(path + 'c')
-        except OSError:
-            pass
+        remove_bytecode(path)
 
     def test_basic(self):
         self.assertIn('{0}.top'.format(self.module_name), self.loader)
@@ -815,7 +912,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
 
         # update them all
         for lib in self.libs:
-            for x in xrange(5):
+            for x in range(5):
                 self.update_lib(lib)
                 self.loader.clear()
                 self._verify_libs()

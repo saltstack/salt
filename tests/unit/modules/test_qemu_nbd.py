@@ -10,6 +10,7 @@ import glob
 import tempfile
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -19,16 +20,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import qemu_nbd
-
-qemu_nbd.__salt__ = {}
+import salt.modules.qemu_nbd as qemu_nbd
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class QemuNbdTestCase(TestCase):
+class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.qemu_nbd
     '''
+    def setup_loader_modules(self):
+        return {qemu_nbd: {}}
+
     # 'connect' function tests: 1
 
     def test_connect(self):

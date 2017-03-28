@@ -8,14 +8,12 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, MagicMock, patch
 
 # Import salt libs
-from salt.modules import postgres as postgresmod
-from salt.states import (
-    postgres_database,
-    postgres_user,
-    postgres_group,
-    postgres_extension,
-    postgres_schema,
-)
+import salt.modules.postgres as postgresmod
+import salt.states.postgres_database as postgres_database
+import salt.states.postgres_user as postgres_user
+import salt.states.postgres_group as postgres_group
+import salt.states.postgres_extension as postgres_extension
+import salt.states.postgres_schema as postgres_schema
 MODS = (
     postgres_database,
     postgres_user,

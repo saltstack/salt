@@ -4,15 +4,12 @@
 from __future__ import absolute_import
 
 # Import Salt testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import Mock, patch, mock_open
 
 # Import Salt libs
-from salt.states import kapacitor
-
-kapacitor.__opts__ = {'test': False}
-kapacitor.__salt__ = {}
-kapacitor.__env__ = 'test'
+import salt.states.kapacitor as kapacitor
 
 
 def _present(name='testname',
@@ -66,7 +63,15 @@ def _task(script='testscript', enabled=True, task_type='stream', db='testdb', rp
     }
 
 
-class KapacitorTestCase(TestCase):
+class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            kapacitor: {
+                '__opts__': {'test': False},
+                '__env__': 'test'
+            }
+        }
+
     def test_task_present_new_task(self):
         ret, get_mock, define_mock, enable_mock, _ = _present()
         get_mock.assert_called_once_with('testname')

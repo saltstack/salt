@@ -10,6 +10,7 @@ import tempfile
 
 # Import Salt Testing libs
 import tests.integration as integration
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -18,25 +19,24 @@ from tests.support.mock import (
     patch
 )
 
-
 # Import Salt libs
 import salt.payload
 import salt.utils
-from salt.cache import localfs
+import salt.cache.localfs as localfs
 from salt.exceptions import SaltCacheError
 
 # Import 3rd-party libs
 import salt.ext.six as six
 
-localfs.__context__ = {}
-localfs.__opts__ = {'cachedir': ''}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LocalFSTest(TestCase):
+class LocalFSTest(TestCase, LoaderModuleMockMixin):
     '''
     Validate the functions in the localfs cache
     '''
+
+    def setup_loader_modules(self):
+        return {localfs: {}}
 
     def _create_tmp_cache_file(self, tmp_dir, serializer):
         '''

@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,17 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import ilo
-
-# Globals
-ilo.__salt__ = {}
+import salt.modules.ilo as ilo
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IloTestCase(TestCase):
+class IloTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.ilo
     '''
+    def setup_loader_modules(self):
+        return {ilo: {}}
+
     # 'global_settings' function tests: 1
 
     @patch('salt.modules.ilo.__execute_cmd',

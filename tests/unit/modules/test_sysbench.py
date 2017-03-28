@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,17 +15,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.modules import sysbench
-
-# Globals
-sysbench.__salt__ = {}
+import salt.modules.sysbench as sysbench
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SysbenchTestCase(TestCase):
+class SysbenchTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases to salt.modules.sysbench
     '''
+    def setup_loader_modules(self):
+        return {sysbench: {}}
+
     def test_cpu(self):
         '''
         Test to tests to the CPU performance of minions.

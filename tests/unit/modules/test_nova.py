@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,20 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import nova
-
-# Globals
-nova.__grains__ = {}
-nova.__salt__ = {}
-nova.__context__ = {}
-nova.__opts__ = {}
+import salt.modules.nova as nova
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NovaTestCase(TestCase):
+class NovaTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.nova
     '''
+    def setup_loader_modules(self):
+        return {nova: {}}
+
     @patch('salt.modules.nova._auth')
     def test_boot(self, mock_auth):
         '''

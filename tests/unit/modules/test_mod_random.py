@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -15,15 +16,12 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import mod_random
+import salt.modules.mod_random as mod_random
 import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError
 
-# Globals
-mod_random.__grains__ = {}
-mod_random.__salt__ = {}
-mod_random.__context__ = {}
-mod_random.__opts__ = {}
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def _test_hashlib():
@@ -31,7 +29,13 @@ def _test_hashlib():
         import hashlib
     except ImportError:
         return False
-    if not hasattr(hashlib, 'algorithms'):
+
+    if six.PY2:
+        algorithms_attr_name = 'algorithms'
+    else:
+        algorithms_attr_name = 'algorithms_guaranteed'
+
+    if not hasattr(hashlib, algorithms_attr_name):
         return False
     else:
         return True
@@ -41,10 +45,13 @@ SUPPORTED_HASHLIB = _test_hashlib()
 
 @skipIf(not SUPPORTED_HASHLIB, 'Hashlib does not contain needed functionality')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ModrandomTestCase(TestCase):
+class ModrandomTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.mod_random
     '''
+    def setup_loader_modules(self):
+        return {mod_random: {}}
+
     def test_hash(self):
         '''
         Test for Encodes a value with the specified encoder.
@@ -64,7 +71,11 @@ class ModrandomTestCase(TestCase):
         self.assertRaises(SaltInvocationError,
                           mod_random.str_encode, None)
 
-        self.assertEqual(mod_random.str_encode('A'), 'QQ==\n')
+        if six.PY2:
+            self.assertEqual(mod_random.str_encode('A'), 'QQ==\n')
+        else:
+            # We're using the base64 module which does not include the trailing new line
+            self.assertEqual(mod_random.str_encode('A'), 'QQ==')
 
     def test_get_str(self):
         '''

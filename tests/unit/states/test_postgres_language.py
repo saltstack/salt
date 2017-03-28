@@ -12,7 +12,7 @@ from tests.support.mock import (
     patch
 )
 
-from salt.states import postgres_language
+import salt.states.postgres_language as postgres_language
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

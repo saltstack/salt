@@ -7,12 +7,13 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import cmdmod
+import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.log import LOG_LEVELS
 import salt.utils
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
@@ -22,8 +23,6 @@ from tests.support.mock import (
     patch
 )
 
-cmdmod.__grains__ = {}
-
 DEFAULT_SHELL = 'foo/bar'
 MOCK_SHELL_FILE = '# List of acceptable shells\n' \
                   '\n'\
@@ -31,14 +30,23 @@ MOCK_SHELL_FILE = '# List of acceptable shells\n' \
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class CMDMODTestCase(TestCase):
+class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit tests for the salt.modules.cmdmod module
     '''
 
-    mock_loglevels = {'info': 'foo', 'all': 'bar', 'critical': 'bar',
-                      'trace': 'bar', 'garbage': 'bar', 'error': 'bar',
-                      'debug': 'bar', 'warning': 'bar', 'quiet': 'bar'}
+    def setup_loader_modules(self):
+        return {cmdmod: {}}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mock_loglevels = {'info': 'foo', 'all': 'bar', 'critical': 'bar',
+                              'trace': 'bar', 'garbage': 'bar', 'error': 'bar',
+                              'debug': 'bar', 'warning': 'bar', 'quiet': 'bar'}
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.mock_loglevels
 
     def test_render_cmd_no_template(self):
         '''

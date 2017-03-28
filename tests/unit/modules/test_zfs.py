@@ -10,9 +10,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-
-# Import Mock libraries
 from tests.support.mock import (
     MagicMock,
     patch,
@@ -21,19 +20,18 @@ from tests.support.mock import (
 )
 
 # Import Salt Execution module to test
-from salt.modules import zfs
+import salt.modules.zfs as zfs
 from salt.utils.odict import OrderedDict
-
-# Globals
-zfs.__salt__ = {}
 
 
 # Skip this test case if we don't have access to mock!
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ZfsTestCase(TestCase):
+class ZfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     This class contains a set of functions that test salt.modules.zfs module
     '''
+    def setup_loader_modules(self):
+        return {zfs: {}}
 
     @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_exists_success(self):

@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,17 +17,17 @@ from tests.support.mock import (
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Libs
-from salt.states import memcached
-
-memcached.__salt__ = {}
-memcached.__opts__ = {}
+import salt.states.memcached as memcached
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MemcachedTestCase(TestCase):
+class MemcachedTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.memcached
     '''
+    def setup_loader_modules(self):
+        return {memcached: {}}
+
     # 'managed' function tests: 1
 
     def test_managed(self):

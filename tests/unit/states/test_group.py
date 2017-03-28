@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,20 +17,18 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import group
+import salt.states.group as group
 from salt.utils.odict import OrderedDict
 
 
-# Globals
-group.__salt__ = {}
-group.__opts__ = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GroupTestCase(TestCase):
+class GroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the group state
     '''
+    def setup_loader_modules(self):
+        return {group: {}}
+
     def test_present(self):
         '''
             Test to ensure that a group is present

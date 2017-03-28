@@ -8,7 +8,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 
 # Import Salt Module
-from salt.modules import nginx
+import salt.modules.nginx as nginx
 
 MOCK_STATUS_OUTPUT = """Active connections: 7
 server accepts handled requests

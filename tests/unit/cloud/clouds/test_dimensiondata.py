@@ -21,23 +21,10 @@ from salt.exceptions import SaltCloudSystemExit
 from salt.utils.versions import LooseVersion
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch, __version__ as mock_version
 
-# Global Variables
-dimensiondata.__active_provider_name__ = ''
-dimensiondata.__opts__ = {
-    'providers': {
-        'my-dimensiondata-cloud': {
-            'dimensiondata': {
-                'driver': 'dimensiondata',
-                'region': 'dd-au',
-                'user_id': 'jon_snow',
-                'key': 'IKnowNothing'
-            }
-        }
-    }
-}
 VM_NAME = 'winterfell'
 
 # Use certifi if installed
@@ -65,10 +52,29 @@ class ExtendedTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.cloud.clouds.dimensiondata.__virtual__', MagicMock(return_value='dimensiondata'))
-class DimensionDataTestCase(ExtendedTestCase):
+class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.dimensiondata module.
     '''
+
+    def setup_loader_modules(self):
+        return {
+            dimensiondata: {
+                '__active_provider_name__': '',
+                '__opts__': {
+                    'providers': {
+                        'my-dimensiondata-cloud': {
+                            'dimensiondata': {
+                                'driver': 'dimensiondata',
+                                'region': 'dd-au',
+                                'user_id': 'jon_snow',
+                                'key': 'IKnowNothing'
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
     def test_avail_images_call(self):
         '''

@@ -7,6 +7,7 @@ Unit tests for the docker state
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     Mock,
@@ -19,17 +20,22 @@ from tests.support.mock import (
 import salt.modules.dockermod as docker_mod
 import salt.states.docker_volume as docker_state
 
-docker_mod.__context__ = {'docker.docker_version': ''}
-docker_mod.__salt__ = {}
-docker_state.__context__ = {}
-docker_state.__opts__ = {'test': False}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DockerVolumeTestCase(TestCase):
+class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test docker_volume states
     '''
+    def setup_loader_modules(self):
+        return {
+            docker_mod: {
+                '__context__': {'docker.docker_version': ''}
+            },
+            docker_state: {
+                '__opts__': {'test': False}
+            }
+        }
+
     def test_present(self):
         '''
         Test docker_volume.present

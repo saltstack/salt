@@ -11,7 +11,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import salt libs
-from salt.modules import dig
+import salt.modules.dig as dig
 
 
 _SPF_VALUES = {

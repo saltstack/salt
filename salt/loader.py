@@ -19,7 +19,8 @@ from collections import MutableMapping
 from zipimport import zipimporter
 
 # Import salt libs
-import salt
+import salt.config
+import salt.syspaths
 import salt.utils.context
 import salt.utils.lazy
 import salt.utils.event
@@ -28,10 +29,6 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 from salt.utils import is_proxy
-
-# Solve the Chicken and egg problem where grains need to run before any
-# of the modules are loaded and are generally available for any usage.
-import salt.modules.cmdmod
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -42,12 +39,9 @@ try:
 except ImportError:
     HAS_PKG_RESOURCES = False
 
-__salt__ = {
-    'cmd.run': salt.modules.cmdmod._run_quiet
-}
 log = logging.getLogger(__name__)
 
-SALT_BASE_PATH = os.path.abspath(os.path.dirname(salt.__file__))
+SALT_BASE_PATH = os.path.abspath(salt.syspaths.INSTALL_DIR)
 LOADED_BASE_NAME = 'salt.loaded'
 
 if six.PY3:
@@ -634,6 +628,8 @@ def grains(opts, force_refresh=False, proxy=None):
         __grains__ = salt.loader.grains(__opts__)
         print __grains__['id']
     '''
+    # Need to re-import salt.config, somehow it got lost when a minion is starting
+    import salt.config
     # if we have no grains, lets try loading from disk (TODO: move to decorator?)
     cfn = os.path.join(
         opts['cachedir'],
@@ -766,8 +762,10 @@ def grains(opts, force_refresh=False, proxy=None):
         cumask = os.umask(0o77)
         try:
             if salt.utils.is_windows():
+                # Late import
+                import salt.modules.cmdmod
                 # Make sure cache file isn't read-only
-                __salt__['cmd.run']('attrib -R "{0}"'.format(cfn))
+                salt.modules.cmdmod._run_quiet('attrib -R "{0}"'.format(cfn))
             with salt.utils.fopen(cfn, 'w+b') as fp_:
                 try:
                     serial = salt.payload.Serial(opts)

@@ -13,13 +13,14 @@ from pkg_resources import DistributionNotFound
 # pylint: enable=3rd-party-module-not-gated
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
 import salt.config
 import salt.loader
-from salt.modules import boto_vpc
+import salt.modules.boto_vpc as boto_vpc
 from salt.utils.versions import LooseVersion
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
@@ -74,15 +75,6 @@ dhcp_options_parameters = {'domain_name': 'example.com', 'domain_name_servers': 
 network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
 dhcp_options_parameters.update(conn_parameters)
 
-opts = salt.config.DEFAULT_MINION_OPTS
-utils = salt.loader.utils(opts, whitelist=['boto', 'boto3'])
-mods = salt.loader.minion_mods(opts)
-
-boto_vpc.__utils__ = utils
-boto_vpc.__salt__ = {}
-if HAS_BOTO:
-    boto_vpc.__init__(opts)
-
 
 def _has_required_boto():
     '''
@@ -95,6 +87,15 @@ def _has_required_boto():
         return False
     else:
         return True
+
+
+def _get_boto_version():
+    '''
+    Returns the boto version
+    '''
+    if not HAS_BOTO:
+        return False
+    return LooseVersion(boto.__version__)
 
 
 def _get_moto_version():
@@ -123,23 +124,26 @@ def _has_required_moto():
         return True
 
 
-context = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto_version))
-@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {0}'.format(required_moto_version))
-class BotoVpcTestCaseBase(TestCase):
+                                       ' or equal to version {}. Installed: {}'
+        .format(required_boto_version, _get_boto_version()))
+@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {}. Installed: {}'.format(required_moto_version, _get_moto_version()))
+class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn3 = None
+
+    def setup_loader_modules(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto', 'boto3'])
+        return {boto_vpc: {'__utils__': utils}}
 
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
-        boto_vpc.__context__ = {}
-        context.clear()
+        super(BotoVpcTestCaseBase, self).setUp()
+        boto_vpc.__init__(self.opts)
+        delattr(self, 'opts')
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -147,10 +151,12 @@ class BotoVpcTestCaseBase(TestCase):
 
         self.patcher = patch('boto3.session.Session')
         self.addCleanup(self.patcher.stop)
+        self.addCleanup(delattr, self, 'patcher')
         mock_session = self.patcher.start()
 
         session_instance = mock_session.return_value
         self.conn3 = MagicMock()
+        self.addCleanup(delattr, self, 'conn3')
         session_instance.client.return_value = self.conn3
 
 
@@ -578,8 +584,8 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto_version))
+                                       ' or equal to version {}. Installed: {}'
+        .format(required_boto_version, _get_boto_version()))
 @skipIf(_has_required_moto() is False, 'The moto version must be >= to version {0}'.format(required_moto_version))
 class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2
@@ -881,8 +887,8 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto_version))
+                                       ' or equal to version {}. Installed: {}'
+        .format(required_boto_version, _get_boto_version()))
 class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2
     def test_that_when_creating_an_internet_gateway_the_create_internet_gateway_method_returns_true(self):
@@ -942,8 +948,8 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto_version))
+                                       ' or equal to version {}. Installed: {}'
+        .format(required_boto_version, _get_boto_version()))
 class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2
     def test_that_when_creating_an_nat_gateway_the_create_nat_gateway_method_returns_true(self):
@@ -991,8 +997,8 @@ class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto_version))
+                                       ' or equal to version {}. Installed: {}'
+        .format(required_boto_version, _get_boto_version()))
 class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1029,8 +1035,8 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto_version))
+                                       ' or equal to version {}. Installed: {}'
+        .format(required_boto_version, _get_boto_version()))
 @skipIf(_has_required_moto() is False, 'The moto version must be >= to version {0}'.format(required_moto_version))
 class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2
@@ -1197,8 +1203,8 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto_version))
+                                       ' or equal to version {}. Installed: {}'
+        .format(required_boto_version, _get_boto_version()))
 class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2
     def test_that_when_creating_network_acl_for_an_existing_vpc_the_create_network_acl_method_returns_true(self):
@@ -1559,8 +1565,8 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto_version))
+                                       ' or equal to version {}. Installed: {}'
+        .format(required_boto_version, _get_boto_version()))
 class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1779,8 +1785,8 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto_version))
+                                       ' or equal to version {}. Installed: {}'
+        .format(required_boto_version, _get_boto_version()))
 @skipIf(_has_required_moto() is False, 'The moto version must be >= to version {0}'.format(required_moto_version))
 class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 

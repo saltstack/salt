@@ -5,8 +5,10 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import json
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,19 +18,18 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import npm
+import salt.modules.npm as npm
 from salt.exceptions import CommandExecutionError
-import json
-
-# Globals
-npm.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NpmTestCase(TestCase):
+class NpmTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.npm
     '''
+    def setup_loader_modules(self):
+        return {npm: {}}
+
     # 'install' function tests: 1
 
     @patch('salt.modules.npm._check_valid_version',

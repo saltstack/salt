@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,19 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import dpkg
-
-# Globals
-dpkg.__grains__ = {}
-dpkg.__salt__ = {}
-dpkg.__context__ = {}
+import salt.modules.dpkg as dpkg
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DpkgTestCase(TestCase):
+class DpkgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.dpkg
     '''
+    def setup_loader_modules(self):
+        return {dpkg: {}}
+
     # 'unpurge' function tests: 2
 
     def test_unpurge(self):

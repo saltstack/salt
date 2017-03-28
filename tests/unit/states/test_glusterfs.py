@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import socket
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,20 +16,23 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import glusterfs
+import salt.states.glusterfs as glusterfs
 import salt.utils.cloud
 import salt.modules.glusterfs as mod_glusterfs
 
-# Globals
-glusterfs.__salt__ = {'glusterfs.peer': mod_glusterfs.peer}
-glusterfs.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GlusterfsTestCase(TestCase):
+class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.glusterfs
     '''
+    def setup_loader_modules(self):
+        return {
+            glusterfs: {
+                '__salt__': {'glusterfs.peer': mod_glusterfs.peer}
+            }
+        }
+
     # 'peered' function tests: 1
 
     def test_peered(self):
@@ -271,7 +275,7 @@ class GlusterfsTestCase(TestCase):
 
         with patch.dict(glusterfs.__salt__,
                         {'glusterfs.info': mock_info,
-                        'glusterfs.add_volume_bricks': mock_add}):
+                         'glusterfs.add_volume_bricks': mock_add}):
             ret.update({'comment': 'Volume salt does not exist'})
             self.assertDictEqual(glusterfs.add_volume_bricks(name, bricks), ret)
 
@@ -292,4 +296,9 @@ class GlusterfsTestCase(TestCase):
             ret.update({'comment': 'Bricks successfully added to volume salt',
                         'changes': {'new': bricks + old_bricks,
                                     'old': old_bricks}})
-            self.assertDictEqual(glusterfs.add_volume_bricks(name, bricks), ret)
+            # Let's sort ourselves because the test under python 3 sometimes fails
+            # just because of the new changes list order
+            result = glusterfs.add_volume_bricks(name, bricks)
+            ret['changes']['new'] = sorted(ret['changes']['new'])
+            result['changes']['new'] = sorted(result['changes']['new'])
+            self.assertDictEqual(result, ret)

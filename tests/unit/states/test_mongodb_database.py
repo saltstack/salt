@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,17 +15,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import mongodb_database
-
-mongodb_database.__salt__ = {}
-mongodb_database.__opts__ = {}
+import salt.states.mongodb_database as mongodb_database
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MongodbDatabaseTestCase(TestCase):
+class MongodbDatabaseTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.mongodb_database
     '''
+    def setup_loader_modules(self):
+        return {mongodb_database: {}}
+
     # 'absent' function tests: 1
 
     def test_absent(self):

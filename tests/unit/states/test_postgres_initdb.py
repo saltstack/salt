@@ -12,7 +12,7 @@ from tests.support.mock import (
     patch
 )
 
-from salt.states import postgres_initdb
+import salt.states.postgres_initdb as postgres_initdb
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

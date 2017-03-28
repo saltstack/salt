@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,18 +15,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import zk_concurrency
-
-# Globals
-zk_concurrency.__salt__ = {}
-zk_concurrency.__opts__ = {}
+import salt.states.zk_concurrency as zk_concurrency
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ZkConcurrencyTestCase(TestCase):
+class ZkConcurrencyTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the zk_concurrency state
     '''
+    def setup_loader_modules(self):
+        return {zk_concurrency: {}}
+
     def test_lock(self):
         '''
             Test to block state execution until you are able to get the lock

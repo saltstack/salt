@@ -7,10 +7,11 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import mac_sysctl
+import salt.modules.mac_sysctl as mac_sysctl
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -21,15 +22,14 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-# Globals
-mac_sysctl.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DarwinSysctlTestCase(TestCase):
+class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.mac_sysctl module
     '''
+    def setup_loader_modules(self):
+        return {mac_sysctl: {}}
 
     def test_get(self):
         '''

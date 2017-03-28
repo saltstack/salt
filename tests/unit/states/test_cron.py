@@ -7,12 +7,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 from salt.ext.six.moves import StringIO
-from salt.modules import cron as cronmod
-from salt.states import cron as cron
+import salt.modules.cron as cronmod
+import salt.states.cron as cron
 
 STUB_USER = 'root'
 STUB_PATH = '/tmp'
@@ -30,31 +31,6 @@ STUB_SIMPLE_CRON_DICT = {
     'crons': [],
     'env': [],
     'special': []}
-
-__low__ = {
-    '__id__': 'noo'
-}
-__grains__ = {
-    'os': 'Debian',
-    'os_family': 'Debian',
-}
-
-cron.__opts__ = {
-    'test': False,
-}
-cronmod.__low__ = cron.__low__ = __low__
-cronmod.__grains__ = cron.__grains__ = __grains__
-cronmod.__salt__ = cron.__salt__ = {
-    'cmd.run_all': MagicMock(return_value={
-        'pid': 5,
-        'retcode': 0,
-        'stderr': '',
-        'stdout': ''}),
-    'cron.list_tab': cronmod.list_tab,
-    'cron.rm_job': cronmod.rm_job,
-    'cron.set_job': cronmod.set_job,
-}
-
 
 CRONTAB = StringIO()
 
@@ -78,7 +54,28 @@ def write_crontab(*args, **kw):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class CronTestCase(TestCase):
+class CronTestCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        loader_gloabals = {
+            '__low__': {'__id__': 'noo'},
+            '__grains__': {
+                'os': 'Debian',
+                'os_family': 'Debian',
+            },
+            '__opts__': {'test': False},
+            '__salt__': {
+                'cmd.run_all': MagicMock(return_value={
+                    'pid': 5,
+                    'retcode': 0,
+                    'stderr': '',
+                    'stdout': ''}),
+                'cron.list_tab': cronmod.list_tab,
+                'cron.rm_job': cronmod.rm_job,
+                'cron.set_job': cronmod.set_job,
+            }
+        }
+        return {cron: loader_gloabals, cronmod: loader_gloabals}
 
     def setUp(self):
         super(CronTestCase, self).setUp()
@@ -184,62 +181,62 @@ class CronTestCase(TestCase):
     @patch('salt.modules.cron._write_cron_lines',
            new=MagicMock(side_effect=write_crontab))
     def test_remove(self):
-        cron.__opts__['test'] = True
-        set_crontab(
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:1\n'
-            '* 1 * * * foo')
-        result = cron.absent(name='bar', identifier='1')
-        self.assertEqual(
-            result,
-            {'changes': {},
-             'comment': 'Cron bar is set to be removed',
-             'name': 'bar',
-             'result': None}
-        )
-        self.assertEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:1\n'
-            '* 1 * * * foo')
-        cron.__opts__['test'] = False
-        set_crontab(
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:1\n'
-            '* 1 * * * foo')
-        cron.absent(name='bar', identifier='1')
-        self.assertEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit'
-        )
-        set_crontab(
-            '# Lines below here are managed by Salt, do not edit\n'
-            '* * * * * foo')
-        cron.absent(name='bar', identifier='1')
-        self.assertEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '* * * * * foo'
-        )
-        # old behavior, do not remove with identifier set and
-        # even if command match !
-        set_crontab(
-            '# Lines below here are managed by Salt, do not edit\n'
-            '* * * * * foo')
-        cron.absent(name='foo', identifier='1')
-        self.assertEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit'
-        )
-        # old behavior, remove if no identifier and command match
-        set_crontab(
-            '# Lines below here are managed by Salt, do not edit\n'
-            '* * * * * foo')
-        cron.absent(name='foo')
-        self.assertEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit'
-        )
+        with patch.dict(cron.__opts__, {'test': True}):
+            set_crontab(
+                '# Lines below here are managed by Salt, do not edit\n'
+                '# SALT_CRON_IDENTIFIER:1\n'
+                '* 1 * * * foo')
+            result = cron.absent(name='bar', identifier='1')
+            self.assertEqual(
+                result,
+                {'changes': {},
+                 'comment': 'Cron bar is set to be removed',
+                 'name': 'bar',
+                 'result': None}
+            )
+            self.assertEqual(
+                get_crontab(),
+                '# Lines below here are managed by Salt, do not edit\n'
+                '# SALT_CRON_IDENTIFIER:1\n'
+                '* 1 * * * foo')
+        with patch.dict(cron.__opts__, {'test': False}):
+            set_crontab(
+                '# Lines below here are managed by Salt, do not edit\n'
+                '# SALT_CRON_IDENTIFIER:1\n'
+                '* 1 * * * foo')
+            cron.absent(name='bar', identifier='1')
+            self.assertEqual(
+                get_crontab(),
+                '# Lines below here are managed by Salt, do not edit'
+            )
+            set_crontab(
+                '# Lines below here are managed by Salt, do not edit\n'
+                '* * * * * foo')
+            cron.absent(name='bar', identifier='1')
+            self.assertEqual(
+                get_crontab(),
+                '# Lines below here are managed by Salt, do not edit\n'
+                '* * * * * foo'
+            )
+            # old behavior, do not remove with identifier set and
+            # even if command match !
+            set_crontab(
+                '# Lines below here are managed by Salt, do not edit\n'
+                '* * * * * foo')
+            cron.absent(name='foo', identifier='1')
+            self.assertEqual(
+                get_crontab(),
+                '# Lines below here are managed by Salt, do not edit'
+            )
+            # old behavior, remove if no identifier and command match
+            set_crontab(
+                '# Lines below here are managed by Salt, do not edit\n'
+                '* * * * * foo')
+            cron.absent(name='foo')
+            self.assertEqual(
+                get_crontab(),
+                '# Lines below here are managed by Salt, do not edit'
+            )
 
     @patch('salt.modules.cron.raw_cron',
            new=MagicMock(side_effect=get_crontab))

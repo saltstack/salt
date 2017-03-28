@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,18 +15,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import at
-
-at.__salt__ = {}
-at.__opts__ = {}
-at.__grains__ = {}
+import salt.states.at as at
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class AtTestCase(TestCase):
+class AtTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.at
     '''
+    def setup_loader_modules(self):
+        return {at: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

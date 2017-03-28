@@ -21,24 +21,10 @@ from salt.exceptions import SaltCloudSystemExit
 from salt.utils.versions import LooseVersion
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, __version__ as mock_version
 
-# Global Variables
-gce.__active_provider_name__ = ''
-gce.__opts__ = {
-    'providers': {
-        'my-google-cloud': {
-            'gce': {
-                'project': 'daenerys-cloud',
-                'service_account_email_address': 'dany@targaryen.westeros.cloud',
-                'service_account_private_key': '/home/dany/PRIVKEY.pem',
-                'driver': 'gce',
-                'ssh_interface': 'public_ips'
-            }
-        }
-    }
-}
 VM_NAME = 'kings_landing'
 DUMMY_TOKEN = {
     'refresh_token': None,
@@ -57,10 +43,30 @@ except ImportError:
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GCETestCase(TestCase):
+class GCETestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.gce module.
     '''
+
+    def setup_loader_modules(self):
+        return {
+            gce: {
+                '__active_provider_name__': '',
+                '__opts__': {
+                    'providers': {
+                        'my-google-cloud': {
+                            'gce': {
+                                'project': 'daenerys-cloud',
+                                'service_account_email_address': 'dany@targaryen.westeros.cloud',
+                                'service_account_private_key': '/home/dany/PRIVKEY.pem',
+                                'driver': 'gce',
+                                'ssh_interface': 'public_ips'
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
     def test_destroy_call(self):
         '''

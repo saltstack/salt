@@ -11,7 +11,7 @@ from salt.beacons import inotify
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-
+from tests.support.mixins import LoaderModuleMockMixin
 # Third-party libs
 try:
     import pyinotify  # pylint: disable=unused-import
@@ -21,12 +21,15 @@ except ImportError:
 
 
 @skipIf(not HAS_PYINOTIFY, 'pyinotify is not available')
-class INotifyBeaconTestCase(TestCase):
+class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.inotify
     '''
+
+    def setup_loader_modules(self):
+        return {inotify: {}}
+
     def setUp(self):
-        inotify.__context__ = {}
         self.tmpdir = tempfile.mkdtemp()
 
     def tearDown(self):

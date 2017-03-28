@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -15,19 +16,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import djangomod
-
-# Globals
-djangomod.__grains__ = {}
-djangomod.__salt__ = {}
-djangomod.__context__ = {}
+import salt.modules.djangomod as djangomod
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DjangomodTestCase(TestCase):
+class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.djangomod
     '''
+    def setup_loader_modules(self):
+        return {djangomod: {}}
+
     # 'command' function tests: 1
 
     @patch('salt.modules.djangomod._get_django_admin',

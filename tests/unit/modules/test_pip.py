@@ -5,18 +5,20 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-from salt.modules import pip
+import salt.modules.pip as pip
 from salt.exceptions import CommandExecutionError
-
-pip.__salt__ = {'cmd.which_bin': lambda _: 'pip'}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PipTestCase(TestCase):
+class PipTestCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {pip: {'__salt__': {'cmd.which_bin': lambda _: 'pip'}}}
 
     def test_fix4361(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})

@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -17,19 +18,17 @@ from tests.support.mock import (
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
-from salt.states import test
-
-# Globals
-test.__salt__ = {}
-test.__opts__ = {}
-test.__low__ = {'__reqs__': {'watch': ''}}
+import salt.states.test as test
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestTestCase(TestCase):
+class TestTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the test state
     '''
+    def setup_loader_modules(self):
+        return {test: {'__low__': {'__reqs__': {'watch': ''}}}}
+
     def test_succeed_without_changes(self):
         '''
             Test to returns successful.
