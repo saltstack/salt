@@ -1765,7 +1765,12 @@ class LocalClient(object):
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(
                 'Salt request timed out. The master is not responding. You '
-                'may need to run your command with `--async`.'
+                'may need to run your command with `--async` in order to '
+                'bypass the congested event bus. With `--async`, the CLI tool '
+                'will print the job id (jid) and exit immediately without '
+                'listening for responses. You can then use '
+                '`salt-run jobs.lookup_jid` to look up the results of the job '
+                'in the job cache later.'
             )
 
         if not payload:
@@ -1869,7 +1874,12 @@ class LocalClient(object):
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(
                 'Salt request timed out. The master is not responding. You '
-                'may need to run your command with `--async`.'
+                'may need to run your command with `--async` in order to '
+                'bypass the congested event bus. With `--async`, the CLI tool '
+                'will print the job id (jid) and exit immediately without '
+                'listening for responses. You can then use '
+                '`salt-run jobs.lookup_jid` to look up the results of the job '
+                'in the job cache later.'
             )
 
         if not payload:
