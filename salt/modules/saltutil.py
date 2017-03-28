@@ -1297,7 +1297,7 @@ def cmd_iter(tgt,
         yield ret
 
 
-def runner(name, **kwargs):
+def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=None, **kwargs):
     '''
     Execute a runner function. This function must be run on the master,
     either by targeting a minion running on a master or by using
@@ -1319,11 +1319,17 @@ def runner(name, **kwargs):
     .. code-block:: bash
 
         salt master_minion saltutil.runner jobs.list_jobs
+        salt master_minion saltutil.runner test.arg arg="['baz']" kwarg="{'foo': 'bar'}"
     '''
-    jid = kwargs.pop('__orchestration_jid__', None)
-    saltenv = kwargs.pop('__env__', 'base')
-    full_return = kwargs.pop('full_return', False)
+    if arg is None:
+        arg = []
+    if kwarg is None:
+        kwarg = {}
+    jid = kwargs.pop('__orchestration_jid__', jid)
+    saltenv = kwargs.pop('__env__', saltenv)
     kwargs = salt.utils.clean_kwargs(**kwargs)
+    if kwargs:
+        kwarg.update(kwargs)
 
     if 'master_job_cache' not in __opts__:
         master_config = os.path.join(os.path.dirname(__opts__['conf_file']),
@@ -1336,18 +1342,19 @@ def runner(name, **kwargs):
     if name in rclient.functions:
         aspec = salt.utils.args.get_function_argspec(rclient.functions[name])
         if 'saltenv' in aspec.args:
-            kwargs['saltenv'] = saltenv
+            kwarg['saltenv'] = saltenv
 
     if jid:
         salt.utils.event.fire_args(
             __opts__,
             jid,
-            {'type': 'runner', 'name': name, 'args': kwargs},
+            {'type': 'runner', 'name': name, 'args': arg, 'kwargs': kwarg},
             prefix='run'
         )
 
     return rclient.cmd(name,
-                       kwarg=kwargs,
+                       arg=arg,
+                       kwarg=kwarg,
                        print_event=False,
                        full_return=full_return)
 
