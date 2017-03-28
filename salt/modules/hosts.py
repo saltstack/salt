@@ -265,15 +265,15 @@ def _write_hosts(hosts):
                 line = ''.join(aliases)
             else:
                 line = '{0}\t\t{1}'.format(
-                    ip,
-                    ' '.join(aliases)
-                    )
-        lines.append(line)
+                    ip, ' '.join(aliases))
+        lines.append(line.strip() + os.linesep)
 
     hfn = _get_or_create_hostfile()
-    with salt.utils.fopen(hfn, 'w+') as ofile:
-        for line in lines:
-            if line.strip():
-                # /etc/hosts needs to end with EOL so that some utils that read
-                # it do not break
-                ofile.write(line.strip() + os.linesep)
+
+    if six.PY2:
+        with salt.utils.fopen(hfn, 'w+') as ofile:
+            ofile.writelines(lines)
+    else:
+        with salt.utils.fopen(hfn, 'w+', newline='') as ofile:
+            ofile.writelines(lines)
+

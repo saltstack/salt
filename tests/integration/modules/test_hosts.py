@@ -13,6 +13,9 @@ import tests.integration as integration
 # Import salt libs
 import salt.utils
 
+# Import 3rd party libs
+import salt.ext.six as six
+
 HFN = os.path.join(integration.TMP, 'hosts')
 
 
@@ -205,8 +208,13 @@ class HostsModuleTest(integration.ModuleCase):
         )
 
         # now read the lines and ensure they're formatted correctly
-        with salt.utils.fopen(HFN, 'r') as fp_:
-            lines = fp_.read().splitlines()
+        if six.PY2:
+            with salt.utils.fopen(HFN, 'r') as fp_:
+                lines = fp_.read().splitlines()
+        else:
+            with salt.utils.fopen(HFN, 'r', newline='') as fp_:
+                lines = fp_.read().splitlines()
+
         self.assertEqual(lines, [
             '192.168.1.3\t\thost3.fqdn.com',
             '192.168.1.1\t\thost1.fqdn.com host1 host1-reorder',
