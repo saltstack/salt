@@ -482,7 +482,6 @@ class CPModuleTest(integration.ModuleCase):
                     'salt://grail/scene33',
                 ])
 
-
         if six.PY2:
             with salt.utils.fopen(path, 'r') as fn_:
                 data = fn_.read()
