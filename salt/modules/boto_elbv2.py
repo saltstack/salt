@@ -89,7 +89,7 @@ def target_group_exists(name, region=None, key=None, keyid=None, profile=None):
         if alb:
             return True
         else:
-            msg = 'The load balancer does not exist in region {0}'.format(region)
+            log.warning('The target group does not exist in region {0}'.format(region))
             return False
     except ClientError as error:
         log.warning(error)
