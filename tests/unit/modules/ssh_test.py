@@ -104,7 +104,7 @@ class SSHAuthKeyTestCase(TestCase):
 
         with patch.dict(ssh.__salt__, {'user.info': MagicMock(return_value={})}):
             with patch('salt.modules.ssh._get_config_file', MagicMock(return_value=temp_file.name)):
-                ret = ssh._replace_auth_key('foo', key, enc=enc, comment=email, options=options, config=temp_file.name)
+                ssh._replace_auth_key('foo', key, enc=enc, comment=email, options=options, config=temp_file.name)
 
         # Assert that the new line was added as-is to the file
         with salt.utils.fopen(temp_file.name) as _fh:
