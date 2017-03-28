@@ -17,21 +17,32 @@ import socket
 import logging
 from collections import namedtuple
 
-# Let's allow `integration` and `unit` to be importable
 TESTS_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
-if TESTS_DIR not in sys.path:
-    sys.path.insert(0, TESTS_DIR)
-
 CODE_DIR = os.path.dirname(TESTS_DIR)
+os.chdir(CODE_DIR)
+try:
+    # If we have a system-wide salt module imported, unload it
+    import salt
+    for module in list(sys.modules):
+        if module.startswith(('salt',)):
+            try:
+                if not sys.modules[module].__file__.startswith(CODE_DIR):
+                    sys.modules.pop(module)
+            except AttributeError:
+                continue
+    sys.path.insert(0, CODE_DIR)
+except ImportError:
+    sys.path.insert(0, CODE_DIR)
+
+# Import test libs
+import tests.support.paths  # pylint: disable=unused-import
+from tests.integration import TestDaemon
 
 # Import 3rd-party libs
 import pytest
 import salt.ext.six as six
-
-# Import test libs
-from tests.integration import TestDaemon
 
 # Import salt libs
 import salt.utils
