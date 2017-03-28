@@ -276,4 +276,3 @@ def _write_hosts(hosts):
     else:
         with salt.utils.fopen(hfn, 'w+', newline='') as ofile:
             ofile.writelines(lines)
-
