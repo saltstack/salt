@@ -2066,8 +2066,7 @@ def request_instance(vm_=None, call=None):
 
             log.debug('Returned query data: {0}'.format(data))
 
-            if 'state' in data[0]:
-                state = data[0]['state']
+            state = data[0].get('state')
 
             if state == 'active':
                 return data
