@@ -21,7 +21,7 @@ from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
 import salt.modules.docker as docker_mod
 
-docker_mod.__context__ = {'docker.docker_version': ''}
+dockerng_mod.__context__ = {}
 docker_mod.__salt__ = {}
 docker_mod.__opts__ = {}
 
@@ -41,6 +41,34 @@ class DockerTestCase(TestCase):
     '''
     Validate docker module
     '''
+
+    docker_version = dockerng_mod.docker.version_info
+    client_args_mock = MagicMock(return_value={
+        'create_container': [
+            'image', 'command', 'hostname', 'user', 'detach', 'stdin_open',
+            'tty', 'ports', 'environment', 'volumes', 'network_disabled',
+            'name', 'entrypoint', 'working_dir', 'domainname', 'cpuset',
+            'host_config', 'mac_address', 'labels', 'volume_driver',
+            'stop_signal', 'networking_config', 'healthcheck',
+            'stop_timeout'],
+        'host_config': [
+            'binds', 'port_bindings', 'lxc_conf', 'publish_all_ports',
+            'links', 'privileged', 'dns', 'dns_search', 'volumes_from',
+            'network_mode', 'restart_policy', 'cap_add', 'cap_drop',
+            'devices', 'extra_hosts', 'read_only', 'pid_mode', 'ipc_mode',
+            'security_opt', 'ulimits', 'log_config', 'mem_limit',
+            'memswap_limit', 'mem_reservation', 'kernel_memory',
+            'mem_swappiness', 'cgroup_parent', 'group_add', 'cpu_quota',
+            'cpu_period', 'blkio_weight', 'blkio_weight_device',
+            'device_read_bps', 'device_write_bps', 'device_read_iops',
+            'device_write_iops', 'oom_kill_disable', 'shm_size', 'sysctls',
+            'tmpfs', 'oom_score_adj', 'dns_opt', 'cpu_shares',
+            'cpuset_cpus', 'userns_mode', 'pids_limit', 'isolation',
+            'auto_remove', 'storage_opt'],
+        'networking_config': [
+            'aliases', 'links', 'ipv4_address', 'ipv6_address',
+            'link_local_ips'],
+    })
 
     def test_ps_with_host_true(self):
         '''
@@ -131,6 +159,8 @@ class DockerTestCase(TestCase):
 
     @skipIf(_docker_py_version() < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_list_networks(self, *args):
         '''
         test list networks.
@@ -155,8 +185,10 @@ class DockerTestCase(TestCase):
                     ids=['01234'],
         )
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_create_network(self, *args):
         '''
         test create network.
@@ -181,8 +213,10 @@ class DockerTestCase(TestCase):
                     driver='bridge',
         )
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_remove_network(self, *args):
         '''
         test remove network.
@@ -201,8 +235,10 @@ class DockerTestCase(TestCase):
                 docker_mod.remove_network('foo')
         client.remove_network.assert_called_once_with('foo')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_inspect_network(self, *args):
         '''
         test inspect network.
@@ -221,8 +257,10 @@ class DockerTestCase(TestCase):
                 docker_mod.inspect_network('foo')
         client.inspect_network.assert_called_once_with('foo')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_connect_container_to_network(self, *args):
         '''
         test inspect network.
@@ -245,8 +283,10 @@ class DockerTestCase(TestCase):
         client.connect_container_to_network.assert_called_once_with(
             'container', 'foo', None)
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_disconnect_container_from_network(self, *args):
         '''
         test inspect network.
@@ -266,8 +306,10 @@ class DockerTestCase(TestCase):
         client.disconnect_container_from_network.assert_called_once_with(
             'container', 'foo')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_list_volumes(self, *args):
         '''
         test list volumes.
@@ -289,8 +331,10 @@ class DockerTestCase(TestCase):
             filters={'dangling': [True]},
         )
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_create_volume(self, *args):
         '''
         test create volume.
@@ -316,8 +360,10 @@ class DockerTestCase(TestCase):
                     driver_opts={},
         )
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_remove_volume(self, *args):
         '''
         test remove volume.
@@ -335,8 +381,10 @@ class DockerTestCase(TestCase):
                 docker_mod.remove_volume('foo')
         client.remove_volume.assert_called_once_with('foo')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_inspect_volume(self, *args):
         '''
         test inspect volume.
