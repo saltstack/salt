@@ -364,7 +364,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.bootstrap:
             host = self.options.bootstrap
-            if len(self.args) > 0 and '=' not in self.args[0]:
+            if self.args and '=' not in self.args[0]:
                 minion_id = self.args.pop(0)
             else:
                 minion_id = host
