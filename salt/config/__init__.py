@@ -767,7 +767,7 @@ VALID_OPTS = {
 
     # A compound target definition.
     # See: http://docs.saltstack.com/en/latest/topics/targeting/nodegroups.html
-    'nodegroups': dict,
+    'nodegroups': (dict, list),
 
     # List-only nodegroups for salt-ssh. Each group must be formed as either a
     # comma-separated list, or a YAML list.
@@ -3365,6 +3365,8 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
     # out or not present.
     if opts.get('nodegroups') is None:
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
+    if salt.utils.is_dictlist(opts['nodegroups']):
+        opts['nodegroups'] = salt.utils.repack_dictlist(opts['nodegroups'])
     if opts.get('transport') == 'raet' and 'aes' in opts:
         opts.pop('aes')
     apply_sdb(opts)
