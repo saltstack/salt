@@ -18,13 +18,13 @@ Module to provide Elasticsearch compatibility to Salt
         elasticsearch:
           host: '10.10.10.100:9200'
 
-        elasticsearch:
+        elasticsearch-cluster:
           hosts:
             - '10.10.10.100:9200'
             - '10.10.10.101:9200'
             - '10.10.10.102:9200'
 
-        elasticsearch:
+        elasticsearch-extra:
           hosts:
             - '10.10.10.100:9200'
           use_ssl: True
@@ -156,9 +156,13 @@ def ping(allow_failure=False, hosts=None, profile=None):
 
     Test connection to Elasticsearch instance. This method does not fail if not explicitly specified.
 
+    allow_failure
+        Throw exception if ping fails
+
     CLI example::
 
         salt myminion elasticsearch.ping allow_failure=True
+        salt myminion elasticsearch.ping profile=elasticsearch-extra
     '''
     try:
         _get_instance(hosts, profile)
@@ -178,6 +182,7 @@ def info(hosts=None, profile=None):
     CLI example::
 
         salt myminion elasticsearch.info
+        salt myminion elasticsearch.info profile=elasticsearch-extra
     '''
     es = _get_instance(hosts, profile)
 
@@ -200,7 +205,7 @@ def node_info(nodes=None, flat_settings=False, hosts=None, profile=None):
 
     CLI example::
 
-        salt myminion elasticsearch.node_info
+        salt myminion elasticsearch.node_info flat_settings=True
     '''
     es = _get_instance(hosts, profile)
 
@@ -260,6 +265,13 @@ def alias_create(indices, alias, hosts=None, body=None, profile=None):
     '''
     Create an alias for a specific index/indices
 
+    indices
+        Single or multiple indices separated by comma, use _all to perform the operation on all indices.
+    alias
+        Alias name
+    body
+        Optional definition such as routing or filter as defined in https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-aliases.html
+
     CLI example::
 
         salt myminion elasticsearch.alias_create testindex_v1 testindex
@@ -276,6 +288,11 @@ def alias_create(indices, alias, hosts=None, body=None, profile=None):
 def alias_delete(indices, aliases, hosts=None, body=None, profile=None):
     '''
     Delete an alias of an index
+
+    indices
+        Single or multiple indices separated by comma, use _all to perform the operation on all indices.
+    aliases
+        Alias names separated by comma
 
     CLI example::
 
@@ -297,6 +314,11 @@ def alias_exists(aliases, indices=None, hosts=None, profile=None):
     '''
     Return a boolean indicating whether given alias exists
 
+    indices
+        Single or multiple indices separated by comma, use _all to perform the operation on all indices.
+    aliases
+        Alias names separated by comma
+
     CLI example::
 
         salt myminion elasticsearch.alias_exists None testindex
@@ -313,6 +335,11 @@ def alias_exists(aliases, indices=None, hosts=None, profile=None):
 def alias_get(indices=None, aliases=None, hosts=None, profile=None):
     '''
     Check for the existence of an alias and if it exists, return it
+
+    indices
+        Single or multiple indices separated by comma, use _all to perform the operation on all indices.
+    aliases
+        Alias names separated by comma
 
     CLI example::
 
@@ -332,6 +359,15 @@ def document_create(index, doc_type, body=None, id=None, hosts=None, profile=Non
     '''
     Create a document in a specified index
 
+    index
+        Index name where the document should reside
+    doc_type
+        Type of the document
+    body
+        Document to store
+    id
+        Optional unique document identifier for specified doc_type (empty for random)
+
     CLI example::
 
         salt myminion elasticsearch.document_create testindex doctype1 '{}'
@@ -347,6 +383,13 @@ def document_create(index, doc_type, body=None, id=None, hosts=None, profile=Non
 def document_delete(index, doc_type, id, hosts=None, profile=None):
     '''
     Delete a document from an index
+
+    index
+        Index name where the document resides
+    doc_type
+        Type of the document
+    id
+        Document identifier
 
     CLI example::
 
@@ -366,6 +409,13 @@ def document_exists(index, id, doc_type='_all', hosts=None, profile=None):
     '''
     Return a boolean indicating whether given document exists
 
+    index
+        Index name where the document resides
+    id
+        Document identifier
+    doc_type
+        Type of the document, use _all to fetch the first document matching the ID across all types
+
     CLI example::
 
         salt myminion elasticsearch.document_exists testindex AUx-384m0Bug_8U80wQZ
@@ -383,6 +433,13 @@ def document_exists(index, id, doc_type='_all', hosts=None, profile=None):
 def document_get(index, id, doc_type='_all', hosts=None, profile=None):
     '''
     Check for the existence of a document and if it exists, return it
+
+    index
+        Index name where the document resides
+    id
+        Document identifier
+    doc_type
+        Type of the document, use _all to fetch the first document matching the ID across all types
 
     CLI example::
 
@@ -402,9 +459,15 @@ def index_create(index, body=None, hosts=None, profile=None):
     '''
     Create an index
 
+    index
+        Index name
+    body
+        Index definition, such as settings and mappings as defined in https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-create-index.html
+
     CLI example::
 
         salt myminion elasticsearch.index_create testindex
+        salt myminion elasticsearch.index_create testindex2 '{"settings" : {"index" : {"number_of_shards" : 3, "number_of_replicas" : 2}}}'
     '''
     es = _get_instance(hosts, profile)
 
@@ -421,6 +484,9 @@ def index_create(index, body=None, hosts=None, profile=None):
 def index_delete(index, hosts=None, profile=None):
     '''
     Delete an index
+
+    index
+        Index name
 
     CLI example::
 
@@ -442,6 +508,9 @@ def index_exists(index, hosts=None, profile=None):
     '''
     Return a boolean indicating whether given index exists
 
+    index
+        Index name
+
     CLI example::
 
         salt myminion elasticsearch.index_exists testindex
@@ -459,6 +528,9 @@ def index_exists(index, hosts=None, profile=None):
 def index_get(index, hosts=None, profile=None):
     '''
     Check for the existence of an index and if it exists, return it
+
+    index
+        Index name
 
     CLI example::
 
@@ -536,6 +608,13 @@ def mapping_create(index, doc_type, body, hosts=None, profile=None):
     '''
     Create a mapping in a given index
 
+    index
+        Index for the mapping
+    doc_type
+        Name of the document type
+    body
+        Mapping definition as specified in https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-put-mapping.html
+
     CLI example::
 
         salt myminion elasticsearch.mapping_create testindex user '{ "user" : { "properties" : { "message" : {"type" : "string", "store" : true } } } }'
@@ -552,6 +631,11 @@ def mapping_create(index, doc_type, body, hosts=None, profile=None):
 def mapping_delete(index, doc_type, hosts=None, profile=None):
     '''
     Delete a mapping (type) along with its data. As of Elasticsearch 5.0 this is no longer available.
+
+    index
+        Index for the mapping
+    doc_type
+        Name of the document type
 
     CLI example::
 
@@ -574,6 +658,11 @@ def mapping_get(index, doc_type, hosts=None, profile=None):
     '''
     Retrieve mapping definition of index or index/type
 
+    index
+        Index for the mapping
+    doc_type
+        Name of the document type
+
     CLI example::
 
         salt myminion elasticsearch.mapping_get testindex user
@@ -592,6 +681,11 @@ def index_template_create(name, body, hosts=None, profile=None):
     '''
     Create an index template
 
+    name
+        Index template name
+    body
+        Template definition as specified in http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
+
     CLI example::
 
         salt myminion elasticsearch.index_template_create testindex_templ '{ "template": "logstash-*", "order": 1, "settings": { "number_of_shards": 1 } }'
@@ -608,6 +702,9 @@ def index_template_create(name, body, hosts=None, profile=None):
 def index_template_delete(name, hosts=None, profile=None):
     '''
     Delete an index template (type) along with its data
+
+    name
+        Index template name
 
     CLI example::
 
@@ -628,6 +725,9 @@ def index_template_exists(name, hosts=None, profile=None):
     '''
     Return a boolean indicating whether given index template exists
 
+    name
+        Index template name
+
     CLI example::
 
         salt myminion elasticsearch.index_template_exists testindex_templ
@@ -642,6 +742,9 @@ def index_template_exists(name, hosts=None, profile=None):
 def index_template_get(name, hosts=None, profile=None):
     '''
     Retrieve template definition of index or index/type
+
+    name
+        Index template name
 
     CLI example::
 
@@ -662,6 +765,9 @@ def pipeline_get(id, hosts=None, profile=None):
     .. versionadded:: Nitrogen
 
     Retrieve Ingest pipeline definition. Available since Elasticsearch 5.0.
+
+    id
+        Pipeline id
 
     CLI example::
 
@@ -684,6 +790,9 @@ def pipeline_delete(id, hosts=None, profile=None):
     .. versionadded:: Nitrogen
 
     Delete Ingest pipeline. Available since Elasticsearch 5.0.
+
+    id
+        Pipeline id
 
     CLI example::
 
@@ -708,6 +817,11 @@ def pipeline_create(id, body, hosts=None, profile=None):
 
     Create Ingest pipeline by supplied definition. Available since Elasticsearch 5.0.
 
+    id
+        Pipeline id
+    body
+        Pipeline definition as specified in https://www.elastic.co/guide/en/elasticsearch/reference/master/pipeline.html
+
     CLI example::
 
         salt myminion elasticsearch.pipeline_create mypipeline '{"description": "my custom pipeline", "processors": [{"set" : {"field": "collector_timestamp_millis", "value": "{{_ingest.timestamp}}"}}]}'
@@ -727,6 +841,13 @@ def pipeline_simulate(id, body, verbose=False, hosts=None, profile=None):
     .. versionadded:: Nitrogen
 
     Simulate existing Ingest pipeline on provided data. Available since Elasticsearch 5.0.
+
+    id
+        Pipeline id
+    body
+        Pipeline definition as specified in https://www.elastic.co/guide/en/elasticsearch/reference/master/pipeline.html
+    verbose
+        Specify if the output should be more verbose
 
     CLI example::
 
@@ -848,7 +969,7 @@ def repository_create(name, body, hosts=None, profile=None):
     name
         Repository name
     body
-        Repository definition
+        Repository definition as in https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-snapshots.html
 
     CLI example::
 
@@ -973,7 +1094,7 @@ def snapshot_create(repository, snapshot, body=None, hosts=None, profile=None):
     snapshot
         Snapshot name
     body
-        Snapshot definition
+        Snapshot definition as in https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-snapshots.html
 
     CLI example::
 
@@ -1000,7 +1121,7 @@ def snapshot_restore(repository, snapshot, body=None, hosts=None, profile=None):
     snapshot
         Snapshot name
     body
-        Restore definition
+        Restore definition as in https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-snapshots.html
 
     CLI example::
 
