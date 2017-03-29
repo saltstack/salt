@@ -268,7 +268,7 @@ Upgrade without automatic restart
 *********************************
 
 Doing the Minion upgrade seems to be a simplest state in your SLS file at
-first. But the operating systems such as Debian GNU/Linux, Ununtu and their
+first. But the operating systems such as Debian GNU/Linux, Ubuntu and their
 derivatives start the service after the package installation by default.
 To prevent this, we need to create policy layer which will prevent the Minion
 service to restart right after the upgrade:
