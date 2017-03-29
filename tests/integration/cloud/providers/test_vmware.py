@@ -27,6 +27,7 @@ def __random_name(size=6):
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'vmware'
+TIMEOUT = 500
 
 class VMWareTest(integration.ShellCase):
     '''
@@ -38,7 +39,6 @@ class VMWareTest(integration.ShellCase):
         '''
         Sets up the test requirements
         '''
-     #   super(EC2Test, self).setUp()
 
         # check if appropriate cloud provider and profile files are present
         profile_str = 'vmware-config'
@@ -51,8 +51,7 @@ class VMWareTest(integration.ShellCase):
                 .format(PROVIDER_NAME)
             )
 
-        # check if id, key, keyname, securitygroup, private_key, location,
-        # and provider are present
+        # check if user, password, url and provider are present
         config = cloud_providers_config(
             os.path.join(
                 integration.FILES,
@@ -86,22 +85,62 @@ class VMWareTest(integration.ShellCase):
         Tests creating and deleting an instance on vmware
         '''
         # create the instance
-        instance = self.run_cloud('-p vmware-test {0}'.format(INSTANCE_NAME), timeout=500)
+        instance = self.run_cloud('-p vmware-test {0}'.format(INSTANCE_NAME), timeout=TIMEOUT)
         ret_str = '{0}:'.format(INSTANCE_NAME)
 
         # check if instance returned with salt installed
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
-        ret_str = '                    shutting-down'
+        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
+        ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
 
         # check if deletion was performed appropriately
+        try:
+            self.assertIn(ret_str, str(delete))
+        except AssertionError:
+            raise
+
+    def test_snapshot(self):
+        '''
+        Tests creating and deleting an instance on vmware
+        '''
+        # create the instance
+        instance = self.run_cloud('-p vmware-test {0} --no-deploy'.format(INSTANCE_NAME),
+                                  timeout=TIMEOUT)
+        ret_str = '{0}:'.format(INSTANCE_NAME)
+
+        # check if instance returned with salt installed
+        try:
+            self.assertIn(ret_str, instance)
+        except AssertionError:
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
+            raise
+
+        create_snapshot = self.run_cloud('-a create_snapshot {0} snapshot_name=\'Test Cloud\' memdump=True'.format(INSTANCE_NAME),
+                                         timeout=TIMEOUT)
+
+        # delete the instance
+        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
+        ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
+
         try:
             self.assertIn(ret_str, delete)
         except AssertionError:
             raise
+
+
+    def tearDown(self):
+        '''
+        Clean up after tests
+        '''
+        query = self.run_cloud('--query')
+        ret_str = '        {0}:'.format(INSTANCE_NAME)
+
+        # if test instance is still present, delete it
+        if ret_str in query:
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
