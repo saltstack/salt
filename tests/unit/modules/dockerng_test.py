@@ -37,7 +37,11 @@ class DockerngTestCase(TestCase):
     Validate dockerng module
     '''
 
-    docker_version = dockerng_mod.docker.version_info
+    try:
+        docker_version = dockerng_mod.docker.version_info
+    except AttributeError:
+        docker_version = 0,
+
     client_args_mock = MagicMock(return_value={
         'create_container': [
             'image', 'command', 'hostname', 'user', 'detach', 'stdin_open',
