@@ -352,7 +352,7 @@ if six.PY2:
 
         global file_spec
         if file_spec is None:
-            file_spec = file
+            file_spec = file  # pylint: disable=undefined-variable
 
         if mock is None:
             mock = _mock.MagicMock(name='open', spec=open)

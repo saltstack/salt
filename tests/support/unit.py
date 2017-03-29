@@ -19,7 +19,7 @@
 
     .. _`unittest2`: https://pypi.python.org/pypi/unittest2
 '''
-# pylint: disable=unused-import
+# pylint: disable=unused-import,blacklisted-module
 
 # Import python libs
 from __future__ import absolute_import
