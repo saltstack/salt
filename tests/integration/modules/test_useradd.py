@@ -2,7 +2,6 @@
 
 # Import python libs
 from __future__ import absolute_import
-import os
 import string
 import random
 
@@ -11,6 +10,7 @@ import tests.integration as integration
 from tests.support.unit import skipIf
 from tests.support.helpers import (
     destructiveTest,
+    skip_if_not_root,
     requires_system_grains
 )
 
@@ -20,21 +20,10 @@ import salt.utils
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
-IS_ADMIN = False
-if salt.utils.is_windows():
-    import salt.utils.win_functions
-    current_user = salt.utils.win_functions.get_current_user()
-    if current_user == 'SYSTEM':
-        IS_ADMIN = True
-    else:
-        IS_ADMIN = salt.utils.win_functions.is_admin(current_user)
-else:
-    IS_ADMIN = os.geteuid() == 0
-
 
 @destructiveTest
 @skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
-@skipIf(not IS_ADMIN, 'You must be root to run these tests')
+@skip_if_not_root
 class UseraddModuleTestLinux(integration.ModuleCase):
 
     def setUp(self):
@@ -54,7 +43,7 @@ class UseraddModuleTestLinux(integration.ModuleCase):
         )
 
     @requires_system_grains
-    def test_groups_includes_primary(self, grains=None):
+    def test_groups_includes_primary(self, grains):
         # Let's create a user, which usually creates the group matching the
         # name
         uname = self.__random_string()
@@ -96,7 +85,7 @@ class UseraddModuleTestLinux(integration.ModuleCase):
             self.run_function('user.delete', [uname, True, True])
             raise
 
-    def test_user_primary_group(self, grains=None):
+    def test_user_primary_group(self):
         '''
         Tests the primary_group function
         '''
@@ -120,7 +109,7 @@ class UseraddModuleTestLinux(integration.ModuleCase):
 
 @destructiveTest
 @skipIf(not salt.utils.is_windows(), 'These tests can only be run on Windows')
-@skipIf(not IS_ADMIN, 'You must be Administrator to run these tests')
+@skip_if_not_root
 class UseraddModuleTestWindows(integration.ModuleCase):
 
     def __random_string(self, size=6):

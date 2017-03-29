@@ -10,10 +10,7 @@ import os
 # Import Salt Testing Libs
 import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import (
-    destructiveTest,
-    requires_system_grains
-)
+from tests.support.helpers import destructiveTest
 
 OSA_SCRIPT = '/usr/bin/osascript'
 
@@ -54,8 +51,7 @@ class MacAssistiveTest(integration.ModuleCase):
         if smile_bundle_present:
             self.run_function('assistive.remove', [smile_bundle])
 
-    @requires_system_grains
-    def test_install_and_remove(self, grains=None):
+    def test_install_and_remove(self):
         '''
         Tests installing and removing a bundled ID or command to use assistive access.
         '''
@@ -67,8 +63,7 @@ class MacAssistiveTest(integration.ModuleCase):
             self.run_function('assistive.remove', [new_bundle])
         )
 
-    @requires_system_grains
-    def test_installed(self, grains=None):
+    def test_installed(self):
         '''
         Tests the True and False return of assistive.installed.
         '''
@@ -83,8 +78,7 @@ class MacAssistiveTest(integration.ModuleCase):
             self.run_function('assistive.installed', [OSA_SCRIPT])
         )
 
-    @requires_system_grains
-    def test_enable(self, grains=None):
+    def test_enable(self):
         '''
         Tests setting the enabled status of a bundled ID or command.
         '''
@@ -106,8 +100,7 @@ class MacAssistiveTest(integration.ModuleCase):
             self.run_function('assistive.enabled', [OSA_SCRIPT])
         )
 
-    @requires_system_grains
-    def test_enabled(self, grains=None):
+    def test_enabled(self):
         '''
         Tests if a bundled ID or command is listed in assistive access returns True.
         '''
