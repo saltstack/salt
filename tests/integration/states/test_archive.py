@@ -204,7 +204,7 @@ class ArchiveTest(integration.ModuleCase,
         '''
 
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=ARCHIVE_TAR_SOURCE,
+                             source=self.archive_tar_source,
                              source_hash=ARCHIVE_TAR_HASH,
                              use_cmd_unzip=False,
                              archive_format='tar')
