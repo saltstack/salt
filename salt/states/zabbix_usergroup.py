@@ -16,7 +16,7 @@ def __virtual__():
 
 def present(name, **kwargs):
     '''
-    Creates new user.
+    Creates new user group.
     NOTE: This function accepts all standard user group properties: keyword argument names differ depending on your
     zabbix version, see:
     https://www.zabbix.com/documentation/2.0/manual/appendix/api/usergroup/definitions#user_group
