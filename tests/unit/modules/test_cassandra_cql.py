@@ -11,6 +11,7 @@ import ssl
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
+from tests.support.mock import patch, MagicMock
 
 # Import salt libs
 import salt.modules.cassandra_cql as cassandra_cql
@@ -38,7 +39,7 @@ class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         If ssl options are present then check that they are parsed and returned
         '''
-        cassandra_cql.cs_ = {
+        options = MagicMock(return_value={
             'cluster': [
                 '192.168.50.10', '192.168.50.11', '192.168.50.12'],
             'port': 9000,
@@ -46,17 +47,18 @@ class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
                 'ca_certs': '/etc/ssl/certs/ca-bundle.trust.crt',
                 'ssl_version': 'PROTOCOL_TLSv1'},
             'username': 'cas_admin'}
+        )
 
-        cassandra_cql.__salt__['config.option'] = lambda x: cassandra_cql.cs_
+        with patch.dict(cassandra_cql.__salt__, {'config.option': options}):
 
-        self.assertEqual(cassandra_cql._get_ssl_opts(), {  # pylint: disable=protected-access
-            'ca_certs': '/etc/ssl/certs/ca-bundle.trust.crt', 'ssl_version': ssl.PROTOCOL_TLSv1})  # pylint: disable=no-member
+            self.assertEqual(cassandra_cql._get_ssl_opts(), {  # pylint: disable=protected-access
+                'ca_certs': '/etc/ssl/certs/ca-bundle.trust.crt', 'ssl_version': ssl.PROTOCOL_TLSv1})  # pylint: disable=no-member
 
     def test_invalid_protocol_version(self):
         '''
         Check that the protocol version is imported only if it isvalid
         '''
-        cassandra_cql.cs_ = {
+        options = MagicMock(return_value={
             'cluster': [
                 '192.168.50.10', '192.168.50.11', '192.168.50.12'],
             'port': 9000,
@@ -64,17 +66,16 @@ class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
                 'ca_certs': '/etc/ssl/certs/ca-bundle.trust.crt',
                 'ssl_version': 'Invalid'},
             'username': 'cas_admin'}
+        )
 
-        cassandra_cql.__salt__['config.option'] = lambda x: cassandra_cql.cs_
-
-        with self.assertRaises(CommandExecutionError):
-            cassandra_cql._get_ssl_opts()  # pylint: disable=protected-access
+        with patch.dict(cassandra_cql.__salt__, {'config.option': options}):
+            with self.assertRaises(CommandExecutionError):
+                cassandra_cql._get_ssl_opts()  # pylint: disable=protected-access
 
     def test_unspecified_opts(self):
         '''
         Check that it returns None when ssl opts aren't specified
         '''
-        cassandra_cql.__salt__['config.option'] = lambda x: {}
-
-        self.assertEqual(cassandra_cql._get_ssl_opts(),  # pylint: disable=protected-access
-                         None)
+        with patch.dict(cassandra_cql.__salt__, {'config.option': MagicMock(return_value={})}):
+            self.assertEqual(cassandra_cql._get_ssl_opts(),  # pylint: disable=protected-access
+                             None)

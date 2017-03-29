@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
@@ -15,11 +16,12 @@ import salt.modules.extfs as extfs
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ExtfsTestCase(TestCase):
+class ExtfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.extfs
     '''
-    extfs.__salt__ = {}
+    def setup_loader_modules(self):
+        return {extfs: {}}
 
     # 'mkfs' function tests: 1
 

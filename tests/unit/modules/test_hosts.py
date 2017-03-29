@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
@@ -18,13 +19,12 @@ import salt.modules.hosts as hosts
 from salt.ext.six.moves import StringIO
 
 
-class HostsTestCase(TestCase):
+class HostsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.hosts
     '''
-    hosts.__grains__ = {}
-    hosts.__salt__ = {}
-    hosts.__context__ = {}
+    def setup_loader_modules(self):
+        return {hosts: {}}
 
     # 'list_hosts' function tests: 1
 

@@ -8,6 +8,7 @@ import datetime
 from salt.beacons import telegram_bot_msg
 
 # Salt testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
@@ -21,12 +22,12 @@ except ImportError:
 
 @skipIf(not HAS_TELEGRAM, 'telegram is not available')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TelegramBotMsgBeaconTestCase(TestCase):
+class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.telegram_bot
     '''
-    def setUp(self):
-        telegram_bot_msg.__context__ = {}
+    def setup_loader_modules(self):
+        return {telegram_bot_msg: {}}
 
     def test_validate_empty_config(self, *args, **kwargs):
         ret = telegram_bot_msg.__validate__(None)

@@ -5,28 +5,27 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import grp
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 import salt.modules.groupadd as groupadd
 
-# Import python Libs
-import grp
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GroupAddTestCase(TestCase):
+class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.groupadd
     '''
-    groupadd.__grains__ = {}
-    groupadd.__salt__ = {}
-    groupadd.__context__ = {}
     mock_group = {'passwd': '*', 'gid': 0, 'name': 'test', 'members': ['root']}
     mock_getgrnam = grp.struct_group(('foo', '*', 20, ['test']))
+
+    def setup_loader_modules(self):
+        return {groupadd: {}}
 
     # 'add' function tests: 1
 

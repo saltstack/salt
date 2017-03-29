@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+'''
+    :codeauthor: :email:`Rajvi Dhimar <rajvidhimar95@gmail.com>`
+'''
 
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
-__author__ = "Rajvi Dhimar"
-
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch, mock_open
 from tests.support.unit import skipIf, TestCase
 try:
@@ -23,13 +24,18 @@ import salt.modules.junos as junos
 
 
 @skipIf(not HAS_JUNOS, 'Missing dependencies')
-class Test_Junos_Module(TestCase):
+class Test_Junos_Module(TestCase, LoaderModuleMockMixin):
 
-    def setUp(self):
-        junos.__proxy__ = {
-            'junos.conn': self.make_connect,
-            'junos.get_serialized_facts': self.get_facts}
-        junos.__salt__ = {'cp.get_template': self.mock_cp}
+    def setup_loader_modules(self):
+        return {
+            junos: {
+                '__proxy__': {
+                    'junos.conn': self.make_connect,
+                    'junos.get_serialized_facts': self.get_facts
+                },
+                '__salt__': {'cp.get_template': self.mock_cp}
+            }
+        }
 
     def mock_cp(self, *args, **kwargs):
         pass
