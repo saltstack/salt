@@ -231,7 +231,7 @@ class LocalClient(object):
         Return the information about a given job
         '''
         log.debug('Checking whether jid {0} is still running'.format(jid))
-        timeout = kwargs.get('gather_job_timeout', self.opts['gather_job_timeout'])
+        timeout = int(kwargs.get('gather_job_timeout', self.opts['gather_job_timeout']))
 
         pub_data = self.run_job(tgt,
                                 'saltutil.find_job',
@@ -561,6 +561,12 @@ class LocalClient(object):
                 'ret': ret,
                 'batch': batch,
                 'raw': kwargs.get('raw', False)}
+
+        if 'timeout' in kwargs:
+            opts['timeout'] = kwargs['timeout']
+        if 'gather_job_timeout' in kwargs:
+            opts['gather_job_timeout'] = kwargs['gather_job_timeout']
+
         for key, val in six.iteritems(self.opts):
             if key not in opts:
                 opts[key] = val
@@ -1113,7 +1119,7 @@ class LocalClient(object):
 
         if timeout is None:
             timeout = self.opts['timeout']
-        gather_job_timeout = kwargs.get('gather_job_timeout', self.opts['gather_job_timeout'])
+        gather_job_timeout = int(kwargs.get('gather_job_timeout', self.opts['gather_job_timeout']))
         start = int(time.time())
 
         # timeouts per minion, id_ -> timeout time

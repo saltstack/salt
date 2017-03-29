@@ -1787,6 +1787,14 @@ def is_openbsd():
     return sys.platform.startswith('openbsd')
 
 
+@real_memoize
+def is_aix():
+    '''
+    Simple function to return if host is AIX or not
+    '''
+    return sys.platform.startswith('aix')
+
+
 def is_fcntl_available(check_sunos=False):
     '''
     Simple function to check if the `fcntl` module is available or not.

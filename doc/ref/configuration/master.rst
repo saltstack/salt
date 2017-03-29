@@ -510,7 +510,7 @@ are expected to reply from executions.
 .. conf_master:: cache
 
 ``cache``
----------------------
+---------
 
 Default: ``localfs``
 

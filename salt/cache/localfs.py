@@ -4,10 +4,10 @@ Cache data in filesystem.
 
 .. versionadded:: 2016.11.0
 
-The `localfs` Minion cache module is the default cache module and does not
+The ``localfs`` Minion cache module is the default cache module and does not
 require any configuration.
 
-Expirations can be set in the relevant config file (``/etc/salt/master`` for
+Expiration values can be set in the relevant config file (``/etc/salt/master`` for
 the master, ``/etc/salt/cloud`` for Salt Cloud, etc).
 '''
 from __future__ import absolute_import
