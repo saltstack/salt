@@ -1731,7 +1731,14 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
             pillar = json.load(fp_)
     else:
         pillar = None
+    roster_grains_json = os.path.join(root, 'roster_grains.json')
+    if os.path.isfile(roster_grains_json):
+        with salt.utils.fopen(roster_grains_json, 'r') as fp_:
+            roster_grains = json.load(fp_, object_hook=salt.utils.decode_dict)
+
     popts = _get_opts(kwargs.get('localconfig'))
+    if os.path.isfile(roster_grains_json):
+        popts['grains'] = roster_grains
     popts['fileclient'] = 'local'
     popts['file_roots'] = {}
     popts['test'] = _get_test_value(test, **kwargs)
