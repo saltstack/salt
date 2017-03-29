@@ -132,8 +132,6 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(_docker_py_version() < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
-    @patch('salt.modules.docker._get_docker_py_versioninfo',
-           MagicMock(return_value=docker_version))
     def test_list_networks(self, *args):
         '''
         test list networks.
@@ -160,8 +158,6 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
-    @patch('salt.modules.docker._get_docker_py_versioninfo',
-           MagicMock(return_value=docker_version))
     def test_create_network(self, *args):
         '''
         test create network.
@@ -188,8 +184,6 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
-    @patch('salt.modules.docker._get_docker_py_versioninfo',
-           MagicMock(return_value=docker_version))
     def test_remove_network(self, *args):
         '''
         test remove network.
@@ -210,8 +204,6 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
-    @patch('salt.modules.docker._get_docker_py_versioninfo',
-           MagicMock(return_value=docker_version))
     def test_inspect_network(self, *args):
         '''
         test inspect network.
@@ -232,8 +224,6 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
-    @patch('salt.modules.docker._get_docker_py_versioninfo',
-           MagicMock(return_value=docker_version))
     def test_connect_container_to_network(self, *args):
         '''
         test inspect network.
@@ -258,8 +248,6 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
-    @patch('salt.modules.docker._get_docker_py_versioninfo',
-           MagicMock(return_value=docker_version))
     def test_disconnect_container_from_network(self, *args):
         '''
         test inspect network.
@@ -281,8 +269,6 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
-    @patch('salt.modules.docker._get_docker_py_versioninfo',
-           MagicMock(return_value=docker_version))
     def test_list_volumes(self, *args):
         '''
         test list volumes.
@@ -306,8 +292,6 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
-    @patch('salt.modules.docker._get_docker_py_versioninfo',
-           MagicMock(return_value=docker_version))
     def test_create_volume(self, *args):
         '''
         test create volume.
@@ -335,8 +319,6 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
-    @patch('salt.modules.docker._get_docker_py_versioninfo',
-           MagicMock(return_value=docker_version))
     def test_remove_volume(self, *args):
         '''
         test remove volume.
@@ -356,8 +338,6 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
-    @patch('salt.modules.docker._get_docker_py_versioninfo',
-           MagicMock(return_value=docker_version))
     def test_inspect_volume(self, *args):
         '''
         test inspect volume.
