@@ -225,8 +225,6 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         last = int(time.time())
         # Clean out the fileserver backend cache
         salt.daemons.masterapi.clean_fsbackend(self.opts)
-        # Clean out pub auth
-        salt.daemons.masterapi.clean_pub_auth(self.opts)
 
         old_present = set()
         while True:
@@ -234,6 +232,7 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             if (now - last) >= self.loop_interval:
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
+                salt.daemons.masterapi.clean_pub_auth(self.opts)
             self.handle_search(now, last)
             self.handle_git_pillar()
             self.handle_schedule()
