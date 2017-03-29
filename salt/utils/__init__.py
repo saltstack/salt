@@ -1331,9 +1331,13 @@ def fopen(*args, **kwargs):
             if 'b' in kwargs['mode']:
                 binary = True
         if not binary:
-            kwargs['encoding'] = 'utf-8'
+            kwargs['encoding'] = __salt_system_encoding__
+
+    if six.PY3 and not binary and not kwargs.get('newline', None):
+        kwargs['newline'] = ''
 
     fhandle = open(*args, **kwargs)
+
     if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
         # unix and unix-like systems only

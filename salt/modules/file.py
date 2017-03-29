@@ -30,8 +30,8 @@ import time
 import glob
 import hashlib
 import mmap
-from functools import reduce  # pylint: disable=redefined-builtin
 from collections import Iterable, Mapping
+from functools import reduce  # pylint: disable=redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
