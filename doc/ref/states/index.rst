@@ -53,7 +53,7 @@ The Salt States are files which contain the information about how to configure
 Salt minions. The states are laid out in a directory tree and can be written in
 many different formats.
 
-The contents of the files and they way they are laid out is intended to be as
+The contents of the files and the way they are laid out is intended to be as
 simple as possible while allowing for maximum flexibility. The files are laid
 out in states and contains information about how the minion needs to be
 configured.
