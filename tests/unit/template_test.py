@@ -7,8 +7,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
 
 ensure_in_syspath('../')
 
@@ -28,6 +29,57 @@ class TemplateTestCase(TestCase):
         '''
         ret = template.compile_template(['1', '2', '3'], None, None, None, None)
         self.assertDictEqual(ret, {})
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_compile_template_preserves_windows_newlines(self):
+        '''
+        Test to ensure that a file with Windows newlines, when rendered by a
+        template renderer, does not eat the CR character.
+
+        NOTE: template renderers actually return StringIO instances, but since
+        we're mocking the return from the renderer there's no sense in mocking
+        a StringIO only to have to join its contents to get it back to a string
+        for the purposes of comparing the results.
+        '''
+        input_data_windows = 'foo\r\nbar\r\nbaz\r\n'
+        input_data_non_windows = input_data_windows.replace('\r\n', '\n')
+        renderer = 'test'
+        rend = {renderer: MagicMock(return_value=input_data_non_windows)}
+        blacklist = whitelist = []
+
+        ret = template.compile_template(
+            ':string:',
+            rend,
+            renderer,
+            blacklist,
+            whitelist,
+            input_data=input_data_windows)
+        # Even though the mocked renderer returned a string without the windows
+        # newlines, the compiled template should still have them.
+        self.assertEqual(ret, input_data_windows)
+
+        # Now test that we aren't adding them in unnecessarily.
+        ret = template.compile_template(
+            ':string:',
+            rend,
+            renderer,
+            blacklist,
+            whitelist,
+            input_data=input_data_non_windows)
+        self.assertEqual(ret, input_data_non_windows)
+
+        # Finally, ensure that we're not unnecessarily replacing the \n with
+        # \r\n in the event that the renderer returned a string with the
+        # windows newlines intact.
+        rend[renderer] = MagicMock(return_value=input_data_windows)
+        ret = template.compile_template(
+            ':string:',
+            rend,
+            renderer,
+            blacklist,
+            whitelist,
+            input_data=input_data_windows)
+        self.assertEqual(ret, input_data_windows)
 
     def test_check_render_pipe_str(self):
         '''
