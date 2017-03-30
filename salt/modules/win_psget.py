@@ -32,15 +32,18 @@ def __virtual__():
     '''
     # Verify Windows
     if not salt.utils.is_windows():
+        log.debug('Module PSGet: Only available on Windows systems')
         return False, 'Module PSGet: Only available on Windows systems'
 
     # Verify PowerShell
     powershell_info = __salt__['cmd.shell_info']('powershell')
     if not powershell_info['installed']:
+        log.debug('Module PSGet: Requires PowerShell')
         return False, 'Module PSGet: Requires PowerShell'
 
     # Verify PowerShell 5.0 or greater
     if salt.utils.compare_versions(powershell_info['version'], '<', '5.0'):
+        log.debug('Module PSGet: Requires PowerShell 5 or newer')
         return False, 'Module PSGet: Requires PowerShell 5 or newer.'
 
     return __virtualname__

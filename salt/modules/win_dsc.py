@@ -29,15 +29,18 @@ def __virtual__():
     '''
     # Verify Windows
     if not salt.utils.is_windows():
+        log.debug('Module DSC: Only available on Windows systems')
         return False, 'Module DSC: Only available on Windows systems'
 
     # Verify PowerShell
     powershell_info = __salt__['cmd.shell_info']('powershell')
     if not powershell_info['installed']:
+        log.debug('Module DSC: Requires PowerShell')
         return False, 'Module DSC: Requires PowerShell'
 
     # Verify PowerShell 5.0 or greater
     if salt.utils.compare_versions(powershell_info['version'], '<', '5.0'):
+        log.debug('Module DSC: Requires PowerShell 5 or later')
         return False, 'Module DSC: Requires PowerShell 5 or later'
 
     return __virtualname__
