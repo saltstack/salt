@@ -12,6 +12,7 @@ from __future__ import absolute_import
 
 # Import Salt testing libs
 import tests.integration as integration
+from tests.support.helpers import flaky
 
 # Import Salt libs
 import salt.utils.event
@@ -22,6 +23,7 @@ class ReactorTest(integration.ModuleCase, integration.SaltMinionEventAssertsMixI
     Test Salt's reactor system
     '''
 
+    @flaky()
     def test_ping_reaction(self):
         '''
         Fire an event on the master and ensure
