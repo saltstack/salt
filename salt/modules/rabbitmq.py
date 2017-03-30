@@ -319,7 +319,7 @@ def check_password(name, password, runas=None):
         if server_version is None:
             raise ValueError
 
-        server_version = server_version.group(1)
+        server_version = server_version.group(1).split('-')[0]
         version = [int(i) for i in server_version.split('.')]
     except ValueError:
         version = (0, 0, 0)
