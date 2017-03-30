@@ -1,6 +1,15 @@
 # -*- coding: utf-8 -*-
 '''
 Module to interact with Junos devices.
+
+:maturity: new
+:dependencies: junos-eznc, jxmlease
+
+.. note::
+
+    Those who wish to use junos-eznc (PyEZ) version 2.1.0, must
+    use the latest salt code from github until the next release.
+
 '''
 from __future__ import absolute_import
 
