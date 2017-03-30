@@ -80,6 +80,8 @@ def compile_template(template,
     # Get the list of render funcs in the render pipe line.
     render_pipe = template_shebang(template, renderers, default, blacklist, whitelist, input_data)
 
+    windows_newline = '\r\n' in input_data
+
     input_data = string_io(input_data)
     for render, argline in render_pipe:
         # For GPG renderer, input_data can be an OrderedDict (from YAML) or dict (from py renderer).
@@ -120,6 +122,11 @@ def compile_template(template,
                 # structure. We don't want to log this, so ignore this
                 # exception.
                 pass
+
+    # Preserve newlines from original template
+    if windows_newline and '\r\n' not in ret:
+        return ret.replace('\n', '\r\n')
+
     return ret
 
 
