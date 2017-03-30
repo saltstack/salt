@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
+
 from salt.modules import tuned
 
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 
 tuned.__salt__ = {}
@@ -11,6 +12,9 @@ tuned.__salt__ = {}
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TunedListTestCase(TestCase):
+    """
+    Test the tuned.list_() method for different versions of tuned-adm
+    """
     def test_v_241(self):
         """
         Test the list_ function for older tuned-adm (v2.4.1)
@@ -42,7 +46,7 @@ Current active profile: throughput-performance'''
 
     def test_v_271(self):
         """
-        Test the list_ function for older tuned-adm (v2.7.1)
+        Test the list_ function for newer tuned-adm (v2.7.1)
         as shipped with CentOS-7
         """
         tuned_list = '''Available profiles:
