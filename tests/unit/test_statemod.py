@@ -10,7 +10,7 @@ import os.path
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
 import tests.integration as integration
@@ -22,13 +22,15 @@ class StatemodTests(TestCase):
     def setUp(self):
         self.tmp_cachedir = tempfile.mkdtemp(dir=integration.TMP)
 
-    @patch('salt.states.saltmod.__salt__', MagicMock())
     def test_statemod_state(self):
-        ''' Smoke test for for salt.states.statemod.state().  Ensures that we
+        '''
+            Smoke test for for salt.states.statemod.state(). Ensures that we
             don't take an exception if optional parameters are not specified in
             __opts__ or __env__.
         '''
         argv = []
+        saltmod.__env__ = {}
+        saltmod.__salt__ = {'saltutil.cmd': MagicMock()}
         saltmod.__opts__ = {
             'id': 'webserver2',
             'argv': argv,
