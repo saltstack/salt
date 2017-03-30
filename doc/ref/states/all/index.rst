@@ -73,6 +73,7 @@ state modules
     disk
     docker
     drac
+    elasticsearch
     elasticsearch_index
     elasticsearch_index_template
     environ
