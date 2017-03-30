@@ -3441,7 +3441,7 @@ class BaseHighState(object):
                     ext[name]['__sls__'] = sls
                 if '__env__' not in ext[name]:
                     ext[name]['__env__'] = saltenv
-                for key in ext[name]:
+                for key in list(ext[name]):
                     if key.startswith('_'):
                         continue
                     if not isinstance(ext[name][key], list):
