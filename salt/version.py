@@ -594,6 +594,7 @@ def dependency_information(include_salt_cloud=False):
         ('python-gnupg', 'gnupg', '__version__'),
         ('mysql-python', 'MySQLdb', '__version__'),
         ('cherrypy', 'cherrypy', '__version__'),
+        ('docker-py', 'docker', '__version__'),
     ]
 
     if include_salt_cloud:
