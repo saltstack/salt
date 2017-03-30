@@ -3,27 +3,28 @@
 # Import Python libs
 from __future__ import absolute_import
 import json
-import yaml
 import os
 import copy
 import hashlib
 
 # Import Salt Testing Libs
-from tests.support.unit import skipIf
-import tests.integration as integration
+from tests.integration import AdaptedConfigurationTestCaseMixIn
+from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
+import salt.auth
 try:
     import salt.netapi.rest_tornado as rest_tornado
     from salt.netapi.rest_tornado import saltnado
     HAS_TORNADO = True
 except ImportError:
     HAS_TORNADO = False
-import salt.auth
 
 # Import 3rd-party libs
+import yaml
 # pylint: disable=import-error
 try:
+    import tornado.escape
     import tornado.testing
     import tornado.concurrent
     from tornado.testing import AsyncHTTPTestCase, gen_test
@@ -45,7 +46,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')  # pylint: disable=W0223
-class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
+class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixIn, AsyncHTTPTestCase):
     '''
     Mixin to hold some shared things
     '''
@@ -134,6 +135,20 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
         application.mod_opts = self.mod_opts
 
         return application
+
+    def decode_body(self, response):
+        if six.PY2:
+            return response
+        if response.body:
+            # Decode it
+            if response.headers.get('Content-Type') == 'application/json':
+                response._body = response.body.decode('utf-8')
+            else:
+                response._body = tornado.escape.native_str(response.body)
+        return response
+
+    def fetch(self, path, **kwargs):
+        return self.decode_body(super(SaltnadoTestCase, self).fetch(path, **kwargs))
 
 
 class TestBaseSaltAPIHandler(SaltnadoTestCase):
@@ -625,7 +640,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
                                                 method='POST',
                                                 body=urlencode(self.auth_creds),
                                                 headers={'Content-Type': self.content_type_map['form']})
-        token = json.loads(response.body)['return'][0]['token']
+        token = json.loads(self.decode_body(response).body)['return'][0]['token']
 
         url = 'ws://127.0.0.1:{0}/all_events/{1}'.format(self.get_http_port(), token)
         request = HTTPRequest(url, headers={'Origin': 'http://example.com',
@@ -657,7 +672,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
                                                 method='POST',
                                                 body=urlencode(self.auth_creds),
                                                 headers={'Content-Type': self.content_type_map['form']})
-        token = json.loads(response.body)['return'][0]['token']
+        token = json.loads(self.decode_body(response).body)['return'][0]['token']
 
         url = 'ws://127.0.0.1:{0}/all_events/{1}'.format(self.get_http_port(), token)
         request = HTTPRequest(url, headers={'Origin': 'http://foo.bar',
@@ -674,7 +689,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
                                                 method='POST',
                                                 body=urlencode(self.auth_creds),
                                                 headers={'Content-Type': self.content_type_map['form']})
-        token = json.loads(response.body)['return'][0]['token']
+        token = json.loads(self.decode_body(response).body)['return'][0]['token']
         url = 'ws://127.0.0.1:{0}/all_events/{1}'.format(self.get_http_port(), token)
 
         # Example.com should works
@@ -700,7 +715,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
                                                 method='POST',
                                                 body=urlencode(self.auth_creds),
                                                 headers={'Content-Type': self.content_type_map['form']})
-        token = json.loads(response.body)['return'][0]['token']
+        token = json.loads(self.decode_body(response).body)['return'][0]['token']
         url = 'ws://127.0.0.1:{0}/all_events/{1}'.format(self.get_http_port(), token)
 
         # Example.com should works
