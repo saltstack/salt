@@ -386,7 +386,7 @@ class Compiler(object):
         errors = []
         if not isinstance(high, dict):
             errors.append('High data is not a dictionary and is invalid')
-        reqs = {}
+        reqs = OrderedDict()
         for name, body in six.iteritems(high):
             if name.startswith('__'):
                 continue
@@ -966,9 +966,8 @@ class State(object):
                 bad.append(val)
         if bad:
             raise SaltException(
-                    ('The following keys were not present in the state '
-                     'return: {0}'
-                     ).format(','.join(bad)))
+                'The following keys were not present in the state '
+                'return: {0}'.format(','.join(bad)))
 
     def verify_data(self, data):
         '''
@@ -1064,7 +1063,7 @@ class State(object):
         errors = []
         if not isinstance(high, dict):
             errors.append('High data is not a dictionary and is invalid')
-        reqs = {}
+        reqs = OrderedDict()
         for name, body in six.iteritems(high):
             try:
                 if name.startswith('__'):
@@ -1141,7 +1140,7 @@ class State(object):
                                 # It is a list, verify that the members of the
                                 # list are all single key dicts.
                                 else:
-                                    reqs[name] = {'state': state}
+                                    reqs[name] = OrderedDict(state=state)
                                     for req in arg[argfirst]:
                                         if isinstance(req, six.string_types):
                                             req = {'id': req}
@@ -1156,7 +1155,7 @@ class State(object):
                                         req_key = next(iter(req))
                                         req_val = req[req_key]
                                         if '.' in req_key:
-                                            errors.append((
+                                            errors.append(
                                                 'Invalid requisite type \'{0}\' '
                                                 'in state \'{1}\', in SLS '
                                                 '\'{2}\'. Requisite types must '
@@ -1167,12 +1166,12 @@ class State(object):
                                                     body['__sls__'],
                                                     req_key[:req_key.find('.')]
                                                 )
-                                            ))
+                                            )
                                         if not ishashable(req_val):
                                             errors.append((
                                                 'Illegal requisite "{0}", '
                                                 'please check your syntax.\n'
-                                                ).format(str(req_val)))
+                                                ).format(req_val))
                                             continue
 
                                         # Check for global recursive requisites
@@ -1310,7 +1309,7 @@ class State(object):
                         else:
                             live['name'] = entry
                         live['name_order'] = name_order
-                        name_order = name_order + 1
+                        name_order += 1
                         for fun in funcs:
                             live['fun'] = fun
                             chunks.append(live)
@@ -1480,9 +1479,9 @@ class State(object):
                                 # Not a use requisite_in
                                 found = False
                                 if name not in extend:
-                                    extend[name] = {}
+                                    extend[name] = OrderedDict()
                                 if '.' in _state:
-                                    errors.append((
+                                    errors.append(
                                         'Invalid requisite in {0}: {1} for '
                                         '{2}, in SLS \'{3}\'. Requisites must '
                                         'not contain dots, did you mean \'{4}\'?'
@@ -1493,7 +1492,7 @@ class State(object):
                                             body['__sls__'],
                                             _state[:_state.find('.')]
                                         )
-                                    ))
+                                    )
                                     _state = _state.split(".")[0]
                                 if _state not in extend[name]:
                                     extend[name][_state] = []
@@ -1531,7 +1530,7 @@ class State(object):
                                 else:
                                     hinges.append((pname, pstate))
                                 if '.' in pstate:
-                                    errors.append((
+                                    errors.append(
                                         'Invalid requisite in {0}: {1} for '
                                         '{2}, in SLS \'{3}\'. Requisites must '
                                         'not contain dots, did you mean \'{4}\'?'
@@ -1542,14 +1541,14 @@ class State(object):
                                             body['__sls__'],
                                             pstate[:pstate.find('.')]
                                         )
-                                    ))
+                                    )
                                     pstate = pstate.split(".")[0]
                                 for tup in hinges:
                                     name, _state = tup
                                     if key == 'prereq_in':
                                         # Add prerequired to origin
                                         if id_ not in extend:
-                                            extend[id_] = {}
+                                            extend[id_] = OrderedDict()
                                         if state not in extend[id_]:
                                             extend[id_][state] = []
                                         extend[id_][state].append(
@@ -1560,7 +1559,7 @@ class State(object):
                                         ext_ids = find_name(name, _state, high)
                                         for ext_id, _req_state in ext_ids:
                                             if ext_id not in extend:
-                                                extend[ext_id] = {}
+                                                extend[ext_id] = OrderedDict()
                                             if _req_state not in extend[ext_id]:
                                                 extend[ext_id][_req_state] = []
                                             extend[ext_id][_req_state].append(
@@ -1576,7 +1575,7 @@ class State(object):
                                                 continue
                                             ext_args = state_args(ext_id, _state, high)
                                             if ext_id not in extend:
-                                                extend[ext_id] = {}
+                                                extend[ext_id] = OrderedDict()
                                             if _req_state not in extend[ext_id]:
                                                 extend[ext_id][_req_state] = []
                                             ignore_args = req_in_all.union(ext_args)
@@ -1603,7 +1602,7 @@ class State(object):
                                                 continue
                                             loc_args = state_args(id_, state, high)
                                             if id_ not in extend:
-                                                extend[id_] = {}
+                                                extend[id_] = OrderedDict()
                                             if state not in extend[id_]:
                                                 extend[id_][state] = []
                                             ignore_args = req_in_all.union(loc_args)
@@ -1623,7 +1622,7 @@ class State(object):
                                         continue
                                     found = False
                                     if name not in extend:
-                                        extend[name] = {}
+                                        extend[name] = OrderedDict()
                                     if _state not in extend[name]:
                                         extend[name][_state] = []
                                     extend[name]['__env__'] = body['__env__']
@@ -2218,7 +2217,7 @@ class State(object):
         requisites = ['require', 'watch', 'prereq', 'onfail', 'onchanges']
         if not low.get('__prereq__'):
             requisites.append('prerequired')
-            status, reqs = self.check_requisite(low, running, chunks, True)
+            status, reqs = self.check_requisite(low, running, chunks, pre=True)
         else:
             status, reqs = self.check_requisite(low, running, chunks)
         if status == 'unmet':
@@ -2634,7 +2633,7 @@ class BaseHighState(object):
         self.iorder = 10000
         self.avail = self.__gather_avail()
         self.serial = salt.payload.Serial(self.opts)
-        self.building_highstate = {}
+        self.building_highstate = OrderedDict()
 
     def __gather_avail(self):
         '''
@@ -3761,8 +3760,7 @@ class HighState(BaseHighState):
         self.opts = opts
         self.client = salt.fileclient.get_file_client(self.opts)
         BaseHighState.__init__(self, opts)
-        self.state = State(
-                           self.opts,
+        self.state = State(self.opts,
                            pillar,
                            jid,
                            pillar_enc,
