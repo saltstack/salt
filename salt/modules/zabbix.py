@@ -680,7 +680,7 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
                     name = ''
                 ret = usergroup_get(name, None, **connection_args)
                 return bool(ret)
-            # zabbix 2.4 nad earlier
+            # zabbix 2.4 and earlier
             else:
                 method = 'usergroup.exists'
                 params = {}
