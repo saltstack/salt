@@ -15,11 +15,6 @@ from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 from salt import client
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError, SaltClientError
 
-if integration.SaltClientTestCaseMixIn().get_config('minion')['transport'] != 'zeromq':
-    NOT_ZMQ = True
-else:
-    NOT_ZMQ = False
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalClientTestCase(TestCase,
@@ -72,8 +67,9 @@ class LocalClientTestCase(TestCase,
                                                 kwarg=None, tgt_type='list',
                                                 ret='')
 
-    @skipIf(NOT_ZMQ, 'This test only works with ZeroMQ')
     def test_pub(self):
+        if self.get_config('minion')['transport'] != 'zeromq':
+            self.skip('This test only works with ZeroMQ')
         # Make sure we cleanly return if the publisher isn't running
         with patch('os.path.exists', return_value=False):
             self.assertRaises(SaltClientError, lambda: self.client.pub('*', 'test.ping'))
