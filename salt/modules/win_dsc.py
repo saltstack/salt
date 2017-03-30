@@ -11,7 +11,6 @@ from __future__ import absolute_import, unicode_literals
 import logging
 import json
 import os
-import distutils.version
 
 # Import salt libs
 import salt.utils
@@ -32,14 +31,14 @@ def __virtual__():
     if not salt.utils.is_windows():
         return False, 'Module DSC: Only available on Windows systems'
 
-    # Verify PowerShell 5.0
+    # Verify PowerShell
     powershell_info = __salt__['cmd.shell_info']('powershell')
     if not powershell_info['installed']:
-        return False, 'Module DSC: Powershell not available'
+        return False, 'Module DSC: Requires PowerShell'
 
-    if distutils.version.StrictVersion(powershell_info['version']) < \
-            distutils.version.StrictVersion('5.0'):
-        return False, 'Module DSC: Requires Powershell 5 or later'
+    # Verify PowerShell 5.0 or greater
+    if salt.utils.compare_versions(powershell_info['version'], '<', '5.0'):
+        return False, 'Module DSC: Requires PowerShell 5 or later'
 
     return __virtualname__
 

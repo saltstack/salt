@@ -14,7 +14,6 @@ from __future__ import absolute_import, unicode_literals
 import copy
 import logging
 import json
-import distutils.version
 
 # Import salt libs
 import salt.utils
@@ -31,16 +30,18 @@ def __virtual__():
     '''
     Set the system module of the kernel is Windows
     '''
+    # Verify Windows
     if not salt.utils.is_windows():
-        return False, 'Module PSGet: Module only works on Windows systems'
+        return False, 'Module PSGet: Only available on Windows systems'
 
-    # Verify PowerShell 5.0
+    # Verify PowerShell
     powershell_info = __salt__['cmd.shell_info']('powershell')
-    if not powershell_info['installed'] or \
-            distutils.version.StrictVersion(
-                powershell_info['version']) >= distutils.version.StrictVersion('5.0'):
-        return False, 'Module DSC: Module only works with PowerShell 5 or ' \
-                      'newer.'
+    if not powershell_info['installed']:
+        return False, 'Module PSGet: Requires PowerShell'
+
+    # Verify PowerShell 5.0 or greater
+    if salt.utils.compare_versions(powershell_info['version'], '<', '5.0'):
+        return False, 'Module PSGet: Requires PowerShell 5 or newer.'
 
     return __virtualname__
 
