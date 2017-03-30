@@ -35,7 +35,12 @@ def __virtual__():
     '''
     return __virtualname__
 
+
 def _get_hook_url():
+    '''
+    Return hook_url from minion/master config file
+    or from pillar
+    '''
     hook_url = __salt__['config.get']('msteams.hook_url') or \
         __salt__['config.get']('msteams:hook_url')
 
@@ -45,16 +50,16 @@ def _get_hook_url():
     return hook_url
 
 
-def post_card( message,
-             hook_url=None,
-             title=None,
-             themeColor=None):
+def post_card(message,
+              hook_url=None,
+              title=None,
+              theme_color=None):
     '''
     Send a message to an MS Teams channel.
     :param message:     The message to send to the MS Teams channel.
     :param hook_url:    The Teams webhook URL, if not specified in the configuration.
     :param title:       Optional title for the posted card
-    :param themeColor:  Optional hex color highlight for the posted card
+    :param theme_color:  Optional hex color highlight for the posted card
     :return:            Boolean if message was sent successfully.
     CLI Example:
     .. code-block:: bash
@@ -62,7 +67,7 @@ def post_card( message,
     '''
 
     if not hook_url:
-        hook_url = _get_hook_urly()
+        hook_url = _get_hook_url()
 
     if not message:
         log.error('message is a required option.')
@@ -70,16 +75,8 @@ def post_card( message,
     payload = {
         "text": message,
         "title": title,
-        "themeColor": themeColor
+        "theme_color": theme_color
     }
-
-    '''
-    data = _urlencode(
-        {
-            'payload': jsondumps(payload, ensure_ascii=False)
-        }
-    )
-    '''
 
     result = salt.utils.http.query(hook_url, method='POST', data=json.dumps(payload), status=True)
 

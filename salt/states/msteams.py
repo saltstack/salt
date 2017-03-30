@@ -33,7 +33,7 @@ def post_card(name,
               message,
               hook_url=None,
               title=None,
-              themeColor=None):
+              theme_color=None):
     '''
     Send a message to a Microsft Teams channel.
     .. code-block:: yaml
@@ -50,7 +50,7 @@ def post_card(name,
         if not specified in the configuration options of master or minion.
     title
         The title for the card posted to the channel
-    themeColor
+    theme_color
         A hex code for the desired highlight color
     '''
     ret = {'name': name,
@@ -72,7 +72,7 @@ def post_card(name,
             message=message,
             hook_url=hook_url,
             title=title,
-            themeColor=themeColor,
+            theme_color=theme_color,
         )
     except SaltInvocationError as sie:
         ret['comment'] = 'Failed to send message ({0}): {1}'.format(sie, name)
