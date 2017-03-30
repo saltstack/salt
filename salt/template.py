@@ -168,17 +168,15 @@ def template_shebang(template, renderers, default, blacklist, whitelist, input_d
 #
 OLD_STYLE_RENDERERS = {}
 
-for comb in '''
-        yaml_jinja
-        yaml_mako
-        yaml_wempy
-        json_jinja
-        json_mako
-        json_wempy
-        yamlex_jinja
-        yamlexyamlex_mako
-        yamlexyamlex_wempy
-        '''.strip().split():
+for comb in ('yaml_jinja',
+             'yaml_mako',
+             'yaml_wempy',
+             'json_jinja',
+             'json_mako',
+             'json_wempy',
+             'yamlex_jinja',
+             'yamlexyamlex_mako',
+             'yamlexyamlex_wempy'):
 
     fmt, tmpl = comb.split('_')
     OLD_STYLE_RENDERERS[comb] = '{0}|{1}'.format(tmpl, fmt)
@@ -204,7 +202,9 @@ def check_render_pipe_str(pipestr, renderers, blacklist, whitelist):
             name, argline = (part + ' ').split(' ', 1)
             if whitelist and name not in whitelist or \
                     blacklist and name in blacklist:
-                log.warning('The renderer "{0}" is disallowed by cofiguration and will be skipped.'.format(name))
+                log.warning(
+                    'The renderer "{0}" is disallowed by configuration and '
+                    'will be skipped.'.format(name))
                 continue
             results.append((renderers[name], argline.strip()))
         return results
