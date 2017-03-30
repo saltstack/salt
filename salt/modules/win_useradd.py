@@ -778,7 +778,7 @@ def info(name):
 
     else:
 
-        return False
+        return {}
 
 
 def _get_userprofile_from_registry(user, sid):
