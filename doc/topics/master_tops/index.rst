@@ -8,10 +8,9 @@ In 0.10.4 the `external_nodes` system was upgraded to allow for modular
 subsystems to be used to generate the top file data for a :ref:`highstate
 <running-highstate>` run on the master.
 
-The old `external_nodes` option has been removed.
-The master tops system contains a number of subsystems that
-are loaded via the Salt loader interfaces like modules, states, returners,
-runners, etc.
+The old `external_nodes` option has been removed. The master tops system
+provides an pluggable and extendable replacement for it, allowing for multiple
+different subsystems to provide top file data.
 
 Using the new `master_tops` option is simple:
 
@@ -31,24 +30,25 @@ for :mod:`Cobbler <salt.tops.cobbler>` or:
 
 for :mod:`Reclass <salt.tops.reclass_adapter>`.
 
-It's also possible to create custom master_tops modules. These modules must go
-in a subdirectory called `tops` in the `extension_modules` directory.
-The `extension_modules` directory is not defined by default (the
-default `/srv/salt/_modules` will NOT work as of this release)
+It's also possible to create custom master_tops modules. Simply place them into
+``salt://_tops`` in the Salt fileserver and use the
+:py:func:`saltutil.sync_tops <salt.runners.saltutil.sync_tops>` runner to sync
+them. If this runner function is not available, they can manually be placed
+into ``extmods/tops``, relative to the master cachedir (in most cases the full
+path will be ``/var/cache/salt/master/extmods/tops``).
 
 Custom tops modules are written like any other execution module, see the source
-for the two modules above for examples of fully functional ones. Below is
-a degenerate example:
+for the two modules above for examples of fully functional ones. Below is a
+bare-bones example:
 
-/etc/salt/master:
+**/etc/salt/master:**
 
 .. code-block:: yaml
 
-   extension_modules: /srv/salt/modules
    master_tops:
      customtop: True
 
-/srv/salt/modules/tops/customtop.py:
+**customtop.py:** (custom master_tops module)
 
 .. code-block:: python
 
@@ -58,6 +58,7 @@ a degenerate example:
     __virtualname__ = 'customtop'
 
     log = logging.getLogger(__name__)
+
 
     def __virtual__():
         return __virtualname__
@@ -77,3 +78,10 @@ a degenerate example:
        ----------
        base:
          - test
+
+.. note::
+    If a master_tops module returns :ref:`top file <states-top>` data for a
+    given minion, it will be added to the states configured in the top file. It
+    will *not* replace it altogether. The Nitrogen release adds additional
+    functionality allowing a minion to treat master_tops as the single source
+    of truth, irrespective of the top file.
