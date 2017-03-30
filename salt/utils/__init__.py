@@ -1895,6 +1895,11 @@ def search_onfail_requisites(sid, highstate):
                         for fdata in fchunk:
                             if not isinstance(fdata, dict):
                                 continue
+                            # bydefault onfail will fail, but you can
+                            # set onfail_stop: False to prevent the highstate
+                            # to stop if you handle it
+                            if fdata.get('onfail_stop', True):
+                                continue
                             for knob, fvalue in six.iteritems(fdata):
                                 if knob != 'onfail':
                                     continue
