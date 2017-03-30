@@ -178,7 +178,7 @@ and the SLS files below it apply to all minions.
 
 The second expression is a regular expression that will match all minions
 with an ID matching ``saltmaster.*`` and specifies that for those minions, the
-salt.master state should be applied. To
+salt.master state should be applied. 
 
 .. important::
     Since version 2014.7.0, the default matcher (when one is not explicitly
