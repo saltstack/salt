@@ -1466,7 +1466,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 # private functions are skipped
                 continue
             func = getattr(mod, attr)
-            if not inspect.isfunction(func):
+            if not inspect.isfunction(func) and not isinstance(func, functools.partial):
                 # Not a function!? Skip it!!!
                 continue
             # Let's get the function name.
