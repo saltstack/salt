@@ -4,6 +4,7 @@
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 import os
 import random
 import string
@@ -14,6 +15,8 @@ from salt.config import cloud_providers_config
 # Import Salt Testing LIbs
 import tests.integration as integration
 from tests.support.helpers import expensiveTest
+from salt.ext.six.moves import range
+
 
 def __random_name(size=6):
     '''
@@ -28,6 +31,7 @@ def __random_name(size=6):
 INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'vmware'
 TIMEOUT = 500
+
 
 class VMWareTest(integration.ShellCase):
     '''
@@ -82,7 +86,7 @@ class VMWareTest(integration.ShellCase):
 
     def test_instance(self):
         '''
-        Tests creating and deleting an instance on vmware
+        Tests creating and deleting an instance on vmware and installing salt
         '''
         # create the instance
         instance = self.run_cloud('-p vmware-test {0}'.format(INSTANCE_NAME), timeout=TIMEOUT)
@@ -107,7 +111,7 @@ class VMWareTest(integration.ShellCase):
 
     def test_snapshot(self):
         '''
-        Tests creating and deleting an instance on vmware
+        Tests creating snapshot and creating vm with --no-deploy
         '''
         # create the instance
         instance = self.run_cloud('-p vmware-test {0} --no-deploy'.format(INSTANCE_NAME),
@@ -121,18 +125,22 @@ class VMWareTest(integration.ShellCase):
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             raise
 
-        create_snapshot = self.run_cloud('-a create_snapshot {0} snapshot_name=\'Test Cloud\' memdump=True'.format(INSTANCE_NAME),
+        create_snapshot = self.run_cloud('-a create_snapshot {0} \
+                                         snapshot_name=\'Test Cloud\' \
+                                         memdump=True -y'.format(INSTANCE_NAME),
                                          timeout=TIMEOUT)
+        s_ret_str = 'Snapshot created successfully'
+
+        self.assertIn(s_ret_str, str(create_snapshot))
 
         # delete the instance
         delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
         ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
 
         try:
-            self.assertIn(ret_str, delete)
+            self.assertIn(ret_str, str(delete))
         except AssertionError:
             raise
-
 
     def tearDown(self):
         '''
