@@ -56,7 +56,9 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
         lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
         comment, uncomment, _add_flags, comment_line, _regex_to_static,
-        _get_line_indent, apply_template_on_contents)
+        _get_line_indent, apply_template_on_contents, dirname, basename,
+        list_backups_dir)
+from salt.modules.file import normpath as normpath_
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -104,7 +106,8 @@ def __virtual__():
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
-            global _regex_to_static, _get_line_indent
+            global _regex_to_static, _get_line_indent, dirname, basename
+            global list_backups_dir, normpath_
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -161,6 +164,10 @@ def __virtual__():
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
             _add_flags = _namespaced_function(_add_flags, globals())
             apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())
+            dirname = _namespaced_function(dirname, globals())
+            basename = _namespaced_function(basename, globals())
+            list_backups_dir = _namespaced_function(list_backups_dir, globals())
+            normpath_ = _namespaced_function(normpath_, globals())
 
         else:
             return False, 'Module win_file: Missing Win32 modules'
@@ -176,7 +183,8 @@ __outputter__ = {
 }
 
 __func_alias__ = {
-    'makedirs_': 'makedirs'
+    'makedirs_': 'makedirs',
+    'normpath_': 'normpath',
 }
 
 
