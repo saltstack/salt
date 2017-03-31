@@ -262,11 +262,11 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin):
         self.assertEqual(junos.facts(), ret)
 
     def test_facts_exception(self):
-        junos.__proxy__ = {'junos.get_serialized_facts': self.raise_exception}
-        ret = dict()
-        ret['message'] = 'Could not display facts due to "Test exception"'
-        ret['out'] = False
-        self.assertEqual(junos.facts(), ret)
+        with patch.dict(junos.__proxy__, {'junos.get_serialized_facts': self.raise_exception}):
+            ret = dict()
+            ret['message'] = 'Could not display facts due to "Test exception"'
+            ret['out'] = False
+            self.assertEqual(junos.facts(), ret)
 
     def test_set_hostname_without_args(self):
         ret = dict()
@@ -1562,14 +1562,14 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin):
     # an external user.
 
     def test_virtual_proxy_unavailable(self):
-        junos.__opts__ = {}
-        res = (False, 'The junos module could not be \
-                loaded: junos-eznc or jxmlease or proxy could not be loaded.')
-        self.assertEqual(junos.__virtual__(), res)
+        with patch.dict(junos.__opts__, {}):
+            res = (False, 'The junos module could not be '
+                          'loaded: junos-eznc or jxmlease or proxy could not be loaded.')
+            self.assertEqual(junos.__virtual__(), res)
 
     def test_virtual_all_true(self):
-        junos.__opts__ = {'proxy': 'test'}
-        self.assertEqual(junos.__virtual__(), 'junos')
+        with patch.dict(junos.__opts__, {'proxy': 'test'}):
+            self.assertEqual(junos.__virtual__(), 'junos')
 
     def test_rpc_without_args(self):
         ret = dict()
