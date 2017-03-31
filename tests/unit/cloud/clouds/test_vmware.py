@@ -22,31 +22,33 @@ from salt.exceptions import SaltCloudSystemExit
 
 # Attempt to import pyVim and pyVmomi libs
 HAS_LIBS = True
+# pylint: disable=import-error,no-name-in-module,unused-import
 try:
-    from pyVim.connect import SmartConnect, Disconnect  # pylint: disable=W0611
-    from pyVmomi import vim, vmodl  # pylint: disable=W0611
-except Exception:
+    from pyVim.connect import SmartConnect, Disconnect
+    from pyVmomi import vim, vmodl
+except ImportError:
     HAS_LIBS = False
+# pylint: enable=import-error,no-name-in-module,unused-import
 
 # Global Variables
 PROVIDER_CONFIG = {
-  'vcenter01': {
-    'vmware': {
-      'driver': 'vmware',
-      'url': 'vcenter01.domain.com',
-      'user': 'DOMAIN\\user',
-      'password': 'verybadpass',
+    'vcenter01': {
+        'vmware': {
+            'driver': 'vmware',
+            'url': 'vcenter01.domain.com',
+            'user': 'DOMAIN\\user',
+            'password': 'verybadpass',
+        }
     }
-  }
 }
 VM_NAME = 'test-vm'
 PROFILE = {
-  'base-gold': {
-    'provider': 'vcenter01:vmware',
-    'datastore': 'Datastore1',
-    'resourcepool': 'Resources',
-    'folder': 'vm'
-  }
+    'base-gold': {
+        'provider': 'vcenter01:vmware',
+        'datastore': 'Datastore1',
+        'resourcepool': 'Resources',
+        'folder': 'vm'
+    }
 }
 
 
