@@ -258,6 +258,10 @@ New modules:
   in the details of the network interfaces, IP addresses, MAC address tables,
   ARP tables and LLDP neighbors.
 - :mod:`BGP finder <salt.runners.bgp>` - Runner to search BGP neighbors details.
+- :mod:`NAPALM syslog <salt.engines.napalm_syslog>` - Engine to import events
+  from the napalm-logs library into the Salt event bus. The events are based
+  on the syslog messages from the network devices and structured following
+  the OpenConfig/IETF YANG models.
 
 New grains: :mod:`Host <salt.grains.napalm.host>`,
 :mod:`Username <salt.grains.napalm.username>` and
