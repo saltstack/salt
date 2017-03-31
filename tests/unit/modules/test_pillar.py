@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -21,7 +22,10 @@ import salt.modules.pillar as pillarmod
 pillar_value_1 = dict(a=1, b='very secret')
 
 
-class PillarModuleTestCase(TestCase):
+class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {pillarmod: {}}
 
     def test_obfuscate_inner_recursion(self):
         self.assertEqual(
@@ -56,15 +60,14 @@ class PillarModuleTestCase(TestCase):
             self.assertEqual(pillarmod.ls(), ['a', 'b'])
 
     def test_pillar_get_default_merge(self):
-        pillarmod.__opts__ = {}
-        pillarmod.__pillar__ = {'key': 'value'}
-        default = {'default': 'plop'}
+        with patch.dict(pillarmod.__pillar__, {'key': 'value'}):
+            default = {'default': 'plop'}
 
-        res = pillarmod.get(key='key', default=default)
-        self.assertEqual("value", res)
+            res = pillarmod.get(key='key', default=default)
+            self.assertEqual("value", res)
 
-        res = pillarmod.get(key='missing pillar', default=default)
-        self.assertEqual({'default': 'plop'}, res)
+            res = pillarmod.get(key='missing pillar', default=default)
+            self.assertEqual({'default': 'plop'}, res)
 
     def test_pillar_get_default_merge_regression_38558(self):
         """Test for pillar.get(key=..., default=..., merge=True)
@@ -73,22 +76,20 @@ class PillarModuleTestCase(TestCase):
 
         See: https://github.com/saltstack/salt/issues/38558
         """
+        with patch.dict(pillarmod.__pillar__, {'l1': {'l2': {'l3': 42}}}):
 
-        pillarmod.__opts__ = {}
-        pillarmod.__pillar__ = {'l1': {'l2': {'l3': 42}}}
+            res = pillarmod.get(key='l1')
+            self.assertEqual({'l2': {'l3': 42}}, res)
 
-        res = pillarmod.get(key='l1')
-        self.assertEqual({'l2': {'l3': 42}}, res)
+            default = {'l2': {'l3': 43}}
 
-        default = {'l2': {'l3': 43}}
+            res = pillarmod.get(key='l1', default=default)
+            self.assertEqual({'l2': {'l3': 42}}, res)
+            self.assertEqual({'l2': {'l3': 43}}, default)
 
-        res = pillarmod.get(key='l1', default=default)
-        self.assertEqual({'l2': {'l3': 42}}, res)
-        self.assertEqual({'l2': {'l3': 43}}, default)
-
-        res = pillarmod.get(key='l1', default=default, merge=True)
-        self.assertEqual({'l2': {'l3': 42}}, res)
-        self.assertEqual({'l2': {'l3': 43}}, default)
+            res = pillarmod.get(key='l1', default=default, merge=True)
+            self.assertEqual({'l2': {'l3': 42}}, res)
+            self.assertEqual({'l2': {'l3': 43}}, default)
 
     def test_pillar_get_default_merge_regression_39062(self):
         '''
@@ -97,10 +98,9 @@ class PillarModuleTestCase(TestCase):
 
         See https://github.com/saltstack/salt/issues/39062 for more info.
         '''
-        pillarmod.__opts__ = {}
-        pillarmod.__pillar__ = {'foo': 'bar'}
+        with patch.dict(pillarmod.__pillar__, {'foo': 'bar'}):
 
-        self.assertEqual(
-            pillarmod.get(key='foo', default=None, merge=True),
-            'bar',
-        )
+            self.assertEqual(
+                pillarmod.get(key='foo', default=None, merge=True),
+                'bar',
+            )

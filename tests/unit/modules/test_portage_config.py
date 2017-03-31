@@ -9,18 +9,25 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.modules.portage_config as portage_config
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PortageConfigTestCase(TestCase):
+class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
+
     class DummyAtom(object):
         def __init__(self, atom):
             self.cp, self.repo = atom.split("::") if "::" in atom else (atom, None)
+
+    def setup_loader_modules(self):
+        self.portage = MagicMock()
+        self.addCleanup(delattr, self, 'portage')
+        return {portage_config: {'portage': self.portage}}
 
     def test_get_config_file_wildcards(self):
         pairs = [
@@ -31,9 +38,8 @@ class PortageConfigTestCase(TestCase):
             ('cat/pkg::repo', '/etc/portage/package.mask/cat/pkg'),
         ]
 
-        portage_config.portage = MagicMock()
         for (atom, expected) in pairs:
             dummy_atom = self.DummyAtom(atom)
-            portage_config.portage.dep.Atom = MagicMock(return_value=dummy_atom)
-            portage_config._p_to_cp = MagicMock(return_value=dummy_atom.cp)
-            self.assertEqual(portage_config._get_config_file('mask', atom), expected)
+            self.portage.dep.Atom = MagicMock(return_value=dummy_atom)
+            with patch.object(portage_config, '_p_to_cp', MagicMock(return_value=dummy_atom.cp)):
+                self.assertEqual(portage_config._get_config_file('mask', atom), expected)

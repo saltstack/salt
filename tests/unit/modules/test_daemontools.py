@@ -124,7 +124,7 @@ class DaemontoolsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.assertRaises(CommandExecutionError, daemontools.get_all)
 
-        daemontools.SERVICE_DIR = 'A'
-        mock = MagicMock(return_value='A')
-        with patch.object(os, 'listdir', mock):
-            self.assertEqual(daemontools.get_all(), ['A'])
+        with patch.object(daemontools, 'SERVICE_DIR', 'A'):
+            mock = MagicMock(return_value='A')
+            with patch.object(os, 'listdir', mock):
+                self.assertEqual(daemontools.get_all(), ['A'])

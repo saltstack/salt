@@ -26,7 +26,7 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.rpm
     '''
     def setup_loader_modules(self):
-        return {rpm: {}}
+        return {rpm: {'rpm': MagicMock(return_value=MagicMock)}}
 
     # 'list_pkgs' function tests: 1
 
@@ -118,7 +118,6 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
 
         :return:
         '''
-        rpm.rpm = MagicMock(return_value=MagicMock)
         with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)):
             self.assertEqual(0, rpm.version_cmp('1', '2'))  # mock returns 0, which means RPM was called
 
@@ -129,6 +128,5 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
 
         :return:
         '''
-        rpm.rpm = MagicMock(return_value=MagicMock)
         with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)):
             self.assertEqual(-1, rpm.version_cmp('1', '2'))  # mock returns -1, a python implementation was called
