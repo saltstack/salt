@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -19,16 +20,20 @@ from salt.exceptions import CommandExecutionError
 from salt.states import elasticsearch
 from salt.utils import dictdiffer
 
-elasticsearch.__salt__ = {}
-elasticsearch.__opts__ = {'test': False}
-elasticsearch.__utils__ = {'dictdiffer.deep_diff': dictdiffer.deep_diff}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ElasticsearchTestCase(TestCase):
+class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.elasticsearch
     '''
+    def setup_loader_modules(self):
+        return {
+            elasticsearch: {
+                '__opts__': {'test': False},
+                '__utils__': {'dictdiffer.deep_diff': dictdiffer.deep_diff}
+            }
+        }
+
     # 'index_absent' function tests: 1
 
     def test_index_absent(self):
@@ -166,7 +171,7 @@ class ElasticsearchTestCase(TestCase):
         mock_create = MagicMock(side_effect=[True, True, False, CommandExecutionError])
 
         with patch.dict(elasticsearch.__salt__, {'elasticsearch.alias_get': mock_get,
-                                             'elasticsearch.alias_create': mock_create}):
+                                                 'elasticsearch.alias_create': mock_create}):
             self.assertDictEqual(elasticsearch.alias_present(name, index, {"test": "key"}), ret)
 
             ret.update({'comment': "Successfully replaced alias foo for index bar", 'changes': {'old': {"test": "key"}, 'new': {"test2": "key"}}})

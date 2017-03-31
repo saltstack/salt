@@ -106,8 +106,8 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
 
     def test_setenv_test_mode(self):
         '''test that imitating action returns good values'''
-        envstate.__opts__ = {'test': True}
-        ret = envstate.setenv('test', 'value')
-        self.assertEqual(ret['changes'], {'test': 'value'})
-        ret = envstate.setenv('INITIAL', 'initial')
-        self.assertEqual(ret['changes'], {})
+        with patch.dict(envstate.__opts__, {'test': True}):
+            ret = envstate.setenv('test', 'value')
+            self.assertEqual(ret['changes'], {'test': 'value'})
+            ret = envstate.setenv('INITIAL', 'initial')
+            self.assertEqual(ret['changes'], {})

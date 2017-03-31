@@ -107,11 +107,6 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     def run_contents_pillar(self, pillar_value, expected):
         returner = MagicMock(return_value=None)
-
-        filestate.__salt__ = {
-            'file.manage_file': returner
-        }
-
         path = '/tmp/foo'
         pillar_path = 'foo:bar'
 
