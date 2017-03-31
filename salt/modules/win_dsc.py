@@ -25,7 +25,6 @@ import os
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.utils.versions import StrictVersion as _StrictVersion
 
 # Set up logging
 log = logging.getLogger(__name__)
