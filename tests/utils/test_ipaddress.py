@@ -79,7 +79,7 @@ class BaseTestCase(TestCase):
         """
         if args:
             details = details % args
-        cm = self.assertRaisesRegexp(exc_type, details)
+        cm = self.assertRaisesRegex(exc_type, details)
         with cm as exc:
             yield exc
 
@@ -721,21 +721,21 @@ class IpaddrUnitTest(TestCase):
         class Broken(ipaddress._BaseAddress):
             pass
         broken = Broken('127.0.0.1')
-        with self.assertRaisesRegexp(NotImplementedError, "Broken.*version"):
+        with self.assertRaisesRegex(NotImplementedError, "Broken.*version"):
             broken.version
 
     def testMissingNetworkVersion(self):
         class Broken(ipaddress._BaseNetwork):
             pass
         broken = Broken('127.0.0.1')
-        with self.assertRaisesRegexp(NotImplementedError, "Broken.*version"):
+        with self.assertRaisesRegex(NotImplementedError, "Broken.*version"):
             broken.version
 
     def testMissingAddressClass(self):
         class Broken(ipaddress._BaseNetwork):
             pass
         broken = Broken('127.0.0.1')
-        with self.assertRaisesRegexp(NotImplementedError, "Broken.*address"):
+        with self.assertRaisesRegex(NotImplementedError, "Broken.*address"):
             broken._address_class
 
     def testGetNetwork(self):

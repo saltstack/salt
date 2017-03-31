@@ -1797,13 +1797,13 @@ class DockerTranslateHelperTestCase(TestCase):
         # Passing a port range
         self.assertEqual(translate_funcs._get_port_range('2222-2223'), (2222, 2223))
         # Error case: port range start is greater than end
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 r'Start of port range \(2222\) cannot be greater than end of '
                 r'port range \(2221\)'):
             translate_funcs._get_port_range('2222-2221')
         # Error case: non-numeric input
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 '\'2222-bar\' is non-numeric or an invalid port range'):
             translate_funcs._get_port_range('2222-bar')

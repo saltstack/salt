@@ -228,7 +228,7 @@ class TestGetTemplate(TestCase):
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
             with salt.utils.fopen(filename) as fp_:
-                self.assertRaisesRegexp(
+                self.assertRaisesRegex(
                     SaltRenderError,
                     expected,
                     render_jinja_tmpl,
@@ -252,7 +252,7 @@ class TestGetTemplate(TestCase):
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
             with salt.utils.fopen(filename) as fp_:
-                self.assertRaisesRegexp(
+                self.assertRaisesRegex(
                     SaltRenderError,
                     expected,
                     render_jinja_tmpl,
@@ -276,7 +276,7 @@ class TestGetTemplate(TestCase):
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
             with salt.utils.fopen(filename) as fp_:
-                self.assertRaisesRegexp(
+                self.assertRaisesRegex(
                     SaltRenderError,
                     expected,
                     render_jinja_tmpl,
@@ -376,7 +376,7 @@ class TestGetTemplate(TestCase):
     def test_render_with_syntax_error(self):
         template = 'hello\n\n{{ bad\n\nfoo'
         expected = r'.*---\nhello\n\n{{ bad\n\nfoo    <======================\n---'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             SaltRenderError,
             expected,
             render_jinja_tmpl,
@@ -390,7 +390,7 @@ class TestGetTemplate(TestCase):
         with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
             template = u'hello\n\n{{ bad\n\nfoo\ud55c'
             expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 SaltRenderError,
                 expected,
                 render_jinja_tmpl,
@@ -403,7 +403,7 @@ class TestGetTemplate(TestCase):
         with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
             template = 'hello\n\n{{ bad\n\nfoo\xed\x95\x9c'
             expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 SaltRenderError,
                 expected,
                 render_jinja_tmpl,
@@ -414,7 +414,7 @@ class TestGetTemplate(TestCase):
     def test_render_with_undefined_variable(self):
         template = "hello\n\n{{ foo }}\n\nfoo"
         expected = r'Jinja variable \'foo\' is undefined'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             SaltRenderError,
             expected,
             render_jinja_tmpl,
@@ -425,7 +425,7 @@ class TestGetTemplate(TestCase):
     def test_render_with_undefined_variable_utf8(self):
         template = "hello\xed\x95\x9c\n\n{{ foo }}\n\nfoo"
         expected = r'Jinja variable \'foo\' is undefined'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             SaltRenderError,
             expected,
             render_jinja_tmpl,
@@ -436,7 +436,7 @@ class TestGetTemplate(TestCase):
     def test_render_with_undefined_variable_unicode(self):
         template = u"hello\ud55c\n\n{{ foo }}\n\nfoo"
         expected = r'Jinja variable \'foo\' is undefined'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             SaltRenderError,
             expected,
             render_jinja_tmpl,

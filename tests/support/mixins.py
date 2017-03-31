@@ -213,7 +213,7 @@ class SaltReturnAssertsMixin(object):
         )
 
     def assertInSaltReturnRegexpMatches(self, ret, pattern, keys=()):
-        return self.assertRegexpMatches(
+        return self.assertRegex(
             self.__getWithinSaltReturn(ret, keys), pattern
         )
 

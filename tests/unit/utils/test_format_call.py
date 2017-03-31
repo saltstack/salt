@@ -45,12 +45,12 @@ class TestFormatCall(TestCase):
         def foo2(one, two, three=3):
             pass
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 SaltInvocationError,
                 r'foo takes at least 1 argument \(0 given\)'):
             format_call(foo, dict(two=3))
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError,
                 r'foo2 takes at least 2 arguments \(1 given\)'):
             format_call(foo2, dict(one=1))

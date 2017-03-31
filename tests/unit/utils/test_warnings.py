@@ -65,7 +65,7 @@ class WarnUntilTestCase(TestCase):
             self.assertEqual(0, len(recorded_warnings))
 
         # Let's set version info to (0, 17), a RuntimeError should be raised
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)test_warnings.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
@@ -74,7 +74,7 @@ class WarnUntilTestCase(TestCase):
             raise_warning(_version_info_=(0, 17, 0))
 
         # Let's set version info to (0, 17), a RuntimeError should be raised
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)test_warnings.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
@@ -84,7 +84,7 @@ class WarnUntilTestCase(TestCase):
 
         # Even though we're calling warn_until, we pass _dont_call_warnings
         # because we're only after the RuntimeError
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)test_warnings.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
@@ -94,7 +94,7 @@ class WarnUntilTestCase(TestCase):
                 (0, 17), 'Foo', _dont_call_warnings=True
             )
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)test_warnings.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
@@ -148,7 +148,7 @@ class WarnUntilTestCase(TestCase):
 
         # Let's set version info to (0, 17), a RuntimeError should be raised
         # regardless of whether or not we pass any **kwargs.
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)test_warnings.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
@@ -156,7 +156,7 @@ class WarnUntilTestCase(TestCase):
                 r'Please remove the warning.'):
             raise_warning(_version_info_=(0, 17))  # no kwargs
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)test_warnings.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '

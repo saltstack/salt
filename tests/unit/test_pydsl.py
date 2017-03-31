@@ -232,14 +232,14 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertEqual(ret['changes']['stdout'], 'this is state G')
 
     def test_multiple_state_func_in_state_mod(self):
-        with self.assertRaisesRegexp(PyDslError, 'Multiple state functions'):
+        with self.assertRaisesRegex(PyDslError, 'Multiple state functions'):
             self.render_sls(textwrap.dedent('''
                 state('A').cmd.run('echo hoho')
                 state('A').cmd.wait('echo hehe')
             '''))
 
     def test_no_state_func_in_state_mod(self):
-        with self.assertRaisesRegexp(PyDslError, 'No state function specified'):
+        with self.assertRaisesRegex(PyDslError, 'No state function specified'):
             self.render_sls(textwrap.dedent('''
                 state('B').cmd.require(cmd='hoho')
             '''))

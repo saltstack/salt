@@ -421,7 +421,7 @@ class PipModuleTest(integration.ModuleCase):
         try:
             self.assertEqual(ret['retcode'], 0)
             for package in ('Blinker', 'SaltTesting', 'pep8'):
-                self.assertRegexpMatches(
+                self.assertRegex(
                     ret['stdout'],
                     r'(?:.*)(Successfully installed)(?:.*)({0})(?:.*)'.format(package)
                 )
