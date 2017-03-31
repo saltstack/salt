@@ -872,6 +872,9 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False, default=None
     )
+    userdata_renderer = config.get_cloud_config_value(
+        'userdata_renderer', vm_, __opts__, search_global=False, default=None
+    )
     if userdata_file is None:
         userdata = config.get_cloud_config_value(
             'userdata', vm_, __opts__, search_global=False, default=None
@@ -882,6 +885,20 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 userdata = fh_.read()
 
     if userdata is not None:
+        render_opts = __opts__.copy()
+        render_opts.update(vm_)
+        # Use the cloud profile's userdata_renderer, otherwise get it from the
+        # master configuration file.
+        renderer = __opts__.get('userdata_renderer', 'jinja') \
+            if userdata_renderer is None
+            else userdata_renderer
+        rend = salt.loader.render(render_opts, {})
+        blacklist = __opts__['renderer_blacklist']
+        whitelist = __opts__['renderer_whitelist']
+        userdata = compile_template(
+            ':string:', rend, renderer, blacklist, whitelist, input_data=userdata,
+        )
+
         os_kwargs['custom_data'] = base64.b64encode(userdata)
 
     iface_data = create_interface(kwargs=vm_)

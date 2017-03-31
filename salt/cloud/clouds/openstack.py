@@ -526,12 +526,31 @@ def request_instance(vm_=None, call=None):
                 kwargs['ex_files'][src_path] = fp_.read()
 
     userdata_file = config.get_cloud_config_value(
-        'userdata_file', vm_, __opts__, search_global=False
+        'userdata_file', vm_, __opts__, search_global=False, default=None
+    )
+    userdata_renderer = config.get_cloud_config_value(
+        'userdata_renderer', vm_, __opts__, search_global=False, default=None
     )
 
     if userdata_file is not None:
-        with salt.utils.fopen(userdata_file, 'r') as fp:
-            kwargs['ex_userdata'] = fp.read()
+        with salt.utils.fopen(userdata_file, 'r') as fp_:
+            userdata = fp_.read()
+
+        render_opts = __opts__.copy()
+        render_opts.update(vm_)
+        # Use the cloud profile's userdata_renderer, otherwise get it from the
+        # master configuration file.
+        renderer = __opts__.get('userdata_renderer', 'jinja') \
+            if userdata_renderer is None
+            else userdata_renderer
+        rend = salt.loader.render(render_opts, {})
+        blacklist = __opts__['renderer_blacklist']
+        whitelist = __opts__['renderer_whitelist']
+        userdata = compile_template(
+            ':string:', rend, renderer, blacklist, whitelist, input_data=userdata,
+        )
+
+        kwargs['ex_userdata'] = userdata
 
     config_drive = config.get_cloud_config_value(
         'config_drive', vm_, __opts__, default=None, search_global=False
