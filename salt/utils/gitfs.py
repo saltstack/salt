@@ -863,7 +863,8 @@ class GitPython(GitProvider):
             relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(
+            self.mountpoint(tgt_env), path, use_posixpath=True)
         for blob in tree.traverse():
             if isinstance(blob, git.Tree):
                 ret.add(add_mountpoint(relpath(blob.path)))
@@ -939,7 +940,8 @@ class GitPython(GitProvider):
             relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(
+            self.mountpoint(tgt_env), path, use_posixpath=True)
         for file_blob in tree.traverse():
             if not isinstance(file_blob, git.Blob):
                 continue
@@ -981,7 +983,8 @@ class GitPython(GitProvider):
                     stream.seek(0)
                     link_tgt = stream.read()
                     stream.close()
-                    path = salt.utils.path_join(os.path.dirname(path), link_tgt)
+                    path = salt.utils.path_join(
+                        os.path.dirname(path), link_tgt, use_posixpath=True)
                 else:
                     blob = file_blob
                     if isinstance(blob, git.Tree):
@@ -1355,9 +1358,14 @@ class Pygit2(GitProvider):
                 blob = self.repo[entry.oid]
                 if not isinstance(blob, pygit2.Tree):
                     continue
-                blobs.append(salt.utils.path_join(prefix, entry.name))
+                blobs.append(
+                    salt.utils.path_join(prefix, entry.name, use_posixpath=True)
+                )
                 if len(blob):
-                    _traverse(blob, blobs, salt.utils.path_join(prefix, entry.name))
+                    _traverse(
+                        blob, blobs, salt.utils.path_join(
+                            prefix, entry.name, use_posixpath=True)
+                    )
 
         ret = set()
         tree = self.get_tree(tgt_env)
@@ -1377,7 +1385,8 @@ class Pygit2(GitProvider):
         blobs = []
         if len(tree):
             _traverse(tree, blobs, self.root(tgt_env))
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(
+            self.mountpoint(tgt_env), path, use_posixpath=True)
         for blob in blobs:
             ret.add(add_mountpoint(relpath(blob)))
         if self.mountpoint(tgt_env):
@@ -1467,13 +1476,17 @@ class Pygit2(GitProvider):
                     continue
                 obj = self.repo[entry.oid]
                 if isinstance(obj, pygit2.Blob):
-                    repo_path = salt.utils.path_join(prefix, entry.name)
+                    repo_path = salt.utils.path_join(
+                        prefix, entry.name, use_posixpath=True)
                     blobs.setdefault('files', []).append(repo_path)
                     if stat.S_ISLNK(tree[entry.name].filemode):
                         link_tgt = self.repo[tree[entry.name].oid].data
                         blobs.setdefault('symlinks', {})[repo_path] = link_tgt
                 elif isinstance(obj, pygit2.Tree):
-                    _traverse(obj, blobs, salt.utils.path_join(prefix, entry.name))
+                    _traverse(
+                        obj, blobs, salt.utils.path_join(
+                            prefix, entry.name, use_posixpath=True)
+                    )
 
         files = set()
         symlinks = {}
@@ -1497,7 +1510,8 @@ class Pygit2(GitProvider):
         blobs = {}
         if len(tree):
             _traverse(tree, blobs, self.root(tgt_env))
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(
+            self.mountpoint(tgt_env), path, use_posixpath=True)
         for repo_path in blobs.get('files', []):
             files.add(add_mountpoint(relpath(repo_path)))
         for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
@@ -1529,7 +1543,8 @@ class Pygit2(GitProvider):
                     # the symlink and set path to the location indicated
                     # in the blob data.
                     link_tgt = self.repo[entry.oid].data
-                    path = salt.utils.path_join(os.path.dirname(path), link_tgt)
+                    path = salt.utils.path_join(
+                        os.path.dirname(path), link_tgt, use_posixpath=True)
                 else:
                     blob = self.repo[entry.oid]
                     if isinstance(blob, pygit2.Tree):
@@ -1738,9 +1753,14 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     continue
                 if not isinstance(obj, dulwich.objects.Tree):
                     continue
-                blobs.append(salt.utils.path_join(prefix, item.path))
+                blobs.append(
+                    salt.utils.path_join(prefix, item.path, use_posixpath=True)
+                )
                 if len(self.repo.get_object(item.sha)):
-                    _traverse(obj, blobs, salt.utils.path_join(prefix, item.path))
+                    _traverse(
+                        obj, blobs, salt.utils.path_join(
+                            prefix, item.path, use_posixpath=True)
+                    )
 
         ret = set()
         tree = self.get_tree(tgt_env)
@@ -1754,7 +1774,8 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
             relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(
+            self.mountpoint(tgt_env), path, use_posixpath=True)
         for blob in blobs:
             ret.add(add_mountpoint(relpath(blob)))
         if self.mountpoint(tgt_env):
@@ -1854,14 +1875,18 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     # Entry is a submodule, skip it
                     continue
                 if isinstance(obj, dulwich.objects.Blob):
-                    repo_path = salt.utils.path_join(prefix, item.path)
+                    repo_path = salt.utils.path_join(
+                        prefix, item.path, use_posixpath=True)
                     blobs.setdefault('files', []).append(repo_path)
                     mode, oid = tree[item.path]
                     if stat.S_ISLNK(mode):
                         link_tgt = self.repo.get_object(oid).as_raw_string()
                         blobs.setdefault('symlinks', {})[repo_path] = link_tgt
                 elif isinstance(obj, dulwich.objects.Tree):
-                    _traverse(obj, blobs, salt.utils.path_join(prefix, item.path))
+                    _traverse(
+                        obj, blobs, salt.utils.path_join(
+                            prefix, item.path, use_posixpath=True)
+                    )
 
         files = set()
         symlinks = {}
@@ -1876,7 +1901,8 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
             relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(
+            self.mountpoint(tgt_env), path, use_posixpath=True)
         for repo_path in blobs.get('files', []):
             files.add(add_mountpoint(relpath(repo_path)))
         for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
@@ -1912,7 +1938,8 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     # symlink. Follow the symlink and set path to the
                     # location indicated in the blob data.
                     link_tgt = self.repo.get_object(oid).as_raw_string()
-                    path = salt.utils.path_join(os.path.dirname(path), link_tgt)
+                    path = salt.utils.path_join(
+                        os.path.dirname(path), link_tgt, use_posixpath=True)
                 else:
                     blob = self.repo.get_object(oid)
                     if isinstance(blob, dulwich.objects.Tree):
@@ -2110,10 +2137,10 @@ class GitBase(object):
         if cache_root is not None:
             self.cache_root = cache_root
         else:
-            self.cache_root = salt.utils.path_join(self.opts['cachedir'], self.role)
+            self.cache_root = salt.utils.path_join(
+                self.opts['cachedir'], self.role)
         self.env_cache = salt.utils.path_join(self.cache_root, 'envs.p')
-        self.hash_cachedir = salt.utils.path_join(
-            self.cache_root, 'hash')
+        self.hash_cachedir = salt.utils.path_join(self.cache_root, 'hash')
         self.file_list_cachedir = salt.utils.path_join(
             self.opts['cachedir'], 'file_lists', self.role)
 
