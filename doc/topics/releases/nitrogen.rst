@@ -239,7 +239,7 @@ have been improved, enhanced and widenened in scope:
   device can be dropped, e.g.: packet loss, idle time (no commands issued
   within a couple of minutes or seconds), or simply the device decides to kill
   the process. In Nitrogen we have introduced the functionality to re-establish
-  the connection. One can disable feature this feature through the
+  the connection. One can disable this feature through the
   :conf_proxy:`proxy_keep_alive` option and adjust the polling frequency
   speciying a custom value for :conf_proxy:`proxy_keep_alive_interval`,
   in minutes.
