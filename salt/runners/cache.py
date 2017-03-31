@@ -413,6 +413,26 @@ def cloud(tgt, provider=None):
     return ret
 
 
+def store(bank, key, data, cachedir=None):
+    '''
+    Lists entries stored in the specified bank.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.store mycache mykey 'The time has come the walrus said'
+    '''
+    if cachedir is None:
+        cachedir = __opts__['cachedir']
+
+    try:
+        cache = salt.cache.Cache(__opts__, cachedir=cachedir)
+    except TypeError:
+        cache = salt.cache.Cache(__opts__)
+    return cache.store(bank, key, data)
+
+
 def list_(bank, cachedir=None):
     '''
     Lists entries stored in the specified bank.
@@ -427,7 +447,7 @@ def list_(bank, cachedir=None):
         cachedir = __opts__['cachedir']
 
     try:
-        cache = salt.cache.Cache(__opts__, cachedir)
+        cache = salt.cache.Cache(__opts__, cachedir=cachedir)
     except TypeError:
         cache = salt.cache.Cache(__opts__)
     return cache.list(bank)
@@ -447,7 +467,7 @@ def fetch(bank, key, cachedir=None):
         cachedir = __opts__['cachedir']
 
     try:
-        cache = salt.cache.Cache(__opts__, cachedir)
+        cache = salt.cache.Cache(__opts__, cachedir=cachedir)
     except TypeError:
         cache = salt.cache.Cache(__opts__)
     return cache.fetch(bank, key)
@@ -469,7 +489,7 @@ def flush(bank, key=None, cachedir=None):
         cachedir = __opts__['cachedir']
 
     try:
-        cache = salt.cache.Cache(__opts__, cachedir)
+        cache = salt.cache.Cache(__opts__, cachedir=cachedir)
     except TypeError:
         cache = salt.cache.Cache(__opts__)
     return cache.flush(bank, key)
