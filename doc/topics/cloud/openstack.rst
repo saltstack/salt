@@ -156,8 +156,8 @@ cloud-init if available.
     userdata_file: /etc/salt/cloud-init/packages.yml
 
 .. note::
-    As of the 2016.11.0 release, this file can be templated, and as of the
-    2016.11.4 release, the renderer(s) used can be specified in the cloud
-    profile using the ``userdata_renderer`` option. If this option is not set
-    in the cloud profile, salt-cloud will fall back to the
-    :conf_master:`userdata_renderer` master configuration option.
+    As of the 2016.11.4 release, this file can be templated. The renderer(s)
+    used can be specified in the cloud profile using the ``userdata_renderer``
+    option. If this option is not set in the cloud profile, salt-cloud will
+    fall back to the :conf_master:`userdata_renderer` master configuration
+    option.
