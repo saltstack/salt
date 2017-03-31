@@ -26,6 +26,60 @@ def __virtual__():
     return salt.utils.which_bin(['udevadm']) is not None
 
 
+def _parse_udevadm_info(udevadm_info):
+    '''
+    Parse the info returned by udevadm command.
+    '''
+    devices = list()
+    udev_info = dict()
+
+    for line in udevadm_info.splitlines():
+        line = line.strip()
+        if line:
+            line = line.split(': ', 1)
+            query = str(line[0])
+            if query == 'E':
+                if query not in udev_info:
+                    udev_info[query] = {}
+                val = line[1].split('=', 1)
+                key = str(val[0])
+                val = val[1]
+
+                try:
+                    val = int(val)
+                except:  # pylint: disable=bare-except
+                    try:
+                        val = float(val)
+                    except:  # pylint: disable=bare-except
+                        pass
+
+                udev_info[query][key] = val
+            else:
+                if query not in udev_info:
+                    udev_info[query] = []
+                udev_info[query].append(line[1])
+
+        else:
+            _normalize_info(udev_info)
+            devices.append(udev_info)
+            udev_info = dict()
+
+    if udev_info:
+        _normalize_info(udev_info)
+        devices.append(udev_info)
+
+    return devices
+
+
+def _normalize_info(udev_info):
+    '''
+    Normalize the output dictionary
+    '''
+    for sect, val in udev_info.items():
+        if len(val) == 1:
+            udev_info[sect] = val[0]
+
+
 def info(dev):
     '''
     Extract all info delivered by udevadm
@@ -48,37 +102,7 @@ def info(dev):
     if udev_result['retcode'] != 0:
         raise CommandExecutionError(udev_result['stderr'])
 
-    udev_info = {}
-
-    for line in udev_result['stdout'].splitlines():
-        line = line.split(': ', 1)
-        query = str(line[0])
-        if query == 'E':
-            if query not in udev_info:
-                udev_info[query] = {}
-            val = line[1].split('=', 1)
-            key = str(val[0])
-            val = val[1]
-
-            try:
-                val = int(val)
-            except:  # pylint: disable=bare-except
-                try:
-                    val = float(val)
-                except:  # pylint: disable=bare-except
-                    pass
-
-            udev_info[query][key] = val
-        else:
-            if query not in udev_info:
-                udev_info[query] = []
-            udev_info[query].append(line[1])
-
-    for sect, val in udev_info.items():
-        if len(val) == 1:
-            udev_info[sect] = val[0]
-
-    return udev_info
+    return _parse_udevadm_info(udev_result['stdout'])[0]
 
 
 def env(dev):
@@ -135,3 +159,22 @@ def links(dev):
         salt '*' udev.links /sys/class/net/eth0
     '''
     return info(dev).get('S', None)
+
+
+def exportdb():
+    '''
+    Return all the udev database
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' udev.exportdb
+    '''
+
+    cmd = 'udevadm info --export-db'
+    udev_result = __salt__['cmd.run_all'](cmd, output_loglevel='quiet')
+
+    if udev_result['retcode']:
+        raise CommandExecutionError(udev_result['stderr'])
+
+    return _parse_udevadm_info(udev_result['stdout'])
