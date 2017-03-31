@@ -1715,7 +1715,15 @@ def request_instance(vm_=None, call=None):
                 input_data=userdata,
             )
 
-        params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
+        try:
+            # template renderers like "jinja" should return a StringIO
+            params[spot_prefix + 'UserData'] = \
+                ''.join(base64.b64encode(userdata).readlines())
+        except AttributeError:
+            try:
+                params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
+            except Exception as exc:
+                log.exception('Failed to encode userdata: %s')
 
     vm_size = config.get_cloud_config_value(
         'size', vm_, __opts__, search_global=False
