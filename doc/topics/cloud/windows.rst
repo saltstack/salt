@@ -96,6 +96,17 @@ profile configuration as `userdata_file`. For instance:
     If this is not set, then no templating will be performed on the
     userdata_file.
 
+    To disable templating in a cloud profile when a
+    :conf_master:`userdata_template` has been set in the master configuration
+    file, simply set ``userdata_template`` to ``False`` in the cloud profile:
+
+    .. code-block:: yaml
+
+        my-ec2-config:
+          # Pass userdata to the instance to be created
+          userdata_file: /etc/salt/windows-firewall.ps1
+          userdata_template: False
+
 
 If you are using WinRM on EC2 the HTTPS port for the WinRM service must also be
 enabled in your userdata. By default EC2 Windows images only have insecure HTTP

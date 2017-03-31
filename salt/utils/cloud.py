@@ -3222,6 +3222,8 @@ def userdata_template(opts, vm_, userdata):
     userdata_template = salt.config.get_cloud_config_value(
         'userdata_template', vm_, opts, search_global=False, default=None
     )
+    if userdata_template is False:
+        return userdata
     # Use the cloud profile's userdata_template, otherwise get it from the
     # master configuration file.
     renderer = opts.get('userdata_template') \

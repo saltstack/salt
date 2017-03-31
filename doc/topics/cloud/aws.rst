@@ -373,6 +373,16 @@ functionality was added to Salt in the 2015.5.0 release.
     If this is not set, then no templating will be performed on the
     userdata_file.
 
+    To disable templating in a cloud profile when a
+    :conf_master:`userdata_template` has been set in the master configuration
+    file, simply set ``userdata_template`` to ``False`` in the cloud profile:
+
+    .. code-block:: yaml
+
+        my-ec2-config:
+          # Pass userdata to the instance to be created
+          userdata_file: /etc/salt/my-userdata-file
+          userdata_template: False
 
 EC2 allows a location to be set for servers to be deployed in. Availability
 zones exist inside regions, and may be added to increase specificity.

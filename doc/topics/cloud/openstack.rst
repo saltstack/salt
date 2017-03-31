@@ -172,3 +172,14 @@ cloud-init if available.
     configuration will be checked for a :conf_master:`userdata_template` value.
     If this is not set, then no templating will be performed on the
     userdata_file.
+
+    To disable templating in a cloud profile when a
+    :conf_master:`userdata_template` has been set in the master configuration
+    file, simply set ``userdata_template`` to ``False`` in the cloud profile:
+
+    .. code-block:: yaml
+
+        my-openstack-config:
+          # Pass userdata to the instance to be created
+          userdata_file: /etc/salt/cloud-init/packages.yml
+          userdata_template: False
