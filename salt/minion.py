@@ -3208,8 +3208,8 @@ class ProxyMinion(Minion):
         # proxy keepalive
         proxy_alive_fn = fq_proxyname+'.alive'
         if (proxy_alive_fn in self.proxy
-            and 'status.proxy_reconnect' in self.functions and
-            self.opts.get('proxy_keep_alive', True)):
+            and 'status.proxy_reconnect' in self.functions
+            and self.opts.get('proxy_keep_alive', True)):
             # if `proxy_keep_alive` is either not specified, either set to False does not retry reconnecting
             self.schedule.add_job({
                 '__proxy_keepalive':
