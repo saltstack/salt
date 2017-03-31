@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -76,15 +77,20 @@ class MockTwilioRestClient(object):
     def __init__(self):
         self.sms = MockSMS()
 
-twilio_notify.TwilioRestClient = MockTwilioRestClient
-twilio_notify.TwilioRestException = MockTwilioRestException
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TwilioNotifyTestCase(TestCase):
+class TwilioNotifyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.twilio_notify
     '''
+    def setup_loader_modules(self):
+        return {
+            twilio_notify: {
+                'TwilioRestClient': MockTwilioRestClient,
+                'TwilioRestException': MockTwilioRestException
+            }
+        }
+
     # 'send_sms' function tests: 1
 
     def test_send_sms(self):

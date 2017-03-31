@@ -43,17 +43,15 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         Test for Get the current system locale
         '''
         with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': True}):
-            localemod.HAS_DBUS = True
-            with patch.object(localemod,
-                              '_parse_dbus_locale',
-                              return_value={'LANG': 'A'}):
+            with patch.multiple(localemod,
+                               _parse_dbus_locale=MagicMock(return_value={'LANG': 'A'}),
+                               HAS_DBUS=True):
                 self.assertEqual('A', localemod.get_locale())
                 localemod._parse_dbus_locale.assert_called_once_with()
 
-            localemod.HAS_DBUS = False
-            with patch.object(localemod,
-                              '_parse_localectl',
-                              return_value={'LANG': 'A'}):
+            with patch.multiple(localemod,
+                               _parse_localectl=MagicMock(return_value={'LANG': 'A'}),
+                               HAS_DBUS=False):
                 self.assertEqual('A', localemod.get_locale())
                 localemod._parse_localectl.assert_called_once_with()
 
