@@ -11,6 +11,8 @@ import subprocess
 import yaml
 
 # Import Salt Testing libs
+from tests.integration import AdaptedConfigurationTestCaseMixIn
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
@@ -20,9 +22,9 @@ COMMIT_USER_NAME = 'test_user'
 # file contents
 PILLAR_CONTENT = {'gna': 'hello'}
 FILE_DATA = {
-             'top.sls': {'base': {'*': ['user']}},
-             'user.sls': PILLAR_CONTENT
-             }
+     'top.sls': {'base': {'*': ['user']}},
+     'user.sls': PILLAR_CONTENT
+}
 
 # Import Salt Libs
 import salt.pillar.hg_pillar as hg_pillar
@@ -30,37 +32,38 @@ HGLIB = hg_pillar.hglib
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(HGLIB is None, 'python-hglib no')
-class HgPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
+@skipIf(HGLIB is None, 'python-hglib library not installed')
+class HgPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMixin):
     'test hg_pillar pillar'
     maxDiff = None
 
-    def setUp(self):
-        super(HgPillarTestCase, self).setUp()
+    def setup_loader_modules(self):
         self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        self.addCleanup(shutil.rmtree, self.tmpdir)
         cachedir = os.path.join(self.tmpdir, 'cachedir')
         os.makedirs(os.path.join(cachedir, 'hg_pillar'))
         self.hg_repo_path = self._create_hg_repo()
-        hg_pillar.__opts__ = {
-                'cachedir': cachedir,
-                'pillar_roots': {},
-                'file_roots': {},
-                'state_top': 'top.sls',
-                'extension_modules': '',
-                'renderer': 'yaml_jinja',
-                'pillar_opts': False
+        return {
+            hg_pillar: {
+                '__opts__':  {
+                    'cachedir': cachedir,
+                    'pillar_roots': {},
+                    'file_roots': {},
+                    'state_top': 'top.sls',
+                    'extension_modules': '',
+                    'renderer': 'yaml_jinja',
+                    'pillar_opts': False,
+                    'renderer_blacklist': [],
+                    'renderer_whitelist': []
                 }
-        hg_pillar.__grains__ = {}
-
-    def tearDown(self):
-        shutil.rmtree(self.tmpdir)
-        super(HgPillarTestCase, self).tearDown()
+            }
+        }
 
     def _create_hg_repo(self):
         'create repo in tempdir'
         hg_repo = os.path.join(self.tmpdir, 'repo_pillar')
         os.makedirs(hg_repo)
-        subprocess.check_call(["hg", "init", hg_repo])
+        subprocess.check_call(['hg', 'init', hg_repo])
         for filename in FILE_DATA:
             with open(os.path.join(hg_repo, filename), 'w') as data_file:
                 yaml.dump(FILE_DATA[filename], data_file)
