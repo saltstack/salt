@@ -28,9 +28,11 @@ from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.version
+from salt._compat import ElementTree as etree
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -556,3 +558,27 @@ class LoaderModuleMockMixin(six.with_metaclass(_FixLoaderModuleMockMixinMroOrder
         raise NotImplementedError(
             '\'{}.setup_loader_modules()\' must be implemented'.format(self.__class__.__name__)
         )
+
+
+class XMLEqualityMixin(object):
+
+    def assertEqualXML(self, e1, e2):
+        if six.PY3 and isinstance(e1, bytes):
+            e1 = e1.decode('utf-8')
+        if six.PY3 and isinstance(e2, bytes):
+            e2 = e2.decode('utf-8')
+        if isinstance(e1, six.string_types):
+            e1 = etree.XML(e1)
+        if isinstance(e2, six.string_types):
+            e2 = etree.XML(e2)
+        if e1.tag != e2.tag:
+            return False
+        if e1.text != e2.text:
+            return False
+        if e1.tail != e2.tail:
+            return False
+        if e1.attrib != e2.attrib:
+            return False
+        if len(e1) != len(e2):
+            return False
+        return all(self.assertEqualXML(c1, c2) for c1, c2 in zip(e1, e2))
