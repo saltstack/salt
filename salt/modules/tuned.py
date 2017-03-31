@@ -51,7 +51,7 @@ def list_():
     result.pop()
     # Output can be : " - <profile name> - <description>" (v2.7.1)
     # or " - <profile name> " (v2.4.1)
-    result = [i.split('-')[1].strip() for i in result]
+    result = [i.split('- ')[1].strip() for i in result]
     return result
 
 
