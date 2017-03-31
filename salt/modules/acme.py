@@ -172,12 +172,9 @@ def cert(name,
         return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
 
     if 'no action taken' in res['stdout']:
-     return {
-         'result': None,
-         'comment': 'No action taken on certificate {0}'.format(cert_file),
-         'not_after': expires(name)
-     }
-
+        return {'result': None,
+                'comment': 'No action taken on certificate {0}'.format(cert_file),
+                'not_after': expires(name)}
 
     if renew:
         comment = 'Certificate {0} renewed'.format(name)
