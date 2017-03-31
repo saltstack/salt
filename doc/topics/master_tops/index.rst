@@ -9,7 +9,7 @@ subsystems to be used to generate the top file data for a :ref:`highstate
 <running-highstate>` run on the master.
 
 The old `external_nodes` option has been removed. The master tops system
-provides an pluggable and extendable replacement for it, allowing for multiple
+provides a pluggable and extendable replacement for it, allowing for multiple
 different subsystems to provide top file data.
 
 Using the new `master_tops` option is simple:
