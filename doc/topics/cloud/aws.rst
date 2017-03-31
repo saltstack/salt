@@ -354,6 +354,13 @@ functionality was added to Salt in the 2015.5.0 release.
       # Pass userdata to the instance to be created
       userdata_file: /etc/salt/my-userdata-file
 
+.. note::
+    As of the 2016.11.0 release, this file can be templated, and as of the
+    2016.11.4 release, the renderer(s) used can be specified in the cloud
+    profile using the ``userdata_renderer`` option. If this option is not set
+    in the cloud profile, salt-cloud will fall back to the
+    :conf_master:`userdata_renderer` master configuration option.
+
 
 EC2 allows a location to be set for servers to be deployed in. Availability
 zones exist inside regions, and may be added to increase specificity.

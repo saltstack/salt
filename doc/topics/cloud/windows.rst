@@ -75,10 +75,18 @@ profile configuration as `userdata_file`. For instance:
 
     userdata_file: /etc/salt/windows-firewall.ps1
 
-If you are using WinRM on EC2 the HTTPS port for the WinRM service must also be enabled
-in your userdata. By default EC2 Windows images only have insecure HTTP enabled. To
-enable HTTPS and basic authentication required by pywinrm consider the following
-userdata example:
+.. note::
+    As of the 2016.11.0 release, this file can be templated, and as of the
+    2016.11.4 release, the renderer(s) used can be specified in the cloud
+    profile using the ``userdata_renderer`` option. If this option is not set
+    in the cloud profile, salt-cloud will fall back to the
+    :conf_master:`userdata_renderer` master configuration option.
+
+
+If you are using WinRM on EC2 the HTTPS port for the WinRM service must also be
+enabled in your userdata. By default EC2 Windows images only have insecure HTTP
+enabled. To enable HTTPS and basic authentication required by pywinrm consider
+the following userdata example:
 
 .. code-block:: powershell
 

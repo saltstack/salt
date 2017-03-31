@@ -1351,6 +1351,22 @@ The renderer to use on the minions to render the state data.
 
     renderer: yaml_jinja
 
+.. conf_master:: userdata_renderer
+
+``userdata_renderer``
+---------------------
+
+.. versionadded:: 2016.11.4
+
+Default: ``jinja``
+
+The renderer to use for templating userdata files in salt-cloud, if the
+``userdata_renderer`` is not set in the cloud profile.
+
+.. code-block:: yaml
+
+    userdata_renderer: jinja
+
 .. conf_master:: jinja_trim_blocks
 
 ``jinja_trim_blocks``
