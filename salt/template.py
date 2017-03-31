@@ -13,9 +13,10 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.stringio
 from salt.utils.odict import OrderedDict
-from salt._compat import string_io
-from salt.ext.six import string_types
+from salt.ext import six
+from salt.ext.six.moves import StringIO
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ def compile_template(template,
 
     if template != ':string:':
         # Template was specified incorrectly
-        if not isinstance(template, string_types):
+        if not isinstance(template, six.string_types):
             log.error('Template was specified incorrectly: {0}'.format(template))
             return ret
         # Template does not exist
@@ -82,7 +83,7 @@ def compile_template(template,
 
     windows_newline = '\r\n' in input_data
 
-    input_data = string_io(input_data)
+    input_data = StringIO(input_data)
     for render, argline in render_pipe:
         # For GPG renderer, input_data can be an OrderedDict (from YAML) or dict (from py renderer).
         # Repress the error.
@@ -124,9 +125,21 @@ def compile_template(template,
                 pass
 
     # Preserve newlines from original template
-    if windows_newline and '\r\n' not in ret:
-        return ret.replace('\n', '\r\n')
+    if windows_newline:
+        if salt.utils.stringio.is_readable(ret):
+            is_stringio = True
+            contents = ret.read()
+        else:
+            is_stringio = False
+            contents = ret
 
+        if isinstance(contents, six.string_types):
+            if '\r\n' not in contents:
+                contents = contents.replace('\n', '\r\n')
+                ret = StringIO(contents) if is_stringio else contents
+            else:
+                if is_stringio:
+                    ret.seek(0)
     return ret
 
 
