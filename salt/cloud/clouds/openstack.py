@@ -529,14 +529,14 @@ def request_instance(vm_=None, call=None):
         'userdata_file', vm_, __opts__, search_global=False, default=None
     )
     if userdata_file is not None:
-        with salt.utils.fopen(userdata_file, 'r') as fp_:
-            userdata = salt.utils.cloud.userdata_template(
-                __opts__, vm_, fp_.read()
-            )
         try:
-            kwargs['ex_userdata'] = base64.b64encode(userdata)
+            with salt.utils.fopen(userdata_file, 'r') as fp_:
+                kwargs['ex_userdata'] = salt.utils.cloud.userdata_template(
+                    __opts__, vm_, fp_.read()
+                )
         except Exception as exc:
-            log.exception('Failed to encode userdata: %s', exc)
+            log.exception(
+                'Failed to read userdata from %s: %s', userdata_file, exc)
 
     config_drive = config.get_cloud_config_value(
         'config_drive', vm_, __opts__, default=None, search_global=False
