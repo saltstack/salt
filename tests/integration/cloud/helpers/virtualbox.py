@@ -48,7 +48,7 @@ class VirtualboxTestCase(TestCase):
                 self.fail(e.message)
 
     def assertMachineDoesNotExist(self, name):
-        self.assertRaisesRegexp(Exception, "Could not find a registered machine", self.vbox.findMachine, name)
+        self.assertRaisesRegex(Exception, "Could not find a registered machine", self.vbox.findMachine, name)
 
 
 @skipIf(salt.utils.virtualbox.HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')
