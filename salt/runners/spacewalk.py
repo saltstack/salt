@@ -36,17 +36,7 @@ import atexit
 import logging
 
 # Import third party libs
-HAS_LIBS = False
-try:
-    import salt.ext.six as six
-    HAS_LIBS = True
-except ImportError:
-    # Salt version <= 2014.7.0
-    try:
-        import six
-        HAS_LIBS = True
-    except ImportError:
-        pass
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -58,8 +48,6 @@ def __virtual__():
     Check for spacewalk configuration in master config file
     or directory and load runner only if it is specified
     '''
-    if not HAS_LIBS:
-        return False, 'Missing six library'
     if not _get_spacewalk_configuration():
         return False, 'No spacewalk configuration found'
     return True

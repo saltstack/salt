@@ -3,11 +3,15 @@
 Return data to a postgresql server
 
 .. note::
+    There are three PostgreSQL returners.  Any can function as an external
+    :ref:`master job cache <external-master-cache>`. but each has different
+    features.  SaltStack recommends
+    :mod:`returners.pgjsonb <salt.returners.pgjsonb>` if you are working with
+    a version of PostgreSQL that has the appropriate native binary JSON types.
+    Otherwise, review
+    :mod:`returners.postgres <salt.returners.postgres>` and
     :mod:`returners.postgres_local_cache <salt.returners.postgres_local_cache>`
-    is recommended instead of this module when using PostgreSQL as a
-    :ref:`master job cache <external-master-cache>`. These two modules
-    provide different functionality so you should compare each to see which
-    module best suits your particular needs.
+    to see which module best suits your particular needs.
 
 :maintainer:    None
 :maturity:      New

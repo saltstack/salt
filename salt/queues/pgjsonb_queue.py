@@ -45,6 +45,8 @@ from contextlib import contextmanager
 import json
 import sys
 
+# import salt libs
+import salt.ext.six as six
 from salt.exceptions import SaltInvocationError, SaltMasterError
 
 try:
@@ -237,7 +239,7 @@ def pop(queue, quantity=1):
     '''
     Pop one or more or all items from the queue return them.
     '''
-    cmd = 'SELECT data FROM {0}'.format(queue)
+    cmd = 'SELECT id, data FROM {0}'.format(queue)
     if quantity != 'all':
         try:
             quantity = int(quantity)
@@ -247,17 +249,18 @@ def pop(queue, quantity=1):
             raise SaltInvocationError(error_txt)
         cmd = ''.join([cmd, ' LIMIT {0};'.format(quantity)])
     log.debug('SQL Query: {0}'.format(cmd))
+    items = []
     with _conn(commit=True) as cur:
-        items = []
         cur.execute(cmd)
         result = cur.fetchall()
         if len(result) > 0:
-            items = [item[0] for item in result]
-            itemlist = "','".join(items)
-            del_cmd = '''DELETE FROM {0} WHERE data IN ('{1}');'''.format(
-                queue, itemlist)
+            ids = [six.text_type(item[0]) for item in result]
+            items = [item[1] for item in result]
+            idlist = "','".join(ids)
+            del_cmd = '''DELETE FROM {0} WHERE id IN ('{1}');'''.format(
+                queue, idlist)
 
             log.debug('SQL Query: {0}'.format(del_cmd))
 
             cur.execute(del_cmd)
-    return [json.loads(x) for x in items]
+    return items

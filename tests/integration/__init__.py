@@ -34,23 +34,24 @@ STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
     r'(?P<pid>[\d]+) and was started at (?P<date>.*) with jid (?P<jid>[\d]+)'
 )
-INTEGRATION_TEST_DIR = os.path.dirname(
-    os.path.normpath(os.path.abspath(__file__))
-)
+
+TESTS_DIR = os.path.dirname(os.path.dirname(os.path.normpath(os.path.abspath(__file__))))
 if os.name == 'nt':
-    INTEGRATION_TEST_DIR = INTEGRATION_TEST_DIR.replace('\\', '\\\\')
-CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
+    TESTS_DIR = TESTS_DIR.replace('\\', '\\\\')
+CODE_DIR = os.path.dirname(TESTS_DIR)
 
-# Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.case import ShellTestCase
-from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
-from salttesting.parser import PNUM, print_header, SaltTestcaseParser
-from salttesting.helpers import requires_sshd_server
-from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
+# Let's inject CODE_DIR so salt is importable if not there already
+if CODE_DIR not in sys.path:
+    sys.path.insert(0, CODE_DIR)
 
-# Update sys.path
-ensure_in_syspath(CODE_DIR)
+# Import salt tests support dirs
+from tests.support.paths import *  # pylint: disable=wildcard-import
+from tests.support.processes import *  # pylint: disable=wildcard-import
+from tests.support.unit import TestCase
+from tests.support.case import ShellTestCase
+from tests.support.mixins import CheckShellBinaryNameAndVersionMixin, ShellCaseCommonTestsMixin
+from tests.support.parser import PNUM, print_header, SaltTestcaseParser
+from tests.support.helpers import requires_sshd_server, RedirectStdStreams
 
 # Import Salt libs
 import salt
@@ -60,6 +61,7 @@ import salt.runner
 import salt.output
 import salt.version
 import salt.utils
+import salt.utils.network
 import salt.utils.process
 import salt.log.setup as salt_log_setup
 from salt.ext import six
@@ -67,6 +69,12 @@ from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
+
+try:
+    from salt.utils.gitfs import HAS_GITPYTHON, HAS_PYGIT2
+    HAS_GITFS = HAS_GITPYTHON or HAS_PYGIT2
+except ImportError:
+    HAS_GITFS = False
 
 try:
     from shlex import quote as _quote  # pylint: disable=E0611
@@ -96,144 +104,9 @@ if salt.utils.is_windows():
 from tornado import gen
 from tornado import ioloop
 
-try:
-    from salttesting.helpers import terminate_process_pid
-except ImportError:
-    # Once the latest salt-testing works against salt's develop branch
-    # uncomment the following 2 lines and delete the function defined
-    # in this except
-    #print('Please upgrade your version of salt-testing')
-    #sys.exit(1)
+# Import salt tests support libs
+from tests.support.processes import SaltMaster, SaltMinion, SaltSyndic
 
-    import psutil
-
-    def terminate_process_pid(pid, only_children=False):
-        children = []
-        process = None
-
-        # Let's begin the shutdown routines
-        try:
-            process = psutil.Process(pid)
-            if hasattr(process, 'children'):
-                children = process.children(recursive=True)
-        except psutil.NoSuchProcess:
-            log.info('No process with the PID %s was found running', pid)
-
-        if process and only_children is False:
-            try:
-                cmdline = process.cmdline()
-            except psutil.AccessDenied:
-                # macOS denies us access to the above information
-                cmdline = None
-            if not cmdline:
-                try:
-                    cmdline = process.as_dict()
-                except psutil.NoSuchProcess as exc:
-                    log.debug('No such process found. Stacktrace: {0}'.format(exc))
-
-            if psutil.pid_exists(pid):
-                log.info('Terminating process: %s', cmdline)
-                process.terminate()
-                try:
-                    process.wait(timeout=10)
-                except psutil.TimeoutExpired:
-                    pass
-
-            if psutil.pid_exists(pid):
-                log.warning('Killing process: %s', cmdline)
-                process.kill()
-
-            if psutil.pid_exists(pid):
-                log.warning('Process left behind which we were unable to kill: %s', cmdline)
-        if children:
-            # Lets log and kill any child processes which salt left behind
-            def kill_children(_children, kill=False):
-                for child in _children[:][::-1]:  # Iterate over a reversed copy of the list
-                    try:
-                        if not kill and child.status() == psutil.STATUS_ZOMBIE:
-                            # Zombie processes will exit once child processes also exit
-                            continue
-                        try:
-                            cmdline = child.cmdline()
-                        except psutil.AccessDenied as err:
-                            log.debug('Cannot obtain child process cmdline: %s', err)
-                            cmdline = ''
-                        if not cmdline:
-                            cmdline = child.as_dict()
-                        if kill:
-                            log.warning('Killing child process left behind: %s', cmdline)
-                            child.kill()
-                        else:
-                            log.warning('Terminating child process left behind: %s', cmdline)
-                            child.terminate()
-                        if not psutil.pid_exists(child.pid):
-                            _children.remove(child)
-                    except psutil.NoSuchProcess:
-                        _children.remove(child)
-            try:
-                kill_children([child for child in children if child.is_running()
-                               and not any(sys.argv[0] in cmd for cmd in child.cmdline())])
-            except psutil.AccessDenied:
-                # OSX denies us access to the above information
-                kill_children(children)
-
-            if children:
-                psutil.wait_procs(children, timeout=3, callback=lambda proc: kill_children(children, kill=True))
-
-            if children:
-                psutil.wait_procs(children, timeout=1, callback=lambda proc: kill_children(children, kill=True))
-
-
-SYS_TMP_DIR = os.path.realpath(
-    # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
-    # for unix sockets: ``error: AF_UNIX path too long``
-    # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
-    os.environ.get('TMPDIR', tempfile.gettempdir()) if not salt.utils.is_darwin() else '/tmp'
-)
-TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
-FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
-PYEXEC = 'python{0}.{1}'.format(*sys.version_info)
-MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
-SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
-TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
-TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
-TMP_CONF_DIR = os.path.join(TMP, 'config')
-TMP_SUB_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, 'sub-minion')
-TMP_SYNDIC_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, 'syndic-minion')
-TMP_SYNDIC_MASTER_CONF_DIR = os.path.join(TMP_CONF_DIR, 'syndic-master')
-CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-PILLAR_DIR = os.path.join(FILES, 'pillar')
-TMP_SCRIPT_DIR = os.path.join(TMP, 'scripts')
-ENGINES_DIR = os.path.join(FILES, 'engines')
-LOG_HANDLERS_DIR = os.path.join(FILES, 'log_handlers')
-
-SCRIPT_TEMPLATES = {
-    'salt': [
-        'from salt.scripts import salt_main\n',
-        'if __name__ == \'__main__\':\n'
-        '    salt_main()'
-    ],
-    'salt-api': [
-        'import salt.cli\n',
-        'def main():\n',
-        '    sapi = salt.cli.SaltAPI()',
-        '    sapi.start()\n',
-        'if __name__ == \'__main__\':',
-        '    main()'
-    ],
-    'common': [
-        'from salt.scripts import salt_{0}\n',
-        'from salt.utils import is_windows\n\n',
-        'if __name__ == \'__main__\':\n',
-        '    if is_windows():\n',
-        '        import os.path\n',
-        '        import py_compile\n',
-        '        cfile = os.path.splitext(__file__)[0] + ".pyc"\n',
-        '        if not os.path.exists(cfile):\n',
-        '            py_compile.compile(__file__, cfile)\n',
-        '    salt_{0}()'
-    ]
-}
 RUNTIME_CONFIGS = {}
 
 log = logging.getLogger(__name__)
@@ -293,67 +166,6 @@ atexit.register(close_open_sockets, _RUNTESTS_PORTS)
 SALT_LOG_PORT = get_unused_localhost_port()
 
 
-def run_tests(*test_cases, **kwargs):
-    '''
-    Run integration tests for the chosen test cases.
-
-    Function uses optparse to set up test environment
-    '''
-
-    needs_daemon = kwargs.pop('needs_daemon', True)
-    if kwargs:
-        raise RuntimeError(
-            'The \'run_tests\' function only accepts \'needs_daemon\' as a '
-            'keyword argument'
-        )
-
-    class TestcaseParser(SaltTestcaseParser):
-        def setup_additional_options(self):
-            self.add_option(
-                '--sysinfo',
-                default=False,
-                action='store_true',
-                help='Print some system information.'
-            )
-            self.output_options_group.add_option(
-                '--no-colors',
-                '--no-colours',
-                default=False,
-                action='store_true',
-                help='Disable colour printing.'
-            )
-            if needs_daemon:
-                self.add_option(
-                    '--transport',
-                    default='zeromq',
-                    choices=('zeromq', 'raet', 'tcp'),
-                    help=('Select which transport to run the integration tests with, '
-                          'zeromq, raet, or tcp. Default: %default')
-                )
-
-        def validate_options(self):
-            SaltTestcaseParser.validate_options(self)
-            # Transplant configuration
-            transport = None
-            if needs_daemon:
-                transport = self.options.transport
-            TestDaemon.transplant_configs(transport=transport)
-
-        def run_testcase(self, testcase, needs_daemon=True):  # pylint: disable=W0221
-            if needs_daemon:
-                print(' * Setting up Salt daemons to execute tests')
-                with TestDaemon(self):
-                    return SaltTestcaseParser.run_testcase(self, testcase)
-            return SaltTestcaseParser.run_testcase(self, testcase)
-
-    parser = TestcaseParser()
-    parser.parse_args()
-    for case in test_cases:
-        if parser.run_testcase(case, needs_daemon=needs_daemon) is False:
-            parser.finalize(1)
-    parser.finalize(0)
-
-
 class ThreadingMixIn(socketserver.ThreadingMixIn):
     daemon_threads = True
 
@@ -402,273 +214,6 @@ class SocketServerRequestHandler(socketserver.StreamRequestHandler):
                 log.exception(exc)
 
 
-class ScriptPathMixin(object):
-
-    def get_script_path(self, script_name):
-        '''
-        Return the path to a testing runtime script
-        '''
-        if not os.path.isdir(TMP_SCRIPT_DIR):
-            os.makedirs(TMP_SCRIPT_DIR)
-
-        script_path = os.path.join(TMP_SCRIPT_DIR,
-                                   'cli_{0}.py'.format(script_name.replace('-', '_')))
-
-        if not os.path.isfile(script_path):
-            log.info('Generating {0}'.format(script_path))
-
-            # Late import
-            import salt.utils
-
-            with salt.utils.fopen(script_path, 'w') as sfh:
-                script_template = SCRIPT_TEMPLATES.get(script_name, None)
-                if script_template is None:
-                    script_template = SCRIPT_TEMPLATES.get('common', None)
-                if script_template is None:
-                    raise RuntimeError(
-                        '{0} does not know how to handle the {1} script'.format(
-                            self.__class__.__name__,
-                            script_name
-                        )
-                    )
-                sfh.write(
-                    '#!{0}\n\n'.format(sys.executable) +
-                    'import sys\n' +
-                    'CODE_DIR="{0}"\n'.format(CODE_DIR) +
-                    'if CODE_DIR not in sys.path:\n' +
-                    '    sys.path.insert(0, CODE_DIR)\n\n' +
-                    '\n'.join(script_template).format(script_name.replace('salt-', ''))
-                )
-            fst = os.stat(script_path)
-            os.chmod(script_path, fst.st_mode | stat.S_IEXEC)
-
-        log.info('Returning script path %r', script_path)
-        return script_path
-
-
-class SaltScriptBase(ScriptPathMixin):
-    '''
-    Base class for Salt CLI scripts
-    '''
-
-    cli_script_name = None
-
-    def __init__(self,
-                 config,
-                 config_dir,
-                 bin_dir_path,
-                 io_loop=None):
-        self.config = config
-        self.config_dir = config_dir
-        self.bin_dir_path = bin_dir_path
-        self._io_loop = io_loop
-
-    @property
-    def io_loop(self):
-        '''
-        Return an IOLoop
-        '''
-        if self._io_loop is None:
-            self._io_loop = ioloop.IOLoop.current()
-        return self._io_loop
-
-    def get_script_args(self):  # pylint: disable=no-self-use
-        '''
-        Returns any additional arguments to pass to the CLI script
-        '''
-        return []
-
-
-class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
-    '''
-    Base class for Salt Daemon CLI scripts
-    '''
-
-    def __init__(self, *args, **kwargs):
-        super(SaltDaemonScriptBase, self).__init__(*args, **kwargs)
-        self._running = multiprocessing.Event()
-        self._connectable = multiprocessing.Event()
-        self._process = None
-
-    def is_alive(self):
-        '''
-        Returns true if the process is alive
-        '''
-        return self._running.is_set()
-
-    def get_check_ports(self):  # pylint: disable=no-self-use
-        '''
-        Return a list of ports to check against to ensure the daemon is running
-        '''
-        return []
-
-    def start(self):
-        '''
-        Start the daemon subprocess
-        '''
-        self._process = salt.utils.process.SignalHandlingMultiprocessingProcess(
-            target=self._start, args=(self._running,))
-        self._process.start()
-        self._running.set()
-        return True
-
-    def _start(self, running_event):
-        '''
-        The actual, coroutine aware, start method
-        '''
-        log.info('Starting %s %s DAEMON', self.display_name, self.__class__.__name__)
-        proc_args = [
-            self.get_script_path(self.cli_script_name),
-            '-c',
-            self.config_dir,
-        ] + self.get_script_args()
-        if salt.utils.is_windows():
-            # Windows need the python executable to come first
-            proc_args.insert(0, sys.executable)
-        log.info('Running \'%s\' from %s...', ' '.join(proc_args), self.__class__.__name__)
-
-        try:
-            terminal = NonBlockingPopen(proc_args, cwd=CODE_DIR)
-
-            while running_event.is_set() and terminal.poll() is None:
-                # We're not actually interested in processing the output, just consume it
-                if terminal.stdout is not None:
-                    terminal.recv()
-                if terminal.stderr is not None:
-                    terminal.recv_err()
-                time.sleep(0.125)
-        except (SystemExit, KeyboardInterrupt):
-            pass
-
-        terminate_process_pid(terminal.pid)
-#        terminal.communicate()
-
-    def terminate(self):
-        '''
-        Terminate the started daemon
-        '''
-        log.info('Terminating %s %s DAEMON', self.display_name, self.__class__.__name__)
-        self._running.clear()
-        self._connectable.clear()
-        time.sleep(0.0125)
-        terminate_process_pid(self._process.pid)
-#        self._process.join()
-        log.info('%s %s DAEMON terminated', self.display_name, self.__class__.__name__)
-
-    def wait_until_running(self, timeout=None):
-        '''
-        Blocking call to wait for the daemon to start listening
-        '''
-        if self._connectable.is_set():
-            return True
-        try:
-            return self.io_loop.run_sync(self._wait_until_running, timeout=timeout)
-        except ioloop.TimeoutError:
-            return False
-
-    @gen.coroutine
-    def _wait_until_running(self):
-        '''
-        The actual, coroutine aware, call to wait for the daemon to start listening
-        '''
-        check_ports = self.get_check_ports()
-        log.debug(
-            '%s is checking the following ports to assure running status: %s',
-            self.__class__.__name__,
-            check_ports
-        )
-        while self._running.is_set():
-            if not check_ports:
-                self._connectable.set()
-                break
-            for port in set(check_ports):
-                if isinstance(port, int):
-                    log.trace('Checking connectable status on port: %s', port)
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    conn = sock.connect_ex(('localhost', port))
-                    if conn == 0:
-                        log.debug('Port %s is connectable!', port)
-                        check_ports.remove(port)
-                        try:
-                            sock.shutdown(socket.SHUT_RDWR)
-                            sock.close()
-                        except socket.error as exc:
-                            if not sys.platform.startswith('darwin'):
-                                raise
-                            try:
-                                if exc.errno != errno.ENOTCONN:
-                                    raise
-                            except AttributeError:
-                                # This is not macOS !?
-                                pass
-                    del sock
-                elif isinstance(port, str):
-                    joined = self.run_run('manage.joined', config_dir=self.config_dir)
-                    joined = [x.lstrip('- ') for x in joined]
-                    if port in joined:
-                        check_ports.remove(port)
-            yield gen.sleep(0.125)
-        # A final sleep to allow the ioloop to do other things
-        yield gen.sleep(0.125)
-        log.info('All ports checked. %s running!', self.cli_script_name)
-        raise gen.Return(self._connectable.is_set())
-
-
-class SaltMinion(SaltDaemonScriptBase):
-    '''
-    Class which runs the salt-minion daemon
-    '''
-
-    cli_script_name = 'salt-minion'
-
-    def get_script_args(self):
-        script_args = ['-l', 'quiet']
-        if salt.utils.is_windows() is False:
-            script_args.append('--disable-keepalive')
-        return script_args
-
-    def get_check_ports(self):
-        if salt.utils.is_windows():
-            return set([self.config['tcp_pub_port'],
-                        self.config['tcp_pull_port']])
-        else:
-            return set([self.config['id']])
-
-
-class SaltMaster(SaltDaemonScriptBase):
-    '''
-    Class which runs the salt-minion daemon
-    '''
-
-    cli_script_name = 'salt-master'
-
-    def get_check_ports(self):
-        #return set([self.config['runtests_conn_check_port']])
-        return set([self.config['ret_port'],
-                    self.config['publish_port']])
-        # Disabled along with Pytest config until fixed.
-#                    self.config['runtests_conn_check_port']])
-
-    def get_script_args(self):
-        #return ['-l', 'debug']
-        return ['-l', 'quiet']
-
-
-class SaltSyndic(SaltDaemonScriptBase):
-    '''
-    Class which runs the salt-syndic daemon
-    '''
-
-    cli_script_name = 'salt-syndic'
-
-    def get_script_args(self):
-        #return ['-l', 'debug']
-        return ['-l', 'quiet']
-
-    def get_check_ports(self):
-        return set()
-
-
 class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
@@ -694,6 +239,14 @@ class TestDaemon(object):
 
         # Set up PATH to mockbin
         self._enter_mockbin()
+
+        if not HAS_GITFS:
+            sys.stdout.write(
+                ' * {LIGHT_RED}No suitable provider for git_pillar is installed. Install\n'
+                '   GitPython or Pygit2.{ENDC}\n'.format(
+                    **self.colors
+                )
+            )
 
         if self.parser.options.transport == 'zeromq':
             self.start_zeromq_daemons()
@@ -761,42 +314,194 @@ class TestDaemon(object):
         '''
         Fire up the daemons used for zeromq tests
         '''
+        if not salt.utils.network.ip_addrs():
+            sys.stdout.write(
+                ' * {LIGHT_RED}Unable to list IPv4 addresses. Test suite startup will be\n'
+                '   slower. Install iproute/ifconfig to fix this.{ENDC}\n'.format(
+                    **self.colors
+                )
+            )
         self.log_server = ThreadedSocketServer(('localhost', SALT_LOG_PORT), SocketServerRequestHandler)
         self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
         self.log_server_process.daemon = True
         self.log_server_process.start()
-
-        self.master_process = SaltMaster(self.master_opts, TMP_CONF_DIR, SCRIPT_DIR)
-        self.master_process.display_name = 'salt-master'
-        self.minion_process = SaltMinion(self.minion_opts, TMP_CONF_DIR, SCRIPT_DIR)
-        self.minion_process.display_name = 'salt-minion'
-        self.sub_minion_process = SaltMinion(self.sub_minion_opts, TMP_SUB_MINION_CONF_DIR, SCRIPT_DIR)
-        self.sub_minion_process.display_name = 'sub salt-minion'
-        self.smaster_process = SaltMaster(self.syndic_master_opts, TMP_SYNDIC_MASTER_CONF_DIR, SCRIPT_DIR)
-        self.smaster_process.display_name = 'syndic salt-master'
-        self.syndic_process = SaltSyndic(self.syndic_opts, TMP_SYNDIC_MINION_CONF_DIR, SCRIPT_DIR)
-        self.syndic_process.display_name = 'salt-syndic'
-        for process in (self.master_process, self.minion_process, self.sub_minion_process,
-                        self.smaster_process, self.syndic_process):
+        try:
             sys.stdout.write(
-                ' * {LIGHT_YELLOW}Starting {0} ... {ENDC}'.format(
-                    process.display_name,
-                    **self.colors
-                )
+                ' * {LIGHT_YELLOW}Starting salt-master ... {ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-            process.start()
-            process.wait_until_running(timeout=60)
+            self.master_process = start_daemon(
+                daemon_name='salt-master',
+                daemon_id=self.master_opts['id'],
+                daemon_log_prefix='salt-master/{}'.format(self.master_opts['id']),
+                daemon_cli_script_name='master',
+                daemon_config=self.master_opts,
+                daemon_config_dir=TMP_CONF_DIR,
+                daemon_class=SaltMaster,
+                bin_dir_path=SCRIPT_DIR,
+                fail_hard=True,
+                start_timeout=30)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
                 )
             )
             sys.stdout.write(
-                ' * {LIGHT_GREEN}Starting {0} ... STARTED!\n{ENDC}'.format(
-                    process.display_name,
-                    **self.colors
+                ' * {LIGHT_GREEN}Starting salt-master ... STARTED!\n{ENDC}'.format(**self.colors)
+            )
+            sys.stdout.flush()
+        except (RuntimeWarning, RuntimeError):
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
                 )
+            )
+            sys.stdout.write(
+                ' * {LIGHT_RED}Starting salt-master ... FAILED!\n{ENDC}'.format(**self.colors)
+            )
+            sys.stdout.flush()
+
+        try:
+            sys.stdout.write(
+                ' * {LIGHT_YELLOW}Starting salt-minion ... {ENDC}'.format(**self.colors)
+            )
+            sys.stdout.flush()
+            self.minion_process = start_daemon(
+                daemon_name='salt-minion',
+                daemon_id=self.master_opts['id'],
+                daemon_log_prefix='salt-minion/{}'.format(self.minion_opts['id']),
+                daemon_cli_script_name='minion',
+                daemon_config=self.minion_opts,
+                daemon_config_dir=TMP_CONF_DIR,
+                daemon_class=SaltMinion,
+                bin_dir_path=SCRIPT_DIR,
+                fail_hard=True,
+                start_timeout=30)
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
+            sys.stdout.write(
+                ' * {LIGHT_GREEN}Starting salt-minion ... STARTED!\n{ENDC}'.format(**self.colors)
+            )
+            sys.stdout.flush()
+        except (RuntimeWarning, RuntimeError):
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
+            sys.stdout.write(
+                ' * {LIGHT_RED}Starting salt-minion ... FAILED!\n{ENDC}'.format(**self.colors)
+            )
+            sys.stdout.flush()
+
+        try:
+            sys.stdout.write(
+                ' * {LIGHT_YELLOW}Starting sub salt-minion ... {ENDC}'.format(**self.colors)
+            )
+            sys.stdout.flush()
+            self.sub_minion_process = start_daemon(
+                daemon_name='sub salt-minion',
+                daemon_id=self.master_opts['id'],
+                daemon_log_prefix='sub-salt-minion/{}'.format(self.sub_minion_opts['id']),
+                daemon_cli_script_name='minion',
+                daemon_config=self.sub_minion_opts,
+                daemon_config_dir=TMP_SUB_MINION_CONF_DIR,
+                daemon_class=SaltMinion,
+                bin_dir_path=SCRIPT_DIR,
+                fail_hard=True,
+                start_timeout=30)
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
+            sys.stdout.write(
+                ' * {LIGHT_GREEN}Starting sub salt-minion ... STARTED!\n{ENDC}'.format(**self.colors)
+            )
+            sys.stdout.flush()
+        except (RuntimeWarning, RuntimeError):
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
+            sys.stdout.write(
+                ' * {LIGHT_RED}Starting sub salt-minion ... FAILED!\n{ENDC}'.format(**self.colors)
+            )
+            sys.stdout.flush()
+
+        try:
+            sys.stdout.write(
+                ' * {LIGHT_YELLOW}Starting syndic salt-master ... {ENDC}'.format(**self.colors)
+            )
+            sys.stdout.flush()
+            self.smaster_process = start_daemon(
+                daemon_name='salt-smaster',
+                daemon_id=self.syndic_master_opts['id'],
+                daemon_log_prefix='salt-smaster/{}'.format(self.syndic_master_opts['id']),
+                daemon_cli_script_name='master',
+                daemon_config=self.syndic_master_opts,
+                daemon_config_dir=TMP_SYNDIC_MASTER_CONF_DIR,
+                daemon_class=SaltMaster,
+                bin_dir_path=SCRIPT_DIR,
+                fail_hard=True,
+                start_timeout=30)
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
+            sys.stdout.write(
+                ' * {LIGHT_GREEN}Starting syndic salt-master ... STARTED!\n{ENDC}'.format(**self.colors)
+            )
+            sys.stdout.flush()
+        except (RuntimeWarning, RuntimeError):
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
+            sys.stdout.write(
+                ' * {LIGHT_RED}Starting syndic salt-master ... FAILED!\n{ENDC}'.format(**self.colors)
+            )
+            sys.stdout.flush()
+
+        try:
+            sys.stdout.write(
+                ' * {LIGHT_YELLOW}Starting salt-syndic ... {ENDC}'.format(**self.colors)
+            )
+            sys.stdout.flush()
+            self.syndic_process = start_daemon(
+                daemon_name='salt-syndic',
+                daemon_id=self.syndic_opts['id'],
+                daemon_log_prefix='salt-syndic/{}'.format(self.syndic_opts['id']),
+                daemon_cli_script_name='syndic',
+                daemon_config=self.syndic_opts,
+                daemon_config_dir=TMP_SYNDIC_MINION_CONF_DIR,
+                daemon_class=SaltSyndic,
+                bin_dir_path=SCRIPT_DIR,
+                fail_hard=True,
+                start_timeout=30)
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
+            sys.stdout.write(
+                ' * {LIGHT_GREEN}Starting salt-syndic ... STARTED!\n{ENDC}'.format(**self.colors)
+            )
+            sys.stdout.flush()
+        except (RuntimeWarning, RuntimeError):
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
+            sys.stdout.write(
+                ' * {LIGHT_RED}Starting salt-syndic ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
 
@@ -1123,6 +828,13 @@ class TestDaemon(object):
                 TMP_PRODENV_STATE_TREE
             ]
         }
+        master_opts.setdefault('reactor', []).append(
+            {
+                'salt/minion/*/start': [
+                    os.path.join(FILES, 'reactor-sync-minion.sls')
+                ],
+            }
+        )
         for opts_dict in (master_opts, syndic_master_opts):
             if 'ext_pillar' not in opts_dict:
                 opts_dict['ext_pillar'] = []
@@ -1156,7 +868,22 @@ class TestDaemon(object):
             syndic_opts[optname] = optname_path
             syndic_master_opts[optname] = optname_path
 
+        master_opts['runtests_conn_check_port'] = get_unused_localhost_port()
+        minion_opts['runtests_conn_check_port'] = get_unused_localhost_port()
+        sub_minion_opts['runtests_conn_check_port'] = get_unused_localhost_port()
+        syndic_opts['runtests_conn_check_port'] = get_unused_localhost_port()
+        syndic_master_opts['runtests_conn_check_port'] = get_unused_localhost_port()
+
         for conf in (master_opts, minion_opts, sub_minion_opts, syndic_opts, syndic_master_opts):
+            if 'engines' not in conf:
+                conf['engines'] = []
+            conf['engines'].append({'salt_runtests': {}})
+
+            if 'engines_dirs' not in conf:
+                conf['engines_dirs'] = []
+
+            conf['engines_dirs'].insert(0, ENGINES_DIR)
+
             if 'log_handlers_dirs' not in conf:
                 conf['log_handlers_dirs'] = []
             conf['log_handlers_dirs'].insert(0, LOG_HANDLERS_DIR)
@@ -1358,7 +1085,8 @@ class TestDaemon(object):
         Clean out the tmp files
         '''
         def remove_readonly(func, path, excinfo):
-            os.chmod(path, stat.S_IWRITE)
+            # Give full permissions to owner
+            os.chmod(path, stat.S_IRWXU)
             func(path)
 
         for dirname in (TMP, TMP_STATE_TREE, TMP_PRODENV_STATE_TREE):
@@ -1564,6 +1292,7 @@ class TestDaemon(object):
         self.sync_minion_modules_('modules', targets, timeout=timeout)
 
     def sync_minion_grains(self, targets, timeout=None):
+        salt.utils.appendproctitle('SyncMinionGrains')
         self.sync_minion_modules_('grains', targets, timeout=timeout)
 
 
@@ -1706,16 +1435,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
     Execute a module function
     '''
 
-    def runTest(self):
-        '''
-        TODO remove after salt-testing PR #74 is merged and deployed
-        '''
-        try:
-            super(ModuleCase, self).runTest()
-        except AttributeError:
-            log.error('ModuleCase runTest() could not execute. Requires at least v2016.8.3 of '
-                    'salt-testing package')
-
     def minion_run(self, _function, *args, **kw):
         '''
         Run a single salt function on the 'minion' target and condition
@@ -1732,6 +1451,10 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         know_to_return_none = (
             'file.chown', 'file.chgrp', 'ssh.recv_known_host'
         )
+        if 'f_arg' in kwargs:
+            kwargs['arg'] = kwargs.pop('f_arg')
+        if 'f_timeout' in kwargs:
+            kwargs['timeout'] = kwargs.pop('f_timeout')
         orig = self.client.cmd(
             minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
         )
@@ -1944,67 +1667,6 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-cloud', arg_str, catch_stderr,
                                timeout=timeout)
-
-
-class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
-
-    _call_binary_expected_version_ = salt.version.__version__
-
-    def test_salt_with_git_version(self):
-        if getattr(self, '_call_binary_', None) is None:
-            self.skipTest('\'_call_binary_\' not defined.')
-        from salt.utils import which
-        from salt.version import __version_info__, SaltStackVersion
-        git = which('git')
-        if not git:
-            self.skipTest('The git binary is not available')
-
-        # Let's get the output of git describe
-        process = subprocess.Popen(
-            [git, 'describe', '--tags', '--first-parent', '--match', 'v[0-9]*'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            close_fds=True,
-            cwd=CODE_DIR
-        )
-        out, err = process.communicate()
-        if process.returncode != 0:
-            process = subprocess.Popen(
-                [git, 'describe', '--tags', '--match', 'v[0-9]*'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                close_fds=True,
-                cwd=CODE_DIR
-            )
-            out, err = process.communicate()
-        if not out:
-            self.skipTest(
-                'Failed to get the output of \'git describe\'. '
-                'Error: \'{0}\''.format(
-                    salt.utils.to_str(err)
-                )
-            )
-
-        parsed_version = SaltStackVersion.parse(out)
-
-        if parsed_version.info < __version_info__:
-            self.skipTest(
-                'We\'re likely about to release a new version. This test '
-                'would fail. Parsed(\'{0}\') < Expected(\'{1}\')'.format(
-                    parsed_version.info, __version_info__
-                )
-            )
-        elif parsed_version.info != __version_info__:
-            self.skipTest(
-                'In order to get the proper salt version with the '
-                'git hash you need to update salt\'s local git '
-                'tags. Something like: \'git fetch --tags\' or '
-                '\'git fetch --tags upstream\' if you followed '
-                'salt\'s contribute documentation. The version '
-                'string WILL NOT include the git hash.'
-            )
-        out = '\n'.join(self.run_script(self._call_binary_, '--version'))
-        self.assertIn(parsed_version.string, out)
 
 
 @requires_sshd_server

@@ -95,7 +95,8 @@ def cert(name,
          keysize=None,
          server=None,
          owner='root',
-         group='root'):
+         group='root',
+         certname=None):
     '''
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
 
@@ -109,6 +110,7 @@ def cert(name,
     :param server: API endpoint to talk to
     :param owner: owner of private key
     :param group: group of private key
+    :param certname: Name of the certificate to save
     :return: dict with 'result' True/False/None, 'comment' and certificate's expiry date ('not_after')
 
     CLI example:
@@ -137,6 +139,9 @@ def cert(name,
 
     if server:
         cmd.append('--server {0}'.format(server))
+
+    if certname:
+        cmd.append('--cert-name {0}'.format(certname))
 
     if test_cert:
         if server:

@@ -387,7 +387,7 @@ def get_network(network_name,
             log.debug('Infoblox record returned: {0}'.format(entry))
             tEntry = {}
             data = _parse_record_data(entry)
-            for key in data.keys():
+            for key in data:
                 tEntry[key] = data[key]
             records.append(tEntry)
         return records
@@ -467,7 +467,7 @@ def get_record(record_name,
             log.debug('Infoblox record returned: {0}'.format(entry))
             tEntry = {}
             data = _parse_record_data(entry)
-            for key in data.keys():
+            for key in data:
                 tEntry[key] = data[key]
             records.append(tEntry)
         return records

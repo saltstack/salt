@@ -4,6 +4,12 @@ Connection module for Amazon Lambda
 
 .. versionadded:: 2016.3.0
 
+:depends:
+    - boto
+    - boto3
+
+The dependencies listed above can be installed via package or pip.
+
 :configuration: This module accepts explicit Lambda credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
@@ -69,8 +75,6 @@ Connection module for Amazon Lambda
         error:
           message: error message
 
-:depends: boto3
-
 '''
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
@@ -79,7 +83,6 @@ Connection module for Amazon Lambda
 from __future__ import absolute_import
 import logging
 import json
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import time
 import random
 
@@ -88,6 +91,7 @@ import salt.ext.six as six
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range  # pylint: disable=import-error
 
@@ -202,6 +206,22 @@ def _filedata(infile):
         return f.read()
 
 
+def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
+    if isinstance(conf, six.string_types):
+        conf = json.loads(conf)
+    if not conf:
+        return None
+    if not isinstance(conf, dict):
+        raise SaltInvocationError('VpcConfig must be a dict.')
+    sns = [__salt__['boto_vpc.get_resource_id']('subnet', s, region=region, key=key,
+            keyid=keyid, profile=profile).get('id') for s in conf.pop('SubnetNames', [])]
+    sgs = [__salt__['boto_secgroup.get_group_id'](s, region=region, key=key, keyid=keyid,
+            profile=profile) for s in conf.pop('SecurityGroupNames', [])]
+    conf.setdefault('SubnetIds', []).extend(sns)
+    conf.setdefault('SecurityGroupIds', []).extend(sgs)
+    return conf
+
+
 def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
                     S3Bucket=None, S3Key=None, S3ObjectVersion=None,
                     Description="", Timeout=3, MemorySize=128, Publish=False,
@@ -256,7 +276,7 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
                 code['S3ObjectVersion'] = S3ObjectVersion
         kwargs = {}
         if VpcConfig is not None:
-            kwargs['VpcConfig'] = VpcConfig
+            kwargs['VpcConfig'] = _resolve_vpcconfig(VpcConfig, region=region, key=key, keyid=keyid, profile=profile)
         if Environment is not None:
             kwargs['Environment'] = Environment
         if WaitForRole:
@@ -386,14 +406,15 @@ def update_function_config(FunctionName, Role=None, Handler=None,
                'VpcConfig': VpcConfig,
                'Environment': Environment}
 
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     for val, var in six.iteritems(options):
         if var:
             args[val] = var
     if Role:
-        role_arn = _get_role_arn(Role, region, key, keyid, profile)
-        args['Role'] = role_arn
+        args['Role'] = _get_role_arn(Role, region, key, keyid, profile)
+    if VpcConfig:
+        args['VpcConfig'] = _resolve_vpcconfig(VpcConfig, region=region, key=key, keyid=keyid, profile=profile)
     try:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if WaitForRole:
             retrycount = RoleRetries
         else:
@@ -591,6 +612,25 @@ def get_permissions(FunctionName, Qualifier=None,
         if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
             return {'permissions': None}
         return {'permissions': None, 'error': err}
+
+
+def list_functions(region=None, key=None, keyid=None, profile=None):
+    '''
+    List all Lambda functions visible in the current scope.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lambda.list_functions
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    ret = []
+    for funcs in salt.utils.boto3.paged_call(conn.list_functions):
+        ret += funcs['Functions']
+    return ret
 
 
 def list_function_versions(FunctionName,

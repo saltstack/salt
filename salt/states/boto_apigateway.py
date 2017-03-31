@@ -31,18 +31,18 @@ config:
 .. code-block:: yaml
 
     myprofile:
-        keyid: GKTADJGHEIQSXMKKRBJ08H
-        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
 
 .. code-block:: yaml
 
     Ensure Apigateway API exists:
-        boto_apigateway.present:
-            - name: myfunction
-            - region: us-east-1
-            - keyid: GKTADJGHEIQSXMKKRBJ08H
-            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      boto_apigateway.present:
+        - name: myfunction
+        - region: us-east-1
+        - keyid: GKTADJGHEIQSXMKKRBJ08H
+        - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
 '''
 
@@ -436,7 +436,7 @@ def _gen_md5_filehash(fname, *args):
             _hash.update(chunk)
 
     for extra_arg in args:
-        _hash.update(str(extra_arg))
+        _hash.update(six.b(str(extra_arg)))
     return _hash.hexdigest()
 
 

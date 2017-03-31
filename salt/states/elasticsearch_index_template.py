@@ -3,6 +3,7 @@
 State module to manage Elasticsearch index templates
 
 .. versionadded:: 2015.8.0
+.. deprecated:: Nitrogen Use elasticsearch state instead
 '''
 
 # Import python libs
@@ -16,58 +17,84 @@ log = logging.getLogger(__name__)
 
 def absent(name):
     '''
-    Ensure that the named index template is absent
+    Ensure that the named index template is absent.
+
+    name
+        Name of the index to remove
     '''
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    index_template_exists = __salt__['elasticsearch.index_template_exists'](name=name)
-    if index_template_exists:
-        if __opts__['test']:
-            ret['comment'] = 'Index template {0} will be removed'.format(name)
-            ret['result'] = None
-        else:
-            ret['result'] = __salt__['elasticsearch.index_template_delete'](name=name)
-
-            if ret['result']:
-                ret['comment'] = 'Removed index template {0} successfully'.format(name)
-                # TODO show pending changes (body)
+    try:
+        index_template = __salt__['elasticsearch.index_template_get'](name=name)
+        if index_template and name in index_template:
+            if __opts__['test']:
+                ret['comment'] = 'Index template {0} will be removed'.format(name)
+                ret['changes']['old'] = index_template[name]
+                ret['result'] = None
             else:
-                ret['comment'] = 'Failed to remove index template {0}'.format(name)  # TODO error handling
-    elif not index_template_exists:
-        ret['comment'] = 'Index template {0} is already absent'.format(name)
-    else:
-        ret['comment'] = 'Failed to determine whether index template {0} is absent, see Minion log for more information'.format(name)
+                ret['result'] = __salt__['elasticsearch.index_template_delete'](name=name)
+                if ret['result']:
+                    ret['comment'] = 'Successfully removed index template {0}'.format(name)
+                    ret['changes']['old'] = index_template[name]
+                else:
+                    ret['comment'] = 'Failed to remove index template {0} for unknown reasons'.format(name)
+        else:
+            ret['comment'] = 'Index template {0} is already absent'.format(name)
+    except Exception as e:
         ret['result'] = False
+        ret['comment'] = str(e)
 
     return ret
 
 
-def present(name, definition=None):
+def present(name, definition):
     '''
-    Ensure that the named index template is present
-    '''
+    .. versionadded:: 2015.8.0
+    .. versionchanged:: 2017.3.0
+            Marked ``definition`` as required.
 
-    if definition is None:
-        definition = {}
+    Ensure that the named index templat eis present.
+
+    name
+        Name of the index to add
+
+    definition
+        Required dict for creation parameters as per https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
+
+    **Example:**
+
+    .. code-block:: yaml
+        mytestindex2_template:
+          elasticsearch_index_template.present:
+            - definition:
+                template: logstash-*
+                order: 1
+                settings:
+                  number_of_shards: 1
+    '''
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    index_template_exists = __salt__['elasticsearch.index_template_exists'](name=name)
-    if not index_template_exists:
-        if __opts__['test']:
-            ret['comment'] = 'Index template {0} will be created'.format(name)
-            ret['result'] = None
+    try:
+        index_template_exists = __salt__['elasticsearch.index_template_exists'](name=name)
+        if not index_template_exists:
+            if __opts__['test']:
+                ret['comment'] = 'Index template {0} does not exist and will be created'.format(name)
+                ret['changes'] = {'new': definition}
+                ret['result'] = None
+            else:
+                output = __salt__['elasticsearch.index_template_create'](name=name, body=definition)
+                if output:
+                    ret['comment'] = 'Successfully created index template {0}'.format(name)
+                    ret['changes'] = {'new': __salt__['elasticsearch.index_template_get'](name=name)[name]}
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Cannot create index template {0}, {1}'.format(name, output)
         else:
-            ret['result'] = __salt__['elasticsearch.index_template_create'](name=name, body=definition)
-            # TODO show pending changes (body)
-
-            if ret['result']:
-                ret['comment'] = 'Created index template {0} successfully'.format(name)
-    elif index_template_exists:
-        ret['comment'] = 'Index template {0} is already present'.format(name)
-    else:
-        ret['comment'] = 'Failed to determine whether index template {0} is present, see Minion log for more information'.format(name)
+            ret['comment'] = 'Index template {0} is already present'.format(name)
+    except Exception as e:
         ret['result'] = False
+        ret['comment'] = str(e)
 
     return ret

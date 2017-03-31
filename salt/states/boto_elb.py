@@ -493,17 +493,19 @@ def present(
     if not instance_ids:
         instance_ids = []
     if instance_names:
+        # AWS borks on adding instances in "non-running" states, so filter 'em out.
+        running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
         for n in instance_names:
             instance_ids += __salt__['boto_ec2.find_instances'](name=n, region=region,
                                                                 key=key, keyid=keyid,
-                                                                profile=profile)
+                                                                profile=profile,
+                                                                in_states=running_states)
     # Backwards compat:  Only touch attached instances if requested (e.g. if some are defined).
     if instance_ids:
         if __opts__['test']:
             if __salt__['boto_elb.set_instances'](name, instance_ids, True, region,
                                                   key, keyid, profile):
                 ret['comment'] += ' ELB {0} instances would be updated.'.format(name)
-                ret['result'] = None
                 return ret
         _ret = __salt__['boto_elb.set_instances'](name, instance_ids, False, region,
                                                   key, keyid, profile)
@@ -562,7 +564,6 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
         else:
             if __opts__['test']:
                 ret['comment'] = 'ELB {0} is set to register : {1}.'.format(name, new)
-                ret['result'] = None
                 return ret
             state = __salt__['boto_elb.register_instances'](name,
                                                             instances,
@@ -674,7 +675,6 @@ def _elb_present(
     if not exists:
         if __opts__['test']:
             ret['comment'] = 'ELB {0} is set to be created.'.format(name)
-            ret['result'] = None
             return ret
         created = __salt__['boto_elb.create'](name=name,
                                               availability_zones=availability_zones,
@@ -777,7 +777,6 @@ def _listeners_present(
         else:
             msg.append('Listeners already set on ELB {0}.'.format(name))
         ret['comment'] = ' '.join(msg)
-        ret['result'] = None
         return ret
 
     if to_delete:
@@ -840,7 +839,6 @@ def _security_groups_present(
         if __opts__['test']:
             msg = 'ELB {0} set to have security groups modified.'.format(name)
             ret['comment'] = msg
-            ret['result'] = None
             return ret
         changed = __salt__['boto_elb.apply_security_groups'](
             name, security_groups, region, key, keyid, profile
@@ -904,7 +902,6 @@ def _attributes_present(
     if attrs_to_set:
         if __opts__['test']:
             ret['comment'] = 'ELB {0} set to have attributes set.'.format(name)
-            ret['result'] = None
             return ret
         was_set = __salt__['boto_elb.set_attributes'](name, attributes,
                                                       region, key, keyid,
@@ -947,7 +944,6 @@ def _health_check_present(
     if need_to_set:
         if __opts__['test']:
             msg = 'ELB {0} set to have health check set.'.format(name)
-            ret['result'] = True
             ret['comment'] = msg
             return ret
         was_set = __salt__['boto_elb.set_health_check'](name, health_check,
@@ -997,7 +993,6 @@ def _zones_present(
         if __opts__['test']:
             msg = 'ELB {0} to have availability zones set.'.format(name)
             ret['comment'] = msg
-            ret['result'] = None
             return ret
         if to_enable:
             enabled = __salt__['boto_elb.enable_availability_zones'](name,
@@ -1069,7 +1064,6 @@ def _subnets_present(
         if __opts__['test']:
             msg = 'ELB {0} to have subnets set.'.format(name)
             ret['comment'] = msg
-            ret['result'] = None
             return ret
         if to_enable:
             attached = __salt__['boto_elb.attach_subnets'](name, to_enable,
@@ -1283,15 +1277,12 @@ def _policies_present(
                 msg.append('Policy {0} added.'.format(policy))
             for policy in to_delete:
                 msg.append('Policy {0} deleted.'.format(policy))
-            ret['result'] = None
         else:
             msg.append('Policies already set on ELB {0}.'.format(name))
         for listener in listeners_to_update:
             msg.append('Listener {0} policies updated.'.format(listener))
-            ret['result'] = None
         for backend in backends_to_update:
             msg.append('Backend {0} policies updated.'.format(backend))
-            ret['result'] = None
         ret['comment'] = ' '.join(msg)
         return ret
 
@@ -1412,7 +1403,6 @@ def absent(
     if exists:
         if __opts__['test']:
             ret['comment'] = 'ELB {0} is set to be removed.'.format(name)
-            ret['result'] = None
             return ret
         deleted = __salt__['boto_elb.delete'](name, region, key, keyid,
                                               profile)
@@ -1445,7 +1435,7 @@ def _tags_present(name,
         tags_to_update = {}
         tags_to_remove = []
         if lb['tags']:
-            for _tag in lb['tags'].keys():
+            for _tag in lb['tags']:
                 if _tag not in tags.keys():
                     if _tag not in tags_to_remove:
                         tags_to_remove.append(_tag)
@@ -1458,7 +1448,6 @@ def _tags_present(name,
                 msg = 'The following tag{0} set to be removed: {1}.'.format(
                         ('s are' if len(tags_to_remove) > 1 else ' is'), ', '.join(tags_to_remove))
                 ret['comment'] = ' '.join([ret['comment'], msg])
-                ret['result'] = None
             else:
                 _ret = __salt__['boto_elb.delete_tags'](
                             name,
@@ -1483,13 +1472,11 @@ def _tags_present(name,
                             ('s are' if len(tags_to_add.keys()) > 1 else ' is'),
                             ', '.join(tags_to_add.keys()))
                     ret['comment'] = ' '. join([ret['comment'], msg])
-                    ret['result'] = None
                 if tags_to_update:
                     msg = 'The following tag {0} set to be updated: {1}.'.format(
                             ('values are' if len(tags_to_update.keys()) > 1 else 'value is'),
                             ', '.join(tags_to_update.keys()))
                     ret['comment'] = ' '.join([ret['comment'], msg])
-                    ret['result'] = None
             else:
                 all_tag_changes = dictupdate.update(tags_to_add, tags_to_update)
                 _ret = __salt__['boto_elb.set_tags'](

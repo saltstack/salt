@@ -23,7 +23,6 @@ import time
 import shutil
 import re
 import random
-import distutils.version  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt
@@ -34,6 +33,7 @@ import salt.utils.network
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils.cloud
 import salt.config
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -120,8 +120,8 @@ def version():
     if not __context__.get(k, None):
         cversion = __salt__['cmd.run_all']('lxc-info --version')
         if not cversion['retcode']:
-            ver = distutils.version.LooseVersion(cversion['stdout'])
-            if ver < distutils.version.LooseVersion('1.0'):
+            ver = _LooseVersion(cversion['stdout'])
+            if ver < _LooseVersion('1.0'):
                 raise CommandExecutionError('LXC should be at least 1.0')
             __context__[k] = "{0}".format(ver)
     return __context__.get(k, None)
@@ -870,11 +870,9 @@ def _network_conf(conf_tuples=None, **kwargs):
     # on old versions of lxc, still support the gateway auto mode
     # if we didnt explicitly say no to
     # (lxc.network.ipv4.gateway: auto)
-    if (
-        distutils.version.LooseVersion(version()) <= '1.0.7' and
-        True not in ['lxc.network.ipv4.gateway' in a for a in ret] and
-        True in ['lxc.network.ipv4' in a for a in ret]
-    ):
+    if _LooseVersion(version()) <= '1.0.7' and \
+            True not in ['lxc.network.ipv4.gateway' in a for a in ret] and \
+            True in ['lxc.network.ipv4' in a for a in ret]:
         ret.append({'lxc.network.ipv4.gateway': 'auto'})
     return ret
 
@@ -2081,7 +2079,7 @@ def clone(name,
     if backing in ('dir', 'overlayfs', 'btrfs'):
         size = None
     # LXC commands and options changed in 2.0 - CF issue #34086 for details
-    if version() >= distutils.version.LooseVersion('2.0'):
+    if version() >= _LooseVersion('2.0'):
         # https://linuxcontainers.org/lxc/manpages//man1/lxc-copy.1.html
         cmd = 'lxc-copy'
         cmd += ' {0} -n {1} -N {2}'.format(snapshot, orig, name)

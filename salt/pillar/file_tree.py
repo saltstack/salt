@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Recursively iterate over directories and add all files as Pillar data
+
+``File_tree`` is an external pillar that allows
+values from all files in a directory tree to be imported as Pillar data.
+
+Note this is an external pillar, and is subject to the rules and constraints
+governing external pillars detailed here: :ref:`external-pillars`.
 
 .. versionadded:: 2015.5.0
 
@@ -169,13 +174,13 @@ from __future__ import absolute_import
 import fnmatch
 import logging
 import os
-import cStringIO
 
 # Import salt libs
 import salt.loader
 import salt.utils
 import salt.utils.dictupdate
 import salt.utils.minions
+import salt.utils.stringio
 import salt.template
 
 # Set up logging
@@ -272,7 +277,7 @@ def _construct_pillar(top_dir,
                                                           default=render_default,
                                                           blacklist=renderer_blacklist,
                                                           whitelist=renderer_whitelist)
-                if isinstance(data, cStringIO.InputType):
+                if salt.utils.stringio.is_readable(data):
                     pillar_node[file_name] = data.getvalue()
                 else:
                     pillar_node[file_name] = data

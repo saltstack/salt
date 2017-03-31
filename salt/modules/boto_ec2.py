@@ -50,13 +50,13 @@ from __future__ import absolute_import
 import logging
 import time
 import json
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.utils
 import salt.utils.compat
 import salt.ext.six as six
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import third party libs
 try:
@@ -614,8 +614,8 @@ def create_image(ami_name, instance_id=None, instance_name=None, tags=None, regi
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.create_instance ami_name instance_name=myinstance
-        salt myminion boto_ec2.create_instance another_ami_name tags='{"mytag": "value"}' description='this is my ami'
+        salt myminion boto_ec2.create_image ami_name instance_name=myinstance
+        salt myminion boto_ec2.create_image another_ami_name tags='{"mytag": "value"}' description='this is my ami'
 
     '''
 

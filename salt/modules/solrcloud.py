@@ -98,17 +98,19 @@ def _validate_core_properties(properties):
     props_string = ""
 
     for prop_name, prop_value in six.iteritems(properties):
-        if prop_name in STRING_PROPS_LIST:
-            if not isinstance(prop_value, six.string_types):
-                raise ValueError('In option "properties", core property "'+prop_name+'" value must be a string')
-
-            props_string = props_string+"&"+prop_name+"="+prop_value
-
-        elif prop_name in BOOL_PROPS_LIST:
+        if prop_name in BOOL_PROPS_LIST:
             if not isinstance(prop_value, bool):
                 raise ValueError('Option "'+prop_name+'" value must be an boolean')
 
             props_string = props_string+"&property."+prop_name+"="+("true" if prop_value else "false")
+        elif prop_name in STRING_PROPS_LIST:
+            if not isinstance(prop_value, six.string_types):
+                raise ValueError('In option "properties", core property "'+prop_name+'" value must be a string')
+
+            props_string = props_string+"&property."+prop_name+"="+prop_value
+
+        else:
+            props_string = props_string+"&property."+str(prop_name)+"="+str(prop_value)
 
     return props_string
 
@@ -229,7 +231,10 @@ def alias_get_collections(alias_name, **kwargs):
     if not isinstance(alias_name, six.string_types):
         raise ValueError('Alias name must be a string')
 
-    collection_aliases = [(k_v[0], k_v[1]["aliases"]) for k_v in six.iteritems(cluster_status(**kwargs)["collections"])]
+    collection_aliases = [
+        (k_v[0], k_v[1]["aliases"])
+        for k_v in six.iteritems(cluster_status(**kwargs)["collections"])
+        if "aliases" in k_v[1]]
     aliases = [k_v1[0] for k_v1 in [k_v for k_v in collection_aliases if alias_name in k_v[1]]]
 
     return aliases

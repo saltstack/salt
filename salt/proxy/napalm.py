@@ -123,6 +123,35 @@ def init(opts):
     return True
 
 
+def alive(opts):
+    '''
+    Return the connection status with the remote device.
+
+    .. versionadded:: Nitrogen
+    '''
+    if salt.utils.napalm.not_always_alive(opts):
+        return True  # don't force reconnection for not-always alive proxies
+        # or regular minion
+    is_alive_ret = call('is_alive', **{})
+    if not is_alive_ret.get('result', False):
+        log.debug('[{proxyid}] Unable to execute `is_alive`: {comment}'.format(
+            proxyid=opts.get('id'),
+            comment=is_alive_ret.get('comment')
+        ))
+        # if `is_alive` is not implemented by the underneath driver,
+        # will consider the connection to be still alive
+        # we don't want overly request connection reestablishment
+        # NOTE: revisit this if IOS is still not stable
+        #       and return False to force reconnection
+        return True
+    flag = is_alive_ret.get('out', {}).get('is_alive', False)
+    log.debug('Is {proxyid} still alive? {answ}'.format(
+        proxyid=opts.get('id'),
+        answ='Yes.' if flag else 'No.'
+    ))
+    return flag
+
+
 def ping():
     '''
     Connection open successfully?

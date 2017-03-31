@@ -35,6 +35,8 @@ from __future__ import absolute_import
 import logging
 import json
 
+# Import 3rd-party libs
+import salt.ext.six as six
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
@@ -131,7 +133,7 @@ def event_return(events):
         log.debug('Event: {0}'.format(str(event)))
         log.debug('Event data: {0}'.format(str(event['data'])))
         message = 'tag: {0}\r\n'.format(event['tag'])
-        for key, value in event['data'].iteritems():
+        for key, value in six.iteritems(event['data']):
             message += '{0}: {1}\r\n'.format(key, value)
         result = post_message(channel,
                               message,
