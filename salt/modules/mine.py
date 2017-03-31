@@ -281,7 +281,7 @@ def get(tgt,
         :py:func:`saltutil.runner <salt.modules.saltutil.runner>` module. For
         example:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set minion_ips = salt.saltutil.runner('mine.get',
                 tgt='*',
@@ -407,7 +407,7 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
         cidrs = cidr_
 
     # Get docker info
-    cmd = 'dockerng.ps'
+    cmd = 'docker.ps'
     docker_hosts = get('*', cmd)
 
     proxy_lists = {}

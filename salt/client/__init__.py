@@ -231,7 +231,7 @@ class LocalClient(object):
         Return the information about a given job
         '''
         log.debug('Checking whether jid {0} is still running'.format(jid))
-        timeout = self.opts['gather_job_timeout']
+        timeout = int(kwargs.get('gather_job_timeout', self.opts['gather_job_timeout']))
 
         pub_data = self.run_job(tgt,
                                 'saltutil.find_job',
@@ -561,6 +561,12 @@ class LocalClient(object):
                 'ret': ret,
                 'batch': batch,
                 'raw': kwargs.get('raw', False)}
+
+        if 'timeout' in kwargs:
+            opts['timeout'] = kwargs['timeout']
+        if 'gather_job_timeout' in kwargs:
+            opts['gather_job_timeout'] = kwargs['gather_job_timeout']
+
         for key, val in six.iteritems(self.opts):
             if key not in opts:
                 opts[key] = val
@@ -576,6 +582,7 @@ class LocalClient(object):
             tgt_type='glob',
             ret='',
             jid='',
+            full_return=False,
             kwarg=None,
             **kwargs):
         '''
@@ -664,6 +671,9 @@ class LocalClient(object):
 
         :param kwarg: A dictionary with keyword arguments for the function.
 
+        :param full_return: Output the job return only (default) or the full
+            return including exit code and other job metadata.
+
         :param kwargs: Optional keyword arguments.
             Authentication credentials may be passed when using
             :conf_master:`external_auth`.
@@ -714,9 +724,10 @@ class LocalClient(object):
 
                 if fn_ret:
                     for mid, data in six.iteritems(fn_ret):
-                        ret[mid] = data.get('ret', {})
+                        ret[mid] = (data if full_return
+                                else data.get('ret', {}))
 
-            for failed in list(set(pub_data['minions']) ^ set(ret.keys())):
+            for failed in list(set(pub_data['minions']) ^ set(ret)):
                 ret[failed] = False
             return ret
         finally:
@@ -938,7 +949,7 @@ class LocalClient(object):
                                                     block=False,
                                                     **kwargs):
                     if fn_ret and any([show_jid, verbose]):
-                        for minion in fn_ret.keys():
+                        for minion in fn_ret:
                             fn_ret[minion]['jid'] = pub_data['jid']
                     yield fn_ret
 
@@ -1108,6 +1119,7 @@ class LocalClient(object):
 
         if timeout is None:
             timeout = self.opts['timeout']
+        gather_job_timeout = int(kwargs.get('gather_job_timeout', self.opts['gather_job_timeout']))
         start = int(time.time())
 
         # timeouts per minion, id_ -> timeout time
@@ -1208,7 +1220,7 @@ class LocalClient(object):
                     jinfo_iter = []
                 else:
                     jinfo_iter = self.get_returns_no_block('salt/job/{0}'.format(jinfo['jid']))
-                timeout_at = time.time() + self.opts['gather_job_timeout']
+                timeout_at = time.time() + gather_job_timeout
                 # if you are a syndic, wait a little longer
                 if self.opts['order_masters']:
                     timeout_at += self.opts.get('syndic_wait', 1)
@@ -1758,9 +1770,13 @@ class LocalClient(object):
             payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(
-                'Salt request timed out. The master is not responding. '
-                'If this error persists after verifying the master is up, '
-                'worker_threads may need to be increased.'
+                'Salt request timed out. The master is not responding. You '
+                'may need to run your command with `--async` in order to '
+                'bypass the congested event bus. With `--async`, the CLI tool '
+                'will print the job id (jid) and exit immediately without '
+                'listening for responses. You can then use '
+                '`salt-run jobs.lookup_jid` to look up the results of the job '
+                'in the job cache later.'
             )
 
         if not payload:
@@ -1863,9 +1879,13 @@ class LocalClient(object):
             payload = yield channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(
-                'Salt request timed out. The master is not responding. '
-                'If this error persists after verifying the master is up, '
-                'worker_threads may need to be increased.'
+                'Salt request timed out. The master is not responding. You '
+                'may need to run your command with `--async` in order to '
+                'bypass the congested event bus. With `--async`, the CLI tool '
+                'will print the job id (jid) and exit immediately without '
+                'listening for responses. You can then use '
+                '`salt-run jobs.lookup_jid` to look up the results of the job '
+                'in the job cache later.'
             )
 
         if not payload:

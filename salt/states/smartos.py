@@ -161,7 +161,7 @@ def _parse_vmconfig(config, instances):
 
     if isinstance(config, (salt.utils.odict.OrderedDict)):
         vmconfig = OrderedDict()
-        for prop in config.keys():
+        for prop in config:
             if prop not in instances:
                 vmconfig[prop] = config[prop]
             else:
@@ -188,7 +188,7 @@ def _get_instance_changes(current, state):
 
     # compare configs
     changed = salt.utils.compare_dicts(current, state)
-    for change in changed.keys():
+    for change in changed:
         if change in changed and changed[change]['old'] == "":
             del changed[change]
         if change in changed and changed[change]['new'] == "":

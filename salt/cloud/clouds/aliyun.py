@@ -61,15 +61,24 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 ALIYUN_LOCATIONS = {
-    #'us-west-2': 'ec2_us_west_oregon',
+    # 'us-west-2': 'ec2_us_west_oregon',
     'cn-hangzhou': 'AliYun HangZhou Region',
     'cn-beijing': 'AliYun BeiJing Region',
     'cn-hongkong': 'AliYun HongKong Region',
-    'cn-qingdao': 'AliYun QingDao Region'
+    'cn-qingdao': 'AliYun QingDao Region',
+    'cn-shanghai': 'AliYun ShangHai Region',
+    'cn-shenzhen': 'AliYun ShenZheng Region',
+    'ap-northeast-1': 'AliYun DongJing Region',
+    'ap-southeast-1': 'AliYun XinJiaPo Region',
+    'ap-southeast-2': 'AliYun XiNi Region',
+    'eu-central-1': 'EU FalaKeFu Region',
+    'me-east-1': 'ME DiBai Region',
+    'us-east-1': 'US FuJiNiYa Region',
+    'us-west-1': 'US GuiGu Region',
 }
 DEFAULT_LOCATION = 'cn-hangzhou'
 
-DEFAULT_ALIYUN_API_VERSION = '2013-01-10'
+DEFAULT_ALIYUN_API_VERSION = '2014-05-26'
 
 __virtualname__ = 'aliyun'
 
@@ -151,7 +160,11 @@ def avail_images(kwargs=None, call=None):
     if 'location' in kwargs:
         location = kwargs['location']
 
-    params = {'Action': 'DescribeImages', 'RegionId': location}
+    params = {
+        'Action': 'DescribeImages',
+        'RegionId': location,
+        'PageSize': '100',
+    }
     items = query(params=params)
 
     ret = {}
@@ -294,6 +307,7 @@ def list_nodes_full(call=None):
     params = {
         'Action': 'DescribeInstanceStatus',
         'RegionId': location,
+        'PageSize': '50'
     }
     result = query(params=params)
 
@@ -303,7 +317,14 @@ def list_nodes_full(call=None):
     if 'Code' in result or result['TotalCount'] == 0:
         return ret
 
-    for node in result['InstanceStatuses']['InstanceStatus']:
+    # aliyun max 100 top instance in api
+    result_instancestatus = result['InstanceStatuses']['InstanceStatus']
+    if result['TotalCount'] > 50:
+        params['PageNumber'] = '2'
+        result = query(params=params)
+        result_instancestatus.update(result['InstanceStatuses']['InstanceStatus'])
+
+    for node in result_instancestatus:
 
         instanceId = node.get('InstanceId', '')
 
@@ -316,9 +337,10 @@ def list_nodes_full(call=None):
             log.warning('Query instance:{0} attribute failed'.format(instanceId))
             continue
 
-        ret[instanceId] = {
+        name = items['InstanceName']
+        ret[name] = {
             'id': items['InstanceId'],
-            'name': items['InstanceName'],
+            'name': name,
             'image': items['ImageId'],
             'size': 'TODO',
             'state': items['Status']
@@ -328,10 +350,14 @@ def list_nodes_full(call=None):
             if value is not None:
                 value = str(value)
             if item == "PublicIpAddress":
-                ret[instanceId]['public_ips'] = items[item]['IpAddress']
-            if item == "InnerIpAddress":
-                ret[instanceId]['private_ips'] = items[item]['IpAddress']
-            ret[instanceId][item] = value
+                ret[name]['public_ips'] = items[item]['IpAddress']
+            if item == "InnerIpAddress" and 'private_ips' not in ret[name]:
+                ret[name]['private_ips'] = items[item]['IpAddress']
+            if item == 'VpcAttributes':
+                vpc_ips = items[item]['PrivateIpAddress']['IpAddress']
+                if len(vpc_ips) > 0:
+                    ret[name]['private_ips'] = vpc_ips
+            ret[name][item] = value
 
     provider = __active_provider_name__ or 'aliyun'
     if ':' in provider:
@@ -365,6 +391,7 @@ def list_securitygroup(call=None):
     params = {
         'Action': 'DescribeSecurityGroups',
         'RegionId': get_location(),
+        'PageSize': '50',
     }
 
     result = query(params)
@@ -556,13 +583,14 @@ def create_node(kwargs):
         'RegionId': kwargs.get('region_id', DEFAULT_LOCATION),
         'ImageId': kwargs.get('image_id', ''),
         'SecurityGroupId': kwargs.get('securitygroup_id', ''),
+        'InstanceName': kwargs.get('name', ''),
     }
 
-    # Optional parameters
+    # Optional parameters'
     optional = [
         'InstanceName', 'InternetChargeType',
         'InternetMaxBandwidthIn', 'InternetMaxBandwidthOut',
-        'HostName', 'Password', 'SystemDisk.Category',
+        'HostName', 'Password', 'SystemDisk.Category', 'VSwitchId'
         # 'DataDisk.n.Size', 'DataDisk.n.Category', 'DataDisk.n.SnapshotId'
     ]
 
@@ -593,11 +621,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -610,12 +634,28 @@ def create(vm_):
         'region_id': __get_location(vm_),
         'securitygroup_id': get_securitygroup(vm_),
     }
+    if 'vswitch_id' in vm_:
+        kwargs['VSwitchId'] = vm_['vswitch_id']
+    if 'internet_chargetype' in vm_:
+        kwargs['InternetChargeType'] = vm_['internet_chargetype']
+    if 'internet_maxbandwidthin' in vm_:
+        kwargs['InternetMaxBandwidthIn'] = str(vm_['internet_maxbandwidthin'])
+    if 'internet_maxbandwidthout' in vm_:
+        kwargs['InternetMaxBandwidthOut'] = str(vm_['internet_maxbandwidthOut'])
+    if 'hostname' in vm_:
+        kwargs['HostName'] = vm_['hostname']
+    if 'password' in vm_:
+        kwargs['Password'] = vm_['password']
+    if 'instance_name' in vm_:
+        kwargs['InstanceName'] = vm_['instance_name']
+    if 'systemdisk_category' in vm_:
+        kwargs['SystemDisk.Category'] = vm_['systemdisk_category']
 
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args={'kwargs': kwargs},
+        args=__utils__['cloud.filter_event']('requesting', kwargs, kwargs.keys()),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -634,6 +674,11 @@ def create(vm_):
             exc_info_on_loglevel=logging.DEBUG
         )
         return False
+    # repair ip address error and start vm
+    time.sleep(8)
+    params = {'Action': 'StartInstance',
+              'InstanceId': ret}
+    query(params)
 
     def __query_node_data(vm_name):
         data = show_instance(vm_name, call='action')
@@ -661,13 +706,19 @@ def create(vm_):
         finally:
             raise SaltCloudSystemExit(str(exc))
 
-    public_ip = data['PublicIpAddress'][0]
-    log.debug('VM {0} is now running'.format(public_ip))
-    vm_['ssh_host'] = public_ip
+    if len(data['public_ips']) > 0:
+        ssh_ip = data['public_ips'][0]
+    elif len(data['private_ips']) > 0:
+        ssh_ip = data['private_ips'][0]
+    else:
+        log.info('No available ip:cant connect to salt')
+        return False
+    log.debug('VM {0} is now running'.format(ssh_ip))
+    vm_['ssh_host'] = ssh_ip
 
     # The instance is booted and accessible, let's Salt it!
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
-    ret.update(data.__dict__)
+    ret.update(data)
 
     log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
@@ -680,11 +731,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -731,7 +778,7 @@ def query(params=None):
     '''
     Make a web call to aliyun ECS REST API
     '''
-    path = 'https://ecs.aliyuncs.com/'
+    path = 'https://ecs-cn-hangzhou.aliyuncs.com'
 
     access_key_id = config.get_cloud_config_value(
         'id', get_configured_provider(), __opts__, search_global=False
@@ -780,7 +827,6 @@ def query(params=None):
         raise SaltCloudSystemExit(
             pprint.pformat(result.get('Message', {}))
         )
-
     return result
 
 
@@ -970,9 +1016,18 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
+    instanceId = _get_node(name)['InstanceId']
+
+    # have to stop instance before del it
+    stop_params = {
+        'Action': 'StopInstance',
+        'InstanceId': instanceId
+    }
+    query(stop_params)
+
     params = {
         'Action': 'DeleteInstance',
-        'InstanceId': name
+        'InstanceId': instanceId
     }
 
     node = query(params)

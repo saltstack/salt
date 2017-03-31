@@ -137,7 +137,7 @@ if salt.utils.is_windows():
         import msgpack
     except ImportError:
         import msgpack_pure as msgpack
-    from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
+    from salt.utils.versions import LooseVersion
     # pylint: enable=import-error,unused-import
 # pylint: enable=invalid-name
 
@@ -2661,6 +2661,7 @@ def mod_aggregate(low, chunks, running):
     low chunks and merges them into a single pkgs ref in the present low data
     '''
     pkgs = []
+    pkg_type = None
     agg_enabled = [
         'installed',
         'latest',
@@ -2683,18 +2684,34 @@ def mod_aggregate(low, chunks, running):
             # Check for the same repo
             if chunk.get('fromrepo') != low.get('fromrepo'):
                 continue
-            # Pull out the pkg names!
-            if 'pkgs' in chunk:
-                pkgs.extend(chunk['pkgs'])
-                chunk['__agg__'] = True
-            elif 'name' in chunk:
-                pkgs.append(chunk['name'])
-                chunk['__agg__'] = True
-    if pkgs:
-        if 'pkgs' in low:
-            low['pkgs'].extend(pkgs)
+            # Check first if 'sources' was passed so we don't aggregate pkgs
+            # and sources together.
+            if 'sources' in chunk:
+                if pkg_type is None:
+                    pkg_type = 'sources'
+                if pkg_type == 'sources':
+                    pkgs.extend(chunk['sources'])
+                    chunk['__agg__'] = True
+            else:
+                if pkg_type is None:
+                    pkg_type = 'pkgs'
+                if pkg_type == 'pkgs':
+                    # Pull out the pkg names!
+                    if 'pkgs' in chunk:
+                        pkgs.extend(chunk['pkgs'])
+                        chunk['__agg__'] = True
+                    elif 'name' in chunk:
+                        version = chunk.pop('version', None)
+                        if version is not None:
+                            pkgs.append({chunk['name']: version})
+                        else:
+                            pkgs.append(chunk['name'])
+                        chunk['__agg__'] = True
+    if pkg_type is not None and pkgs:
+        if pkg_type in low:
+            low[pkg_type].extend(pkgs)
         else:
-            low['pkgs'] = pkgs
+            low[pkg_type] = pkgs
     return low
 
 

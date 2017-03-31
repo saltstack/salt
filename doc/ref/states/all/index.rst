@@ -71,9 +71,9 @@ state modules
     debconfmod
     dellchassis
     disk
-    dockerio
-    dockerng
+    docker
     drac
+    elasticsearch
     elasticsearch_index
     elasticsearch_index_template
     environ
@@ -159,6 +159,7 @@ state modules
     mysql_grants
     mysql_query
     mysql_user
+    netacl
     netconfig
     netntp
     netsnmp

@@ -24,7 +24,6 @@ import logging
 import os
 import re
 import string
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=no-name-in-module,import-error
 
 # pylint: disable=import-error,redefined-builtin
 # Import 3rd-party libs
@@ -45,6 +44,7 @@ import salt.utils.itertools
 import salt.utils.systemd
 import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -1021,6 +1021,7 @@ def install(name=None,
             skip_verify=False,
             pkgs=None,
             sources=None,
+            downloadonly=False,
             reinstall=False,
             normalize=True,
             update_holds=False,
@@ -1078,6 +1079,9 @@ def install(name=None,
 
     skip_verify
         Skip the GPG verification check (e.g., ``--nogpgcheck``)
+
+    downloadonly
+        Only download the packages, do not install.
 
     version
         Install a specific version of the package, e.g. 1.2.3-4.el5. Ignored
@@ -1356,6 +1360,8 @@ def install(name=None,
                 cmd.extend(arg)
         if skip_verify:
             cmd.append('--nogpgcheck')
+        if downloadonly:
+            cmd.append('--downloadonly')
 
     try:
         holds = list_holds(full=False)
@@ -2365,7 +2371,7 @@ def list_repos(basedir=None):
             if not repofile.endswith('.repo'):
                 continue
             filerepos = _parse_repo_file(repopath)[1]
-            for reponame in filerepos.keys():
+            for reponame in filerepos:
                 repo = filerepos[reponame]
                 repo['file'] = repopath
                 repos[reponame] = repo
@@ -2503,17 +2509,11 @@ def mod_repo(repo, basedir=None, **kwargs):
         )
 
     # Build a list of keys to be deleted
-    todelete = ['disabled']
+    todelete = []
     for key in repo_opts:
         if repo_opts[key] != 0 and not repo_opts[key]:
             del repo_opts[key]
             todelete.append(key)
-
-    # convert disabled to enabled respectively from pkgrepo state
-    if 'enabled' not in repo_opts:
-        repo_opts['enabled'] = int(str(repo_opts.pop('disabled', False)).lower() != 'true')
-    else:
-        repo_opts.pop('disabled', False)
 
     # Add baseurl or mirrorlist to the 'todelete' list if the other was
     # specified in the repo_opts
@@ -2586,6 +2586,7 @@ def mod_repo(repo, basedir=None, **kwargs):
         if key in six.iterkeys(filerepos[repo].copy()):
             del filerepos[repo][key]
 
+    _bool_to_str = lambda x: '1' if x else '0'
     # Old file or new, write out the repos(s)
     filerepos[repo].update(repo_opts)
     content = header
@@ -2596,7 +2597,12 @@ def mod_repo(repo, basedir=None, **kwargs):
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
         for line in six.iterkeys(filerepos[stanza]):
-            content += '\n{0}={1}'.format(line, filerepos[stanza][line])
+            content += '\n{0}={1}'.format(
+                line,
+                filerepos[stanza][line]
+                    if not isinstance(filerepos[stanza][line], bool)
+                    else _bool_to_str(filerepos[stanza][line])
+            )
         content += '\n{0}\n'.format(comments)
 
     with salt.utils.fopen(repofile, 'w') as fileout:
@@ -2642,9 +2648,6 @@ def _parse_repo_file(filename):
                         'Failed to parse line in %s, offending line was '
                         '\'%s\'', filename, line.rstrip()
                     )
-                # YUM uses enabled field - create the disabled field so that comparisons works correctly in state
-                if comps[0].strip() == 'enabled':
-                    repos[repo]['disabled'] = comps[1] != "1"
 
     return (header, repos)
 

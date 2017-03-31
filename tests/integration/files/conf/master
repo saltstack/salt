@@ -17,6 +17,7 @@ log_file: master.log
 log_fmt: '[%(asctime)s.%(msecs)s] %(colorlevel)s%(colorname)s%(colorprocess)s %(funcName)s() L%(lineno)s %(processName)s %(message)s'
 log_level_logfile: debug
 key_logfile: key.log
+ssh_log_file: ssh.log
 token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
 
 # These settings needed for tests on Windows which defaults
@@ -30,10 +31,14 @@ peer:
   '.*':
     - 'test.*'
 
+git_pillar_verify_config: False
+
 ext_pillar:
-  - git: master https://github.com/saltstack/pillar1.git
-  - git: master https://github.com/saltstack/pillar2.git
-  - git: dev:testing https://github.com/saltstack/pillar1.git
+  - git:
+    - master https://github.com/saltstack/pillar1.git
+    - master https://github.com/saltstack/pillar2.git
+    - dev https://github.com/saltstack/pillar1.git:
+      - env: testing
   - test_ext_pillar_opts:
     - test_issue_5951_actual_file_roots_in_opts
 

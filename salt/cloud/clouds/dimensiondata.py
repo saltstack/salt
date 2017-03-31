@@ -151,11 +151,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -164,42 +160,55 @@ def create(vm_):
     conn = get_conn()
     rootPw = NodeAuthPassword(vm_['auth'])
 
+    location = conn.ex_get_location_by_id(vm_['location'])
+    images = conn.list_images(location=location)
+    image = [x for x in images if x.id == vm_['image']][0]
+    network_domains = conn.ex_list_network_domains(location=location)
     try:
-        location = conn.ex_get_location_by_id(vm_['location'])
-        images = conn.list_images(location=location)
-        image = [x for x in images if x.id == vm_['image']][0]
-        network_domains = conn.ex_list_network_domains(location=location)
-        try:
-            network_domain = [y for y in network_domains
-                              if y.name == vm_['network_domain']][0]
-        except IndexError:
-            network_domain = conn.ex_create_network_domain(
-                location=location,
-                name=vm_['network_domain'],
-                plan='ADVANCED',
-                description=''
-            )
+        network_domain = [y for y in network_domains
+                          if y.name == vm_['network_domain']][0]
+    except IndexError:
+        network_domain = conn.ex_create_network_domain(
+            location=location,
+            name=vm_['network_domain'],
+            plan='ADVANCED',
+            description=''
+        )
 
-        try:
-            vlan = [y for y in conn.ex_list_vlans(
-                location=location,
-                network_domain=network_domain)
-                    if y.name == vm_['vlan']][0]
-        except (IndexError, KeyError):
-            # Use the first VLAN in the network domain
-            vlan = conn.ex_list_vlans(
-                location=location,
-                network_domain=network_domain)[0]
+    try:
+        vlan = [y for y in conn.ex_list_vlans(
+            location=location,
+            network_domain=network_domain)
+                if y.name == vm_['vlan']][0]
+    except (IndexError, KeyError):
+        # Use the first VLAN in the network domain
+        vlan = conn.ex_list_vlans(
+            location=location,
+            network_domain=network_domain)[0]
 
-        kwargs = {
-            'name': vm_['name'],
-            'image': image,
-            'auth': rootPw,
-            'ex_description': vm_['description'],
-            'ex_network_domain': network_domain,
-            'ex_vlan': vlan,
-            'ex_is_started': vm_['is_started']
-        }
+    kwargs = {
+        'name': vm_['name'],
+        'image': image,
+        'auth': rootPw,
+        'ex_description': vm_['description'],
+        'ex_network_domain': network_domain,
+        'ex_vlan': vlan,
+        'ex_is_started': vm_['is_started']
+    }
+
+    event_data = kwargs.copy()
+    del event_data['auth']
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'requesting instance',
+        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        args=__utils__['cloud.filter_event']('requesting', event_data, event_data.keys()),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
         log.error(
@@ -245,6 +254,8 @@ def create(vm_):
             )
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
+                if private_ip is False:
+                    continue
                 if salt.utils.cloud.is_public_ip(private_ip):
                     log.warning('%s is a public IP', private_ip)
                     data.public_ips.append(private_ip)
@@ -330,11 +341,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )

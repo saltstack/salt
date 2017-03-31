@@ -31,6 +31,8 @@ from __future__ import absolute_import
 import time
 import pprint
 import logging
+import re
+import json
 
 # Import salt libs
 import salt.ext.six as six
@@ -44,6 +46,7 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+from salt.ext.six.moves import range
 
 # Import Third Party Libs
 try:
@@ -106,6 +109,7 @@ url = None
 ticket = None
 csrf = None
 verify_ssl = None
+api = None
 
 
 def _authenticate():
@@ -515,11 +519,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -614,15 +614,65 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
     )
 
     return ret
+
+
+def _import_api():
+    '''
+    Download https://<url>/pve-docs/api-viewer/apidoc.js
+    Extract content of pveapi var (json formated)
+    Load this json content into global variable "api"
+    '''
+    global api
+    full_url = 'https://{0}:8006/pve-docs/api-viewer/apidoc.js'.format(url)
+    returned_data = requests.get(full_url, verify=verify_ssl)
+
+    re_filter = re.compile('(?<=pveapi =)(.*)(?=^;)', re.DOTALL | re.MULTILINE)
+    api_json = re_filter.findall(returned_data.text)[0]
+    api = json.loads(api_json)
+
+
+def _get_properties(path="", method="GET", forced_params=None):
+    '''
+    Return the parameter list from api for defined path and HTTP method
+    '''
+    if api is None:
+        _import_api()
+
+    sub = api
+    path_levels = [level for level in path.split('/') if level != '']
+    search_path = ''
+    props = []
+    parameters = set([] if forced_params is None else forced_params)
+    # Browse all path elements but last
+    for elem in path_levels[:-1]:
+        search_path += '/' + elem
+        # Lookup for a dictionnary with path = "requested path" in list" and return its children
+        sub = (item for item in sub if item["path"] == search_path).next()['children']
+    # Get leaf element in path
+    search_path += '/' + path_levels[-1]
+    sub = next((item for item in sub if item["path"] == search_path))
+    try:
+        # get list of properties for requested method
+        props = sub['info'][method]['parameters']['properties'].keys()
+    except KeyError as exc:
+        log.error('method not found: "{0}"'.format(str(exc)))
+    except:
+        raise
+    for prop in props:
+        numerical = re.match(r'(\w+)\[n\]', prop)
+        # generate (arbitrarily) 10 properties for duplicatable properties identified by:
+        # "prop[n]"
+        if numerical:
+            for i in range(10):
+                parameters.add(numerical.group(1) + str(i))
+        else:
+            parameters.add(prop)
+    return parameters
 
 
 def create_node(vm_, newid):
@@ -673,7 +723,11 @@ def create_node(vm_, newid):
         newnode['hostname'] = vm_['name']
         newnode['ostemplate'] = vm_['image']
 
-        for prop in 'cpuunits', 'description', 'memory', 'onboot', 'net0', 'password', 'nameserver', 'swap', 'storage', 'rootfs':
+        static_props = ('cpuunits', 'description', 'memory', 'onboot', 'net0',
+                        'password', 'nameserver', 'swap', 'storage', 'rootfs')
+        for prop in _get_properties('/nodes/{node}/lxc',
+                                    'POST',
+                                    static_props):
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
@@ -695,7 +749,10 @@ def create_node(vm_, newid):
 
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
-        for prop in 'acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0':
+        static_props = ('acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0')
+        for prop in _get_properties('/nodes/{node}/qemu',
+                                    'POST',
+                                    static_props):
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
@@ -704,7 +761,9 @@ def create_node(vm_, newid):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args={'kwargs': newnode},
+        args={
+            'kwargs': __utils__['cloud.filter_event']('requesting', newnode, newnode.keys()),
+        },
         sock_dir=__opts__['sock_dir'],
     )
 

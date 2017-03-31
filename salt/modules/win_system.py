@@ -12,6 +12,7 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import time
+import ctypes
 from datetime import datetime
 
 # Import 3rd Party Libs
@@ -22,7 +23,6 @@ try:
     import win32api
     import win32con
     import pywintypes
-    import ctypes
     from ctypes import windll
     HAS_WIN32NET_MODS = True
 except ImportError:
@@ -158,22 +158,20 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disabl
 
     :param bool wait_for_reboot:
 
-        Sleeps for timeout + 30 seconds after reboot has been initiated.
-        This is useful for use in a highstate for example where
-        you have many states that could be ran after this one. Which you don't want
-        to start until after the restart i.e You could end up with a half finished state.
+        Sleeps for timeout + 30 seconds after reboot has been initiated. This
+        may be useful for use in a highstate if a reboot should be performed
+        and the return data of the highstate is not required. If return data is
+        required, consider using the reboot state instead of this module.
 
         .. versionadded:: 2015.8.0
 
     :param bool only_on_pending_reboot:
 
-        If this is set to True, then then the reboot will only proceed
-        if the system reports a pending reboot. Setting this paramater to
-        True could be useful when calling this function from a final housekeeping
-        state intended to be executed
-        at the end of a state run (using *order: last*).
+        If this is set to True, then the reboot will only proceed if the system
+        reports a pending reboot. To optionally reboot in a highstate, consider
+        using the reboot state instead of this module.
 
-    :return: True if successful
+    :return: True if successful (a reboot will occur)
     :rtype: bool
 
     CLI Example:
@@ -248,10 +246,11 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
         False caches to disk and safely powers down the system.
 
     :param bool only_on_pending_reboot:
-        If this is set to True, then then shutdown will only proceed
-        if the system reports a pending reboot.
+        If this is set to True, then the shutdown will only proceed if the
+        system reports a pending reboot. To optionally shutdown in a highstate,
+        consider using the shutdown state instead of this module.
 
-    :return: True if successful
+    :return: True if successful (a shutdown or reboot will occur)
     :rtype: bool
 
     CLI Example:
@@ -263,7 +262,7 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
     timeout = _convert_minutes_seconds(timeout, in_seconds)
 
     if only_on_pending_reboot and not get_pending_reboot():
-        return True
+        return False
 
     if message and not isinstance(message, str):
         message = message.decode('utf-8')
@@ -573,33 +572,6 @@ def set_hostname(hostname):
     return "successful" in ret
 
 
-def _lookup_error(number):
-    '''
-    Lookup the error based on the passed number
-    .. versionadded:: 2015.5.7
-    .. versionadded:: 2015.8.2
-
-    :param int number: Number code to lookup
-
-    :return: The text that corresponds to the error number
-    :rtype: str
-    '''
-    return_values = {
-        2:    'Invalid OU or specifying OU is not supported',
-        5:    'Access is denied',
-        53:   'The network path was not found',
-        87:   'The parameter is incorrect',
-        110:  'The system cannot open the specified object',
-        1323: 'Unable to update the password',
-        1326: 'Logon failure: unknown username or bad password',
-        1355: 'The specified domain either does not exist or could not be contacted',
-        2224: 'The account already exists',
-        2691: 'The machine is already joined to the domain',
-        2692: 'The machine is not currently joined to a domain',
-    }
-    return return_values[number]
-
-
 def join_domain(domain,
                 username=None,
                 password=None,
@@ -694,7 +666,7 @@ def join_domain(domain,
             ret['Restart'] = reboot()
         return ret
 
-    log.error(_lookup_error(err[0]))
+    log.error(win32api.FormatMessage(err[0]).rstrip())
     return False
 
 
@@ -783,11 +755,11 @@ def unjoin_domain(username=None,
 
             return ret
         else:
-            log.error(_lookup_error(err[0]))
+            log.error(win32api.FormatMessage(err[0]).rstrip())
             log.error('Failed to join the computer to {0}'.format(workgroup))
             return False
     else:
-        log.error(_lookup_error(err[0]))
+        log.error(win32api.FormatMessage(err[0]).rstrip())
         log.error('Failed to unjoin computer from {0}'.format(status['Domain']))
         return False
 

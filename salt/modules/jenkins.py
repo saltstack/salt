@@ -6,6 +6,11 @@ Module for controlling Jenkins
 
 .. versionadded:: 2016.3.0
 
+:depends: python-jenkins_ Python module (not to be confused with jenkins_)
+
+.. _python-jenkins: https://pypi.python.org/pypi/python-jenkins
+.. _jenkins: https://pypi.python.org/pypi/jenkins
+
 :configuration: This module can be used by either passing an api key and version
     directly or by specifying both in a configuration profile in the salt
     master/minion config.
@@ -47,9 +52,15 @@ def __virtual__():
     :return: The virtual name of the module.
     '''
     if HAS_JENKINS:
-        return __virtualname__
+        if hasattr(jenkins, 'Jenkins'):
+            return __virtualname__
+        else:
+            return (False,
+                    'The wrong Python module appears to be installed. Please '
+                    'make sure that \'python-jenkins\' is installed, not '
+                    '\'jenkins\'.')
     return (False, 'The jenkins execution module cannot be loaded: '
-            'python jenkins library is not installed.')
+                   'python-jenkins is not installed.')
 
 
 def _connect():

@@ -4,15 +4,7 @@
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
-init-hook="
-  exec 'aW1wb3J0IG9zLCBzeXMKCmlmICdWSVJUVUFMX0VOVicgaW4gb3MuZW52aXJvbjoKCiAgICB2ZV9k \
-  aXIgPSBvcy5lbnZpcm9uWydWSVJUVUFMX0VOViddCiAgICB2ZV9kaXIgaW4gc3lzLnBhdGggb3Ig \
-  c3lzLnBhdGguaW5zZXJ0KDAsIHZlX2RpcikKICAgIGFjdGl2YXRlX3RoaXMgPSBvcy5wYXRoLmpv \
-  aW4ob3MucGF0aC5qb2luKHZlX2RpciwgJ2JpbicpLCAnYWN0aXZhdGVfdGhpcy5weScpCgogICAg \
-  IyBGaXggZm9yIHdpbmRvd3MKICAgIGlmIG5vdCBvcy5wYXRoLmV4aXN0cyhhY3RpdmF0ZV90aGlz \
-  KToKICAgICAgICBhY3RpdmF0ZV90aGlzID0gb3MucGF0aC5qb2luKG9zLnBhdGguam9pbih2ZV9k \
-  aXIsICdTY3JpcHRzJyksICdhY3RpdmF0ZV90aGlzLnB5JykKCiAgICBleGVjZmlsZShhY3RpdmF0 \
-  ZV90aGlzLCBkaWN0KF9fZmlsZV9fPWFjdGl2YXRlX3RoaXMpKQo='.decode('base64')"
+#init-hook=
 
 # Profiled execution.
 profile=no
@@ -32,7 +24,9 @@ load-plugins=saltpylint.pep8,
   saltpylint.fileperms,
   saltpylint.py3modernize,
   saltpylint.smartup,
-  saltpylint.minpyver
+  saltpylint.minpyver,
+  saltpylint.blacklist,
+  saltpylint.thirdparty
 
 # Use multiple processes to speed up Pylint.
 # Don't bump this values on PyLint 1.4.0 - Know bug that ignores the passed --rcfile
@@ -49,13 +43,22 @@ extension-pkg-whitelist=
 
 # Fileperms Lint Plugin Settings
 fileperms-default=0644
-fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
-
-# Py3 Modernize PyLint Plugin Settings
-modernize-nofix = libmodernize.fixes.fix_dict_six
+fileperms-ignore-paths=setup.py,tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
 
 # Minimum Python Version To Enforce
-minimum-python-version = 2.6
+minimum-python-version = 2.7
+
+# Allowed 3rd-party package imports
+allowed-3rd-party-modules = msgpack,
+  tornado,
+  yaml,
+  jinja2,
+  Crypto,
+  requests,
+  libcloud,
+  zmq,
+  pytest,
+  pytestsalt
 
 [MESSAGES CONTROL]
 # Only show warnings with the listed confidence levels. Leave empty to show
@@ -81,6 +84,7 @@ disable=W0142,
   I0011,
   I0012,
   W1202,
+  E1320,
   E8402,
   E8731
 #  E8121,

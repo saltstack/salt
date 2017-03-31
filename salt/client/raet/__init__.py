@@ -10,14 +10,19 @@ import time
 import logging
 
 # Import Salt libs
-from raet import raeting, nacling
-from raet.lane.stacking import LaneStack
-from raet.lane.yarding import RemoteYard
 import salt.config
 import salt.client
 import salt.utils
 import salt.syspaths as syspaths
 from salt.utils import kinds
+
+try:
+    from raet import raeting, nacling
+    from raet.lane.stacking import LaneStack
+    from raet.lane.yarding import RemoteYard
+    HAS_RAET_LIBS = True
+except ImportError:
+    HAS_RAET_LIBS = False
 
 log = logging.getLogger(__name__)
 

@@ -283,8 +283,8 @@ def setvals(grains, destructive=False):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
     if not __opts__.get('local', False):
-        # Sync the grains
-        __salt__['saltutil.sync_grains']()
+        # Refresh the grains
+        __salt__['saltutil.refresh_grains']()
     # Return the grains we just set to confirm everything was OK
     return new_grains
 
@@ -757,6 +757,24 @@ def set(key,
         ret['comment'] = _setval_ret
         ret['result'] = False
     return ret
+
+
+def equals(key, value):
+    '''
+    Used to make sure the minion's grain key/value matches.
+
+    Returns ``True`` if matches otherwise ``False``.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grains.equals fqdn <expected_fqdn>
+        salt '*' grains.equals systemd:version 219
+    '''
+    return str(value) == str(get(key))
 
 
 # Provide a jinja function call compatible get aliased as fetch

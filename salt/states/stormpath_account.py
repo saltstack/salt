@@ -83,7 +83,7 @@ def present(name, **kwargs):
         pass
     needs_update = {}
     if info.get('email', False):
-        for field in kwargs.keys():
+        for field in kwargs:
             if info.get(field, None) != kwargs[field]:
                 needs_update[field] = kwargs[field]
         del needs_update['directory_id']

@@ -209,6 +209,29 @@ def describe(Name,
         return {'error': __utils__['boto3.get_error'](e)}
 
 
+def list_rules(region=None, key=None, keyid=None, profile=None):
+    '''
+    List, with details, all Cloudwatch Event rules visible in the current scope.
+
+    CLI example::
+
+        salt myminion boto_cloudwatch_event.list_rules region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        ret = []
+        NextToken = ''
+        while NextToken is not None:
+            args = {'NextToken': NextToken} if NextToken else {}
+            r = conn.list_rules(**args)
+            ret += r.get('Rules', [])
+            NextToken = r.get('NextToken')
+        return ret
+    except ClientError as e:
+        return {'error': __utils__['boto3.get_error'](e)}
+
+
 def list_targets(Rule,
              region=None, key=None, keyid=None, profile=None):
     '''

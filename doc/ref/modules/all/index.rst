@@ -1,4 +1,4 @@
-.. _all-salt_modules:
+.. _all-salt.modules:
 
 =================
 execution modules
@@ -70,6 +70,7 @@ execution modules
     bsd_shadow
     btrfs
     cabal
+    capirca_acl
     cassandra
     cassandra_cql
     celery
@@ -108,8 +109,7 @@ execution modules
     dnsmasq
     dnsutil
     dockercompose
-    dockerio
-    dockerng
+    dockermod
     dpkg
     drac
     dracr
@@ -201,6 +201,7 @@ execution modules
     localemod
     locate
     logadm
+    logmod
     logrotate
     lvs
     lxc
@@ -248,6 +249,8 @@ execution modules
     namecheap_ns
     namecheap_ssl
     namecheap_users
+    napalm
+    napalm_acl
     napalm_bgp
     napalm_network
     napalm_ntp
@@ -264,6 +267,7 @@ execution modules
     nfs3
     nftables
     nginx
+    nix
     nova
     npm
     nspawn

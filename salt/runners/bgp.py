@@ -331,8 +331,8 @@ def neighbors(*asns, **kwargs):
             # when requested to display only the neighbors on a certain device
             continue
         get_bgp_neighbors_minion_out = get_bgp_neighbors_minion.get('out', {})
-        for vrf, vrf_bgp_neighbors in get_bgp_neighbors_minion_out.iteritems():  # pylint: disable=unused-variable
-            for asn, get_bgp_neighbors_minion_asn in vrf_bgp_neighbors.iteritems():
+        for vrf, vrf_bgp_neighbors in six.iteritems(get_bgp_neighbors_minion_out):  # pylint: disable=unused-variable
+            for asn, get_bgp_neighbors_minion_asn in six.iteritems(vrf_bgp_neighbors):
                 if asns and asn not in asns:
                     # if filtering by AS number(s),
                     # will ignore if this AS number key not in that list

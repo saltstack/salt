@@ -121,7 +121,8 @@ class MasterPillarUtil(object):
             log.debug('Skipping cached mine data minion_data_cache'
                       'and enfore_mine_cache are both disabled.')
             return mine_data
-        minion_ids = self.cache.list('minions')
+        if not minion_ids:
+            minion_ids = self.cache.list('minions')
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
@@ -139,11 +140,20 @@ class MasterPillarUtil(object):
             log.debug('Skipping cached data because minion_data_cache is not '
                       'enabled.')
             return grains, pillars
-        minion_ids = self.cache.list('minions')
+        if not minion_ids:
+            minion_ids = self.cache.list('minions')
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
             mdata = self.cache.fetch('minions/{0}'.format(minion_id), 'data')
+            if not isinstance(mdata, dict):
+                log.warning(
+                    'cache.fetch should always return a dict. ReturnedType: {0}, MinionId: {1}'.format(
+                        type(mdata).__name__,
+                        minion_id
+                    )
+                )
+                continue
             if 'grains' in mdata:
                 grains[minion_id] = mdata['grains']
             if 'pillar' in mdata:

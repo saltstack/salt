@@ -297,6 +297,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
     '''
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    conn3 = _get_conn_autoscaling_boto3(region=region, key=key, keyid=keyid,
+                                        profile=profile)
     if not conn:
         return False, "failed to connect to AWS"
     if isinstance(availability_zones, six.string_types):
@@ -307,9 +309,25 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         vpc_zone_identifier = json.loads(vpc_zone_identifier)
     if isinstance(tags, six.string_types):
         tags = json.loads(tags)
-    # Make a list of tag objects from the dict.
-    _tags = []
+    if isinstance(termination_policies, six.string_types):
+        termination_policies = json.loads(termination_policies)
+    if isinstance(suspended_processes, six.string_types):
+        suspended_processes = json.loads(suspended_processes)
+    if isinstance(scheduled_actions, six.string_types):
+        scheduled_actions = json.loads(scheduled_actions)
+
+    # Massage our tagset into  add / remove lists
+    # Use a boto3 call here b/c the boto2 call doeesn't implement filters
+    current_tags = conn3.describe_tags(Filters=[{'Name': 'auto-scaling-group',
+                                      'Values': [name]}]).get('Tags', [])
+    current_tags = [{'key': t['Key'],
+                     'value': t['Value'],
+                     'resource_id': t['ResourceId'],
+                     'propagate_at_launch': t.get('PropagateAtLaunch', False)}
+                          for t in current_tags]
+    desired_tags = []
     if tags:
+        tags = __utils__['boto3.ordered'](tags)
         for tag in tags:
             try:
                 key = tag.get('key')
@@ -322,15 +340,14 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
                 log.error('Tag missing value.')
                 return False, "Tag {0} missing value".format(tag)
             propagate_at_launch = tag.get('propagate_at_launch', False)
-            _tag = autoscale.Tag(key=key, value=value, resource_id=name,
-                                 propagate_at_launch=propagate_at_launch)
-            _tags.append(_tag)
-    if isinstance(termination_policies, six.string_types):
-        termination_policies = json.loads(termination_policies)
-    if isinstance(suspended_processes, six.string_types):
-        suspended_processes = json.loads(suspended_processes)
-    if isinstance(scheduled_actions, six.string_types):
-        scheduled_actions = json.loads(scheduled_actions)
+            _tag = {'key': key,
+                    'value': value,
+                    'resource_id': name,
+                    'propagate_at_launch': propagate_at_launch}
+            if _tag not in current_tags:
+                desired_tags.append(_tag)
+    delete_tags = [t for t in current_tags if t not in desired_tags]
+
     try:
         _asg = autoscale.AutoScalingGroup(
             connection=conn,
@@ -341,7 +358,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             default_cooldown=default_cooldown,
             health_check_type=health_check_type,
             health_check_period=health_check_period,
-            placement_group=placement_group, tags=_tags,
+            placement_group=placement_group, tags=desired_tags,
             vpc_zone_identifier=vpc_zone_identifier,
             termination_policies=termination_policies)
         if notification_arn and notification_types:
@@ -349,12 +366,16 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         _asg.update()
         # Seems the update call doesn't handle tags, so we'll need to update
         # that separately.
-        if _tags:
-            conn.create_or_update_tags(_tags)
+        if desired_tags:
+            log.debug('Adding/updating tags from ASG: {}'.format(desired_tags))
+            conn.create_or_update_tags([autoscale.Tag(**t) for t in desired_tags])
+        if delete_tags:
+            log.debug('Deleting tags from ASG: {}'.format(delete_tags))
+            conn.delete_tags([autoscale.Tag(**t) for t in delete_tags])
         # update doesn't handle suspended_processes either
         # Resume all processes
         _asg.resume_processes()
-        # suspend any that are specified. Note that the boto default of empty
+        # suspend any that are specified.  Note that the boto default of empty
         # list suspends all; don't do that.
         if suspended_processes is not None and len(suspended_processes) > 0:
             _asg.suspend_processes(suspended_processes)

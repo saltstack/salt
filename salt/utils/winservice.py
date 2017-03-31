@@ -30,52 +30,69 @@ def __virtual__():
     return 'winservice'
 
 
-class Service(win32serviceutil.ServiceFramework):
+def service(instantiated=True):
+    '''
+    Helper function to return an instance of the ServiceFramework class
 
-    _svc_name_ = '_unNamed'
-    _svc_display_name_ = '_Service Template'
+    Args:
+        instantiated (bool): True to return an instantiated object, False to
+            return the object definition. Use False if inherited by another
+            class. Default is True.
 
-    def __init__(self, *args):
-        win32serviceutil.ServiceFramework.__init__(self, *args)
-        self.log('init')
-        self.stop_event = win32event.CreateEvent(None, 0, 0, None)
+    Returns:
+        class: An instance of the ServiceFramework class
+    '''
+    if not HAS_WIN32:
+        return
 
-    def log(self, msg):
-        import servicemanager
-        servicemanager.LogInfoMsg(str(msg))
+    class Service(win32serviceutil.ServiceFramework):
 
-    def sleep(self, sec):
-        win32api.Sleep(sec * 1000, True)
+        _svc_name_ = '_unNamed'
+        _svc_display_name_ = '_Service Template'
 
-    def SvcDoRun(self):  # pylint: disable=C0103
-        self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
-        try:
-            self.ReportServiceStatus(win32service.SERVICE_RUNNING)
-            self.log('start')
-            self.start()
-            self.log('wait')
-            win32event.WaitForSingleObject(self.stop_event,
-                                           win32event.INFINITE)
-            self.log('done')
-        except Exception as err:
-            self.log('Exception: {0}'.format(err))
-            self.SvcStop()
+        def __init__(self, *args):
+            win32serviceutil.ServiceFramework.__init__(self, *args)
+            self.log('init')
+            self.stop_event = win32event.CreateEvent(None, 0, 0, None)
 
-    def SvcStop(self):  # pylint: disable=C0103
-        self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
-        self.log('stopping')
-        self.stop()
-        self.log('stopped')
-        win32event.SetEvent(self.stop_event)
-        self.ReportServiceStatus(win32service.SERVICE_STOPPED)
+        def log(self, msg):
+            import servicemanager  # pylint: disable=3rd-party-module-not-gated
+            servicemanager.LogInfoMsg(str(msg))
 
-    # to be overridden
-    def start(self):
-        pass
+        def sleep(self, sec):
+            win32api.Sleep(sec * 1000, True)
 
-    # to be overridden
-    def stop(self):
-        pass
+        def SvcDoRun(self):  # pylint: disable=C0103
+            self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
+            try:
+                self.ReportServiceStatus(win32service.SERVICE_RUNNING)
+                self.log('start')
+                self.start()
+                self.log('wait')
+                win32event.WaitForSingleObject(self.stop_event,
+                                               win32event.INFINITE)
+                self.log('done')
+            except Exception as err:
+                self.log('Exception: {0}'.format(err))
+                self.SvcStop()
+
+        def SvcStop(self):  # pylint: disable=C0103
+            self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
+            self.log('stopping')
+            self.stop()
+            self.log('stopped')
+            win32event.SetEvent(self.stop_event)
+            self.ReportServiceStatus(win32service.SERVICE_STOPPED)
+
+        # to be overridden
+        def start(self):
+            pass
+
+        # to be overridden
+        def stop(self):
+            pass
+
+    return Service() if instantiated else Service
 
 
 def instart(cls, name, display_name=None, stay_alive=True):

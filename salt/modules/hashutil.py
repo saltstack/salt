@@ -276,13 +276,11 @@ def github_signature(string, shared_secret, challenge_hmac):
 
         salt '*' hashutil.github_signature '{"ref":....} ' 'shared secret' 'sha1=bc6550fc290acf5b42283fa8deaf55cea0f8c206'
     '''
+    msg = string
+    key = shared_secret
+    hashtype, challenge = challenge_hmac.split('=')
     if six.PY3:
-        msg = salt.utils.to_bytes(string)
-        key = salt.utils.to_bytes(shared_secret)
-        hashtype, challenge = salt.utils.to_bytes(challenge_hmac).split('=')
-    else:
-        msg = string
-        key = shared_secret
-        hashtype, challenge = challenge_hmac.split('=')
+        msg = salt.utils.to_bytes(msg)
+        key = salt.utils.to_bytes(key)
     hmac_hash = hmac.new(key, msg, getattr(hashlib, hashtype))
     return hmac_hash.hexdigest() == challenge

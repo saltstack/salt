@@ -1634,6 +1634,40 @@ def export_users(path_prefix='/', region=None, key=None, keyid=None,
     return _safe_dump(results)
 
 
+def export_roles(path_prefix='/', region=None, key=None, keyid=None, profile=None):
+    '''
+    Get all IAM role details. Produces results that can be used to create an
+    sls file.
+
+    CLI Example:
+
+        salt-call boto_iam.export_roles --out=txt | sed "s/local: //" > iam_roles.sls
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return None
+    results = odict.OrderedDict()
+    roles = get_all_roles(path_prefix, region, key, keyid, profile)
+    for role in roles:
+        name = role.role_name
+        _policies = conn.list_role_policies(name, max_items=100)
+        _policies = _policies.list_role_policies_response.list_role_policies_result.policy_names
+        policies = {}
+        for policy_name in _policies:
+            _policy = conn.get_role_policy(name, policy_name)
+            _policy = json.loads(_unquote(
+                _policy.get_role_policy_response.get_role_policy_result.policy_document
+            ))
+            policies[policy_name] = _policy
+        role_sls = []
+        role_sls.append({"name": name})
+        role_sls.append({"policies": policies})
+        role_sls.append({'policy_document': json.loads(_unquote(role.assume_role_policy_document))})
+        role_sls.append({"path": role.path})
+        results["manage role " + name] = {"boto_iam_role.present": role_sls}
+    return _safe_dump(results)
+
+
 def _get_policy_arn(name, region=None, key=None, keyid=None, profile=None):
     if name.startswith('arn:aws:iam:'):
         return name

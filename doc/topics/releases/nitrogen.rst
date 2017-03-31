@@ -52,9 +52,65 @@ Grains Changes
   may need to be adjusted to account for this change.
 - Add ability to specify disk backing mode in the VMWare salt cloud profile.
 
+State Module Changes
+====================
+
+- The :py:func:`service.running <salt.states.service.running>` and
+  :py:func:`service.dead <salt.states.service.dead>` states now support a
+  ``no_block`` argument which, when set to ``True`` on systemd minions, will
+  start/stop the service using the ``--no-block`` flag in the ``systemctl``
+  command. On non-systemd minions, a warning will be issued.
+
+- The :py:func:`module.run <salt.states.module.run>` state has dropped its previous
+  syntax with ``m_`` prefix for reserved keywords. Additionally, it allows
+  running several functions in a batch.
+
+.. note::
+    It is nesessary to explicitly turn on the new behaviour (see below)
+
+  Before and after:
+
+.. code-block:: yaml
+
+    # Before
+    run_something:
+      module.run:
+        - name: mymodule.something
+        - m_name: 'some name'
+        - kwargs: {
+          first_arg: 'one',
+          second_arg: 'two',
+          do_stuff: 'True'
+        }
+
+    # After
+    run_something:
+      module.run:
+        mymodule.something:
+          - name: some name
+          - first_arg: one
+          - second_arg: two
+          - do_stuff: True
+
+- Previous behaviour of the function :py:func:`module.run <salt.states.module.run>` is
+  still kept by default and can be bypassed in case you want to use behaviour above.
+  Please keep in mind that the old syntax will no longer be supported in the ``Oxygen``
+  release of Salt. To enable the new behavior, add the following to the minion config file:
+
+
+.. code-block:: yaml
+
+    use_superseded:
+      - module.run
+
+
+
 Execution Module Changes
 ========================
 
+- Several functions in the :mod:`systemd <salt.modules.systemd>` execution
+  module have gained a ``no_block`` argument, which when set to ``True`` will
+  use ``--no-block`` in the ``systemctl`` command.
 - In the :mod:`solarisips <salt.modules.solarisips>` ``pkg`` module, the
   default value for the ``refresh`` argument to the ``list_upgrades`` function
   has been changed from ``False`` to ``True``. This makes the function more
@@ -72,6 +128,23 @@ Execution Module Changes
 - A ``pkg.list_repo_pkgs`` function has been added for both
   :py:func:`Debian/Ubuntu <salt.modules.aptpkg.list_repo_pkgs>` and
   :py:func:`Arch Linux <salt.modules.pacman.list_repo_pkgs>`-based distros.
+
+
+Proxy Module Changes
+====================
+
+The :conf_proxy:`proxy_merge_grains_in_module` configuration variable
+introduced in 2016.3, has been changed, defaulting to ``True``.
+
+The connection with the remote device is kept alive by default, when the
+module implements the ``alive`` function and :conf_proxy:`proxy_keep_alive`
+is set to ``True``. The polling interval is set using the
+:conf_proxy:`proxy_keep_alive_interval` option which defaults to 1 minute.
+
+The developers are also able to use the :conf_proxy:`proxy_always_alive`,
+when designing a proxy module flexible enough to open the
+connection with the remote device only when required.
+
 
 Wildcard Versions in :py:func:`pkg.installed <salt.states.pkg.installed>` States
 ================================================================================
@@ -99,12 +172,19 @@ numbers like ``1.2.34-5.el7``. An example of the usage for this would be:
 
 - The :mod:`system <salt.modules.system>` module changed the returned format
   from "HH:MM AM/PM" to "HH:MM:SS AM/PM" for `get_system_time`.
+
 Master Configuration Additions
 ==============================
 
 - :conf_master:`syndic_forward_all_events` - Option on multi-syndic or single
   when connected to multiple masters to be able to send events to all connected
   masters.
+
+- :conf_master:`eauth_acl_module` - In case external auth is enabled master can
+  get authenticate and get the authorization list from different auth modules.
+
+- :conf_master:`keep_acl_in_token` - Option that allows master to build ACL once
+  for each user being authenticated and keep it in the token.
 
 Minion Configuration Additions
 ==============================
@@ -135,6 +215,168 @@ release cycle (two major releases after this one), those who are using the
 to use ``tgt_type``.
 
 
+Network Automation
+==================
+
+NAPALM
+------
+
+Introduced in 2016.11, the modules for cross-vendor network automation
+have been improved, enhanced and widenened in scope:
+
+- Manage network devices like servers: the NAPALM modules have been transformed
+  so they can run in both proxy and regular minions. That means, if the
+  operating system allows, the salt-minion package can be installed directly
+  on the network gear. Examples of such devices (also covered by NAPALM)
+  include: Arista, Cumulus, Cisco IOS-XR or Cisco Nexus.
+- Not always alive: in certain less dynamic environments,
+  maintaining the remote connection permanently open with the network device
+  is not always beneficial. In those particular cases, the user can select
+  to initialize the connection only when needed, by specifying the field
+  ``always_alive: false`` in the :mod:`proxy configuration <salt.proxy.napalm>`
+  or using the :conf_proxy:`proxy_always_alive` option.
+- Proxy keepalive: due to external factors, the connection with the remote
+  device can be dropped, e.g.: packet loss, idle time (no commands issued
+  within a couple of minutes or seconds), or simply the device decides to kill
+  the process. In Nitrogen we have introduced the functionality to re-establish
+  the connection. One can disable feature this feature through the
+  :conf_proxy:`proxy_keep_alive` option and adjust the polling frequency
+  speciying a custom value for :conf_proxy:`proxy_keep_alive_interval`,
+  in minutes.
+
+New modules:
+
+- :mod:`Netconfig state <salt.states.netconfig>` - Manage the configuration
+  of network devices using arbitrary templates and the Salt-specific
+  advanced templating methodologies.
+- :mod:`Network ACL execution module <salt.modules.napalm_acl>` - Generate and
+  load ACL (firewall) configuration on network devices.
+- :mod:`Network ACL state <salt.states.netacl>` - Manage the firewall
+  configuration. It only requires writing the pillar structure correctly!
+- :mod:`NET finder <salt.runners.net>` - Runner to find details easily and
+  fast. It's smart enough to know what you are looking for. It will search
+  in the details of the network interfaces, IP addresses, MAC address tables,
+  ARP tables and LLDP neighbors.
+- :mod:`BGP finder <salt.runners.bgp>` - Runner to search BGP neighbors details.
+
+New grains: :mod:`Host <salt.grains.napalm.host>`,
+:mod:`Username <salt.grains.napalm.username>` and
+:mod:`Optional args <salt.grains.napalm.optional_args>`.
+
+
+Custom Refspecs in GitFS / git_pillar / winrepo
+===============================================
+
+It is now possible to specify the refspecs to use when fetching from remote
+repositories for GitFS, git_pillar, and winrepo. More information on how this
+feature works can be found :ref:`here <gitfs-custom-refspecs>` in the GitFS
+Walkthrough. The git_pillar and winrepo versions of this feature work the same
+as their GitFS counterpart.
+
+git_pillar "mountpoints" Feature Added
+======================================
+
+See :ref:`here <git-pillar-mountpoints>` for detailed documentation.
+
+Big Improvements to Docker Support
+==================================
+
+The old ``docker`` state and execution modules have been moved to
+salt-contrib_. The ``dockerng`` execution module has been renamed to
+:mod:`docker <salt.modules.docker>` and now serves as Salt's official Docker
+execution module.
+
+The old ``dockerng`` state module has been split into 4 state modules:
+
+- :mod:`docker_container <salt.states.docker_container>` - States to manage
+  Docker containers
+- :mod:`docker_image <salt.states.docker_image>` - States to manage Docker
+  images
+- :mod:`docker_volume <salt.states.docker_volume>` - States to manage
+  Docker volumes
+- :mod:`docker_network <salt.states.docker_network>` - States to manage
+  Docker networks
+
+The reason for this change was to make states and requisites more clear. For
+example, imagine this SLS:
+
+.. code-block:: yaml
+
+    myuser/appimage:
+      docker.image_present:
+        - sls: docker.images.appimage
+
+    myapp:
+      docker.running:
+        - image: myuser/appimage
+        - require:
+          - docker: myuser/appimage
+
+The new syntax would be:
+
+.. code-block:: yaml
+
+    myuser/appimage:
+      docker_image.present:
+        - sls: docker.images.appimage
+
+    myapp:
+      docker_container.running:
+        - image: myuser/appimage
+        - require:
+          - docker_image: myuser/appimage
+
+This is similar to how Salt handles MySQL, MongoDB, Zabbix, and other cases
+where the same execution module is used to manage several different kinds
+of objects (users, databases, roles, etc.).
+
+The old syntax will continue to work until the **Fluorine** release of Salt.
+The old ``dockerng`` naming will also continue to work until that release, so
+no immediate changes need to be made to your SLS files (unless you were still
+using the old docker states that have been moved to salt-contrib_).
+
+The :py:func:`docker_container.running <salt.states.docker_container.running>`
+state has undergone a significant change in how it determines whether or not a
+container needs to be replaced. Rather than comparing individual arguments to
+their corresponding values in the named container, a temporary container is
+created (but not started) using the passed arguments. The two containers are
+then compared to each other to determine whether or not there are changes, and
+if so, the old container is stopped and destroyed, and the temporary container
+is renamed and started.
+
+Salt still needs to translate arguments into the format which docker-py
+expects, but if it does not properly do so, the :ref:`skip_translate
+<docker-container-running-skip-translate>` argument can be used to skip input
+translation on an argument-by-argument basis, and you can then format your SLS
+file to pass the data in the format that the docker-py expects. This allows you
+to work around any changes in Docker's API or issues with the input
+translation, and continue to manage your Docker containers using Salt. Read the
+documentation for :ref:`skip_translate
+<docker-container-running-skip-translate>` for more information.
+
+.. note::
+    When running the :py:func:`docker_container.running
+    <salt.states.docker_container.running>` state for the first time after
+    upgrading to Nitrogen, your container(s) may be replaced. The changes may
+    show diffs for certain parameters which say that the old value was an empty
+    string, and the new value is ``None``. This is due to the fact that in
+    prior releases Salt was passing empty strings for these values when
+    creating the container if they were undefined in the SLS file, where now
+    Salt simply does not pass any arguments not explicitly defined in the SLS
+    file. Subsequent runs of the state should not replace the container if the
+    configuration remains unchanged.
+
+.. _salt-contrib: https://github.com/saltstack/salt-contrib
+
+New SSH Cache Roster
+====================
+
+The :mod:`SSH cache Roster <salt.roster.cache>` has been rewritten from scratch to increase its usefulness.
+The new roster supports all minion matchers, so it is now possible to target minions identically through `salt` and `salt-ssh`.
+The new configuration syntax allows for flexible combinations of arbitrary grains, pillar and mine data.
+This applies not just for the `host` of a minion, but also for other configuration data.
+The new release is also fully IPv4 and IPv6 enabled and even allows for the selection of certain CIDR ranges for connecting.
+
 Deprecations
 ============
 
@@ -142,6 +384,7 @@ General Deprecations
 --------------------
 
 - Removed support for aliasing ``cmd.run`` to ``cmd.shell``.
+- Removed support for Dulwich from :ref:`GitFS <tutorial-gitfs>`.
 - Beacon configurations should be lists instead of dictionaries.
 - The ``PidfileMixin`` has been removed. Please use ``DaemonMixIn`` instead.
 - The ``use_pending`` argument was removed from the ``salt.utils.event.get_event``

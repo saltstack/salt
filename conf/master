@@ -362,6 +362,15 @@
 #
 #token_expire_user_override: False
 
+# Set to True to enable keeping the calculated user's auth list in the token
+# file. This is disabled by default and the auth list is calculated or requested
+# from the eauth driver each time.
+#keep_acl_in_token: False
+
+# Auth subsystem module to use to get authorized access list for a user. By default it's
+# the same module used for external authentication.
+#eauth_acl_module: django
+
 # Allow minions to push files to the master. This is disabled by default, for
 # security purposes.
 #file_recv: False
@@ -549,11 +558,11 @@
 #default_top: base
 
 # The hash_type is the hash to use when discovering the hash of a file on
-# the master server. The default is md5 but sha1, sha224, sha256, sha384
-# and sha512 are also supported.
+# the master server. The default is sha256, but md5, sha1, sha224, sha384 and
+# sha512 are also supported.
 #
-# WARNING: While md5 is also supported, do not use it due to the high chance
-# of possible collisions and thus security breach.
+# WARNING: While md5 and sha1 are also supported, do not use them due to the
+# high chance of possible collisions and thus security breach.
 #
 # Prior to changing this value, the master should be stopped and all Salt
 # caches should be cleared.
@@ -623,10 +632,11 @@
 
 # Git File Server Backend Configuration
 #
-# Optional parameter used to specify the provider to be used for gitfs. Must
-# be one of the following: pygit2, gitpython, or dulwich. If unset, then each
-# will be tried in that same order, and the first one with a compatible
-# version installed will be the provider that is used.
+# Optional parameter used to specify the provider to be used for gitfs. Must be
+# either pygit2 or gitpython. If unset, then both will be tried (in that
+# order), and the first one with a compatible version installed will be the
+# provider that is used.
+#
 #gitfs_provider: pygit2
 
 # Along with gitfs_password, is used to authenticate to HTTPS remotes.
@@ -678,6 +688,11 @@
 # within the repository. The path is defined relative to the root of the
 # repository and defaults to the repository root.
 #gitfs_root: somefolder/otherfolder
+#
+# The refspecs fetched by gitfs remotes
+#gitfs_refspecs:
+#  - '+refs/heads/*:refs/remotes/origin/*'
+#  - '+refs/tags/*:refs/tags/*'
 #
 #
 #####         Pillar settings        #####
@@ -827,6 +842,11 @@
 # This parameter is optional, required only when the SSH key being used
 # to authenticate is protected by a passphrase.
 #git_pillar_passphrase: ''
+
+# The refspecs fetched by git_pillar remotes
+#git_pillar_refspecs:
+#  - '+refs/heads/*:refs/remotes/origin/*'
+#  - '+refs/tags/*:refs/tags/*'
 
 # A master can cache pillars locally to bypass the expense of having to render them
 # for each minion on every request. This feature should only be enabled in cases
@@ -1073,6 +1093,11 @@
 #winrepo_remotes:
 #  - 'https://github.com/saltstack/salt-winrepo.git'
 
+# The refspecs fetched by winrepo remotes
+#winrepo_refspecs:
+#  - '+refs/heads/*:refs/remotes/origin/*'
+#  - '+refs/tags/*:refs/tags/*'
+#
 
 #####      Returner settings          ######
 ############################################

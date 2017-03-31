@@ -103,9 +103,16 @@ Multiple policy configuration
 
 '''
 
+# Import python libs
 from __future__ import absolute_import
 import logging
 import json
+
+# Import salt libs
+import salt.utils.dictdiffer
+
+# Import 3rd party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'
@@ -218,9 +225,9 @@ def set_(name,
                            'requested_policy': computer_policy,
                            'policy_lookup': {}}
 
-    for p_class, p_data in pol_data.iteritems():
+    for p_class, p_data in six.iteritems(pol_data):
         if p_data['requested_policy']:
-            for policy_name, policy_setting in p_data['requested_policy'].iteritems():
+            for policy_name, policy_setting in six.iteritems(p_data['requested_policy']):
                 lookup = __salt__['lgpo.get_policy_info'](policy_name,
                                                           p_class,
                                                           adml_language=adml_language)
@@ -239,10 +246,10 @@ def set_(name,
 
     # compare policies
     policy_changes = []
-    for policy_section, policy_data in pol_data.iteritems():
+    for policy_section, policy_data in six.iteritems(pol_data):
         pol_id = None
         if policy_data and policy_data['output_section'] in current_policy:
-            for policy_name, policy_setting in policy_data['requested_policy'].iteritems():
+            for policy_name, policy_setting in six.iteritems(policy_data['requested_policy']):
                 currently_set = False
                 if policy_name in current_policy[policy_data['output_section']]:
                     currently_set = True
@@ -294,10 +301,11 @@ def set_(name,
                                         adml_language=adml_language)
             if _ret:
                 ret['result'] = _ret
-                ret['changes']['old'] = current_policy
-                ret['changes']['new'] = __salt__['lgpo.get'](policy_class=policy_class,
-                                                             adml_language=adml_language,
-                                                             hierarchical_return=False)
+                ret['changes'] = salt.utils.dictdiffer.deep_diff(
+                    current_policy,
+                    __salt__['lgpo.get'](policy_class=policy_class,
+                                         adml_language=adml_language,
+                                         hierarchical_return=False))
             else:
                 ret['result'] = False
                 ret['comment'] = 'Errors occurred while attempting to configure policies: {0}'.format(_ret)

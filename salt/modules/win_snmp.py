@@ -51,7 +51,7 @@ def get_agent_service_types():
 
         salt '*' win_snmp.get_agent_service_types
     '''
-    return _SERVICE_TYPES.keys()
+    return list(_SERVICE_TYPES)
 
 
 def get_permission_types():
@@ -67,7 +67,7 @@ def get_permission_types():
 
         salt '*' win_snmp.get_permission_types
     '''
-    return _PERMISSION_TYPES.keys()
+    return list(_PERMISSION_TYPES)
 
 
 def get_agent_settings():

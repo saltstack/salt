@@ -101,10 +101,11 @@ def jid_dir(jid, job_dir=None, hash_type='sha256'):
     '''
     Return the jid_dir for the given job id
     '''
+    if not isinstance(jid, six.string_types):
+        jid = str(jid)
     if six.PY3:
-        jhash = getattr(hashlib, hash_type)(jid.encode('utf-8')).hexdigest()
-    else:
-        jhash = getattr(hashlib, hash_type)(str(jid)).hexdigest()
+        jid = jid.encode('utf-8')
+    jhash = getattr(hashlib, hash_type)(jid).hexdigest()
 
     parts = []
     if job_dir is not None:

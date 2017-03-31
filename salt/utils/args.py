@@ -61,8 +61,7 @@ def parse_input(args, condition=True):
             # condition_input is called below, but this is the only way to
             # gracefully handle both CLI and API input.
             if arg.pop('__kwarg__', False) is True:
-                for key, val in six.iteritems(arg):
-                    _kwargs[key] = yamlify_arg(val)
+                _kwargs.update(arg)
             else:
                 _args.append(arg)
         else:
@@ -170,15 +169,25 @@ if six.PY3:
         return _ArgSpec(args, varargs, varkw, defaults)
 
 
-def get_function_argspec(func):
+def get_function_argspec(func, is_class_method=None):
     '''
     A small wrapper around getargspec that also supports callable classes
+    :param is_class_method: Pass True if you are sure that the function being passed
+                            is a class method. The reason for this is that on Python 3
+                            ``inspect.ismethod`` only returns ``True`` for bound methods,
+                            while on Python 2, it returns ``True`` for bound and unbound
+                            methods. So, on Python 3, in case of a class method, you'd
+                            need the class to which the function belongs to be instantiated
+                            and this is not always wanted.
     '''
     if not callable(func):
         raise TypeError('{0} is not a callable'.format(func))
 
     if six.PY2:
-        if inspect.isfunction(func):
+        if is_class_method is True:
+            aspec = inspect.getargspec(func)
+            del aspec.args[0]  # self
+        elif inspect.isfunction(func):
             aspec = inspect.getargspec(func)
         elif inspect.ismethod(func):
             aspec = inspect.getargspec(func)
@@ -191,7 +200,10 @@ def get_function_argspec(func):
                 'Cannot inspect argument list for \'{0}\''.format(func)
             )
     else:
-        if inspect.isfunction(func):
+        if is_class_method is True:
+            aspec = _getargspec(func)
+            del aspec.args[0]  # self
+        elif inspect.isfunction(func):
             aspec = _getargspec(func)  # pylint: disable=redefined-variable-type
         elif inspect.ismethod(func):
             aspec = _getargspec(func)

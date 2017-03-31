@@ -10,6 +10,9 @@ States for solrcloud alias and collection configuration
 from __future__ import absolute_import
 import json
 
+# Import 3rd party libs
+import salt.ext.six as six
+
 
 def alias(name, collections, **kwargs):
     '''
@@ -117,7 +120,7 @@ def collection(name, options=None, **kwargs):
             "rule",
             "snitch"]
 
-        options = [k for k in options.iteritems() if k in updatable_options]
+        options = [k for k in six.iteritems(options) if k in updatable_options]
 
         for key, value in options:
             if key not in current_options or current_options[key] != value:

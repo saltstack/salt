@@ -235,7 +235,7 @@ def user_present(name,
             ret['changes']['Password'] = 'Updated'
 
         if roles:
-            for tenant in roles.keys():
+            for tenant in roles:
                 args = dict({'user_name': name, 'tenant_name':
                              tenant, 'profile': profile}, **connection_args)
                 tenant_roles = __salt__['keystone.user_role_list'](**args)
@@ -284,7 +284,7 @@ def user_present(name,
                                          profile=profile,
                                          **connection_args)
         if roles:
-            for tenant in roles.keys():
+            for tenant in roles:
                 for role in roles[tenant]:
                     __salt__['keystone.user_role_add'](user=name,
                                                        role=role,

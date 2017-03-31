@@ -9,7 +9,8 @@ Loader mechanism for caching data, with data expiration, etc.
 from __future__ import absolute_import
 import time
 
-# Import Salt lobs
+# Import Salt libs
+import salt.config
 import salt.loader
 import salt.syspaths
 from salt.payload import Serial
@@ -54,7 +55,7 @@ class Cache(object):
             self.cachedir = opts.get('cachedir', salt.syspaths.CACHE_DIR)
         else:
             self.cachedir = cachedir
-        self.driver = opts['cache']
+        self.driver = opts.get('cache', salt.config.DEFAULT_MASTER_OPTS)
         self.serial = Serial(opts)
         self._modules = None
 
@@ -143,8 +144,8 @@ class Cache(object):
             added by the driver itself.
 
         :return:
-            Return a python object fetched from the cache or None if the given
-            path or key not found.
+            Return a python object fetched from the cache or an empty dict if
+            the given path or key not found.
 
         :raises SaltCacheError:
             Raises an exception if cache driver detected an error accessing data

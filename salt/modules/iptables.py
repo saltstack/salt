@@ -107,6 +107,11 @@ def _conf(family='ipv4'):
     elif __grains__['os_family'] == 'SUSE':
         # SuSE does not seem to use separate files for IPv4 and IPv6
         return '/etc/sysconfig/scripts/SuSEfirewall2-custom'
+    elif __grains__['os'] == 'Alpine':
+        if family == 'ipv6':
+            return '/etc/iptables/rules6-save'
+        else:
+            return '/etc/iptables/rules-save'
     else:
         raise SaltException('Saving iptables to file is not' +
                             ' supported on {0}.'.format(__grains__['os']) +

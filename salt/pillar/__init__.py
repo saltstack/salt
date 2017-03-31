@@ -10,6 +10,8 @@ import os
 import collections
 import logging
 import tornado.gen
+import sys
+import traceback
 
 # Import salt libs
 import salt.loader
@@ -38,10 +40,13 @@ def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
     '''
     Return the correct pillar driver based on the file_client option
     '''
+    file_client = opts['file_client']
+    if opts.get('master_type') == 'disable' and file_client == 'remote':
+        file_client = 'local'
     ptype = {
         'remote': RemotePillar,
         'local': Pillar
-    }.get(opts['file_client'], Pillar)
+    }.get(file_client, Pillar)
     # If local pillar and we're caching, run through the cache system first
     log.debug('Determining pillar cache')
     if opts['pillar_cache']:
@@ -59,10 +64,13 @@ def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None
     '''
     Return the correct pillar driver based on the file_client option
     '''
+    file_client = opts['file_client']
+    if opts.get('master_type') == 'disable' and file_client == 'remote':
+        file_client = 'local'
     ptype = {
         'remote': AsyncRemotePillar,
         'local': AsyncPillar,
-    }.get(opts['file_client'], AsyncPillar)
+    }.get(file_client, AsyncPillar)
     return ptype(opts, grains, minion_id, saltenv, ext, functions=funcs,
                  pillar=pillar, pillarenv=pillarenv)
 
@@ -362,11 +370,14 @@ class Pillar(object):
             opts['grains'] = {}
         else:
             opts['grains'] = grains
-        if not opts.get('environment'):
-            opts['environment'] = saltenv
+        # Allow minion/CLI saltenv/pillarenv to take precedence over master
+        opts['environment'] = saltenv \
+            if saltenv is not None \
+            else opts.get('environment')
+        opts['pillarenv'] = pillarenv \
+            if pillarenv is not None \
+            else opts.get('pillarenv')
         opts['id'] = self.minion_id
-        if not opts.get('pillarenv'):
-            opts['pillarenv'] = pillarenv
         if opts['state_top'].startswith('salt://'):
             opts['state_top'] = opts['state_top']
         elif opts['state_top'].startswith('/'):
@@ -400,20 +411,21 @@ class Pillar(object):
         # Gather initial top files
         try:
             if self.opts['pillarenv']:
-                tops[self.opts['pillarenv']] = [
-                        compile_template(
-                            self.client.cache_file(
-                                self.opts['state_top'],
-                                self.opts['pillarenv']
-                                ),
-                            self.rend,
-                            self.opts['renderer'],
-                            self.opts['renderer_blacklist'],
-                            self.opts['renderer_whitelist'],
-                            self.opts['pillarenv'],
-                            _pillar_rend=True,
-                            )
-                        ]
+                top = self.client.cache_file(
+                    self.opts['state_top'], self.opts['pillarenv'])
+
+                if top:
+                    tops[self.opts['pillarenv']] = [
+                            compile_template(
+                                top,
+                                self.rend,
+                                self.opts['renderer'],
+                                self.opts['renderer_blacklist'],
+                                self.opts['renderer_whitelist'],
+                                self.opts['pillarenv'],
+                                _pillar_rend=True,
+                                )
+                            ]
             else:
                 for saltenv in self._get_envs():
                     if self.opts.get('pillar_source_merging_strategy', None) == "none":
@@ -676,9 +688,11 @@ class Pillar(object):
                                         )
                                 if nstate:
                                     if key:
-                                        nstate = {
-                                            key: nstate
-                                        }
+                                        # If key is x:y, convert it to {x: {y: nstate}}
+                                        for key_fragment in reversed(key.split(":")):
+                                            nstate = {
+                                                key_fragment: nstate
+                                            }
 
                                     state = merge(
                                         state,
@@ -814,8 +828,16 @@ class Pillar(object):
                                                         pillar_dirs,
                                                         key)
                 except Exception as exc:
-                    errors.append('Failed to load ext_pillar {0}: {1}'.format(
-                        key, exc))
+                    errors.append(
+                        'Failed to load ext_pillar {0}: {1}'.format(
+                            key,
+                            exc.__str__(),
+                        )
+                    )
+                    log.error(
+                        'Execption caught loading ext_pillar \'%s\':\n%s',
+                        key, ''.join(traceback.format_tb(sys.exc_info()[2]))
+                    )
             if ext:
                 pillar = merge(
                     pillar,
@@ -833,7 +855,9 @@ class Pillar(object):
         top, top_errors = self.get_top()
         if ext:
             if self.opts.get('ext_pillar_first', False):
-                self.opts['pillar'], errors = self.ext_pillar({}, pillar_dirs)
+                self.opts['pillar'], errors = self.ext_pillar(
+                    self.pillar_override,
+                    pillar_dirs)
                 self.rend = salt.loader.render(self.opts, self.functions)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches, errors=errors)

@@ -35,10 +35,14 @@ def __define_global_system_encoding_variable__():
     # This is the most trustworthy source of the system encoding, though, if
     # salt is being imported after being daemonized, this information is lost
     # and reset to None
-    if sys.stdin is not None:
+    encoding = None
+
+    if not sys.platform.startswith('win') and sys.stdin is not None:
+        # On linux we can rely on sys.stdin for the encoding since it
+        # most commonly matches the filesystem encoding. This however
+        # does not apply to windows
         encoding = sys.stdin.encoding
-    else:
-        encoding = None
+
     if not encoding:
         # If the system is properly configured this should return a valid
         # encoding. MS Windows has problems with this and reports the wrong

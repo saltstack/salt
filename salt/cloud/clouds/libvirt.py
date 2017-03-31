@@ -62,6 +62,8 @@ import os
 
 from xml.etree import ElementTree
 
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     import libvirt  # pylint: disable=import-error
     from libvirt import libvirtError
@@ -69,6 +71,7 @@ try:
 except ImportError:
     HAS_LIBVIRT = False
 
+# Import salt libs
 import salt.config as config
 import salt.utils
 import salt.utils.cloud
@@ -166,7 +169,7 @@ def list_nodes(call=None):
     providers = __opts__.get('providers', {})
 
     ret = {}
-    providers_to_check = [_f for _f in [cfg.get('libvirt') for cfg in providers.itervalues()] if _f]
+    providers_to_check = [_f for _f in [cfg.get('libvirt') for cfg in six.itervalues(providers)] if _f]
     for provider in providers_to_check:
         conn = __get_conn(provider['url'])
         domains = conn.listAllDomains()
@@ -239,7 +242,7 @@ def get_domain_ips(domain, ip_source):
         log.info("Exception polling address {0}".format(error))
         return ips
 
-    for (name, val) in addresses.iteritems():
+    for (name, val) in six.iteritems(addresses):
         if val['addrs']:
             for addr in val['addrs']:
                 tp = to_ip_addr_type(addr['type'])
@@ -293,11 +296,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(name),
-        {
-            'name': name,
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -339,7 +338,9 @@ def create(vm_):
                 'event',
                 'requesting instance',
                 'salt/cloud/{0}/requesting'.format(name),
-                {'kwargs': kwargs},
+                args={
+                    'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, kwargs.keys()),
+                },
                 sock_dir=__opts__['sock_dir'],
                 transport=__opts__['transport']
             )
@@ -442,11 +443,7 @@ def create(vm_):
             'event',
             'created instance',
             'salt/cloud/{0}/created'.format(name),
-            {
-                'name': name,
-                'profile': vm_['profile'],
-                'provider': vm_['driver'],
-            },
+            args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
@@ -495,7 +492,7 @@ def destroy(name, call=None):
     found = []
 
     providers = __opts__.get('providers', {})
-    providers_to_check = [_f for _f in [cfg.get('libvirt') for cfg in providers.itervalues()] if _f]
+    providers_to_check = [_f for _f in [cfg.get('libvirt') for cfg in six.itervalues(providers)] if _f]
     for provider in providers_to_check:
         conn = __get_conn(provider['url'])
         log.info("looking at {0}".format(provider['url']))

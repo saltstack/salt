@@ -8,12 +8,12 @@ import os
 import unittest
 
 # Import Salt Testing libs
-from salttesting import skipIf
+from tests.support.unit import skipIf
 
 # Import Salt libs
 import salt.ext.six as six
-import integration
-from salt.utils import virtualbox
+import tests.integration as integration
+import salt.utils.virtualbox
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = integration.cloud.helpers.random_name()
@@ -34,10 +34,10 @@ log.setLevel(logging.INFO)
 info = log.info
 
 
-@skipIf(virtualbox.HAS_LIBS is False, 'virtualbox has to be installed')
+@skipIf(salt.utils.virtualbox.HAS_LIBS is False, 'virtualbox has to be installed')
 class VirtualboxTestCase(unittest.TestCase):
     def setUp(self):
-        self.vbox = virtualbox.vb_get_box()
+        self.vbox = salt.utils.virtualbox.vb_get_box()
 
     def assertMachineExists(self, name, msg=None):
         try:
@@ -52,7 +52,7 @@ class VirtualboxTestCase(unittest.TestCase):
         self.assertRaisesRegexp(Exception, "Could not find a registered machine", self.vbox.findMachine, name)
 
 
-@skipIf(virtualbox.HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')
+@skipIf(salt.utils.virtualbox.HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')
 class VirtualboxCloudTestCase(integration.ShellCase):
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         """

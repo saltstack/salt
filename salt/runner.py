@@ -62,36 +62,33 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         '''
         Format the low data for RunnerClient()'s master_call() function
 
-        The master_call function here has a different function signature than
-        on WheelClient. So extract all the eauth keys and the fun key and
-        assume everything else is a kwarg to pass along to the runner function
-        to be called.
+        This also normalizes the following low data formats to a single, common
+        low data structure.
+
+        Old-style low: ``{'fun': 'jobs.lookup_jid', 'jid': '1234'}``
+        New-style: ``{'fun': 'jobs.lookup_jid', 'kwarg': {'jid': '1234'}}``
+        CLI-style: ``{'fun': 'jobs.lookup_jid', 'arg': ['jid="1234"']}``
         '''
-        auth_creds = dict([(i, low.pop(i)) for i in [
-                'username', 'password', 'eauth', 'token', 'client', 'user', 'key'
-            ] if i in low])
         fun = low.pop('fun')
-        reformatted_low = {'fun': fun}
-        reformatted_low.update(auth_creds)
-        # Support old style calls where arguments could be specified in 'low' top level
-        if not low.get('arg') and not low.get('kwarg'):  # not specified or empty
-            verify_fun(self.functions, fun)
-            merged_args_kwargs = salt.utils.args.condition_input([], low)
-            parsed_input = salt.utils.args.parse_input(merged_args_kwargs)
-            args, kwargs = salt.minion.load_args_and_kwargs(
-                self.functions[fun],
-                parsed_input,
-                self.opts,
-                ignore_invalid=True
-            )
-            low['arg'] = args
-            low['kwarg'] = kwargs
-        if 'kwarg' not in low:
-            low['kwarg'] = {}
-        if 'arg' not in low:
-            low['arg'] = []
-        reformatted_low['kwarg'] = low
-        return reformatted_low
+        verify_fun(self.functions, fun)
+
+        reserved_kwargs = dict([(i, low.pop(i)) for i in [
+            'username', 'password', 'eauth', 'token', 'client', 'user', 'key',
+        ] if i in low])
+
+        # Run name=value args through parse_input. We don't need to run kwargs
+        # through because there is no way to send name=value strings in the low
+        # dict other than by including an `arg` array.
+        arg, kwarg = salt.utils.args.parse_input(
+                low.pop('arg', []), condition=False)
+        kwarg.update(low.pop('kwarg', {}))
+
+        # If anything hasn't been pop()'ed out of low by this point it must be
+        # an old-style kwarg.
+        kwarg.update(low)
+
+        return dict(fun=fun, kwarg={'kwarg': kwarg, 'arg': arg},
+                **reserved_kwargs)
 
     def cmd_async(self, low):
         '''
@@ -113,7 +110,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
         return mixins.AsyncClientMixin.cmd_async(self, reformatted_low)
 
-    def cmd_sync(self, low, timeout=None):
+    def cmd_sync(self, low, timeout=None, full_return=False):
         '''
         Execute a runner function synchronously; eauth is respected
 
@@ -130,7 +127,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             })
         '''
         reformatted_low = self._reformat_low(low)
-        return mixins.SyncClientMixin.cmd_sync(self, reformatted_low, timeout)
+        return mixins.SyncClientMixin.cmd_sync(self, reformatted_low, timeout, full_return)
 
     def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):
         '''

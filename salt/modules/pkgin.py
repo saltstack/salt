@@ -619,7 +619,7 @@ def file_dict(*packages):
                 continue  # unexpected string
 
     ret = {'errors': errors, 'files': files}
-    for field in ret.keys():
+    for field in ret:
         if not ret[field] or ret[field] == '':
             del ret[field]
     return ret

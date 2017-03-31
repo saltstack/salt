@@ -205,7 +205,7 @@ def _get_sysv_services():
     try:
         sysv_services = os.listdir(INITSCRIPT_PATH)
     except OSError as exc:
-        if exc.errno == errno.EEXIST:
+        if exc.errno == errno.ENOENT:
             pass
         elif exc.errno == errno.EACCES:
             log.error(
@@ -274,7 +274,7 @@ def _runlevel():
     return ret
 
 
-def _systemctl_cmd(action, name=None, systemd_scope=False):
+def _systemctl_cmd(action, name=None, systemd_scope=False, no_block=False):
     '''
     Build a systemctl command line. Treat unit names without one
     of the valid suffixes as a service.
@@ -285,6 +285,8 @@ def _systemctl_cmd(action, name=None, systemd_scope=False):
             and __salt__['config.get']('systemd.scope', True):
         ret.extend(['systemd-run', '--scope'])
     ret.append('systemctl')
+    if no_block:
+        ret.append('--no-block')
     if isinstance(action, six.string_types):
         action = shlex.split(action)
     ret.extend(action)
@@ -731,7 +733,7 @@ def masked(name, runtime=False):
         return False
 
 
-def start(name):
+def start(name, no_block=False):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -746,6 +748,11 @@ def start(name):
 
     Start the specified service with systemd
 
+    no_block : False
+        Set to ``True`` to start the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
@@ -755,11 +762,11 @@ def start(name):
     _check_for_unit_changes(name)
     unmask(name)
     return __salt__['cmd.retcode'](
-        _systemctl_cmd('start', name, systemd_scope=True),
+        _systemctl_cmd('start', name, systemd_scope=True, no_block=no_block),
         python_shell=False) == 0
 
 
-def stop(name):
+def stop(name, no_block=False):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -774,6 +781,11 @@ def stop(name):
 
     Stop the specified service with systemd
 
+    no_block : False
+        Set to ``True`` to start the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
@@ -782,11 +794,11 @@ def stop(name):
     '''
     _check_for_unit_changes(name)
     return __salt__['cmd.retcode'](
-        _systemctl_cmd('stop', name, systemd_scope=True),
+        _systemctl_cmd('stop', name, systemd_scope=True, no_block=no_block),
         python_shell=False) == 0
 
 
-def restart(name):
+def restart(name, no_block=False):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -801,6 +813,11 @@ def restart(name):
 
     Restart the specified service with systemd
 
+    no_block : False
+        Set to ``True`` to start the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
@@ -810,11 +827,11 @@ def restart(name):
     _check_for_unit_changes(name)
     unmask(name)
     return __salt__['cmd.retcode'](
-        _systemctl_cmd('restart', name, systemd_scope=True),
+        _systemctl_cmd('restart', name, systemd_scope=True, no_block=no_block),
         python_shell=False) == 0
 
 
-def reload_(name):
+def reload_(name, no_block=False):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -829,6 +846,11 @@ def reload_(name):
 
     Reload the specified service with systemd
 
+    no_block : False
+        Set to ``True`` to start the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
@@ -838,11 +860,11 @@ def reload_(name):
     _check_for_unit_changes(name)
     unmask(name)
     return __salt__['cmd.retcode'](
-        _systemctl_cmd('reload', name, systemd_scope=True),
+        _systemctl_cmd('reload', name, systemd_scope=True, no_block=no_block),
         python_shell=False) == 0
 
 
-def force_reload(name):
+def force_reload(name, no_block=True):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -859,6 +881,11 @@ def force_reload(name):
 
     Force-reload the specified service with systemd
 
+    no_block : False
+        Set to ``True`` to start the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
@@ -868,7 +895,8 @@ def force_reload(name):
     _check_for_unit_changes(name)
     unmask(name)
     return __salt__['cmd.retcode'](
-        _systemctl_cmd('force-reload', name, systemd_scope=True),
+        _systemctl_cmd('force-reload', name,
+                       systemd_scope=True, no_block=no_block),
         python_shell=False) == 0
 
 
@@ -908,12 +936,18 @@ def enable(name, **kwargs):  # pylint: disable=unused-argument
 
     Enable the named service to start when the system boots
 
+    no_block : False
+        Set to ``True`` to start the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' service.enable <service name>
     '''
+    no_block = kwargs.pop('no_block', False)
     _check_for_unit_changes(name)
     unmask(name)
     if name in _get_sysv_services():
@@ -930,7 +964,7 @@ def enable(name, **kwargs):  # pylint: disable=unused-argument
                                        python_shell=False,
                                        ignore_retcode=True) == 0
     return __salt__['cmd.retcode'](
-        _systemctl_cmd('enable', name, systemd_scope=True),
+        _systemctl_cmd('enable', name, systemd_scope=True, no_block=no_block),
         python_shell=False,
         ignore_retcode=True) == 0
 
@@ -952,12 +986,18 @@ def disable(name, **kwargs):  # pylint: disable=unused-argument
 
     Disable the named service to not start when the system boots
 
+    no_block : False
+        Set to ``True`` to start the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' service.disable <service name>
     '''
+    no_block = kwargs.pop('no_block', False)
     _check_for_unit_changes(name)
     if name in _get_sysv_services():
         cmd = []
@@ -973,9 +1013,9 @@ def disable(name, **kwargs):  # pylint: disable=unused-argument
                                        python_shell=False,
                                        ignore_retcode=True) == 0
     return __salt__['cmd.retcode'](
-        _systemctl_cmd('disable', name, systemd_scope=True),
+        _systemctl_cmd('disable', name, systemd_scope=True, no_block=no_block),
         python_shell=False,
-        ignore_recode=True) == 0
+        ignore_retcode=True) == 0
 
 
 # The unused kwargs argument is required to maintain consistency with the API

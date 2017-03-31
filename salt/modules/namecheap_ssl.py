@@ -43,11 +43,13 @@
 from __future__ import absolute_import
 CAN_USE_NAMECHEAP = True
 
-
 try:
     import salt.utils.namecheap
 except ImportError:
     CAN_USE_NAMECHEAP = False
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -230,7 +232,7 @@ def __get_certificates(command,
     if http_dc_validation:
         opts['HTTPDCValidation'] = 'True'
 
-    for key, value in kwargs.iteritems():
+    for key, value in six.iteritems(kwargs):
         opts[key] = value
 
     csr_handle.close()
@@ -648,7 +650,7 @@ def get_list(**kwargs):
         salt 'my-minion' namecheap_ssl.get_list Processing
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.getList')
-    for key, value in kwargs.iteritems():
+    for key, value in six.iteritems(kwargs):
         opts[key] = value
 
     response_xml = salt.utils.namecheap.get_request(opts)

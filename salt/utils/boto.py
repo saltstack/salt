@@ -39,7 +39,6 @@ from __future__ import absolute_import
 import hashlib
 import logging
 import sys
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 from functools import partial
 from salt.loader import minion_mods
 
@@ -47,6 +46,7 @@ from salt.loader import minion_mods
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 import salt.utils
 
 # Import third party libs

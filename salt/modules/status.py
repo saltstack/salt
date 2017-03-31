@@ -4,7 +4,6 @@ Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
 
-
 # Import python libs
 from __future__ import absolute_import
 import datetime
@@ -25,8 +24,8 @@ import salt.config
 import salt.minion
 import salt.utils
 import salt.utils.event
-from salt.utils.minion import connected_masters as _connected_masters
 from salt.utils.network import host_to_ips as _host_to_ips
+from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
 from salt.exceptions import CommandExecutionError
 
@@ -39,6 +38,16 @@ __opts__ = {}
 __func_alias__ = {
     'time_': 'time'
 }
+
+
+def __virtual__():
+    '''
+    Not all functions supported by Windows
+    '''
+    if salt.utils.is_windows():
+        return False, 'Windows platform is not supported by this module'
+
+    return __virtualname__
 
 
 def _number(text):
@@ -67,8 +76,6 @@ def procs():
         salt '*' status.procs
     '''
     # Get the user, pid and cmd
-    if salt.utils.is_windows():
-        raise CommandExecutionError('This platform is not supported')
     ret = {}
     uind = 0
     pind = 0
@@ -117,8 +124,6 @@ def custom():
 
         salt '*' status.custom
     '''
-    if salt.utils.is_windows():
-        raise CommandExecutionError('This platform is not supported')
     ret = {}
     conf = __salt__['config.dot_vals']('status')
     for key, val in six.iteritems(conf):
@@ -587,10 +592,6 @@ def diskusage(*args):
         salt '*' status.diskusage ext?    # usage for ext[234] filesystems
         salt '*' status.diskusage / ext?  # usage for / and all ext filesystems
     '''
-
-    if salt.utils.is_windows():
-        raise CommandExecutionError('This platform is not supported')
-
     selected = set()
     fstypes = set()
     if not args:
@@ -878,7 +879,7 @@ def netdev():
         '''
         ret = {}
         ##NOTE: we cannot use hwaddr_interfaces here, so we grab both ip4 and ip6
-        for dev in __grains__['ip4_interfaces'].keys() + __grains__['ip6_interfaces'].keys():
+        for dev in __grains__['ip4_interfaces'].keys() + __grains__['ip6_interfaces']:
             # fetch device info
             netstat_ipv4 = __salt__['cmd.run']('netstat -i -I {dev} -n -f inet'.format(dev=dev)).splitlines()
             netstat_ipv6 = __salt__['cmd.run']('netstat -i -I {dev} -n -f inet6'.format(dev=dev)).splitlines()
@@ -929,8 +930,6 @@ def w():  # pylint: disable=C0103
 
         salt '*' status.w
     '''
-    if salt.utils.is_windows():
-        raise CommandExecutionError('This platform is not supported')
     user_list = []
     users = __salt__['cmd.run']('w -h').splitlines()
     for row in users:
@@ -1055,7 +1054,8 @@ def master(master=None, connected=True):
         return
 
     master_connection_status = False
-    connected_ips = _connected_masters()
+    port = __salt__['config.get']('publish_port', default=4505)
+    connected_ips = _remote_port_tcp(port)
 
     # Get connection status for master
     for master_ip in master_ips:
@@ -1126,7 +1126,7 @@ def proxy_reconnect(proxy_name, opts=None):
         The virtual name of the proxy module.
 
     opts: None
-        Opts dictionary.
+        Opts dictionary. Not intended for CLI usage.
 
     CLI Example:
 

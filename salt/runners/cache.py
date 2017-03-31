@@ -6,6 +6,7 @@ from __future__ import absolute_import
 # Import python libs
 import fnmatch
 import logging
+import os
 
 # Import salt libs
 import salt.config
@@ -14,6 +15,7 @@ import salt.log
 import salt.utils
 import salt.utils.master
 import salt.payload
+import salt.cache
 from salt.exceptions import SaltInvocationError
 from salt.fileserver import clear_lock as _clear_lock
 from salt.fileserver.gitfs import PER_REMOTE_OVERRIDES as __GITFS_OVERRIDES
@@ -22,6 +24,10 @@ from salt.pillar.git_pillar \
 from salt.runners.winrepo import PER_REMOTE_OVERRIDES as __WINREPO_OVERRIDES
 
 log = logging.getLogger(__name__)
+
+__func_alias__ = {
+    'list_': 'list',
+}
 
 
 def grains(tgt=None, tgt_type='glob', **kwargs):
@@ -386,13 +392,84 @@ def cloud(tgt, provider=None):
     '''
     if not isinstance(tgt, six.string_types):
         return {}
-    ret = {}
-    opts = salt.config.cloud_config('/etc/salt/cloud')
+
+    opts = salt.config.cloud_config(
+        os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
+    )
+    if not opts.get('update_cachedir'):
+        return {}
+
     cloud_cache = __utils__['cloud.list_cache_nodes_full'](opts=opts, provider=provider)
-    for driver, providers in cloud_cache.items():
-        for provider, servers in providers.items():
-            for name, data in servers.items():
+    if cloud_cache is None:
+        return {}
+
+    ret = {}
+    for driver, providers in six.iteritems(cloud_cache):
+        for provider, servers in six.iteritems(providers):
+            for name, data in six.iteritems(servers):
                 if fnmatch.fnmatch(name, tgt):
                     ret[name] = data
-                    ret['name']['provider'] = provider
+                    ret[name]['provider'] = provider
     return ret
+
+
+def list_(bank, cachedir=None):
+    '''
+    Lists entries stored in the specified bank.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.list cloud/active/ec2/myec2 cachedir=/var/cache/salt/
+    '''
+    if cachedir is None:
+        cachedir = __opts__['cachedir']
+
+    try:
+        cache = salt.cache.Cache(__opts__, cachedir)
+    except TypeError:
+        cache = salt.cache.Cache(__opts__)
+    return cache.list(bank)
+
+
+def fetch(bank, key, cachedir=None):
+    '''
+    Fetch data from a salt.cache bank.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.fetch cloud/active/ec2/myec2 myminion cachedir=/var/cache/salt/
+    '''
+    if cachedir is None:
+        cachedir = __opts__['cachedir']
+
+    try:
+        cache = salt.cache.Cache(__opts__, cachedir)
+    except TypeError:
+        cache = salt.cache.Cache(__opts__)
+    return cache.fetch(bank, key)
+
+
+def flush(bank, key=None, cachedir=None):
+    '''
+    Remove the key from the cache bank with all the key content. If no key is
+    specified remove the entire bank with all keys and sub-banks inside.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-run cache.flush cloud/active/ec2/myec2 cachedir=/var/cache/salt/
+        salt-run cache.flush cloud/active/ec2/myec2 myminion cachedir=/var/cache/salt/
+    '''
+    if cachedir is None:
+        cachedir = __opts__['cachedir']
+
+    try:
+        cache = salt.cache.Cache(__opts__, cachedir)
+    except TypeError:
+        cache = salt.cache.Cache(__opts__)
+    return cache.flush(bank, key)

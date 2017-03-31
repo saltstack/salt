@@ -10,6 +10,7 @@ import os
 import re
 import sys
 import glob
+import getpass
 import time
 import codecs
 import logging
@@ -57,6 +58,7 @@ _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
 )
+_DFLT_REFSPECS = ['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']
 
 if salt.utils.is_windows():
     # Since an 'ipc_mode' of 'ipc' will never work on Windows due to lack of
@@ -561,6 +563,12 @@ VALID_OPTS = {
     # False in 2016.3.0
     'add_proxymodule_to_opts': bool,
 
+    # In some particular cases, always alive proxies are not beneficial.
+    # This option can be used in those less dynamic environments:
+    # the user can request the connection
+    # always alive, or init-shutdown per command.
+    'proxy_always_alive': bool,
+
     # Poll the connection state with the proxy minion
     # If enabled, this option requires the function `alive`
     # to be implemented in the proxy module
@@ -580,6 +588,9 @@ VALID_OPTS = {
     'git_pillar_privkey': str,
     'git_pillar_pubkey': str,
     'git_pillar_passphrase': str,
+    'git_pillar_refspecs': list,
+    'git_pillar_includes': bool,
+    'git_pillar_verify_config': bool,
     'gitfs_remotes': list,
     'gitfs_mountpoint': str,
     'gitfs_root': str,
@@ -595,6 +606,7 @@ VALID_OPTS = {
     'gitfs_ssl_verify': bool,
     'gitfs_global_lock': bool,
     'gitfs_saltenv': list,
+    'gitfs_refspecs': list,
     'hgfs_remotes': list,
     'hgfs_mountpoint': str,
     'hgfs_root': str,
@@ -680,6 +692,14 @@ VALID_OPTS = {
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
     'fileserver_limit_traversal': bool,
+    'fileserver_verify_config': bool,
+
+    # Optionally enables keeping the calculated user's auth list in the token file.
+    'keep_acl_in_token': bool,
+
+    # Auth subsystem module to use to get authorized access list for a user. By default it's the
+    # same module used for external authentication.
+    'eauth_acl_module': str,
 
     # The number of open files a daemon is allowed to have open. Frequently needs to be increased
     # higher than the system default in order to account for the way zeromq consumes file handles.
@@ -747,7 +767,7 @@ VALID_OPTS = {
 
     # A compound target definition.
     # See: http://docs.saltstack.com/en/latest/topics/targeting/nodegroups.html
-    'nodegroups': dict,
+    'nodegroups': (dict, list),
 
     # List-only nodegroups for salt-ssh. Each group must be formed as either a
     # comma-separated list, or a YAML list.
@@ -781,6 +801,7 @@ VALID_OPTS = {
     'winrepo_privkey': str,
     'winrepo_pubkey': str,
     'winrepo_passphrase': str,
+    'winrepo_refspecs': list,
 
     # Set a hard limit for the amount of memory modules can consume on a minion.
     'modules_max_memory': int,
@@ -971,7 +992,7 @@ VALID_OPTS = {
     # http://docs.python.org/2/library/ssl.html#ssl.wrap_socket
     # Note: to set enum arguments values like `cert_reqs` and `ssl_version` use constant names
     # without ssl module prefix: `CERT_REQUIRED` or `PROTOCOL_SSLv23`.
-    'ssl': (dict, None),
+    'ssl': (dict, bool, type(None)),
 
     # Controls how a multi-function job returns its data. If this is False,
     # it will return its data using a dictionary with the function name as
@@ -988,6 +1009,14 @@ VALID_OPTS = {
     # Controls whether the scheduler is set up before a connection
     # to the master is attempted.
     'scheduler_before_connect': bool,
+
+    # Whitelist/blacklist specific modules to be synced
+    'extmod_whitelist': dict,
+    'extmod_blacklist': dict,
+
+    # django auth
+    'django_auth_path': str,
+    'django_auth_settings': str,
 }
 
 # default configurations
@@ -1003,10 +1032,11 @@ DEFAULT_MINION_OPTS = {
     'master_failback': False,
     'master_failback_interval': 0,
     'verify_master_pubkey_sign': False,
+    'sign_pub_messages': False,
     'always_verify_signature': False,
     'master_sign_key_name': 'master_sign',
     'syndic_finger': '',
-    'user': 'root',
+    'user': salt.utils.get_user(),
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': '',
@@ -1081,6 +1111,8 @@ DEFAULT_MINION_OPTS = {
     'git_pillar_privkey': '',
     'git_pillar_pubkey': '',
     'git_pillar_passphrase': '',
+    'git_pillar_refspecs': _DFLT_REFSPECS,
+    'git_pillar_includes': True,
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -1096,6 +1128,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'gitfs_saltenv': [],
+    'gitfs_refspecs': _DFLT_REFSPECS,
     'hash_type': 'sha256',
     'disable_modules': [],
     'disable_returners': [],
@@ -1120,7 +1153,7 @@ DEFAULT_MINION_OPTS = {
     'mine_interval': 60,
     'ipc_mode': _DFLT_IPC_MODE,
     'ipc_write_buffer': _DFLT_IPC_WBUFFER,
-    'ipv6': False,
+    'ipv6': None,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
@@ -1181,6 +1214,7 @@ DEFAULT_MINION_OPTS = {
     'winrepo_privkey': '',
     'winrepo_pubkey': '',
     'winrepo_passphrase': '',
+    'winrepo_refspecs': _DFLT_REFSPECS,
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
     'reactor_refresh_interval': 60,
@@ -1241,6 +1275,8 @@ DEFAULT_MINION_OPTS = {
     'beacons_before_connect': False,
     'scheduler_before_connect': False,
     'cache': 'localfs',
+    'extmod_whitelist': {},
+    'extmod_blacklist': {},
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1249,7 +1285,7 @@ DEFAULT_MASTER_OPTS = {
     'zmq_backlog': 1000,
     'pub_hwm': 1000,
     'auth_mode': 1,
-    'user': 'root',
+    'user': salt.utils.get_user(),
     'worker_threads': 5,
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'master'),
     'ret_port': 4506,
@@ -1297,6 +1333,9 @@ DEFAULT_MASTER_OPTS = {
     'git_pillar_privkey': '',
     'git_pillar_pubkey': '',
     'git_pillar_passphrase': '',
+    'git_pillar_refspecs': _DFLT_REFSPECS,
+    'git_pillar_includes': True,
+    'git_pillar_verify_config': True,
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -1312,6 +1351,7 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'gitfs_saltenv': [],
+    'gitfs_refspecs': _DFLT_REFSPECS,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -1360,6 +1400,8 @@ DEFAULT_MASTER_OPTS = {
     'external_auth': {},
     'token_expire': 43200,
     'token_expire_user_override': False,
+    'keep_acl_in_token': False,
+    'eauth_acl_module': '',
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
     'file_recv': False,
     'file_recv_max_size': 100,
@@ -1370,6 +1412,7 @@ DEFAULT_MASTER_OPTS = {
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
     'fileserver_limit_traversal': False,
+    'fileserver_verify_config': True,
     'max_open_files': 100000,
     'hash_type': 'sha256',
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'master'),
@@ -1454,6 +1497,7 @@ DEFAULT_MASTER_OPTS = {
     'winrepo_privkey': '',
     'winrepo_pubkey': '',
     'winrepo_passphrase': '',
+    'winrepo_refspecs': _DFLT_REFSPECS,
     'syndic_wait': 5,
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
@@ -1461,7 +1505,7 @@ DEFAULT_MASTER_OPTS = {
     'tcp_keepalive_idle': 300,
     'tcp_keepalive_cnt': -1,
     'tcp_keepalive_intvl': -1,
-    'sign_pub_messages': False,
+    'sign_pub_messages': True,
     'keysize': 2048,
     'transport': 'zeromq',
     'gather_job_timeout': 10,
@@ -1517,6 +1561,11 @@ DEFAULT_MASTER_OPTS = {
     'thin_extra_mods': '',
     'min_extra_mods': '',
     'ssl': None,
+    'extmod_whitelist': {},
+    'extmod_blacklist': {},
+    'clean_dynamic_modules': True,
+    'django_auth_path': '',
+    'django_auth_settings': '',
 }
 
 
@@ -1527,10 +1576,18 @@ DEFAULT_MASTER_OPTS = {
 DEFAULT_PROXY_MINION_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
+    'sign_pub_messages': False,
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': True,
-    'append_minionid_config_dirs': ['cachedir', 'pidfile'],
+    'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include'],
     'default_include': 'proxy.d/*.conf',
+
+    # By default, proxies will preserve the connection.
+    # If this option is set to False,
+    # the connection with the remote dumb device
+    # is closed after each command request.
+    'proxy_always_alive': True,
+
     'proxy_keep_alive': True,  # by default will try to keep alive the connection
     'proxy_keep_alive_interval': 1  # frequency of the proxy keepalive in minutes
 }
@@ -1587,6 +1644,12 @@ DEFAULT_SPM_OPTS = {
     'spm_build_dir': '/srv/spm_build',
     'spm_build_exclude': ['CVS', '.hg', '.git', '.svn'],
     'spm_db': os.path.join(salt.syspaths.CACHE_DIR, 'spm', 'packages.db'),
+    'cache': 'localfs',
+    'spm_repo_dups': 'ignore',
+    # If set, spm_node_type will be either master or minion, but they should
+    # NOT be a default
+    'spm_node_type': '',
+    'spm_share_dir': os.path.join(salt.syspaths.SHARE_DIR, 'spm'),
     # <---- Salt master settings overridden by SPM ----------------------
 }
 
@@ -2090,7 +2153,7 @@ def syndic_config(master_config_path,
         'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir'
     ]
-    for config_key in ('log_file', 'key_logfile'):
+    for config_key in ('syndic_log_file', 'log_file', 'key_logfile'):
         # If this is not a URI and instead a local path
         if urlparse(opts.get(config_key, '')).scheme == '':
             prepend_root_dirs.append(config_key)
@@ -3138,7 +3201,11 @@ def _update_ssl_config(opts):
     '''
     Resolves string names to integer constant in ssl configuration.
     '''
-    if opts['ssl'] is None:
+    if opts['ssl'] in (None, False):
+        opts['ssl'] = None
+        return
+    if opts['ssl'] is True:
+        opts['ssl'] = {}
         return
     import ssl
     for key, prefix in (('cert_reqs', 'CERT_'),
@@ -3186,9 +3253,15 @@ def apply_minion_config(overrides=None,
         opts['id'] = _append_domain(opts)
 
     for directory in opts.get('append_minionid_config_dirs', []):
-        if directory in ['pki_dir', 'cachedir', 'extension_modules']:
+        if directory in ('pki_dir', 'cachedir', 'extension_modules'):
             newdirectory = os.path.join(opts[directory], opts['id'])
             opts[directory] = newdirectory
+        elif directory == 'default_include' and directory in opts:
+            include_dir = os.path.dirname(opts[directory])
+            new_include_dir = os.path.join(include_dir,
+                                           opts['id'],
+                                           os.path.basename(opts[directory]))
+            opts[directory] = new_include_dir
 
     # pidfile can be in the list of append_minionid_config_dirs, but pidfile
     # is the actual path with the filename, not a directory.
@@ -3235,7 +3308,7 @@ def apply_minion_config(overrides=None,
     if 'beacons' not in opts:
         opts['beacons'] = {}
 
-    if overrides.get('ipc_write_buffer', '') == 'dynamic':
+    if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
@@ -3292,6 +3365,8 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
     # out or not present.
     if opts.get('nodegroups') is None:
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
+    if salt.utils.is_dictlist(opts['nodegroups']):
+        opts['nodegroups'] = salt.utils.repack_dictlist(opts['nodegroups'])
     if opts.get('transport') == 'raet' and 'aes' in opts:
         opts.pop('aes')
     apply_sdb(opts)
@@ -3320,7 +3395,7 @@ def apply_master_config(overrides=None, defaults=None):
     )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
     opts['syndic_dir'] = os.path.join(opts['cachedir'], 'syndics')
-    if overrides.get('ipc_write_buffer', '') == 'dynamic':
+    if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
@@ -3346,7 +3421,7 @@ def apply_master_config(overrides=None, defaults=None):
     ]
 
     # These can be set to syslog, so, not actual paths on the system
-    for config_key in ('log_file', 'key_logfile'):
+    for config_key in ('log_file', 'key_logfile', 'ssh_log_file'):
         log_setting = opts.get(config_key, '')
         if log_setting is None:
             continue

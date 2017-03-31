@@ -13,37 +13,35 @@ Master config file.
     fileserver_backend:
       - git
 
-As of Salt 2014.7.0, the Git fileserver backend supports GitPython_, pygit2_,
-and dulwich_ to provide the Python interface to git. If more than one of these
-are present, the order of preference for which one will be chosen is the same
-as the order in which they were listed: pygit2, GitPython, dulwich (keep in
-mind, this order is subject to change).
+The Git fileserver backend supports both pygit2_ and GitPython_, to provide the
+Python interface to git. If both are present, the order of preference for which
+one will be chosen is the same as the order in which they were listed: pygit2,
+then GitPython.
 
 An optional master config parameter (:conf_master:`gitfs_provider`) can be used
-to specify which provider should be used.
+to specify which provider should be used, in the event that compatible versions
+of both pygit2_ and GitPython_ are installed.
 
-More detailed information on how to use gitfs can be found in the :ref:`Gitfs
+More detailed information on how to use GitFS can be found in the :ref:`GitFS
 Walkthrough <tutorial-gitfs>`.
 
 .. note:: Minimum requirements
 
-    To use GitPython_ for gitfs requires a minimum GitPython version of 0.3.0,
-    as well as the git CLI utility. Instructions for installing GitPython can
-    be found :ref:`here <gitfs-dependencies>`.
-
-    To use pygit2_ for gitfs requires a minimum pygit2_ version of 0.20.3.
+    To use pygit2_ for GitFS requires a minimum pygit2_ version of 0.20.3.
     pygit2_ 0.20.3 requires libgit2_ 0.20.0. pygit2_ and libgit2_ are developed
     alongside one another, so it is recommended to keep them both at the same
     major release to avoid unexpected behavior. For example, pygit2_ 0.21.x
     requires libgit2_ 0.21.x, pygit2_ 0.22.x will require libgit2_ 0.22.x, etc.
 
-    To find stale refs, pygit2 additionally requires the git CLI utility to be
-    installed.
+    To use GitPython_ for GitFS requires a minimum GitPython version of 0.3.0,
+    as well as the git CLI utility. Instructions for installing GitPython can
+    be found :ref:`here <gitfs-dependencies>`.
 
-.. _GitPython: https://github.com/gitpython-developers/GitPython
+    To clear stale refs the git CLI utility must also be installed.
+
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _libgit2: https://libgit2.github.com/
-.. _dulwich: https://www.samba.org/~jelmer/dulwich/
+.. _GitPython: https://github.com/gitpython-developers/GitPython
 '''
 
 # Import python libs
@@ -51,7 +49,7 @@ from __future__ import absolute_import
 import logging
 
 PER_REMOTE_OVERRIDES = ('base', 'mountpoint', 'root', 'ssl_verify',
-                        'env_whitelist', 'env_blacklist')
+                        'env_whitelist', 'env_blacklist', 'refspecs')
 PER_REMOTE_ONLY = ('name', 'saltenv')
 
 # Auth support (auth params can be global or per-remote, too)

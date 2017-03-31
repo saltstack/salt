@@ -28,10 +28,16 @@ __proxyenabled__ = ['*']
 __FQDN__ = None
 
 # Extend the default list of supported distros. This will be used for the
-# /etc/DISTRO-release checking that is part of platform.linux_distribution()
+# /etc/DISTRO-release checking that is part of linux_distribution()
 from platform import _supported_dists
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'ovs', 'system', 'mint', 'oracle', 'void')
+
+# linux_distribution deprecated in py3.7
+try:
+    from platform import linux_distribution
+except ImportError:
+    from distro import linux_distribution
 
 # Import salt libs
 import salt.log
@@ -685,14 +691,14 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
             elif 'joyent smartdc hvm' in model:
                 grains['virtual'] = 'kvm'
+            break
     else:
-        if osdata['kernel'] in skip_cmds:
-            log.warning(
-                "The tools 'dmidecode' and 'lspci' failed to "
-                'execute because they do not exist on the system of the user '
-                'running this instance or the user does not have the '
-                'necessary permissions to execute them. Grains output might '
-                'not be accurate.'
+        if osdata['kernel'] not in skip_cmds:
+            log.debug(
+                'All tools for virtual hardware identification failed to '
+                'execute because they do not exist on the system running this '
+                'instance or the user does not have the necessary permissions '
+                'to execute them. Grains output might not be accurate.'
             )
 
     choices = ('Linux', 'OpenBSD', 'HP-UX')
@@ -851,7 +857,7 @@ def _virtual(osdata):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
     for command in failed_commands:
-        log.warning(
+        log.info(
             "Although '{0}' was found in path, the current user "
             'cannot execute it. Grains output might not be '
             'accurate.'.format(command)
@@ -1496,12 +1502,12 @@ def os_data():
         # (though apparently it's not intelligent enough to strip quotes)
         (osname, osrelease, oscodename) = \
             [x.strip('"').strip("'") for x in
-             platform.linux_distribution(supported_dists=_supported_dists)]
+             linux_distribution(supported_dists=_supported_dists)]
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
-        # so that platform.linux_distribution() does the /etc/lsb-release
-        # parsing, but we do it anyway here for the sake for full portability.
+        # so that linux_distribution() does the /etc/lsb-release parsing, but
+        # we do it anyway here for the sake for full portability.
         if 'osfullname' not in grains:
             grains['osfullname'] = \
                 grains.get('lsb_distrib_id', osname).strip()
@@ -1766,6 +1772,8 @@ def ip_fqdn():
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list(set(item[4][0] for item in info))
             except socket.error:
+                log.warning('Unable to find IPv{0} record for "{1}" causing a 10 second timeout when rendering grains. '
+                            'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn))
                 ret[key] = []
 
     return ret

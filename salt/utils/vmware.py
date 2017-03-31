@@ -116,7 +116,7 @@ def __virtual__():
         return False, 'Missing dependency: The salt.utils.vmware module requires pyVmomi.'
 
 
-def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
+def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None, credstore=None):
     '''
     Shell out and call the specified esxcli commmand, parse the result
     and return something sane.
@@ -128,6 +128,8 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
     :param cmd: esxcli command and arguments
     :param esxi_host: If `host` is a vCenter host, then esxi_host is the
                       ESXi machine on which to execute this command
+    :param credstore: Optional path to the credential store file
+
     :return: Dictionary
     '''
 
@@ -141,6 +143,9 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
         port = 443
     if protocol is None:
         protocol = 'https'
+
+    if credstore:
+        esx_cmd += ' --credstore \'{0}\''.format(credstore)
 
     if not esxi_host:
         # Then we are connecting directly to an ESXi server,

@@ -72,13 +72,14 @@ def state(name,
         saltenv=None,
         test=False,
         pillar=None,
-        expect_minions=False,
+        expect_minions=True,
         fail_minions=None,
         allow_fail=0,
         concurrent=False,
         timeout=None,
         batch=None,
         queue=False,
+        subset=None,
         orchestration_jid=None):
     '''
     Invoke a state run on a given target
@@ -156,6 +157,11 @@ def state(name,
         Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
 
         .. versionadded:: 2016.3.0
+
+    subset
+        Number of minions from the targeted set to randomly use
+
+        .. versionadded:: Nitrogen
 
     Examples:
 
@@ -248,6 +254,8 @@ def state(name,
 
     if batch is not None:
         cmd_kw['batch'] = str(batch)
+    if subset is not None:
+        cmd_kw['subset'] = subset
 
     masterless = __opts__['__role'] == 'minion' and \
                  __opts__['file_client'] == 'local'
@@ -367,7 +375,8 @@ def function(
         arg=None,
         kwarg=None,
         timeout=None,
-        batch=None):
+        batch=None,
+        subset=None):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
 
@@ -405,6 +414,15 @@ def function(
 
     ssh
         Set to `True` to use the ssh client instead of the standard salt client
+
+    batch
+        Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
+
+    subset
+        Number of minions from the targeted set to randomly use
+
+        .. versionadded:: Nitrogen
+
     '''
     func_ret = {'name': name,
            'changes': {},
@@ -433,6 +451,8 @@ def function(
 
     if batch is not None:
         cmd_kw['batch'] = str(batch)
+    if subset is not None:
+        cmd_kw['subset'] = subset
 
     cmd_kw['tgt_type'] = tgt_type
     cmd_kw['ssh'] = ssh

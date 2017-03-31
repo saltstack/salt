@@ -3,9 +3,9 @@
     - system_site_packages: False
     - distribute: True
 
-supervisord-pip:
+pep8-pip:
     pip.installed:
-      - name: supervisor
+      - name: pep8
       - bin_env: {{ salt['runtests_helpers.get_sys_temp_dir_for_path']('issue-2028-pip-installed') }}
       - require:
         - virtualenv: {{ salt['runtests_helpers.get_sys_temp_dir_for_path']('issue-2028-pip-installed') }}

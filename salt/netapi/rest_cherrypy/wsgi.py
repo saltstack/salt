@@ -48,7 +48,7 @@ from __future__ import absolute_import
 
 import os
 
-import cherrypy
+import cherrypy  # pylint: disable=3rd-party-module-not-gated
 
 
 def bootstrap_app():

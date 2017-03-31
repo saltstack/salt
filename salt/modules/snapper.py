@@ -64,7 +64,7 @@ if HAS_DBUS:
     try:
         bus = dbus.SystemBus()
     except dbus.DBusException as exc:
-        log.error(exc)
+        log.warning(exc)
         system_bus_error = exc
     else:
         if SNAPPER_DBUS_OBJECT in bus.list_activatable_names():
@@ -73,7 +73,7 @@ if HAS_DBUS:
                                                         SNAPPER_DBUS_PATH),
                                          dbus_interface=SNAPPER_DBUS_INTERFACE)
             except (dbus.DBusException, ValueError) as exc:
-                log.error(exc)
+                log.warning(exc)
                 snapper_error = exc
         else:
             snapper_error = 'snapper is missing'
@@ -290,6 +290,60 @@ def get_config(name='root'):
         )
 
 
+def create_config(name=None,
+                  subvolume=None,
+                  fstype=None,
+                  template=None,
+                  extra_opts=None):
+    '''
+    Creates a new Snapper configuration
+
+    name
+        Name of the new Snapper configuration.
+    subvolume
+        Path to the related subvolume.
+    fstype
+        Filesystem type of the subvolume.
+    template
+        Configuration template to use. (Default: default)
+    extra_opts
+        Extra Snapper configuration opts dictionary. It will override the values provided
+        by the given template (if any).
+
+    CLI example:
+
+    .. code-block:: bash
+
+      salt '*' snapper.create_config name=myconfig subvolume=/foo/bar/ fstype=btrfs
+      salt '*' snapper.create_config name=myconfig subvolume=/foo/bar/ fstype=btrfs template="default"
+      salt '*' snapper.create_config name=myconfig subvolume=/foo/bar/ fstype=btrfs extra_opts='{"NUMBER_CLEANUP": False}'
+    '''
+    def raise_arg_error(argname):
+        raise CommandExecutionError(
+            'You must provide a "{0}" for the new configuration'.format(argname)
+        )
+
+    if not name:
+        raise_arg_error("name")
+    if not subvolume:
+        raise_arg_error("subvolume")
+    if not fstype:
+        raise_arg_error("fstype")
+    if not template:
+        template = ""
+
+    try:
+        snapper.CreateConfig(name, subvolume, fstype, template)
+        if extra_opts:
+            set_config(name, **extra_opts)
+        return get_config(name)
+    except dbus.DBusException as exc:
+        raise CommandExecutionError(
+            'Error encountered while creating the new configuration: {0}'
+            .format(_dbus_exception_to_reason(exc, locals()))
+        )
+
+
 def create_snapshot(config='root', snapshot_type='single', pre_number=None,
                     description=None, cleanup_algorithm='number', userdata=None,
                     **kwargs):
@@ -309,14 +363,14 @@ def create_snapshot(config='root', snapshot_type='single', pre_number=None,
     cleanup_algorithm
         Set the cleanup algorithm for the snapshot.
 
-        number
-            Deletes old snapshots when a certain number of snapshots
-            is reached.
-        timeline
-            Deletes old snapshots but keeps a number of hourly,
-            daily, weekly, monthly and yearly snapshots.
-        empty-pre-post
-            Deletes pre/post snapshot pairs with empty diffs.
+    number
+        Deletes old snapshots when a certain number of snapshots
+        is reached.
+    timeline
+        Deletes old snapshots but keeps a number of hourly,
+        daily, weekly, monthly and yearly snapshots.
+    empty-pre-post
+        Deletes pre/post snapshot pairs with empty diffs.
     userdata
         Set userdata for the snapshot (key-value pairs).
 
@@ -362,6 +416,95 @@ def create_snapshot(config='root', snapshot_type='single', pre_number=None,
             .format(_dbus_exception_to_reason(exc, locals()))
         )
     return new_nr
+
+
+def delete_snapshot(snapshots_ids=None, config="root"):
+    '''
+    Deletes an snapshot
+
+    config
+        Configuration name. (Default: root)
+
+    snapshots_ids
+        List of the snapshots IDs to be deleted.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' snapper.delete_snapshot 54
+        salt '*' snapper.delete_snapshot config=root 54
+        salt '*' snapper.delete_snapshot config=root snapshots_ids=[54,55,56]
+    '''
+    if not snapshots_ids:
+        raise CommandExecutionError('Error: No snapshot ID has been provided')
+    try:
+        current_snapshots_ids = [x['id'] for x in list_snapshots(config)]
+        if not isinstance(snapshots_ids, list):
+            snapshots_ids = [snapshots_ids]
+        if not set(snapshots_ids).issubset(set(current_snapshots_ids)):
+            raise CommandExecutionError(
+                "Error: Snapshots '{0}' not found".format(", ".join(
+                    [str(x) for x in set(snapshots_ids).difference(
+                        set(current_snapshots_ids))]))
+            )
+        snapper.DeleteSnapshots(config, snapshots_ids)
+        return {config: {"ids": snapshots_ids, "status": "deleted"}}
+    except dbus.DBusException as exc:
+        raise CommandExecutionError(_dbus_exception_to_reason(exc, locals()))
+
+
+def modify_snapshot(snapshot_id=None,
+                    description=None,
+                    userdata=None,
+                    cleanup=None,
+                    config="root"):
+    '''
+    Modify attributes of an existing snapshot.
+
+    config
+        Configuration name. (Default: root)
+
+    snapshot_id
+        ID of the snapshot to be modified.
+
+    cleanup
+        Change the cleanup method of the snapshot. (str)
+
+    description
+        Change the description of the snapshot. (str)
+
+    userdata
+        Change the userdata dictionary of the snapshot. (dict)
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' snapper.modify_snapshot 54 description="my snapshot description"
+        salt '*' snapper.modify_snapshot 54 description="my snapshot description"
+        salt '*' snapper.modify_snapshot 54 userdata='{"foo": "bar"}'
+        salt '*' snapper.modify_snapshot snapshot_id=54 cleanup="number"
+    '''
+    if not snapshot_id:
+        raise CommandExecutionError('Error: No snapshot ID has been provided')
+
+    snapshot = get_snapshot(config=config, number=snapshot_id)
+    try:
+        # Updating only the explicitely provided attributes by the user
+        updated_opts = {
+            'description': description if description is not None else snapshot['description'],
+            'cleanup': cleanup if cleanup is not None else snapshot['cleanup'],
+            'userdata': userdata if userdata is not None else snapshot['userdata'],
+        }
+        snapper.SetSnapshot(config,
+                            snapshot_id,
+                            updated_opts['description'],
+                            updated_opts['cleanup'],
+                            updated_opts['userdata'])
+        return get_snapshot(config=config, number=snapshot_id)
+    except dbus.DBusException as exc:
+        raise CommandExecutionError(_dbus_exception_to_reason(exc, locals()))
 
 
 def _get_num_interval(config, num_pre, num_post):

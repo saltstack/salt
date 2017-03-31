@@ -12,4 +12,4 @@ cache modules
 
     localfs
     consul
-    redis
+    redis_cache

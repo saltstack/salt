@@ -6,7 +6,7 @@ Common resources for LXC and systemd-nspawn containers
 
 These functions are not designed to be called directly, but instead from the
 :mod:`lxc <salt.modules.lxc>`, :mod:`nspawn <salt.modules.nspawn>`, and
-:mod:`dockerng <salt.modules.dockerng>` execution modules. They provide for
+:mod:`docker <salt.modules.docker>` execution modules. They provide for
 common logic to be re-used for common actions.
 '''
 
@@ -40,7 +40,7 @@ def _validate(wrapped):
         container_type = kwargs.get('container_type')
         exec_driver = kwargs.get('exec_driver')
         valid_driver = {
-            'dockerng': ('lxc-attach', 'nsenter', 'docker-exec'),
+            'docker': ('lxc-attach', 'nsenter', 'docker-exec'),
             'lxc': ('lxc-attach',),
             'nspawn': ('nsenter',),
         }

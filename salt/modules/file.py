@@ -30,8 +30,8 @@ import time
 import glob
 import hashlib
 import mmap
-from functools import reduce  # pylint: disable=redefined-builtin
 from collections import Iterable, Mapping
+from functools import reduce  # pylint: disable=redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
@@ -687,31 +687,54 @@ def check_hash(path, file_hash):
     '''
     Check if a file matches the given hash string
 
-    Returns true if the hash matched, otherwise false. Raises ValueError if
-    the hash was not formatted correctly.
+    Returns ``True`` if the hash matches, otherwise ``False``.
 
     path
-        A file path
+        Path to a file local to the minion.
+
     hash
-        A string in the form <hash_type>:<hash_value>. For example:
-        ``md5:e138491e9d5b97023cea823fe17bac22``
+        The hash to check against the file specified in the ``path`` argument.
+        For versions 2016.11.4 and newer, the hash can be specified without an
+        accompanying hash type (e.g. ``e138491e9d5b97023cea823fe17bac22``),
+        but for earlier releases it is necessary to also specify the hash type
+        in the format ``<hash_type>:<hash_value>`` (e.g.
+        ``md5:e138491e9d5b97023cea823fe17bac22``).
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.check_hash /etc/fstab md5:<md5sum>
+        salt '*' file.check_hash /etc/fstab e138491e9d5b97023cea823fe17bac22
+        salt '*' file.check_hash /etc/fstab md5:e138491e9d5b97023cea823fe17bac22
     '''
     path = os.path.expanduser(path)
 
-    hash_parts = file_hash.split(':', 1)
-    if len(hash_parts) != 2:
-        # Support "=" for backward compatibility.
-        hash_parts = file_hash.split('=', 1)
-        if len(hash_parts) != 2:
-            raise ValueError('Bad hash format: \'{0}\''.format(file_hash))
-    hash_form, hash_value = hash_parts
-    return get_hash(path, hash_form) == hash_value
+    if not isinstance(file_hash, six.string_types):
+        raise SaltInvocationError('hash must be a string')
+
+    for sep in (':', '='):
+        if sep in file_hash:
+            hash_type, hash_value = file_hash.split(sep, 1)
+            break
+    else:
+        hash_value = file_hash
+        hash_len = len(file_hash)
+        hash_type = HASHES_REVMAP.get(hash_len)
+        if hash_type is None:
+            raise SaltInvocationError(
+                'Hash {0} (length: {1}) could not be matched to a supported '
+                'hash type. The supported hash types and lengths are: '
+                '{2}'.format(
+                    file_hash,
+                    hash_len,
+                    ', '.join(
+                        ['{0} ({1})'.format(HASHES_REVMAP[x], x)
+                         for x in sorted(HASHES_REVMAP)]
+                    ),
+                )
+            )
+
+    return get_hash(path, hash_type) == hash_value
 
 
 def find(path, *args, **kwargs):
@@ -1275,6 +1298,8 @@ def comment_line(path,
             # Loop through each line of the file and look for a match
             for line in r_file:
                 # Is it in this line
+                if six.PY3:
+                    line = line.decode(__salt_system_encoding__)
                 if re.match(regex, line):
                     # Load lines into dictionaries, set found to True
                     orig_file.append(line)
@@ -1316,17 +1341,22 @@ def comment_line(path,
                                       buffering=bufsize) as r_file:
                     # Loop through each line of the file and look for a match
                     for line in r_file:
+                        if six.PY3:
+                            line = line.decode(__salt_system_encoding__)
                         try:
                             # Is it in this line
                             if re.match(regex, line):
                                 # Write the new line
                                 if cmnt:
-                                    w_file.write('{0}{1}'.format(char, line))
+                                    wline = '{0}{1}'.format(char, line)
                                 else:
-                                    w_file.write(line.lstrip(char))
+                                    wline = line.lstrip(char)
                             else:
                                 # Write the existing line (no change)
-                                w_file.write(line)
+                                wline = line
+                            if six.PY3:
+                                wline = wline.encode(__salt_system_encoding__)
+                            w_file.write(wline)
                         except (OSError, IOError) as exc:
                             raise CommandExecutionError(
                                 "Unable to write file '{0}'. Contents may "
@@ -1538,7 +1568,7 @@ def _get_line_indent(src, line, indent):
     '''
     Indent the line with the source line.
     '''
-    if not (indent or line):
+    if not indent:
         return line
 
     idt = []
@@ -1748,7 +1778,6 @@ def line(path, content=None, match=None, mode=None, location=None,
     elif mode == 'ensure':
         after = after and after.strip()
         before = before and before.strip()
-        content = content and content.strip()
 
         if before and after:
             _assert_occurrence(body, before, 'before')
@@ -3006,6 +3035,13 @@ def symlink(src, path):
     '''
     path = os.path.expanduser(path)
 
+    try:
+        if os.path.normpath(os.readlink(path)) == os.path.normpath(src):
+            log.debug('link already in correct state: %s -> %s', path, src)
+            return True
+    except OSError:
+        pass
+
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
 
@@ -3644,6 +3680,9 @@ def apply_template_on_contents(
             opts=__opts__)['data']
         if six.PY2:
             contents = contents.encode('utf-8')
+        elif six.PY3 and isinstance(contents, bytes):
+            # bytes -> str
+            contents = contents.decode('utf-8')
     else:
         ret = {}
         ret['result'] = False
@@ -3767,16 +3806,22 @@ def get_managed(
 
     if source and (template or parsed_scheme in salt.utils.files.REMOTE_PROTOS):
         # Check if we have the template or remote file cached
+        cache_refetch = False
         cached_dest = __salt__['cp.is_cached'](source, saltenv)
         if cached_dest and (source_hash or skip_verify):
             htype = source_sum.get('hash_type', 'sha256')
             cached_sum = get_hash(cached_dest, form=htype)
-            if skip_verify or cached_sum == source_sum['hsum']:
+            if skip_verify:
+                # prev: if skip_verify or cached_sum == source_sum['hsum']:
+                # but `cached_sum == source_sum['hsum']` is elliptical as prev if
                 sfn = cached_dest
                 source_sum = {'hsum': cached_sum, 'hash_type': htype}
+            elif cached_sum != source_sum['hsum']:
+                cache_refetch = True
 
         # If we didn't have the template or remote file, let's get it
-        if not sfn:
+        # Similarly when the file has been updated and the cache has to be refreshed
+        if not sfn or cache_refetch:
             try:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             except Exception as exc:
@@ -4522,6 +4567,8 @@ def manage_file(name,
                 follow_symlinks=True,
                 skip_verify=False,
                 keep_mode=False,
+                encoding=None,
+                encoding_errors='strict',
                 **kwargs):
     '''
     Checks the destination against what was retrieved with get_managed and
@@ -4587,6 +4634,21 @@ def manage_file(name,
         If ``True``, and the ``source`` is a file from the Salt fileserver (or
         a local file on the minion), the mode of the destination file will be
         set to the mode of the source file.
+
+    encoding : None
+        If None, str() will be applied to contents.
+        If not None, specified encoding will be used.
+        See https://docs.python.org/3/library/codecs.html#standard-encodings
+        for the list of available encodings.
+
+        .. versionadded:: Nitrogen
+
+    encoding_errors : 'strict'
+        Default is ```'strict'```.
+        See https://docs.python.org/2/library/codecs.html#codec-base-classes
+        for the error handling schemes.
+
+        .. versionadded:: Nitrogen
 
     CLI Example:
 
@@ -4706,7 +4768,11 @@ def manage_file(name,
             if salt.utils.is_windows():
                 contents = os.linesep.join(contents.splitlines())
             with salt.utils.fopen(tmp, 'w') as tmp_:
-                tmp_.write(str(contents))
+                if encoding:
+                    log.debug('File will be encoded with {0}'.format(encoding))
+                    tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
+                else:
+                    tmp_.write(str(contents))
 
             # Compare contents of files to know if we need to replace
             with salt.utils.fopen(tmp, 'r') as src:
@@ -4910,7 +4976,12 @@ def manage_file(name,
             if salt.utils.is_windows():
                 contents = os.linesep.join(contents.splitlines())
             with salt.utils.fopen(tmp, 'w') as tmp_:
-                tmp_.write(str(contents))
+                if encoding:
+                    log.debug('File will be encoded with {0}'.format(encoding))
+                    tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
+                else:
+                    tmp_.write(str(contents))
+
             # Copy into place
             salt.utils.files.copyfile(tmp,
                                 name,
@@ -5005,6 +5076,9 @@ def makedirs_(path,
         salt '*' file.makedirs /opt/code/
     '''
     path = os.path.expanduser(path)
+
+    if mode:
+        mode = salt.utils.normalize_mode(mode)
 
     # walk up the directory structure until we find the first existing
     # directory
@@ -5757,7 +5831,7 @@ def pardir():
 
     This can be useful when constructing Salt Formulas.
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set pardir = salt['file.pardir']() %}
         {% set final_path = salt['file.join']('subdir', pardir, 'confdir') %}
@@ -5779,7 +5853,7 @@ def normpath(path):
 
     This can be useful at the CLI but is frequently useful when scripting.
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {%- from salt['file.normpath'](tpldir + '/../vars.jinja') import parent_vars %}
 
@@ -5800,7 +5874,7 @@ def basename(path):
 
     This can be useful at the CLI but is frequently useful when scripting.
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {%- set filename = salt['file.basename'](source_file) %}
 
@@ -5821,7 +5895,7 @@ def dirname(path):
 
     This can be useful at the CLI but is frequently useful when scripting.
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {%- from salt['file.dirname'](tpldir) + '/vars.jinja' import parent_vars %}
 
@@ -5843,7 +5917,7 @@ def join(*args):
     This can be useful at the CLI but is frequently useful when scripting
     combining path variables:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set www_root = '/var' %}
         {% set app_dir = 'myapp' %}

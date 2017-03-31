@@ -355,7 +355,7 @@ def _get_private_key_obj(private_key, passphrase=None):
     Returns a private key object based on PEM text.
     '''
     private_key = _text_or_file(private_key)
-    private_key = get_pem_entry(private_key, pem_type='RSA PRIVATE KEY')
+    private_key = get_pem_entry(private_key, pem_type='(?:RSA )?PRIVATE KEY')
     rsaprivkey = M2Crypto.RSA.load_key_string(
         private_key, callback=_passphrase_callback(passphrase))
     evpprivkey = M2Crypto.EVP.PKey()
@@ -765,7 +765,7 @@ def write_pem(text, path, overwrite=True, pem_type=None):
         except salt.exceptions.SaltInvocationError:
             pass
         try:
-            _private_key = get_pem_entry(_filecontents, 'RSA PRIVATE KEY')
+            _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
         except salt.exceptions.SaltInvocationError:
             pass
     with salt.utils.fopen(path, 'w') as _fp:
@@ -842,7 +842,7 @@ def create_private_key(path=None,
         return write_pem(
             text=bio.read_all(),
             path=path,
-            pem_type='RSA PRIVATE KEY'
+            pem_type='(?:RSA )?PRIVATE KEY'
         )
     else:
         return bio.read_all()
@@ -850,6 +850,7 @@ def create_private_key(path=None,
 
 def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         path=None, text=False, signing_private_key=None,
+        signing_private_key_passphrase=None,
         signing_cert=None, revoked=None, include_expired=False,
         days_valid=100, digest=''):
     '''
@@ -867,6 +868,9 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
     signing_private_key:
         A path or string of the private key in PEM format that will be used
         to sign this crl. This is required.
+
+    signing_private_key_passphrase:
+        Passphrase to decrypt the private key.
 
     signing_cert:
         A certificate matching the private key that will be used to sign
@@ -971,7 +975,8 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
     cert = OpenSSL.crypto.load_certificate(
         OpenSSL.crypto.FILETYPE_PEM,
         get_pem_entry(signing_cert, pem_type='CERTIFICATE'))
-    signing_private_key = _text_or_file(signing_private_key)
+    signing_private_key = _get_private_key_obj(signing_private_key,
+                                               passphrase=signing_private_key_passphrase).as_pem(cipher=None)
     key = OpenSSL.crypto.load_privatekey(
         OpenSSL.crypto.FILETYPE_PEM,
         get_pem_entry(signing_private_key))
@@ -1586,8 +1591,17 @@ def create_csr(path=None, text=False, **kwargs):
     if 'public_key' not in kwargs:
         kwargs['public_key'] = kwargs['private_key']
 
+    if 'private_key_passphrase' not in kwargs:
+        kwargs['private_key_passphrase'] = None
     if 'public_key_passphrase' not in kwargs:
         kwargs['public_key_passphrase'] = None
+    if kwargs['public_key_passphrase'] and not kwargs[
+            'private_key_passphrase']:
+        kwargs['private_key_passphrase'] = kwargs['public_key_passphrase']
+    if kwargs['private_key_passphrase'] and not kwargs[
+            'public_key_passphrase']:
+        kwargs['public_key_passphrase'] = kwargs['private_key_passphrase']
+
     csr.set_pubkey(get_public_key(kwargs['public_key'],
                                   passphrase=kwargs['public_key_passphrase'], asObj=True))
 
@@ -1609,6 +1623,9 @@ def create_csr(path=None, text=False, **kwargs):
             critical = True
             extval = extval[9:]
 
+        if extname == 'subjectKeyIdentifier' and 'hash' in extval:
+            extval = extval.replace('hash', _get_pubkey_hash(csr))
+
         if extname == 'subjectAltName':
             extval = extval.replace('IP Address', 'IP')
 
@@ -1628,7 +1645,7 @@ def create_csr(path=None, text=False, **kwargs):
     csr.add_extensions(extstack)
 
     csr.sign(_get_private_key_obj(kwargs['private_key'],
-                                  passphrase=kwargs['public_key_passphrase']), kwargs['algorithm'])
+                                  passphrase=kwargs['private_key_passphrase']), kwargs['algorithm'])
 
     if path:
         return write_pem(

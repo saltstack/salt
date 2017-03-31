@@ -17,7 +17,6 @@ import signal
 import stat
 import logging
 import multiprocessing
-import traceback
 
 # Import third party libs
 from Crypto.PublicKey import RSA
@@ -226,8 +225,6 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         last = int(time.time())
         # Clean out the fileserver backend cache
         salt.daemons.masterapi.clean_fsbackend(self.opts)
-        # Clean out pub auth
-        salt.daemons.masterapi.clean_pub_auth(self.opts)
 
         old_present = set()
         while True:
@@ -235,6 +232,7 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             if (now - last) >= self.loop_interval:
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
+                salt.daemons.masterapi.clean_pub_auth(self.opts)
             self.handle_search(now, last)
             self.handle_git_pillar()
             self.handle_schedule()
@@ -306,7 +304,7 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             for secret_key, secret_map in six.iteritems(SMaster.secrets):
                 # should be unnecessary-- since no one else should be modifying
                 with secret_map['secret'].get_lock():
-                    secret_map['secret'].value = secret_map['reload']()
+                    secret_map['secret'].value = six.b(secret_map['reload']())
                 self.event.fire_event({'rotate_{0}_key'.format(secret_key): True}, tag='key')
             self.rotate = now
             if self.opts.get('ping_on_rotate'):
@@ -323,11 +321,8 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             for pillar in self.git_pillar:
                 pillar.update()
         except Exception as exc:
-            log.error(
-                'Exception \'{0}\' caught while updating git_pillar'
-                .format(exc),
-                exc_info_on_loglevel=logging.DEBUG
-            )
+            log.error('Exception caught while updating git_pillar',
+                      exc_info=True)
 
     def handle_schedule(self):
         '''
@@ -458,19 +453,21 @@ class Master(SMaster):
                 'Cannot change to root directory ({1})'.format(err)
             )
 
-        fileserver = salt.fileserver.Fileserver(self.opts)
-        if not fileserver.servers:
-            errors.append(
-                'Failed to load fileserver backends, the configured backends '
-                'are: {0}'.format(', '.join(self.opts['fileserver_backend']))
-            )
-        else:
-            # Run init() for all backends which support the function, to
-            # double-check configuration
-            try:
-                fileserver.init()
-            except FileserverConfigError as exc:
-                critical_errors.append('{0}'.format(exc))
+        if self.opts.get('fileserver_verify_config', True):
+            fileserver = salt.fileserver.Fileserver(self.opts)
+            if not fileserver.servers:
+                errors.append(
+                    'Failed to load fileserver backends, the configured backends '
+                    'are: {0}'.format(', '.join(self.opts['fileserver_backend']))
+                )
+            else:
+                # Run init() for all backends which support the function, to
+                # double-check configuration
+                try:
+                    fileserver.init()
+                except FileserverConfigError as exc:
+                    critical_errors.append('{0}'.format(exc))
+
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
 
@@ -483,25 +480,29 @@ class Master(SMaster):
             except OSError:
                 pass
 
-        non_legacy_git_pillars = [
-            x for x in self.opts.get('ext_pillar', [])
-            if 'git' in x
-            and not isinstance(x['git'], six.string_types)
-        ]
-        if non_legacy_git_pillars:
-            try:
-                new_opts = copy.deepcopy(self.opts)
-                from salt.pillar.git_pillar \
-                    import PER_REMOTE_OVERRIDES as overrides
-                for repo in non_legacy_git_pillars:
-                    new_opts['ext_pillar'] = [repo]
-                    try:
-                        git_pillar = salt.utils.gitfs.GitPillar(new_opts)
-                        git_pillar.init_remotes(repo['git'], overrides)
-                    except FileserverConfigError as exc:
-                        critical_errors.append(exc.strerror)
-            finally:
-                del new_opts
+        if self.opts.get('git_pillar_verify_config', True):
+            non_legacy_git_pillars = [
+                x for x in self.opts.get('ext_pillar', [])
+                if 'git' in x
+                and not isinstance(x['git'], six.string_types)
+            ]
+            if non_legacy_git_pillars:
+                try:
+                    new_opts = copy.deepcopy(self.opts)
+                    from salt.pillar.git_pillar \
+                        import PER_REMOTE_OVERRIDES as per_remote_overrides, \
+                        PER_REMOTE_ONLY as per_remote_only
+                    for repo in non_legacy_git_pillars:
+                        new_opts['ext_pillar'] = [repo]
+                        try:
+                            git_pillar = salt.utils.gitfs.GitPillar(new_opts)
+                            git_pillar.init_remotes(repo['git'],
+                                                    per_remote_overrides,
+                                                    per_remote_only)
+                        except FileserverConfigError as exc:
+                            critical_errors.append(exc.strerror)
+                finally:
+                    del new_opts
 
         if errors or critical_errors:
             for error in errors:
@@ -535,7 +536,7 @@ class Master(SMaster):
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets['aes'] = {'secret': multiprocessing.Array(ctypes.c_char,
-                                                salt.crypt.Crypticle.generate_key_string().encode('ascii')),
+                                                six.b(salt.crypt.Crypticle.generate_key_string())),
                                       'reload': salt.crypt.Crypticle.generate_key_string
                                      }
             log.info('Creating master process manager')
@@ -971,6 +972,7 @@ class AESFuncs(object):
         self._serve_file = self.fs_.serve_file
         self._file_find = self.fs_._find_file
         self._file_hash = self.fs_.file_hash
+        self._file_hash_and_stat = self.fs_.file_hash_and_stat
         self._file_list = self.fs_.file_list
         self._file_list_emptydirs = self.fs_.file_list_emptydirs
         self._dir_list = self.fs_.dir_list
@@ -1306,7 +1308,10 @@ class AESFuncs(object):
         with salt.utils.fopen(cpath, mode) as fp_:
             if load['loc']:
                 fp_.seek(load['loc'])
-            fp_.write(load['data'])
+            if six.PY3:
+                fp_.write(load['data'].encode(__salt_system_encoding__))
+            else:
+                fp_.write(load['data'])
         return True
 
     def _pillar(self, load):
@@ -1653,152 +1658,60 @@ class ClearFuncs(object):
         # Make a masterapi object
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
 
-    def process_token(self, tok, fun, auth_type):
-        '''
-        Process a token and determine if a command is authorized
-        '''
-        try:
-            token = self.loadauth.get_tok(tok)
-        except Exception as exc:
-            msg = 'Exception occurred when generating auth token: {0}'.format(
-                  exc)
-            log.error(msg)
-            return dict(error=dict(name='TokenAuthenticationError',
-                                   message=msg))
-        if not token:
-            msg = 'Authentication failure of type "token" occurred.'
-            log.warning(msg)
-            return dict(error=dict(name='TokenAuthenticationError',
-                                   message=msg))
-        if token['eauth'] not in self.opts['external_auth']:
-            msg = 'Authentication failure of type "token" occurred.'
-            log.warning(msg)
-            return dict(error=dict(name='TokenAuthenticationError',
-                                   message=msg))
-
-        check_fun = getattr(self.ckminions,
-                            '{auth}_check'.format(auth=auth_type))
-        if token['name'] in self.opts['external_auth'][token['eauth']]:
-            good = check_fun(self.opts['external_auth'][token['eauth']][token['name']], fun)
-        elif any(key.endswith('%') for key in self.opts['external_auth'][token['eauth']]):
-            for group in self.opts['external_auth'][token['eauth']]:
-                if group.endswith('%'):
-                    for group in self.opts['external_auth'][token['eauth']]:
-                        good = check_fun(self.opts['external_auth'][token['eauth']][group], fun)
-                        if good:
-                            break
-        else:
-            good = check_fun(self.opts['external_auth'][token['eauth']]['*'], fun)
-        if not good:
-            msg = ('Authentication failure of type "token" occurred for '
-                   'user {0}.').format(token['name'])
-            log.warning(msg)
-            return dict(error=dict(name='TokenAuthenticationError',
-                                   message=msg))
-        return None
-
-    def process_eauth(self, clear_load, auth_type):
-        '''
-        Process a clear load to determine eauth perms
-
-        Any return other than None is an eauth failure
-        '''
-        if 'eauth' not in clear_load:
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
-                                   message=msg))
-        if clear_load['eauth'] not in self.opts['external_auth']:
-            # The eauth system is not enabled, fail
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
-                                   message=msg))
-
-        name = self.loadauth.load_name(clear_load)
-        if self.loadauth.time_auth(clear_load) is False:
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
-                                   message=msg))
-
-        check_fun = getattr(self.ckminions,
-                            '{auth}_check'.format(auth=auth_type))
-        if name in self.opts['external_auth'][clear_load['eauth']]:
-            good = check_fun(self.opts['external_auth'][clear_load['eauth']][name], clear_load['fun'])
-        elif any(key.endswith('%') for key in self.opts['external_auth'][clear_load['eauth']]):
-            for group in self.opts['external_auth'][clear_load['eauth']]:
-                if group.endswith('%'):
-                    good = check_fun(self.opts['external_auth'][clear_load['eauth']][group], clear_load['fun'])
-                    if good:
-                        break
-        else:
-            good = check_fun(self.opts['external_auth'][clear_load['eauth']]['*'], clear_load['fun'])
-        if not good:
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
-                                   message=msg))
-        return None
-
     def runner(self, clear_load):
         '''
         Send a master control function back to the runner system
         '''
         # All runner ops pass through eauth
         if 'token' in clear_load:
-            auth_error = self.process_token(clear_load['token'],
-                                            clear_load['fun'],
-                                            'runner')
-            if auth_error:
-                return auth_error
-            else:
-                token = self.loadauth.get_tok(clear_load.pop('token'))
-                username = token['name']
-        elif 'eauth' in clear_load:
-            try:
-                eauth_error = self.process_eauth(clear_load, 'runner')
-                if eauth_error:
-                    return eauth_error
-                # No error occurred, consume the password from the clear_load if
-                # passed
-                username = clear_load.pop('username', 'UNKNOWN')
-                clear_load.pop('password', None)
+            # Authenticate
+            token = self.loadauth.authenticate_token(clear_load)
 
-            except Exception as exc:
-                log.error(
-                    'Exception occurred in the runner system: {0}'.format(exc)
-                )
-                return dict(error=dict(name=exc.__class__.__name__,
-                                       args=exc.args,
-                                       message=str(exc)))
+            if not token:
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message='Authentication failure of type "token" occurred.'))
+
+            # Authorize
+            if self.opts['keep_acl_in_token'] and 'auth_list' in token:
+                auth_list = token['auth_list']
+            else:
+                clear_load['eauth'] = token['eauth']
+                clear_load['username'] = token['name']
+                auth_list = self.loadauth.get_auth_list(clear_load)
+
+            if not self.ckminions.runner_check(auth_list, clear_load['fun']):
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message=('Authentication failure of type "token" occurred for '
+                                                'user {0}.').format(token['name'])))
+            clear_load.pop('token')
+            username = token['name']
+        elif 'eauth' in clear_load:
+            if not self.loadauth.authenticate_eauth(clear_load):
+                return dict(error=dict(name='EauthAuthenticationError',
+                                       message=('Authentication failure of type "eauth" occurred for '
+                                                'user {0}.').format(clear_load.get('username', 'UNKNOWN'))))
+
+            auth_list = self.loadauth.get_auth_list(clear_load)
+            if not self.ckminions.runner_check(auth_list, clear_load['fun']):
+                return dict(error=dict(name='EauthAuthenticationError',
+                                       message=('Authentication failure of type "eauth" occurred for '
+                                                'user {0}.').format(clear_load.get('username', 'UNKNOWN'))))
+
+            # No error occurred, consume the password from the clear_load if
+            # passed
+            username = clear_load.pop('username', 'UNKNOWN')
+            clear_load.pop('password', None)
         else:
-            if 'key' not in clear_load:
-                msg = 'Authentication failure of type "user" occurred'
-                log.warning(msg)
+            if not self.loadauth.authenticate_key(clear_load, self.key):
                 return dict(error=dict(name='UserAuthenticationError',
-                                       message=msg))
-            key = clear_load.pop('key')
+                                       message='Authentication failure of type "user" occurred'))
 
             if 'user' in clear_load:
                 username = clear_load['user']
-                auth_user = salt.auth.AuthUser(username)
-                if auth_user.is_sudo:
+                if salt.auth.AuthUser(username).is_sudo():
                     username = self.opts.get('user', 'root')
             else:
                 username = salt.utils.get_user()
-
-            if username not in self.key and \
-                    key != self.key[username] and \
-                    key != self.key['root']:
-                msg = 'Authentication failure of type "user" occurred for user {0}'.format(username)
-                log.warning(msg)
-                return dict(error=dict(name='UserAuthenticationError',
-                                       message=msg))
 
         # Authorized. Do the job!
         try:
@@ -1821,54 +1734,52 @@ class ClearFuncs(object):
         # All wheel ops pass through eauth
         username = None
         if 'token' in clear_load:
-            auth_error = self.process_token(clear_load['token'],
-                                            clear_load['fun'],
-                                            'wheel')
-            if auth_error:
-                return auth_error
+            # Authenticate
+            token = self.loadauth.authenticate_token(clear_load)
+            if not token:
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message='Authentication failure of type "token" occurred.'))
+
+            # Authorize
+            if self.opts['keep_acl_in_token'] and 'auth_list' in token:
+                auth_list = token['auth_list']
             else:
-                token = self.loadauth.get_tok(clear_load.pop('token'))
+                clear_load['eauth'] = token['eauth']
+                clear_load['username'] = token['name']
+                auth_list = self.loadauth.get_auth_list(clear_load)
+            if not self.ckminions.wheel_check(auth_list, clear_load['fun']):
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message=('Authentication failure of type "token" occurred for '
+                                                'user {0}.').format(token['name'])))
+            clear_load.pop('token')
             username = token['name']
         elif 'eauth' in clear_load:
-            try:
-                eauth_error = self.process_eauth(clear_load, 'wheel')
-                if eauth_error:
-                    return eauth_error
+            if not self.loadauth.authenticate_eauth(clear_load):
+                return dict(error=dict(name='EauthAuthenticationError',
+                                       message=('Authentication failure of type "eauth" occurred for '
+                                                'user {0}.').format(clear_load.get('username', 'UNKNOWN'))))
 
-                # No error occurred, consume the password from the clear_load if
-                # passed
-                clear_load.pop('password', None)
-                username = clear_load.pop('username', 'UNKNOWN')
-            except Exception as exc:
-                log.error(
-                    'Exception occurred in the wheel system: {0}'.format(exc)
-                )
-                return dict(error=dict(name=exc.__class__.__name__,
-                                       args=exc.args,
-                                       message=str(exc)))
+            auth_list = self.loadauth.get_auth_list(clear_load)
+            if not self.ckminions.wheel_check(auth_list, clear_load['fun']):
+                return dict(error=dict(name='EauthAuthenticationError',
+                                       message=('Authentication failure of type "eauth" occurred for '
+                                                'user {0}.').format(clear_load.get('username', 'UNKNOWN'))))
+
+            # No error occurred, consume the password from the clear_load if
+            # passed
+            clear_load.pop('password', None)
+            username = clear_load.pop('username', 'UNKNOWN')
         else:
-            if 'key' not in clear_load:
-                msg = 'Authentication failure of type "user" occurred'
-                log.warning(msg)
+            if not self.loadauth.authenticate_key(clear_load, self.key):
                 return dict(error=dict(name='UserAuthenticationError',
-                                       message=msg))
-            key = clear_load.pop('key')
+                                       message='Authentication failure of type "user" occurred'))
 
             if 'user' in clear_load:
                 username = clear_load['user']
-                auth_user = salt.auth.AuthUser(username)
-                if auth_user.is_sudo:
+                if salt.auth.AuthUser(username).is_sudo():
                     username = self.opts.get('user', 'root')
             else:
                 username = salt.utils.get_user()
-
-            if username not in self.key and \
-                    key != self.key[username] and \
-                    key != self.key['root']:
-                msg = 'Authentication failure of type "user" occurred for user {0}'.format(username)
-                log.warning(msg)
-                return dict(error=dict(name='UserAuthenticationError',
-                                       message=msg))
 
         # Authorized. Do the job!
         try:
@@ -1905,42 +1816,11 @@ class ClearFuncs(object):
         Create and return an authentication token, the clear load needs to
         contain the eauth key and the needed authentication creds.
         '''
-
-        if 'eauth' not in clear_load:
+        token = self.loadauth.mk_token(clear_load)
+        if not token:
             log.warning('Authentication failure of type "eauth" occurred.')
             return ''
-        if clear_load['eauth'] not in self.opts['external_auth']:
-            # The eauth system is not enabled, fail
-            log.warning('Authentication failure of type "eauth" occurred.')
-            return ''
-        try:
-            name = self.loadauth.load_name(clear_load)
-            groups = self.loadauth.get_groups(clear_load)
-            eauth_config = self.opts['external_auth'][clear_load['eauth']]
-            if '*' not in eauth_config and name not in eauth_config:
-                found = False
-                for group in groups:
-                    if "{0}%".format(group) in eauth_config:
-                        found = True
-                        break
-                if not found:
-                    log.warning('Authentication failure of type "eauth" occurred.')
-                    return ''
-
-            clear_load['groups'] = groups
-            token = self.loadauth.mk_token(clear_load)
-            if not token:
-                log.warning('Authentication failure of type "eauth" occurred.')
-                return ''
-            else:
-                return token
-        except Exception as exc:
-            type_, value_, traceback_ = sys.exc_info()
-            log.error(
-                'Exception occurred while authenticating: {0}'.format(exc)
-            )
-            log.error(traceback.format_exception(type_, value_, traceback_))
-            return ''
+        return token
 
     def get_token(self, clear_load):
         '''
@@ -1981,263 +1861,89 @@ class ClearFuncs(object):
 
         # Check for external auth calls
         if extra.get('token', False):
-            # A token was passed, check it
-            try:
-                token = self.loadauth.get_tok(extra['token'])
-            except Exception as exc:
-                log.error(
-                    'Exception occurred when generating auth token: {0}'.format(
-                        exc
-                    )
-                )
+            # Authenticate.
+            token = self.loadauth.authenticate_token(extra)
+            if not token:
                 return ''
 
-            # Bail if the token is empty or if the eauth type specified is not allowed
-            if not token or token['eauth'] not in self.opts['external_auth']:
+            # Get acl
+            if self.opts['keep_acl_in_token'] and 'auth_list' in token:
+                auth_list = token['auth_list']
+            else:
+                extra['eauth'] = token['eauth']
+                extra['username'] = token['name']
+                auth_list = self.loadauth.get_auth_list(extra)
+
+            # Authorize the request
+            if not self.ckminions.auth_check(
+                    auth_list,
+                    clear_load['fun'],
+                    clear_load['arg'],
+                    clear_load['tgt'],
+                    clear_load.get('tgt_type', 'glob'),
+                    minions=minions,
+                    # always accept find_job
+                    whitelist=['saltutil.find_job'],
+                    ):
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-
-            # Fetch eauth config and collect users and groups configured for access
-            eauth_config = self.opts['external_auth'][token['eauth']]
-            eauth_users = []
-            eauth_groups = []
-            for entry in eauth_config:
-                if entry.endswith('%'):
-                    eauth_groups.append(entry.rstrip('%'))
-                else:
-                    eauth_users.append(entry)
-
-            # If there are groups in the token, check if any of them are listed in the eauth config
-            group_auth_match = False
-            try:
-                if token.get('groups'):
-                    for group in token['groups']:
-                        if group in eauth_groups:
-                            group_auth_match = True
-                            break
-            except KeyError:
-                pass
-            if '*' not in eauth_users and token['name'] not in eauth_users \
-                and not group_auth_match:
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
-
-            # Compile list of authorized actions for the user
-            auth_list = token.get('auth_list')
-            if auth_list is None:
-                auth_list = []
-                # Add permissions for '*' or user-specific to the auth list
-                for user_key in ('*', token['name']):
-                    auth_list.extend(eauth_config.get(user_key, []))
-                # Add any add'l permissions allowed by group membership
-                if group_auth_match:
-                    auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
-                auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
-            log.trace("Compiled auth_list: {0}".format(auth_list))
-
-            good = self.ckminions.auth_check(
-                auth_list,
-                clear_load['fun'],
-                clear_load['arg'],
-                clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob'),
-                minions=minions)
-            if not good:
-                # Accept find_job so the CLI will function cleanly
-                if clear_load['fun'] != 'saltutil.find_job':
-                    log.warning(
-                        'Authentication failure of type "token" occurred.'
-                    )
-                    return ''
             clear_load['user'] = token['name']
             log.debug('Minion tokenized user = "{0}"'.format(clear_load['user']))
         elif 'eauth' in extra:
-            if extra['eauth'] not in self.opts['external_auth']:
-                # The eauth system is not enabled, fail
-                log.warning(
-                    'Authentication failure of type "eauth" occurred.'
-                )
-                return ''
-            auth_list = None
-            try:
-                name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
-                groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
-                if groups is None or groups is False:
-                    groups = []
-                group_perm_keys = [item for item in self.opts['external_auth'][extra['eauth']] if item.endswith('%')]  # The configured auth groups
-
-                # First we need to know if the user is allowed to proceed via any of their group memberships.
-                group_auth_match = False
-                for group_config in group_perm_keys:
-                    group_config = group_config.rstrip('%')
-                    for group in groups:
-                        if group == group_config:
-                            group_auth_match = True
-                # If a group_auth_match is set it means only that we have a
-                # user which matches at least one or more of the groups defined
-                # in the configuration file.
-
-                external_auth_in_db = False
-                for entry in self.opts['external_auth'][extra['eauth']]:
-                    if entry.startswith('^'):
-                        external_auth_in_db = True
-                        break
-
-                # If neither a catchall, a named membership or a group
-                # membership is found, there is no need to continue. Simply
-                # deny the user access.
-                if not ((name in self.opts['external_auth'][extra['eauth']]) |
-                        ('*' in self.opts['external_auth'][extra['eauth']]) |
-                        group_auth_match | external_auth_in_db):
-
-                        # A group def is defined and the user is a member
-                        #[group for groups in ['external_auth'][extra['eauth']]]):
-                    # Auth successful, but no matching user found in config
-                    log.warning(
-                        'Authentication failure of type "eauth" occurred.'
-                    )
-                    return ''
-
-                # Perform the actual authentication. If we fail here, do not
-                # continue.
-                auth_ret = self.loadauth.time_auth(extra)
-                if isinstance(auth_ret, list):
-                    auth_list = auth_ret
-                elif not auth_ret:
-                    log.warning(
-                        'Authentication failure of type "eauth" occurred.'
-                    )
-                    return ''
-
-            except Exception as exc:
-                type_, value_, traceback_ = sys.exc_info()
-                log.error(
-                    'Exception occurred while authenticating: {0}'.format(exc)
-                )
-                log.error(traceback.format_exception(
-                    type_, value_, traceback_))
+            # Authenticate.
+            if not self.loadauth.authenticate_eauth(extra):
                 return ''
 
-            # We now have an authenticated session and it is time to determine
-            # what the user has access to.
-            if auth_list is None:
-                auth_list = []
-                if '*' in self.opts['external_auth'][extra['eauth']]:
-                    auth_list.extend(self.opts['external_auth'][extra['eauth']]['*'])
-                if name in self.opts['external_auth'][extra['eauth']]:
-                    auth_list = self.opts['external_auth'][extra['eauth']][name]
-                if group_auth_match:
-                    auth_list = self.ckminions.fill_auth_list_from_groups(
-                            self.opts['external_auth'][extra['eauth']],
-                            groups,
-                            auth_list)
-                if extra['eauth'] == 'ldap':
-                    auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
-            good = self.ckminions.auth_check(
-                auth_list,
-                clear_load['fun'],
-                clear_load['arg'],
-                clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob'),
-                minions=minions
-                )
-            if not good:
-                # Accept find_job so the CLI will function cleanly
-                if clear_load['fun'] != 'saltutil.find_job':
-                    log.warning(
-                        'Authentication failure of type "eauth" occurred.'
-                    )
-                    return ''
-            clear_load['user'] = name
+            # Get acl from eauth module.
+            auth_list = self.loadauth.get_auth_list(extra)
+
+            # Authorize the request
+            if not self.ckminions.auth_check(
+                    auth_list,
+                    clear_load['fun'],
+                    clear_load['arg'],
+                    clear_load['tgt'],
+                    clear_load.get('tgt_type', 'glob'),
+                    minions=minions,
+                    # always accept find_job
+                    whitelist=['saltutil.find_job'],
+                    ):
+                log.warning('Authentication failure of type "eauth" occurred.')
+                return ''
+            clear_load['user'] = self.loadauth.load_name(extra)  # The username we are attempting to auth with
         # Verify that the caller has root on master
-        elif 'user' in clear_load:
-            auth_user = salt.auth.AuthUser(clear_load['user'])
-            if auth_user.is_sudo():
-                # If someone sudos check to make sure there is no ACL's around their username
-                if clear_load.get('key', 'invalid') == self.key.get('root'):
-                    clear_load.pop('key')
-                elif clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
+        else:
+            auth_ret = self.loadauth.authenticate_key(clear_load, self.key)
+            if auth_ret is False:
+                return ''
+
+            if auth_ret is not True:
+                if salt.auth.AuthUser(clear_load['user']).is_sudo():
+                    if not self.opts['sudo_acl'] or not self.opts['publisher_acl']:
+                        auth_ret = True
+
+            if auth_ret is not True:
+                auth_list = salt.utils.get_values_of_matching_keys(
+                        self.opts['publisher_acl'],
+                        auth_ret)
+                if not auth_list:
                     log.warning(
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-                publisher_acl = self.opts['publisher_acl']
-                if self.opts['sudo_acl'] and publisher_acl:
-                    publisher_acl = salt.utils.get_values_of_matching_keys(
-                            publisher_acl,
-                            clear_load['user'].split('_', 1)[-1])
-                    good = self.ckminions.auth_check(
-                                publisher_acl,
-                                clear_load['fun'],
-                                clear_load['arg'],
-                                clear_load['tgt'],
-                                clear_load.get('tgt_type', 'glob'),
-                                minions=minions)
-                    if not good:
-                        # Accept find_job so the CLI will function cleanly
-                        if clear_load['fun'] != 'saltutil.find_job':
-                            log.warning(
-                                'Authentication failure of type "user" '
-                                'occurred.'
-                            )
-                            return ''
-            elif clear_load['user'] == self.opts.get('user', 'root') or clear_load['user'] == 'root':
-                if clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
-                    log.warning(
-                        'Authentication failure of type "user" occurred.'
-                    )
-                    return ''
-            elif auth_user.is_running_user():
-                if clear_load.pop('key') != self.key.get(clear_load['user']):
-                    log.warning(
-                        'Authentication failure of type "user" occurred.'
-                    )
-                    return ''
-            elif clear_load.get('key', 'invalid') == self.key.get('root'):
-                clear_load.pop('key')
-            else:
-                if clear_load['user'] in self.key:
-                    # User is authorised, check key and check perms
-                    if clear_load.pop('key') != self.key[clear_load['user']]:
-                        log.warning(
-                            'Authentication failure of type "user" occurred.'
-                        )
-                        return ''
-                    # Build ACL matching the user name
-                    acl = salt.utils.get_values_of_matching_keys(
-                            self.opts['publisher_acl'],
-                            clear_load['user'])
-                    if not acl:
-                        log.warning(
-                            'Authentication failure of type "user" occurred.'
-                        )
-                        return ''
-                    good = self.ckminions.auth_check(
-                        acl,
+
+                if not self.ckminions.auth_check(
+                        auth_list,
                         clear_load['fun'],
                         clear_load['arg'],
                         clear_load['tgt'],
                         clear_load.get('tgt_type', 'glob'),
-                        minions=minions)
-                    if not good:
-                        # Accept find_job so the CLI will function cleanly
-                        if clear_load['fun'] != 'saltutil.find_job':
-                            log.warning(
-                                'Authentication failure of type "user" '
-                                'occurred.'
-                            )
-                            return ''
-                else:
-                    log.warning(
-                        'Authentication failure of type "user" occurred.'
-                    )
+                        minions=minions,
+                        # always accept find_job
+                        whitelist=['saltutil.find_job'],
+                        ):
+                    log.warning('Authentication failure of type "user" occurred.')
                     return ''
-        else:
-            if clear_load.pop('key') != self.key[salt.utils.get_user()]:
-                log.warning(
-                    'Authentication failure of type "other" occurred.'
-                )
-                return ''
 
         # If we order masters (via a syndic), don't short circuit if no minions
         # are found

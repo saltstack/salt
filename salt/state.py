@@ -23,6 +23,7 @@ import logging
 import datetime
 import traceback
 import re
+import time
 import random
 
 # Import salt libs
@@ -35,6 +36,7 @@ import salt.utils.crypt
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.url
+import salt.utils.process
 import salt.syspaths as syspaths
 from salt.utils import immutabletypes
 from salt.template import compile_template, compile_template_str
@@ -53,6 +55,7 @@ import salt.utils.yamlloader as yamlloader
 import salt.ext.six as six
 from salt.ext.six.moves import map, range, reload_module
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
+import msgpack
 
 log = logging.getLogger(__name__)
 
@@ -85,12 +88,14 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'unless',
     'retry',
     'order',
+    'parallel',
     'prereq',
     'prereq_in',
     'prerequired',
     'reload_modules',
     'reload_grains',
     'reload_pillar',
+    'runas',
     'fire_event',
     'saltenv',
     'use',
@@ -203,6 +208,20 @@ def find_name(name, state, high):
                         if arg[next(iter(arg))] == name:
                             ext_id.append((nid, state))
     return ext_id
+
+
+def find_sls_ids(sls, high):
+    '''
+    Scan for all ids in the given sls and return them in a dict; {name: state}
+    '''
+    ret = []
+    for nid, item in six.iteritems(high):
+        if item['__sls__'] == sls:
+            for st_ in item:
+                if st_.startswith('__'):
+                    continue
+                ret.append((nid, st_))
+    return ret
 
 
 def format_log(ret):
@@ -547,7 +566,7 @@ class Compiler(object):
                 continue
             for state, run in six.iteritems(body):
                 funcs = set()
-                names = set()
+                names = []
                 if state.startswith('__'):
                     continue
                 chunk = {'state': state,
@@ -564,7 +583,9 @@ class Compiler(object):
                     if isinstance(arg, dict):
                         for key, val in six.iteritems(arg):
                             if key == 'names':
-                                names.update(val)
+                                for _name in val:
+                                    if _name not in names:
+                                        names.append(_name)
                                 continue
                             else:
                                 chunk.update(arg)
@@ -1247,7 +1268,7 @@ class State(object):
                 continue
             for state, run in six.iteritems(body):
                 funcs = set()
-                names = set()
+                names = []
                 if state.startswith('__'):
                     continue
                 chunk = {'state': state,
@@ -1266,7 +1287,9 @@ class State(object):
                     if isinstance(arg, dict):
                         for key, val in six.iteritems(arg):
                             if key == 'names':
-                                names.update(val)
+                                for _name in val:
+                                    if _name not in names:
+                                        names.append(_name)
                             elif key == 'state':
                                 # Don't pass down a state override
                                 continue
@@ -1493,130 +1516,193 @@ class State(object):
 
                         if isinstance(items, list):
                             # Formed as a list of requisite additions
+                            hinges = []
                             for ind in items:
                                 if not isinstance(ind, dict):
                                     # Malformed req_in
                                     continue
                                 if len(ind) < 1:
                                     continue
-                                _state = next(iter(ind))
-                                name = ind[_state]
-                                if '.' in _state:
+                                pstate = next(iter(ind))
+                                pname = ind[pstate]
+                                if pstate == 'sls':
+                                    # Expand hinges here
+                                    hinges = find_sls_ids(pname, high)
+                                else:
+                                    hinges.append((pname, pstate))
+                                if '.' in pstate:
                                     errors.append((
                                         'Invalid requisite in {0}: {1} for '
                                         '{2}, in SLS \'{3}\'. Requisites must '
                                         'not contain dots, did you mean \'{4}\'?'
                                         .format(
                                             rkey,
-                                            _state,
-                                            name,
+                                            pstate,
+                                            pname,
                                             body['__sls__'],
-                                            _state[:_state.find('.')]
+                                            pstate[:pstate.find('.')]
                                         )
                                     ))
-                                    _state = _state.split(".")[0]
-                                if key == 'prereq_in':
-                                    # Add prerequired to origin
-                                    if id_ not in extend:
-                                        extend[id_] = {}
-                                    if state not in extend[id_]:
-                                        extend[id_][state] = []
-                                    extend[id_][state].append(
-                                            {'prerequired': [{_state: name}]}
-                                            )
-                                if key == 'prereq':
-                                    # Add prerequired to prereqs
-                                    ext_ids = find_name(name, _state, high)
-                                    for ext_id, _req_state in ext_ids:
-                                        if ext_id not in extend:
-                                            extend[ext_id] = {}
-                                        if _req_state not in extend[ext_id]:
-                                            extend[ext_id][_req_state] = []
-                                        extend[ext_id][_req_state].append(
-                                                {'prerequired': [{state: id_}]}
-                                                )
-                                    continue
-                                if key == 'use_in':
-                                    # Add the running states args to the
-                                    # use_in states
-                                    ext_ids = find_name(name, _state, high)
-                                    for ext_id, _req_state in ext_ids:
-                                        if not ext_id:
-                                            continue
-                                        ext_args = state_args(ext_id, _state, high)
-                                        if ext_id not in extend:
-                                            extend[ext_id] = {}
-                                        if _req_state not in extend[ext_id]:
-                                            extend[ext_id][_req_state] = []
-                                        ignore_args = req_in_all.union(ext_args)
-                                        for arg in high[id_][state]:
-                                            if not isinstance(arg, dict):
-                                                continue
-                                            if len(arg) != 1:
-                                                continue
-                                            if next(iter(arg)) in ignore_args:
-                                                continue
-                                            # Don't use name or names
-                                            if next(six.iterkeys(arg)) == 'name':
-                                                continue
-                                            if next(six.iterkeys(arg)) == 'names':
-                                                continue
-                                            extend[ext_id][_req_state].append(arg)
-                                    continue
-                                if key == 'use':
-                                    # Add the use state's args to the
-                                    # running state
-                                    ext_ids = find_name(name, _state, high)
-                                    for ext_id, _req_state in ext_ids:
-                                        if not ext_id:
-                                            continue
-                                        loc_args = state_args(id_, state, high)
+                                    pstate = pstate.split(".")[0]
+                                for tup in hinges:
+                                    name, _state = tup
+                                    if key == 'prereq_in':
+                                        # Add prerequired to origin
                                         if id_ not in extend:
                                             extend[id_] = {}
                                         if state not in extend[id_]:
                                             extend[id_][state] = []
-                                        ignore_args = req_in_all.union(loc_args)
-                                        for arg in high[ext_id][_req_state]:
-                                            if not isinstance(arg, dict):
-                                                continue
-                                            if len(arg) != 1:
-                                                continue
-                                            if next(iter(arg)) in ignore_args:
-                                                continue
-                                            # Don't use name or names
-                                            if next(six.iterkeys(arg)) == 'name':
-                                                continue
-                                            if next(six.iterkeys(arg)) == 'names':
-                                                continue
-                                            extend[id_][state].append(arg)
-                                    continue
-                                found = False
-                                if name not in extend:
-                                    extend[name] = {}
-                                if _state not in extend[name]:
-                                    extend[name][_state] = []
-                                extend[name]['__env__'] = body['__env__']
-                                extend[name]['__sls__'] = body['__sls__']
-                                for ind in range(len(extend[name][_state])):
-                                    if next(iter(
-                                        extend[name][_state][ind])) == rkey:
-                                        # Extending again
-                                        extend[name][_state][ind][rkey].append(
-                                                {state: id_}
+                                        extend[id_][state].append(
+                                                {'prerequired': [{_state: name}]}
                                                 )
-                                        found = True
-                                if found:
-                                    continue
-                                # The rkey is not present yet, create it
-                                extend[name][_state].append(
-                                        {rkey: [{state: id_}]}
-                                        )
+                                    if key == 'prereq':
+                                        # Add prerequired to prereqs
+                                        ext_ids = find_name(name, _state, high)
+                                        for ext_id, _req_state in ext_ids:
+                                            if ext_id not in extend:
+                                                extend[ext_id] = {}
+                                            if _req_state not in extend[ext_id]:
+                                                extend[ext_id][_req_state] = []
+                                            extend[ext_id][_req_state].append(
+                                                    {'prerequired': [{state: id_}]}
+                                                    )
+                                        continue
+                                    if key == 'use_in':
+                                        # Add the running states args to the
+                                        # use_in states
+                                        ext_ids = find_name(name, _state, high)
+                                        for ext_id, _req_state in ext_ids:
+                                            if not ext_id:
+                                                continue
+                                            ext_args = state_args(ext_id, _state, high)
+                                            if ext_id not in extend:
+                                                extend[ext_id] = {}
+                                            if _req_state not in extend[ext_id]:
+                                                extend[ext_id][_req_state] = []
+                                            ignore_args = req_in_all.union(ext_args)
+                                            for arg in high[id_][state]:
+                                                if not isinstance(arg, dict):
+                                                    continue
+                                                if len(arg) != 1:
+                                                    continue
+                                                if next(iter(arg)) in ignore_args:
+                                                    continue
+                                                # Don't use name or names
+                                                if next(six.iterkeys(arg)) == 'name':
+                                                    continue
+                                                if next(six.iterkeys(arg)) == 'names':
+                                                    continue
+                                                extend[ext_id][_req_state].append(arg)
+                                        continue
+                                    if key == 'use':
+                                        # Add the use state's args to the
+                                        # running state
+                                        ext_ids = find_name(name, _state, high)
+                                        for ext_id, _req_state in ext_ids:
+                                            if not ext_id:
+                                                continue
+                                            loc_args = state_args(id_, state, high)
+                                            if id_ not in extend:
+                                                extend[id_] = {}
+                                            if state not in extend[id_]:
+                                                extend[id_][state] = []
+                                            ignore_args = req_in_all.union(loc_args)
+                                            for arg in high[ext_id][_req_state]:
+                                                if not isinstance(arg, dict):
+                                                    continue
+                                                if len(arg) != 1:
+                                                    continue
+                                                if next(iter(arg)) in ignore_args:
+                                                    continue
+                                                # Don't use name or names
+                                                if next(six.iterkeys(arg)) == 'name':
+                                                    continue
+                                                if next(six.iterkeys(arg)) == 'names':
+                                                    continue
+                                                extend[id_][state].append(arg)
+                                        continue
+                                    found = False
+                                    if name not in extend:
+                                        extend[name] = {}
+                                    if _state not in extend[name]:
+                                        extend[name][_state] = []
+                                    extend[name]['__env__'] = body['__env__']
+                                    extend[name]['__sls__'] = body['__sls__']
+                                    for ind in range(len(extend[name][_state])):
+                                        if next(iter(
+                                            extend[name][_state][ind])) == rkey:
+                                            # Extending again
+                                            extend[name][_state][ind][rkey].append(
+                                                    {state: id_}
+                                                    )
+                                            found = True
+                                    if found:
+                                        continue
+                                    # The rkey is not present yet, create it
+                                    extend[name][_state].append(
+                                            {rkey: [{state: id_}]}
+                                            )
         high['__extend__'] = []
         for key, val in six.iteritems(extend):
             high['__extend__'].append({key: val})
         req_in_high, req_in_errors = self.reconcile_extend(high)
         errors.extend(req_in_errors)
         return req_in_high, errors
+
+    def _call_parallel_target(self, cdata, low):
+        '''
+        The target function to call that will create the parallel thread/process
+        '''
+        tag = _gen_tag(low)
+        try:
+            ret = self.states[cdata['full']](*cdata['args'],
+                                             **cdata['kwargs'])
+        except Exception:
+            trb = traceback.format_exc()
+            # There are a number of possibilities to not have the cdata
+            # populated with what we might have expected, so just be smart
+            # enough to not raise another KeyError as the name is easily
+            # guessable and fallback in all cases to present the real
+            # exception to the user
+            if len(cdata['args']) > 0:
+                name = cdata['args'][0]
+            elif 'name' in cdata['kwargs']:
+                name = cdata['kwargs']['name']
+            else:
+                name = low.get('name', low.get('__id__'))
+            ret = {
+                'result': False,
+                'name': name,
+                'changes': {},
+                'comment': 'An exception occurred in this state: {0}'.format(
+                    trb)
+            }
+        troot = os.path.join(self.opts['cachedir'], self.jid)
+        tfile = os.path.join(troot, tag)
+        if not os.path.isdir(troot):
+            try:
+                os.makedirs(troot)
+            except OSError:
+                # Looks like the directory was created between the check
+                # and the attempt, we are safe to pass
+                pass
+        with salt.utils.fopen(tfile, 'wb+') as fp_:
+            fp_.write(msgpack.dumps(ret))
+
+    def call_parallel(self, cdata, low):
+        '''
+        Call the state defined in the given cdata in parallel
+        '''
+        proc = salt.utils.process.MultiprocessingProcess(
+                target=self._call_parallel_target,
+                args=(cdata, low))
+        proc.start()
+        ret = {'name': cdata['args'][0],
+                'result': None,
+                'changes': {},
+                'comment': 'Started in a seperate process',
+                'proc': proc}
+        return ret
 
     def call(self, low, chunks=None, running=None, retries=1):
         '''
@@ -1647,6 +1733,8 @@ class State(object):
             return ret
         else:
             ret = {'result': False, 'name': low['name'], 'changes': {}}
+
+        self.state_con['runas'] = low.get('runas', None)
 
         if not low.get('__prereq__'):
             log.info(
@@ -1724,8 +1812,13 @@ class State(object):
                 if self.mocked:
                     ret = mock_ret(cdata)
                 else:
-                    ret = self.states[cdata['full']](*cdata['args'],
-                                                     **cdata['kwargs'])
+                    # Execute the state function
+                    if not low.get('__prereq__') and low.get('parallel'):
+                        # run the state call in parallel, but only if not in a prereq
+                        ret = self.call_parallel(cdata, low)
+                    else:
+                        ret = self.states[cdata['full']](*cdata['args'],
+                                                         **cdata['kwargs'])
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
@@ -1845,7 +1938,7 @@ class State(object):
         }
         validated_retry_data = {}
         if isinstance(retry_data, dict):
-            for expected_key, value_type in expected_data.iteritems():
+            for expected_key, value_type in six.iteritems(expected_data):
                 if expected_key in retry_data:
                     if isinstance(retry_data[expected_key], value_type):
                         validated_retry_data[expected_key] = retry_data[expected_key]
@@ -1866,6 +1959,29 @@ class State(object):
         '''
         Iterate over a list of chunks and call them, checking for requires.
         '''
+        # Check for any disabled states
+        disabled = {}
+        if 'state_runs_disabled' in self.opts['grains']:
+            for low in chunks[:]:
+                state_ = '{0}.{1}'.format(low['state'], low['fun'])
+                for pat in self.opts['grains']['state_runs_disabled']:
+                    if fnmatch.fnmatch(state_, pat):
+                        comment = (
+                                    'The state function "{0}" is currently disabled by "{1}", '
+                                    'to re-enable, run state.enable {1}.'
+                                  ).format(
+                                    state_,
+                                    pat,
+                                  )
+                        _tag = _gen_tag(low)
+                        disabled[_tag] = {'changes': {},
+                                          'result': False,
+                                          'comment': comment,
+                                          '__run_num__': self.__run_num,
+                                          '__sls__': low['__sls__']}
+                        self.__run_num += 1
+                        chunks.remove(low)
+                        break
         running = {}
         for low in chunks:
             if '__FAILHARD__' in running:
@@ -1877,7 +1993,12 @@ class State(object):
                 if self.check_failhard(low, running):
                     return running
             self.active = set()
-        return running
+        while True:
+            if self.reconcile_procs(running):
+                break
+            time.sleep(0.01)
+        ret = dict(list(disabled.items()) + list(running.items()))
+        return ret
 
     def check_failhard(self, low, running):
         '''
@@ -1892,6 +2013,35 @@ class State(object):
                 return False
             return not running[tag]['result']
         return False
+
+    def reconcile_procs(self, running):
+        '''
+        Check the running dict for processes and resolve them
+        '''
+        retset = set()
+        for tag in running:
+            proc = running[tag].get('proc')
+            if proc:
+                if not proc.is_alive():
+                    ret_cache = os.path.join(self.opts['cachedir'], self.jid, tag)
+                    if not os.path.isfile(ret_cache):
+                        ret = {'result': False,
+                               'comment': 'Parallel process failed to return',
+                               'name': running[tag]['name'],
+                               'changes': {}}
+                    try:
+                        with salt.utils.fopen(ret_cache, 'rb') as fp_:
+                            ret = msgpack.loads(fp_.read())
+                    except (OSError, IOError):
+                        ret = {'result': False,
+                               'comment': 'Parallel cache failure',
+                               'name': running[tag]['name'],
+                               'changes': {}}
+                    running[tag].update(ret)
+                    running[tag].pop('proc')
+                else:
+                    retset.add(False)
+        return False not in retset
 
     def check_requisite(self, low, running, chunks, pre=False):
         '''
@@ -1920,6 +2070,7 @@ class State(object):
             present = True
         if not present:
             return 'met', ()
+        self.reconcile_procs(running)
         reqs = {
                 'require': [],
                 'watch': [],
@@ -1967,6 +2118,10 @@ class State(object):
                 if tag not in run_dict:
                     fun_stats.add('unmet')
                     continue
+                if run_dict[tag].get('proc'):
+                    # Run in parallel, first wait for a touch and then recheck
+                    time.sleep(0.01)
+                    return self.check_requisite(low, running, chunks, pre)
                 if r_state == 'onfail':
                     if run_dict[tag]['result'] is True:
                         fun_stats.add('onfail')  # At least one state is OK
@@ -2329,35 +2484,11 @@ class State(object):
         # Compile and verify the raw chunks
         chunks = self.compile_high_data(high, orchestration_jid)
 
-        # Check for any disabled states
-        disabled = {}
-        if 'state_runs_disabled' in self.opts['grains']:
-            for low in chunks[:]:
-                state_ = '{0}.{1}'.format(low['state'], low['fun'])
-                for pat in self.opts['grains']['state_runs_disabled']:
-                    if fnmatch.fnmatch(state_, pat):
-                        comment = (
-                                    'The state function "{0}" is currently disabled by "{1}", '
-                                    'to re-enable, run state.enable {1}.'
-                                  ).format(
-                                    state_,
-                                    pat,
-                                  )
-                        _tag = _gen_tag(low)
-                        disabled[_tag] = {'changes': {},
-                                          'result': False,
-                                          'comment': comment,
-                                          '__run_num__': self.__run_num,
-                                          '__sls__': low['__sls__']}
-                        self.__run_num += 1
-                        chunks.remove(low)
-                        break
-
         # If there are extensions in the highstate, process them and update
         # the low data chunks
         if errors:
             return errors
-        ret = dict(list(disabled.items()) + list(self.call_chunks(chunks).items()))
+        ret = self.call_chunks(chunks)
         ret = self.call_listen(chunks, ret)
 
         def _cleanup_accumulator_data():
@@ -3310,7 +3441,7 @@ class BaseHighState(object):
                     ext[name]['__sls__'] = sls
                 if '__env__' not in ext[name]:
                     ext[name]['__env__'] = saltenv
-                for key in ext[name]:
+                for key in list(ext[name]):
                     if key.startswith('_'):
                         continue
                     if not isinstance(ext[name][key], list):

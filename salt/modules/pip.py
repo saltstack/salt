@@ -87,6 +87,7 @@ import salt.utils
 import tempfile
 import salt.utils.locales
 import salt.utils.url
+import salt.ext.six as six
 from salt.ext.six import string_types, iteritems
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
@@ -119,17 +120,20 @@ def _get_pip_bin(bin_env):
     '''
     if not bin_env:
         which_result = __salt__['cmd.which_bin'](['pip', 'pip2', 'pip3', 'pip-python'])
+        if salt.utils.is_windows() and six.PY2:
+            which_result.encode('string-escape')
         if which_result is None:
             raise CommandNotFoundError('Could not find a `pip` binary')
-        if salt.utils.is_windows():
-            return which_result.encode('string-escape')
         return which_result
 
     # try to get pip bin from virtualenv, bin_env
     if os.path.isdir(bin_env):
         if salt.utils.is_windows():
-            pip_bin = os.path.join(
-                bin_env, 'Scripts', 'pip.exe').encode('string-escape')
+            if six.PY2:
+                pip_bin = os.path.join(
+                    bin_env, 'Scripts', 'pip.exe').encode('string-escape')
+            else:
+                pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe')
         else:
             pip_bin = os.path.join(bin_env, 'bin', 'pip')
         if os.path.isfile(pip_bin):
@@ -367,7 +371,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             env_vars=None,
             use_vt=False,
             trusted_host=None,
-            no_cache_dir=False):
+            no_cache_dir=False,
+            cache_dir=None):
     '''
     Install packages with pip
 
@@ -440,8 +445,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     download
         Download packages into ``download`` instead of installing them
 
-    download_cache
-        Cache downloaded packages in ``download_cache`` dir
+    download_cache | cache_dir
+        Cache downloaded packages in ``download_cache`` or ``cache_dir`` dir
 
     source
         Check out ``editable`` packages into ``source`` dir
@@ -678,8 +683,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if download:
         cmd.extend(['--download', download])
 
-    if download_cache:
-        cmd.extend(['--download-cache', download_cache])
+    if download_cache or cache_dir:
+        cmd.extend(['--cache-dir' if salt.utils.compare_versions(
+            ver1=version(bin_env), oper='>=', ver2='6.0'
+        ) else '--download-cache', download_cache or cache_dir])
 
     if source:
         cmd.extend(['--source', source])
@@ -1058,6 +1065,9 @@ def list_(prefix=None,
         elif line.startswith('-e'):
             line = line.split('-e ')[1]
             version_, name = line.split('#egg=')
+        elif len(line.split('===')) >= 2:
+            name = line.split('===')[0]
+            version_ = line.split('===')[1]
         elif len(line.split('==')) >= 2:
             name = line.split('==')[0]
             version_ = line.split('==')[1]

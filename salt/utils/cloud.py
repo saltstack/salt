@@ -497,6 +497,9 @@ def bootstrap(vm_, opts):
         deploy_kwargs['winrm_port'] = salt.config.get_cloud_config_value(
             'winrm_port', vm_, opts, default=5986
         )
+        deploy_kwargs['winrm_use_ssl'] = salt.config.get_cloud_config_value(
+        'winrm_use_ssl', vm_, opts, default=True
+        )
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
@@ -821,7 +824,7 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
             )
 
 
-def wait_for_winrm(host, port, username, password, timeout=900):
+def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
     '''
     Wait until WinRM connection can be established.
     '''
@@ -835,7 +838,10 @@ def wait_for_winrm(host, port, username, password, timeout=900):
     while True:
         trycount += 1
         try:
-            s = winrm.Session(host, auth=(username, password), transport='ssl')
+            transport = 'ssl'
+            if not use_ssl:
+                transport = 'plaintext'
+            s = winrm.Session(host, auth=(username, password), transport=transport)
             if hasattr(s.protocol, 'set_timeout'):
                 s.protocol.set_timeout(15)
             log.trace('WinRM endpoint url: {0}'.format(s.url))
@@ -982,6 +988,7 @@ def deploy_windows(host,
                    master_sign_pub_file=None,
                    use_winrm=False,
                    winrm_port=5986,
+                   winrm_use_ssl=True,
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
@@ -1007,8 +1014,8 @@ def deploy_windows(host,
 
     if HAS_WINRM and use_winrm:
         winrm_session = wait_for_winrm(host=host, port=winrm_port,
-                                           username=username, password=password,
-                                           timeout=port_timeout * 60)
+                                       username=username, password=password,
+                                       timeout=port_timeout * 60, use_ssl=winrm_use_ssl)
         if winrm_session is not None:
             service_available = True
     else:
@@ -1127,8 +1134,11 @@ def deploy_windows(host,
         # Delete C:\salttmp\ and installer file
         # Unless keep_tmp is True
         if not keep_tmp:
-            smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
-            smb_conn.deleteDirectory('C$', 'salttemp')
+            if use_winrm:
+                winrm_cmd(winrm_session, 'rmdir', ['/Q', '/S', 'C:\\salttemp\\'])
+            else:
+                smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
+                smb_conn.deleteDirectory('C$', 'salttemp')
         # Shell out to winexe to ensure salt-minion service started
         if use_winrm:
             winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
@@ -1726,8 +1736,37 @@ def run_inline_script(host,
     return True
 
 
+def filter_event(tag, data, defaults):
+    '''
+    Accept a tag, a dict and a list of default keys to return from the dict, and
+    check them against the cloud configuration for that tag
+    '''
+    ret = {}
+    keys = []
+    use_defaults = True
+
+    for ktag in __opts__.get('filter_events', {}):
+        if tag != ktag:
+            continue
+        keys = __opts__['filter_events'][ktag]['keys']
+        use_defaults = __opts__['filter_events'][ktag].get('use_defaults', True)
+
+    if use_defaults is False:
+        defaults = []
+
+    defaults = list(set(defaults + keys))
+
+    for key in defaults:
+        if key in data:
+            ret[key] = data[key]
+
+    return ret
+
+
 def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
-    # Fire deploy action
+    '''
+    Fire deploy action
+    '''
     if sock_dir is None:
         salt.utils.warn_until(
             'Oxygen',
@@ -3197,8 +3236,8 @@ def check_key_path_and_mode(provider, key_path):
         )
         return False
 
-    key_mode = str(oct(stat.S_IMODE(os.stat(key_path).st_mode)))
-    if key_mode not in ('0400', '0600'):
+    key_mode = stat.S_IMODE(os.stat(key_path).st_mode)
+    if key_mode not in (0o400, 0o600):
         log.error(
             'The key file \'{0}\' used in the \'{1}\' provider configuration '
             'needs to be set to mode 0400 or 0600.\n'.format(

@@ -35,7 +35,10 @@ bytes = bytearray
 import re
 import contextlib
 import operator
-import ipaddress
+try:
+    import ipaddress
+except ImportError:
+    import salt.ext.ipaddress as ipaddress
 import sys
 if sys.version_info < (2, 7):
     import unittest2 as unittest

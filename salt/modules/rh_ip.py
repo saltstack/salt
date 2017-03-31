@@ -876,9 +876,12 @@ def _read_file(path):
     Reads and returns the contents of a file
     '''
     try:
-        with salt.utils.fopen(path, 'rb') as contents:
+        with salt.utils.fopen(path, 'rb') as rfh:
+            contents = rfh.read()
+            if six.PY3:
+                contents = contents.encode(__salt_system_encoding__)
             # without newlines character. http://stackoverflow.com/questions/12330522/reading-a-file-without-newlines
-            lines = contents.read().splitlines()
+            lines = contents.splitlines()
             try:
                 lines.remove('')
             except ValueError:
@@ -992,7 +995,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type == 'bridge':
         __salt__['pkg.install']('bridge-utils')
 
-    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip', 'ib']:
+    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip', 'ib', 'alias']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
             template = JINJA.get_template('rh{0}_eth.jinja'.format(rh_major))

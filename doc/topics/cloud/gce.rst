@@ -15,7 +15,10 @@ at https://cloud.google.com.
 
 Dependencies
 ============
-* LibCloud >= 0.14.1
+* LibCloud >= 1.0.0
+
+.. versionchanged:: Nitrogen
+
 * A Google Cloud Platform account with Compute Engine enabled
 * A registered Service Account for authorization
 * Oh, and obviously you'll need `salt <https://github.com/saltstack/salt>`_
@@ -219,9 +222,11 @@ network resource.
 subnetwork
 ----------
 
-Custom non-legacy network resources have subnetworks.
-the 'default' network has a 'default' subnetwork.
-Set a subnetwork when using custom network resources. Required.
+Use this setting to define the subnetwork an instance will be created in.
+This requires that the network your instance is created under has a mode of 'custom' or 'auto'.
+Additionally, the subnetwork your instance is created under is associated with the location you provide. Required.
+
+.. versionadded:: Nitrogen
 
 tags
 ----
@@ -510,19 +515,23 @@ is blocked.
 
 Create network
 --------------
-New networks require a name and CIDR range. New instances can be created
-and added to this network by setting the network name during create. It is
+New networks require a name and CIDR range if they don't have a 'mode'.
+Optionally, 'mode' can be provided. Supported modes are 'auto', 'custom', 'legacy'.
+Optionally, 'description' can be provided to add an extra note to your network.
+New instances can be created and added to this network by setting the network name during create. It is
 not possible to add/remove existing instances to a network.
 
 .. code-block:: bash
 
     salt-cloud -f create_network gce name=mynet cidr=10.10.10.0/24
+    salt-cloud -f create_network gce name=mynet mode=auto description=some optional info.
+
+.. versionchanged:: Nitrogen
 
 Destroy network
 ---------------
-Destroy a network by specifying the name. Make sure that there are no
-instances associated with the network prior to deleting it or you'll have
-a bad day.
+Destroy a network by specifying the name. If a resource is currently using
+the target network an exception will be raised.
 
 .. code-block:: bash
 
@@ -535,6 +544,41 @@ Specify the network name to view information about the network.
 .. code-block:: bash
 
     salt-cloud -f show_network gce name=mynet
+
+Create subnetwork
+--------------
+New subnetworks require a name, region, and CIDR range.
+Optionally, 'description' can be provided to add an extra note to your subnetwork.
+New instances can be created and added to this subnetwork by setting the subnetwork name during create. It is
+not possible to add/remove existing instances to a subnetwork.
+
+.. code-block:: bash
+
+    salt-cloud -f create_subnetwork gce name=mynet network=mynet region=us-central1 cidr=10.0.10.0/24
+    salt-cloud -f create_subnetwork gce name=mynet network=mynet region=us-central1 cidr=10.10.10.0/24 description=some info about my subnet.
+
+.. versionadded:: Nitrogen
+
+Destroy subnetwork
+---------------
+Destroy a subnetwork by specifying the name and region. If a resource is currently using
+the target subnetwork an exception will be raised.
+
+.. code-block:: bash
+
+    salt-cloud -f delete_subnetwork gce name=mynet region=us-central1
+
+.. versionadded:: Nitrogen
+
+Show subnetwork
+------------
+Specify the subnetwork name to view information about the subnetwork.
+
+.. code-block:: bash
+
+    salt-cloud -f show_subnetwork gce name=mynet
+
+.. versionadded:: Nitrogen
 
 Create address
 --------------

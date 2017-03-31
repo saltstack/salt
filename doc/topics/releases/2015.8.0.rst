@@ -108,6 +108,8 @@ Using the new features will require updates to the git ext_pillar
 configuration, further details can be found in the :ref:`pillar.git_pillar
 <git-pillar-2015-8-0-and-later>` docs.
 
+.. _pygit2: https://github.com/libgit2/pygit2
+
 Salt Cloud Improvements
 =======================
 

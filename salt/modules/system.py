@@ -11,6 +11,7 @@ import os.path
 
 # Import salt libs
 import salt.utils
+import salt.ext.six as six
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
@@ -157,10 +158,14 @@ def _date_bin_set_datetime(new_date):
     return True
 
 
-def _has_settable_hwclock():
+def has_settable_hwclock():
     '''
-    Returns True if the system has a harware clock capable of being
+    Returns True if the system has a hardware clock capable of being
     set from software.
+
+    CLI Example:
+
+    salt '*' system.has_settable_hwclock
     '''
     if salt.utils.which_bin(['hwclock']) is not None:
         res = __salt__['cmd.run_all'](['hwclock', '--test', '--systohc'], python_shell=False)
@@ -378,7 +383,7 @@ def set_system_date_time(years=None,
     if not _date_bin_set_datetime(new_datetime):
         return False
 
-    if _has_settable_hwclock():
+    if has_settable_hwclock():
         # Now that we've successfully set the software clock, we should
         # update hardware clock for time to persist though reboot.
         return _swclock_to_hwclock()
@@ -491,7 +496,10 @@ def get_computer_desc():
     desc = None
     hostname_cmd = salt.utils.which('hostnamectl')
     if hostname_cmd:
-        desc = __salt__['cmd.run']('{0} status --pretty'.format(hostname_cmd))
+        desc = __salt__['cmd.run'](
+            [hostname_cmd, 'status', '--pretty'],
+            python_shell=False
+        )
     else:
         pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
         try:
@@ -500,10 +508,14 @@ def get_computer_desc():
                     match = pattern.match(line)
                     if match:
                         # get rid of whitespace then strip off quotes
-                        desc = _strip_quotes(match.group(1).strip()).replace('\\"', '"')
+                        desc = _strip_quotes(match.group(1).strip())
                         # no break so we get the last occurance
         except IOError:
             return False
+    if six.PY3:
+        desc = desc.replace('\\"', '"')
+    else:
+        desc = desc.replace('\\"', '"').decode('string_escape')
     return desc
 
 
@@ -522,18 +534,25 @@ def set_computer_desc(desc):
 
         salt '*' system.set_computer_desc "Michael's laptop"
     '''
+    if six.PY3:
+        desc = desc.replace('"', '\\"')
+    else:
+        desc = desc.encode('string_escape').replace('"', '\\"')
     hostname_cmd = salt.utils.which('hostnamectl')
     if hostname_cmd:
-        result = __salt__['cmd.retcode']('{0} set-hostname --pretty {1}'.format(hostname_cmd, desc))
+        result = __salt__['cmd.retcode'](
+            [hostname_cmd, 'set-hostname', '--pretty', desc],
+            python_shell=False
+        )
         return True if result == 0 else False
 
     if not os.path.isfile('/etc/machine-info'):
-        f = salt.utils.fopen('/etc/machine-info', 'a')
-        f.close()
+        with salt.utils.fopen('/etc/machine-info', 'w'):
+            pass
 
     is_pretty_hostname_found = False
     pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
-    new_line = 'PRETTY_HOSTNAME="{0}"'.format(desc.replace('"', '\\"'))
+    new_line = 'PRETTY_HOSTNAME="{0}"'.format(desc)
     try:
         with salt.utils.fopen('/etc/machine-info', 'r+') as mach_info:
             lines = mach_info.readlines()

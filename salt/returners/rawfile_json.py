@@ -58,7 +58,7 @@ def returner(ret):
     opts = _get_options({})  # Pass in empty ret, since this is a list of events
     try:
         with salt.utils.flopen(opts['filename'], 'a') as logfile:
-            logfile.write(str(ret)+'\n')
+            logfile.write(json.dumps(ret)+'\n')
     except:
         log.error('Could not write to rawdata_json file {0}'.format(opts['filename']))
         raise

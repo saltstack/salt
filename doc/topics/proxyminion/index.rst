@@ -36,6 +36,21 @@ or more minions.
 See :ref:`Proxyminion Beacon <proxy-minion-beacon>` to help
 with easy configuration and management of ``salt-proxy`` processes.
 
+New in Nitrogen
+---------------
+
+The :conf_proxy:`proxy_merge_grains_in_module` configuration variable
+introduced in 2016.3, has been changed, defaulting to ``True``.
+
+The connection with the remote device is kept alive by default, when the
+module implements the ``alive`` function and :conf_proxy:`proxy_keep_alive`
+is set to ``True``. The polling interval is set using the
+:conf_proxy:`proxy_keep_alive_interval` option which defaults to 1 minute.
+
+The developers are also able to use the :conf_proxy:`proxy_always_alive`,
+when designing a proxy module flexible enough to open the
+connection with the remote device only when required.
+
 New in 2016.11.0
 ----------------
 
@@ -368,7 +383,8 @@ Pre 2015.8 the proxymodule also must have an ``id()`` function.  2015.8 and foll
 this function because the proxy's id is required on the command line.
 
 Here is an example proxymodule used to interface to a *very* simple REST
-server.  Code for the server is in the `salt-contrib GitHub repository <https://github.com/saltstack/salt-contrib/proxyminion_rest_example>`_
+server.  Code for the server is in the `salt-contrib GitHub repository
+<https://github.com/saltstack/salt-contrib/tree/master/proxyminion_rest_example>`_
 
 This proxymodule enables "service" enumeration, starting, stopping, restarting,
 and status; "package" installation, and a ping.

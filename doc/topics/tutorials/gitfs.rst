@@ -26,21 +26,17 @@ Branches and tags become Salt fileserver environments.
 Installing Dependencies
 =======================
 
-Beginning with version 2014.7.0, both pygit2_ and Dulwich_ are supported as
-alternatives to GitPython_. The desired provider can be configured using the
-:conf_master:`gitfs_provider` parameter in the master config file.
-
-If :conf_master:`gitfs_provider` is not configured, then Salt will prefer
-pygit2_ if a suitable version is available, followed by GitPython_ and
-Dulwich_.
+Both pygit2_ and GitPython_ are supported Python interfaces to git. If
+compatible versions of both are installed, pygit2_ will preferred. In these
+cases, GitPython_ can be forced using the :conf_master:`gitfs_provider`
+parameter in the master config file.
 
 .. note::
     It is recommended to always run the most recent version of any the below
-    dependencies. Certain features of gitfs may not be available without
+    dependencies. Certain features of GitFS may not be available without
     the most recent version of the chosen library.
 
 .. _pygit2: https://github.com/libgit2/pygit2
-.. _Dulwich: https://www.samba.org/~jelmer/dulwich/
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 
 pygit2
@@ -67,7 +63,8 @@ be used to install it:
 
 
 If pygit2_ is not packaged for the platform on which the Master is running, the
-pygit2_ website has installation instructions here__. Keep in mind however that
+pygit2_ website has installation instructions
+`here <pygit2-install-instructions>`_. Keep in mind however that
 following these instructions will install libgit2_ and pygit2_ without system
 packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
 <pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
@@ -75,35 +72,82 @@ libraries to be present before libgit2_ is built. On some Debian-based distros
 ``pkg-config`` is also required to link libgit2_ with libssh2.
 .. note::
     If you are receiving the error "Unsupported URL Protocol" in the Salt Master
-    log when making a connection using SSH, review the libssh2 details listed 
+    log when making a connection using SSH, review the libssh2 details listed
     above.
 
 Additionally, version 0.21.0 of pygit2 introduced a dependency on python-cffi_,
 which in turn depends on newer releases of libffi_. Upgrading libffi_ is not
 advisable as several other applications depend on it, so on older LTS linux
 releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
-While these are not packaged in the official repositories for Debian and
-Ubuntu, SaltStack is actively working on adding packages for these to our
-repositories_. The progress of this effort can be tracked here__.
 
 .. warning::
-    pygit2_ is actively developed and :ref:`frequently makes
-    non-backwards-compatible API changes <pygit2-version-policy>`, even in
+    pygit2_ is actively developed and `frequently makes
+    non-backwards-compatible API changes <pygit2-version-policy>`_, even in
     minor releases. It is not uncommon for pygit2_ upgrades to result in errors
     in Salt. Please take care when upgrading pygit2_, and pay close attention
     to the changelog_, keeping an eye out for API changes. Errors can be
-    reported on the :ref:`SaltStack issue tracker <saltstack-issue-tracker>`.
+    reported on the `SaltStack issue tracker <saltstack-issue-tracker>`_.
 
 .. _pygit2-version-policy: http://www.pygit2.org/install.html#version-numbers
 .. _changelog: https://github.com/libgit2/pygit2#changelog
 .. _saltstack-issue-tracker: https://github.com/saltstack/salt/issues
-.. __: http://www.pygit2.org/install.html
+.. _pygit2-install-instructions: http://www.pygit2.org/install.html
 .. _libgit2: https://libgit2.github.com/
 .. _libssh2: http://www.libssh2.org/
 .. _python-cffi: https://pypi.python.org/pypi/cffi
 .. _libffi: http://sourceware.org/libffi/
-.. _repositories: https://repo.saltstack.com
-.. __: https://github.com/saltstack/salt-pack/issues/70
+
+
+RedHat Pygit2 Issues
+~~~~~~~~~~~~~~~~~~~~
+
+The release of RedHat/CentOS 7.3 upgraded both ``python-cffi`` and
+``http-parser``, both of which are dependencies for pygit2_/libgit2_. Both
+pygit2_ and libgit2_ (which are from the EPEL repository and not managed
+directly by RedHat) need to be rebuilt against these updated dependencies.
+
+The below errors will show up in the master log if an incompatible
+``python-pygit2`` package is installed:
+
+.. code-block:: text
+
+    2017-02-10 09:07:34,892 [salt.utils.gitfs ][ERROR ][11211] Import pygit2 failed: CompileError: command 'gcc' failed with exit status 1
+    2017-02-10 09:07:34,907 [salt.utils.gitfs ][ERROR ][11211] gitfs is configured but could not be loaded, are pygit2 and libgit2 installed?
+    2017-02-10 09:07:34,907 [salt.utils.gitfs ][CRITICAL][11211] No suitable gitfs provider module is installed.
+    2017-02-10 09:07:34,912 [salt.master ][CRITICAL][11211] Master failed pre flight checks, exiting
+
+The below errors will show up in the master log if an incompatible ``libgit2``
+package is installed:
+
+.. code-block:: text
+
+    2017-02-15 18:04:45,211 [salt.utils.gitfs ][ERROR   ][6211] Error occurred fetching gitfs remote 'https://foo.com/bar.git': No Content-Type header in response
+
+As of 15 February 2017, ``python-pygit2`` has been rebuilt and is in the stable
+EPEL repository. However, ``libgit2`` remains broken (a `bug report`_ has been
+filed to get it rebuilt).
+
+In the meantime, you can work around this by downgrading ``http-parser``. To do
+this, go to `this page`_ and download the appropriate ``http-parser`` RPM for
+the OS architecture you are using (x86_64, etc.). Then downgrade using the
+``rpm`` command. For example:
+
+.. code-block:: bash
+
+    [root@784e8a8c5028 /]# curl --silent -O https://kojipkgs.fedoraproject.org//packages/http-parser/2.0/5.20121128gitcd01361.el7/x86_64/http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
+    [root@784e8a8c5028 /]# rpm -Uvh --oldpackage http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
+    Preparing...                          ################################# [100%]
+    Updating / installing...
+       1:http-parser-2.0-5.20121128gitcd01################################# [ 50%]
+    Cleaning up / removing...
+       2:http-parser-2.7.1-3.el7          ################################# [100%]
+
+A restart of the salt-master daemon may be required to allow http(s)
+repositories to continue to be fetched.
+
+.. _`this page`: https://koji.fedoraproject.org/koji/buildinfo?buildID=703753
+.. _`bug report`: https://bugzilla.redhat.com/show_bug.cgi?id=1422583
+
 
 GitPython
 ---------
@@ -157,49 +201,6 @@ install GitPython`` (or ``easy_install GitPython``) as root.
             - name: 'GitPython < 2.0.9'
 
 
-Dulwich
--------
-
-Dulwich 0.9.4 or newer is required to use Dulwich as backend for gitfs.
-
-Dulwich is available in EPEL, and can be easily installed on the master using
-yum:
-
-.. code-block:: bash
-
-    # yum install python-dulwich
-
-For APT-based distros such as Ubuntu and Debian:
-
-.. code-block:: bash
-
-    # apt-get install python-dulwich
-
-.. important::
-
-    If switching to Dulwich from GitPython/pygit2, or switching from
-    GitPython/pygit2 to Dulwich, it is necessary to clear the gitfs cache to
-    avoid unpredictable behavior. This is probably a good idea whenever
-    switching to a new :conf_master:`gitfs_provider`, but it is less important
-    when switching between GitPython and pygit2.
-
-    Beginning in version 2015.5.0, the gitfs cache can be easily cleared using
-    the :mod:`fileserver.clear_cache <salt.runners.fileserver.clear_cache>`
-    runner.
-
-    .. code-block:: bash
-
-        salt-run fileserver.clear_cache backend=git
-
-    If the Master is running an earlier version, then the cache can be cleared
-    by removing the ``gitfs`` and ``file_lists/gitfs`` directories (both paths
-    relative to the master cache directory, usually
-    ``/var/cache/salt/master``).
-
-    .. code-block:: bash
-
-        rm -rf /var/cache/salt/master{,/file_lists}/gitfs
-
 Simple Configuration
 ====================
 
@@ -233,14 +234,6 @@ master:
 
    Information on how to authenticate to SSH remotes can be found :ref:`here
    <gitfs-authentication>`.
-
-   .. note::
-
-       Dulwich does not recognize ``ssh://`` URLs, ``git+ssh://`` must be used
-       instead. Salt version 2015.5.0 and later will automatically add the
-       ``git+`` to the beginning of these URLs before fetching, but earlier
-       Salt versions will fail to fetch unless the URL is specified using
-       ``git+ssh://``.
 
 3. Restart the master to load the new configuration.
 
@@ -316,7 +309,6 @@ is executed. For example:
     cache directory (``/var/cache/salt/master/gitfs``) before restarting the
     salt-master service.
 
-
 .. _gitfs-per-remote-config:
 
 Per-remote Configuration Parameters
@@ -336,6 +328,7 @@ configured gitfs remotes):
 * :conf_master:`gitfs_pubkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_privkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_passphrase` (**pygit2 only**, new in 2014.7.0)
+* :conf_master:`gitfs_refspecs` (new in Nitrogen)
 
 These parameters can now be overridden on a per-remote basis. This allows for a
 tremendous amount of customization. Here's some example usage:
@@ -372,7 +365,8 @@ tremendous amount of customization. Here's some example usage:
 
     2. Per-remote configuration parameters are named like the global versions,
        with the ``gitfs_`` removed from the beginning. The exception being the
-       ``name`` parameter which is only available to per-remote configurations.
+       ``name`` and ``saltenv`` parameters, which are only available to
+       per-remote configurations.
 
 In the example configuration above, the following is true:
 
@@ -454,10 +448,62 @@ Given the above configuration, the following is true:
    ``salt`` directory (and its subdirectories).
 
 
+.. _gitfs-custom-refspecs:
+
+Custom Refspecs
+===============
+
+.. versionadded:: Nitrogen
+
+GitFS will by default fetch remote branches and tags. However, sometimes it can
+be useful to fetch custom refs (such as those created for `GitHub pull
+requests`__). To change the refspecs GitFS fetches, use the
+:conf_master:`gitfs_refspecs` config option:
+
+.. __: https://help.github.com/articles/checking-out-pull-requests-locally/
+
+.. code-block:: yaml
+
+    gitfs_refspecs:
+      - '+refs/heads/*:refs/remotes/origin/*'
+      - '+refs/tags/*:refs/tags/*'
+      - '+refs/pull/*/head:refs/remotes/origin/pr/*'
+      - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
+In the above example, in addition to fetching remote branches and tags,
+GitHub's custom refs for pull requests and merged pull requests will also be
+fetched. These special ``head`` refs represent the head of the branch which is
+requesting to be merged, and the ``merge`` refs represent the result of the
+base branch after the merge.
+
+.. important::
+    When using custom refspecs, the destination of the fetched refs *must* be
+    under ``refs/remotes/origin/``, preferably in a subdirectory like in the
+    example above. These custom refspecs will map as environment names using
+    their relative path underneath ``refs/remotes/origin/``. For example,
+    assuming the configuration above, the head branch for pull request 12345
+    would map to fileserver environment ``pr/12345`` (slash included).
+
+Refspecs can be configured on a :ref:`per-remote basis
+<gitfs-per-remote-config>`. For example, the below configuration would only
+alter the default refspecs for the *second* GitFS remote. The first remote
+would only fetch branches and tags (the default).
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - https://domain.tld/foo.git
+      - https://domain.tld/bar.git:
+        - refspecs:
+          - '+refs/heads/*:refs/remotes/origin/*'
+          - '+refs/tags/*:refs/tags/*'
+          - '+refs/pull/*/head:refs/remotes/origin/pr/*'
+          - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
 Configuration Order of Precedence
 =================================
 
-The order of precedence for gitfs configuration is as follows (each level
+The order of precedence for GitFS configuration is as follows (each level
 overrides all levels below it):
 
 1. Per-saltenv configuration (defined under a per-remote ``saltenv``
@@ -592,7 +638,7 @@ master, each configured git remote will be searched.
 Branches, Environments, and Top Files
 =====================================
 
-When using the gitfs backend, branches, and tags will be mapped to environments
+When using the GitFS backend, branches, and tags will be mapped to environments
 using the branch/tag name as an identifier.
 
 There is one exception to this rule: the ``master`` branch is implicitly mapped
@@ -913,8 +959,9 @@ steps to this process:
          #!/usr/bin/env sh
          sudo -u root salt-call event.fire_master update salt/fileserver/gitfs/update
 
-4. If using sudo in the git hook (above), the policy must be changed to permit all users to fire the event.
-   Add the following policy to the sudoers file on the git server.
+4. If using sudo in the git hook (above), the policy must be changed to permit
+   all users to fire the event.  Add the following policy to the sudoers file
+   on the git server.
 
    .. code-block:: bash
 
@@ -930,12 +977,12 @@ by this reactor.
 Similarly, the tag name ``salt/fileserver/gitfs/update`` can be replaced by
 anything, so long as the usage is consistent.
 
-The ``root`` user name in the hook script and sudo policy should be changed to match the user under which 
-the minion is running.
+The ``root`` user name in the hook script and sudo policy should be changed to
+match the user under which the minion is running.
 
 .. _`post-receive hook`: http://www.git-scm.com/book/en/Customizing-Git-Git-Hooks#Server-Side-Hooks
 
-.. _git-as-ext_pillar
+.. _git-as-ext_pillar:
 
 Using Git as an External Pillar Source
 ======================================

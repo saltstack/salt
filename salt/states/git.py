@@ -18,13 +18,15 @@ import logging
 import os
 import re
 import string
-from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
 import salt.utils
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
+from salt.utils.versions import LooseVersion as _LooseVersion
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 

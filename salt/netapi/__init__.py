@@ -18,6 +18,9 @@ import salt.utils
 import salt.client.ssh.client
 import salt.exceptions
 
+# Import third party libs
+import salt.ext.six as six
+
 
 class NetapiClient(object):
     '''
@@ -60,7 +63,8 @@ class NetapiClient(object):
                     'Salt Master is not available.')
 
         if low.get('client') not in CLIENTS:
-            raise salt.exceptions.SaltInvocationError('Invalid client specified')
+            raise salt.exceptions.SaltInvocationError(
+                    'Invalid client specified: \'{0}\''.format(low.get('client')))
 
         if not ('token' in low or 'eauth' in low) and low['client'] != 'ssh':
             raise salt.exceptions.EauthAuthenticationError(
@@ -121,7 +125,7 @@ class NetapiClient(object):
                                                       disable_custom_roster=True)
         return ssh_client.cmd_sync(kwargs)
 
-    def runner(self, fun, timeout=None, **kwargs):
+    def runner(self, fun, timeout=None, full_return=False, **kwargs):
         '''
         Run `runner modules <all-salt.runners>` synchronously
 
@@ -134,7 +138,7 @@ class NetapiClient(object):
         '''
         kwargs['fun'] = fun
         runner = salt.runner.RunnerClient(self.opts)
-        return runner.cmd_sync(kwargs, timeout=timeout)
+        return runner.cmd_sync(kwargs, timeout=timeout, full_return=full_return)
 
     def runner_async(self, fun, **kwargs):
         '''
@@ -183,6 +187,6 @@ class NetapiClient(object):
 
 CLIENTS = [
     name for name, _
-    in inspect.getmembers(NetapiClient, predicate=inspect.ismethod)
+    in inspect.getmembers(NetapiClient, predicate=inspect.ismethod if six.PY2 else None)
     if not (name == 'run' or name.startswith('_'))
 ]

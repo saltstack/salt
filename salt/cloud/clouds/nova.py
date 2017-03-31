@@ -38,8 +38,6 @@ examples could be set up in the cloud configuration at
 .. code-block:: yaml
 
     my-openstack-config:
-      # The ID of the minion that will execute the salt nova functions
-      auth_minion: myminion
       # The name of the configuration profile to use on said minion
       config_profile: my_openstack_profile
 
@@ -660,16 +658,18 @@ def request_instance(vm_=None, call=None):
 
     kwargs.update(get_block_mapping_opts(vm_))
 
+    event_kwargs = {
+        'name': kwargs['name'],
+        'image': kwargs.get('image_id', 'Boot From Volume'),
+        'size': kwargs['flavor_id'],
+    }
+
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
-            'kwargs': {
-                'name': kwargs['name'],
-                'image': kwargs.get('image_id', 'Boot From Volume'),
-                'size': kwargs['flavor_id'],
-            }
+            'kwargs': __utils__['cloud.filter_event']('requesting', event_kwargs, event_kwargs.keys()),
         },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
@@ -790,11 +790,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -921,6 +917,8 @@ def create(vm_):
             )
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
+                if private_ip is False:
+                    continue
                 if salt.utils.cloud.is_public_ip(private_ip):
                     log.warning('{0} is a public IP'.format(private_ip))
                     data.public_ips.append(private_ip)
@@ -1052,7 +1050,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args=event_data,
+        args=__utils__['cloud.filter_event']('created', event_data, event_data.keys()),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1102,7 +1100,7 @@ def list_nodes(call=None, **kwargs):
         public = []
         if 'addresses' not in server_tmp:
             server_tmp['addresses'] = {}
-        for network in server_tmp['addresses'].keys():
+        for network in server_tmp['addresses']:
             for address in server_tmp['addresses'][network]:
                 if salt.utils.cloud.is_public_ip(address.get('addr', '')):
                     public.append(address['addr'])

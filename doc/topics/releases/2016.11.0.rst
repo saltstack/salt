@@ -103,6 +103,9 @@ Additional Features
           - source: salt://path/to/myapp
           - dir_mode: 755
           - file_mode: keep
+          
+- The ``junos`` state module is now available. It has all the functions 
+  that are present in the ``junos`` execution module.
 
 - The ``junos`` state module is now available. It has all the functions
   that are present in the ``junos`` execution module.
@@ -272,6 +275,18 @@ Pillar Changes
   ref:`utility modules <writing-utility-modules>` synced to the correct
   location on the Master so that they are available in execution modules called
   from Pillar SLS files.
+  
+Junos Module Changes
+===================
+
+- The following new functionalities were added to the junos module
+
+  - facts - Displays the facts gathered during the connection.
+  - shutdown - Shut down or reboot a device running Junos OS.
+  - install_config - Modify the configuration of a Junos device.
+  - install_os - Install Junos OS software package.
+  - zeroize - Remove all configuration information on the Routing Engines and reset all key values on a device.
+  - file_copy - Copy file from proxy to the Junos device.
 
 Network Automation: NAPALM
 ==========================
@@ -298,6 +313,26 @@ In the current release, the following modules were included:
 - :mod:`NTP peers management state <salt.states.netntp>`
 - :mod:`SNMP configuration management state <salt.states.netsnmp>`
 - :mod:`Users management state <salt.states.netusers>`
+
+Cisco NXOS Proxy Minion
+=======================
+
+Beginning with 2016.11.0, there is a proxy minion that can be used to configure
+nxos cisco devices over ssh.
+
+- :mod:`Proxy Minion <salt.proxy.nxos>`
+- :mod:`Execution Module <salt.modules.nxos>`
+- :mod:`State Module <salt.states.nxos>`
+
+Cisco Network Services Orchestrator Proxy Minion
+================================================
+
+Beginning with 2016.11.0, there is a proxy minion to use the Cisco Network
+Services Orchestrator as a proxy minion.
+
+- :mod:`Proxy Minion <salt.proxy.cisconso>`
+- :mod:`Execution Module <salt.modules.cisconso>`
+- :mod:`State Module <salt.states.cisconso>`
 
 Junos Module Changes
 ====================

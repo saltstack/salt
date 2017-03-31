@@ -589,7 +589,7 @@ def wait_script(name,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies.>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -767,6 +767,12 @@ def run(name,
         interactively to the console and the logs.
         This is experimental.
 
+    bg
+        If ``True``, run command in background and do not await or deliver it's
+        results.
+
+        .. versionadded:: 2016.3.6
+
     .. note::
 
         cmd.run supports the usage of ``reload_modules``. This functionality
@@ -787,10 +793,10 @@ def run(name,
                 - reload_modules: True
 
     '''
-    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
-    ###       cannot be removed from the function definition, otherwise the use
-    ###       of unsupported arguments in a cmd.run state will result in a
-    ###       traceback.
+    ### NOTE: The keyword arguments in **kwargs are passed directly to the
+    ###       ``cmd.run_all`` function and cannot be removed from the function
+    ###       definition, otherwise the use of unsupported arguments in a
+    ###       ``cmd.run`` state will result in a traceback.
 
     test_name = None
     if not isinstance(stateful, list):

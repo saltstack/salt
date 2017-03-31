@@ -31,7 +31,10 @@ log = logging.getLogger(__name__)
 # TODO: rename
 class AESPubClientMixin(object):
     def _verify_master_signature(self, payload):
-        if payload.get('sig') and self.opts.get('sign_pub_messages'):
+        if self.opts.get('sign_pub_messages'):
+            if not payload.get('sig', False):
+                raise salt.crypt.AuthenticationError('Message signing is enabled but the payload has no signature.')
+
             # Verify that the signature is valid
             master_pubkey_path = os.path.join(self.opts['pki_dir'], 'minion_master.pub')
             if not salt.crypt.verify_signature(master_pubkey_path, payload['load'], payload.get('sig')):
@@ -68,7 +71,7 @@ class AESReqServerMixin(object):
             # cases, 'aes' is already set in the secrets.
             salt.master.SMaster.secrets['aes'] = {
                 'secret': multiprocessing.Array(ctypes.c_char,
-                              salt.crypt.Crypticle.generate_key_string()),
+                              six.b(salt.crypt.Crypticle.generate_key_string())),
                 'reload': salt.crypt.Crypticle.generate_key_string
             }
 
@@ -243,6 +246,7 @@ class AESReqServerMixin(object):
                         fp_.write(load['pub'])
                     eload = {'result': False,
                              'id': load['id'],
+                             'act': 'denied',
                              'pub': load['pub']}
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                     return {'enc': 'clear',
@@ -331,6 +335,7 @@ class AESReqServerMixin(object):
                             fp_.write(load['pub'])
                         eload = {'result': False,
                                  'id': load['id'],
+                                 'act': 'denied',
                                  'pub': load['pub']}
                         self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                         return {'enc': 'clear',

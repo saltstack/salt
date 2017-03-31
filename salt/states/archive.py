@@ -897,17 +897,6 @@ def extracted(name,
                 ret['comment'] = '\n'.join([str(x) for x in file_result])
             return ret
 
-        # Get actual state result. The state.single return is a single-element
-        # dictionary with the state's unique ID at the top level, and its value
-        # being the state's return dictionary. next(iter(dict_name)) will give
-        # us the value of the first key, so
-        # file_result[next(iter(file_result))] will give us the results of the
-        # state.single we just ran.
-        try:
-            file_result = file_result[next(iter(file_result))]
-        except AttributeError:
-            pass
-
         try:
             if not file_result['result']:
                 log.debug('failed to download {0}'.format(source_match))
@@ -1193,7 +1182,7 @@ def extracted(name,
                     except tarfile.ReadError:
                         if salt.utils.which('xz'):
                             if __salt__['cmd.retcode'](
-                                    ['xz', '-l', cached_source],
+                                    ['xz', '-t', cached_source],
                                     python_shell=False,
                                     ignore_retcode=True) == 0:
                                 # XZ-compressed data
@@ -1344,10 +1333,6 @@ def extracted(name,
                                                           group=group,
                                                           recurse=recurse,
                                                           test=__opts__['test'])
-                try:
-                    dir_result = dir_result[next(iter(dir_result))]
-                except AttributeError:
-                    pass
                 log.debug('file.directory: %s', dir_result)
 
                 if __opts__['test']:

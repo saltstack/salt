@@ -221,7 +221,8 @@ def present(name,
             win_homedrive=None,
             win_profile=None,
             win_logonscript=None,
-            win_description=None):
+            win_description=None,
+            nologinit=False):
     '''
     Ensure that the named user is present with the specified properties
 
@@ -273,6 +274,13 @@ def present(name,
 
             Additionally, parent directories will *not* be created. The parent
             directory for ``home`` must already exist.
+
+    nologinit : False
+        If set to ``True``, it will not add the user to lastlog and faillog
+        databases.
+
+        .. note::
+            Not supported on Windows or Mac OS.
 
     password
         A password hash to set for the user. This field is only supported on
@@ -329,6 +337,7 @@ def present(name,
 
     homephone
         The user's home phone number (not supported in MacOS)
+        If GECOS field contains more than 3 commas, this field will have the rest of 'em
 
     .. versionchanged:: 2014.7.0
        Shadow attribute support added.
@@ -409,7 +418,7 @@ def present(name,
 
     # the comma is used to separate field in GECOS, thus resulting into
     # salt adding the end of fullname each time this function is called
-    for gecos_field in ['fullname', 'roomnumber', 'workphone', 'homephone']:
+    for gecos_field in ['fullname', 'roomnumber', 'workphone']:
         if isinstance(gecos_field, string_types) and ',' in gecos_field:
             ret['comment'] = "Unsupported char ',' in {0}".format(gecos_field)
             ret['result'] = False
@@ -496,21 +505,24 @@ def present(name,
             if key == 'passwd' and not empty_password:
                 __salt__['shadow.set_password'](name, password)
                 continue
+            if key == 'passwd' and empty_password:
+                log.warn("No password will be set when empty_password=True")
+                continue
             if key == 'date':
                 __salt__['shadow.set_date'](name, date)
                 continue
             # run chhome once to avoid any possible bad side-effect
             if key == 'home' and 'homeDoesNotExist' not in changes:
-                if __grains__['kernel'] == 'Darwin':
+                if __grains__['kernel'] in ('Darwin', 'Windows'):
                     __salt__['user.chhome'](name, val)
                 else:
-                    __salt__['user.chhome'](name, val, False)
+                    __salt__['user.chhome'](name, val, persist=False)
                 continue
             if key == 'homeDoesNotExist':
-                if __grains__['kernel'] == 'Darwin':
+                if __grains__['kernel'] in ('Darwin', 'Windows'):
                     __salt__['user.chhome'](name, val)
                 else:
-                    __salt__['user.chhome'](name, val, True)
+                    __salt__['user.chhome'](name, val, persist=True)
                 if not os.path.isdir(val):
                     __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0o755)
                 continue
@@ -631,6 +643,7 @@ def present(name,
                       'workphone': workphone,
                       'homephone': homephone,
                       'createhome': createhome,
+                      'nologinit': nologinit,
                       'loginclass': loginclass}
         else:
             params = ({'name': name,

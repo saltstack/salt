@@ -7,6 +7,7 @@ A module to wrap (non-Windows) archive calls
 from __future__ import absolute_import
 import contextlib  # For < 2.7 compat
 import errno
+import glob
 import logging
 import os
 import re
@@ -20,6 +21,9 @@ try:
 except ImportError:
     from pipes import quote as _quote
 
+# Import third party libs
+import salt.ext.six as six
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 try:
     import rarfile
     HAS_RARFILE = True
@@ -28,11 +32,10 @@ except ImportError:
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.ext.six import string_types, integer_types
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 import salt.utils
 import salt.utils.files
 import salt.utils.itertools
+import salt.utils.templates
 
 # TODO: Check that the passed arguments are correct
 
@@ -185,7 +188,7 @@ def list_(name,
                         raise CommandExecutionError('Invalid CLI options')
                 else:
                     if salt.utils.which('xz') \
-                            and __salt__['cmd.retcode'](['xz', '-l', cached],
+                            and __salt__['cmd.retcode'](['xz', '-t', cached],
                                                         python_shell=False,
                                                         ignore_retcode=True) == 0:
                         decompress_cmd = 'xz --decompress --stdout'
@@ -414,6 +417,36 @@ def list_(name,
         raise CommandExecutionError(exc.error, info=info)
 
 
+_glob_wildcards = re.compile('[*?[]')
+
+
+def _glob(pathname):
+    '''
+    In case ``pathname`` contains glob wildcards, performs expansion and returns
+    the possibly empty list of matching pathnames. Otherwise returns a list that
+    contains only ``pathname`` itself.
+    '''
+    if _glob_wildcards.search(pathname) is None:
+        return [pathname]
+    else:
+        return glob.glob(pathname)
+
+
+def _expand_sources(sources):
+    '''
+    Expands a user-provided specification of source files into a list of paths.
+    '''
+    if sources is None:
+        return []
+    if isinstance(sources, six.string_types):
+        sources = [x.strip() for x in sources.split(',')]
+    elif isinstance(sources, (float, six.integer_types)):
+        sources = [str(sources)]
+    return [path
+            for source in sources
+            for path in _glob(source)]
+
+
 @salt.utils.decorators.which('tar')
 def tar(options, tarfile, sources=None, dest=None,
         cwd=None, template=None, runas=None):
@@ -450,6 +483,9 @@ def tar(options, tarfile, sources=None, dest=None,
         Comma delimited list of files to **pack** into the tarfile. Can also be
         passed as a Python list.
 
+        .. versionchanged:: Nitrogen
+            Globbing is now supported for this argument
+
     dest
         The destination directory into which to **unpack** the tarfile
 
@@ -472,6 +508,8 @@ def tar(options, tarfile, sources=None, dest=None,
 
         # Create a tarfile
         salt '*' archive.tar -cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
+        # Create a tarfile using globbing (Nitrogen and later)
+        salt '*' archive.tar -cjvf /tmp/tarfile.tar.bz2 '/tmp/file_*'
         # Unpack a tarfile
         salt '*' archive.tar xf foo.tar dest=/target/directory
     '''
@@ -481,9 +519,6 @@ def tar(options, tarfile, sources=None, dest=None,
         # should at least let them know of their silliness.
         raise SaltInvocationError('Tar options can not be empty')
 
-    if isinstance(sources, string_types):
-        sources = [s.strip() for s in sources.split(',')]
-
     cmd = ['tar']
     if dest:
         cmd.extend(['-C', '{0}'.format(dest)])
@@ -492,10 +527,7 @@ def tar(options, tarfile, sources=None, dest=None,
         cmd.extend(options.split())
 
     cmd.extend(['{0}'.format(tarfile)])
-
-    if sources is not None:
-        cmd.extend(sources)
-
+    cmd.extend(_expand_sources(sources))
     return __salt__['cmd.run'](cmd,
                                cwd=cwd,
                                template=template,
@@ -602,6 +634,9 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
         Comma-separated list of sources to include in the zip file. Sources can
         also be passed in a Python list.
 
+        .. versionchanged:: Nitrogen
+            Globbing is now supported for this argument
+
     template : None
         Can be set to 'jinja' or another supported template engine to render
         the command arguments before execution:
@@ -636,12 +671,12 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
     .. code-block:: bash
 
         salt '*' archive.cmd_zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
+        # Globbing for sources (Nitrogen and later)
+        salt '*' archive.cmd_zip /tmp/zipfile.zip '/tmp/sourcefile*'
     '''
-    if isinstance(sources, string_types):
-        sources = [s.strip() for s in sources.split(',')]
     cmd = ['zip', '-r']
     cmd.append('{0}'.format(zip_file))
-    cmd.extend(sources)
+    cmd.extend(_expand_sources(sources))
     return __salt__['cmd.run'](cmd,
                                cwd=cwd,
                                template=template,
@@ -667,6 +702,9 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     sources
         Comma-separated list of sources to include in the zip file. Sources can
         also be passed in a Python list.
+
+        .. versionchanged:: Nitrogen
+            Globbing is now supported for this argument
 
     template : None
         Can be set to 'jinja' or another supported template engine to render
@@ -698,6 +736,8 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     .. code-block:: bash
 
         salt '*' archive.zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
+        # Globbing for sources (Nitrogen and later)
+        salt '*' archive.zip /tmp/zipfile.zip '/tmp/sourcefile*'
     '''
     if runas:
         euid = os.geteuid()
@@ -709,11 +749,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
             )
 
     zip_file, sources = _render_filenames(zip_file, sources, None, template)
-
-    if isinstance(sources, string_types):
-        sources = [x.strip() for x in sources.split(',')]
-    elif isinstance(sources, (float, integer_types)):
-        sources = [str(sources)]
+    sources = _expand_sources(sources)
 
     if not cwd:
         for src in sources:
@@ -863,9 +899,9 @@ def cmd_unzip(zip_file,
 
         salt '*' archive.cmd_unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
     '''
-    if isinstance(excludes, string_types):
+    if isinstance(excludes, six.string_types):
         excludes = [x.strip() for x in excludes.split(',')]
-    elif isinstance(excludes, (float, integer_types)):
+    elif isinstance(excludes, (float, six.integer_types)):
         excludes = [str(excludes)]
 
     cmd = ['unzip']
@@ -1001,7 +1037,6 @@ def unzip(zip_file,
         os.seteuid(uinfo['uid'])
 
     try:
-        exc = None
         # Define cleaned_files here so that an exception will not prevent this
         # variable from being defined and cause a NameError in the return
         # statement at the end of the function.
@@ -1009,9 +1044,9 @@ def unzip(zip_file,
         with contextlib.closing(zipfile.ZipFile(zip_file, "r")) as zfile:
             files = zfile.namelist()
 
-            if isinstance(excludes, string_types):
+            if isinstance(excludes, six.string_types):
                 excludes = [x.strip() for x in excludes.split(',')]
-            elif isinstance(excludes, (float, integer_types)):
+            elif isinstance(excludes, (float, six.integer_types)):
                 excludes = [str(excludes)]
 
             cleaned_files.extend([x for x in files if x not in excludes])
@@ -1028,18 +1063,19 @@ def unzip(zip_file,
                     if extract_perms:
                         os.chmod(os.path.join(dest, target), zfile.getinfo(target).external_attr >> 16)
     except Exception as exc:
-        pass
+        if runas:
+            os.seteuid(euid)
+            os.setegid(egid)
+        # Wait to raise the exception until euid/egid are restored to avoid
+        # permission errors in writing to minion log.
+        raise CommandExecutionError(
+            'Exception encountered unpacking zipfile: {0}'.format(exc)
+        )
     finally:
         # Restore the euid/egid
         if runas:
             os.seteuid(euid)
             os.setegid(egid)
-        if exc is not None:
-            # Wait to raise the exception until euid/egid are restored to avoid
-            # permission errors in writing to minion log.
-            raise CommandExecutionError(
-                'Exception encountered unpacking zipfile: {0}'.format(exc)
-            )
 
     return _trim_files(cleaned_files, trim_output)
 
@@ -1121,6 +1157,9 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
         Comma-separated list of sources to include in the rar file. Sources can
         also be passed in a Python list.
 
+        .. versionchanged:: Nitrogen
+            Globbing is now supported for this argument
+
     cwd : None
         Run the rar command from the specified directory. Use this argument
         along with relative file paths to create rar files which do not
@@ -1143,11 +1182,11 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
     .. code-block:: bash
 
         salt '*' archive.rar /tmp/rarfile.rar /tmp/sourcefile1,/tmp/sourcefile2
+        # Globbing for sources (Nitrogen and later)
+        salt '*' archive.rar /tmp/rarfile.rar '/tmp/sourcefile*'
     '''
-    if isinstance(sources, string_types):
-        sources = [s.strip() for s in sources.split(',')]
     cmd = ['rar', 'a', '-idp', '{0}'.format(rarfile)]
-    cmd.extend(sources)
+    cmd.extend(_expand_sources(sources))
     return __salt__['cmd.run'](cmd,
                                cwd=cwd,
                                template=template,
@@ -1187,7 +1226,7 @@ def unrar(rarfile, dest, excludes=None, template=None, runas=None, trim_output=F
         salt '*' archive.unrar /tmp/rarfile.rar /home/strongbad/ excludes=file_1,file_2
 
     '''
-    if isinstance(excludes, string_types):
+    if isinstance(excludes, six.string_types):
         excludes = [entry.strip() for entry in excludes.split(',')]
 
     cmd = [salt.utils.which_bin(('unrar', 'rar')),

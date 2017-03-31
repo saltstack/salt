@@ -199,6 +199,7 @@ from collections import defaultdict
 # pylint: disable=import-error
 import cgi
 import yaml
+import tornado.escape
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
@@ -523,7 +524,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
             # Use cgi.parse_header to correctly separate parameters from value
             header = cgi.parse_header(self.request.headers['Content-Type'])
             value, parameters = header
-            return ct_in_map[value](data)
+            return ct_in_map[value](tornado.escape.native_str(data))
         except KeyError:
             self.send_error(406)
         except ValueError:
@@ -538,7 +539,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         data = self.deserialize(self.request.body)
         self.raw_data = copy(data)
 
-        if 'arg' in data and not isinstance(data['arg'], list):
+        if data and 'arg' in data and not isinstance(data['arg'], list):
             data['arg'] = [data['arg']]
 
         if not isinstance(data, list):
@@ -1059,7 +1060,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
 
     # salt.utils.format_call doesn't work for functions having the annotation tornado.gen.coroutine
     def _format_call_run_job_async(self, chunk):
-        f_call = salt.utils.format_call(salt.client.LocalClient.run_job, chunk)
+        f_call = salt.utils.format_call(salt.client.LocalClient.run_job, chunk, is_class_method=True)
         f_call.get('kwargs', {})['io_loop'] = tornado.ioloop.IOLoop.current()
         return f_call
 

@@ -475,8 +475,8 @@ def exit_success(jid, ext_source=None):
         ext_source=ext_source
     )
 
-    minions = data['Minions']
-    result = data['Result']
+    minions = data.get('Minions', [])
+    result = data.get('Result', {})
 
     for minion in minions:
         if minion in result and 'return' in result[minion]:
@@ -484,6 +484,9 @@ def exit_success(jid, ext_source=None):
         else:
             ret[minion] = False
 
+    for minion in result:
+        if 'return' in result[minion] and result[minion]['return']:
+            ret[minion] = True
     return ret
 
 

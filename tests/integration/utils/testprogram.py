@@ -26,9 +26,10 @@ import salt.utils.psutil_compat as psutils
 import salt.defaults.exitcodes as exitcodes
 import salt.ext.six as six
 
-from salttesting import TestCase
+from tests.support.unit import TestCase
 
-import integration
+import tests.integration as integration
+from tests.support.processes import terminate_process
 
 log = logging.getLogger(__name__)
 
@@ -770,11 +771,11 @@ class TestDaemon(TestProgram):
         if not self._shutdown:
             try:
                 pid = self.wait_for_daemon_pid(timeout)
-                integration.terminate_process_pid(pid)
+                terminate_process(pid=pid)
             except TimeoutError:
                 pass
         if self.process:
-            integration.terminate_process_pid(self.process.pid)
+            terminate_process(pid=self.process.pid)
             self.process.wait()
             self.process = None
         self._shutdown = True

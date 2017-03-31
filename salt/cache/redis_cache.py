@@ -310,7 +310,7 @@ def fetch(bank, key):
         log.error(mesg)
         raise SaltCacheError(mesg)
     if redis_value is None:
-        return redis_value
+        return {}
     return __context__['serial'].loads(redis_value)
 
 

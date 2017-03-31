@@ -17,13 +17,13 @@ import fnmatch
 import logging
 import re
 import os.path
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 import salt.ext.six as six

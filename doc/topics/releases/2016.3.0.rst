@@ -351,7 +351,7 @@ Documentation of the Dimension Data SaltStack integration is found on `developer
 Minion Blackout
 ---------------
 During a blackout, minions will not execute any remote execution commands,
-except for :ref:`saltutil.refresh_pillar
+except for :mod:`saltutil.refresh_pillar
 <salt.modules.saltutil.refresh_pillar>`. Blackouts are enabled using a special
 pillar key, ``minion_blackout`` set to ``True``.
 

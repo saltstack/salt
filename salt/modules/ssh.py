@@ -9,9 +9,8 @@ Manage client ssh components
     or removed.
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import binascii
 import hashlib
 import logging
@@ -28,6 +27,9 @@ from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
 )
+
+# Import 3rd-party libs
+import salt.ext.six as six
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
@@ -153,15 +155,8 @@ def _replace_auth_key(
                     # Commented Line
                     lines.append(line)
                     continue
-                comps = line.split()
-                if len(comps) < 2:
-                    # Not a valid line
-                    lines.append(line)
-                    continue
-                key_ind = 1
-                while comps[key_ind - 1][:4:] not in ['ssh-', 'ecds'] and key_ind < len(comps):
-                    key_ind += 1
-                if comps[key_ind] == key:
+                comps = re.findall(r'((.*)\s)?(ssh-[a-z0-9-]+|ecdsa-[a-z0-9-]+)\s([a-zA-Z0-9+/]+={0,2})(\s(.*))?', line)
+                if comps[0][3] == key:
                     lines.append(auth_line)
                 else:
                     lines.append(line)
@@ -686,14 +681,16 @@ def set_auth_key(
             new_file = False
 
         try:
-            with salt.utils.fopen(fconfig, 'a+') as _fh:
+            with salt.utils.fopen(fconfig, 'ab+') as _fh:
                 if new_file is False:
                     # Let's make sure we have a new line at the end of the file
                     _fh.seek(1024, 2)
-                    if not _fh.read(1024).rstrip(' ').endswith('\n'):
+                    if not _fh.read(1024).rstrip(six.b(' ')).endswith(six.b('\n')):
                         _fh.seek(0, 2)
-                        _fh.write('\n')
-                _fh.write('{0}'.format(auth_line))
+                        _fh.write(six.b('\n'))
+                if six.PY3:
+                    auth_line = auth_line.encode(__salt_system_encoding__)
+                _fh.write(auth_line)
         except (IOError, OSError) as exc:
             msg = 'Could not write to key file: {0}'
             raise CommandExecutionError(msg.format(str(exc)))

@@ -22,6 +22,7 @@ returner modules
     hipchat_return
     influxdb_return
     kafka_return
+    librato_return
     local
     local_cache
     mattermost_returner

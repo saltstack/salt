@@ -53,26 +53,28 @@ class Batch(object):
             args.append(self.opts.get('tgt_type', 'glob'))
 
         self.pub_kwargs['yield_pub_data'] = True
-        ping_gen = self.local.cmd_iter(*args, **self.pub_kwargs)
+        ping_gen = self.local.cmd_iter(*args,
+                                       gather_job_timeout=self.opts['gather_job_timeout'],
+                                       **self.pub_kwargs)
 
         # Broadcast to targets
         fret = set()
         nret = set()
-        try:
-            for ret in ping_gen:
-                if ('minions' and 'jid') in ret:
-                    for minion in ret['minions']:
-                        nret.add(minion)
-                    continue
-                else:
+        for ret in ping_gen:
+            if ('minions' and 'jid') in ret:
+                for minion in ret['minions']:
+                    nret.add(minion)
+                continue
+            else:
+                try:
                     m = next(six.iterkeys(ret))
-                    if m is not None:
-                        fret.add(m)
-            return (list(fret), ping_gen, nret.difference(fret))
-        except StopIteration:
-            if not self.quiet:
-                print_cli('No minions matched the target.')
-        return list(fret), ping_gen
+                except StopIteration:
+                    if not self.quiet:
+                        print_cli('No minions matched the target.')
+                    break
+                if m is not None:
+                    fret.add(m)
+        return (list(fret), ping_gen, nret.difference(fret))
 
     def get_bnum(self):
         '''
@@ -166,7 +168,7 @@ class Batch(object):
 
             if next_:
                 if not self.quiet:
-                    print_cli('\nExecuting run on {0}\n'.format(next_))
+                    print_cli('\nExecuting run on {0}\n'.format(sorted(next_)))
                 # create a new iterator for this batch of minions
                 new_iter = self.local.cmd_iter_no_block(
                                 *args,
@@ -174,6 +176,7 @@ class Batch(object):
                                 ret=self.opts.get('return', ''),
                                 show_jid=show_jid,
                                 verbose=show_verbose,
+                                gather_job_timeout=self.opts['gather_job_timeout'],
                                 **self.eauth)
                 # add it to our iterators and to the minion_tracker
                 iters.append(new_iter)
@@ -190,7 +193,7 @@ class Batch(object):
             for ping_ret in self.ping_gen:
                 if ping_ret is None:
                     break
-                m = next(ping_ret.iterkeys())
+                m = next(six.iterkeys(ping_ret))
                 if m not in self.minions:
                     self.minions.append(m)
                     to_run.append(m)
@@ -215,7 +218,7 @@ class Batch(object):
                                 print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(part['id']))
                         else:
                             parts.update(part)
-                            for id in part.keys():
+                            for id in part:
                                 if id in minion_tracker[queue]['minions']:
                                     minion_tracker[queue]['minions'].remove(id)
                                 else:

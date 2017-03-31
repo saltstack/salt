@@ -89,8 +89,11 @@ def getenforce():
 
         salt '*' selinux.getenforce
     '''
+    _selinux_fs_path = selinux_fs_path()
+    if _selinux_fs_path is None:
+        return 'Disabled'
     try:
-        enforce = os.path.join(selinux_fs_path(), 'enforce')
+        enforce = os.path.join(_selinux_fs_path, 'enforce')
         with salt.utils.fopen(enforce, 'r') as _fp:
             if _fp.readline().strip() == '0':
                 return 'Permissive'
@@ -98,6 +101,27 @@ def getenforce():
                 return 'Enforcing'
     except (IOError, OSError, AttributeError):
         return 'Disabled'
+
+
+def getconfig():
+    '''
+    Return the selinux mode from the config file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.getconfig
+    '''
+    try:
+        config = '/etc/selinux/config'
+        with salt.utils.fopen(config, 'r') as _fp:
+            for line in _fp:
+                if line.strip().startswith('SELINUX='):
+                    return line.split('=')[1].capitalize().strip()
+    except (IOError, OSError, AttributeError):
+        return None
+    return None
 
 
 def setenforce(mode):
@@ -263,6 +287,40 @@ def setsemod(module, state):
         cmd = 'semodule -e {0}'.format(module)
     elif state.lower() == 'disabled':
         cmd = 'semodule -d {0}'.format(module)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def install_semod(module_path):
+    '''
+    Install custom SELinux module from file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.install_semod [salt://]path/to/module.pp
+
+    .. versionadded:: develop
+    '''
+    if module_path.find('salt://') == 0:
+        module_path = __salt__['cp.cache_file'](module_path)
+    cmd = 'semodule -i {0}'.format(module_path)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def remove_semod(module):
+    '''
+    Remove SELinux module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.remove_semod module_name
+
+    .. versionadded:: develop
+    '''
+    cmd = 'semodule -r {0}'.format(module)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -490,10 +548,10 @@ def fcontext_apply_policy(name, recursive=False):
             old = _context_string_to_dict(item[1])
             new = _context_string_to_dict(item[2])
             intersect = {}
-            for key, value in old.iteritems():
+            for key, value in six.iteritems(old):
                 if new.get(key) == value:
                     intersect.update({key: value})
-            for key in intersect.keys():
+            for key in intersect:
                 del old[key]
                 del new[key]
             ret['changes'].update({filespec: {'old': old, 'new': new}})
