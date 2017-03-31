@@ -356,7 +356,8 @@ def eval_master_func(opts):
                 raise KeyError
             # we take whatever the module returns as master address
             opts['master'] = master_mod[mod_fun]()
-            if not isinstance(opts['master'], str):
+            # Check for valid types
+            if not isinstance(opts['master'], (str, list)):
                 raise TypeError
             opts['__master_func_evaluated'] = True
         except KeyError:
