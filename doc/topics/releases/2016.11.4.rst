@@ -32,14 +32,27 @@ templating, followed by loading the data as a YAML dictionary, this results in
 unpredictable results when userdata files are comprised of non-YAML data (which
 they generally are).
 
-2016.11.4 fixes this by setting the default renderer used to template userdata
-files to ``jinja``, and adding a new cloud profile config parameter called
-``userdata_renderer``. If this option is not set, then salt-cloud will fall
-back to using the new master configuration parameter
-:conf_master:`userdata_renderer`.
+2016.11.4 fixes this by only templating the userdata_file when it is explicitly
+configured to do so. This is done by adding a new optional parameter to the
+cloud profile called ``userdata_template``. This option is used in the same way
+as the ``template`` argument in :py:func:`file.managed
+<salt.states.file.managed>` states, it is simply set to the desired templating
+renderer:
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      # Pass userdata to the instance to be created
+      userdata_file: /etc/salt/my-userdata-file
+      userdata_template: jinja
+
+If no ``userdata_template``  option is set in the cloud profile, then
+salt-cloud will check for the presence of the master configuration parameter
+:conf_master:`userdata_renderer`. If this is also not set, then no templating
+will be performed on the userdata_file.
 
 In addition, the other cloud drivers which support setting a ``userdata_file``
 (:mod:`azurearm <salt.cloud.clouds.azurearm>`, :mod:`nova
 <salt.cloud.clouds.nova>`, and :mod:`openstack <salt.cloud.clouds.openstack>`)
-have had templating support added to bring them to feature parity with ec2's
-implementation of the ``userdata_file`` param.
+have had templating support added to bring them to feature parity with the ec2
+driver's implementation of the ``userdata_file`` option.
