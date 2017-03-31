@@ -112,7 +112,9 @@ import logging
 # Import third party libraries
 import zmq
 try:
+    # pylint: disable=W0611
     import napalm_logs
+    # pylint: enable=W0611
     HAS_NAPALM_LOGS = True
 except ImportError:
     HAS_NAPALM_LOGS = False
