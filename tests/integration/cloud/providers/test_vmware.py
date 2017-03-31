@@ -104,10 +104,7 @@ class VMWareTest(integration.ShellCase):
         ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
 
         # check if deletion was performed appropriately
-        try:
-            self.assertIn(ret_str, str(delete))
-        except AssertionError:
-            raise
+        self.assertIn(ret_str, str(delete))
 
     def test_snapshot(self):
         '''
@@ -137,10 +134,7 @@ class VMWareTest(integration.ShellCase):
         delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
         ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
 
-        try:
-            self.assertIn(ret_str, str(delete))
-        except AssertionError:
-            raise
+        self.assertIn(ret_str, str(delete))
 
     def tearDown(self):
         '''
