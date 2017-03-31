@@ -371,17 +371,17 @@ def main():
             }
 
     if args['only_ip']:
-        print (
+        print(
                'IPs making new connections '
                '(ports:{0}, interval:{1})'.format(ports,
                                                   args['ival'])
-              )
+             )
     else:
-        print (
+        print(
                'Salt-Master Network Status '
                '(ports:{0}, interval:{1})'.format(ports,
                                                   args['ival'])
-              )
+             )
     try:
         while 1:
             s_time = int(time.time())
