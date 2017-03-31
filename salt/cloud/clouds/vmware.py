@@ -137,6 +137,7 @@ import salt.config as config
 # Import 3rd-party libs
 import salt.ext.six as six
 try:
+    # Attempt to import pyVmomi libs
     from pyVmomi import vim
     HAS_PYVMOMI = True
 except Exception:
@@ -149,7 +150,6 @@ try:
 except Exception:
     pass
 
-# Attempt to import pyVim and pyVmomi libs
 ESX_5_5_NAME_PORTION = 'VMware ESXi 5.5'
 SAFE_ESX_5_5_CONTROLLER_KEY_INDEX = 200
 FLATTEN_DISK_FULL_CLONE = 'moveAllDiskBackingsAndDisallowSharing'
