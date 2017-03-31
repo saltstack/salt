@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
-import unittest
-import logging
 
+# Import python libs
+from __future__ import absolute_import
+import logging
 import time
 
+# Import test libs
+from tests.support.unit import TestCase
+
+# Import Salt libs
 from salt.utils.timeout import wait_for
 
 log = logging.getLogger(__name__)
@@ -53,10 +57,14 @@ def return_kwargs_after(seconds):
     return actual
 
 
-class WaitForTests(unittest.TestCase):
+class WaitForTests(TestCase):
     def setUp(self):
         self.true_after_1s = return_something_after(1)
         self.self_after_1s = return_something_after(1, something=self)
+
+    def tearDown(self):
+        del self.true_after_1s
+        del self.self_after_1s
 
     def test_wait_for_true(self):
         ret = wait_for(self.true_after_1s, timeout=2, step=0.5)
@@ -89,7 +97,3 @@ class WaitForTests(unittest.TestCase):
     def test_return_false(self):
         ret = self.true_after_1s()
         self.assertFalse(ret)
-
-
-if __name__ == '__main__':
-    unittest.main()
