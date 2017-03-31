@@ -212,9 +212,6 @@ VALID_OPTS = {
     # Rendrerer blacklist. Renderers from this list are disalloed even if specified in whitelist.
     'renderer_blacklist': list,
 
-    # A default renderer for userdata files in salt-cloud
-    'userdata_renderer': str,
-
     # A flag indicating that a highstate run should immediately cease if a failure occurs.
     'failhard': bool,
 
@@ -1323,7 +1320,6 @@ DEFAULT_MASTER_OPTS = {
     'renderer': 'yaml_jinja',
     'renderer_whitelist': [],
     'renderer_blacklist': [],
-    'userdata_renderer': 'jinja',
     'failhard': False,
     'state_top': 'top.sls',
     'state_top_saltenv': None,
