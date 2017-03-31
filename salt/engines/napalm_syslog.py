@@ -100,6 +100,8 @@ Output object example:
       "os": "junos",
       "timestamp": "1490877919"
     }
+
+
 '''
 from __future__ import absolute_import
 
@@ -117,7 +119,6 @@ except ImportError:
 
 # Import salt libs
 from salt.utils import event
-from salt.ext.six import moves
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
