@@ -337,17 +337,13 @@ def create(vm_):
         'ssh_interface', vm_, __opts__, search_global=False, default='public'
     )
 
-    if ssh_interface == 'private':
-        log.info("ssh_interface: Setting interface for ssh to 'private'.")
+    if ssh_interface in ['private', 'public']:
+        log.info("ssh_interface: Setting interface for ssh to {}".format(ssh_interface))
         kwargs['ssh_interface'] = ssh_interface
     else:
-        if ssh_interface != 'public':
-            raise SaltCloudConfigError(
-                "The DigitalOcean driver requires ssh_interface to be defined as 'public' or 'private'."
-            )
-        else:
-            log.info("ssh_interface: Setting interface for ssh to 'public'.")
-            kwargs['ssh_interface'] = ssh_interface
+        raise SaltCloudConfigError(
+            "The DigitalOcean driver requires ssh_interface to be defined as 'public' or 'private'."
+        )
 
     private_networking = config.get_cloud_config_value(
         'private_networking', vm_, __opts__, search_global=False, default=None,

@@ -41,7 +41,10 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {docker_mod: {'__context__': {'docker.docker_version': ''}}}
 
-    docker_version = docker_mod.docker.version_info
+    try:
+        docker_version = docker_mod.docker.version_info
+    except AttributeError:
+        docker_version = 0,
 
     def test_ps_with_host_true(self):
         '''
