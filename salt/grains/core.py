@@ -865,6 +865,8 @@ def _ps(osdata):
         )
     elif osdata['os_family'] == 'Debian':
         grains['ps'] = 'ps -efHww'
+    elif osdata['os_family'] == 'AIX':
+        grains['ps'] = '/usr/bin/ps auxww'
     else:
         grains['ps'] = 'ps -efH'
     return grains
