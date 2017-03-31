@@ -905,7 +905,15 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 input_data=userdata,
             )
 
-        os_kwargs['custom_data'] = base64.b64encode(userdata)
+        try:
+            # template renderers like "jinja" should return a StringIO
+            os_kwargs['custom_data'] = \
+                ''.join(base64.b64encode(userdata).readlines())
+        except AttributeError:
+            try:
+                os_kwargs['custom_data'] = base64.b64encode(userdata)
+            except Exception as exc:
+                log.exception('Failed to encode userdata: %s')
 
     iface_data = create_interface(kwargs=vm_)
     vm_['iface_id'] = iface_data['id']

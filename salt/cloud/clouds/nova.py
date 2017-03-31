@@ -675,7 +675,14 @@ def request_instance(vm_=None, call=None):
                 input_data=userdata,
             )
 
-        kwargs['userdata'] = userdata
+        try:
+            # template renderers like "jinja" should return a StringIO
+            kwargs['userdata'] = ''.join(base64.b64encode(userdata).readlines())
+        except AttributeError:
+            try:
+                kwargs['userdata'] = base64.b64encode(userdata)
+            except Exception as exc:
+                log.exception('Failed to encode userdata: %s')
 
     kwargs['config_drive'] = config.get_cloud_config_value(
         'config_drive', vm_, __opts__, search_global=False
