@@ -10,13 +10,15 @@ Connection module for Apache Libcloud DNS management
     .. code-block:: yaml
 
         libcloud_dns:
-          profile1:
-            driver: godaddy
-            key: 2orgk34kgk34g
-          profile2:
-            driver: route53
-            key: blah
-            secret: blah
+            profile_test1:
+              driver: cloudflare
+              key: 12345
+              secret: mysecret
+            profile_test2:
+              driver: godaddy
+              key: 12345
+              secret: mysecret
+              shopper_id: 12345
 
 :depends: apache-libcloud
 '''
