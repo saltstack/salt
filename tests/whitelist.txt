@@ -4,9 +4,6 @@ integration.fileserver.test_fileclient
 integration.fileserver.test_roots
 integration.loader.test_ext_grains
 integration.loader.test_ext_modules
-integration.loader.test_globals
-integration.loader.test_interfaces
-integration.loader.test_loader
 integration.modules.test_aliases
 integration.modules.test_beacons
 integration.modules.test_config
