@@ -110,7 +110,12 @@ import json
 import logging
 
 # Import third party libraries
-import zmq
+try:
+    import zmq
+    HAS_ZMQ = True
+except ImportError:
+    HAS_ZMQ = False
+
 try:
     # pylint: disable=W0611
     import napalm_logs
@@ -138,9 +143,9 @@ def __virtual__():
     '''
     Load only if napalm-logs is installed.
     '''
-    if not HAS_NAPALM_LOGS:
+    if not HAS_NAPALM_LOGS or not HAS_ZMQ:
         return (False, 'napalm_syslog could not be loaded. \
-            Please install napalm-logs library.')
+            Please install napalm-logs library amd ZeroMQ.')
     return True
 
 
