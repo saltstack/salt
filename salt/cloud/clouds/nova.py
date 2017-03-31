@@ -647,42 +647,15 @@ def request_instance(vm_=None, call=None):
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False, default=None
     )
-    userdata_template = config.get_cloud_config_value(
-        'userdata_template', vm_, __opts__, search_global=False, default=None
-    )
-
     if userdata_file is not None:
         with salt.utils.fopen(userdata_file, 'r') as fp_:
-            userdata = fp_.read()
-
-        # Use the cloud profile's userdata_template, otherwise get it from the
-        # master configuration file.
-        renderer = __opts__.get('userdata_template') \
-            if userdata_template is None
-            else userdata_template
-        if renderer is not None:
-            render_opts = __opts__.copy()
-            render_opts.update(vm_)
-            rend = salt.loader.render(render_opts, {})
-            blacklist = __opts__['renderer_blacklist']
-            whitelist = __opts__['renderer_whitelist']
-            userdata = compile_template(
-                ':string:',
-                rend,
-                renderer,
-                blacklist,
-                whitelist,
-                input_data=userdata,
+            userdata = salt.utils.cloud.userdata_template(
+                __opts__, vm_, fp_.read()
             )
-
         try:
-            # template renderers like "jinja" should return a StringIO
-            kwargs['userdata'] = ''.join(base64.b64encode(userdata).readlines())
-        except AttributeError:
-            try:
-                kwargs['userdata'] = base64.b64encode(userdata)
-            except Exception as exc:
-                log.exception('Failed to encode userdata: %s')
+            kwargs['userdata'] = base64.b64encode(userdata)
+        except Exception as exc:
+            log.exception('Failed to encode userdata: %s', exc)
 
     kwargs['config_drive'] = config.get_cloud_config_value(
         'config_drive', vm_, __opts__, search_global=False

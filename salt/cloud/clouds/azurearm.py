@@ -872,9 +872,6 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False, default=None
     )
-    userdata_template = config.get_cloud_config_value(
-        'userdata_template', vm_, __opts__, search_global=False, default=None
-    )
     if userdata_file is None:
         userdata = config.get_cloud_config_value(
             'userdata', vm_, __opts__, search_global=False, default=None
@@ -884,36 +881,13 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
             with salt.utils.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
-    if userdata is not None:
-        # Use the cloud profile's userdata_template, otherwise get it from the
-        # master configuration file.
-        renderer = __opts__.get('userdata_template') \
-            if userdata_template is None
-            else userdata_template
-        if renderer is not None:
-            render_opts = __opts__.copy()
-            render_opts.update(vm_)
-            rend = salt.loader.render(render_opts, {})
-            blacklist = __opts__['renderer_blacklist']
-            whitelist = __opts__['renderer_whitelist']
-            userdata = compile_template(
-                ':string:',
-                rend,
-                renderer,
-                blacklist,
-                whitelist,
-                input_data=userdata,
-            )
+    userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
 
+    if userdata is not None:
         try:
-            # template renderers like "jinja" should return a StringIO
-            os_kwargs['custom_data'] = \
-                ''.join(base64.b64encode(userdata).readlines())
-        except AttributeError:
-            try:
-                os_kwargs['custom_data'] = base64.b64encode(userdata)
-            except Exception as exc:
-                log.exception('Failed to encode userdata: %s')
+            os_kwargs['custom_data'] = base64.b64encode(userdata)
+        except Exception as exc:
+            log.exception('Failed to encode userdata: %s', exc)
 
     iface_data = create_interface(kwargs=vm_)
     vm_['iface_id'] = iface_data['id']
