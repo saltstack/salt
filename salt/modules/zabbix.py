@@ -733,8 +733,7 @@ def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
             method = 'usergroup.get'
             # Versions above 2.4 allow retrieving user group permissions
             if _LooseVersion(zabbix_version) > _LooseVersion("2.5"):
-                #params = {"selectRights": "extend", "output": "extend", "filter": {}}
-                params = {"output": "extend", "filter": {}}
+                params = {"selectRights": "extend", "output": "extend", "filter": {}}
             else:
                 params = {"output": "extend", "filter": {}}
             if not name and not usrgrpids and not userids:
