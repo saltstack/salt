@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch
 
@@ -15,13 +16,13 @@ from tests.support.mock import MagicMock, patch
 import salt.modules.kmod as kmod
 
 
-class KmodTestCase(TestCase):
+class KmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.kmod
     '''
-    kmod.__grains__ = {}
-    kmod.__salt__ = {}
-    kmod.__context__ = {}
+
+    def setup_loader_modules(self):
+        return {kmod: {}}
 
     # 'available' function tests: 1
 
