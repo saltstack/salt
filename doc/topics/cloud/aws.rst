@@ -355,11 +355,23 @@ functionality was added to Salt in the 2015.5.0 release.
       userdata_file: /etc/salt/my-userdata-file
 
 .. note::
-    As of the 2016.11.0 release, this file can be templated, and as of the
-    2016.11.4 release, the renderer(s) used can be specified in the cloud
-    profile using the ``userdata_renderer`` option. If this option is not set
-    in the cloud profile, salt-cloud will fall back to the
-    :conf_master:`userdata_renderer` master configuration option.
+    From versions 2016.11.0 and 2016.11.3, this file was passed through the
+    master's :conf_master:`renderer` to template it. However, this caused
+    issues with non-YAML data, so templating is no longer performed by default.
+    To template the userdata_file, add a ``userdata_template`` option to the
+    cloud profile:
+
+    .. code-block:: yaml
+
+        my-ec2-config:
+          # Pass userdata to the instance to be created
+          userdata_file: /etc/salt/my-userdata-file
+          userdata_template: jinja
+
+    If no ``userdata_template`` is set in the cloud profile, then the master
+    configuration will be checked for a :conf_master:`userdata_template` value.
+    If this is not set, then no templating will be performed on the
+    userdata_file.
 
 
 EC2 allows a location to be set for servers to be deployed in. Availability
