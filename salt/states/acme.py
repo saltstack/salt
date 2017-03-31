@@ -56,7 +56,7 @@ def cert(name,
     :param name: Common Name of the certificate (DNS name of certificate)
     :param aliases: subjectAltNames (Additional DNS names on certificate)
     :param email: e-mail address for interaction with ACME provider
-    :param webroot: True or a full path to use to use webroot. Otherwise use standalone mode
+    :param webroot: True or a full path to webroot. Otherwise use standalone mode
     :param test_cert: Request a certificate from the Happy Hacker Fake CA (mutually exclusive with 'server')
     :param renew: True/'force' to force a renewal, or a window of renewal before expiry in days
     :param keysize: RSA key bits
