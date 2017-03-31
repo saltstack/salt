@@ -277,6 +277,7 @@ execution modules
     openbsdpkg
     openbsdrcctl
     openbsdservice
+    opensuse_apache
     openstack_config
     openstack_mng
     openvswitch
