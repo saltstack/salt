@@ -296,6 +296,11 @@ def state(name,
         )
         fail_minions = ()
 
+    if not cmd_ret and expect_minions:
+        state_ret['result'] = False
+        state_ret['comment'] = 'No minions returned'
+        return state_ret
+
     for minion, mdata in six.iteritems(cmd_ret):
         if mdata.get('out', '') != 'highstate':
             log.warning('Output from salt state not highstate')
