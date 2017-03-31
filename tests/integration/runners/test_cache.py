@@ -20,17 +20,17 @@ class ManageTest(integration.ShellCase):
         # Store the data
         ret = self.run_run_plus(
             'cache.store',
-            bank='test/runner',
+            bank='cachetest/runner',
             key='test_cache',
             data='The time has come the walrus said',
         )
         # Make sure we can see the new key
-        ret = self.run_run_plus('cache.list', bank='test/runner')
+        ret = self.run_run_plus('cache.list', bank='cachetest/runner')
         self.assertIn('test_cache', ret['return'])
         # Make sure we can see the new data
-        ret = self.run_run_plus('cache.fetch', bank='test/runner', key='test_cache')
+        ret = self.run_run_plus('cache.fetch', bank='cachetest/runner', key='test_cache')
         self.assertIn('The time has come the walrus said', ret['return'])
         # Make sure we can delete the data
-        ret = self.run_run_plus('cache.flush', bank='test/runner', key='test_cache')
-        ret = self.run_run_plus('cache.list', bank='test/runner')
+        ret = self.run_run_plus('cache.flush', bank='cachetest/runner', key='test_cache')
+        ret = self.run_run_plus('cache.list', bank='cachetest/runner')
         self.assertNotIn('test_cache', ret['return'])
