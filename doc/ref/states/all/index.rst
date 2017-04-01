@@ -165,6 +165,7 @@ state modules
     netsnmp
     netusers
     network
+    netyang
     nftables
     npm
     ntp
