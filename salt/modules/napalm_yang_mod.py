@@ -549,3 +549,50 @@ def load_config(data, *models, **kwargs):
                                        commit=commit,
                                        replace=replace,
                                        inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
+
+
+@proxy_napalm_wrap
+def compliance_report(data, *models, **kwargs):
+    '''
+    Return the compliance report using YANG objects.
+
+    data
+        Dictionary structured with respect to the models referenced.
+
+    models
+        A list of models to be used when generating the config.
+
+    filepath
+        The absolute path to the validation file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm_yang.compliance_report {} models.openconfig_interfaces filepath=~/validate.yml
+
+    Output Example:
+
+    .. code-block:: json
+
+        {
+          "skipped": [],
+          "complies": true,
+          "get_interfaces_ip": {
+            "missing": [],
+            "complies": true,
+            "present": {
+              "ge-0/0/0.0": {
+                "complies": true,
+                "nested": true
+              }
+            },
+            "extra": []
+          }
+        }
+    '''
+    filepath = kwargs.pop('filepath', '')
+    root = _get_root_object(*models)
+    root.load_dict(data)
+    return __salt__['napalm.compliance_report'](filepath,
+                                                inherit_napalm_device=root)
