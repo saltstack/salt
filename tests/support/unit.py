@@ -337,9 +337,9 @@ class TestCase(_TestCase):
                 )
             )
 
-        def assertRaisesRegex(self, exception, regexp, callable_obj, *args, **kwds):
+        def assertRaisesRegex(self, exception, regexp, *args, **kwds):
             # In python 2, alias to the future python 3 function
-            return _TestCase.assertRaisesRegexp(self, exception, regexp, callable_obj, *args, **kwds)
+            return _TestCase.assertRaisesRegexp(self, exception, regexp, *args, **kwds)
     else:
         def assertRegexpMatches(self, *args, **kwds):
             raise DeprecationWarning(
