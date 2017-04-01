@@ -652,7 +652,6 @@ def active_tcp():
         # lets use netstat to mimic linux as close as possible
         ret = {}
         for connection in _netstat_aix():
-            ## TBD need to deliver AIX output in consumable fashion
             if not connection['proto'].startswith('tcp'):
                 continue
             if connection['state'] != 'ESTABLISHED':

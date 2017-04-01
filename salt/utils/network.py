@@ -966,6 +966,8 @@ def _remotes_on(port, which_end):
             return _openbsd_remotes_on(port, which_end)
         if salt.utils.is_windows():
             return _windows_remotes_on(port, which_end)
+        if salt.utils.is_aix():
+            return _aix_remotes_on(port, which_end)
 
         return _linux_remotes_on(port, which_end)
 
@@ -1275,4 +1277,54 @@ def _linux_remotes_on(port, which_end):
             continue
         remotes.add(rhost.strip("[]"))
 
+    return remotes
+
+
+def _aix_remotes_on(port, which_end):
+    '''
+    AIX specific helper function.
+    Returns set of ipv4 host addresses of remote established connections
+    on local or remote tcp port.
+
+    Parses output of shell 'netstat' to get connections
+
+    root@la68pp002_pub:/opt/salt/lib/python2.7/site-packages/salt/modules# netstat -f inet -n
+    Active Internet connections
+    Proto Recv-Q Send-Q  Local Address          Foreign Address        (state)
+    tcp4       0      0  172.29.149.95.50093    209.41.78.13.4505      ESTABLISHED
+    tcp4       0      0  127.0.0.1.9514         *.*                    LISTEN
+    tcp4       0      0  127.0.0.1.9515         *.*                    LISTEN
+    tcp4       0      0  127.0.0.1.199          127.0.0.1.32779        ESTABLISHED
+    tcp4       0      0  127.0.0.1.32779        127.0.0.1.199          ESTABLISHED
+    tcp4       0     40  172.29.149.95.22       172.29.96.83.41022     ESTABLISHED
+    tcp4       0      0  172.29.149.95.22       172.29.96.83.41032     ESTABLISHED
+    tcp4       0      0  127.0.0.1.32771        127.0.0.1.32775        ESTABLISHED
+    tcp        0      0  127.0.0.1.32775        127.0.0.1.32771        ESTABLISHED
+    tcp4       0      0  127.0.0.1.32771        127.0.0.1.32776        ESTABLISHED
+    tcp        0      0  127.0.0.1.32776        127.0.0.1.32771        ESTABLISHED
+    tcp4       0      0  127.0.0.1.32771        127.0.0.1.32777        ESTABLISHED
+    tcp        0      0  127.0.0.1.32777        127.0.0.1.32771        ESTABLISHED
+    tcp4       0      0  127.0.0.1.32771        127.0.0.1.32778        ESTABLISHED
+    tcp        0      0  127.0.0.1.32778        127.0.0.1.32771        ESTABLISHED
+    '''
+    remotes = set()
+    try:
+        data = subprocess.check_output(['netstat', '-f', 'inet', '-n'])  # pylint: disable=minimum-python-version
+    except subprocess.CalledProcessError:
+        log.error('Failed netstat')
+        raise
+
+    lines = salt.utils.to_str(data).split('\n')
+    for line in lines:
+        if 'ESTABLISHED' not in line:
+            continue
+        chunks = line.split()
+        local_host, local_port = chunks[3].rsplit('.', 1)
+        remote_host, remote_port = chunks[4].rsplit('.', 1)
+
+        if which_end == 'remote_port' and int(remote_port) != port:
+            continue
+        if which_end == 'local_port' and int(local_port) != port:
+            continue
+        remotes.add(remote_host)
     return remotes
