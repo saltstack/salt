@@ -204,6 +204,6 @@ def compliance_report(filepath, **kwargs):
     '''
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
-        compliance_report,
+        'compliance_report',
         validation_file=filepath
     )
