@@ -149,7 +149,7 @@ def managed(name,
         log.debug('All good here.')
         return ret
     loaded_changes = __salt__['napalm_yang.load_config'](data,
-                                                         **models,
+                                                         *models,
                                                          profiles=profiles,
                                                          test=test,
                                                          debug=debug,
