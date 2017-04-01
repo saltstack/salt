@@ -31,7 +31,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMix
 
     def setup_loader_modules(self):
         self.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
-        self.opts = self.get_config('master', from_scratch=True)
+        self.opts = self.get_temp_config('master')
         self.opts['cachedir'] = self.tmp_cachedir
         empty_dir = os.path.join(TMP_STATE_TREE, 'empty_dir')
         if not os.path.isdir(empty_dir):
@@ -180,7 +180,7 @@ class RootsLimitTraversalTest(TestCase, AdaptedConfigurationTestCaseMixIn):
         3) Ensure that we can find SLS files in a directory so long as there is an SLS file in a directory above.
         4) Ensure that we cannot find an SLS file in a directory that does not have an SLS file in a directory above.
         '''
-        file_client_opts = self.get_config('master', from_scratch=True)
+        file_client_opts = self.get_temp_config('master')
         file_client_opts['fileserver_limit_traversal'] = True
 
         ret = fileclient.Client(file_client_opts).list_states('base')
