@@ -75,7 +75,7 @@ def diff(candidate, running, *models):
     according to the YANG model.
 
     .. note::
-        This method is recommended to be used mostly as a state helper.
+        This function is recommended to be used mostly as a state helper.
 
     candidate
         First model to compare.
