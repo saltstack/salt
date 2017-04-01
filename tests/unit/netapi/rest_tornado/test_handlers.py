@@ -5,11 +5,14 @@ from __future__ import absolute_import
 import json
 import os
 import copy
+import shutil
 import hashlib
+import tempfile
 
 # Import Salt Testing Libs
 from tests.integration import AdaptedConfigurationTestCaseMixIn
 from tests.support.unit import TestCase, skipIf
+from tests.support.paths import TMP
 
 # Import Salt libs
 import salt.auth
@@ -69,11 +72,11 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixIn, AsyncHTTPTes
 
     @property
     def opts(self):
-        return self.get_config('client_config', from_scratch=True)
+        return self.get_temp_config('client_config')
 
     @property
     def mod_opts(self):
-        return self.get_config('minion', from_scratch=True)
+        return self.get_temp_config('minion')
 
     @property
     def auth(self):
@@ -87,21 +90,12 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixIn, AsyncHTTPTes
         return self.auth.mk_token(self.auth_creds_dict)
 
     def setUp(self):
-        # FIXME
-        # The try/except here and in tearDownis a temporary fix, pending the release of a
-        # new salt version, later than 08.22.16
-        try:
-            super(SaltnadoTestCase, self).setUp()
-        except (NotImplementedError, AttributeError):
-            pass
+        super(SaltnadoTestCase, self).setUp()
         self.async_timeout_prev = os.environ.pop('ASYNC_TEST_TIMEOUT', None)
         os.environ['ASYNC_TEST_TIMEOUT'] = str(30)
 
     def tearDown(self):
-        try:
-            super(SaltnadoTestCase, self).tearDown()
-        except AttributeError:
-            pass
+        super(SaltnadoTestCase, self).tearDown()
         if self.async_timeout_prev is None:
             os.environ.pop('ASYNC_TEST_TIMEOUT', None)
         else:
