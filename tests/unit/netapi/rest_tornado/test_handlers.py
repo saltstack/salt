@@ -5,14 +5,11 @@ from __future__ import absolute_import
 import json
 import os
 import copy
-import shutil
 import hashlib
-import tempfile
 
 # Import Salt Testing Libs
 from tests.integration import AdaptedConfigurationTestCaseMixIn
 from tests.support.unit import TestCase, skipIf
-from tests.support.paths import TMP
 
 # Import Salt libs
 import salt.auth
