@@ -108,13 +108,28 @@ def managed(name,
 
     .. code-block:: jinja
 
-        {%- set expected_config =  pillar.get('interfaces') -%}
+        {%- set expected_config =  pillar.get('openconfig_interfaces_cfg') -%}
         interfaces_config:
           napalm_yang.managed:
-            data: {{ expected_config | json }}
-            models:
+            - data: {{ expected_config | json }}
+            - models:
               - models.openconfig_interfaces
-            debug: true
+            - debug: true
+
+    Pillar example:
+
+    .. code-block:: yaml
+
+        openconfig_interfaces_cfg:
+          _kwargs:
+            filter: true
+          interfaces:
+            interface:
+              Et1:
+                config:
+                  mtu: 9000
+              Et2:
+                description: "description example"
     '''
     ret = salt.utils.napalm.default_ret(name)
     test = kwargs.get('test', False) or __opts__.get('test', False)
@@ -142,9 +157,7 @@ def managed(name,
     if complies:
         ret.update({
             'result': True,
-            'comment': 'Already configured as required.',
-            'changes': {},
-            'pchanges': {}
+            'comment': 'Already configured as required.'
         })
         log.debug('All good here.')
         return ret
