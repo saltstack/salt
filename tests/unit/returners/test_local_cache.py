@@ -227,8 +227,7 @@ class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleM
         helper method to add job.
         '''
         # add the job.
-        opts = {}
-        opts.update(self.get_config('master'))
+        opts = self.get_temp_config('master')
         opts['cachedir'] = self.TMP_CACHE_DIR
         load = {'fun_args': [], 'jid': '20160603132323715452',
                 'return': True, 'retcode': 0, 'success': True,
