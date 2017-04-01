@@ -33,7 +33,7 @@ def json_loads(data):
     return json.loads(data)
 
 
-class _SaltnadoIntegrationTestCase(SaltnadoTestCase):
+class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstract-method
 
     @property
     def opts(self):
