@@ -21,7 +21,7 @@ class LocalClientTestCase(TestCase,
                           integration.SaltClientTestCaseMixIn):
 
     def test_create_local_client(self):
-        local_client = client.LocalClient(self.get_config_file_path('master'))
+        local_client = client.LocalClient(mopts=self.get_temp_config('master'))
         self.assertIsInstance(local_client, client.LocalClient, 'LocalClient did not create a LocalClient instance')
 
     def test_check_pub_data(self):
