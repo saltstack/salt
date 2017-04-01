@@ -166,3 +166,40 @@ def call(method, *args, **kwargs):
         *args,
         **clean_kwargs
     )
+
+
+@proxy_napalm_wrap
+def compliance_report(filepath, **kwargs):
+    '''
+    Return the compliance report.
+
+    filepath
+        The absolute path to the validation file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.compliance_report ~/validate.yml
+
+    Output Example:
+
+    .. code-block:: json
+
+        {
+          "skipped": [],
+          "complies": true,
+          "get_interfaces_ip": {
+            "missing": [],
+            "complies": true,
+            "present": {
+              "ge-0/0/0.0": {
+                "complies": true,
+                "nested": true
+              }
+            },
+            "extra": []
+          }
+        }
+    '''
+    return napalm_device.compliance_report(validation_file=filepath)  # pylint: disable=undefined-variable
