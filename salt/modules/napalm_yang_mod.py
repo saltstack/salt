@@ -343,11 +343,11 @@ def parse(*models, **kwargs):
     config = kwargs.pop('config', False)
     state = kwargs.pop('state', False)
     profiles = kwargs.pop('profiles', [])
-    if not profiles and hasattr(napalm_device, 'profile'):
-        profiles = napalm_device.profile
+    if not profiles and hasattr(napalm_device, 'profile'):  # pylint: disable=undefined-variable
+        profiles = napalm_device.profile  # pylint: disable=undefined-variable
     root = _get_root_object(*models)
     parser_kwargs = {
-        'device': napalm_device,
+        'device': napalm_device,  # pylint: disable=undefined-variable
         'profile': profiles
     }
     if config:
@@ -392,8 +392,8 @@ def get_config(data, *models, **kwargs):
             mtu 9000
     '''
     profiles = kwargs.pop('profiles', [])
-    if not profiles and hasattr(napalm_device, 'profile'):
-        profiles = napalm_device.profile
+    if not profiles and hasattr(napalm_device, 'profile'):  # pylint: disable=undefined-variable
+        profiles = napalm_device.profile  # pylint: disable=undefined-variable
     parser_kwargs = {
         'profile': profiles
     }
@@ -548,4 +548,4 @@ def load_config(data, *models, **kwargs):
                                        debug=debug,
                                        commit=commit,
                                        replace=replace,
-                                       inherit_napalm_device=napalm_device)
+                                       inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
