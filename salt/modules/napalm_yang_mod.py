@@ -7,7 +7,6 @@ NAPALM YANG basic operations.
 
 .. versionadded:: Nitrogen
 '''
-
 from __future__ import absolute_import
 
 # Import python stdlib
@@ -21,7 +20,7 @@ except ImportError:
     HAS_NAPALM_YANG = False
 
 # import NAPALM utils
-import salt.utils.napalm as napalm_utils
+import salt.utils.napalm
 from salt.utils.napalm import proxy_napalm_wrap
 
 # -----------------------------------------------------------------------------
@@ -44,15 +43,9 @@ def __virtual__():
     NAPALM library must be installed for this module to work and run in a (proxy) minion.
     This module in particular requires also napalm-yang.
     '''
-    log.error('Has napalm-yang?')
-    log.error(HAS_NAPALM_YANG)
-
     if not HAS_NAPALM_YANG:
         return (False, 'Unable to load napalm_yang execution module: please install napalm-yang!')
-    w = napalm_utils.virtual(__opts__, __virtualname__, __file__)
-    log.error('Has anythin else?')
-    log.error(w)
-    return w
+    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 # -----------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -350,12 +343,13 @@ def parse(*models, **kwargs):
     config = kwargs.pop('config', False)
     state = kwargs.pop('state', False)
     profiles = kwargs.pop('profiles', [])
+    if not profiles and hasattr(napalm_device, 'profile'):
+        profiles = napalm_device.profile
     root = _get_root_object(*models)
     parser_kwargs = {
-        'device': napalm_device
+        'device': napalm_device,
+        'profile': profiles
     }
-    if profiles:
-        parser_kwargs['profile'] = profiles
     if config:
         root.parse_config(**parser_kwargs)
     if state:
@@ -398,9 +392,11 @@ def get_config(data, *models, **kwargs):
             mtu 9000
     '''
     profiles = kwargs.pop('profiles', [])
-    parser_kwargs = {}
-    if profiles:
-        parser_kwargs['profile'] = profiles
+    if not profiles and hasattr(napalm_device, 'profile'):
+        profiles = napalm_device.profile
+    parser_kwargs = {
+        'profile': profiles
+    }
     root = _get_root_object(*models)
     root.load_dict(data)
     return root.translate_config(**parser_kwargs)
@@ -436,6 +432,111 @@ def load_config(data, *models, **kwargs):
 
     replace: ``False``
         Should replace the config with the new generate one?
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm_yang.load_config {} models.openconfig_interfaces test=True debug=True
+
+    Output Example:
+
+    .. code-block:: yaml
+
+        device1:
+            ----------
+            already_configured:
+                False
+            comment:
+            diff:
+                [edit interfaces ge-0/0/0]
+                -   mtu 1400;
+                [edit interfaces ge-0/0/0 unit 0 family inet]
+                -       dhcp;
+                [edit interfaces lo0]
+                -    unit 0 {
+                -        description lo0.0;
+                -    }
+                +    unit 1 {
+                +        description "new loopback";
+                +    }
+            loaded_config:
+                <configuration>
+                  <interfaces replace="replace">
+                    <interface>
+                      <name>ge-0/0/0</name>
+                      <unit>
+                        <name>0</name>
+                        <family>
+                          <inet/>
+                        </family>
+                        <description>ge-0/0/0.0</description>
+                      </unit>
+                      <description>management interface</description>
+                    </interface>
+                    <interface>
+                      <name>ge-0/0/1</name>
+                      <disable/>
+                      <description>ge-0/0/1</description>
+                    </interface>
+                    <interface>
+                      <name>ae0</name>
+                      <unit>
+                        <name>0</name>
+                        <vlan-id>100</vlan-id>
+                        <family>
+                          <inet>
+                            <address>
+                              <name>192.168.100.1/24</name>
+                            </address>
+                            <address>
+                              <name>172.20.100.1/24</name>
+                            </address>
+                          </inet>
+                        </family>
+                        <description>a description</description>
+                      </unit>
+                      <vlan-tagging/>
+                      <unit>
+                        <name>1</name>
+                        <vlan-id>1</vlan-id>
+                        <family>
+                          <inet>
+                            <address>
+                              <name>192.168.101.1/24</name>
+                            </address>
+                          </inet>
+                        </family>
+                        <disable/>
+                        <description>ae0.1</description>
+                      </unit>
+                      <vlan-tagging/>
+                      <unit>
+                        <name>2</name>
+                        <vlan-id>2</vlan-id>
+                        <family>
+                          <inet>
+                            <address>
+                              <name>192.168.102.1/24</name>
+                            </address>
+                          </inet>
+                        </family>
+                        <description>ae0.2</description>
+                      </unit>
+                      <vlan-tagging/>
+                    </interface>
+                    <interface>
+                      <name>lo0</name>
+                      <unit>
+                        <name>1</name>
+                        <description>new loopback</description>
+                      </unit>
+                      <description>lo0</description>
+                    </interface>
+                  </interfaces>
+                </configuration>
+            result:
+                True
     '''
     config = get_config(data, *models, **kwargs)
     test = kwargs.pop('test', False)
