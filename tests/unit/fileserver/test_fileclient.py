@@ -71,10 +71,11 @@ class FileClientTest(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMo
             self.file_client.get_file(None)
 
     def test_get_file_client(self):
-        with patch.dict(self.get_config('minion', from_scratch=True), {'file_client': 'remote'}):
-            with patch('salt.fileclient.RemoteClient', MagicMock(return_value='remote_client')):
-                ret = fileclient.get_file_client(self.minion_opts)
-                self.assertEqual('remote_client', ret)
+        minion_opts = self.get_temp_config('minion')
+        minion_opts['file_client'] = 'remote'
+        with patch('salt.fileclient.RemoteClient', MagicMock(return_value='remote_client')):
+            ret = fileclient.get_file_client(minion_opts)
+            self.assertEqual('remote_client', ret)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
