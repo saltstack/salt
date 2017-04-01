@@ -41,7 +41,7 @@ def _args_sideffect(*args, **kwargs):
 @skipIf(True, 'Skipping until its clear what and how is this supposed to be testing')
 class TestReactor(TestCase, AdaptedConfigurationTestCaseMixIn):
     def setUp(self):
-        self.opts = self.get_config('master', from_scratch=True)
+        self.opts = self.get_temp_config('master')
         self.tempdir = tempfile.mkdtemp(dir=TMP)
         self.sls_name = os.path.join(self.tempdir, 'test.sls')
         with open(self.sls_name, 'w') as fh:
