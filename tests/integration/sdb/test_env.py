@@ -16,7 +16,7 @@ STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
 
 class EnvTestCase(integration.ModuleCase,
-                  integration.SaltReturnAssertsMixIn):
+                  integration.SaltReturnAssertsMixin):
 
     def setUp(self):
         self.state_name = 'test_sdb_env'

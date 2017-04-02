@@ -12,7 +12,7 @@ import salt.config
 
 
 class TestModuleTest(integration.ModuleCase,
-                     integration.AdaptedConfigurationTestCaseMixIn):
+                     integration.AdaptedConfigurationTestCaseMixin):
     '''
     Validate the test module
     '''

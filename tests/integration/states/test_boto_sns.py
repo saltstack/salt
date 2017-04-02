@@ -35,7 +35,7 @@ except ImportError:
     'Please setup boto AWS credentials before running boto integration tests.'
 )
 class BotoSNSTest(integration.ModuleCase,
-                  integration.SaltReturnAssertsMixIn):
+                  integration.SaltReturnAssertsMixin):
 
     def setUp(self):
         # The name of the topic you want to create.

@@ -8,7 +8,7 @@ import tests.integration as integration
 
 
 class PublishModuleTest(integration.ModuleCase,
-                        integration.SaltReturnAssertsMixIn):
+                        integration.SaltReturnAssertsMixin):
     '''
     Validate the publish module
     '''

@@ -35,7 +35,7 @@ if not salt.utils.which('mysqladmin'):
     'MySQL integration tests.'
 )
 class MysqlModuleDbTest(integration.ModuleCase,
-                        integration.SaltReturnAssertsMixIn):
+                        integration.SaltReturnAssertsMixin):
     '''
     Module testing database creation on a real MySQL Server.
     '''
@@ -616,7 +616,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
     'MySQL integration tests.'
 )
 class MysqlModuleUserTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixIn):
+                      integration.SaltReturnAssertsMixin):
     '''
     User Creation and connection tests
     '''
@@ -1270,7 +1270,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
     'MySQL integration tests.'
 )
 class MysqlModuleUserGrantTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixIn):
+                      integration.SaltReturnAssertsMixin):
     '''
     User Creation and connection tests
     '''

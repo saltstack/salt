@@ -27,7 +27,7 @@ except ImportError:
     'keystone integration tests.'
 )
 class KeystoneStateTest(integration.ModuleCase,
-                        integration.SaltReturnAssertsMixIn):
+                        integration.SaltReturnAssertsMixin):
     '''
     Validate the keystone state
     '''

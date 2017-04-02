@@ -21,7 +21,7 @@ import salt.utils
 
 
 @skip_if_binaries_missing('git')
-class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
     '''
     Validate the git state
     '''
@@ -462,7 +462,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
 
 @skip_if_binaries_missing('git')
-class LocalRepoGitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+class LocalRepoGitTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
     '''
     Tests which do no require connectivity to github.com
     '''

@@ -17,7 +17,7 @@ import salt.utils
 HFILE = os.path.join(integration.TMP, 'hosts')
 
 
-class HostTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+class HostTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
     '''
     Validate the host state
     '''
