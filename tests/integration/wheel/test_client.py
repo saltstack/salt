@@ -13,7 +13,7 @@ import salt.wheel
 import salt.utils
 
 
-class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixIn):
+class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixin):
 
     eauth_creds = {
         'username': 'saltdev_auto',

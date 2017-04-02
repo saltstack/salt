@@ -12,7 +12,7 @@ from tests.support.helpers import (
 
 
 class PkgModuleTest(integration.ModuleCase,
-                    integration.SaltReturnAssertsMixIn):
+                    integration.SaltReturnAssertsMixin):
     '''
     Validate the pkg module
     '''

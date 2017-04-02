@@ -37,7 +37,7 @@ else:
 @destructiveTest
 @skipIf(os.geteuid() != 0, 'you must be root to run this test')
 class UserTest(integration.ModuleCase,
-               integration.SaltReturnAssertsMixIn):
+               integration.SaltReturnAssertsMixin):
     '''
     test for user absent
     '''

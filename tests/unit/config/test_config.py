@@ -73,7 +73,7 @@ def _salt_configuration_error(filename):
     raise SaltConfigurationError('Configuration error in {0}'.format(filename))
 
 
-class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
+class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
 
     def test_sha256_is_default_for_master(self):
         fpath = tempfile.mktemp()

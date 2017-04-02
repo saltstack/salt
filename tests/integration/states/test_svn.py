@@ -14,7 +14,7 @@ import socket
 import tests.integration as integration
 
 
-class SvnTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+class SvnTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
     '''
     Validate the svn state
     '''

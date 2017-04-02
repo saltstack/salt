@@ -20,7 +20,7 @@ import salt.utils
 # @requires_salt_modules('acl')
 # @requires_salt_modules('linux_acl')
 class LinuxAclModuleTest(integration.ModuleCase,
-                         integration.AdaptedConfigurationTestCaseMixIn):
+                         integration.AdaptedConfigurationTestCaseMixin):
     '''
     Validate the linux_acl module
     '''

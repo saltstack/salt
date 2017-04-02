@@ -19,7 +19,7 @@ IS_WINDOWS = salt.utils.is_windows()
 
 
 class CMDTest(integration.ModuleCase,
-              integration.SaltReturnAssertsMixIn):
+              integration.SaltReturnAssertsMixin):
     '''
     Validate the cmd state
     '''
@@ -41,7 +41,7 @@ class CMDTest(integration.ModuleCase,
 
 
 class CMDRunRedirectTest(integration.ModuleCase,
-                         integration.SaltReturnAssertsMixIn):
+                         integration.SaltReturnAssertsMixin):
     '''
     Validate the cmd state of run_redirect
     '''
@@ -159,7 +159,7 @@ class CMDRunRedirectTest(integration.ModuleCase,
 
 
 class CMDRunWatchTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixIn):
+                      integration.SaltReturnAssertsMixin):
     '''
     Validate the cmd state of run_watch
     '''

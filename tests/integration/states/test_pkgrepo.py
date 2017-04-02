@@ -22,7 +22,7 @@ import salt.ext.six as six
 
 
 class PkgrepoTest(integration.ModuleCase,
-                  integration.SaltReturnAssertsMixIn):
+                  integration.SaltReturnAssertsMixin):
     '''
     pkgrepo state tests
     '''

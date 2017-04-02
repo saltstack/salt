@@ -145,7 +145,7 @@ def latest_version(run_function, *names):
 @destructiveTest
 @requires_salt_modules('pkg.version', 'pkg.latest_version')
 class PkgTest(integration.ModuleCase,
-              integration.SaltReturnAssertsMixIn):
+              integration.SaltReturnAssertsMixin):
     '''
     pkg.installed state tests
     '''

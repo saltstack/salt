@@ -18,7 +18,7 @@ import subprocess
 import yaml
 
 # Import Salt Testing libs
-from tests.integration import AdaptedConfigurationTestCaseMixIn
+from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
@@ -40,7 +40,7 @@ import salt.pillar.git_pillar as git_pillar
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not git_pillar.HAS_GITPYTHON, 'no GitPython')
-class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMixin):
+class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
     'test git_pillar pillar'
     maxDiff = None
 

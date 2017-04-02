@@ -12,7 +12,7 @@ import tests.integration as integration
 
 
 class RabbitVHostTestCase(integration.ModuleCase,
-                          integration.SaltReturnAssertsMixIn):
+                          integration.SaltReturnAssertsMixin):
     '''
     Validate the rabbitmq virtual host states.
     '''

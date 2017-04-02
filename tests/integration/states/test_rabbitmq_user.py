@@ -11,7 +11,7 @@ import tests.integration as integration
 
 
 class RabbitUserTestCase(integration.ModuleCase,
-                         integration.SaltReturnAssertsMixIn):
+                         integration.SaltReturnAssertsMixin):
     '''
     Validate the rabbitmq user states.
     '''

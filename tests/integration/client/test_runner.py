@@ -10,7 +10,7 @@ import tests.integration as integration
 import salt.runner
 
 
-class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixIn):
+class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixin):
     eauth_creds = {
         'username': 'saltdev_auto',
         'password': 'saltdev',

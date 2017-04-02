@@ -17,7 +17,7 @@ import salt.utils
 
 
 @skipIf(salt.utils.which('npm') is None, 'npm not installed')
-class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
 
     @requires_network()
     @destructiveTest

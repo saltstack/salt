@@ -11,7 +11,7 @@ import subprocess
 import yaml
 
 # Import Salt Testing libs
-from tests.integration import AdaptedConfigurationTestCaseMixIn
+from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
@@ -33,7 +33,7 @@ HGLIB = hg_pillar.hglib
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HGLIB is None, 'python-hglib library not installed')
-class HgPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMixin):
+class HgPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
     'test hg_pillar pillar'
     maxDiff = None
 

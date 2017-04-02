@@ -21,7 +21,7 @@ import salt.ext.six as six
 
 
 class StateModuleTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixIn):
+                      integration.SaltReturnAssertsMixin):
     '''
     Validate the state module
     '''

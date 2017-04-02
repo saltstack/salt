@@ -27,7 +27,7 @@ GITHUB_IP = '192.30.253.113'
 
 @skip_if_binaries_missing(['ssh', 'ssh-keygen'], check_all=True)
 class SSHKnownHostsStateTest(integration.ModuleCase,
-                             integration.SaltReturnAssertsMixIn):
+                             integration.SaltReturnAssertsMixin):
     '''
     Validate the ssh state
     '''
@@ -156,7 +156,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
 
 
 class SSHAuthStateTests(integration.ModuleCase,
-                        integration.SaltReturnAssertsMixIn):
+                        integration.SaltReturnAssertsMixin):
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')

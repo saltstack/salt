@@ -17,7 +17,7 @@ import salt.utils
 
 @skipIf(salt.utils.which('bower') is None, 'bower not installed')
 class BowerStateTest(integration.ModuleCase,
-                     integration.SaltReturnAssertsMixIn):
+                     integration.SaltReturnAssertsMixin):
 
     @destructiveTest
     def test_bower_installed_removed(self):

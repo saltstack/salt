@@ -50,7 +50,7 @@ def with_random_name(func):
 @skipIf(not salt.utils.which('busybox'), 'Busybox not installed')
 @skipIf(not salt.utils.which('dockerd'), 'Docker not installed')
 class DockerContainerTestCase(integration.ModuleCase,
-                              integration.SaltReturnAssertsMixIn):
+                              integration.SaltReturnAssertsMixin):
     '''
     Test docker_container states
     '''

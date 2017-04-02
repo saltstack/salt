@@ -29,7 +29,7 @@ except ImportError:
     'openstack integration tests.'
 )
 class OpenstackTest(integration.ModuleCase,
-                    integration.SaltReturnAssertsMixIn):
+                    integration.SaltReturnAssertsMixin):
     '''
     Validate the keystone state
     '''

@@ -49,6 +49,7 @@
 # Import Python modules
 from __future__ import absolute_import, print_function
 import os
+import sys
 import json
 import shutil
 import logging
@@ -101,6 +102,13 @@ try:
         )
 except ImportError:
     pass
+
+if sys.platform.startswith('win'):
+    import win32api  # pylint: disable=import-error
+    RUNNING_TESTS_USER = win32api.GetUserName()
+else:
+    import pwd
+    RUNNING_TESTS_USER = pwd.getpwuid(os.getuid()).pw_name
 
 log = logging.getLogger(__name__)
 
@@ -200,6 +208,7 @@ RUNTIME_VARS = RuntimeVars(
     TMP_BASEENV_STATE_TREE=os.path.join(paths.TMP, 'integration-files', 'file', 'base'),
     TMP_PRODENV_STATE_TREE=os.path.join(paths.TMP, 'integration-files', 'file', 'prod'),
     TMP_BASEENV_PILLAR_TREE=os.path.join(paths.TMP, 'integration-files', 'pillar', 'base'),
-    TMP_PRODENV_PILLAR_TREE=os.path.join(paths.TMP, 'integration-files', 'pillar', 'prod')
+    TMP_PRODENV_PILLAR_TREE=os.path.join(paths.TMP, 'integration-files', 'pillar', 'prod'),
+    RUNNING_TESTS_USER=RUNNING_TESTS_USER
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------

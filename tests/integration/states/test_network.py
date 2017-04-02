@@ -14,7 +14,7 @@ from tests.support.helpers import destructiveTest
 
 
 @destructiveTest
-class NetworkTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+class NetworkTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
     '''
     Validate network state module
     '''

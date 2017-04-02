@@ -18,7 +18,7 @@ from salt.exceptions import EauthAuthenticationError, SaltInvocationError, SaltC
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalClientTestCase(TestCase,
-                          integration.SaltClientTestCaseMixIn):
+                          integration.SaltClientTestCaseMixin):
 
     def test_create_local_client(self):
         local_client = client.LocalClient(mopts=self.get_temp_config('master'))

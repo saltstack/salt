@@ -18,7 +18,7 @@ from tests.support.helpers import flaky
 import salt.utils.event
 
 
-class ReactorTest(integration.ModuleCase, integration.SaltMinionEventAssertsMixIn):
+class ReactorTest(integration.ModuleCase, integration.SaltMinionEventAssertsMixin):
     '''
     Test Salt's reactor system
     '''

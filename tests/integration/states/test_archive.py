@@ -35,7 +35,7 @@ STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
 
 class ArchiveTest(integration.ModuleCase,
-                  integration.SaltReturnAssertsMixIn):
+                  integration.SaltReturnAssertsMixin):
     '''
     Validate the archive state
     '''

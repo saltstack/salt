@@ -33,7 +33,7 @@ import salt.ext.six as six
 
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
-class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
 
     def test_pip_installed_removed(self):
         '''

@@ -35,7 +35,7 @@ if not salt.utils.which('mysqladmin'):
     'MySQL integration tests.'
 )
 class MysqlDatabaseStateTest(integration.ModuleCase,
-                             integration.SaltReturnAssertsMixIn):
+                             integration.SaltReturnAssertsMixin):
     '''
     Validate the mysql_database state
     '''
@@ -241,7 +241,7 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
     'MySQL integration tests.'
 )
 class MysqlGrantsStateTest(integration.ModuleCase,
-                           integration.SaltReturnAssertsMixIn):
+                           integration.SaltReturnAssertsMixin):
     '''
     Validate the mysql_grants states
     '''

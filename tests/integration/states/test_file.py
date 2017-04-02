@@ -139,7 +139,7 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         os.chmod(grail_fs_path, grail_fs_mode)
 
 
-class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
     '''
     Validate the file state
     '''
@@ -2431,7 +2431,7 @@ FILE_SOURCE = 'http://localhost:{0}/grail/scene33'.format(PORT)
 FILE_HASH = 'd2feb3beb323c79fc7a0f44f1408b4a3'
 
 
-class RemoteFileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+class RemoteFileTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
     '''
     Uses a local tornado webserver to test http(s) file.managed states with and
     without skip_verify

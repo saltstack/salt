@@ -8,7 +8,7 @@ import copy
 import hashlib
 
 # Import Salt Testing Libs
-from tests.integration import AdaptedConfigurationTestCaseMixIn
+from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
@@ -46,7 +46,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')  # pylint: disable=W0223
-class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixIn, AsyncHTTPTestCase):
+class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTestCase):
     '''
     Mixin to hold some shared things
     '''

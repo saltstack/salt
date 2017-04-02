@@ -20,7 +20,7 @@ SERVICE_NAME = 'crond'
 @destructiveTest
 @skipIf(salt.utils.which('crond') is None, 'crond not installed')
 class ServiceTest(integration.ModuleCase,
-                  integration.SaltReturnAssertsMixIn):
+                  integration.SaltReturnAssertsMixin):
     '''
     Validate the service state
     '''
