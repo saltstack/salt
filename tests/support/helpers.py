@@ -987,24 +987,12 @@ def requires_salt_modules(*names):
                         )
                     )
 
-                for name in names:
-                    if not hasattr(self, '__salt_sys_docs__'):
-                        # cache salts documentation
-                        self.__salt_sys_docs__ = self.run_function('sys.doc')
-                    if name not in self.__salt_sys_docs__:
-                        self.skipTest('Salt module {0!r} is not available'.format(name))
+                not_found_modules = self.run_function('runtests_helpers.modules_available', names)
+                if not_found_modules:
+                    if len(not_found_modules) == 1:
+                        self.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
+                    self.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
             caller.setUp = setUp
-
-            old_teardown = getattr(caller, 'tearDown', None)
-
-            def teardown(self, *args, **kwargs):
-                if hasattr(self, '__salt_sys_docs__'):
-                    del self.__salt_sys_docs__
-
-                if old_teardown is not None:
-                    old_teardown(self, *args, **kwargs)
-
-            caller.tearDown = teardown
             return caller
 
         # We're simply decorating functions
