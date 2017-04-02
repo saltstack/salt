@@ -97,7 +97,6 @@ from __future__ import absolute_import
 
 # Python
 import logging
-import os
 import re
 
 # Salt libs
