@@ -163,6 +163,9 @@ def managed(name,
         })
         log.debug('All good here.')
         return ret
+    data = data['to_dict']
+    if '_kwargs' in data:
+        data.pop('_kwargs')
     loaded_changes = __salt__['napalm_yang.load_config'](data,
                                                          *models,
                                                          profiles=profiles,
@@ -253,6 +256,8 @@ def configured(name,
     commit = kwargs.get('commit', True) or __opts__.get('commit', True)
     replace = kwargs.get('replace', False) or __opts__.get('replace', False)
     profiles = kwargs.get('profiles', [])
+    if '_kwargs' in data:
+        data.pop('_kwargs')
     loaded_changes = __salt__['napalm_yang.load_config'](data,
                                                          *models,
                                                          profiles=profiles,
