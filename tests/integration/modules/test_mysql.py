@@ -8,6 +8,7 @@ import logging
 import tests.integration as integration
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
@@ -34,8 +35,7 @@ if not salt.utils.which('mysqladmin'):
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
-class MysqlModuleDbTest(integration.ModuleCase,
-                        integration.SaltReturnAssertsMixin):
+class MysqlModuleDbTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Module testing database creation on a real MySQL Server.
     '''
@@ -615,8 +615,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
-class MysqlModuleUserTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixin):
+class MysqlModuleUserTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     User Creation and connection tests
     '''
@@ -1269,8 +1268,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
-class MysqlModuleUserGrantTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixin):
+class MysqlModuleUserGrantTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     User Creation and connection tests
     '''

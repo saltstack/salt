@@ -30,6 +30,7 @@ import tests.integration as integration
 from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP, TMP_STATE_TREE
 from tests.support.helpers import skip_if_not_root, with_system_user_and_group
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
@@ -139,7 +140,7 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         os.chmod(grail_fs_path, grail_fs_mode)
 
 
-class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
+class FileTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the file state
     '''
@@ -2431,7 +2432,7 @@ FILE_SOURCE = 'http://localhost:{0}/grail/scene33'.format(PORT)
 FILE_HASH = 'd2feb3beb323c79fc7a0f44f1408b4a3'
 
 
-class RemoteFileTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
+class RemoteFileTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Uses a local tornado webserver to test http(s) file.managed states with and
     without skip_verify

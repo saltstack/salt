@@ -11,8 +11,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from tests.integration import SaltReturnAssertsMixin
-from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 

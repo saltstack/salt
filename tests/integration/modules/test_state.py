@@ -11,6 +11,7 @@ import time
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import skipIf
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
@@ -20,8 +21,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 import salt.ext.six as six
 
 
-class StateModuleTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixin):
+class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the state module
     '''

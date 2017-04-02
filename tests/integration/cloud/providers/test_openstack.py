@@ -11,6 +11,7 @@ import logging
 import tests.integration as integration
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 log = logging.getLogger(__name__)
 
@@ -28,8 +29,7 @@ except ImportError:
     'Please install keystoneclient and a keystone server before running'
     'openstack integration tests.'
 )
-class OpenstackTest(integration.ModuleCase,
-                    integration.SaltReturnAssertsMixin):
+class OpenstackTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the keystone state
     '''

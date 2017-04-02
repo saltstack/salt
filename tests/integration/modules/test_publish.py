@@ -5,10 +5,10 @@ from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
 import tests.integration as integration
+from tests.support.mixins import SaltReturnAssertsMixin
 
 
-class PublishModuleTest(integration.ModuleCase,
-                        integration.SaltReturnAssertsMixin):
+class PublishModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the publish module
     '''

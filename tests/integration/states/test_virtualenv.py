@@ -16,6 +16,7 @@ import shutil
 import tests.integration as integration
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
@@ -23,8 +24,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
-class VirtualenvTest(integration.ModuleCase,
-                     integration.SaltReturnAssertsMixin):
+class VirtualenvTest(integration.ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_issue_1959_virtualenv_runas(self):

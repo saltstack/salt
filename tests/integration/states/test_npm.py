@@ -11,13 +11,14 @@ from __future__ import absolute_import
 import tests.integration as integration
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, requires_network
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
 
 
 @skipIf(salt.utils.which('npm') is None, 'npm not installed')
-class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
+class NpmStateTest(integration.ModuleCase, SaltReturnAssertsMixin):
 
     @requires_network()
     @destructiveTest

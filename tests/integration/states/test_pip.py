@@ -16,6 +16,7 @@ import glob
 import shutil
 
 # Import Salt Testing libs
+from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 from tests.support.helpers import (
     destructiveTest,
@@ -33,7 +34,7 @@ import salt.ext.six as six
 
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
-class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
+class PipStateTest(integration.ModuleCase, SaltReturnAssertsMixin):
 
     def test_pip_installed_removed(self):
         '''

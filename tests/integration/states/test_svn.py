@@ -12,9 +12,10 @@ import socket
 
 # Import Salt Testing libs
 import tests.integration as integration
+from tests.support.mixins import SaltReturnAssertsMixin
 
 
-class SvnTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
+class SvnTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the svn state
     '''

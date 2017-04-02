@@ -438,6 +438,7 @@ to test states:
     import shutil
 
     # Import Salt Testing libs
+    from tests.support.mixins import SaltReturnAssertsMixin
     import tests.integration as integration
 
     # Import salt libs
@@ -446,7 +447,7 @@ to test states:
     HFILE = os.path.join(integration.TMP, 'hosts')
 
 
-    class HostTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
+    class HostTest(integration.ModuleCase, SaltReturnAssertsMixin):
         '''
         Validate the host state
         '''

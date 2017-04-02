@@ -10,6 +10,7 @@ import shutil
 
 # Import Salt Testing libs
 import tests.integration as integration
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
@@ -17,7 +18,7 @@ import salt.utils
 HFILE = os.path.join(integration.TMP, 'hosts')
 
 
-class HostTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
+class HostTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the host state
     '''

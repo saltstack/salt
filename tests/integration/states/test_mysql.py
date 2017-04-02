@@ -11,6 +11,7 @@ import logging
 import tests.integration as integration
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
@@ -34,8 +35,7 @@ if not salt.utils.which('mysqladmin'):
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
-class MysqlDatabaseStateTest(integration.ModuleCase,
-                             integration.SaltReturnAssertsMixin):
+class MysqlDatabaseStateTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the mysql_database state
     '''
@@ -240,8 +240,7 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
-class MysqlGrantsStateTest(integration.ModuleCase,
-                           integration.SaltReturnAssertsMixin):
+class MysqlGrantsStateTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the mysql_grants states
     '''
