@@ -52,7 +52,6 @@ from tests.support.case import ShellTestCase
 from tests.support.parser import PNUM, print_header, SaltTestcaseParser
 from tests.support.helpers import requires_sshd_server, RedirectStdStreams
 from tests.support.paths import ScriptPathMixin
-from tests.support.mixins import RUNTIME_CONFIGS
 from tests.support.mixins import CheckShellBinaryNameAndVersionMixin, ShellCaseCommonTestsMixin
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTestCaseMixin
 from tests.support.mixins import SaltMinionEventAssertsMixin, SaltReturnAssertsMixin
@@ -109,16 +108,6 @@ from tornado import ioloop
 from tests.support.processes import SaltMaster, SaltMinion, SaltSyndic
 
 log = logging.getLogger(__name__)
-
-
-def cleanup_runtime_config_instance(to_cleanup):
-    # Explicit and forced cleanup
-    for key in list(to_cleanup.keys()):
-        instance = to_cleanup.pop(key)
-        del instance
-
-
-atexit.register(cleanup_runtime_config_instance, RUNTIME_CONFIGS)
 
 _RUNTESTS_PORTS = {}
 
@@ -335,7 +324,7 @@ class TestDaemon(object):
                 daemon_log_prefix='salt-master/{}'.format(self.master_opts['id']),
                 daemon_cli_script_name='master',
                 daemon_config=self.master_opts,
-                daemon_config_dir=TMP_CONF_DIR,
+                daemon_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
@@ -371,7 +360,7 @@ class TestDaemon(object):
                 daemon_log_prefix='salt-minion/{}'.format(self.minion_opts['id']),
                 daemon_cli_script_name='minion',
                 daemon_config=self.minion_opts,
-                daemon_config_dir=TMP_CONF_DIR,
+                daemon_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
@@ -407,7 +396,7 @@ class TestDaemon(object):
                 daemon_log_prefix='sub-salt-minion/{}'.format(self.sub_minion_opts['id']),
                 daemon_cli_script_name='minion',
                 daemon_config=self.sub_minion_opts,
-                daemon_config_dir=TMP_SUB_MINION_CONF_DIR,
+                daemon_config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR,
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
@@ -443,7 +432,7 @@ class TestDaemon(object):
                 daemon_log_prefix='salt-smaster/{}'.format(self.syndic_master_opts['id']),
                 daemon_cli_script_name='master',
                 daemon_config=self.syndic_master_opts,
-                daemon_config_dir=TMP_SYNDIC_MASTER_CONF_DIR,
+                daemon_config_dir=RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR,
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
@@ -479,7 +468,7 @@ class TestDaemon(object):
                 daemon_log_prefix='salt-syndic/{}'.format(self.syndic_opts['id']),
                 daemon_cli_script_name='syndic',
                 daemon_config=self.syndic_opts,
-                daemon_config_dir=TMP_SYNDIC_MINION_CONF_DIR,
+                daemon_config_dir=RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR,
                 daemon_class=SaltSyndic,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
@@ -547,12 +536,12 @@ class TestDaemon(object):
         if not (keygen and sshd):
             print('WARNING: Could not initialize SSH subsystem. Tests for salt-ssh may break!')
             return
-        if not os.path.exists(TMP_CONF_DIR):
-            os.makedirs(TMP_CONF_DIR)
+        if not os.path.exists(RUNTIME_VARS.TMP_CONF_DIR):
+            os.makedirs(RUNTIME_VARS.TMP_CONF_DIR)
 
         # Generate client key
-        pub_key_test_file = os.path.join(TMP_CONF_DIR, 'key_test.pub')
-        priv_key_test_file = os.path.join(TMP_CONF_DIR, 'key_test')
+        pub_key_test_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test.pub')
+        priv_key_test_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test')
         if os.path.exists(pub_key_test_file):
             os.remove(pub_key_test_file)
         if os.path.exists(priv_key_test_file):
@@ -571,17 +560,17 @@ class TestDaemon(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
-            cwd=TMP_CONF_DIR
+            cwd=RUNTIME_VARS.TMP_CONF_DIR
         )
         _, keygen_err = keygen_process.communicate()
         if keygen_err:
             print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_err)))
         sshd_config_path = os.path.join(FILES, 'conf/_ssh/sshd_config')
-        shutil.copy(sshd_config_path, TMP_CONF_DIR)
-        auth_key_file = os.path.join(TMP_CONF_DIR, 'key_test.pub')
+        shutil.copy(sshd_config_path, RUNTIME_VARS.TMP_CONF_DIR)
+        auth_key_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test.pub')
 
         # Generate server key
-        server_key_dir = os.path.join(TMP_CONF_DIR, 'server')
+        server_key_dir = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'server')
         if not os.path.exists(server_key_dir):
             os.makedirs(server_key_dir)
         server_dsa_priv_key_file = os.path.join(server_key_dir, 'ssh_host_dsa_key')
@@ -660,7 +649,7 @@ class TestDaemon(object):
         if keygen_ed25519_err:
             print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_ed25519_err)))
 
-        with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
+        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
             ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
             if not keygen_dsa_err:
                 ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
@@ -669,13 +658,13 @@ class TestDaemon(object):
             if not keygen_ed25519_err:
                 ssh_config.write('HostKey {0}\n'.format(server_ed25519_priv_key_file))
 
-        self.sshd_pidfile = os.path.join(TMP_CONF_DIR, 'sshd.pid')
+        self.sshd_pidfile = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'sshd.pid')
         self.sshd_process = subprocess.Popen(
             [sshd, '-f', 'sshd_config', '-oPidFile={0}'.format(self.sshd_pidfile)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
-            cwd=TMP_CONF_DIR
+            cwd=RUNTIME_VARS.TMP_CONF_DIR
         )
         _, sshd_err = self.sshd_process.communicate()
         if sshd_err:
@@ -683,10 +672,10 @@ class TestDaemon(object):
         else:
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
-        shutil.copy(roster_path, TMP_CONF_DIR)
-        with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
+        shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
+        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
             roster.write('  user: {0}\n'.format(RUNTIME_VARS.RUNNING_TESTS_USER))
-            roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
+            roster.write('  priv: {0}/{1}'.format(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'))
         sys.stdout.write(
             ' {LIGHT_GREEN}STARTED!\n{ENDC}'.format(
                 **self.colors
@@ -705,11 +694,11 @@ class TestDaemon(object):
             * syndic_master
             * sub_minion
         '''
-        return RUNTIME_CONFIGS[role]
+        return RUNTIME_VARS.RUNTIME_CONFIGS[role]
 
     @classmethod
     def config_location(cls):
-        return TMP_CONF_DIR
+        return RUNTIME_VARS.TMP_CONF_DIR
 
     @property
     def client(self):
@@ -721,31 +710,31 @@ class TestDaemon(object):
         to be deferred to a latter stage. If created it on `__enter__` like it
         previously was, it would not receive the master events.
         '''
-        if 'runtime_client' not in RUNTIME_CONFIGS:
-            RUNTIME_CONFIGS['runtime_client'] = salt.client.get_local_client(
+        if 'runtime_client' not in RUNTIME_VARS.RUNTIME_CONFIGS:
+            RUNTIME_VARS.RUNTIME_CONFIGS['runtime_client'] = salt.client.get_local_client(
                 mopts=self.master_opts
             )
-        return RUNTIME_CONFIGS['runtime_client']
+        return RUNTIME_VARS.RUNTIME_CONFIGS['runtime_client']
 
     @classmethod
     def transplant_configs(cls, transport='zeromq'):
-        if os.path.isdir(TMP_CONF_DIR):
-            shutil.rmtree(TMP_CONF_DIR)
-        os.makedirs(TMP_CONF_DIR)
-        os.makedirs(TMP_SUB_MINION_CONF_DIR)
-        os.makedirs(TMP_SYNDIC_MASTER_CONF_DIR)
-        os.makedirs(TMP_SYNDIC_MINION_CONF_DIR)
-        print(' * Transplanting configuration files to \'{0}\''.format(TMP_CONF_DIR))
-        tests_known_hosts_file = os.path.join(TMP_CONF_DIR, 'salt_ssh_known_hosts')
+        if os.path.isdir(RUNTIME_VARS.TMP_CONF_DIR):
+            shutil.rmtree(RUNTIME_VARS.TMP_CONF_DIR)
+        os.makedirs(RUNTIME_VARS.TMP_CONF_DIR)
+        os.makedirs(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
+        os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR)
+        os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR)
+        print(' * Transplanting configuration files to \'{0}\''.format(RUNTIME_VARS.TMP_CONF_DIR))
+        tests_known_hosts_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'salt_ssh_known_hosts')
         with salt.utils.fopen(tests_known_hosts_file, 'w') as known_hosts:
             known_hosts.write('')
 
         # This master connects to syndic_master via a syndic
-        master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
+        master_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'master'))
         master_opts['known_hosts_file'] = tests_known_hosts_file
         master_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
         master_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
-        master_opts['config_dir'] = TMP_CONF_DIR
+        master_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
         master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
         master_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'master')
 
@@ -753,35 +742,35 @@ class TestDaemon(object):
         # Let's start with a copy of the syndic master configuration
         syndic_opts = copy.deepcopy(master_opts)
         # Let's update with the syndic configuration
-        syndic_opts.update(salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic')))
+        syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
         syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
-        syndic_opts['config_dir'] = TMP_SYNDIC_MINION_CONF_DIR
+        syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
 
         # This minion connects to master
-        minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'minion'))
+        minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion'))
         minion_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
         minion_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
-        minion_opts['config_dir'] = TMP_CONF_DIR
+        minion_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
         minion_opts['root_dir'] = os.path.join(TMP, 'rootdir')
         minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
         minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
         minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
 
         # This sub_minion also connects to master
-        sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
+        sub_minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion'))
         sub_minion_opts['cachedir'] = os.path.join(TMP, 'rootdir-sub-minion', 'cache')
         sub_minion_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
-        sub_minion_opts['config_dir'] = TMP_SUB_MINION_CONF_DIR
+        sub_minion_opts['config_dir'] = RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR
         sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
         sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
         sub_minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
         sub_minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
 
         # This is the master of masters
-        syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
+        syndic_master_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master'))
         syndic_master_opts['cachedir'] = os.path.join(TMP, 'rootdir-syndic-master', 'cache')
         syndic_master_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
-        syndic_master_opts['config_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
+        syndic_master_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
         syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
 
@@ -809,12 +798,12 @@ class TestDaemon(object):
                 os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
                 #   salt://my-temp-file.txt
-                TMP_STATE_TREE
+                RUNTIME_VARS.TMP_STATE_TREE
             ],
             # Alternate root to test __env__ choices
             'prod': [
                 os.path.join(FILES, 'file', 'prod'),
-                TMP_PRODENV_STATE_TREE
+                RUNTIME_VARS.TMP_PRODENV_STATE_TREE
             ]
         }
         master_opts.setdefault('reactor', []).append(
@@ -879,59 +868,59 @@ class TestDaemon(object):
             conf['runtests_log_port'] = SALT_LOG_PORT
 
         # ----- Transcribe Configuration ---------------------------------------------------------------------------->
-        for entry in os.listdir(CONF_DIR):
+        for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
             if entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
                 # These have runtime computed values and will be handled
                 # differently
                 continue
-            entry_path = os.path.join(CONF_DIR, entry)
+            entry_path = os.path.join(RUNTIME_VARS.CONF_DIR, entry)
             if os.path.isfile(entry_path):
                 shutil.copy(
                     entry_path,
-                    os.path.join(TMP_CONF_DIR, entry)
+                    os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
                 )
             elif os.path.isdir(entry_path):
                 shutil.copytree(
                     entry_path,
-                    os.path.join(TMP_CONF_DIR, entry)
+                    os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
                 )
 
         for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
-            with salt.utils.fopen(os.path.join(TMP_CONF_DIR, entry), 'w') as fp_:
+            with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry), 'w') as fp_:
                 fp_.write(yaml.dump(computed_config, default_flow_style=False))
         sub_minion_computed_config = copy.deepcopy(sub_minion_opts)
-        salt.utils.fopen(os.path.join(TMP_SUB_MINION_CONF_DIR, 'minion'), 'w').write(
+        salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'), 'w').write(
             yaml.dump(sub_minion_computed_config, default_flow_style=False)
         )
-        shutil.copyfile(os.path.join(TMP_CONF_DIR, 'master'), os.path.join(TMP_SUB_MINION_CONF_DIR, 'master'))
+        shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'master'))
 
         syndic_master_computed_config = copy.deepcopy(syndic_master_opts)
-        salt.utils.fopen(os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w').write(
+        salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w').write(
             yaml.dump(syndic_master_computed_config, default_flow_style=False)
         )
         syndic_computed_config = copy.deepcopy(syndic_opts)
-        salt.utils.fopen(os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w').write(
+        salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w').write(
             yaml.dump(syndic_computed_config, default_flow_style=False)
         )
-        shutil.copyfile(os.path.join(TMP_CONF_DIR, 'master'), os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'master'))
+        shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'master'))
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
 
         # ----- Verify Environment ---------------------------------------------------------------------------------->
-        master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'master'))
-        minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
+        master_opts = salt.config.master_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'))
+        minion_opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         syndic_opts = salt.config.syndic_config(
-            os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'master'),
-            os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'minion'),
+            os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'master'),
+            os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion'),
         )
-        sub_minion_opts = salt.config.minion_config(os.path.join(TMP_SUB_MINION_CONF_DIR, 'minion'))
-        syndic_master_opts = salt.config.master_config(os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master'))
+        sub_minion_opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'))
+        syndic_master_opts = salt.config.master_config(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'))
 
-        RUNTIME_CONFIGS['master'] = freeze(master_opts)
-        RUNTIME_CONFIGS['minion'] = freeze(minion_opts)
-        RUNTIME_CONFIGS['syndic'] = freeze(syndic_opts)
-        RUNTIME_CONFIGS['sub_minion'] = freeze(sub_minion_opts)
-        RUNTIME_CONFIGS['syndic_master'] = freeze(syndic_master_opts)
+        RUNTIME_VARS.RUNTIME_CONFIGS['master'] = freeze(master_opts)
+        RUNTIME_VARS.RUNTIME_CONFIGS['minion'] = freeze(minion_opts)
+        RUNTIME_VARS.RUNTIME_CONFIGS['syndic'] = freeze(syndic_opts)
+        RUNTIME_VARS.RUNTIME_CONFIGS['sub_minion'] = freeze(sub_minion_opts)
+        RUNTIME_VARS.RUNTIME_CONFIGS['syndic_master'] = freeze(syndic_master_opts)
 
         verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
@@ -970,8 +959,8 @@ class TestDaemon(object):
                     syndic_master_opts['sock_dir'],
                     sub_minion_opts['sock_dir'],
                     minion_opts['sock_dir'],
-                    TMP_STATE_TREE,
-                    TMP_PRODENV_STATE_TREE,
+                    RUNTIME_VARS.TMP_STATE_TREE,
+                    RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
                     TMP,
                     ],
                    RUNTIME_VARS.RUNNING_TESTS_USER)
@@ -1078,7 +1067,7 @@ class TestDaemon(object):
             os.chmod(path, stat.S_IRWXU)
             func(path)
 
-        for dirname in (TMP, TMP_STATE_TREE, TMP_PRODENV_STATE_TREE):
+        for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
             if os.path.isdir(dirname):
                 shutil.rmtree(dirname, onerror=remove_readonly)
 
@@ -1426,7 +1415,11 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         '''
         Execute salt-ssh
         '''
-        arg_str = '-ldebug -W -c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
+        arg_str = '-ldebug -W -c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(
+            self.get_config_dir(),
+            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
+            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
+            arg_str)
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout, raw=True)
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
