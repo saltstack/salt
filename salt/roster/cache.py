@@ -6,7 +6,6 @@ to access regular minions over ``salt-ssh``.
 .. versionadded:: Nitrogen
 
     - grains, pillar, mine data matching
-    - environment variables
     - SDB URLs
     - IPv6 support
     - roster_order per config key
@@ -86,7 +85,7 @@ roster_order:
 
   user:
     - pillar: ssh:auth:user          # Lookup this pillar key
-    - env: USER                      # Lookup this env var
+    - sdb://osenv/USER               # Lookup this env var through sdb
 
   priv:
     - pillar:                        # Lists are also supported
@@ -225,7 +224,6 @@ def _minion_lookup(minion_id, key, minion):
                 'pillar': pillar,
                 'grain': grains,
                 'mine': mine,
-                'env': os.environ,
             }[data_id]
 
             for k in _data_lookup(ref, lookup):
