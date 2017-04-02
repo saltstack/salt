@@ -259,6 +259,14 @@ New modules:
   ARP tables and LLDP neighbors.
 - :mod:`BGP finder <salt.runners.bgp>` - Runner to search BGP neighbors details.
 
+New functions:
+
+- :mod:`Configuration getter <salt.modules.napalm_network.config>` - Return
+  the whole configuration of the network device.
+- :mod:`Optics getter <salt.modules.napalm_network.optics>` - Fetches
+  the power usage on the various transceivers installed on the network device
+  (in dBm).
+
 New grains: :mod:`Host <salt.grains.napalm.host>`,
 :mod:`Username <salt.grains.napalm.username>` and
 :mod:`Optional args <salt.grains.napalm.optional_args>`.
