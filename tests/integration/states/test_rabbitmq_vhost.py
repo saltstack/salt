@@ -9,10 +9,10 @@ import os
 
 # Import Salt Testing libs
 import tests.integration as integration
+from tests.support.mixins import SaltReturnAssertsMixin
 
 
-class RabbitVHostTestCase(integration.ModuleCase,
-                          integration.SaltReturnAssertsMixin):
+class RabbitVHostTestCase(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the rabbitmq virtual host states.
     '''

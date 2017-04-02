@@ -11,10 +11,11 @@ from __future__ import absolute_import
 # Import salt testing libs
 import tests.integration as integration
 from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 
 @destructiveTest
-class NetworkTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
+class NetworkTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate network state module
     '''

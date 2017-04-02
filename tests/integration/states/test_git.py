@@ -15,13 +15,14 @@ import tempfile
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.helpers import skip_if_binaries_missing
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
 
 
 @skip_if_binaries_missing('git')
-class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
+class GitTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the git state
     '''
@@ -462,7 +463,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
 
 
 @skip_if_binaries_missing('git')
-class LocalRepoGitTest(integration.ModuleCase, integration.SaltReturnAssertsMixin):
+class LocalRepoGitTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Tests which do no require connectivity to github.com
     '''

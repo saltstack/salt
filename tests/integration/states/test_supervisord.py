@@ -13,6 +13,7 @@ import subprocess
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import skipIf
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
@@ -25,8 +26,7 @@ import salt.ext.six as six
 @skipIf(six.PY3, 'supervisor does not work under python 3')
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 @skipIf(salt.utils.which('supervisorctl') is None, 'supervisord not installed')
-class SupervisordTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixin):
+class SupervisordTest(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the supervisord states.
     '''
