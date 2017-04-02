@@ -8,7 +8,7 @@ States to manage Docker containers, images, volumes, and networks
 
 .. important::
     As of the Nitrogen release, the states in this module have been separated
-    into the following four modules:
+    into the following four state modules:
 
     - :mod:`docker_container <salt.states.docker_container>` - States to manage
       Docker containers
@@ -91,8 +91,8 @@ def running(name, **kwargs):
     )
     msg = (
         'The docker.running state has been renamed to '
-        'docker_container.running. Update your SLS to use the new function '
-        'name to get rid of this warning.'
+        'docker_container.running. To get rid of this warning, update your '
+        'SLS to use the new name.'
     )
     salt.utils.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
@@ -109,9 +109,9 @@ def stopped(**kwargs):
         **salt.utils.clean_kwargs(**kwargs)
     )
     msg = (
-        'The docker.running state has been renamed to '
-        'docker_container.running. Update your SLS to use the new function '
-        'name to get rid of this warning.'
+        'The docker.stopped state has been renamed to '
+        'docker_container.stopped. To get rid of this warning, update your '
+        'SLS to use the new name.'
     )
     salt.utils.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
@@ -129,9 +129,9 @@ def absent(name, **kwargs):
         **salt.utils.clean_kwargs(**kwargs)
     )
     msg = (
-        'The docker.running state has been renamed to '
-        'docker_container.running. Update your SLS to use the new function '
-        'name to get rid of this warning.'
+        'The docker.absent state has been renamed to '
+        'docker_container.absent. To get rid of this warning, update your '
+        'SLS to use the new name.'
     )
     salt.utils.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
@@ -150,8 +150,8 @@ def network_present(name, **kwargs):
     )
     msg = (
         'The docker.network_present state has been renamed to '
-        'docker_network.present. Update your SLS to use the new function name '
-        'to get rid of this warning.'
+        'docker_network.present. To get rid of this warning, update your SLS '
+        'to use the new name.'
     )
     salt.utils.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
@@ -170,8 +170,8 @@ def network_absent(name, **kwargs):
     )
     msg = (
         'The docker.network_absent state has been renamed to '
-        'docker_network.absent. Update your SLS to use the new function name '
-        'to get rid of this warning.'
+        'docker_network.absent. To get rid of this warning, update your SLS '
+        'to use the new name.'
     )
     salt.utils.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
@@ -190,8 +190,8 @@ def image_present(name, **kwargs):
     )
     msg = (
         'The docker.image_present state has been renamed to '
-        'docker_image.present. Update your SLS to use the new function name '
-        'to get rid of this warning.'
+        'docker_image.present. To get rid of this warning, update your SLS '
+        'to use the new name.'
     )
     salt.utils.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
@@ -209,8 +209,8 @@ def image_absent(**kwargs):
     )
     msg = (
         'The docker.image_absent state has been renamed to '
-        'docker_image.absent. Update your SLS to use the new function name '
-        'to get rid of this warning.'
+        'docker_image.absent. To get rid of this warning, update your SLS to '
+        'use the new name.'
     )
     salt.utils.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
@@ -229,8 +229,8 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
                                               force=force)
     msg = (
         'The docker.volume_present state has been renamed to '
-        'docker_volume.present. Update your SLS to use the new function name '
-        'to get rid of this warning.'
+        'docker_volume.present. To get rid of this warning, update your SLS '
+        'to use the new name.'
     )
     salt.utils.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
@@ -246,8 +246,8 @@ def volume_absent(name, driver=None):
     ret = __states__['docker_volume.absent'](name, driver=driver)
     msg = (
         'The docker.volume_absent state has been renamed to '
-        'docker_volume.absent. Update your SLS to use the new function name '
-        'to get rid of this warning.'
+        'docker_volume.absent. To get rid of this warning, update your SLS '
+        'to use the new name.'
     )
     salt.utils.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
