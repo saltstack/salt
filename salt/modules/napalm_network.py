@@ -808,9 +808,10 @@ def mac(address='', interface='', vlan=0, **kwargs):  # pylint: disable=unused-a
     return proxy_output
 
 
-def config(source=None):
+@proxy_napalm_wrap
+def config(source=None, **kwargs):  # pylint: disable=unused-argument
     '''
-    .. versionadded:: 2016.11.2
+    .. versionadded:: Nitrogen
 
     Return the whole configuration of the network device.
     By default, it will return all possible configuration
@@ -822,31 +823,37 @@ def config(source=None):
     - candidate config
 
     To return only one of the configurations, you can use
-    the `source` argument.
+    the ``source`` argument.
 
     source (optional)
         Which configuration type you want to display, default is all of them.
 
+        Options:
+
+        - running
+        - candidate
+        - startup
+
     :return:
         The object returned is a dictionary with the following keys:
 
-            - running (string): Representation of the native running configuration.
-            - candidate (string): Representation of the native candidate configuration.
-                If the device doesnt differentiate between running and startup
-                configuration this will an empty string.
-            - startup (string): Representation of the native startup configuration.
-                If the device doesnt differentiate between running and startup
-                configuration this will an empty string.
+        - running (string): Representation of the native running configuration.
+        - candidate (string): Representation of the native candidate configuration.
+            If the device doesnt differentiate between running and startup
+            configuration this will an empty string.
+        - startup (string): Representation of the native startup configuration.
+            If the device doesnt differentiate between running and startup
+            configuration this will an empty string.
 
     CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' net.config
-            salt '*' net.config source=candidate
+        salt '*' net.config
+        salt '*' net.config source=candidate
     '''
-
-    return __proxy__['napalm.call'](
+    return salt.utils.napalm.call(
+        napalm_device,  # pylint: disable=undefined-variable
         'get_config',
         **{
             'retrieve': source
@@ -854,9 +861,10 @@ def config(source=None):
     )
 
 
-def optics():
+@proxy_napalm_wrap
+def optics(**kwargs):  # pylint: disable=unused-argument
     '''
-    .. versionadded:: 2016.11.2
+    .. versionadded:: Nitrogen
 
     Fetches the power usage on the various transceivers installed
     on the network device (in dBm), and returns a view that conforms with the
@@ -887,11 +895,12 @@ def optics():
 
     CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' net.optics
+        salt '*' net.optics
     '''
-    return __proxy__['napalm.call'](
+    return salt.utils.napalm.call(
+        napalm_device,  # pylint: disable=undefined-variable
         'get_optics',
         **{
         }
