@@ -19,7 +19,7 @@ if not os.path.exists('/etc/alternatives'):
 
 @skipIf(NO_ALTERNATIVES, '/etc/alternatives does not exist on the system')
 class AlterantivesStateTest(integration.ModuleCase,
-                            integration.SaltReturnAssertsMixIn):
+                            integration.SaltReturnAssertsMixin):
     @destructiveTest
     def test_install_set_and_remove(self):
         ret = self.run_state('alternatives.set', name='alt-test', path='/bin/true')
