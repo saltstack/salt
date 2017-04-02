@@ -36,6 +36,8 @@ try:
 except ImportError:
     HAS_NAPALM_YANG = False
 
+# Import salt modules
+from salt.utils import fopen
 import salt.utils.napalm
 
 # ------------------------------------------------------------------------------
@@ -141,7 +143,7 @@ def managed(name,
     log.debug('Creating temp file: {0}'.format(temp_file))
     if 'to_dict' not in data:
         data = {'to_dict': data}
-    with salt.utils.fopen(temp_file, 'w') as file_handle:
+    with fopen(temp_file, 'w') as file_handle:
         yaml.dump(data, file_handle)
     device_config = __salt__['napalm_yang.parse'](*models,
                                                   config=True,
