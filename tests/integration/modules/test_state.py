@@ -112,7 +112,7 @@ class StateModuleTest(integration.ModuleCase,
         '''
         remove minion state request file
         '''
-        cache_file = os.path.join(integration.RUNTIME_CONFIGS['minion']['cachedir'], 'req_state.p')
+        cache_file = os.path.join(self.get_config('minion')['cachedir'], 'req_state.p')
         if os.path.exists(cache_file):
             os.remove(cache_file)
 

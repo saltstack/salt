@@ -40,17 +40,6 @@ from salt._compat import ElementTree as etree
 import salt.ext.six as six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
-RUNTIME_CONFIGS = {}
-
-def cleanup_runtime_config_instance(to_cleanup):
-    # Explicit and forced cleanup
-    for key in list(to_cleanup):
-        instance = to_cleanup.pop(key)
-        del instance
-
-
-atexit.register(cleanup_runtime_config_instance, RUNTIME_CONFIGS)
-
 log = logging.getLogger(__name__)
 
 
@@ -138,33 +127,33 @@ class AdaptedConfigurationTestCaseMixin(object):
                     AdaptedConfigurationTestCaseMixin.get_config_file_path('master')
                 )
 
-        if config_for not in RUNTIME_CONFIGS:
+        if config_for not in RUNTIME_VARS.RUNTIME_CONFIGS:
             if config_for in ('master', 'syndic_master'):
-                RUNTIME_CONFIGS[config_for] = freeze(
+                RUNTIME_VARS.RUNTIME_CONFIGS[config_for] = freeze(
                     salt.config.master_config(
                         AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for)
                     )
                 )
             elif config_for in ('minion', 'sub_minion'):
-                RUNTIME_CONFIGS[config_for] = freeze(
+                RUNTIME_VARS.RUNTIME_CONFIGS[config_for] = freeze(
                     salt.config.minion_config(
                         AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for)
                     )
                 )
             elif config_for in ('syndic',):
-                RUNTIME_CONFIGS[config_for] = freeze(
+                RUNTIME_VARS.RUNTIME_CONFIGS[config_for] = freeze(
                     salt.config.syndic_config(
                         AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for),
                         AdaptedConfigurationTestCaseMixin.get_config_file_path('minion')
                     )
                 )
             elif config_for == 'client_config':
-                RUNTIME_CONFIGS[config_for] = freeze(
+                RUNTIME_VARS.RUNTIME_CONFIGS[config_for] = freeze(
                     salt.config.client_config(
                         AdaptedConfigurationTestCaseMixin.get_config_file_path('master')
                     )
                 )
-        return RUNTIME_CONFIGS[config_for]
+        return RUNTIME_VARS.RUNTIME_CONFIGS[config_for]
 
     @staticmethod
     def get_config_dir():
@@ -233,11 +222,10 @@ class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
     def client(self):
         # Late import
         import salt.client
-        if 'runtime_client' not in RUNTIME_CONFIGS:
-            RUNTIME_CONFIGS['runtime_client'] = salt.client.get_local_client(
-                mopts=self.get_config(self._salt_client_config_file_name_, from_scratch=True)
-            )
-        return RUNTIME_CONFIGS['runtime_client']
+        if 'runtime_client' not in RUNTIME_VARS.RUNTIME_CONFIGS:
+            mopts = self.get_config(self._salt_client_config_file_name_, from_scratch=True)
+            RUNTIME_VARS.RUNTIME_CONFIGS['runtime_client'] = salt.client.get_local_client(mopts=mopts)
+        return RUNTIME_VARS.RUNTIME_CONFIGS['runtime_client']
 
 
 class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
