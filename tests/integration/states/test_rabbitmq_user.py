@@ -8,10 +8,10 @@ import os
 
 # Import Salt Testing libs
 import tests.integration as integration
+from tests.support.mixins import SaltReturnAssertsMixin
 
 
-class RabbitUserTestCase(integration.ModuleCase,
-                         integration.SaltReturnAssertsMixin):
+class RabbitUserTestCase(integration.ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the rabbitmq user states.
     '''
