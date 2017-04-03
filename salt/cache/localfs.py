@@ -23,7 +23,7 @@ import salt.utils.atomicfile
 
 log = logging.getLogger(__name__)
 
-__func_alias__ = {'ls': 'list'}
+__func_alias__ = {'list': 'ls'}
 
 
 def __cachedir(kwargs=None):
