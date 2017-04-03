@@ -267,6 +267,7 @@ import difflib
 import itertools
 import logging
 import os
+import posixpath
 import re
 import shutil
 import sys
@@ -353,6 +354,41 @@ def _check_user(user, group):
     return err
 
 
+def _is_valid_relpath(
+        relpath,
+        maxdepth=None):
+    '''
+    Performs basic sanity checks on a relative path.
+
+    Requires POSIX-compatible paths (i.e. the kind obtained through
+    cp.list_master or other such calls).
+
+    Ensures that the path does not contain directory transversal, and
+    that it does not exceed a stated maximum depth (if specified).
+    '''
+    # Check relpath surrounded by slashes, so that `..` can be caught as
+    # a path component at the start, end, and in the middle of the path.
+    sep, pardir = posixpath.sep, posixpath.pardir
+    if sep + pardir + sep in sep + relpath + sep:
+        return False
+
+    # Check that the relative path's depth does not exceed maxdepth
+    if maxdepth is not None:
+        path_depth = relpath.strip(sep).count(sep)
+        if path_depth > maxdepth:
+            return False
+
+    return True
+
+
+def _salt_to_os_path(path):
+    '''
+    Converts a path from the form received via salt master to the OS's native
+    path format.
+    '''
+    return os.path.normpath(path.replace(posixpath.sep, os.path.sep))
+
+
 def _gen_recurse_managed_files(
         name,
         source,
@@ -366,20 +402,20 @@ def _gen_recurse_managed_files(
     Generate the list of files managed by a recurse state
     '''
 
+    # Convert a relative path generated from salt master paths to an OS path
+    # using "name" as the base directory
+    def full_path(master_relpath):
+        return os.path.join(name, _salt_to_os_path(master_relpath))
+
     # Process symlinks and return the updated filenames list
     def process_symlinks(filenames, symlinks):
         for lname, ltarget in six.iteritems(symlinks):
-            if not salt.utils.check_include_exclude(
-                    os.path.relpath(lname, srcpath), include_pat, exclude_pat):
+            srelpath = posixpath.relpath(lname, srcpath)
+            if not _is_valid_relpath(srelpath, maxdepth=maxdepth):
                 continue
-            srelpath = os.path.relpath(lname, srcpath)
-            # Check for max depth
-            if maxdepth is not None:
-                srelpieces = srelpath.split('/')
-                if not srelpieces[-1]:
-                    srelpieces = srelpieces[:-1]
-                if len(srelpieces) > maxdepth + 1:
-                    continue
+            if not salt.utils.check_include_exclude(
+                    srelpath, include_pat, exclude_pat):
+                continue
             # Check for all paths that begin with the symlink
             # and axe it leaving only the dirs/files below it.
             # This needs to use list() otherwise they reference
@@ -396,7 +432,7 @@ def _gen_recurse_managed_files(
             managed_symlinks.add((srelpath, ltarget))
 
             # Add the path to the keep set in case clean is set to True
-            keep.add(os.path.join(name, srelpath))
+            keep.add(full_path(srelpath))
         vdir.update(keep)
         return filenames
 
@@ -409,10 +445,9 @@ def _gen_recurse_managed_files(
     srcpath, senv = salt.utils.url.parse(source)
     if senv is None:
         senv = __env__
-    if not srcpath.endswith(os.sep):
+    if not srcpath.endswith(posixpath.sep):
         # we're searching for things that start with this *directory*.
-        # use '/' since #master only runs on POSIX
-        srcpath = srcpath + os.sep
+        srcpath = srcpath + posixpath.sep
     fns_ = __salt__['cp.list_master'](senv, srcpath)
 
     # If we are instructed to keep symlinks, then process them.
@@ -429,27 +464,16 @@ def _gen_recurse_managed_files(
         # the file to copy from; it is either a normal file or an
         # empty dir(if include_empty==true).
 
-        relname = sdecode(os.path.relpath(fn_, srcpath))
-        if relname.startswith('..'):
+        relname = sdecode(posixpath.relpath(fn_, srcpath))
+        if not _is_valid_relpath(relname, maxdepth=maxdepth):
             continue
-
-        # Check for maxdepth of the relative path
-        if maxdepth is not None:
-            # Since paths are all master, just use POSIX separator
-            relpieces = relname.split('/')
-            # Handle empty directories (include_empty==true) by removing the
-            # the last piece if it is an empty string
-            if not relpieces[-1]:
-                relpieces = relpieces[:-1]
-            if len(relpieces) > maxdepth + 1:
-                continue
 
         # Check if it is to be excluded. Match only part of the path
         # relative to the target directory
         if not salt.utils.check_include_exclude(
                 relname, include_pat, exclude_pat):
             continue
-        dest = os.path.join(name, relname)
+        dest = full_path(relname)
         dirname = os.path.dirname(dest)
         keep.add(dest)
 
@@ -464,10 +488,13 @@ def _gen_recurse_managed_files(
     if include_empty:
         mdirs = __salt__['cp.list_master_dirs'](senv, srcpath)
         for mdir in mdirs:
-            if not salt.utils.check_include_exclude(
-                    os.path.relpath(mdir, srcpath), include_pat, exclude_pat):
+            relname = posixpath.relpath(mdir, srcpath)
+            if not _is_valid_relpath(relname, maxdepth=maxdepth):
                 continue
-            mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
+            if not salt.utils.check_include_exclude(
+                    relname, include_pat, exclude_pat):
+                continue
+            mdest = full_path(relname)
             # Check for symlinks that happen to point to an empty dir.
             if keep_symlinks:
                 islink = False
@@ -2390,7 +2417,7 @@ def _depth_limited_walk(top, max_depth=None):
     '''
     for root, dirs, files in os.walk(top):
         if max_depth is not None:
-            rel_depth = root.count(os.sep) - top.count(os.sep)
+            rel_depth = root.count(os.path.sep) - top.count(os.path.sep)
             if rel_depth >= max_depth:
                 del dirs[:]
         yield (str(root), list(dirs), list(files))
