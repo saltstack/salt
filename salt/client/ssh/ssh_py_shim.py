@@ -42,6 +42,12 @@ ARGS = None
 # pylint: disable=block-comment-should-start-with-cardinal-space
 #%%OPTS
 
+def is_windows():
+    '''
+    Simple function to return if a host is Windows or not
+    '''
+    return sys.platform.startswith('win')
+
 
 def need_deployment():
     """
@@ -54,25 +60,26 @@ def need_deployment():
     os.makedirs(OPTIONS.saltdir)
     os.umask(old_umask)
     # Verify perms on saltdir
-    euid = os.geteuid()
-    dstat = os.stat(OPTIONS.saltdir)
-    if dstat.st_uid != euid:
-        # Attack detected, try again
-        need_deployment()
-    if dstat.st_mode != 16832:
-        # Attack detected
-        need_deployment()
-    # If SUDOing then also give the super user group write permissions
-    sudo_gid = os.environ.get('SUDO_GID')
-    if sudo_gid:
-        try:
-            os.chown(OPTIONS.saltdir, -1, int(sudo_gid))
-            stt = os.stat(OPTIONS.saltdir)
-            os.chmod(OPTIONS.saltdir, stt.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
-        except OSError:
-            sys.stdout.write('\n\nUnable to set permissions on thin directory.\nIf sudo_user is set '
-                    'and is not root, be certain the user is in the same group\nas the login user')
-            sys.exit(1)
+    if not is_windows():
+        euid = os.geteuid()
+        dstat = os.stat(OPTIONS.saltdir)
+        if dstat.st_uid != euid:
+            # Attack detected, try again
+            need_deployment()
+        if dstat.st_mode != 16832:
+            # Attack detected
+            need_deployment()
+        # If SUDOing then also give the super user group write permissions
+        sudo_gid = os.environ.get('SUDO_GID')
+        if sudo_gid:
+            try:
+                os.chown(OPTIONS.saltdir, -1, int(sudo_gid))
+                stt = os.stat(OPTIONS.saltdir)
+                os.chmod(OPTIONS.saltdir, stt.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
+            except OSError:
+                sys.stdout.write('\n\nUnable to set permissions on thin directory.\nIf sudo_user is set '
+                        'and is not root, be certain the user is in the same group\nas the login user')
+                sys.exit(1)
 
     # Delimiter emitted on stdout *only* to indicate shim message to master.
     sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimiter))
@@ -140,9 +147,10 @@ def main(argv):  # pylint: disable=W0613
         unpack_thin(thin_path)
         # Salt thin now is available to use
     else:
-        scpstat = subprocess.Popen(['/bin/sh', '-c', 'command -v scp']).wait()
-        if scpstat != 0:
-            sys.exit(EX_SCP_NOT_FOUND)
+        if not sys.platform.startswith('win'):
+            scpstat = subprocess.Popen(['/bin/sh', '-c', 'command -v scp']).wait()
+            if scpstat != 0:
+                sys.exit(EX_SCP_NOT_FOUND)
 
         if not os.path.exists(OPTIONS.saltdir):
             need_deployment()
@@ -154,7 +162,7 @@ def main(argv):  # pylint: disable=W0613
             )
             sys.exit(EX_CANTCREAT)
 
-        version_path = os.path.join(OPTIONS.saltdir, 'version')
+        version_path = os.path.normpath(os.path.join(OPTIONS.saltdir, 'version'))
         if not os.path.exists(version_path) or not os.path.isfile(version_path):
             sys.stderr.write(
                 'WARNING: Unable to locate current thin '

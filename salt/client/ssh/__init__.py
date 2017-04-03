@@ -22,6 +22,7 @@ import uuid
 import tempfile
 import binascii
 import sys
+import ntpath
 
 # Import salt libs
 import salt.output
@@ -50,7 +51,11 @@ from salt.utils.process import MultiprocessingProcess
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
-
+try:
+    import saltwinshell
+    HAS_WINSHELL = False
+except ImportError:
+    HAS_WINSHELL = False
 try:
     import zmq
     HAS_ZMQ = True
@@ -122,6 +127,7 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 # to be able to define the string with indentation for readability but
 # still strip the white space for compactness and to avoid issues with
 # some multi-line embedded python code having indentation errors
+
 SSH_SH_SHIM = \
     '\n'.join(
         [s.strip() for s in r'''/bin/sh << 'EOF'
@@ -184,6 +190,7 @@ exit $EX_PYTHON_INVALID
 EOF'''.format(
             EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
             ).split('\n')])
+
 
 if not is_windows():
     shim_file = os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')
@@ -696,12 +703,15 @@ class Single(object):
             identities_only=False,
             sudo_user=None,
             remote_port_forwards=None,
+            winrm=False,
             ssh_options=None,
             **kwargs):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
         self.mine = mine
         self.mine_functions = kwargs.get('mine_functions')
         self.cmd_umask = kwargs.get('cmd_umask', None)
+
+        self.winrm = winrm
 
         self.opts = opts
         self.tty = tty
@@ -711,6 +721,8 @@ class Single(object):
             self.wipe = 'True' if self.opts.get('ssh_wipe') else 'False'
         if kwargs.get('thin_dir'):
             self.thin_dir = kwargs['thin_dir']
+        elif self.winrm:
+            saltwinshell.set_winvars(self)
         else:
             if user:
                 thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
@@ -747,6 +759,7 @@ class Single(object):
                 'identities_only': identities_only,
                 'sudo_user': sudo_user,
                 'remote_port_forwards': remote_port_forwards,
+                'winrm': winrm,
                 'ssh_options': ssh_options}
         # Pre apply changeable defaults
         self.minion_opts = {
@@ -768,7 +781,7 @@ class Single(object):
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.context)
-        self.shell = salt.client.ssh.shell.Shell(opts, **args)
+        self.shell = salt.client.ssh.shell.gen_shell(opts, **args)
         self.thin = thin if thin else salt.utils.thin.thin_path(opts['cachedir'])
 
     def __arg_comps(self):
@@ -789,6 +802,8 @@ class Single(object):
         Effectively just escape all characters in the argument that are not
         alphanumeric!
         '''
+        if self.winrm:
+            return arg
         return ''.join(['\\' + char if re.match(r'\W', char) else char for char in arg])
 
     def deploy(self):
@@ -1040,35 +1055,40 @@ ARGS = {10}\n'''.format(self.minion_config,
             py_code_enc = py_code.encode('base64')
         else:
             py_code_enc = base64.encodebytes(py_code.encode('utf-8')).decode('utf-8')
-        cmd = SSH_SH_SHIM.format(
-            DEBUG=debug,
-            SUDO=sudo,
-            SUDO_USER=sudo_user,
-            SSH_PY_CODE=py_code_enc,
-            HOST_PY_MAJOR=sys.version_info[0],
-        )
+        if not self.winrm:
+            cmd = SSH_SH_SHIM.format(
+                DEBUG=debug,
+                SUDO=sudo,
+                SUDO_USER=sudo_user,
+                SSH_PY_CODE=py_code_enc,
+                HOST_PY_MAJOR=sys.version_info[0],
+            )
+        else:
+            cmd = saltwinshell.gen_shim(py_code_enc)
 
         return cmd
 
-    def shim_cmd(self, cmd_str):
+    def shim_cmd(self, cmd_str, extension='py'):
         '''
         Run a shim command.
 
         If tty is enabled, we must scp the shim to the target system and
         execute it there
         '''
-        if not self.tty:
+        if not self.tty and not self.winrm:
             return self.shell.exec_cmd(cmd_str)
 
         # Write the shim to a temporary file in the default temp directory
-        with tempfile.NamedTemporaryFile(mode='w',
+        with tempfile.NamedTemporaryFile(mode='w+b',
                                          prefix='shim_',
                                          delete=False) as shim_tmp_file:
             shim_tmp_file.write(cmd_str)
 
         # Copy shim to target system, under $HOME/.<randomized name>
-        target_shim_file = '.{0}'.format(binascii.hexlify(os.urandom(6)))
-        self.shell.send(shim_tmp_file.name, target_shim_file)
+        target_shim_file = '.{0}.{1}'.format(binascii.hexlify(os.urandom(6)), extension)
+        if self.winrm:
+            target_shim_file = saltwinshell.get_target_shim_file(self)
+        self.shell.send(shim_tmp_file.name, target_shim_file, makedirs=True)
 
         # Remove our shim file
         try:
@@ -1077,10 +1097,19 @@ ARGS = {10}\n'''.format(self.minion_config,
             pass
 
         # Execute shim
-        ret = self.shell.exec_cmd('/bin/sh \'$HOME/{0}\''.format(target_shim_file))
+        if extension == 'ps1':
+            ret = self.shell.exec_cmd('"powershell {0}"'.format(target_shim_file))
+        else:
+            if not self.winrm:
+                ret = self.shell.exec_cmd('/bin/sh \'$HOME/{0}\''.format(target_shim_file))
+            else:
+                ret = saltwinshell.call_python(self)
 
         # Remove shim from target system
-        self.shell.exec_cmd('rm \'$HOME/{0}\''.format(target_shim_file))
+        if not self.winrm:
+            self.shell.exec_cmd('rm \'$HOME/{0}\''.format(target_shim_file))
+        else:
+            self.shell.exec_cmd('del {0}'.format(target_shim_file))
 
         return ret
 
@@ -1106,7 +1135,14 @@ ARGS = {10}\n'''.format(self.minion_config,
 
         error = self.categorize_shim_errors(stdout, stderr, retcode)
         if error:
-            if error == 'Undefined SHIM state':
+            if error == 'Python environment not found on Windows system':
+                saltwinshell.deploy_python(self)
+                stdout, stderr, retcode = self.shim_cmd(cmd_str)
+                while re.search(RSTR_RE, stdout):
+                    stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
+                while re.search(RSTR_RE, stderr):
+                    stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+            elif error == 'Undefined SHIM state':
                 self.deploy()
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
@@ -1143,12 +1179,12 @@ ARGS = {10}\n'''.format(self.minion_config,
                     if not self.tty:
                         # If RSTR is not seen in both stdout and stderr then there
                         # was a thin deployment problem.
-                        log.error('ERROR: Failure deploying thin, retrying: {0}\n{1}'.format(stdout, stderr), stderr, retcode)
+                        log.error('ERROR: Failure deploying thin, retrying: {0}\n{1}'.format(stdout, stderr))
                         return self.cmd_block()
                     elif not re.search(RSTR_RE, stdout):
                         # If RSTR is not seen in stdout with tty, then there
                         # was a thin deployment problem.
-                        log.error('ERROR: Failure deploying thin, retrying: {0}\n{1}'.format(stdout, stderr), stderr, retcode)
+                        log.error('ERROR: Failure deploying thin, retrying: {0}\n{1}'.format(stdout, stderr))
                 while re.search(RSTR_RE, stdout):
                     stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 if self.tty:
@@ -1238,6 +1274,16 @@ ARGS = {10}\n'''.format(self.minion_config,
                 (salt.defaults.exitcodes.EX_SOFTWARE,),
                 'exists but is not',
                 'An internal error occurred with the shim, please investigate:\n ' + stderr,
+            ),
+            (
+                (),
+                'The system cannot find the path specified',
+                'Python environment not found on Windows system',
+            ),
+            (
+                (),
+                'is not recognized',
+                'Python environment not found on Windows system',
             ),
         ]
 
