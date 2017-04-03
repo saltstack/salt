@@ -21,10 +21,21 @@ from salt.exceptions import SaltCacheError
 import salt.utils
 import salt.utils.atomicfile
 
-# Don't shadow built-ins
-__func_alias__ = {'list_': 'list'}
-
 log = logging.getLogger(__name__)
+
+
+def __cachedir(kwargs=None):
+    if kwargs and 'cachedir' in kwargs:
+        return kwargs['cachedir']
+    return __opts__.get('cachedir', salt.syspaths.CACHE_DIR)
+
+
+def init_kwargs(kwargs):
+    return {'cachedir': __cachedir(kwargs)}
+
+
+def get_storage_id(kwargs):
+    return ('localfs', __cachedir(kwargs))
 
 
 def store(bank, key, data, cachedir):
@@ -108,7 +119,7 @@ def flush(bank, key=None, cachedir=None):
     Remove the key from the cache bank with all the key content.
     '''
     if cachedir is None:
-        cachedir = __opts__['cachedir']
+        cachedir = __cachedir()
 
     try:
         if key is None:
@@ -130,7 +141,7 @@ def flush(bank, key=None, cachedir=None):
     return True
 
 
-def list_(bank, cachedir):
+def ls(bank, cachedir):
     '''
     Return an iterable object containing all entries stored in the specified bank.
     '''
@@ -152,9 +163,6 @@ def list_(bank, cachedir):
         else:
             ret.append(item)
     return ret
-
-
-getlist = list_
 
 
 def contains(bank, key, cachedir):

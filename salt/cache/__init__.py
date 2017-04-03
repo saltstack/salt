@@ -7,13 +7,31 @@ Loader mechanism for caching data, with data expiration, etc.
 
 # Import Python libs
 from __future__ import absolute_import
+import logging
 import time
 
 # Import Salt libs
 import salt.config
+from salt.ext import six
+from salt.payload import Serial
+from salt.utils.odict import OrderedDict
 import salt.loader
 import salt.syspaths
-from salt.payload import Serial
+
+log = logging.getLogger(__name__)
+
+
+def factory(opts, **kwargs):
+    '''
+    Creates and returns the cache class.
+    If memory caching is enabled by opts MemCache class will be instantiated.
+    If not Cache class will be returned.
+    '''
+    if opts.get('memcache_expire_seconds', 0):
+        cls = MemCache
+    else:
+        cls = Cache
+    return cls(opts, **kwargs)
 
 
 class Cache(object):
@@ -49,7 +67,7 @@ class Cache(object):
     Key name is a string identifier of a data container (like a file inside a
     directory) which will hold the data.
     '''
-    def __init__(self, opts, cachedir=None):
+    def __init__(self, opts, **kwargs):
         self.opts = opts
         if cachedir is None:
             self.cachedir = opts.get('cachedir', salt.syspaths.CACHE_DIR)
@@ -58,11 +76,20 @@ class Cache(object):
         self.driver = opts.get('cache', salt.config.DEFAULT_MASTER_OPTS)
         self.serial = Serial(opts)
         self._modules = None
+        self._kwargs = kwargs
+
+    def __lazy_init(self):
+        self._modules = salt.loader.cache(self.opts, self.serial)
+        fun = '{0}.init_kwargs'.format(self.driver)
+        if fun in self.modules:
+            self._kwargs = self.modules[fun](self._kwargs)
+        else:
+            self._kwargs = {}
 
     @property
     def modules(self):
         if self._modules is None:
-            self._modules = salt.loader.cache(self.opts, self.serial)
+            self.__lazy_init()
         return self._modules
 
     def cache(self, bank, key, fun, loop_fun=None, **kwargs):
@@ -124,11 +151,8 @@ class Cache(object):
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
         '''
-        fun = '{0}.{1}'.format(self.driver, 'store')
-        try:
-            return self.modules[fun](bank, key, data, self.cachedir)
-        except TypeError:
-            return self.modules[fun](bank, key, data)
+        fun = '{0}.store'.format(self.driver)
+        return self.modules[fun](bank, key, data, **self._kwargs)
 
     def fetch(self, bank, key):
         '''
@@ -151,11 +175,8 @@ class Cache(object):
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
         '''
-        fun = '{0}.{1}'.format(self.driver, 'fetch')
-        try:
-            return self.modules[fun](bank, key, self.cachedir)
-        except TypeError:
-            return self.modules[fun](bank, key)
+        fun = '{0}.fetch'.format(self.driver)
+        return self.modules[fun](bank, key, **self._kwargs)
 
     def updated(self, bank, key):
         '''
@@ -178,11 +199,8 @@ class Cache(object):
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
         '''
-        fun = '{0}.{1}'.format(self.driver, 'updated')
-        try:
-            return self.modules[fun](bank, key, self.cachedir)
-        except TypeError:
-            return self.modules[fun](bank, key)
+        fun = '{0}.updated'.format(self.driver)
+        return self.modules[fun](bank, key, **self._kwargs)
 
     def flush(self, bank, key=None):
         '''
@@ -202,13 +220,10 @@ class Cache(object):
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
         '''
-        fun = '{0}.{1}'.format(self.driver, 'flush')
-        try:
-            return self.modules[fun](bank, key=key, cachedir=self.cachedir)
-        except TypeError:
-            return self.modules[fun](bank, key=key)
+        fun = '{0}.flush'.format(self.driver)
+        return self.modules[fun](bank, key=key, **self._kwargs)
 
-    def list(self, bank):
+    def ls(self, bank):
         '''
         Lists entries stored in the specified bank.
 
@@ -224,11 +239,8 @@ class Cache(object):
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
         '''
-        fun = '{0}.{1}'.format(self.driver, 'list')
-        try:
-            return self.modules[fun](bank, self.cachedir)
-        except TypeError:
-            return self.modules[fun](bank)
+        fun = '{0}.ls'.format(self.driver)
+        return self.modules[fun](bank, **self._kwargs)
 
     def contains(self, bank, key=None):
         '''
@@ -252,8 +264,86 @@ class Cache(object):
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
         '''
-        fun = '{0}.{1}'.format(self.driver, 'contains')
-        try:
-            return self.modules[fun](bank, key, self.cachedir)
-        except TypeError:
-            return self.modules[fun](bank, key)
+        fun = '{0}.contains'.format(self.driver)
+        return self.modules[fun](bank, key, **self._kwargs)
+
+
+class MemCache(Cache):
+    '''
+    Short-lived in-memory cache store keeping values on time and/or size (count)
+    basis.
+    '''
+    # {<storage_id>: odict({<key>: [atime, data], ...}), ...}
+    data = {}
+
+    def __init__(self, opts, **kwargs):
+        super(MemCache, self).__init__(opts, **kwargs)
+        self.expire = opts.get('memcache_expire_seconds', 10)
+        self.max = opts.get('memcache_max_items', 1024)
+        self.cleanup = opts.get('memcache_full_cleanup', False)
+        self.debug = opts.get('memcache_debug', False)
+        if self.debug:
+            self.call = 0
+            self.hit = 0
+        self._storage = None
+
+    @classmethod
+    def __cleanup(cls, expire):
+        now = time.time()
+        for storage in six.itervalues(cls.data):
+            for key, data in list(storage.items()):
+                if data[0] + expire < now:
+                    del storage[key]
+
+    def _get_storage_id(self):
+        fun = '{0}.storage_id'.format(self.driver)
+        if fun in self.modules:
+            return self.modules[fun](self.kwargs)
+        else:
+            return self.driver
+
+    @property
+    def storage(self):
+        if self._storage is None:
+            storage_id = self._get_storage_id()
+            if storage_id not in MemCache.data:
+                MemCache.data[storage_id] = OrderedDict()
+            self._storage = MemCache.data[storage_id]
+        return self._storage
+
+    def fetch(self, bank, key):
+        if self.debug:
+            self.call += 1
+        now = time.time()
+        record = self.storage.pop((bank, key), None)
+        # Have a cached value for the key
+        if record is not None and record[0] + self.expire >= now:
+            if self.debug:
+                self.hit += 1
+                log.trace('MemCache stats (call/hit/rate): '
+                          '{0}/{1}/{2}'.format(self.call,
+                                               self.hit,
+                                               float(self.hit) / self.call))
+            # update atime and return
+            record[0] = now
+            self.storage[(bank, key)] = record
+            return record[1]
+
+        # Have no value for the key or value is expired
+        data = super(MemCache, self).fetch(bank, key)
+        self.storage[(bank, key)] = [now, data]
+        return data
+
+    def store(self, bank, key, data):
+        self.storage.pop((bank, key), None)
+        super(MemCache, self).store(bank, key, data)
+        if len(self.storage) >= self.max:
+            if self.cleanup:
+                MemCache.__cleanup(self.expire)
+            else:
+                self.storage.popitem(last=False)
+        self.storage[(bank, key)] = [time.time(), data]
+
+    def flush(self, bank, key=None):
+        self.storage.pop((bank, key), None)
+        super(MemCache, self).flush(bank, key)
