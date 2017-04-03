@@ -726,11 +726,16 @@ def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
         salt '*' zabbix.usergroup_get Guests
     '''
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
     try:
         if conn_args:
             method = 'usergroup.get'
-            params = {"output": "extend", "filter": {}}
+            # Versions above 2.4 allow retrieving user group permissions
+            if _LooseVersion(zabbix_version) > _LooseVersion("2.5"):
+                params = {"selectRights": "extend", "output": "extend", "filter": {}}
+            else:
+                params = {"output": "extend", "filter": {}}
             if not name and not usrgrpids and not userids:
                 return False
             if name:
