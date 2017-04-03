@@ -1921,11 +1921,11 @@ def set_webapp_settings(name, site, settings):
 
         # Append relevant update command per setting key
         if setting == "userName" or setting == "password":
-            pscmd.append(r" Set-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
-            pscmd.append(r" -Name \"{0}\" -Value {1};".format(setting, value))
+            pscmd.append(" Set-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
+            pscmd.append(" -Name \"{0}\" -Value {1};".format(setting, value))
 
         if setting == "physicalPath" or setting == "applicationPool":
-            pscmd.append(r" Set-ItemProperty \"IIS:\Sites\{0}\{1}\" -Name {2} -Value {3};".format(site, name, setting, value))
+            pscmd.append(" Set-ItemProperty \"IIS:\Sites\{0}\{1}\" -Name {2} -Value {3};".format(site, name, setting, value))
             if setting == "physicalPath":
                 if not os.path.isdir(value):
                     log.error('Path is not present: {0}'.format(setting))
