@@ -12,7 +12,10 @@ import random
 
 # Import 3rd-party libs
 try:
-    import Crypto.Random  # pylint: disable=E0611
+    try:
+        import Crypto.Random as CRand # pylint: disable=E0611
+    except ImportError:
+        import Crypto.Random as CRand # pylint: disable=E0611
     HAS_RANDOM = True
 except ImportError:
     HAS_RANDOM = False
@@ -36,7 +39,7 @@ def secure_password(length=20, use_random=True):
     pw = ''
     while len(pw) < length:
         if HAS_RANDOM and use_random:
-            pw += re.sub(r'\W', '', Crypto.Random.get_random_bytes(1))
+            pw += re.sub(r'\W', '', CRand.get_random_bytes(1))
         else:
             pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
     return pw

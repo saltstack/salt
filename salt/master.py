@@ -20,7 +20,11 @@ import multiprocessing
 import traceback
 
 # Import third party libs
-from Crypto.PublicKey import RSA
+try:
+    from Cryptodome.PublicKey import RSA
+except ImportError:
+    # Fall back to pycrypto
+    from Crypto.PublicKey import RSA
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
