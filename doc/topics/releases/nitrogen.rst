@@ -267,6 +267,14 @@ New modules:
   on the syslog messages from the network devices and structured following
   the OpenConfig/IETF YANG models.
 
+New functions:
+
+- :mod:`Configuration getter <salt.modules.napalm_network.config>` - Return
+  the whole configuration of the network device.
+- :mod:`Optics getter <salt.modules.napalm_network.optics>` - Fetches
+  the power usage on the various transceivers installed on the network device
+  (in dBm).
+
 New grains: :mod:`Host <salt.grains.napalm.host>`,
 :mod:`Username <salt.grains.napalm.username>` and
 :mod:`Optional args <salt.grains.napalm.optional_args>`.

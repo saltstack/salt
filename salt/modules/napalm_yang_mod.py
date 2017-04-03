@@ -594,4 +594,4 @@ def compliance_report(data, *models, **kwargs):
     filepath = kwargs.pop('filepath', '')
     root = _get_root_object(*models)
     root.load_dict(data)
-    return root.compliance_report(validation_file=filepath)
+    return root.compliance_report(filepath)
