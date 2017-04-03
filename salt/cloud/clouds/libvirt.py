@@ -620,5 +620,5 @@ def get_domain_volumes(conn, domain):
                 pool, volume = find_pool_and_volume(conn, source)
                 volumes.append(volume)
             except libvirtError:
-                log.warn("Disk not found '{0}'".format(source))
+                log.warning("Disk not found '{0}'".format(source))
     return volumes
