@@ -44,6 +44,7 @@ def sync_all(saltenv='base'):
     ret['queues'] = sync_queues(saltenv=saltenv)
     ret['pillar'] = sync_pillar(saltenv=saltenv)
     ret['utils'] = sync_utils(saltenv=saltenv)
+    ret['tops'] = sync_tops(saltenv=saltenv)
     return ret
 
 
@@ -268,3 +269,22 @@ def sync_utils(saltenv='base'):
         salt-run saltutil.sync_utils
     '''
     return salt.utils.extmods.sync(__opts__, 'utils', saltenv=saltenv)[0]
+
+
+def sync_tops(saltenv='base'):
+    '''
+    .. versionadded:: 2016.3.7,2016.11.4,Nitrogen
+
+    Sync master_tops modules from ``salt://_tops`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run saltutil.sync_tops
+    '''
+    return salt.utils.extmods.sync(__opts__, 'tops', saltenv=saltenv)[0]
