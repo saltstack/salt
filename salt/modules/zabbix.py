@@ -1588,7 +1588,7 @@ def mediatype_delete(mediatypeids, **connection_args):
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    :return: ID of deleted host interfaces, False on failure.
+    :return: ID of deleted mediatype, False on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -1604,6 +1604,43 @@ def mediatype_delete(mediatypeids, **connection_args):
                 params = mediatypeids
             else:
                 params = [mediatypeids]
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['mediatypeids']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def mediatype_update(mediatypeid, name=False, mediatype=False,  **connection_args):
+    '''
+    Update existing mediatype.
+    NOTE: This function accepts all standard mediatype properties: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/3.0/manual/api/reference/mediatype/object
+
+    :param mediatypeid: ID of the mediatype to update
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: IDs of the updated mediatypes, False on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.usergroup_update 8 name="Email update"
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'mediatype.update'
+            params = {"mediatypeid": mediatypeid}
+            if name:
+                params['description'] = name
+            if mediatype:
+                params['type'] = mediatype
+            params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
             return ret['result']['mediatypeids']
         else:
