@@ -1489,6 +1489,85 @@ def hostinterface_update(interfaceid, **connection_args):
         return ret
 
 
+def mediatype_get(name=None, mediatypeids=None, **connection_args):
+    '''
+    Retrieve mediatypes according to the given parameters.
+
+    Args:
+        name:         Name or description of the mediatype
+        mediatypeids: ids of the mediatypes
+
+        optional connection_args:
+                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
+                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
+                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+
+                all optional mediatype.get parameters: keyword argument names differ depending on your zabbix version, see:
+
+                https://www.zabbix.com/documentation/2.2/manual/api/reference/mediatype/get
+
+    Returns:
+        Array with mediatype details, False if no mediatype found or on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.mediatype_get name='Email'
+        salt '*' zabbix.mediatype_get mediatypeids="['1', '2', '3']"
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'mediatype.get'
+            params = {"output": "extend", "filter": {}}
+            if name:
+                params['filter'].setdefault('description', name)
+            if mediatypeids:
+                params.setdefault('mediatypeids', mediatypeids)
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result'] if len(ret['result']) > 0 else False
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def mediatype_delete(mediatypeids, **connection_args):
+    '''
+    Delete mediatype
+
+
+    :param interfaceids: IDs of the mediatypes to delete
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: ID of deleted host interfaces, False on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.mediatype_delete 3
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'mediatype.delete'
+            if isinstance(mediatypeids, list):
+                params = mediatypeids
+            else:
+                params = [mediatypeids]
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['mediatypeids']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
 def template_get(name=None, host=None, templateids=None, **connection_args):
     '''
     Retrieve templates according to the given parameters.
