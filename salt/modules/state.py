@@ -83,7 +83,7 @@ def _filter_running(runnings):
     return ret
 
 
-def _set_retcode(ret):
+def _set_retcode(ret, highstate=None):
     '''
     Set the return code based on the data back from the state system
     '''
@@ -94,7 +94,8 @@ def _set_retcode(ret):
     if isinstance(ret, list):
         __context__['retcode'] = 1
         return
-    if not salt.utils.check_state_result(ret):
+    if not salt.utils.check_state_result(ret, highstate=highstate):
+
         __context__['retcode'] = 2
 
 
@@ -345,7 +346,7 @@ def high(data, test=None, queue=False, **kwargs):
         st_ = salt.state.State(opts, pillar, pillar_enc=pillar_enc)
 
     ret = st_.call_high(data)
-    _set_retcode(ret)
+    _set_retcode(ret, highstate=data)
     return ret
 
 
@@ -393,7 +394,7 @@ def template(tem, queue=False, **kwargs):
         __context__['retcode'] = 1
         return errors
     ret = st_.state.call_high(high_state)
-    _set_retcode(ret)
+    _set_retcode(ret, highstate=high_state)
     return ret
 
 
@@ -859,7 +860,7 @@ def highstate(test=None,
 
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
-    _set_retcode(ret)
+    _set_retcode(ret, highstate=st_.building_highstate)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
     _snapper_post(opts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
@@ -1091,7 +1092,7 @@ def sls(mods,
     except (IOError, OSError):
         msg = 'Unable to write to SLS cache file {0}. Check permission.'
         log.error(msg.format(cache_file))
-    _set_retcode(ret)
+    _set_retcode(ret, high_)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
     __opts__['test'] = orig_test
@@ -1195,7 +1196,7 @@ def top(topfn,
     finally:
         st_.pop_active()
 
-    _set_retcode(ret)
+    _set_retcode(ret, highstate=st_.building_highstate)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
     _snapper_post(opts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
@@ -1396,7 +1397,7 @@ def sls_id(
         if chunk.get('__id__', '') == id_:
             ret.update(st_.state.call_chunk(chunk, {}, chunks))
 
-    _set_retcode(ret)
+    _set_retcode(ret, highstate=highstate)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
     __opts__['test'] = orig_test
