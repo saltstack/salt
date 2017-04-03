@@ -50,16 +50,16 @@ import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt.exceptions import SaltInvocationError
 import salt.utils.dictupdate as dictupdate
-from salt.ext.six import string_types
-from salt.ext.six.moves import range
-from salt.ext.six import StringIO
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
+
 __virtualname__ = 'lgpo'
 __func_alias__ = {'set_': 'set'}
+
 adm_policy_name_map = {True: {}, False: {}}
 HAS_WINDOWS_MODULES = False
 # define some global XPATH variables that we'll set assuming all our imports are
@@ -348,11 +348,11 @@ class _policy_info(object):
             },
         }
         self.security_options_gpedit_path = [
-                'Computer Configuration',
-                'Windows Settings',
-                'Security Settings',
-                'Local Policies',
-                'Security Options'
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Local Policies',
+            'Security Options'
         ]
         self.password_policy_gpedit_path = [
             'Computer Configuration',
@@ -2482,7 +2482,7 @@ class _policy_info(object):
         minimum = 0
         maximum = 1
 
-        if isinstance(val, string_types):
+        if isinstance(val, six.string_types):
             if val.lower() == 'not defined':
                 return True
             else:
@@ -2551,7 +2551,7 @@ class _policy_info(object):
         '''
         converts a list of pysid objects to string representations
         '''
-        if isinstance(val, string_types):
+        if isinstance(val, six.string_types):
             val = val.split(',')
         usernames = []
         for _sid in val:
@@ -2573,7 +2573,7 @@ class _policy_info(object):
         '''
         if not val:
             return val
-        if isinstance(val, string_types):
+        if isinstance(val, six.string_types):
             val = val.split(',')
         sids = []
         for _user in val:
@@ -2666,7 +2666,7 @@ def _updateNamespace(item, new_namespace):
         temp_item = item.tag
     item.tag = '{{{0}}}{1}'.format(new_namespace, temp_item)
     for child in item.getiterator():
-        if isinstance(child.tag, string_types):
+        if isinstance(child.tag, six.string_types):
             temp_item = ''
             i = child.tag.find('}')
             if i >= 0:
@@ -2696,10 +2696,10 @@ def _remove_unicode_encoding(xml_file):
     as lxml does not support that on a windows node currently
     see issue #38100
     '''
-    with open(xml_file, 'rb') as f:
+    with salt.utils.fopen(xml_file, 'rb') as f:
         xml_content = f.read()
     modified_xml = re.sub(r' encoding=[\'"]+unicode[\'"]+', '', xml_content.decode('utf-16'), count=1)
-    xmltree = lxml.etree.parse(StringIO(modified_xml))
+    xmltree = lxml.etree.parse(six.StringIO(modified_xml))
     return xmltree
 
 
@@ -3215,11 +3215,11 @@ def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
         if reg_vtype == 'REG_DWORD':
             this_element_value = ''
             for v in struct.unpack('2H', struct.pack('I', int(reg_data))):
-                this_element_value = this_element_value + unichr(v)
+                this_element_value = this_element_value + six.unichr(v)
         elif reg_vtype == 'REG_QWORD':
             this_element_value = ''
             for v in struct.unpack('4H', struct.pack('I', int(reg_data))):
-                this_element_value = this_element_value + unichr(v)
+                this_element_value = this_element_value + six.unichr(v)
         elif reg_vtype == 'REG_SZ':
             this_element_value = '{0}{1}'.format(reg_data, chr(0))
     if check_deleted:
@@ -3229,7 +3229,7 @@ def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
                                 reg_key,
                                 reg_valueName,
                                 chr(registry.vtype[reg_vtype]),
-                                unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
+                                six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
                                 ' ')
     else:
         expected_string = u'[{1}{0};{2}{0};{3}{0};{4}{0};{5}]'.format(
@@ -3237,7 +3237,7 @@ def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
                                 reg_key,
                                 reg_valueName,
                                 chr(registry.vtype[reg_vtype]),
-                                unichr(len(this_element_value.encode('utf-16-le'))),
+                                six.unichr(len(this_element_value.encode('utf-16-le'))),
                                 this_element_value)
     return expected_string
 
@@ -3272,7 +3272,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
         if 'value' in element.attrib:
             this_element_value = ''
             for val in struct.unpack('2H', struct.pack('I', int(element.attrib['value']))):
-                this_element_value = this_element_value + unichr(val)
+                this_element_value = this_element_value + six.unichr(val)
         else:
             msg = ('The {2} child {1} element for the policy with attributes: '
                    '{0} does not have the required "value" attribute. The '
@@ -3289,7 +3289,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
         if 'value' in element.attrib:
             this_element_value = ''
             for val in struct.unpack('4H', struct.pack('I', int(element.attrib['value']))):
-                this_element_value = this_element_value + unichr(val)
+                this_element_value = this_element_value + six.unichr(val)
         else:
             msg = ('The {2} child {1} element for the policy with attributes: '
                    '{0} does not have the required "value" attribute. The '
@@ -3321,9 +3321,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             if this_element_value is not None:
                 temp_val = ''
                 for v in struct.unpack('2H', struct.pack('I', int(this_element_value))):
-                    # Not Python 3 compliant
-                    # `unichr` not available in Python 3
-                    temp_val = temp_val + unichr(v)
+                    temp_val = temp_val + six.unichr(v)
                 this_element_value = temp_val
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
@@ -3339,9 +3337,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             if this_element_value is not None:
                 temp_val = ''
                 for v in struct.unpack('4H', struct.pack('I', int(this_element_value))):
-                    # Not Python 3 compliant
-                    # `unichr` not available in Python 3
-                    temp_val = temp_val + unichr(v)
+                    temp_val = temp_val + six.unichr(v)
                 this_element_value = temp_val
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
@@ -3400,7 +3396,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                                 reg_key,
                                                 element_valuenames[i],
                                                 chr(registry.vtype[this_vtype]),
-                                                unichr(len('{0}{1}'.format(element_values[i],
+                                                six.unichr(len('{0}{1}'.format(element_values[i],
                                                                            chr(0)).encode('utf-16-le'))),
                                                 '{0}{1}'.format(element_values[i], chr(0)))
                 else:
@@ -3424,9 +3420,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                         reg_key,
                                         reg_valuename,
                                         chr(registry.vtype[this_vtype]),
-                                        # Not Python 3 compliant
-                                        # `unichr` not available in Python 3
-                                        unichr(len(this_element_value.encode('utf-16-le'))),
+                                        six.unichr(len(this_element_value.encode('utf-16-le'))),
                                         this_element_value)
             else:
                 expected_string = u'[{1}{0};{2}{0};{3}{0};'.format(chr(0),
@@ -3442,9 +3436,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                     reg_key,
                                     reg_valuename,
                                     chr(registry.vtype[this_vtype]),
-                                    # Not Python 3 compliant
-                                    # `unichr` not available in Python 3
-                                    unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
+                                    six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
                                     ' ')
         else:
             expected_string = standard_layout.format(
@@ -3452,9 +3444,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                     reg_key,
                                     reg_valuename,
                                     chr(registry.vtype[this_vtype]),
-                                    # Not Python 3 compliant
-                                    # `unichr` not available in Python 3
-                                    unichr(len(this_element_value.encode('utf-16-le'))),
+                                    six.unichr(len(this_element_value.encode('utf-16-le'))),
                                     this_element_value)
     return expected_string
 
@@ -3820,9 +3810,7 @@ def _checkAllAdmxPolicies(policy_class,
     if policy_vals and return_full_policy_names and not hierarchical_return:
         unpathed_dict = {}
         pathed_dict = {}
-        # keys needs to be called here b/c we are changing the policy_vals
-        # dict during the for loop
-        for policy_item in policy_vals.keys():  # pylint: disable=C0201
+        for policy_item in list(policy_vals):
             if full_names[policy_item] in policy_vals:
                 # add this item with the path'd full name
                 full_path_list = hierarchy[policy_item]
@@ -3945,7 +3933,7 @@ def _read_regpol_file(reg_pol_path):
     '''
     returndata = None
     if os.path.exists(reg_pol_path):
-        with open(reg_pol_path, 'rb') as pol_file:
+        with salt.utils.fopen(reg_pol_path, 'rb') as pol_file:
             returndata = pol_file.read()
         returndata = returndata.decode('utf-16-le')
     return returndata
@@ -3993,14 +3981,14 @@ def _write_regpol_data(data_to_write,
             reg_pol_header = u'\u5250\u6765\x01\x00'
             if not os.path.exists(policy_file_path):
                 ret = __salt__['file.makedirs'](policy_file_path)
-            with open(policy_file_path, 'wb') as pol_file:
+            with salt.utils.fopen(policy_file_path, 'wb') as pol_file:
                 if not data_to_write.startswith(reg_pol_header):
                     pol_file.write(reg_pol_header.encode('utf-16-le'))
                 pol_file.write(data_to_write.encode('utf-16-le'))
             try:
                 gpt_ini_data = ''
                 if os.path.exists(gpt_ini_path):
-                    with open(gpt_ini_path, 'rb') as gpt_file:
+                    with salt.utils.fopen(gpt_ini_path, 'rb') as gpt_file:
                         gpt_ini_data = gpt_file.read()
                 if not _regexSearchRegPolData(r'\[General\]\r\n', gpt_ini_data):
                     gpt_ini_data = '[General]\r\n' + gpt_ini_data
@@ -4056,7 +4044,7 @@ def _write_regpol_data(data_to_write,
                             int("{0}{1}".format(str(version_nums[0]).zfill(4), str(version_nums[1]).zfill(4)), 16),
                             gpt_ini_data[general_location.end():])
                 if gpt_ini_data:
-                    with open(gpt_ini_path, 'wb') as gpt_file:
+                    with salt.utils.fopen(gpt_ini_path, 'wb') as gpt_file:
                         gpt_file.write(gpt_ini_data)
             except Exception as e:
                 msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(
