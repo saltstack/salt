@@ -32,6 +32,7 @@ from tests.support.paths import CODE_DIR
 # Import salt libs
 #import salt.config
 import salt.version
+import salt.exceptions
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt._compat import ElementTree as etree
@@ -668,7 +669,7 @@ class SaltMinionEventAssertsMixin(object):
 
     def assertMinionEventFired(self, tag):
         #TODO
-        raise NotImplementedError('assertMinionEventFired() not implemented')
+        raise salt.exceptions.NotImplemented('assertMinionEventFired() not implemented')
 
     def assertMinionEventReceived(self, desired_event):
         queue_wait = 5  # 2.5s
