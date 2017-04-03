@@ -4,10 +4,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import SyndicCase
 
 
-class TestSyndic(integration.SyndicCase):
+class TestSyndic(SyndicCase):
     '''
     Validate the syndic interface by testing the test module
     '''

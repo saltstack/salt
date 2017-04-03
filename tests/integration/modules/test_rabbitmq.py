@@ -5,14 +5,14 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import requires_salt_modules
 
 
 @skipIf(os.geteuid() != 0, 'You must be root to run this test')
 @requires_salt_modules('rabbitmq')
-class RabbitModuleTest(integration.ModuleCase):
+class RabbitModuleTest(ModuleCase):
     '''
     Validates the rabbitmqctl functions.
     To run these tests, you will need to be able to access the rabbitmqctl

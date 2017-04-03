@@ -10,7 +10,7 @@ import textwrap
 import tempfile
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.paths import TMP_STATE_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
 
@@ -20,7 +20,7 @@ import salt.utils
 IS_WINDOWS = salt.utils.is_windows()
 
 
-class CMDTest(integration.ModuleCase, SaltReturnAssertsMixin):
+class CMDTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the cmd state
     '''
@@ -41,7 +41,7 @@ class CMDTest(integration.ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltNoneReturn(ret)
 
 
-class CMDRunRedirectTest(integration.ModuleCase, SaltReturnAssertsMixin):
+class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the cmd state of run_redirect
     '''
@@ -158,7 +158,7 @@ class CMDRunRedirectTest(integration.ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(ret[state_key]['result'])
 
 
-class CMDRunWatchTest(integration.ModuleCase, SaltReturnAssertsMixin):
+class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the cmd state of run_watch
     '''

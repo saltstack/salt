@@ -8,11 +8,11 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
-class RabbitVHostTestCase(integration.ModuleCase, SaltReturnAssertsMixin):
+class RabbitVHostTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the rabbitmq virtual host states.
     '''

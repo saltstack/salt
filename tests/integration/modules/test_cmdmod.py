@@ -7,7 +7,7 @@ import sys
 import textwrap
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import (
     destructiveTest,
@@ -30,7 +30,7 @@ AVAILABLE_PYTHON_EXECUTABLE = salt.utils.which_bin([
 ])
 
 
-class CMDModuleTest(integration.ModuleCase):
+class CMDModuleTest(ModuleCase):
     '''
     Validate the cmd module
     '''

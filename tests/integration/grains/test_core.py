@@ -7,7 +7,7 @@ Test the core grains
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 # Import salt libs
@@ -19,7 +19,7 @@ if salt.utils.is_windows():
         pass
 
 
-class TestGrainsCore(integration.ModuleCase):
+class TestGrainsCore(ModuleCase):
     '''
     Test the core grains grains
     '''
@@ -30,9 +30,9 @@ class TestGrainsCore(integration.ModuleCase):
         '''
         opts = self.minion_opts
         cpu_model_text = salt.modules.reg.read_value(
-                "HKEY_LOCAL_MACHINE",
-                "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
-                "ProcessorNameString").get('vdata')
+                'HKEY_LOCAL_MACHINE',
+                'HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0',
+                'ProcessorNameString').get('vdata')
         self.assertEqual(
             self.run_function('grains.items')['cpu_model'],
             cpu_model_text

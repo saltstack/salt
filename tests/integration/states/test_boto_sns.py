@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import re
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.mixins import SaltReturnAssertsMixin
 
@@ -35,7 +35,7 @@ except ImportError:
     BOTO_NOT_CONFIGURED,
     'Please setup boto AWS credentials before running boto integration tests.'
 )
-class BotoSNSTest(integration.ModuleCase, SaltReturnAssertsMixin):
+class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
 
     def setUp(self):
         # The name of the topic you want to create.

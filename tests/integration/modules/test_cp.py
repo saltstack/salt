@@ -8,7 +8,7 @@ import shutil
 import hashlib
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 import tests.support.paths as paths
 
 # Import salt libs
@@ -16,7 +16,7 @@ import salt.ext.six as six
 import salt.utils
 
 
-class CPModuleTest(integration.ModuleCase):
+class CPModuleTest(ModuleCase):
     '''
     Validate the cp module
     '''
