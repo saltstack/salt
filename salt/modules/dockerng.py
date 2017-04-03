@@ -673,7 +673,7 @@ def _clear_context():
     # an exception will be raised if the size of the dict is modified during
     # iteration.
     keep_context = (
-        'docker.exec_driver', 'dockerng._pull_status',
+        'docker.client', 'docker.exec_driver', 'dockerng._pull_status',
         'docker.docker_version', 'docker.docker_py_version'
     )
     for key in list(__context__):
