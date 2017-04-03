@@ -69,7 +69,7 @@ Using cached data
 =================
 
 Several cached libraries can be selected using the ``library: `` prefix, followed by the library key.
-This can be referenced using the same ``:`` syntax as e.g. ``pillar.get()``.
+This can be referenced using the same ``:`` syntax as e.g. :py:func:`pillar.get <salt.modules.pillar.get>`.
 Lists of references are also supported during the lookup, as are Salt SDB URLs.
 
 This should be especially useful for the other roster keys:
