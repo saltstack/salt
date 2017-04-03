@@ -109,7 +109,7 @@ class Beacon(object):
                 if runonce:
                     self.disable_beacon(mod)
             else:
-                log.debug('Unable to process beacon {0}'.format(mod))
+                log.warning('Unable to process beacon {0}'.format(mod))
         return ret
 
     def _trim_config(self, b_config, mod, key):

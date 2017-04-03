@@ -25,7 +25,6 @@ import os
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.utils.versions import StrictVersion as _StrictVersion
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -40,15 +39,18 @@ def __virtual__():
     '''
     # Verify Windows
     if not salt.utils.is_windows():
+        log.debug('Module DSC: Only available on Windows systems')
         return False, 'Module DSC: Only available on Windows systems'
 
-    # Verify PowerShell 5.0
+    # Verify PowerShell
     powershell_info = __salt__['cmd.shell_info']('powershell')
     if not powershell_info['installed']:
-        return False, 'Module DSC: PowerShell not available'
+        log.debug('Module DSC: Requires PowerShell')
+        return False, 'Module DSC: Requires PowerShell'
 
-    if _StrictVersion(powershell_info['version']) < \
-            _StrictVersion('5.0'):
+    # Verify PowerShell 5.0 or greater
+    if salt.utils.compare_versions(powershell_info['version'], '<', '5.0'):
+        log.debug('Module DSC: Requires PowerShell 5 or later')
         return False, 'Module DSC: Requires PowerShell 5 or later'
 
     return __virtualname__

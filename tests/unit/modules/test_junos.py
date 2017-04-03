@@ -1571,10 +1571,9 @@ class Test_Junos_Module(TestCase):
         ret['out'] = False
         self.assertEqual(junos.rpc(), ret)
 
-    @skipIf(True, 'This @patch decorator stacktraces as written. This test needs to be updated.')
-    @patch('salt.modules.junos.getattr')
-    def test_rpc_get_config_exception(self, mock_attr):
-        mock_attr.return_value = self.raise_exception
+    @patch('jnpr.junos.device.Device.execute')
+    def test_rpc_get_config_exception(self, mock_execute):
+        mock_execute.side_effect = self.raise_exception
         ret = dict()
         ret['message'] = 'RPC execution failed due to "Test exception"'
         ret['out'] = False
@@ -1642,11 +1641,10 @@ class Test_Junos_Module(TestCase):
         mock_warning.assert_called_with(
             'Filter ignored as it is only used with "get-config" rpc')
 
-    @skipIf(True, 'This @patch decorator stacktraces as written. This test needs to be updated.')
-    @patch('salt.modules.junos.getattr')
+    @patch('jnpr.junos.device.Device.execute')
     def test_rpc_get_interface_information_exception(
-            self, mock_attr):
-        mock_attr.return_value = self.raise_exception
+            self, mock_execute):
+        mock_execute.side_effect = self.raise_exception
         ret = dict()
         ret['message'] = 'RPC execution failed due to "Test exception"'
         ret['out'] = False

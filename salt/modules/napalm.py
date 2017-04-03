@@ -166,3 +166,78 @@ def call(method, *args, **kwargs):
         *args,
         **clean_kwargs
     )
+
+
+@proxy_napalm_wrap
+def compliance_report(filepath, **kwargs):
+    '''
+    Return the compliance report.
+
+    filepath
+        The absolute path to the validation file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.compliance_report ~/validate.yml
+
+    Validation File Example:
+
+    .. code-block:: yaml
+
+        - get_facts:
+            os_version: 4.17
+
+        - get_interfaces_ip:
+            Management1:
+                ipv4:
+                    10.0.2.14:
+                        prefix_length: 24
+                    _mode: strict
+
+    Output Example:
+
+    .. code-block:: yaml
+
+        device1:
+            ----------
+            comment:
+            out:
+                ----------
+                complies:
+                    False
+                get_facts:
+                    ----------
+                    complies:
+                        False
+                    extra:
+                    missing:
+                    present:
+                        ----------
+                        os_version:
+                            ----------
+                            actual_value:
+                                15.1F6-S1.4
+                            complies:
+                                False
+                            nested:
+                                False
+                get_interfaces_ip:
+                    ----------
+                    complies:
+                        False
+                    extra:
+                    missing:
+                        - Management1
+                    present:
+                        ----------
+                skipped:
+            result:
+                True
+    '''
+    return salt.utils.napalm.call(
+        napalm_device,  # pylint: disable=undefined-variable
+        'compliance_report',
+        validation_file=filepath
+    )
