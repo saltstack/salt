@@ -158,6 +158,10 @@ def get_repo_tag(image, default_tag='latest'):
             'Assuming tag \'%s\' for repo \'%s\'', default_tag, image
         )
         r_tag = default_tag
+    elif '/' in r_tag:
+        # Public registry notation with no tag specified
+        # (e.g. foo.bar.com:5000/imagename)
+        return image, default_tag
     return r_name, r_tag
 
 
