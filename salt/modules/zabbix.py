@@ -1534,6 +1534,50 @@ def mediatype_get(name=None, mediatypeids=None, **connection_args):
         return ret
 
 
+def mediatype_create(name, mediatype, **connection_args):
+    '''
+    Create new mediatype.
+    NOTE: This function accepts all standard mediatype properties: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/3.0/manual/api/reference/mediatype/object
+
+    :param mediatype: media type - 0: email, 1: script, 2: sms, 3: Jabber, 100: Ez Texting
+    :param exec_path: exec path - Required for script and Ez Texting types, see Zabbix API docs
+    :param gsm_modem: exec path - Required for sms type, see Zabbix API docs
+    :param smtp_email: email address from which notifications will be sent, required for email type
+    :param smtp_helo: SMTP HELO, required for email type
+    :param smtp_server: SMTP server, required for email type
+    :param status: whether the media type is enabled - 0: enabled, 1: disabled
+    :param username: authentication user, required for Jabber and Ez Texting types
+    :param passwd: authentication password, required for Jabber and Ez Texting types
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    return: ID of the created mediatype.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.mediatype_create 'Email' 0 smtp_email='noreply@example.com'
+        smtp_server='mailserver.example.com' smtp_helo='zabbix.example.com'
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'mediatype.create'
+            params = {"description": name}
+            params['type'] = mediatype
+            params = _params_extend(params, _ignore_name=True, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['mediatypeid']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
 def mediatype_delete(mediatypeids, **connection_args):
     '''
     Delete mediatype
