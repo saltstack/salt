@@ -3,6 +3,7 @@ from __future__ import absolute_import
 
 from salt.modules import tuned
 
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -12,14 +13,14 @@ from tests.support.mock import (
 )
 
 
-tuned.__salt__ = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TunedListTestCase(TestCase):
+class TunedListTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test the tuned.list_() method for different versions of tuned-adm
     '''
+    def setup_loader_modules(self):
+        return {tuned: {}}
+
     def test_v_241(self):
         '''
         Test the list_ function for older tuned-adm (v2.4.1)
