@@ -15,8 +15,9 @@ import re
 import tempfile
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
+from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils
@@ -24,12 +25,12 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
-class PipModuleTest(integration.ModuleCase):
+class PipModuleTest(ModuleCase):
 
     def setUp(self):
         super(PipModuleTest, self).setUp()
 
-        self.venv_test_dir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        self.venv_test_dir = tempfile.mkdtemp(dir=TMP)
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
         for key in os.environ.copy():
             if key.startswith('PIP_'):

@@ -7,7 +7,7 @@ integration tests for mac_power
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
@@ -18,7 +18,7 @@ import salt.utils
 @skipIf(not salt.utils.is_darwin()
         or not salt.utils.which('systemsetup')
         or salt.utils.get_uid(salt.utils.get_user()) != 0, 'Test requirements not met')
-class MacPowerModuleTest(integration.ModuleCase):
+class MacPowerModuleTest(ModuleCase):
     '''
     Validate the mac_power module
     '''
@@ -142,7 +142,7 @@ class MacPowerModuleTest(integration.ModuleCase):
 @skipIf(not salt.utils.is_darwin()
         or not salt.utils.which('systemsetup')
         or salt.utils.get_uid(salt.utils.get_user()) != 0, 'Test requirements not met')
-class MacPowerModuleTestSleepOnPowerButton(integration.ModuleCase):
+class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
     '''
     Test power.get_sleep_on_power_button
     Test power.set_sleep_on_power_button
@@ -192,7 +192,7 @@ class MacPowerModuleTestSleepOnPowerButton(integration.ModuleCase):
 @skipIf(not salt.utils.is_darwin()
         or not salt.utils.which('systemsetup')
         or salt.utils.get_uid(salt.utils.get_user()) != 0, 'Test requirements not met')
-class MacPowerModuleTestRestartPowerFailure(integration.ModuleCase):
+class MacPowerModuleTestRestartPowerFailure(ModuleCase):
     '''
     Test power.get_restart_power_failure
     Test power.set_restart_power_failure
@@ -241,7 +241,7 @@ class MacPowerModuleTestRestartPowerFailure(integration.ModuleCase):
 @skipIf(not salt.utils.is_darwin()
         or not salt.utils.which('systemsetup')
         or salt.utils.get_uid(salt.utils.get_user()) != 0, 'Test requirements not met')
-class MacPowerModuleTestWakeOnNet(integration.ModuleCase):
+class MacPowerModuleTestWakeOnNet(ModuleCase):
     '''
     Test power.get_wake_on_network
     Test power.set_wake_on_network
@@ -287,7 +287,7 @@ class MacPowerModuleTestWakeOnNet(integration.ModuleCase):
 @skipIf(not salt.utils.is_darwin()
         or not salt.utils.which('systemsetup')
         or salt.utils.get_uid(salt.utils.get_user()) != 0, 'Test requirements not met')
-class MacPowerModuleTestWakeOnModem(integration.ModuleCase):
+class MacPowerModuleTestWakeOnModem(ModuleCase):
     '''
     Test power.get_wake_on_modem
     Test power.set_wake_on_modem

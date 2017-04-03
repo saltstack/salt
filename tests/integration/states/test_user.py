@@ -15,7 +15,7 @@ from random import randint
 import grp
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -37,7 +37,7 @@ else:
 
 @destructiveTest
 @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-class UserTest(integration.ModuleCase, SaltReturnAssertsMixin):
+class UserTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     test for user absent
     '''

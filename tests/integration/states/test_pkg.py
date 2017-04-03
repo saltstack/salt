@@ -10,7 +10,7 @@ import os
 import time
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 from tests.support.helpers import (
@@ -145,7 +145,7 @@ def latest_version(run_function, *names):
 
 @destructiveTest
 @requires_salt_modules('pkg.version', 'pkg.latest_version')
-class PkgTest(integration.ModuleCase, SaltReturnAssertsMixin):
+class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkg.installed state tests
     '''

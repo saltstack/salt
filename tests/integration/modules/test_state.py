@@ -9,8 +9,9 @@ import threading
 import time
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
+from tests.support.paths import TMP
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
@@ -21,7 +22,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 import salt.ext.six as six
 
 
-class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
+class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the state module
     '''
@@ -33,7 +34,7 @@ class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
         state.show_highstate
         '''
         high = self.run_function('state.show_highstate')
-        destpath = os.path.join(integration.SYS_TMP_DIR, 'testfile')
+        destpath = os.path.join(TMP, 'testfile')
         self.assertTrue(isinstance(high, dict))
         self.assertTrue(destpath in high)
         self.assertEqual(high[destpath]['__env__'], 'base')
@@ -183,7 +184,7 @@ class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
         '''
         Verify that we can append a file's contents
         '''
-        testfile = os.path.join(integration.TMP, 'test.append')
+        testfile = os.path.join(TMP, 'test.append')
         if os.path.isfile(testfile):
             os.unlink(testfile)
 
@@ -250,7 +251,7 @@ class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
                 - text: foo
 
         '''
-        testfile = os.path.join(integration.TMP, 'issue-1876')
+        testfile = os.path.join(TMP, 'issue-1876')
         sls = self.run_function('state.sls', mods='issue-1876')
         self.assertIn(
             'ID \'{0}\' in SLS \'issue-1876\' contains multiple state '
@@ -275,7 +276,7 @@ class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
             expected = os.linesep.join(new_contents)
             expected += os.linesep
 
-        testfile = os.path.join(integration.TMP, 'issue-1879')
+        testfile = os.path.join(TMP, 'issue-1879')
         # Delete if exiting
         if os.path.isfile(testfile):
             os.unlink(testfile)
@@ -325,11 +326,11 @@ class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
 
     def test_include(self):
         fnames = (
-            os.path.join(integration.SYS_TMP_DIR, 'include-test'),
-            os.path.join(integration.SYS_TMP_DIR, 'to-include-test')
+            os.path.join(TMP, 'include-test'),
+            os.path.join(TMP, 'to-include-test')
         )
         exclude_test_file = os.path.join(
-            integration.SYS_TMP_DIR, 'exclude-test'
+            TMP, 'exclude-test'
         )
         try:
             ret = self.run_function('state.sls', mods='include-test')
@@ -345,11 +346,11 @@ class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
 
     def test_exclude(self):
         fnames = (
-            os.path.join(integration.SYS_TMP_DIR, 'include-test'),
-            os.path.join(integration.SYS_TMP_DIR, 'exclude-test')
+            os.path.join(TMP, 'include-test'),
+            os.path.join(TMP, 'exclude-test')
         )
         to_include_test_file = os.path.join(
-            integration.SYS_TMP_DIR, 'to-include-test'
+            TMP, 'to-include-test'
         )
         try:
             ret = self.run_function('state.sls', mods='exclude-test')
@@ -366,7 +367,7 @@ class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
     @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
     def test_issue_2068_template_str(self):
         venv_dir = os.path.join(
-            integration.SYS_TMP_DIR, 'issue-2068-template-str'
+            TMP, 'issue-2068-template-str'
         )
 
         try:
@@ -965,7 +966,7 @@ class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
         #])
 
     def test_get_file_from_env_in_top_match(self):
-        tgt = os.path.join(integration.SYS_TMP_DIR, 'prod-cheese-file')
+        tgt = os.path.join(TMP, 'prod-cheese-file')
         try:
             ret = self.run_function(
                 'state.highstate', minion_tgt='sub_minion'
@@ -1217,7 +1218,7 @@ class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
         '''
         test a state with the retry option that should return True immedietly (i.e. no retries)
         '''
-        testfile = os.path.join(integration.TMP, 'retry_file')
+        testfile = os.path.join(TMP, 'retry_file')
         state_run = self.run_function(
             'state.sls',
             mods='retry.retry_success'
@@ -1230,7 +1231,7 @@ class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
         '''
         helper function to wait 30 seconds and then create the temp retry file
         '''
-        testfile = os.path.join(integration.TMP, 'retry_file')
+        testfile = os.path.join(TMP, 'retry_file')
         time.sleep(30)
         open(testfile, 'a').close()
 
@@ -1239,7 +1240,7 @@ class StateModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
         test a state with the retry option that should return True after at least 4 retry attmempt
         but never run 15 attempts
         '''
-        testfile = os.path.join(integration.TMP, 'retry_file')
+        testfile = os.path.join(TMP, 'retry_file')
         create_thread = threading.Thread(target=self.run_create)
         create_thread.start()
         state_run = self.run_function(

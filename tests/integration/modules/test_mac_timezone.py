@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import datetime
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
@@ -23,7 +23,7 @@ from tests.support.helpers import destructiveTest
 import salt.utils
 
 
-class MacTimezoneModuleTest(integration.ModuleCase):
+class MacTimezoneModuleTest(ModuleCase):
     '''
     Validate the mac_timezone module
     '''

@@ -7,7 +7,7 @@ tests for pkgrepo states
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 from tests.support.helpers import (
@@ -22,7 +22,7 @@ import salt.utils
 import salt.ext.six as six
 
 
-class PkgrepoTest(integration.ModuleCase, SaltReturnAssertsMixin):
+class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkgrepo state tests
     '''

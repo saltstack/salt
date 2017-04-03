@@ -9,7 +9,7 @@ import signal
 import subprocess
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
-class SystemModuleTest(integration.ModuleCase):
+class SystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the system module
     '''

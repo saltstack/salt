@@ -4,8 +4,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
+from tests.support.paths import TMP_STATE_TREE
 from tests.support.helpers import requires_network
 
 # Import salt libs
@@ -22,7 +23,7 @@ except ImportError:
     pass
 
 
-class PillarModuleTest(integration.ModuleCase):
+class PillarModuleTest(ModuleCase):
     '''
     Validate the pillar module
     '''
@@ -73,7 +74,7 @@ class PillarModuleTest(integration.ModuleCase):
         the pillar back to the minion.
         '''
         self.assertIn(
-            integration.TMP_STATE_TREE,
+            TMP_STATE_TREE,
             self.run_function('pillar.data')['master']['file_roots']['base']
         )
 
@@ -87,7 +88,7 @@ class PillarModuleTest(integration.ModuleCase):
 
     def test_issue_5951_actual_file_roots_in_opts(self):
         self.assertIn(
-            integration.TMP_STATE_TREE,
+            TMP_STATE_TREE,
             self.run_function('pillar.data')['test_ext_pillar_opts']['file_roots']['base']
         )
 

@@ -7,11 +7,11 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
-class RabbitUserTestCase(integration.ModuleCase, SaltReturnAssertsMixin):
+class RabbitUserTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the rabbitmq user states.
     '''

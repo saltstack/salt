@@ -7,8 +7,9 @@ import time
 import subprocess
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
+from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils
@@ -21,14 +22,14 @@ import salt.ext.six as six
 @skipIf(six.PY3, 'supervisor does not work under python 3')
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 @skipIf(salt.utils.which('supervisorctl') is None, 'supervisord not installed')
-class SupervisordModuleTest(integration.ModuleCase):
+class SupervisordModuleTest(ModuleCase):
     '''
     Validates the supervisorctl functions.
     '''
     def setUp(self):
         super(SupervisordModuleTest, self).setUp()
 
-        self.venv_test_dir = os.path.join(integration.TMP, 'supervisortests')
+        self.venv_test_dir = os.path.join(TMP, 'supervisortests')
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
         self.supervisor_sock = os.path.join(self.venv_dir, 'supervisor.sock')
 

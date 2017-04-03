@@ -4,15 +4,15 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import salt libs
 import salt.version
 import salt.config
 
 
-class TestModuleTest(integration.ModuleCase,
-                     integration.AdaptedConfigurationTestCaseMixin):
+class TestModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     '''
     Validate the test module
     '''

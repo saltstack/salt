@@ -438,22 +438,23 @@ to test states:
     import shutil
 
     # Import Salt Testing libs
+    from tests.support.case import ModuleCase
+    from tests.support.paths import FILES, TMP
     from tests.support.mixins import SaltReturnAssertsMixin
-    import tests.integration as integration
 
     # Import salt libs
     import salt.utils
 
-    HFILE = os.path.join(integration.TMP, 'hosts')
+    HFILE = os.path.join(TMP, 'hosts')
 
 
-    class HostTest(integration.ModuleCase, SaltReturnAssertsMixin):
+    class HostTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Validate the host state
         '''
 
         def setUp(self):
-            shutil.copyfile(os.path.join(integration.FILES, 'hosts'), HFILE)
+            shutil.copyfile(os.path.join(FILES, 'hosts'), HFILE)
             super(HostTest, self).setUp()
 
         def tearDown(self):
@@ -473,12 +474,12 @@ to test states:
                 output = fp_.read()
                 self.assertIn('{0}\t\t{1}'.format(ip, name), output)
 
-To access the integration files, a variable named ``integration.FILES``
-points to the ``tests/integration/files`` directory. This is where the referenced
+To access the integration files, a variable named ``FILES`` points to the 
+``tests/integration/files`` directory. This is where the referenced
 ``host.present`` sls file resides.
 
 In addition to the static files in the integration state tree, the location
-``integration.TMP`` can also be used to store temporary files that the test system
+``TMP`` can also be used to store temporary files that the test system
 will clean up when the execution finishes.
 
 
@@ -506,7 +507,7 @@ the test method:
 .. code-block:: python
 
     import tests.integration as integration
-    from tests.support.helpers import destructiveTest
+    from tests.support.helpers import destructiveTest, skip_if_not_root
 
     class DestructiveExampleModuleTest(integration.ModuleCase):
         '''
@@ -514,7 +515,7 @@ the test method:
         '''
 
         @destructiveTest
-        @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+        @skip_if_not_root
         def test_user_not_present(self):
             '''
             This is a DESTRUCTIVE TEST it creates a new user on the minion.
@@ -571,7 +572,10 @@ contain valid information are also required in the test class's ``setUp`` functi
 
 .. code-block:: python
 
-    class LinodeTest(integration.ShellCase):
+    from tests.support.case import ShellCase
+    from tests.support.paths import FILES
+
+    class LinodeTest(ShellCase):
     '''
     Integration tests for the Linode cloud provider in Salt-Cloud
     '''
@@ -594,7 +598,7 @@ contain valid information are also required in the test class's ``setUp`` functi
             )
 
         # check if apikey and password are present
-        path = os.path.join(integration.FILES,
+        path = os.path.join(FILES,
                             'conf',
                             'cloud.providers.d',
                             provider + '.conf')

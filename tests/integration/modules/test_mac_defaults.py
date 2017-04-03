@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
@@ -19,7 +19,7 @@ DEFAULT_VALUE = '0'
 
 @destructiveTest
 @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-class MacDefaultsModuleTest(integration.ModuleCase):
+class MacDefaultsModuleTest(ModuleCase):
     '''
     Integration tests for the mac_default module
     '''

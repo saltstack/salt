@@ -13,10 +13,11 @@ import os
 import shutil
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.utils
@@ -24,7 +25,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
-class VirtualenvTest(integration.ModuleCase, SaltReturnAssertsMixin):
+class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_issue_1959_virtualenv_runas(self):
@@ -34,7 +35,7 @@ class VirtualenvTest(integration.ModuleCase, SaltReturnAssertsMixin):
         uinfo = self.run_function('user.info', [user])
 
         venv_dir = os.path.join(
-            integration.SYS_TMP_DIR, 'issue-1959-virtualenv-runas'
+            RUNTIME_VARS.TMP, 'issue-1959-virtualenv-runas'
         )
         try:
             ret = self.run_function(
@@ -53,12 +54,12 @@ class VirtualenvTest(integration.ModuleCase, SaltReturnAssertsMixin):
 
     def test_issue_2594_non_invalidated_cache(self):
         # Testing virtualenv directory
-        venv_path = os.path.join(integration.TMP, 'issue-2594-ve')
+        venv_path = os.path.join(RUNTIME_VARS.TMP, 'issue-2594-ve')
         if os.path.exists(venv_path):
             shutil.rmtree(venv_path)
         # Our virtualenv requirements file
         requirements_file_path = os.path.join(
-            integration.TMP_STATE_TREE, 'issue-2594-requirements.txt'
+            RUNTIME_VARS.TMP_STATE_TREE, 'issue-2594-requirements.txt'
         )
         if os.path.exists(requirements_file_path):
             os.unlink(requirements_file_path)

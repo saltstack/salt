@@ -13,16 +13,20 @@ import getpass
 import os
 import sys
 import platform
-import yaml
 import signal
 import shutil
 import logging
 
+# Import 3rd-party libs
+import yaml
+
 # Import Salt Testing libs
-import tests.integration as integration
 import tests.integration.utils
-from tests.integration.utils import testprogram
+from tests.support.case import ShellCase
 from tests.support.unit import skipIf
+from tests.support.paths import CODE_DIR, TMP
+from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.integration.utils import testprogram
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -35,7 +39,7 @@ log = logging.getLogger(__name__)
 DEBUG = True
 
 
-class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixin):
+class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     '''
     Various integration tests for the salt-minion executable.
     '''
@@ -48,7 +52,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        config_dir = os.path.join(TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
@@ -209,7 +213,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         init_script = testprogram.TestProgram(
             name='init:salt-minion',
-            program=os.path.join(integration.CODE_DIR, 'pkg', 'rpm', 'salt-minion'),
+            program=os.path.join(CODE_DIR, 'pkg', 'rpm', 'salt-minion'),
             env=cmd_env,
         )
 

@@ -11,11 +11,11 @@ import os
 from salt.exceptions import CommandExecutionError
 
 # Salttesting libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 
-class BeaconsAddDeleteTest(integration.ModuleCase):
+class BeaconsAddDeleteTest(ModuleCase):
     '''
     Tests the add and delete functions
     '''
@@ -50,7 +50,7 @@ class BeaconsAddDeleteTest(integration.ModuleCase):
         self.run_function('beacons.save')
 
 
-class BeaconsTest(integration.ModuleCase):
+class BeaconsTest(ModuleCase):
     '''
     Tests the beacons execution module
     '''

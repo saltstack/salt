@@ -6,16 +6,17 @@ import os
 import textwrap
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.paths import FILES
 
 # Import Salt Libs
 import salt.utils
 
 
-STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
+STATE_DIR = os.path.join(FILES, 'file', 'base')
 
 
-class EnabledTest(integration.ModuleCase):
+class EnabledTest(ModuleCase):
     '''
     validate the use of shell processing for cmd.run on the salt command line
     and in templating

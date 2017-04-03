@@ -4,8 +4,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
-from tests.support.unit import skipIf
+from tests.support.unit import TestCase, skipIf
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import Salt libs
 import salt.auth
@@ -13,7 +13,7 @@ import salt.wheel
 import salt.utils
 
 
-class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixin):
+class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
     eauth_creds = {
         'username': 'saltdev_auto',

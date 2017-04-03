@@ -14,13 +14,17 @@ import os
 import sys
 import re
 import shutil
-import yaml
 from datetime import datetime
 import logging
 
+# Import 3rd-party libs
+import yaml
+
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 from tests.support.unit import skipIf
+from tests.support.paths import FILES, TMP
+from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import destructiveTest
 from tests.integration.utils import testprogram
 
@@ -40,7 +44,7 @@ _PKG_TARGETS = {
 _PKGS_INSTALLED = set()
 
 
-class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixin):
+class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-call'
 
@@ -71,7 +75,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
         self.assertIn('"local": true', ''.join(out))
 
     def test_local_sls_call(self):
-        fileroot = os.path.join(integration.FILES, 'file', 'base')
+        fileroot = os.path.join(FILES, 'file', 'base')
         out = self.run_call('--file-root {0} --local state.sls saltcalllocal'.format(fileroot))
         self.assertIn('Name: test.echo', ''.join(out))
         self.assertIn('Result: True', ''.join(out))
@@ -121,8 +125,8 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
         for this minion, salt-call should exit non-zero if invoked with
         option --retcode-passthrough
         '''
-        src = os.path.join(integration.FILES, 'file/base/top.sls')
-        dst = os.path.join(integration.FILES, 'file/base/top.sls.bak')
+        src = os.path.join(FILES, 'file/base/top.sls')
+        dst = os.path.join(FILES, 'file/base/top.sls.bak')
         shutil.move(src, dst)
         expected_comment = 'No states found for this minion'
         try:
@@ -162,7 +166,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_issue_2731_masterless(self):
-        root_dir = os.path.join(integration.TMP, 'issue-2731')
+        root_dir = os.path.join(TMP, 'issue-2731')
         config_dir = os.path.join(root_dir, 'conf')
         minion_config_file = os.path.join(config_dir, 'minion')
         logfile = os.path.join(root_dir, 'minion_test_issue_2731')
@@ -299,7 +303,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        config_dir = os.path.join(TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
@@ -336,7 +340,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
                 shutil.rmtree(config_dir)
 
     def test_issue_15074_output_file_append(self):
-        output_file_append = os.path.join(integration.TMP, 'issue-15074')
+        output_file_append = os.path.join(TMP, 'issue-15074')
         try:
             # Let's create an initial output file with some data
             _ = self.run_script(
@@ -368,7 +372,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
                 os.unlink(output_file_append)
 
     def test_issue_14979_output_file_permissions(self):
-        output_file = os.path.join(integration.TMP, 'issue-14979')
+        output_file = os.path.join(TMP, 'issue-14979')
         current_umask = os.umask(0o077)
         try:
             # Let's create an initial output file with some data

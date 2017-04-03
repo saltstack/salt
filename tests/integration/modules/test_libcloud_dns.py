@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-import tests.integration as integration
+from tests.support.case import ModuleCase
 
 
-class LibcloudDNSTest(integration.ModuleCase):
+class LibcloudDNSTest(ModuleCase):
     '''
     Validate the libcloud_dns module
     '''

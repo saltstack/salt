@@ -6,7 +6,7 @@ import os
 import shutil
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
@@ -20,7 +20,7 @@ import salt.ext.six as six
 @destructiveTest
 @skipIf(salt.utils.is_windows(), 'No mtab on Windows')
 @skipIf(salt.utils.is_darwin(), 'No mtab on Darwin')
-class DiskModuleVirtualizationTest(integration.ModuleCase):
+class DiskModuleVirtualizationTest(ModuleCase):
     '''
     Test to make sure we return a clean result under Docker. Refs #8976
 
@@ -40,7 +40,7 @@ class DiskModuleVirtualizationTest(integration.ModuleCase):
             shutil.move('/tmp/mtab', '/etc/mtab')
 
 
-class DiskModuleTest(integration.ModuleCase):
+class DiskModuleTest(ModuleCase):
     '''
     Validate the disk module
     '''

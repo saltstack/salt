@@ -9,7 +9,7 @@ import random
 import string
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
@@ -35,7 +35,7 @@ SET_SUBNET_NAME = __random_string()
 @skipIf(not salt.utils.is_darwin()
         or not salt.utils.which('systemsetup')
         or salt.utils.get_uid(salt.utils.get_user()) != 0, 'Test requirements not met')
-class MacSystemModuleTest(integration.ModuleCase):
+class MacSystemModuleTest(ModuleCase):
     '''
     Validate the mac_system module
     '''

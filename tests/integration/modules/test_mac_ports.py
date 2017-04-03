@@ -7,14 +7,14 @@ integration tests for mac_ports
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 
 # Import salt libs
 import salt.utils
 
 
-class MacPortsModuleTest(integration.ModuleCase):
+class MacPortsModuleTest(ModuleCase):
     '''
     Validate the mac_ports module
     '''

@@ -8,7 +8,8 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.paths import TMP
 from tests.support.helpers import destructiveTest
 
 # Import salt libs
@@ -16,10 +17,10 @@ import salt.utils
 
 TEST_PKG_URL = 'https://distfiles.macports.org/MacPorts/MacPorts-2.3.4-10.11-ElCapitan.pkg'
 TEST_PKG_NAME = 'org.macports.MacPorts'
-TEST_PKG = os.path.join(integration.TMP, 'MacPorts-2.3.4-10.11-ElCapitan.pkg')
+TEST_PKG = os.path.join(TMP, 'MacPorts-2.3.4-10.11-ElCapitan.pkg')
 
 
-class MacPkgutilModuleTest(integration.ModuleCase):
+class MacPkgutilModuleTest(ModuleCase):
     '''
     Validate the mac_pkgutil module
     '''

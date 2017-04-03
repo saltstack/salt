@@ -5,8 +5,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-import tests.integration as integration
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 # Import salt libs
@@ -14,7 +13,7 @@ import salt.utils
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestWhich(integration.TestCase):
+class TestWhich(TestCase):
     '''
     Tests salt.utils.which function to ensure that it returns True as
     expected.

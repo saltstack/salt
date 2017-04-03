@@ -10,7 +10,7 @@ import random
 import string
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
@@ -39,7 +39,7 @@ CHANGE_USER = __random_string()
 
 @destructiveTest
 @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-class MacUserModuleTest(integration.ModuleCase):
+class MacUserModuleTest(ModuleCase):
     '''
     Integration tests for the mac_user module
     '''

@@ -1,14 +1,17 @@
 # coding: utf-8
 
-# Import Salt Testing libs
+# Import python libs
 from __future__ import absolute_import
-import tests.integration as integration
+
+# Import Salt Testing libs
+from tests.support.unit import TestCase
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import Salt libs
 import salt.wheel
 
 
-class KeyWheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixin):
+class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
         self.wheel = salt.wheel.Wheel(dict(self.get_config('client_config')))
 

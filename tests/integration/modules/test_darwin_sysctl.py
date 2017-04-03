@@ -14,7 +14,7 @@ import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
@@ -25,7 +25,7 @@ CONFIG = '/etc/sysctl.conf'
 
 @destructiveTest
 @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-class DarwinSysctlModuleTest(integration.ModuleCase):
+class DarwinSysctlModuleTest(ModuleCase):
     '''
     Integration tests for the darwin_sysctl module
     '''

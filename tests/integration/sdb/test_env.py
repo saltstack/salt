@@ -7,16 +7,17 @@ import os
 import textwrap
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.paths import FILES
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
 
-STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
+STATE_DIR = os.path.join(FILES, 'file', 'base')
 
 
-class EnvTestCase(integration.ModuleCase, SaltReturnAssertsMixin):
+class EnvTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     def setUp(self):
         self.state_name = 'test_sdb_env'

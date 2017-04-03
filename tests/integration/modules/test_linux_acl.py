@@ -6,7 +6,9 @@ import os
 import shutil
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.paths import TMP
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
@@ -19,25 +21,24 @@ import salt.utils
 # Doesn't work. Why?
 # @requires_salt_modules('acl')
 # @requires_salt_modules('linux_acl')
-class LinuxAclModuleTest(integration.ModuleCase,
-                         integration.AdaptedConfigurationTestCaseMixin):
+class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     '''
     Validate the linux_acl module
     '''
     def setUp(self):
         # Blindly copied from tests.integration.modules.file; Refactoring?
-        self.myfile = os.path.join(integration.TMP, 'myfile')
+        self.myfile = os.path.join(TMP, 'myfile')
         with salt.utils.fopen(self.myfile, 'w+') as fp:
             fp.write('Hello\n')
-        self.mydir = os.path.join(integration.TMP, 'mydir/isawesome')
+        self.mydir = os.path.join(TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
             # left behind... Don't fail because of this!
             os.makedirs(self.mydir)
-        self.mysymlink = os.path.join(integration.TMP, 'mysymlink')
+        self.mysymlink = os.path.join(TMP, 'mysymlink')
         if os.path.islink(self.mysymlink):
             os.remove(self.mysymlink)
         os.symlink(self.myfile, self.mysymlink)
-        self.mybadsymlink = os.path.join(integration.TMP, 'mybadsymlink')
+        self.mybadsymlink = os.path.join(TMP, 'mybadsymlink')
         if os.path.islink(self.mybadsymlink):
             os.remove(self.mybadsymlink)
         os.symlink('/nonexistentpath', self.mybadsymlink)

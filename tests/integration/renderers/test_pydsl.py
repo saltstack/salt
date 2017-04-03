@@ -6,13 +6,13 @@ import os
 import textwrap
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 
 # Import Salt libs
 import salt.utils
 
 
-class PyDSLRendererIncludeTestCase(integration.ModuleCase):
+class PyDSLRendererIncludeTestCase(ModuleCase):
 
     def test_rendering_includes(self):
         '''

@@ -4,10 +4,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 
 
-class GentoolkitModuleTest(integration.ModuleCase):
+class GentoolkitModuleTest(ModuleCase):
     def setUp(self):
         '''
         Set up test environment

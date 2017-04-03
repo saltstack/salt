@@ -14,8 +14,9 @@ import tornado.ioloop
 import tornado.web
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
+from tests.support.paths import FILES
 from tests.support.helpers import get_unused_localhost_port
 from tests.support.mixins import SaltReturnAssertsMixin
 
@@ -32,10 +33,10 @@ else:
 
 UNTAR_FILE = os.path.join(ARCHIVE_DIR, 'custom/README')
 ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
-STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
+STATE_DIR = os.path.join(FILES, 'file', 'base')
 
 
-class ArchiveTest(integration.ModuleCase, SaltReturnAssertsMixin):
+class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the archive state
     '''

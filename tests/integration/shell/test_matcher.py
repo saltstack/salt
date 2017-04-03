@@ -3,12 +3,16 @@
 # Import python libs
 from __future__ import absolute_import
 import os
-import yaml
 import shutil
 import time
 
+# Import 3rd-party libs
+import yaml
+
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.paths import TMP
+from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import salt libs
 import salt.utils
@@ -18,7 +22,7 @@ def minion_in_returns(minion, lines):
     return bool([True for line in lines if line == '{0}:'.format(minion)])
 
 
-class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
+class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     '''
     Test salt matchers
     '''
@@ -332,7 +336,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        config_dir = os.path.join(TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 

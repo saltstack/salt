@@ -10,7 +10,7 @@ import random
 import string
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 
 # Import salt libs
@@ -32,7 +32,7 @@ TEST_USER = __random_string()
 NO_USER = __random_string()
 
 
-class MacShadowModuleTest(integration.ModuleCase):
+class MacShadowModuleTest(ModuleCase):
     '''
     Validate the mac_system module
     '''

@@ -12,16 +12,17 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
+from tests.support.paths import FILES
 
 # Import salt libs
 import salt.utils
 
-STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
+STATE_DIR = os.path.join(FILES, 'file', 'base')
 
 
-class StateMatchTest(integration.ModuleCase):
+class StateMatchTest(ModuleCase):
     '''
     Validate the file state
     '''

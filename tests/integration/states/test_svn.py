@@ -11,11 +11,12 @@ import shutil
 import socket
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.paths import TMP
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
-class SvnTest(integration.ModuleCase, SaltReturnAssertsMixin):
+class SvnTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the svn state
     '''
@@ -36,7 +37,7 @@ class SvnTest(integration.ModuleCase, SaltReturnAssertsMixin):
             msg = 'error resolving {0}, possible network issue?'
             self.skipTest(msg.format(self.__domain))
 
-        self.target = os.path.join(integration.TMP, 'apache_http_test_repo')
+        self.target = os.path.join(TMP, 'apache_http_test_repo')
         self.name = 'http://{0}/repos/asf/httpd/httpd/trunk/test/'.format(
             self.__domain
         )

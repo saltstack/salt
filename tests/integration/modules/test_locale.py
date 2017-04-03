@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import (
     requires_salt_modules,
@@ -23,7 +23,7 @@ def _find_new_locale(current_locale):
 
 @skipIf(salt.utils.is_windows(), 'minion is windows')
 @requires_salt_modules('locale')
-class LocaleModuleTest(integration.ModuleCase):
+class LocaleModuleTest(ModuleCase):
     def test_get_locale(self):
         locale = self.run_function('locale.get_locale')
         self.assertNotEqual(None, locale)

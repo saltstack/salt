@@ -5,10 +5,10 @@ from __future__ import absolute_import
 import re
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 
 
-class KeyModuleTest(integration.ModuleCase):
+class KeyModuleTest(ModuleCase):
     def test_key_finger(self):
         '''
         test key.finger to ensure we receive a valid fingerprint

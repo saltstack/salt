@@ -6,7 +6,7 @@ import string
 import random
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 
 # Import salt libs
@@ -14,7 +14,7 @@ from salt.ext.six.moves import range
 import salt.utils
 
 
-class GroupModuleTest(integration.ModuleCase):
+class GroupModuleTest(ModuleCase):
     '''
     Validate the linux group system module
     '''

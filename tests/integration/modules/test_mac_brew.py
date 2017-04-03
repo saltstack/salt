@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
@@ -29,7 +29,7 @@ DEL_PKG = 'acme'
 @skipIf(not salt.utils.is_darwin(), 'Test only applies to macOS')
 @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
 @skipIf(not salt.utils.which('brew'), 'This test requires the brew binary')
-class BrewModuleTest(integration.ModuleCase):
+class BrewModuleTest(ModuleCase):
     '''
     Integration tests for the brew module
     '''

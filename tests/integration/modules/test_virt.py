@@ -7,12 +7,12 @@ Validate the virt module
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.helpers import requires_salt_modules
 
 
 @requires_salt_modules('virt.get_profiles')
-class VirtTest(integration.ModuleCase):
+class VirtTest(ModuleCase):
     '''
     Test virt routines
     '''

@@ -10,12 +10,16 @@
 # Import python libs
 from __future__ import absolute_import
 import os
-import yaml
 import pipes
 import shutil
 
+# Import 3rd-party libs
+import yaml
+
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.paths import TMP
+from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import salt libs
 import salt.utils
@@ -24,7 +28,7 @@ import salt.utils
 import salt.ext.six as six
 
 
-class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
+class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-cp'
 
@@ -53,7 +57,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
         for idx, minion in enumerate(minions):
             ret = self.run_salt(
                 '--out yaml {0} file.directory_exists {1}'.format(
-                    pipes.quote(minion), integration.TMP
+                    pipes.quote(minion), TMP
                 )
             )
             data = yaml.load('\n'.join(ret))
@@ -61,7 +65,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
                 ret = self.run_salt(
                     '--out yaml {0} file.makedirs {1}'.format(
                         pipes.quote(minion),
-                        integration.TMP
+                        TMP
                     )
                 )
 
@@ -69,7 +73,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
                 self.assertTrue(data[minion])
 
             minion_testfile = os.path.join(
-                integration.TMP, 'cp_{0}_testfile'.format(idx)
+                TMP, 'cp_{0}_testfile'.format(idx)
             )
 
             ret = self.run_cp('--out pprint {0} {1} {2}'.format(
@@ -117,7 +121,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
             # about it
             old_cwd = None
 
-        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        config_dir = os.path.join(TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 

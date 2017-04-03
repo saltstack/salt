@@ -12,7 +12,7 @@ import grp
 import random
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
@@ -42,7 +42,7 @@ def gen_password():
     return (password, hashed_pwd)
 
 
-class AuthTest(integration.ShellCase):
+class AuthTest(ShellCase):
     '''
     Test auth mechanisms
     '''

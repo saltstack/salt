@@ -12,7 +12,7 @@ import string
 import random
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
@@ -20,7 +20,7 @@ from tests.support.helpers import destructiveTest
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
-class PwUserModuleTest(integration.ModuleCase):
+class PwUserModuleTest(ModuleCase):
 
     def setUp(self):
         super(PwUserModuleTest, self).setUp()

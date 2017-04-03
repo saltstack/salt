@@ -4,10 +4,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 
 
-class DecoratorTest(integration.ModuleCase):
+class DecoratorTest(ModuleCase):
     def test_module(self):
         self.assertTrue(
                 self.run_function(

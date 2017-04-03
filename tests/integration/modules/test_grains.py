@@ -9,12 +9,12 @@ import os
 import time
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
 
-class TestModulesGrains(integration.ModuleCase):
+class TestModulesGrains(ModuleCase):
     '''
     Test the grains module
     '''
@@ -140,7 +140,7 @@ class TestModulesGrains(integration.ModuleCase):
 
 
 @destructiveTest
-class GrainsAppendTestCase(integration.ModuleCase):
+class GrainsAppendTestCase(ModuleCase):
     '''
     Tests written specifically for the grains.append function.
     '''

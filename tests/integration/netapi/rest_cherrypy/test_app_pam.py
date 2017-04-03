@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import os
 
 # Import test support libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 import tests.support.cherrypy_testclasses as cptc
@@ -32,7 +32,7 @@ AUTH_CREDS = {
 
 
 @skipIf(cptc.HAS_CHERRYPY is False, 'CherryPy not installed')
-class TestAuthPAM(cptc.BaseRestCherryPyTest, integration.ModuleCase):
+class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
     '''
     Test auth with pam using salt-api
     '''

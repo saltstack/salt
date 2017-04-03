@@ -3,7 +3,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.helpers import (
     destructiveTest,
@@ -12,7 +12,7 @@ from tests.support.helpers import (
 )
 
 
-class PkgModuleTest(integration.ModuleCase, SaltReturnAssertsMixin):
+class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the pkg module
     '''
