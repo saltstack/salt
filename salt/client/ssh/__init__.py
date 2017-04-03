@@ -127,7 +127,6 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 # to be able to define the string with indentation for readability but
 # still strip the white space for compactness and to avoid issues with
 # some multi-line embedded python code having indentation errors
-
 SSH_SH_SHIM = \
     '\n'.join(
         [s.strip() for s in r'''/bin/sh << 'EOF'
@@ -190,7 +189,6 @@ exit $EX_PYTHON_INVALID
 EOF'''.format(
             EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
             ).split('\n')])
-
 
 if not is_windows():
     shim_file = os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')
