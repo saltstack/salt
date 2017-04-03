@@ -61,7 +61,7 @@ def _get_root_object(*models):
         current = napalm_yang
         for part in model.split('.'):
             current = getattr(current, part)
-        root.add_model(current())
+        root.add_model(current)
     return root
 
 # -----------------------------------------------------------------------------

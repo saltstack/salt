@@ -258,6 +258,7 @@ execution modules
     napalm_route
     napalm_snmp
     napalm_users
+    napalm_yang_mod
     netaddress
     netbsd_sysctl
     netbsdservice

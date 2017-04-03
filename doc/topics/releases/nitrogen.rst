@@ -253,6 +253,10 @@ New modules:
   load ACL (firewall) configuration on network devices.
 - :mod:`Network ACL state <salt.states.netacl>` - Manage the firewall
   configuration. It only requires writing the pillar structure correctly!
+- :mod:`NAPALM YANG execution module <salt.modules.napalm_yang_mod>` - Parse,
+  generate and load native device configuration in a standard way,
+  using the OpenConfig/IETF models. This module cotains also helpers for
+  the states.
 - :mod:`NET finder <salt.runners.net>` - Runner to find details easily and
   fast. It's smart enough to know what you are looking for. It will search
   in the details of the network interfaces, IP addresses, MAC address tables,
