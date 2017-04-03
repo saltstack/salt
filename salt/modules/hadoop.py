@@ -23,7 +23,7 @@ def __virtual__():
     '''
     if salt.utils.which('hadoop') or salt.utils.which('hdfs'):
         return 'hadoop'
-    return (False, 'The hadoop execution module cannot be loaded: hadoop binary not in path.')
+    return (False, 'The hadoop execution module cannot be loaded: hadoop or hdfs binary not in path.')
 
 
 def _hadoop_cmd(module, command, *args):
@@ -75,8 +75,6 @@ def dfs(command=None, *args):
     '''
     Execute a command on DFS
 
-    trailing argument of use_hdfs will use hdfs command for execution
-
     CLI Example:
 
     .. code-block:: bash
@@ -109,8 +107,6 @@ def dfs_present(path):
 def dfs_absent(path):
     '''
     Check if a file or directory is absent on the distributed FS.
-
-    optional argument of use_hdfs=True will use hdfs command for execution
 
     CLI Example:
 
