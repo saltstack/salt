@@ -239,7 +239,7 @@ have been improved, enhanced and widenened in scope:
   device can be dropped, e.g.: packet loss, idle time (no commands issued
   within a couple of minutes or seconds), or simply the device decides to kill
   the process. In Nitrogen we have introduced the functionality to re-establish
-  the connection. One can disable feature this feature through the
+  the connection. One can disable this feature through the
   :conf_proxy:`proxy_keep_alive` option and adjust the polling frequency
   speciying a custom value for :conf_proxy:`proxy_keep_alive_interval`,
   in minutes.
@@ -262,6 +262,10 @@ New modules:
   in the details of the network interfaces, IP addresses, MAC address tables,
   ARP tables and LLDP neighbors.
 - :mod:`BGP finder <salt.runners.bgp>` - Runner to search BGP neighbors details.
+- :mod:`NAPALM syslog <salt.engines.napalm_syslog>` - Engine to import events
+  from the napalm-logs library into the Salt event bus. The events are based
+  on the syslog messages from the network devices and structured following
+  the OpenConfig/IETF YANG models.
 
 New grains: :mod:`Host <salt.grains.napalm.host>`,
 :mod:`Username <salt.grains.napalm.username>` and
