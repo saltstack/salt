@@ -3091,13 +3091,13 @@ class ProxyMinion(Minion):
         # we can then sync any proxymodules down from the master
         # we do a sync_all here in case proxy code was installed by
         # SPM or was manually placed in /srv/salt/_modules etc.
-        self.functions['saltutil.sync_all'](saltenv='base')
+        self.functions['saltutil.sync_all'](saltenv=self.opts['environment'])
 
         # Pull in the utils
         self.utils = salt.loader.utils(self.opts)
 
         # Then load the proxy module
-        self.proxy = salt.loader.proxy(self.opts)
+        self.proxy = salt.loader.proxy(self.opts, utils=self.utils)
 
         # And re-load the modules so the __proxy__ variable gets injected
         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
@@ -3205,6 +3205,29 @@ class ProxyMinion(Minion):
         else:
             self.schedule.delete_job(master_event(type='alive', master=self.opts['master']), persist=True)
             self.schedule.delete_job(master_event(type='failback'), persist=True)
+
+        # proxy keepalive
+        proxy_alive_fn = fq_proxyname+'.alive'
+        if (proxy_alive_fn in self.proxy
+            and 'status.proxy_reconnect' in self.functions
+            and self.opts.get('proxy_keep_alive', True)):
+            # if `proxy_keep_alive` is either not specified, either set to False does not retry reconnecting
+            self.schedule.add_job({
+                '__proxy_keepalive':
+                {
+                    'function': 'status.proxy_reconnect',
+                    'minutes': self.opts.get('proxy_keep_alive_interval', 1),  # by default, check once per minute
+                    'jid_include': True,
+                    'maxrunning': 1,
+                    'return_job': False,
+                    'kwargs': {
+                        'proxy_name': fq_proxyname
+                    }
+                }
+            }, persist=True)
+            self.schedule.enable_schedule()
+        else:
+            self.schedule.delete_job('__proxy_keepalive', persist=True)
 
         #  Sync the grains here so the proxy can communicate them to the master
         self.functions['saltutil.sync_grains'](saltenv='base')

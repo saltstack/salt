@@ -90,8 +90,8 @@ Page custom pageMinionConfig pageMinionConfig_Leave
 ###############################################################################
 Var Dialog
 Var Label
-Var CheckBox_Minion
-Var CheckBox_Minion_Delayed
+Var CheckBox_Minion_Start
+Var CheckBox_Minion_Start_Delayed
 Var MasterHost
 Var MasterHost_State
 Var MinionName
@@ -152,26 +152,26 @@ Function pageFinish_Show
 
     # Create Start Minion Checkbox
     ${NSD_CreateCheckbox} 120u 90u 100% 12u "&Start salt-minion"
-    Pop $CheckBox_Minion
-    SetCtlColors $CheckBox_Minion "" "ffffff"
+    Pop $CheckBox_Minion_Start
+    SetCtlColors $CheckBox_Minion_Start "" "ffffff"
     # This command required to bring the checkbox to the front
-    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
+    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion_Start, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
 
     # Create Start Minion Delayed ComboBox
-    ${NSD_CreateCheckbox} 130u 105u 100% 12u "&Delayed Start"
-    Pop $CheckBox_Minion_Delayed
-    SetCtlColors $CheckBox_Minion_Delayed "" "ffffff"
+    ${NSD_CreateCheckbox} 130u 102u 100% 12u "&Delayed Start"
+    Pop $CheckBox_Minion_Start_Delayed
+    SetCtlColors $CheckBox_Minion_Start_Delayed "" "ffffff"
     # This command required to bring the checkbox to the front
-    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion_Delayed, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
+    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion_Start_Delayed, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
 
     # Load current settings for Minion
     ${If} $StartMinion == 1
-        ${NSD_Check} $CheckBox_Minion
+        ${NSD_Check} $CheckBox_Minion_Start
     ${EndIf}
 
     # Load current settings for Minion Delayed
     ${If} $StartMinionDelayed == 1
-        ${NSD_Check} $CheckBox_Minion_Delayed
+        ${NSD_Check} $CheckBox_Minion_Start_Delayed
     ${EndIf}
 
 FunctionEnd
@@ -180,8 +180,8 @@ FunctionEnd
 Function pageFinish_Leave
 
     # Assign the current checkbox states
-    ${NSD_GetState} $CheckBox_Minion $StartMinion
-    ${NSD_GetState} $CheckBox_Minion_Delayed $StartMinionDelayed
+    ${NSD_GetState} $CheckBox_Minion_Start $StartMinion
+    ${NSD_GetState} $CheckBox_Minion_Start_Delayed $StartMinionDelayed
 
 FunctionEnd
 
@@ -706,10 +706,9 @@ FunctionEnd
 ;
 ; Usage:
 ;   Push "C:\path\to\add"
-;   Call RemoveFromPath
+;   Call un.RemoveFromPath
 ;------------------------------------------------------------------------------
-!macro RemoveFromPath un
-Function ${un}RemoveFromPath
+Function un.RemoveFromPath
 
     Exch $0
     Push $1
@@ -752,7 +751,7 @@ Function ${un}RemoveFromPath
     ; Check for our directory inside the path
     Push $1             ; String to Search
     Push "$0;"          ; Dir to Find
-    Call ${un}StrStr
+    Call un.StrStr
     Pop $2              ; The results of the search
     StrCmp $2 "" done   ; If results are empty, we're done, otherwise continue
 
@@ -785,9 +784,6 @@ Function ${un}RemoveFromPath
         Pop $0
 
 FunctionEnd
-!macroend
-!insertmacro RemoveFromPath ""
-!insertmacro RemoveFromPath "un."
 
 
 ###############################################################################
@@ -900,7 +896,7 @@ Function parseCommandLineSwitches
         StrCpy $StartMinion 1
     ${EndIf}
 
-    # Service: Startup Type Delayed
+    # Service: Minion Startup Type Delayed
     ${GetOptions} $R0 "/start-minion-delayed" $R1
     IfErrors start_minion_delayed_not_found
         StrCpy $StartMinionDelayed 1

@@ -66,9 +66,13 @@ if salt.utils.is_windows():
     # chance of working.
     _DFLT_IPC_MODE = 'tcp'
     _MASTER_TRIES = -1
+    # This needs to be SYSTEM in order for salt-master to run as a Service
+    # Otherwise, it will not respond to CLI calls
+    _MASTER_USER = 'SYSTEM'
 else:
     _DFLT_IPC_MODE = 'ipc'
     _MASTER_TRIES = 1
+    _MASTER_USER = salt.utils.get_user()
 
 
 def _gather_buffer_space():
@@ -1285,7 +1289,7 @@ DEFAULT_MASTER_OPTS = {
     'zmq_backlog': 1000,
     'pub_hwm': 1000,
     'auth_mode': 1,
-    'user': salt.utils.get_user(),
+    'user': _MASTER_USER,
     'worker_threads': 5,
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'master'),
     'ret_port': 4506,
