@@ -1,11 +1,16 @@
-# -*- coding: utf-8 -
+# -*- coding: utf-8 -*-
 '''
 ACME / Let's Encrypt module
 ===========================
 
 .. versionadded: 2016.3
 
-This module currently uses letsencrypt-auto, which needs to be available in the path or in /opt/letsencrypt/.
+This module currently looks for certbot script in the $PATH as
+- certbot,
+- lestsencrypt,
+- certbot-auto,
+- letsencrypt-auto
+eventually falls back to /opt/letsencrypt/letsencrypt-auto
 
 .. note::
 
