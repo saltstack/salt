@@ -66,6 +66,7 @@ def present(name, **kwargs):
         update_debug_mode = False
         update_gui_access = False
         update_users_status = False
+        update_rights = False
 
         if 'debug_mode' in kwargs:
             if int(kwargs['debug_mode']) != int(usergroup['debug_mode']):
@@ -75,6 +76,22 @@ def present(name, **kwargs):
             if int(kwargs['gui_access']) != int(usergroup['gui_access']):
                 update_gui_access = True
 
+        if 'rights' in kwargs:
+            # Older versions of Zabbix do not return the list of rights for the user group, handle this gracefully
+            try:
+                if usergroup['rights']:
+                    # Make sure right values are strings so we can compare them with the current user group rights
+                    for right in kwargs['rights']:
+                        for key in right:
+                            right[key] = str(right[key])
+                    if cmp(sorted(kwargs['rights']), sorted(usergroup['rights'])) != 0:
+                        update_rights = True
+                else:
+                    update_rights = True
+            except KeyError:
+                # As we don't know the current permissions, overwrite them as provided in the state.
+                update_rights = True
+
         if 'users_status' in kwargs:
             if int(kwargs['users_status']) != int(usergroup['users_status']):
                 update_users_status = True
@@ -82,7 +99,7 @@ def present(name, **kwargs):
     # Dry run, test=true mode
     if __opts__['test']:
         if usergroup_exists:
-            if update_debug_mode or update_gui_access or update_users_status:
+            if update_debug_mode or update_gui_access or update_rights or update_users_status:
                 ret['result'] = None
                 ret['comment'] = comment_usergroup_updated
             else:
@@ -96,7 +113,7 @@ def present(name, **kwargs):
     error = []
 
     if usergroup_exists:
-        if update_debug_mode or update_gui_access or update_users_status:
+        if update_debug_mode or update_gui_access or update_rights or update_users_status:
             ret['result'] = True
             ret['comment'] = comment_usergroup_updated
 
@@ -117,6 +134,15 @@ def present(name, **kwargs):
                     error.append(updated_gui['error'])
                 else:
                     ret['changes']['gui_access'] = kwargs['gui_access']
+
+            if update_rights:
+                updated_rights = __salt__['zabbix.usergroup_update'](usrgrpid,
+                                                                     rights=kwargs['rights'],
+                                                                     **connection_args)
+                if 'error' in updated_rights:
+                    error.append(updated_rights['error'])
+                else:
+                    ret['changes']['rights'] = kwargs['rights']
 
             if update_users_status:
                 updated_status = __salt__['zabbix.usergroup_update'](usrgrpid,
