@@ -82,8 +82,7 @@ def _fetch_secret(pass_path):
     # The version of pass used during development sent output to
     # stdout instead of stderr even though its returncode was non zero.
     if proc.returncode or not pass_data:
-        msg = 'Could not fetch secret: {0} {1}'.format(pass_data, pass_error)
-        log.warn(msg)
+        log.warning('Could not fetch secret: %s %s', pass_data, pass_error)
         pass_data = pass_path
     return pass_data.strip()
 

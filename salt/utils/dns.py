@@ -184,7 +184,7 @@ def _query_simple(name, rdtype, timeout=None):
     }[rdtype]
 
     if timeout:
-        log.warn('Ignoring timeout on simple resolver; fix resolv.conf to do that')
+        log.warning('Ignoring timeout on simple resolver; fix resolv.conf to do that')
 
     try:
         addresses = [sock[4][0] for sock in socket.getaddrinfo(name, None, sock_t, 0, socket.SOCK_RAW)]
