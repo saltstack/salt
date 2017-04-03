@@ -267,7 +267,7 @@ Default: ``False``
 If :conf_minion:`master` is a list of addresses, and :conf_minion`master_type`
 is set to ``failover`` shuffle them before trying to connect to distribute
 the minions over all available masters. This uses
-Python's :func:`random.randint <python2:random.randint>` method.
+Python's :func:`random.randint <python2:random.shuffle>` method.
 
 .. code-block:: yaml
 
