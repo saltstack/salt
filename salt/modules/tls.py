@@ -231,19 +231,19 @@ def _new_serial(ca_name):
                 os.urandom(5))),
         16
     )
-    log.debug('Hashnum: {0}'.format(hashnum))
+    log.debug('Hashnum: %s', hashnum)
 
     # record the hash somewhere
     cachedir = __opts__['cachedir']
-    log.debug('cachedir: {0}'.format(cachedir))
+    log.debug('cachedir: %s', cachedir)
     serial_file = '{0}/{1}.serial'.format(cachedir, ca_name)
     if not os.path.exists(cachedir):
         os.makedirs(cachedir)
     if not os.path.exists(serial_file):
-        fd = salt.utils.fopen(serial_file, 'w')
+        mode = 'w'
     else:
-        fd = salt.utils.fopen(serial_file, 'a+')
-    with fd as ofile:
+        mode = 'a+'
+    with salt.utils.fopen(serial_file, mode) as ofile:
         ofile.write(str(hashnum))
 
     return hashnum
@@ -1745,12 +1745,12 @@ def revoke_cert(
         return 'There is no CA named "{0}"'.format(ca_name)
 
     try:
-        client_cert = OpenSSL.crypto.load_certificate(
-            OpenSSL.crypto.FILETYPE_PEM,
-            salt.utils.fopen('{0}/{1}.crt'.format(
-                cert_path,
-                cert_filename)).read()
-        )
+        with salt.utils.fopen('{}/{}.crt'.format(cert_path,
+                                                 cert_filename)) as rfh:
+            client_cert = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_PEM,
+                rfh.read()
+            )
     except IOError:
         return 'There is no client certificate named "{0}"'.format(CN)
 

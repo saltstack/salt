@@ -362,9 +362,9 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
             pass
 
         try:
-            file_handler = salt.utils.fopen(complete_file_path, 'r+')
+            file_handler = salt.utils.fopen(complete_file_path, 'r+')  # pylint: disable=resource-leakage
         except IOError:
-            file_handler = salt.utils.fopen(complete_file_path, 'w+')
+            file_handler = salt.utils.fopen(complete_file_path, 'w+')  # pylint: disable=resource-leakage
 
         new_contents = ''
         added = False

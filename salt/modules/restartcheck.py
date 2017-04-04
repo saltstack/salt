@@ -126,7 +126,7 @@ def _deleted_files():
         try:
             pinfo = proc.as_dict(attrs=['pid', 'name'])
             try:
-                maps = salt.utils.fopen('/proc/{0}/maps'.format(pinfo['pid']))
+                maps = salt.utils.fopen('/proc/{0}/maps'.format(pinfo['pid']))  # pylint: disable=resource-leakage
                 dirpath = '/proc/' + str(pinfo['pid']) + '/fd/'
                 listdir = os.listdir(dirpath)
             except (OSError, IOError):
@@ -408,7 +408,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
                pth.find('.wants') == -1:
                 is_oneshot = False
                 try:
-                    servicefile = salt.utils.fopen(pth)
+                    servicefile = salt.utils.fopen(pth)  # pylint: disable=resource-leakage
                 except IOError:
                     continue
                 sysfold_len = len(systemd_folder)

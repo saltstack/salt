@@ -72,7 +72,7 @@ def digest_file(infile, checksum='md5'):
         raise salt.exceptions.CommandExecutionError(
                 "File path '{0}' not found.".format(infile))
 
-    with open(infile, 'rb') as f:
+    with salt.utils.fopen(infile, 'rb') as f:
         file_hash = __salt__['hashutil.digest'](f.read(), checksum)
 
     return file_hash
@@ -156,7 +156,7 @@ def base64_encodefile(fname):
     '''
     encoded_f = StringIO.StringIO()
 
-    with open(fname, 'rb') as f:
+    with salt.utils.fopen(fname, 'rb') as f:
         base64.encode(f, encoded_f)
 
     encoded_f.seek(0)
@@ -193,7 +193,7 @@ def base64_decodefile(instr, outfile):
     '''
     encoded_f = StringIO.StringIO(instr)
 
-    with open(outfile, 'wb') as f:
+    with salt.utils.fopen(outfile, 'wb') as f:
         base64.decode(encoded_f, f)
 
     return True

@@ -16,27 +16,23 @@ Support for Opkg
     must be installed.
 
 '''
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import copy
 import os
 import re
 import logging
-from salt.ext import six
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
 from salt.utils.versions import LooseVersion as _LooseVersion
-
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
 OPKG_CONFDIR = '/etc/opkg'
@@ -984,7 +980,7 @@ def list_repos():
     regex = re.compile(REPO_REGEXP)
     for filename in os.listdir(OPKG_CONFDIR):
         if filename.endswith(".conf"):
-            with open(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
+            with salt.utils.fopen(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
                 for line in conf_file:
                     if regex.search(line):
                         repo = {}
@@ -1031,7 +1027,7 @@ def _del_repo_from_file(alias, filepath):
     '''
     Remove a repo from filepath
     '''
-    with open(filepath) as fhandle:
+    with salt.utils.fopen(filepath) as fhandle:
         output = []
         regex = re.compile(REPO_REGEXP)
         for line in fhandle:
@@ -1041,7 +1037,7 @@ def _del_repo_from_file(alias, filepath):
                 cols = salt.utils.shlex_split(line.strip())
                 if alias != cols[1]:
                     output.append(line)
-    with open(filepath, 'w') as fhandle:
+    with salt.utils.fopen(filepath, 'w') as fhandle:
         fhandle.writelines(output)
 
 
@@ -1058,7 +1054,7 @@ def _add_new_repo(alias, uri, compressed, enabled=True):
     repostr += uri + '\n'
     conffile = os.path.join(OPKG_CONFDIR, alias + '.conf')
 
-    with open(conffile, 'a') as fhandle:
+    with salt.utils.fopen(conffile, 'a') as fhandle:
         fhandle.write(repostr)
 
 
@@ -1066,7 +1062,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
     '''
     Replace a repo entry in filepath with repostr
     '''
-    with open(filepath) as fhandle:
+    with salt.utils.fopen(filepath) as fhandle:
         output = []
         for line in fhandle:
             cols = salt.utils.shlex_split(line.strip())
@@ -1074,7 +1070,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
                 output.append(line)
             else:
                 output.append(repostr + '\n')
-    with open(filepath, 'w') as fhandle:
+    with salt.utils.fopen(filepath, 'w') as fhandle:
         fhandle.writelines(output)
 
 

@@ -273,12 +273,13 @@ class _Zypper(object):
 
             if os.path.exists(self.ZYPPER_LOCK):
                 try:
-                    data = __salt__['ps.proc_info'](int(open(self.ZYPPER_LOCK).readline()),
-                                                    attrs=['pid', 'name', 'cmdline', 'create_time'])
-                    data['cmdline'] = ' '.join(data['cmdline'])
-                    data['info'] = 'Blocking process created at {0}.'.format(
-                        datetime.datetime.utcfromtimestamp(data['create_time']).isoformat())
-                    data['success'] = True
+                    with salt.utils.fopen(self.ZYPPER_LOCK) as rfh:
+                        data = __salt__['ps.proc_info'](int(rfh.readline()),
+                                                        attrs=['pid', 'name', 'cmdline', 'create_time'])
+                        data['cmdline'] = ' '.join(data['cmdline'])
+                        data['info'] = 'Blocking process created at {0}.'.format(
+                            datetime.datetime.utcfromtimestamp(data['create_time']).isoformat())
+                        data['success'] = True
                 except Exception as err:
                     data = {'info': 'Unable to retrieve information about blocking process: {0}'.format(err.message),
                             'success': False}

@@ -161,7 +161,8 @@ def uptime():
         ut_path = "/proc/uptime"
         if not os.path.exists(ut_path):
             raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
-        seconds = int(float(salt.utils.fopen(ut_path).read().split()[0]))
+        with salt.utils.fopen(ut_path) as rfh:
+            seconds = int(float(rfh.read().split()[0]))
     elif salt.utils.is_sunos():
         # note: some flavors/vesions report the host uptime inside a zone
         #       https://support.oracle.com/epmos/faces/BugDisplay?id=15611584

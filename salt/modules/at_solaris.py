@@ -224,7 +224,8 @@ def atc(jobid):
         job=jobid
     )
     if __salt__['file.file_exists'](atjob_file):
-        return "".join(salt.utils.fopen(atjob_file, 'r').readlines())
+        with salt.utils.fopen(atjob_file, 'r') as rfh:
+            return "".join(rfh.readlines())
     else:
         return {'error': 'invalid job id \'{0}\''.format(jobid)}
 
