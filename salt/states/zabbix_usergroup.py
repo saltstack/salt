@@ -22,7 +22,7 @@ def present(name, **kwargs):
     https://www.zabbix.com/documentation/2.0/manual/appendix/api/usergroup/definitions#user_group
 
     .. versionadded:: 2016.3.0
-    
+
     :param name: name of the user group
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
@@ -77,10 +77,10 @@ def present(name, **kwargs):
                 update_gui_access = True
 
         if 'rights' in kwargs:
-            # Older versions of Zabbix do not return the list of rights for the user group, handle this gracefully 
+            # Older versions of Zabbix do not return the list of rights for the user group, handle this gracefully
             try:
                 if usergroup['rights']:
-                    # Make sure right values are strings so we can compare them with the current user group rights 
+                    # Make sure right values are strings so we can compare them with the current user group rights
                     for right in kwargs['rights']:
                         for key in right:
                             right[key] = str(right[key])
