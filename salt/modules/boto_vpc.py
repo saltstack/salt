@@ -2283,7 +2283,7 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                                   'must be provided.')
 
     if not _exactly_one((gateway_id, internet_gateway_name, instance_id, interface_id, vpc_peering_connection_id,
-                         interface_id, nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
+                         nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
         raise SaltInvocationError('Only one of gateway_id, internet_gateway_name, instance_id, '
                                   'interface_id, vpc_peering_connection_id, nat_gateway_id, '
                                   'nat_gateway_subnet_id or nat_gateway_subnet_name may be provided.')
