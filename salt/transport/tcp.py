@@ -50,7 +50,10 @@ else:
 # pylint: enable=import-error,no-name-in-module
 
 # Import third party libs
-from Crypto.Cipher import PKCS1_OAEP
+try:
+    from Cryptodome.Cipher import PKCS1_OAEP
+except ImportError:
+    from Crypto.Cipher import PKCS1_OAEP
 
 if six.PY3 and salt.utils.is_windows():
     USE_LOAD_BALANCER = True

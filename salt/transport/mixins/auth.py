@@ -21,8 +21,12 @@ from salt.utils.cache import CacheCli
 
 # Import Third Party Libs
 import tornado.gen
-from Crypto.Cipher import PKCS1_OAEP
-from Crypto.PublicKey import RSA
+try:
+    from Cryptodome.Cipher import PKCS1_OAEP
+    from Cryptodome.PublicKey import RSA
+except ImportError:
+    from Crypto.Cipher import PKCS1_OAEP
+    from Crypto.PublicKey import RSA
 
 
 log = logging.getLogger(__name__)

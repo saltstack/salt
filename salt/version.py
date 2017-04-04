@@ -574,6 +574,7 @@ def dependency_information(include_salt_cloud=False):
         ('msgpack-python', 'msgpack', 'version'),
         ('msgpack-pure', 'msgpack_pure', 'version'),
         ('pycrypto', 'Crypto', '__version__'),
+        ('pycryptodome', 'Cryptodome', 'version_info'),
         ('libnacl', 'libnacl', '__version__'),
         ('PyYAML', 'yaml', '__version__'),
         ('ioflo', 'ioflo', '__version__'),
