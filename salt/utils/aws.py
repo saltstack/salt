@@ -239,6 +239,8 @@ def sig4(method, endpoint, params, prov_dict,
     amzdate = timenow.strftime('%Y%m%dT%H%M%SZ')
     datestamp = timenow.strftime('%Y%m%d')
     new_headers = {}
+    if isinstance(headers, dict):
+        new_headers = headers.copy()
 
     # Create payload hash (hash of the request body content). For GET
     # requests, the payload is an empty string ('').
@@ -250,9 +252,6 @@ def sig4(method, endpoint, params, prov_dict,
     new_headers['x-amz-content-sha256'] = payload_hash
     a_canonical_headers = []
     a_signed_headers = []
-    if isinstance(headers, dict):
-        for key, value in six.iteritems(headers):
-            new_headers[key] = value
 
     if token != '':
         new_headers['X-Amz-security-token'] = token
