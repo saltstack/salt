@@ -197,6 +197,7 @@ XML_OUTPUT_DIR = os.environ.get('SALT_XML_TEST_REPORTS_DIR', os.path.join(paths.
 
 RUNTIME_VARS = RuntimeVars(
     TMP=paths.TMP,
+    SYS_TMP_DIR=paths.SYS_TMP_DIR,
     FILES=paths.FILES,
     CONF_DIR=paths.CONF_DIR,
     PILLAR_DIR=paths.PILLAR_DIR,
