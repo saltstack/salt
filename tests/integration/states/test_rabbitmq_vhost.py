@@ -5,13 +5,14 @@ Tests for the rabbitmq state
 '''
 # Import python libs
 from __future__ import absolute_import
-import os
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import skip_if_not_root
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
+@skip_if_not_root
 class RabbitVHostTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the rabbitmq virtual host states.
@@ -22,8 +23,6 @@ class RabbitVHostTestCase(ModuleCase, SaltReturnAssertsMixin):
 
         if not rabbit_installed:
             self.skipTest('rabbitmq-server not installed')
-        if os.geteuid() != 0:
-            self.skipTest('You must be root to run this test')
 
     def test_present(self):
         '''
