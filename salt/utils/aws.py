@@ -239,20 +239,24 @@ def sig4(method, endpoint, params, prov_dict,
     amzdate = timenow.strftime('%Y%m%dT%H%M%SZ')
     datestamp = timenow.strftime('%Y%m%d')
 
-    headers_for_signing = {key: value for key, value in six.iteritems(headers) if re.match('x-amz-', key)}
-    headers_for_signing['x-amz-date'] = amzdate
-
-    canonical_headers = 'host:{0}'.format(endpoint)
-    signed_headers = 'host'
+    new_headers = {}
+    new_headers['X-Amz-date'] = amzdate
+    new_headers['host'] = endpoint
+    a_canonical_headers = []
+    a_signed_headers = []
+    if isinstance(headers, dict):
+        for key, value in six.iteritems(headers):
+            new_headers[key] = value
 
     if token != '':
-        headers['x-amz-security-token'] = token
+        new_headers['X-Amz-security-token'] = token
 
-    if isinstance(headers, dict):
-        for header in sorted(headers_for_signing.keys()):
-            canonical_headers += '\n{0}:{1}'.format(header, headers_for_signing[header])
-            signed_headers += ';{0}'.format(header)
-    canonical_headers += '\n'
+    for header in sorted(new_headers.keys(), key=str.lower):
+        lower_header = header.lower()
+        a_canonical_headers.append('{0}:{1}'.format(lower_header, new_headers[header].strip()))
+        a_signed_headers.append(lower_header)
+    canonical_headers = '\n'.join(a_canonical_headers) + '\n'
+    signed_headers = ';'.join(a_signed_headers)
 
     algorithm = 'AWS4-HMAC-SHA256'
 
@@ -305,18 +309,8 @@ def sig4(method, endpoint, params, prov_dict,
             signature,
         )
 
-    new_headers = {
-        'x-amz-date': amzdate,
-        'x-amz-content-sha256': payload_hash,
-        'Authorization': authorization_header,
-    }
-    if isinstance(headers, dict):
-        for header in sorted(headers.keys()):
-            new_headers[header] = headers[header]
-
-    # Add in security token if we have one
-    if token != '':
-        new_headers['X-Amz-Security-Token'] = token
+    new_headers['x-amz-content-sha256'] = payload_hash
+    new_headers['Authorization'] = authorization_header
 
     requesturl = '{0}?{1}'.format(requesturl, querystring)
     return new_headers, requesturl
