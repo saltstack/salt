@@ -294,7 +294,8 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                         # As a last resort, kill the process group
                         os.killpg(os.getpgid(process.pid), signal.SIGKILL)
                     except OSError as exc:
-                        if exc.errno != 3:
+                        if exc.errno != errno.ESRCH:
+                            # If errno is not "no such process", raise
                             raise
 
                     out = [
@@ -369,6 +370,14 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                         return out, []
             finally:
                 try:
+                    if os.path.exists(tmp_file.name):
+                        if isinstance(tmp_file.name, str):
+                            # tmp_file.name is an int when using SpooledTemporaryFiles
+                            # int types cannot be used with os.remove() in Python 3
+                            os.remove(tmp_file.name)
+                        else:
+                            # Clean up file handles
+                            tmp_file.close()
                     process.terminate()
                 except OSError as err:
                     # process already terminated
