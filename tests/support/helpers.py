@@ -552,11 +552,10 @@ def requires_network(only_local_network=False):
                          '173.194.41.201', '173.194.41.206', '173.194.41.192',
                          '173.194.41.193', '173.194.41.194', '173.194.41.195',
                          '173.194.41.196', '173.194.41.197'):
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 try:
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sock.settimeout(0.25)
                     sock.connect((addr, 80))
-                    sock.close()
                     # We connected? Stop the loop
                     break
                 except socket.error:
@@ -564,6 +563,8 @@ def requires_network(only_local_network=False):
                     continue
                 else:
                     cls.skipTest('No internet network connection was detected')
+                finally:
+                    sock.close()
             return func(cls)
         return wrapper
     return decorator
