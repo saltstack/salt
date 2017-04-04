@@ -9,7 +9,7 @@
     some fake objects in order to properly set the function/class decorators
     and yet skip the test cases execution.
 '''
-# pylint: disable=unused-import,function-redefined,blacklisted-external-module
+# pylint: disable=unused-import,function-redefined,blacklisted-module,blacklisted-external-module
 
 from __future__ import absolute_import
 import sys
@@ -163,7 +163,7 @@ else:
 
         global file_spec
         if file_spec is None:
-            file_spec = file
+            file_spec = file  # pylint: disable=undefined-variable
 
         if mock is None:
             mock = MagicMock(name='open', spec=open)

@@ -505,7 +505,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')
     def test_get_graphics(self):
-        virt.get_xml = MagicMock(return_value='''<domain type='kvm' id='7'>
+        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
               <name>test-vm</name>
               <devices>
                 <graphics type='vnc' port='5900' autoport='yes' listen='0.0.0.0'>
@@ -514,15 +514,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               </devices>
             </domain>
         ''')
-        graphics = virt.get_graphics('test-vm')
-        self.assertEqual('vnc', graphics['type'])
-        self.assertEqual('5900', graphics['port'])
-        self.assertEqual('0.0.0.0', graphics['listen'])
+        with patch.object(virt, 'get_xml', get_xml_mock):
+            graphics = virt.get_graphics('test-vm')
+            self.assertEqual('vnc', graphics['type'])
+            self.assertEqual('5900', graphics['port'])
+            self.assertEqual('0.0.0.0', graphics['listen'])
 
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')
     def test_get_nics(self):
-        virt.get_xml = MagicMock(return_value='''<domain type='kvm' id='7'>
+        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
               <name>test-vm</name>
               <devices>
                 <interface type='bridge'>
@@ -534,7 +535,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               </devices>
             </domain>
         ''')
-        nics = virt.get_nics('test-vm')
-        nic = nics[list(nics)[0]]
-        self.assertEqual('bridge', nic['type'])
-        self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
+        with patch.object(virt, 'get_xml', get_xml_mock):
+            nics = virt.get_nics('test-vm')
+            nic = nics[list(nics)[0]]
+            self.assertEqual('bridge', nic['type'])
+            self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
